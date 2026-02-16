@@ -1,0 +1,34 @@
+{
+  "evidence_id": "EV-032",
+  "filename": "qc-review-process-recording.mp4",
+  "title": "Post-Close QC Review Process - Screen Recording",
+  "description": "Screen recording of QC analyst performing a post-close quality control review on a recently funded loan. Demonstrates the QC checklist, Encompass audit trail review, document verification steps, and finding documentation process.",
+  "category": "Video",
+  "format": "MP4 (H.264/AAC)",
+  "resolution": "1920x1080",
+  "fps": 30,
+  "duration_seconds": 1560,
+  "duration_display": "0:26:00",
+  "file_size_bytes": 156234567,
+  "recording_date": "2025-10-28",
+  "recorded_by": "D.Okonkwo",
+  "source_system": "Encompass LOS v24.3 / Loom",
+  "presenter": "Maria Santos, VP Underwriting (performing QC review)",
+  "pii_status": "REDACTED",
+  "redaction_notes": "QC performed on test loan MNB-TEST-001; no actual borrower data",
+  "quality_scores": {
+    "completeness": 0.80,
+    "reliability": 0.88,
+    "freshness": 0.95,
+    "consistency": 0.85
+  },
+  "scene_segments": [
+    {"start": "00:00:00", "end": "00:04:30", "description": "QC checklist overview and loan selection criteria"},
+    {"start": "00:04:30", "end": "00:10:00", "description": "Income documentation verification"},
+    {"start": "00:10:00", "end": "00:15:30", "description": "Appraisal review and property eligibility"},
+    {"start": "00:15:30", "end": "00:20:00", "description": "TRID compliance check - LE/CD timing verification"},
+    {"start": "00:20:00", "end": "00:23:00", "description": "Audit trail review for condition clearing"},
+    {"start": "00:23:00", "end": "00:26:00", "description": "Finding documentation and severity classification"}
+  ],
+  "cross_references": ["EV-009", "EV-008", "EV-010"]
+}

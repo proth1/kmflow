@@ -1,0 +1,37 @@
+{
+  "evidence_id": "EV-029",
+  "filename": "compliance-training-session-excerpt.mp3",
+  "title": "Compliance Training Session Audio - TRID Q&A Excerpt",
+  "description": "Audio excerpt from quarterly compliance training session covering TRID disclosure requirements. Includes Q&A segment where loan officers ask about tolerance cure timing and e-consent procedures. Reveals knowledge gaps in field staff regarding recent regulatory updates.",
+  "category": "Audio",
+  "format": "MP3",
+  "duration_seconds": 1920,
+  "duration_display": "0:32:00",
+  "file_size_bytes": 23040000,
+  "sample_rate": 44100,
+  "channels": 1,
+  "bitrate_kbps": 96,
+  "recording_date": "2025-09-12",
+  "recorded_by": "Compliance Department",
+  "location": "Meridian National Bank - Training Room (Virtual/Zoom)",
+  "presenter": "Patricia Nguyen, Compliance Officer",
+  "attendee_count": 24,
+  "consent_obtained": true,
+  "consent_reference": "Standard training recording notice per Employee Handbook Section 8.3",
+  "pii_status": "CLEAN",
+  "quality_scores": {
+    "completeness": 0.75,
+    "reliability": 0.88,
+    "freshness": 0.90,
+    "consistency": 0.82
+  },
+  "key_timestamps": [
+    {"time": "00:02:00", "topic": "TRID tolerance category review"},
+    {"time": "00:12:30", "topic": "Q&A: LO asks about tolerance cure deadline - incorrect assumption corrected"},
+    {"time": "00:18:45", "topic": "E-consent requirements and common errors"},
+    {"time": "00:25:00", "topic": "Q&A: Confusion about CD redisclosure triggers"},
+    {"time": "00:29:30", "topic": "Upcoming CFPB examination preparation"}
+  ],
+  "asr_transcript_excerpt": "Q: 'If we discover a tolerance violation after closing, how long do we have to cure it?' A: 'You have 60 days from consummation to refund the excess... but I want to emphasize, the real issue we're seeing is that our LEs aren't going out within three business days. That's the root cause we need to fix.'",
+  "cross_references": ["EV-010", "EV-020"]
+}

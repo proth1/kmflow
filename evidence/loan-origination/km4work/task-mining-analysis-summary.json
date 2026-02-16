@@ -1,0 +1,106 @@
+{
+  "evidence_id": "EV-034",
+  "title": "Desktop Task Mining Analysis - Loan Processing Operations",
+  "description": "Summary analysis of desktop task mining data collected from 3 senior processors over a 2-week observation period. Data captured application usage patterns, context switching frequency, and time allocation across systems.",
+  "category": "KM4Work",
+  "analysis_period": "2025-10-01 to 2025-10-14",
+  "tool": "UiPath Task Mining (Trial License)",
+  "observed_users": ["P.Davis", "P.Johnson", "P.Garcia"],
+  "total_sessions": 8,
+  "total_events": 2847,
+  "total_observation_hours": 64,
+  "application_time_distribution": {
+    "Encompass LOS": {
+      "percentage": 42.3,
+      "avg_session_minutes": 162,
+      "primary_activities": ["Data entry", "Condition review", "Document upload", "Pipeline management"]
+    },
+    "Microsoft Excel": {
+      "percentage": 14.2,
+      "avg_session_minutes": 54,
+      "primary_activities": ["Stale doc tracking", "Rate lock monitoring", "Ad-hoc calculations"],
+      "finding": "SHADOW_PROCESS - 14.2% of processor time spent in Excel on unofficial tracking"
+    },
+    "Microsoft Outlook": {
+      "percentage": 18.7,
+      "avg_session_minutes": 72,
+      "primary_activities": ["Borrower communication", "UW correspondence", "Vendor follow-up"]
+    },
+    "Chrome Browser": {
+      "percentage": 12.1,
+      "avg_session_minutes": 46,
+      "primary_activities": ["DocuSign status", "Credit portal", "Vendor portals", "Flood cert lookup"]
+    },
+    "Microsoft Teams": {
+      "percentage": 6.8,
+      "avg_session_minutes": 26,
+      "primary_activities": ["Team chat", "Manager updates", "Quick questions"]
+    },
+    "Other": {
+      "percentage": 5.9,
+      "avg_session_minutes": 23,
+      "primary_activities": ["Calculator", "File Explorer", "Adobe PDF", "Snipping Tool"]
+    }
+  },
+  "context_switching": {
+    "avg_switches_per_hour": 47,
+    "avg_switches_per_session": 186,
+    "most_frequent_transition": "Encompass -> Excel (shadow tracker)",
+    "avg_time_before_switch_seconds": 78,
+    "finding": "HIGH_FRAGMENTATION - Average task duration of 78 seconds suggests frequent interruptions and context loss"
+  },
+  "shadow_process_analysis": {
+    "identified_shadow_tools": [
+      {
+        "tool": "Stale_Doc_Tracker_v3.xlsx",
+        "users": ["P.Davis", "P.Johnson"],
+        "avg_daily_interactions": 12,
+        "avg_daily_minutes": 18,
+        "purpose": "Track document expiration dates - workaround for disabled WF-008 alert",
+        "risk": "HIGH - Critical compliance data in uncontrolled local file"
+      },
+      {
+        "tool": "Rate_Lock_Calculator.xlsx",
+        "users": ["P.Davis", "P.Garcia"],
+        "avg_daily_interactions": 4,
+        "avg_daily_minutes": 8,
+        "purpose": "Manual rate lock extension cost calculations",
+        "risk": "MEDIUM - Potential for calculation errors; Encompass has built-in feature"
+      }
+    ],
+    "total_shadow_time_percentage": 14.2,
+    "estimated_annual_hours_wasted": 740,
+    "remediation_recommendation": "Enable WF-008 stale-doc alert in Encompass; configure rate lock extension workflow"
+  },
+  "key_findings": [
+    {
+      "id": "TM-F001",
+      "severity": "HIGH",
+      "finding": "Shadow tracking spreadsheet consumes 14.2% of processor time",
+      "impact": "Compliance risk from uncontrolled data; 740 estimated hours/year wasted across team",
+      "cross_references": ["EV-019", "EV-021", "EV-026"]
+    },
+    {
+      "id": "TM-F002",
+      "severity": "MEDIUM",
+      "finding": "47 application switches per hour indicates high process fragmentation",
+      "impact": "Increased error rate and cognitive load; estimated 15-20% productivity loss from context switching",
+      "cross_references": ["EV-005"]
+    },
+    {
+      "id": "TM-F003",
+      "severity": "MEDIUM",
+      "finding": "Manual credit data re-entry from MeridianCredit portal to Encompass",
+      "impact": "Dual data entry for credit supplements; potential for transcription errors",
+      "cross_references": ["EV-021", "EV-022"]
+    },
+    {
+      "id": "TM-F004",
+      "severity": "LOW",
+      "finding": "Processors use personal calculators for DTI verification instead of Encompass built-in tools",
+      "impact": "Minor efficiency loss; indicates lack of trust in system calculations or inadequate training",
+      "cross_references": ["EV-003", "EV-031"]
+    }
+  ],
+  "cross_references": ["EV-019", "EV-021", "EV-026", "EV-031"]
+}

@@ -1,0 +1,33 @@
+{
+  "evidence_id": "EV-024",
+  "filename": "whiteboard-process-discovery.jpg",
+  "title": "Process Discovery Workshop Whiteboard Capture",
+  "description": "Photograph of whiteboard from Day 2 process discovery workshop with mortgage operations team. Shows hand-drawn as-is process flow with participant annotations highlighting pain points and workarounds.",
+  "category": "Images",
+  "format": "JPEG",
+  "dimensions": "4032x3024",
+  "file_size_bytes": 3241876,
+  "capture_date": "2025-10-02",
+  "captured_by": "S.Chen",
+  "location": "Meridian National Bank - Main Branch, Conference Room 4B",
+  "pii_status": "CLEAN",
+  "quality_scores": {
+    "completeness": 0.78,
+    "reliability": 0.72,
+    "freshness": 0.95,
+    "consistency": 0.60
+  },
+  "annotations": [
+    "Red markers indicate processor-identified bottlenecks",
+    "Yellow sticky notes show unofficial workarounds not in SOPs",
+    "Arrow labeled 'shadow process' between Document Collection and UW Review",
+    "Participant noted: 'We always check the spreadsheet first' (refers to EV-026)"
+  ],
+  "workshop_participants": [
+    "P.Davis (Senior Processor)",
+    "P.Johnson (Processor)",
+    "L.Martinez (Senior LO)",
+    "J.Whitfield (Processing Manager)"
+  ],
+  "cross_references": ["EV-015", "EV-019", "EV-026"]
+}

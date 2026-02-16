@@ -1,0 +1,30 @@
+{
+  "evidence_id": "EV-026",
+  "filename": "stale-doc-tracking-spreadsheet.png",
+  "title": "Shadow Document Tracking Spreadsheet Screenshot",
+  "description": "Screenshot of the unofficial Excel spreadsheet used by processors to track stale document expiration dates. This shadow process was identified during interviews (EV-019) as a workaround for Encompass's disabled stale-doc alert rule (WF-008 in EV-021).",
+  "category": "Images",
+  "format": "PNG",
+  "dimensions": "1920x1080",
+  "file_size_bytes": 342198,
+  "capture_date": "2025-10-20",
+  "captured_by": "D.Okonkwo",
+  "source_system": "Microsoft Excel (Desktop)",
+  "pii_status": "REDACTED",
+  "redaction_notes": "Borrower names replaced with loan IDs; SSNs removed from view",
+  "quality_scores": {
+    "completeness": 0.72,
+    "reliability": 0.68,
+    "freshness": 0.90,
+    "consistency": 0.50
+  },
+  "annotations": [
+    "Spreadsheet maintained by P.Davis on local drive (not shared network)",
+    "Tracks 47 active loans with document expiration dates",
+    "Color coding: Red = expired, Yellow = expiring within 7 days, Green = current",
+    "Formula errors visible in rows 23 and 31 (incorrect date calculations)",
+    "Last modified timestamp shows daily updates - confirms active shadow process"
+  ],
+  "finding": "CONTROL_GAP - Critical document tracking occurs outside auditable systems; no version control or backup",
+  "cross_references": ["EV-014", "EV-019", "EV-021", "EV-034"]
+}

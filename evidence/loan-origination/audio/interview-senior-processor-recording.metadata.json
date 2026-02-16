@@ -1,0 +1,37 @@
+{
+  "evidence_id": "EV-028",
+  "filename": "interview-senior-processor-recording.m4a",
+  "title": "Audio Recording - Senior Loan Processor Interview",
+  "description": "Full audio recording of structured interview with Patricia Davis, Senior Loan Processor. Key discussion topics include the shadow tracking spreadsheet, document collection bottlenecks, and the condition clearing cheat sheet error. Transcript available as EV-019.",
+  "category": "Audio",
+  "format": "M4A (AAC-LC)",
+  "duration_seconds": 3600,
+  "duration_display": "1:00:00",
+  "file_size_bytes": 43276800,
+  "sample_rate": 44100,
+  "channels": 1,
+  "bitrate_kbps": 96,
+  "recording_date": "2025-10-20",
+  "recorded_by": "D.Okonkwo",
+  "location": "Meridian National Bank - Processing Center, Room 2A",
+  "interviewee": "Patricia Davis, Senior Loan Processor",
+  "consent_obtained": true,
+  "consent_reference": "Engagement Letter MNB-2025-LO-001, Section 4.2",
+  "pii_status": "CONTAINS_PII",
+  "pii_notes": "Audio contains staff names and references to specific loan IDs",
+  "quality_scores": {
+    "completeness": 0.90,
+    "reliability": 0.82,
+    "freshness": 0.95,
+    "consistency": 0.75
+  },
+  "key_timestamps": [
+    {"time": "00:03:00", "topic": "Daily workflow and task prioritization"},
+    {"time": "00:14:30", "topic": "Shadow spreadsheet usage and rationale"},
+    {"time": "00:28:00", "topic": "Document collection bottlenecks with borrowers"},
+    {"time": "00:41:15", "topic": "Condition clearing friction with underwriting"},
+    {"time": "00:52:00", "topic": "Cheat sheet - townhouse LTV error discussion"}
+  ],
+  "transcript_reference": "EV-019",
+  "cross_references": ["EV-019", "EV-017", "EV-026"]
+}

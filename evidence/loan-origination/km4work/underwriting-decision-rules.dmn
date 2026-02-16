@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/"
+             xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/"
+             xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/"
+             id="MNB_UW_Decision_Rules"
+             name="Meridian National Bank - Underwriting Decision Rules"
+             namespace="http://meridianbank.example.com/dmn/underwriting">
+
+  <!-- EV-033: DMN 1.3 Decision Table for Underwriting Product Eligibility and Exception Authority -->
+  <!-- Extracted from Encompass business rules configuration (EV-021) and Underwriting SOP (EV-002) -->
+  <!-- NOTE: Townhouse LTV limit is 95% per official policy (EV-001), NOT 97% as shown in cheat sheet (EV-017) -->
+
+  <decision id="ProductEligibility" name="Product Eligibility Determination">
+    <decisionTable id="dt_product_eligibility" hitPolicy="FIRST">
+      <input id="input_loan_type" label="Loan Type">
+        <inputExpression id="ie_loan_type" typeRef="string">
+          <text>loanType</text>
+        </inputExpression>
+        <inputValues id="iv_loan_type">
+          <text>"Conv30Fixed","Conv15Fixed","FHA30Fixed","VA30Fixed","Jumbo30Fixed"</text>
+        </inputValues>
+      </input>
+      <input id="input_credit_score" label="Credit Score">
+        <inputExpression id="ie_credit_score" typeRef="integer">
+          <text>creditScore</text>
+        </inputExpression>
+      </input>
+      <input id="input_ltv" label="LTV Percentage">
+        <inputExpression id="ie_ltv" typeRef="double">
+          <text>ltvPercent</text>
+        </inputExpression>
+      </input>
+      <input id="input_dti_back" label="Back-End DTI">
+        <inputExpression id="ie_dti_back" typeRef="double">
+          <text>dtiBackEnd</text>
+        </inputExpression>
+      </input>
+      <input id="input_property_type" label="Property Type">
+        <inputExpression id="ie_property_type" typeRef="string">
+          <text>propertyType</text>
+        </inputExpression>
+      </input>
+      <output id="output_eligible" label="Eligible" typeRef="boolean" />
+      <output id="output_reason" label="Reason" typeRef="string" />
+      <output id="output_exception_required" label="Exception Required" typeRef="boolean" />
+
+      <!-- Rule 1: Conventional - Standard SFR -->
+      <rule id="rule_conv_sfr_standard">
+        <inputEntry id="ie1_r1"><text>"Conv30Fixed","Conv15Fixed"</text></inputEntry>
+        <inputEntry id="ie2_r1"><text>&gt;= 680</text></inputEntry>
+        <inputEntry id="ie3_r1"><text>&lt;= 97.0</text></inputEntry>
+        <inputEntry id="ie4_r1"><text>&lt;= 45.0</text></inputEntry>
+        <inputEntry id="ie5_r1"><text>"SFR"</text></inputEntry>
+        <outputEntry id="oe1_r1"><text>true</text></outputEntry>
+        <outputEntry id="oe2_r1"><text>"Standard conventional - meets all guidelines"</text></outputEntry>
+        <outputEntry id="oe3_r1"><text>false</text></outputEntry>
+      </rule>
+
+      <!-- Rule 2: Conventional - Townhouse (95% LTV cap per policy EV-001) -->
+      <rule id="rule_conv_townhouse">
+        <inputEntry id="ie1_r2"><text>"Conv30Fixed","Conv15Fixed"</text></inputEntry>
+        <inputEntry id="ie2_r2"><text>&gt;= 680</text></inputEntry>
+        <inputEntry id="ie3_r2"><text>&lt;= 95.0</text></inputEntry>
+        <inputEntry id="ie4_r2"><text>&lt;= 45.0</text></inputEntry>
+        <inputEntry id="ie5_r2"><text>"Townhouse"</text></inputEntry>
+        <outputEntry id="oe1_r2"><text>true</text></outputEntry>
+        <outputEntry id="oe2_r2"><text>"Conventional townhouse - 95% max LTV per policy"</text></outputEntry>
+        <outputEntry id="oe3_r2"><text>false</text></outputEntry>
+      </rule>
+
+      <!-- Rule 3: Conventional - Condo -->
+      <rule id="rule_conv_condo">
+        <inputEntry id="ie1_r3"><text>"Conv30Fixed","Conv15Fixed"</text></inputEntry>
+        <inputEntry id="ie2_r3"><text>&gt;= 700</text></inputEntry>
+        <inputEntry id="ie3_r3"><text>&lt;= 90.0</text></inputEntry>
+        <inputEntry id="ie4_r3"><text>&lt;= 43.0</text></inputEntry>
+        <inputEntry id="ie5_r3"><text>"Condo"</text></inputEntry>
+        <outputEntry id="oe1_r3"><text>true</text></outputEntry>
+        <outputEntry id="oe2_r3"><text>"Conventional condo - tighter guidelines apply"</text></outputEntry>
+        <outputEntry id="oe3_r3"><text>false</text></outputEntry>
+      </rule>
+
+      <!-- Rule 4: FHA - Standard -->
+      <rule id="rule_fha_standard">
+        <inputEntry id="ie1_r4"><text>"FHA30Fixed"</text></inputEntry>
+        <inputEntry id="ie2_r4"><text>&gt;= 580</text></inputEntry>
+        <inputEntry id="ie3_r4"><text>&lt;= 96.5</text></inputEntry>
+        <inputEntry id="ie4_r4"><text>&lt;= 57.0</text></inputEntry>
+        <inputEntry id="ie5_r4"><text>"SFR","Townhouse","Condo"</text></inputEntry>
+        <outputEntry id="oe1_r4"><text>true</text></outputEntry>
+        <outputEntry id="oe2_r4"><text>"FHA eligible - meets minimum requirements"</text></outputEntry>
+        <outputEntry id="oe3_r4"><text>false</text></outputEntry>
+      </rule>
+
+      <!-- Rule 5: VA - Standard -->
+      <rule id="rule_va_standard">
+        <inputEntry id="ie1_r5"><text>"VA30Fixed"</text></inputEntry>
+        <inputEntry id="ie2_r5"><text>&gt;= 620</text></inputEntry>
+        <inputEntry id="ie3_r5"><text>&lt;= 100.0</text></inputEntry>
+        <inputEntry id="ie4_r5"><text>&lt;= 60.0</text></inputEntry>
+        <inputEntry id="ie5_r5"><text>"SFR","Townhouse","Condo"</text></inputEntry>
+        <outputEntry id="oe1_r5"><text>true</text></outputEntry>
+        <outputEntry id="oe2_r5"><text>"VA eligible - 100% financing available"</text></outputEntry>
+        <outputEntry id="oe3_r5"><text>false</text></outputEntry>
+      </rule>
+
+      <!-- Rule 6: Jumbo - Strict requirements -->
+      <rule id="rule_jumbo">
+        <inputEntry id="ie1_r6"><text>"Jumbo30Fixed"</text></inputEntry>
+        <inputEntry id="ie2_r6"><text>&gt;= 720</text></inputEntry>
+        <inputEntry id="ie3_r6"><text>&lt;= 80.0</text></inputEntry>
+        <inputEntry id="ie4_r6"><text>&lt;= 43.0</text></inputEntry>
+        <inputEntry id="ie5_r6"><text>"SFR"</text></inputEntry>
+        <outputEntry id="oe1_r6"><text>true</text></outputEntry>
+        <outputEntry id="oe2_r6"><text>"Jumbo eligible - portfolio product"</text></outputEntry>
+        <outputEntry id="oe3_r6"><text>false</text></outputEntry>
+      </rule>
+
+      <!-- Rule 7: High DTI - Exception required -->
+      <rule id="rule_high_dti_exception">
+        <inputEntry id="ie1_r7"><text>-</text></inputEntry>
+        <inputEntry id="ie2_r7"><text>&gt;= 680</text></inputEntry>
+        <inputEntry id="ie3_r7"><text>-</text></inputEntry>
+        <inputEntry id="ie4_r7"><text>&gt; 45.0</text></inputEntry>
+        <inputEntry id="ie5_r7"><text>-</text></inputEntry>
+        <outputEntry id="oe1_r7"><text>true</text></outputEntry>
+        <outputEntry id="oe2_r7"><text>"DTI exceeds standard - exception approval required"</text></outputEntry>
+        <outputEntry id="oe3_r7"><text>true</text></outputEntry>
+      </rule>
+
+      <!-- Rule 8: Low credit score - Decline -->
+      <rule id="rule_low_credit">
+        <inputEntry id="ie1_r8"><text>-</text></inputEntry>
+        <inputEntry id="ie2_r8"><text>&lt; 580</text></inputEntry>
+        <inputEntry id="ie3_r8"><text>-</text></inputEntry>
+        <inputEntry id="ie4_r8"><text>-</text></inputEntry>
+        <inputEntry id="ie5_r8"><text>-</text></inputEntry>
+        <outputEntry id="oe1_r8"><text>false</text></outputEntry>
+        <outputEntry id="oe2_r8"><text>"Below minimum credit score for all products"</text></outputEntry>
+        <outputEntry id="oe3_r8"><text>false</text></outputEntry>
+      </rule>
+
+      <!-- Rule 9: Catch-all - Not eligible -->
+      <rule id="rule_default">
+        <inputEntry id="ie1_r9"><text>-</text></inputEntry>
+        <inputEntry id="ie2_r9"><text>-</text></inputEntry>
+        <inputEntry id="ie3_r9"><text>-</text></inputEntry>
+        <inputEntry id="ie4_r9"><text>-</text></inputEntry>
+        <inputEntry id="ie5_r9"><text>-</text></inputEntry>
+        <outputEntry id="oe1_r9"><text>false</text></outputEntry>
+        <outputEntry id="oe2_r9"><text>"Does not meet standard eligibility - manual review required"</text></outputEntry>
+        <outputEntry id="oe3_r9"><text>true</text></outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+
+  <decision id="ExceptionAuthority" name="Exception Approval Authority Level">
+    <decisionTable id="dt_exception_authority" hitPolicy="FIRST">
+      <input id="input_exception_type" label="Exception Type">
+        <inputExpression id="ie_exc_type" typeRef="string">
+          <text>exceptionType</text>
+        </inputExpression>
+      </input>
+      <input id="input_loan_amount" label="Loan Amount">
+        <inputExpression id="ie_loan_amount" typeRef="double">
+          <text>loanAmount</text>
+        </inputExpression>
+      </input>
+      <input id="input_compensating_factors" label="Number of Compensating Factors">
+        <inputExpression id="ie_comp_factors" typeRef="integer">
+          <text>compensatingFactorCount</text>
+        </inputExpression>
+      </input>
+      <output id="output_authority" label="Approval Authority" typeRef="string" />
+      <output id="output_sla_hours" label="SLA Hours" typeRef="integer" />
+
+      <!-- Rule 1: Minor DTI exception with compensating factors -->
+      <rule id="rule_exc_minor_dti">
+        <inputEntry id="ie1_ea1"><text>"DTI_OVERRIDE"</text></inputEntry>
+        <inputEntry id="ie2_ea1"><text>&lt;= 500000</text></inputEntry>
+        <inputEntry id="ie3_ea1"><text>&gt;= 2</text></inputEntry>
+        <outputEntry id="oe1_ea1"><text>"Senior Underwriter"</text></outputEntry>
+        <outputEntry id="oe2_ea1"><text>4</text></outputEntry>
+      </rule>
+
+      <!-- Rule 2: Major DTI or high amount -->
+      <rule id="rule_exc_major_dti">
+        <inputEntry id="ie1_ea2"><text>"DTI_OVERRIDE"</text></inputEntry>
+        <inputEntry id="ie2_ea2"><text>&gt; 500000</text></inputEntry>
+        <inputEntry id="ie3_ea2"><text>-</text></inputEntry>
+        <outputEntry id="oe1_ea2"><text>"Underwriting Manager"</text></outputEntry>
+        <outputEntry id="oe2_ea2"><text>8</text></outputEntry>
+      </rule>
+
+      <!-- Rule 3: LTV exception -->
+      <rule id="rule_exc_ltv">
+        <inputEntry id="ie1_ea3"><text>"LTV_EXCEPTION"</text></inputEntry>
+        <inputEntry id="ie2_ea3"><text>-</text></inputEntry>
+        <inputEntry id="ie3_ea3"><text>-</text></inputEntry>
+        <outputEntry id="oe1_ea3"><text>"Underwriting Manager"</text></outputEntry>
+        <outputEntry id="oe2_ea3"><text>8</text></outputEntry>
+      </rule>
+
+      <!-- Rule 4: Policy exception - requires SVP -->
+      <rule id="rule_exc_policy">
+        <inputEntry id="ie1_ea4"><text>"POLICY_EXCEPTION"</text></inputEntry>
+        <inputEntry id="ie2_ea4"><text>-</text></inputEntry>
+        <inputEntry id="ie3_ea4"><text>-</text></inputEntry>
+        <outputEntry id="oe1_ea4"><text>"SVP Credit Risk"</text></outputEntry>
+        <outputEntry id="oe2_ea4"><text>24</text></outputEntry>
+      </rule>
+
+      <!-- Rule 5: Default -->
+      <rule id="rule_exc_default">
+        <inputEntry id="ie1_ea5"><text>-</text></inputEntry>
+        <inputEntry id="ie2_ea5"><text>-</text></inputEntry>
+        <inputEntry id="ie3_ea5"><text>-</text></inputEntry>
+        <outputEntry id="oe1_ea5"><text>"Chief Credit Officer"</text></outputEntry>
+        <outputEntry id="oe2_ea5"><text>48</text></outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+
+</definitions>

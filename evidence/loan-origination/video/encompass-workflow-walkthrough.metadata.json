@@ -1,0 +1,36 @@
+{
+  "evidence_id": "EV-030",
+  "filename": "encompass-workflow-walkthrough.mp4",
+  "title": "Encompass LOS Workflow Walkthrough - Screen Recording",
+  "description": "Screen recording of IT administrator demonstrating the Encompass loan origination workflow from application intake through funding. Covers milestone triggers, automated alerts, role-based access, and integration points. Reveals disabled stale-doc alert rule (WF-008) and manual workarounds.",
+  "category": "Video",
+  "format": "MP4 (H.264/AAC)",
+  "resolution": "1920x1080",
+  "fps": 30,
+  "duration_seconds": 2340,
+  "duration_display": "0:39:00",
+  "file_size_bytes": 234567890,
+  "recording_date": "2025-10-25",
+  "recorded_by": "D.Okonkwo",
+  "source_system": "Encompass LOS v24.3",
+  "presenter": "Kevin Park, IT Systems Administrator",
+  "pii_status": "REDACTED",
+  "redaction_notes": "Test environment used; all borrower data is synthetic",
+  "quality_scores": {
+    "completeness": 0.85,
+    "reliability": 0.90,
+    "freshness": 0.95,
+    "consistency": 0.88
+  },
+  "scene_segments": [
+    {"start": "00:00:00", "end": "00:05:30", "description": "Application intake and initial data entry"},
+    {"start": "00:05:30", "end": "00:12:00", "description": "AUS submission and results processing"},
+    {"start": "00:12:00", "end": "00:18:45", "description": "Document collection tracking and conditions"},
+    {"start": "00:18:45", "end": "00:24:00", "description": "Underwriting queue and assignment rules"},
+    {"start": "00:24:00", "end": "00:28:30", "description": "Closing disclosure generation and compliance checks"},
+    {"start": "00:28:30", "end": "00:32:15", "description": "Funding milestone and post-close QC trigger"},
+    {"start": "00:32:15", "end": "00:36:00", "description": "Workflow rules review - WF-008 stale-doc alert DISABLED"},
+    {"start": "00:36:00", "end": "00:39:00", "description": "Integration endpoints and API health dashboard"}
+  ],
+  "cross_references": ["EV-021", "EV-026", "EV-015"]
+}

@@ -1,0 +1,36 @@
+{
+  "evidence_id": "EV-031",
+  "filename": "branch-observation-lo-interaction.mov",
+  "title": "Branch Observation - Loan Officer Borrower Interaction",
+  "description": "Video recording of in-branch loan officer interaction with walk-in borrower during pre-qualification discussion. Captures actual workflow including dual-entry between paper forms and Encompass, use of rate sheet printouts, and optimistic timeline communication to borrower.",
+  "category": "Video",
+  "format": "MOV (H.264/AAC)",
+  "resolution": "1920x1080",
+  "fps": 30,
+  "duration_seconds": 3180,
+  "duration_display": "0:53:00",
+  "file_size_bytes": 318456789,
+  "recording_date": "2025-10-03",
+  "recorded_by": "S.Chen",
+  "location": "Meridian National Bank - Westside Branch, LO Office",
+  "participants": ["L.Martinez (Loan Officer)", "Walk-in Borrower (consent obtained)"],
+  "consent_obtained": true,
+  "consent_reference": "Signed video consent form on file; Engagement Letter Section 4.2",
+  "pii_status": "CONTAINS_PII",
+  "pii_notes": "Borrower face and voice recorded with consent; no financial documents visible",
+  "quality_scores": {
+    "completeness": 0.82,
+    "reliability": 0.85,
+    "freshness": 0.95,
+    "consistency": 0.70
+  },
+  "observations": [
+    "LO enters data on paper form first, then re-keys into Encompass (dual entry)",
+    "Rate sheet is printed from secondary system - not integrated with Encompass pricing",
+    "LO quotes '30-35 day close' timeline - actual average is 42-45 days per EV-005",
+    "Borrower document checklist handed as photocopy - not generated from Encompass",
+    "LO manually calculates DTI on desk calculator before entering into system"
+  ],
+  "finding": "PROCESS_INEFFICIENCY - Dual data entry and manual calculations increase error risk and cycle time",
+  "cross_references": ["EV-005", "EV-025", "EV-015"]
+}

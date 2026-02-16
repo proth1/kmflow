@@ -1,0 +1,27 @@
+{
+  "evidence_id": "EV-023",
+  "filename": "encompass-pipeline-screenshot.png",
+  "title": "Encompass LOS Pipeline Dashboard Screenshot",
+  "description": "Screenshot of the Encompass loan pipeline dashboard showing active loans, status distribution, and aging metrics as of 2025-10-14. Captured during system walkthrough with IT administrator.",
+  "category": "Images",
+  "format": "PNG",
+  "dimensions": "1920x1080",
+  "file_size_bytes": 487293,
+  "capture_date": "2025-10-14",
+  "captured_by": "D.Okonkwo",
+  "source_system": "Encompass LOS v24.3",
+  "pii_status": "REDACTED",
+  "redaction_notes": "Borrower names and SSN columns masked in screenshot",
+  "quality_scores": {
+    "completeness": 0.85,
+    "reliability": 0.92,
+    "freshness": 0.95,
+    "consistency": 0.88
+  },
+  "annotations": [
+    "Pipeline shows 142 active loans across all stages",
+    "12 loans flagged red for age > 45 days",
+    "Missing consumer direct channel filter - only Retail/Wholesale visible"
+  ],
+  "cross_references": ["EV-004", "EV-021"]
+}

@@ -1,0 +1,56 @@
+case_id,event_id,activity,timestamp,resource,lifecycle_transition,loan_type,loan_amount,channel,notes
+MNB-2024-08001,EVT-001-001,Application Received,2024-07-15T09:23:00,L.Martinez,complete,Conv30Fixed,385000,Retail,
+MNB-2024-08001,EVT-001-002,Initial Disclosure Sent,2024-07-15T14:45:00,SYSTEM,complete,Conv30Fixed,385000,Retail,"Auto-generated LE via Encompass"
+MNB-2024-08001,EVT-001-003,Credit Report Ordered,2024-07-15T14:46:00,SYSTEM,complete,Conv30Fixed,385000,Retail,"MeridianCredit integration"
+MNB-2024-08001,EVT-001-004,Credit Report Received,2024-07-15T14:52:00,SYSTEM,complete,Conv30Fixed,385000,Retail,"Score: 742"
+MNB-2024-08001,EVT-001-005,AUS Submission,2024-07-16T08:15:00,L.Martinez,complete,Conv30Fixed,385000,Retail,"DU submission"
+MNB-2024-08001,EVT-001-006,AUS Result - Approve/Eligible,2024-07-16T08:16:00,SYSTEM,complete,Conv30Fixed,385000,Retail,
+MNB-2024-08001,EVT-001-007,Assigned to Processor,2024-07-16T10:30:00,J.Whitfield,complete,Conv30Fixed,385000,Retail,"Assigned to P.Johnson"
+MNB-2024-08001,EVT-001-008,Document Collection Started,2024-07-17T08:00:00,P.Johnson,start,Conv30Fixed,385000,Retail,
+MNB-2024-08001,EVT-001-009,Appraisal Ordered,2024-07-17T09:15:00,P.Johnson,complete,Conv30Fixed,385000,Retail,"ValuTrac AMC"
+MNB-2024-08001,EVT-001-010,Title Ordered,2024-07-17T09:20:00,P.Johnson,complete,Conv30Fixed,385000,Retail,"ServiceLink"
+MNB-2024-08001,EVT-001-011,Document Collection Completed,2024-07-25T16:00:00,P.Johnson,complete,Conv30Fixed,385000,Retail,"8 calendar days for doc collection"
+MNB-2024-08001,EVT-001-012,Appraisal Received,2024-07-28T11:30:00,SYSTEM,complete,Conv30Fixed,385000,Retail,"Value: $415,000"
+MNB-2024-08001,EVT-001-013,Submitted to Underwriting,2024-07-29T08:45:00,P.Johnson,complete,Conv30Fixed,385000,Retail,
+MNB-2024-08001,EVT-001-014,Underwriting Review Started,2024-07-30T10:00:00,U.Chen,start,Conv30Fixed,385000,Retail,
+MNB-2024-08001,EVT-001-015,Underwriting Decision - Approved with Conditions,2024-07-31T14:30:00,U.Chen,complete,Conv30Fixed,385000,Retail,"3 prior-to-doc conditions"
+MNB-2024-08001,EVT-001-016,Conditions Cleared,2024-08-05T11:00:00,P.Johnson,complete,Conv30Fixed,385000,Retail,
+MNB-2024-08001,EVT-001-017,Clear to Close,2024-08-06T09:00:00,U.Chen,complete,Conv30Fixed,385000,Retail,
+MNB-2024-08001,EVT-001-018,Closing Disclosure Sent,2024-08-08T10:00:00,SYSTEM,complete,Conv30Fixed,385000,Retail,"3-day waiting period starts"
+MNB-2024-08001,EVT-001-019,Closing Scheduled,2024-08-12T09:00:00,P.Johnson,complete,Conv30Fixed,385000,Retail,
+MNB-2024-08001,EVT-001-020,Loan Closed,2024-08-16T14:00:00,SYSTEM,complete,Conv30Fixed,385000,Retail,
+MNB-2024-08001,EVT-001-021,Loan Funded,2024-08-17T10:00:00,SYSTEM,complete,Conv30Fixed,385000,Retail,"32 days application to funding"
+MNB-2024-08010,EVT-010-001,Application Received,2024-08-12T11:00:00,S.Williams,complete,Conv30Fixed,520000,Retail,
+MNB-2024-08010,EVT-010-002,Initial Disclosure Sent,2024-08-12T15:30:00,SYSTEM,complete,Conv30Fixed,520000,Retail,
+MNB-2024-08010,EVT-010-003,Credit Report Ordered,2024-08-12T15:31:00,SYSTEM,complete,Conv30Fixed,520000,Retail,
+MNB-2024-08010,EVT-010-004,Credit Report Received,2024-08-12T15:38:00,SYSTEM,complete,Conv30Fixed,520000,Retail,"Score: 658"
+MNB-2024-08010,EVT-010-005,AUS Submission,2024-08-13T09:00:00,S.Williams,complete,Conv30Fixed,520000,Retail,
+MNB-2024-08010,EVT-010-006,AUS Result - Refer/Eligible,2024-08-13T09:01:00,SYSTEM,complete,Conv30Fixed,520000,Retail,"Manual UW required"
+MNB-2024-08010,EVT-010-007,Assigned to Processor,2024-08-13T11:00:00,J.Whitfield,complete,Conv30Fixed,520000,Retail,"Assigned to P.Garcia"
+MNB-2024-08010,EVT-010-008,Document Collection Started,2024-08-14T08:30:00,P.Garcia,start,Conv30Fixed,520000,Retail,
+MNB-2024-08010,EVT-010-009,Appraisal Ordered,2024-08-14T09:00:00,P.Garcia,complete,Conv30Fixed,520000,Retail,
+MNB-2024-08010,EVT-010-010,Document Collection Completed,2024-08-28T16:00:00,P.Garcia,complete,Conv30Fixed,520000,Retail,"14 days - borrower delays"
+MNB-2024-08010,EVT-010-011,Appraisal Received,2024-08-30T10:00:00,SYSTEM,complete,Conv30Fixed,520000,Retail,"Value: $495,000 - below purchase price"
+MNB-2024-08010,EVT-010-012,Submitted to Underwriting,2024-09-02T08:30:00,P.Garcia,complete,Conv30Fixed,520000,Retail,
+MNB-2024-08010,EVT-010-013,Underwriting Review Started,2024-09-03T14:00:00,U.Patel,start,Conv30Fixed,520000,Retail,"Manual underwrite"
+MNB-2024-08010,EVT-010-014,Underwriting Decision - Denied,2024-09-05T11:00:00,U.Patel,complete,Conv30Fixed,520000,Retail,"LTV exceeds limits based on appraised value; insufficient reserves"
+MNB-2024-08010,EVT-010-015,Adverse Action Notice Sent,2024-09-06T10:00:00,SYSTEM,complete,Conv30Fixed,520000,Retail,
+MNB-2024-08008,EVT-008-001,Application Received,2024-08-05T10:15:00,R.Thompson,complete,FHA30Fixed,175000,Retail,
+MNB-2024-08008,EVT-008-002,Initial Disclosure Sent,2024-08-05T14:00:00,SYSTEM,complete,FHA30Fixed,175000,Retail,
+MNB-2024-08008,EVT-008-003,Credit Report Received,2024-08-05T14:10:00,SYSTEM,complete,FHA30Fixed,175000,Retail,"Score: 545"
+MNB-2024-08008,EVT-008-004,AUS Submission,2024-08-06T08:30:00,R.Thompson,complete,FHA30Fixed,175000,Retail,
+MNB-2024-08008,EVT-008-005,AUS Result - Refer/Ineligible,2024-08-06T08:31:00,SYSTEM,complete,FHA30Fixed,175000,Retail,"Below FHA minimum 580 FICO"
+MNB-2024-08008,EVT-008-006,Assigned to Processor,2024-08-06T10:00:00,J.Whitfield,complete,FHA30Fixed,175000,Retail,"Assigned to P.Davis"
+MNB-2024-08008,EVT-008-007,Submitted to Underwriting,2024-08-07T09:00:00,P.Davis,complete,FHA30Fixed,175000,Retail,"Expedited - likely denial"
+MNB-2024-08008,EVT-008-008,Underwriting Decision - Denied,2024-08-08T10:30:00,U.Ramirez,complete,FHA30Fixed,175000,Retail,"Credit score below minimum; collections in past 12 months"
+MNB-2024-08008,EVT-008-009,Adverse Action Notice Sent,2024-08-09T10:00:00,SYSTEM,complete,FHA30Fixed,175000,Retail,
+MNB-2024-08017,EVT-017-001,Application Received,2024-09-03T13:30:00,L.Martinez,complete,Conv30Fixed,445000,Retail,
+MNB-2024-08017,EVT-017-002,Initial Disclosure Sent,2024-09-03T16:00:00,SYSTEM,complete,Conv30Fixed,445000,Retail,
+MNB-2024-08017,EVT-017-003,Credit Report Received,2024-09-03T16:08:00,SYSTEM,complete,Conv30Fixed,445000,Retail,"Score: 731"
+MNB-2024-08017,EVT-017-004,AUS Submission,2024-09-04T08:45:00,L.Martinez,complete,Conv30Fixed,445000,Retail,
+MNB-2024-08017,EVT-017-005,AUS Result - Approve/Eligible,2024-09-04T08:46:00,SYSTEM,complete,Conv30Fixed,445000,Retail,
+MNB-2024-08017,EVT-017-006,Assigned to Processor,2024-09-04T11:00:00,J.Whitfield,complete,Conv30Fixed,445000,Retail,"Assigned to P.Johnson"
+MNB-2024-08017,EVT-017-007,Document Collection Started,2024-09-05T08:00:00,P.Johnson,start,Conv30Fixed,445000,Retail,
+MNB-2024-08017,EVT-017-008,Appraisal Ordered,2024-09-05T09:30:00,P.Johnson,complete,Conv30Fixed,445000,Retail,
+MNB-2024-08017,EVT-017-009,Borrower Withdrawal Request,2024-09-18T14:00:00,L.Martinez,complete,Conv30Fixed,445000,Retail,"Borrower found another lender with better rate"
+MNB-2024-08017,EVT-017-010,Loan Withdrawn,2024-09-18T16:00:00,SYSTEM,complete,Conv30Fixed,445000,Retail,"15 days in pipeline"

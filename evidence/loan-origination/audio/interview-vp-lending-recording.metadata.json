@@ -1,0 +1,37 @@
+{
+  "evidence_id": "EV-027",
+  "filename": "interview-vp-lending-recording.m4a",
+  "title": "Audio Recording - VP of Mortgage Lending Interview",
+  "description": "Full audio recording of the structured interview with Robert Thornton, VP of Mortgage Lending. Recording was made with participant consent per engagement letter Section 4.2. Transcript available as EV-018.",
+  "category": "Audio",
+  "format": "M4A (AAC-LC)",
+  "duration_seconds": 4500,
+  "duration_display": "1:15:00",
+  "file_size_bytes": 54230400,
+  "sample_rate": 44100,
+  "channels": 1,
+  "bitrate_kbps": 96,
+  "recording_date": "2025-10-18",
+  "recorded_by": "S.Chen",
+  "location": "Meridian National Bank - Executive Conference Room",
+  "interviewee": "Robert Thornton, VP of Mortgage Lending",
+  "consent_obtained": true,
+  "consent_reference": "Engagement Letter MNB-2025-LO-001, Section 4.2",
+  "pii_status": "CONTAINS_PII",
+  "pii_notes": "Audio contains names of staff members; no borrower PII discussed",
+  "quality_scores": {
+    "completeness": 0.88,
+    "reliability": 0.80,
+    "freshness": 0.95,
+    "consistency": 0.82
+  },
+  "key_timestamps": [
+    {"time": "00:04:30", "topic": "Organizational structure and reporting lines"},
+    {"time": "00:18:15", "topic": "Technology gaps and Encompass limitations"},
+    {"time": "00:32:00", "topic": "Exception volume and approval process"},
+    {"time": "00:48:45", "topic": "Vendor management concerns - ValuTrac"},
+    {"time": "01:02:30", "topic": "Consumer direct channel plans"}
+  ],
+  "transcript_reference": "EV-018",
+  "cross_references": ["EV-018", "EV-001", "EV-021"]
+}

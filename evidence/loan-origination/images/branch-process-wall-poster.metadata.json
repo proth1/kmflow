@@ -1,0 +1,29 @@
+{
+  "evidence_id": "EV-025",
+  "filename": "branch-process-wall-poster.jpg",
+  "title": "Branch Office Loan Process Wall Poster",
+  "description": "Photograph of laminated loan origination process poster displayed in branch operations area. Poster is dated 2022 and shows outdated process flow with 30-day target timeline, which conflicts with current average cycle times of 42-45 days.",
+  "category": "Images",
+  "format": "JPEG",
+  "dimensions": "3024x4032",
+  "file_size_bytes": 2876543,
+  "capture_date": "2025-10-03",
+  "captured_by": "D.Okonkwo",
+  "location": "Meridian National Bank - Westside Branch",
+  "pii_status": "CLEAN",
+  "quality_scores": {
+    "completeness": 0.65,
+    "reliability": 0.55,
+    "freshness": 0.30,
+    "consistency": 0.45
+  },
+  "annotations": [
+    "Poster dated 'Revised: March 2022' - over 3 years old",
+    "Shows 30-day close target vs actual 42-45 day average (EV-005)",
+    "Missing FHA Streamline and VA IRRRL products added in 2023",
+    "Does not reflect Encompass v24 workflow changes",
+    "Handwritten note in margin: 'See Patricia for current steps'"
+  ],
+  "finding": "INCONSISTENCY - Displayed process guidance does not match current practice or system configuration",
+  "cross_references": ["EV-005", "EV-015", "EV-021"]
+}
