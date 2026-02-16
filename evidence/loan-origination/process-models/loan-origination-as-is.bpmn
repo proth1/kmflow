@@ -1,0 +1,661 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:modeler="http://camunda.org/schema/modeler/1.0"
+                  id="Definitions_1"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="KMFlow Platform"
+                  exporterVersion="1.0.0"
+                  modeler:executionPlatform="Camunda Platform"
+                  modeler:executionPlatformVersion="7.19.0">
+
+  <!--
+    Meridian National Bank - Residential Mortgage Loan Origination (As-Is)
+    Model Version: 1.2
+    Last Updated: 2023-04-15
+    Author: Process Excellence Team - Karen Mitchell
+
+    NOTE: This model was last updated April 2023 and may not reflect
+    recent changes to the Consumer Direct channel (launched Q3 2023)
+    or the updated exception approval matrix (revised Q1 2024).
+  -->
+
+  <bpmn:collaboration id="Collaboration_LoanOrigination">
+    <bpmn:participant id="Participant_MNB" name="Meridian National Bank - Loan Origination" processRef="Process_LoanOrigination" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_LoanOrigination" name="Residential Mortgage Loan Origination" isExecutable="true">
+
+    <!-- Lanes -->
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_LO" name="Loan Officer">
+        <bpmn:flowNodeRef>Start_Application</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CollectApplication</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PullCredit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RunAUS</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DeliverLE</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_IntentToProceed</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ObtainIntent</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_NoIntent</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Processor" name="Loan Processor">
+        <bpmn:flowNodeRef>Task_SetupFile</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_OrderServices</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CollectDocs</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ValidateDocs</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_DocsComplete</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SubmitToUW</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ClearConditions</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PrepareClosing</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DeliverCD</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CoordinateClosing</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Underwriter" name="Underwriter">
+        <bpmn:flowNodeRef>Task_ReviewFile</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AnalyzeCredit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_VerifyIncome</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReviewAppraisal</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_UWDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_IssueConditions</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DenyLoan</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SuspendLoan</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReviewClearedConditions</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ConditionsCleared</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_IssueCTC</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Denied</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Closer" name="Closer / Post-Close">
+        <bpmn:flowNodeRef>Task_ExecuteClosing</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_FundLoan</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PostCloseQC</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ShipToInvestor</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Funded</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <!-- Start Event -->
+    <bpmn:startEvent id="Start_Application" name="Borrower Requests&#10;Mortgage">
+      <bpmn:outgoing>Flow_01</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <!-- LO Activities -->
+    <bpmn:task id="Task_CollectApplication" name="Collect URLA/1003&#10;Application">
+      <bpmn:incoming>Flow_01</bpmn:incoming>
+      <bpmn:outgoing>Flow_02</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_PullCredit" name="Pull Tri-Merge&#10;Credit Report">
+      <bpmn:incoming>Flow_02</bpmn:incoming>
+      <bpmn:outgoing>Flow_03</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_RunAUS" name="Run AUS&#10;(DU/LP/TOTAL)">
+      <bpmn:incoming>Flow_03</bpmn:incoming>
+      <bpmn:outgoing>Flow_04</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_DeliverLE" name="Generate and Deliver&#10;Loan Estimate">
+      <bpmn:documentation>Must be delivered within 3 business days of completed application (TRID requirement)</bpmn:documentation>
+      <bpmn:incoming>Flow_04</bpmn:incoming>
+      <bpmn:outgoing>Flow_05</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_ObtainIntent" name="Obtain Intent&#10;to Proceed">
+      <bpmn:incoming>Flow_05</bpmn:incoming>
+      <bpmn:outgoing>Flow_06</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_IntentToProceed" name="Borrower&#10;Proceeds?">
+      <bpmn:incoming>Flow_06</bpmn:incoming>
+      <bpmn:outgoing>Flow_07_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_07_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:endEvent id="End_NoIntent" name="Application&#10;Withdrawn">
+      <bpmn:incoming>Flow_07_No</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Processor Activities -->
+    <bpmn:task id="Task_SetupFile" name="Setup Loan File&#10;in Encompass">
+      <bpmn:incoming>Flow_07_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_08</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_OrderServices" name="Order Third-Party&#10;Services">
+      <bpmn:documentation>Appraisal (ValuTrac AMC), Title, Flood Cert, VOE/VOD</bpmn:documentation>
+      <bpmn:incoming>Flow_08</bpmn:incoming>
+      <bpmn:outgoing>Flow_09</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_CollectDocs" name="Collect Borrower&#10;Documents">
+      <bpmn:incoming>Flow_09</bpmn:incoming>
+      <bpmn:incoming>Flow_DocsIncomplete</bpmn:incoming>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_ValidateDocs" name="Validate and Index&#10;Documents">
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+      <bpmn:outgoing>Flow_11</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_DocsComplete" name="All Docs&#10;Complete?">
+      <bpmn:incoming>Flow_11</bpmn:incoming>
+      <bpmn:outgoing>Flow_12_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_DocsIncomplete</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_SubmitToUW" name="Submit File to&#10;Underwriting Queue">
+      <bpmn:incoming>Flow_12_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_13</bpmn:outgoing>
+    </bpmn:task>
+
+    <!-- Underwriter Activities -->
+    <bpmn:task id="Task_ReviewFile" name="Initial File Review&#10;(30-min Checklist)">
+      <bpmn:incoming>Flow_13</bpmn:incoming>
+      <bpmn:incoming>Flow_FromSuspension</bpmn:incoming>
+      <bpmn:outgoing>Flow_14</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_AnalyzeCredit" name="Analyze Credit&#10;and DTI">
+      <bpmn:incoming>Flow_14</bpmn:incoming>
+      <bpmn:outgoing>Flow_15</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_VerifyIncome" name="Verify Income&#10;and Assets">
+      <bpmn:incoming>Flow_15</bpmn:incoming>
+      <bpmn:outgoing>Flow_16</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_ReviewAppraisal" name="Review Appraisal&#10;and Collateral">
+      <bpmn:incoming>Flow_16</bpmn:incoming>
+      <bpmn:outgoing>Flow_17</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_UWDecision" name="UW&#10;Decision?">
+      <bpmn:incoming>Flow_17</bpmn:incoming>
+      <bpmn:outgoing>Flow_Approve</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Deny</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Suspend</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_IssueConditions" name="Issue Approval&#10;with Conditions">
+      <bpmn:incoming>Flow_Approve</bpmn:incoming>
+      <bpmn:outgoing>Flow_18</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_DenyLoan" name="Issue Denial&#10;(Adverse Action)">
+      <bpmn:incoming>Flow_Deny</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToDeniedEnd</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:endEvent id="End_Denied" name="Loan Denied">
+      <bpmn:incoming>Flow_ToDeniedEnd</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:task id="Task_SuspendLoan" name="Suspend - Request&#10;Additional Docs">
+      <bpmn:incoming>Flow_Suspend</bpmn:incoming>
+      <bpmn:outgoing>Flow_FromSuspension</bpmn:outgoing>
+    </bpmn:task>
+
+    <!-- Condition Clearing -->
+    <bpmn:task id="Task_ClearConditions" name="Clear UW&#10;Conditions">
+      <bpmn:incoming>Flow_18</bpmn:incoming>
+      <bpmn:outgoing>Flow_19</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_ReviewClearedConditions" name="Review Cleared&#10;Conditions">
+      <bpmn:incoming>Flow_19</bpmn:incoming>
+      <bpmn:outgoing>Flow_20</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="Gateway_ConditionsCleared" name="All Conditions&#10;Satisfied?">
+      <bpmn:incoming>Flow_20</bpmn:incoming>
+      <bpmn:outgoing>Flow_21_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_21_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_IssueCTC" name="Issue Clear&#10;to Close">
+      <bpmn:incoming>Flow_21_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_22</bpmn:outgoing>
+    </bpmn:task>
+
+    <!-- Pre-Close and Close -->
+    <bpmn:task id="Task_PrepareClosing" name="Prepare Closing&#10;Disclosure">
+      <bpmn:incoming>Flow_22</bpmn:incoming>
+      <bpmn:outgoing>Flow_23</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_DeliverCD" name="Deliver CD&#10;(3-day wait)">
+      <bpmn:documentation>CD must be received 3 business days before consummation (TRID)</bpmn:documentation>
+      <bpmn:incoming>Flow_23</bpmn:incoming>
+      <bpmn:outgoing>Flow_24</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_CoordinateClosing" name="Coordinate&#10;Closing Details">
+      <bpmn:incoming>Flow_24</bpmn:incoming>
+      <bpmn:outgoing>Flow_25</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_ExecuteClosing" name="Execute Closing&#10;(Wet-Sign/eClose)">
+      <bpmn:incoming>Flow_25</bpmn:incoming>
+      <bpmn:outgoing>Flow_26</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_FundLoan" name="Fund Loan&#10;(Wire Transfer)">
+      <bpmn:incoming>Flow_26</bpmn:incoming>
+      <bpmn:outgoing>Flow_27</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_PostCloseQC" name="Post-Close QC&#10;Review (10% sample)">
+      <bpmn:incoming>Flow_27</bpmn:incoming>
+      <bpmn:outgoing>Flow_28</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_ShipToInvestor" name="Ship to Investor&#10;(FNMA/FHLMC/GNMA)">
+      <bpmn:incoming>Flow_28</bpmn:incoming>
+      <bpmn:outgoing>Flow_29</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:endEvent id="End_Funded" name="Loan Funded&#10;and Shipped">
+      <bpmn:incoming>Flow_29</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="Flow_01" sourceRef="Start_Application" targetRef="Task_CollectApplication" />
+    <bpmn:sequenceFlow id="Flow_02" sourceRef="Task_CollectApplication" targetRef="Task_PullCredit" />
+    <bpmn:sequenceFlow id="Flow_03" sourceRef="Task_PullCredit" targetRef="Task_RunAUS" />
+    <bpmn:sequenceFlow id="Flow_04" sourceRef="Task_RunAUS" targetRef="Task_DeliverLE" />
+    <bpmn:sequenceFlow id="Flow_05" sourceRef="Task_DeliverLE" targetRef="Task_ObtainIntent" />
+    <bpmn:sequenceFlow id="Flow_06" sourceRef="Task_ObtainIntent" targetRef="Gateway_IntentToProceed" />
+    <bpmn:sequenceFlow id="Flow_07_Yes" name="Yes" sourceRef="Gateway_IntentToProceed" targetRef="Task_SetupFile" />
+    <bpmn:sequenceFlow id="Flow_07_No" name="No" sourceRef="Gateway_IntentToProceed" targetRef="End_NoIntent" />
+    <bpmn:sequenceFlow id="Flow_08" sourceRef="Task_SetupFile" targetRef="Task_OrderServices" />
+    <bpmn:sequenceFlow id="Flow_09" sourceRef="Task_OrderServices" targetRef="Task_CollectDocs" />
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_CollectDocs" targetRef="Task_ValidateDocs" />
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Task_ValidateDocs" targetRef="Gateway_DocsComplete" />
+    <bpmn:sequenceFlow id="Flow_12_Yes" name="Yes" sourceRef="Gateway_DocsComplete" targetRef="Task_SubmitToUW" />
+    <bpmn:sequenceFlow id="Flow_DocsIncomplete" name="No" sourceRef="Gateway_DocsComplete" targetRef="Task_CollectDocs" />
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Task_SubmitToUW" targetRef="Task_ReviewFile" />
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="Task_ReviewFile" targetRef="Task_AnalyzeCredit" />
+    <bpmn:sequenceFlow id="Flow_15" sourceRef="Task_AnalyzeCredit" targetRef="Task_VerifyIncome" />
+    <bpmn:sequenceFlow id="Flow_16" sourceRef="Task_VerifyIncome" targetRef="Task_ReviewAppraisal" />
+    <bpmn:sequenceFlow id="Flow_17" sourceRef="Task_ReviewAppraisal" targetRef="Gateway_UWDecision" />
+    <bpmn:sequenceFlow id="Flow_Approve" name="Approve" sourceRef="Gateway_UWDecision" targetRef="Task_IssueConditions" />
+    <bpmn:sequenceFlow id="Flow_Deny" name="Deny" sourceRef="Gateway_UWDecision" targetRef="Task_DenyLoan" />
+    <bpmn:sequenceFlow id="Flow_Suspend" name="Suspend" sourceRef="Gateway_UWDecision" targetRef="Task_SuspendLoan" />
+    <bpmn:sequenceFlow id="Flow_ToDeniedEnd" sourceRef="Task_DenyLoan" targetRef="End_Denied" />
+    <bpmn:sequenceFlow id="Flow_FromSuspension" sourceRef="Task_SuspendLoan" targetRef="Task_ReviewFile" />
+    <bpmn:sequenceFlow id="Flow_18" sourceRef="Task_IssueConditions" targetRef="Task_ClearConditions" />
+    <bpmn:sequenceFlow id="Flow_19" sourceRef="Task_ClearConditions" targetRef="Task_ReviewClearedConditions" />
+    <bpmn:sequenceFlow id="Flow_20" sourceRef="Task_ReviewClearedConditions" targetRef="Gateway_ConditionsCleared" />
+    <bpmn:sequenceFlow id="Flow_21_Yes" name="Yes" sourceRef="Gateway_ConditionsCleared" targetRef="Task_IssueCTC" />
+    <bpmn:sequenceFlow id="Flow_21_No" name="No" sourceRef="Gateway_ConditionsCleared" targetRef="Task_ClearConditions" />
+    <bpmn:sequenceFlow id="Flow_22" sourceRef="Task_IssueCTC" targetRef="Task_PrepareClosing" />
+    <bpmn:sequenceFlow id="Flow_23" sourceRef="Task_PrepareClosing" targetRef="Task_DeliverCD" />
+    <bpmn:sequenceFlow id="Flow_24" sourceRef="Task_DeliverCD" targetRef="Task_CoordinateClosing" />
+    <bpmn:sequenceFlow id="Flow_25" sourceRef="Task_CoordinateClosing" targetRef="Task_ExecuteClosing" />
+    <bpmn:sequenceFlow id="Flow_26" sourceRef="Task_ExecuteClosing" targetRef="Task_FundLoan" />
+    <bpmn:sequenceFlow id="Flow_27" sourceRef="Task_FundLoan" targetRef="Task_PostCloseQC" />
+    <bpmn:sequenceFlow id="Flow_28" sourceRef="Task_PostCloseQC" targetRef="Task_ShipToInvestor" />
+    <bpmn:sequenceFlow id="Flow_29" sourceRef="Task_ShipToInvestor" targetRef="End_Funded" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_LoanOrigination">
+      <bpmndi:BPMNShape id="Participant_MNB_di" bpmnElement="Participant_MNB" isHorizontal="true">
+        <dc:Bounds x="160" y="60" width="3200" height="1000" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+
+      <!-- Lane shapes -->
+      <bpmndi:BPMNShape id="Lane_LO_di" bpmnElement="Lane_LO" isHorizontal="true">
+        <dc:Bounds x="190" y="60" width="3170" height="250" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Processor_di" bpmnElement="Lane_Processor" isHorizontal="true">
+        <dc:Bounds x="190" y="310" width="3170" height="250" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Underwriter_di" bpmnElement="Lane_Underwriter" isHorizontal="true">
+        <dc:Bounds x="190" y="560" width="3170" height="250" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Closer_di" bpmnElement="Lane_Closer" isHorizontal="true">
+        <dc:Bounds x="190" y="810" width="3170" height="250" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+
+      <!-- LO shapes -->
+      <bpmndi:BPMNShape id="Start_Application_di" bpmnElement="Start_Application">
+        <dc:Bounds x="242" y="172" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="220" y="215" width="80" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CollectApplication_di" bpmnElement="Task_CollectApplication">
+        <dc:Bounds x="330" y="150" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PullCredit_di" bpmnElement="Task_PullCredit">
+        <dc:Bounds x="480" y="150" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RunAUS_di" bpmnElement="Task_RunAUS">
+        <dc:Bounds x="630" y="150" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_DeliverLE_di" bpmnElement="Task_DeliverLE">
+        <dc:Bounds x="780" y="150" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ObtainIntent_di" bpmnElement="Task_ObtainIntent">
+        <dc:Bounds x="930" y="150" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_IntentToProceed_di" bpmnElement="Gateway_IntentToProceed" isMarkerVisible="true">
+        <dc:Bounds x="1085" y="165" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1080" y="128" width="60" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_NoIntent_di" bpmnElement="End_NoIntent">
+        <dc:Bounds x="1192" y="172" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1175" y="215" width="70" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Processor shapes -->
+      <bpmndi:BPMNShape id="Task_SetupFile_di" bpmnElement="Task_SetupFile">
+        <dc:Bounds x="1060" y="390" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_OrderServices_di" bpmnElement="Task_OrderServices">
+        <dc:Bounds x="1210" y="390" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CollectDocs_di" bpmnElement="Task_CollectDocs">
+        <dc:Bounds x="1360" y="390" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ValidateDocs_di" bpmnElement="Task_ValidateDocs">
+        <dc:Bounds x="1510" y="390" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_DocsComplete_di" bpmnElement="Gateway_DocsComplete" isMarkerVisible="true">
+        <dc:Bounds x="1665" y="405" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1660" y="368" width="60" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SubmitToUW_di" bpmnElement="Task_SubmitToUW">
+        <dc:Bounds x="1770" y="390" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ClearConditions_di" bpmnElement="Task_ClearConditions">
+        <dc:Bounds x="2210" y="390" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PrepareClosing_di" bpmnElement="Task_PrepareClosing">
+        <dc:Bounds x="2610" y="390" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_DeliverCD_di" bpmnElement="Task_DeliverCD">
+        <dc:Bounds x="2760" y="390" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CoordinateClosing_di" bpmnElement="Task_CoordinateClosing">
+        <dc:Bounds x="2910" y="390" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+
+      <!-- Underwriter shapes -->
+      <bpmndi:BPMNShape id="Task_ReviewFile_di" bpmnElement="Task_ReviewFile">
+        <dc:Bounds x="1770" y="640" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AnalyzeCredit_di" bpmnElement="Task_AnalyzeCredit">
+        <dc:Bounds x="1920" y="640" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_VerifyIncome_di" bpmnElement="Task_VerifyIncome">
+        <dc:Bounds x="2070" y="640" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReviewAppraisal_di" bpmnElement="Task_ReviewAppraisal">
+        <dc:Bounds x="2210" y="640" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_UWDecision_di" bpmnElement="Gateway_UWDecision" isMarkerVisible="true">
+        <dc:Bounds x="2365" y="655" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2363" y="618" width="54" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_IssueConditions_di" bpmnElement="Task_IssueConditions">
+        <dc:Bounds x="2210" y="570" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_DenyLoan_di" bpmnElement="Task_DenyLoan">
+        <dc:Bounds x="2470" y="710" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Denied_di" bpmnElement="End_Denied">
+        <dc:Bounds x="2622" y="732" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2610" y="775" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SuspendLoan_di" bpmnElement="Task_SuspendLoan">
+        <dc:Bounds x="2470" y="630" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReviewClearedConditions_di" bpmnElement="Task_ReviewClearedConditions">
+        <dc:Bounds x="2360" y="570" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_ConditionsCleared_di" bpmnElement="Gateway_ConditionsCleared" isMarkerVisible="true">
+        <dc:Bounds x="2495" y="575" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2480" y="545" width="80" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_IssueCTC_di" bpmnElement="Task_IssueCTC">
+        <dc:Bounds x="2580" y="570" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+
+      <!-- Closer shapes -->
+      <bpmndi:BPMNShape id="Task_ExecuteClosing_di" bpmnElement="Task_ExecuteClosing">
+        <dc:Bounds x="2910" y="880" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_FundLoan_di" bpmnElement="Task_FundLoan">
+        <dc:Bounds x="3060" y="880" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PostCloseQC_di" bpmnElement="Task_PostCloseQC">
+        <dc:Bounds x="3060" y="830" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ShipToInvestor_di" bpmnElement="Task_ShipToInvestor">
+        <dc:Bounds x="3210" y="880" width="151" height="76" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Funded_di" bpmnElement="End_Funded">
+        <dc:Bounds x="3332" y="902" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3315" y="945" width="70" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Sequence Flow edges -->
+      <bpmndi:BPMNEdge id="Flow_01_di" bpmnElement="Flow_01">
+        <di:waypoint x="278" y="190" />
+        <di:waypoint x="330" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_02_di" bpmnElement="Flow_02">
+        <di:waypoint x="430" y="190" />
+        <di:waypoint x="480" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_03_di" bpmnElement="Flow_03">
+        <di:waypoint x="580" y="190" />
+        <di:waypoint x="630" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_04_di" bpmnElement="Flow_04">
+        <di:waypoint x="730" y="190" />
+        <di:waypoint x="780" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_05_di" bpmnElement="Flow_05">
+        <di:waypoint x="880" y="190" />
+        <di:waypoint x="930" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_06_di" bpmnElement="Flow_06">
+        <di:waypoint x="1030" y="190" />
+        <di:waypoint x="1085" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_07_Yes_di" bpmnElement="Flow_07_Yes">
+        <di:waypoint x="1110" y="215" />
+        <di:waypoint x="1110" y="390" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_07_No_di" bpmnElement="Flow_07_No">
+        <di:waypoint x="1135" y="190" />
+        <di:waypoint x="1192" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_08_di" bpmnElement="Flow_08">
+        <di:waypoint x="1160" y="430" />
+        <di:waypoint x="1210" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_09_di" bpmnElement="Flow_09">
+        <di:waypoint x="1310" y="430" />
+        <di:waypoint x="1360" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_10_di" bpmnElement="Flow_10">
+        <di:waypoint x="1460" y="430" />
+        <di:waypoint x="1510" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_11_di" bpmnElement="Flow_11">
+        <di:waypoint x="1610" y="430" />
+        <di:waypoint x="1665" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_12_Yes_di" bpmnElement="Flow_12_Yes">
+        <di:waypoint x="1715" y="430" />
+        <di:waypoint x="1770" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_DocsIncomplete_di" bpmnElement="Flow_DocsIncomplete">
+        <di:waypoint x="1690" y="455" />
+        <di:waypoint x="1690" y="500" />
+        <di:waypoint x="1410" y="500" />
+        <di:waypoint x="1410" y="470" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_13_di" bpmnElement="Flow_13">
+        <di:waypoint x="1820" y="470" />
+        <di:waypoint x="1820" y="640" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_14_di" bpmnElement="Flow_14">
+        <di:waypoint x="1870" y="680" />
+        <di:waypoint x="1920" y="680" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_15_di" bpmnElement="Flow_15">
+        <di:waypoint x="2020" y="680" />
+        <di:waypoint x="2070" y="680" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_16_di" bpmnElement="Flow_16">
+        <di:waypoint x="2170" y="680" />
+        <di:waypoint x="2210" y="680" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_17_di" bpmnElement="Flow_17">
+        <di:waypoint x="2310" y="680" />
+        <di:waypoint x="2365" y="680" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Approve_di" bpmnElement="Flow_Approve">
+        <di:waypoint x="2390" y="655" />
+        <di:waypoint x="2390" y="600" />
+        <di:waypoint x="2360" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Deny_di" bpmnElement="Flow_Deny">
+        <di:waypoint x="2390" y="705" />
+        <di:waypoint x="2390" y="750" />
+        <di:waypoint x="2470" y="750" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Suspend_di" bpmnElement="Flow_Suspend">
+        <di:waypoint x="2415" y="680" />
+        <di:waypoint x="2443" y="680" />
+        <di:waypoint x="2443" y="660" />
+        <di:waypoint x="2470" y="660" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToDeniedEnd_di" bpmnElement="Flow_ToDeniedEnd">
+        <di:waypoint x="2570" y="750" />
+        <di:waypoint x="2622" y="750" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_FromSuspension_di" bpmnElement="Flow_FromSuspension">
+        <di:waypoint x="2520" y="630" />
+        <di:waypoint x="2520" y="610" />
+        <di:waypoint x="1750" y="610" />
+        <di:waypoint x="1750" y="680" />
+        <di:waypoint x="1770" y="680" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_18_di" bpmnElement="Flow_18">
+        <di:waypoint x="2260" y="570" />
+        <di:waypoint x="2260" y="470" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_19_di" bpmnElement="Flow_19">
+        <di:waypoint x="2310" y="430" />
+        <di:waypoint x="2335" y="430" />
+        <di:waypoint x="2335" y="600" />
+        <di:waypoint x="2360" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_20_di" bpmnElement="Flow_20">
+        <di:waypoint x="2460" y="600" />
+        <di:waypoint x="2495" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_21_Yes_di" bpmnElement="Flow_21_Yes">
+        <di:waypoint x="2545" y="600" />
+        <di:waypoint x="2580" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_21_No_di" bpmnElement="Flow_21_No">
+        <di:waypoint x="2520" y="575" />
+        <di:waypoint x="2520" y="430" />
+        <di:waypoint x="2310" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_22_di" bpmnElement="Flow_22">
+        <di:waypoint x="2630" y="570" />
+        <di:waypoint x="2630" y="470" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_23_di" bpmnElement="Flow_23">
+        <di:waypoint x="2710" y="430" />
+        <di:waypoint x="2760" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_24_di" bpmnElement="Flow_24">
+        <di:waypoint x="2860" y="430" />
+        <di:waypoint x="2910" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_25_di" bpmnElement="Flow_25">
+        <di:waypoint x="2960" y="470" />
+        <di:waypoint x="2960" y="880" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_26_di" bpmnElement="Flow_26">
+        <di:waypoint x="3010" y="920" />
+        <di:waypoint x="3060" y="920" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_27_di" bpmnElement="Flow_27">
+        <di:waypoint x="3110" y="880" />
+        <di:waypoint x="3110" y="870" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_28_di" bpmnElement="Flow_28">
+        <di:waypoint x="3160" y="850" />
+        <di:waypoint x="3260" y="850" />
+        <di:waypoint x="3260" y="880" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_29_di" bpmnElement="Flow_29">
+        <di:waypoint x="3310" y="920" />
+        <di:waypoint x="3332" y="920" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

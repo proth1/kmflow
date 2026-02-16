@@ -1,0 +1,418 @@
+{
+  "export_metadata": {
+    "system": "Encompass LOS (ICE Mortgage Technology)",
+    "version": "24.3.0.112",
+    "export_date": "2025-10-24",
+    "exported_by": "IT.Admin.Zhao",
+    "export_scope": "Workflow rules, milestone definitions, role-based access, business rules",
+    "environment": "PRODUCTION"
+  },
+  "instance_config": {
+    "company_id": "MNB-001",
+    "company_name": "Meridian National Bank",
+    "instance_type": "SmartClient + WebCenter",
+    "license_tier": "Enterprise",
+    "active_users": 142,
+    "concurrent_user_limit": 75
+  },
+  "milestone_definitions": [
+    {
+      "milestone_id": "MS-001",
+      "name": "Application Received",
+      "stage": "Application",
+      "auto_set": true,
+      "trigger": "All six TRID trigger fields populated",
+      "required_fields": ["borrower_name", "borrower_income", "ssn", "property_address", "property_value", "loan_amount"],
+      "compliance_timer_start": true,
+      "compliance_timer_name": "TRID_LE_3Day"
+    },
+    {
+      "milestone_id": "MS-002",
+      "name": "Loan Estimate Delivered",
+      "stage": "Disclosure",
+      "auto_set": false,
+      "trigger": "Manual - set upon LE delivery confirmation",
+      "compliance_timer_stop": "TRID_LE_3Day",
+      "validation_rule": "Must be set within 3 business days of MS-001"
+    },
+    {
+      "milestone_id": "MS-003",
+      "name": "Intent to Proceed Received",
+      "stage": "Disclosure",
+      "auto_set": false,
+      "trigger": "Manual - set upon borrower intent confirmation",
+      "gate_rule": "Blocks service ordering if not set",
+      "blocked_actions": ["order_appraisal", "order_title", "order_voe"]
+    },
+    {
+      "milestone_id": "MS-004",
+      "name": "File Assigned to Processor",
+      "stage": "Processing",
+      "auto_set": true,
+      "trigger": "Loan file routed to processing queue"
+    },
+    {
+      "milestone_id": "MS-005",
+      "name": "Services Ordered",
+      "stage": "Processing",
+      "auto_set": false,
+      "trigger": "Manual - set when all third-party services ordered",
+      "prerequisite": "MS-003"
+    },
+    {
+      "milestone_id": "MS-006",
+      "name": "Appraisal Received",
+      "stage": "Processing",
+      "auto_set": true,
+      "trigger": "Appraisal document uploaded to vault with type code 'APPR'"
+    },
+    {
+      "milestone_id": "MS-007",
+      "name": "Submitted to Underwriting",
+      "stage": "Underwriting",
+      "auto_set": false,
+      "trigger": "Manual - processor routes file to UW queue",
+      "prerequisite": "MS-006",
+      "validation_rule": "Processor checklist must be marked complete"
+    },
+    {
+      "milestone_id": "MS-008",
+      "name": "Underwriting Decision",
+      "stage": "Underwriting",
+      "auto_set": false,
+      "trigger": "Manual - underwriter records decision",
+      "decision_values": ["Approved", "Approved_with_Conditions", "Suspended", "Denied", "Withdrawn"]
+    },
+    {
+      "milestone_id": "MS-009",
+      "name": "Conditions Cleared",
+      "stage": "Underwriting",
+      "auto_set": true,
+      "trigger": "All conditions in Conditions tab marked 'Cleared'",
+      "prerequisite": "MS-008 = Approved_with_Conditions"
+    },
+    {
+      "milestone_id": "MS-010",
+      "name": "Clear to Close",
+      "stage": "Underwriting",
+      "auto_set": false,
+      "trigger": "Manual - underwriter issues CTC",
+      "prerequisite": "MS-009",
+      "validation_rule": "All PTD and PTC conditions must be cleared"
+    },
+    {
+      "milestone_id": "MS-011",
+      "name": "Closing Disclosure Delivered",
+      "stage": "Closing",
+      "auto_set": false,
+      "trigger": "Manual - set upon CD delivery confirmation",
+      "compliance_timer_start": true,
+      "compliance_timer_name": "TRID_CD_3Day",
+      "prerequisite": "MS-010"
+    },
+    {
+      "milestone_id": "MS-012",
+      "name": "Closing Scheduled",
+      "stage": "Closing",
+      "auto_set": false,
+      "trigger": "Manual - closing date confirmed",
+      "validation_rule": "Closing date must be >= 3 business days after MS-011"
+    },
+    {
+      "milestone_id": "MS-013",
+      "name": "Closed",
+      "stage": "Post-Close",
+      "auto_set": false,
+      "trigger": "Manual - closing documents received and verified"
+    },
+    {
+      "milestone_id": "MS-014",
+      "name": "Funded",
+      "stage": "Post-Close",
+      "auto_set": false,
+      "trigger": "Manual - funding wire confirmed",
+      "prerequisite": "MS-013"
+    },
+    {
+      "milestone_id": "MS-015",
+      "name": "Shipped to Investor",
+      "stage": "Post-Close",
+      "auto_set": false,
+      "trigger": "Manual - loan delivery confirmed by secondary marketing"
+    }
+  ],
+  "workflow_rules": [
+    {
+      "rule_id": "WF-001",
+      "name": "TRID LE Timer Alert",
+      "trigger_event": "MS-001 set",
+      "condition": "MS-002 not set within 2 business days",
+      "action": "Send alert to LO, Processor, and Compliance",
+      "severity": "HIGH",
+      "active": true
+    },
+    {
+      "rule_id": "WF-002",
+      "name": "Block Services Before Intent",
+      "trigger_event": "Service order attempted",
+      "condition": "MS-003 not set",
+      "action": "Block action with message: 'Intent to Proceed required before ordering services'",
+      "severity": "CRITICAL",
+      "active": true
+    },
+    {
+      "rule_id": "WF-003",
+      "name": "OFAC Screening Gate",
+      "trigger_event": "Milestone MS-007 or MS-011 advancement attempted",
+      "condition": "OFAC screening not completed or status = 'Potential Match Unresolved'",
+      "action": "Block milestone advancement",
+      "severity": "CRITICAL",
+      "active": true
+    },
+    {
+      "rule_id": "WF-004",
+      "name": "Rate Lock Expiration Warning",
+      "trigger_event": "Daily pipeline scan (6:00 AM)",
+      "condition": "Rate lock expiration within 7 calendar days AND loan not at MS-013",
+      "action": "Send alert to LO and Processor",
+      "severity": "MEDIUM",
+      "active": true,
+      "notes": "Changed from 5 days to 7 days per Processing Manager request, Oct 2024"
+    },
+    {
+      "rule_id": "WF-005",
+      "name": "Compliance Check on Submission",
+      "trigger_event": "MS-007 set",
+      "condition": "Always",
+      "action": "Run automated TRID compliance check; flag any violations in Compliance Alert queue",
+      "severity": "HIGH",
+      "active": true
+    },
+    {
+      "rule_id": "WF-006",
+      "name": "CD Waiting Period Gate",
+      "trigger_event": "MS-012 set (closing scheduled)",
+      "condition": "Closing date < 3 business days after MS-011 (CD delivery)",
+      "action": "Block milestone with message: 'Closing date violates 3-business-day waiting period'",
+      "severity": "CRITICAL",
+      "active": true
+    },
+    {
+      "rule_id": "WF-007",
+      "name": "Post-Close QC Sample Selection",
+      "trigger_event": "MS-014 set (funded)",
+      "condition": "Random 10% selection OR exception_flag = true OR early_payment_default = true",
+      "action": "Route to QC queue for post-close review",
+      "severity": "LOW",
+      "active": true
+    },
+    {
+      "rule_id": "WF-008",
+      "name": "Stale Document Alert",
+      "trigger_event": "Daily pipeline scan (6:00 AM)",
+      "condition": "Document with type 'PAYSTUB' older than 25 days OR 'BANKSTMT' older than 55 days",
+      "action": "Send alert to Processor",
+      "severity": "MEDIUM",
+      "active": false,
+      "notes": "DISABLED - Configuration incomplete. IT ticket INC-2024-03892 pending since Q1 2024. Processors using manual spreadsheet as workaround."
+    }
+  ],
+  "role_based_access": [
+    {
+      "role": "Loan_Officer",
+      "personas": ["LO_Retail", "LO_ConsumerDirect"],
+      "permissions": {
+        "application": "create, edit",
+        "credit_pull": "initiate",
+        "aus_run": "initiate",
+        "disclosures": "generate, deliver",
+        "pipeline_view": "own_loans",
+        "underwriting": "view_only",
+        "conditions": "view_only",
+        "closing": "view_only",
+        "rate_lock": "request",
+        "exceptions": "request"
+      }
+    },
+    {
+      "role": "Processor",
+      "personas": ["Processor_Standard", "Processor_Senior"],
+      "permissions": {
+        "application": "edit",
+        "services": "order, track",
+        "documents": "upload, index, validate",
+        "pipeline_view": "assigned_loans",
+        "underwriting": "route_to_queue",
+        "conditions": "clear, submit_for_review",
+        "closing": "prepare_cd, coordinate",
+        "rate_lock": "view_only",
+        "exceptions": "view_only"
+      }
+    },
+    {
+      "role": "Underwriter",
+      "personas": ["UW_I", "UW_II", "UW_Senior", "UW_Manager"],
+      "permissions": {
+        "application": "view_only",
+        "underwriting": "review, decide, condition, suspend, deny",
+        "conditions": "review, accept, reject, waive",
+        "ctc": "issue",
+        "exceptions": {
+          "UW_I": "approve_aus_approve_no_conditions",
+          "UW_II": "approve_aus_approve_with_conditions",
+          "UW_Senior": "approve_manual_noncomplex",
+          "UW_Manager": "approve_manual_complex"
+        },
+        "pipeline_view": "underwriting_queue"
+      }
+    },
+    {
+      "role": "Closer",
+      "personas": ["Closer_Standard"],
+      "permissions": {
+        "closing": "prepare_cd, deliver_cd, coordinate, execute",
+        "funding": "authorize",
+        "pipeline_view": "closing_queue",
+        "documents": "upload, index"
+      }
+    },
+    {
+      "role": "QC_Analyst",
+      "personas": ["QC_Standard"],
+      "permissions": {
+        "pipeline_view": "qc_queue",
+        "loan_file": "view_all_documents",
+        "qc_review": "create, edit, complete",
+        "findings": "create, edit"
+      }
+    },
+    {
+      "role": "Compliance",
+      "personas": ["Compliance_Officer", "Compliance_Analyst"],
+      "permissions": {
+        "pipeline_view": "all_loans",
+        "compliance_reports": "generate, export",
+        "hmda_data": "view, edit, export",
+        "audit_trail": "view",
+        "exception_log": "view, export"
+      }
+    },
+    {
+      "role": "Admin",
+      "personas": ["IT_Admin", "System_Admin"],
+      "permissions": {
+        "all": "full_access",
+        "configuration": "modify",
+        "workflow_rules": "create, edit, enable, disable",
+        "user_management": "create, modify, deactivate"
+      }
+    }
+  ],
+  "business_rules": [
+    {
+      "rule_id": "BR-001",
+      "name": "AUS Requirement",
+      "description": "All loans must be run through appropriate AUS before submission to underwriting",
+      "aus_mapping": {
+        "Conventional": "DU (primary), LP (backup)",
+        "FHA": "TOTAL Scorecard",
+        "VA": "WebLGY",
+        "USDA": "GUS",
+        "Jumbo": "DU (advisory only)"
+      },
+      "active": true
+    },
+    {
+      "rule_id": "BR-002",
+      "name": "Credit Report Vendor",
+      "description": "All tri-merge credit reports must be ordered through approved vendor",
+      "approved_vendor": "MeridianCredit (Equifax/Experian/TransUnion)",
+      "active": true
+    },
+    {
+      "rule_id": "BR-003",
+      "name": "AMC Rotation",
+      "description": "Appraisal orders routed through ValuTrac AMC portal with automatic rotation",
+      "direct_lo_appraiser_contact": "PROHIBITED",
+      "rush_fee": 150.00,
+      "rush_approval_required": true,
+      "active": true
+    },
+    {
+      "rule_id": "BR-004",
+      "name": "Exception Logging",
+      "description": "All guideline exceptions must be logged in Exception Tracking module with unique ID",
+      "auto_flag_qc": true,
+      "approval_workflow": "Route to authority level per LO-POL-001 Section 8",
+      "active": true
+    },
+    {
+      "rule_id": "BR-005",
+      "name": "Adverse Action Notice",
+      "description": "Denial decisions automatically trigger adverse action notice generation",
+      "notice_template": "ECOA_Adverse_Action_v3",
+      "delivery_timeline": "30 calendar days from action",
+      "active": true
+    }
+  ],
+  "integration_endpoints": [
+    {
+      "integration": "ValuTrac AMC",
+      "type": "REST API",
+      "direction": "Bidirectional",
+      "status": "Active",
+      "last_health_check": "2025-10-24T06:00:00"
+    },
+    {
+      "integration": "MeridianCredit",
+      "type": "XML/MISMO",
+      "direction": "Bidirectional",
+      "status": "Active",
+      "last_health_check": "2025-10-24T06:00:00",
+      "known_issues": "Intermittent bi-merge returns resolved Aug 2025 patch"
+    },
+    {
+      "integration": "ServiceLink Flood",
+      "type": "REST API",
+      "direction": "Bidirectional",
+      "status": "Active",
+      "last_health_check": "2025-10-24T06:00:00"
+    },
+    {
+      "integration": "DocuSign (eSign)",
+      "type": "REST API",
+      "direction": "Bidirectional",
+      "status": "Active",
+      "last_health_check": "2025-10-24T06:00:00"
+    },
+    {
+      "integration": "LexisNexis (OFAC/ID Verification)",
+      "type": "REST API",
+      "direction": "Request/Response",
+      "status": "Active",
+      "last_health_check": "2025-10-24T06:00:00"
+    },
+    {
+      "integration": "DU (Desktop Underwriter)",
+      "type": "MISMO XML",
+      "direction": "Bidirectional",
+      "status": "Active",
+      "last_health_check": "2025-10-24T06:00:00"
+    },
+    {
+      "integration": "LP (Loan Prospector)",
+      "type": "MISMO XML",
+      "direction": "Bidirectional",
+      "status": "Active",
+      "last_health_check": "2025-10-24T06:00:00"
+    },
+    {
+      "integration": "HMDA LAR Export",
+      "type": "File export (CSV)",
+      "direction": "Outbound",
+      "status": "Active",
+      "frequency": "Monthly extract, annual submission",
+      "known_issues": "Manual reconciliation required - geocoding discrepancies in new AZ market"
+    }
+  ]
+}

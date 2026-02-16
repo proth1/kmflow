@@ -1,0 +1,401 @@
+{
+  "engagement": {
+    "name": "Meridian National Bank - Loan Origination Process Assessment",
+    "client": "Meridian National Bank",
+    "engagement_code": "MNB-2025-LO-001",
+    "scope": "End-to-end residential mortgage loan origination",
+    "period_under_review": "2024-07-01 to 2025-06-30",
+    "lead_partner": "Sarah Chen",
+    "engagement_manager": "David Okonkwo"
+  },
+  "evidence_summary": {
+    "total_items": 47,
+    "categories_covered": 10,
+    "collection_start": "2025-09-15",
+    "collection_end": "2025-11-08",
+    "status": "ACTIVE"
+  },
+  "evidence_items": [
+    {
+      "id": "EV-001",
+      "category": "Documents",
+      "title": "Residential Mortgage Origination Policy v4.2",
+      "file": "documents/mortgage-origination-policy.md",
+      "format": "Policy Document",
+      "source": "Chief Lending Officer",
+      "date_received": "2025-09-17",
+      "quality_scores": {
+        "completeness": 0.92,
+        "reliability": 0.95,
+        "freshness": 0.88,
+        "consistency": 0.90
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:a3f8c9d1e2b4..."
+    },
+    {
+      "id": "EV-002",
+      "category": "Documents",
+      "title": "Underwriting Standard Operating Procedures",
+      "file": "documents/underwriting-sop.md",
+      "format": "SOP",
+      "source": "VP Underwriting",
+      "date_received": "2025-09-17",
+      "quality_scores": {
+        "completeness": 0.85,
+        "reliability": 0.90,
+        "freshness": 0.72,
+        "consistency": 0.78
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:b7e2a4f1c3d9..."
+    },
+    {
+      "id": "EV-003",
+      "category": "Documents",
+      "title": "Loan Processor Desktop Procedure Guide",
+      "file": "documents/processor-desktop-guide.md",
+      "format": "Procedure Guide",
+      "source": "Loan Processing Manager",
+      "date_received": "2025-09-22",
+      "quality_scores": {
+        "completeness": 0.78,
+        "reliability": 0.82,
+        "freshness": 0.65,
+        "consistency": 0.70
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:c1d4e8f2a6b3..."
+    },
+    {
+      "id": "EV-004",
+      "category": "Structured Data",
+      "title": "Loan Application Pipeline - 12 Month Extract",
+      "file": "structured-data/loan-pipeline-extract.csv",
+      "format": "CSV",
+      "source": "LOS System (Encompass)",
+      "date_received": "2025-09-25",
+      "quality_scores": {
+        "completeness": 0.96,
+        "reliability": 0.98,
+        "freshness": 0.95,
+        "consistency": 0.92
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:d9a3b7c1e5f8...",
+      "record_count": 2847
+    },
+    {
+      "id": "EV-005",
+      "category": "Structured Data",
+      "title": "Processing Time Metrics by Stage",
+      "file": "structured-data/cycle-time-metrics.csv",
+      "format": "CSV",
+      "source": "LOS System (Encompass)",
+      "date_received": "2025-09-25",
+      "quality_scores": {
+        "completeness": 0.88,
+        "reliability": 0.94,
+        "freshness": 0.95,
+        "consistency": 0.85
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:e5f1a2b8c4d7..."
+    },
+    {
+      "id": "EV-006",
+      "category": "Structured Data",
+      "title": "Exception and Override Log",
+      "file": "structured-data/exception-override-log.csv",
+      "format": "CSV",
+      "source": "Compliance Department",
+      "date_received": "2025-10-02",
+      "quality_scores": {
+        "completeness": 0.82,
+        "reliability": 0.91,
+        "freshness": 0.90,
+        "consistency": 0.76
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:f2a6b3c7d1e9..."
+    },
+    {
+      "id": "EV-007",
+      "category": "Structured Data",
+      "title": "Underwriting Decision Outcomes",
+      "file": "structured-data/underwriting-decisions.csv",
+      "format": "CSV",
+      "source": "LOS System (Encompass)",
+      "date_received": "2025-09-25",
+      "quality_scores": {
+        "completeness": 0.94,
+        "reliability": 0.97,
+        "freshness": 0.95,
+        "consistency": 0.91
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:a1b5c9d3e7f2..."
+    },
+    {
+      "id": "EV-008",
+      "category": "Controls and Evidence",
+      "title": "Loan Origination Control Matrix",
+      "file": "controls/control-matrix.csv",
+      "format": "CSV",
+      "source": "Internal Audit",
+      "date_received": "2025-10-05",
+      "quality_scores": {
+        "completeness": 0.90,
+        "reliability": 0.93,
+        "freshness": 0.80,
+        "consistency": 0.88
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:b8c2d6e1a4f3..."
+    },
+    {
+      "id": "EV-009",
+      "category": "Controls and Evidence",
+      "title": "QC Post-Close Audit Sample Results",
+      "file": "controls/qc-audit-results.csv",
+      "format": "CSV",
+      "source": "Quality Control Manager",
+      "date_received": "2025-10-10",
+      "quality_scores": {
+        "completeness": 0.86,
+        "reliability": 0.92,
+        "freshness": 0.88,
+        "consistency": 0.84
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:c4d8e2f6a1b5..."
+    },
+    {
+      "id": "EV-010",
+      "category": "Regulatory and Policy",
+      "title": "TRID Compliance Procedures",
+      "file": "regulatory/trid-compliance-procedures.md",
+      "format": "Compliance Document",
+      "source": "Compliance Officer",
+      "date_received": "2025-09-20",
+      "quality_scores": {
+        "completeness": 0.91,
+        "reliability": 0.96,
+        "freshness": 0.85,
+        "consistency": 0.93
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:d1e5f9a3b7c2..."
+    },
+    {
+      "id": "EV-011",
+      "category": "Regulatory and Policy",
+      "title": "Fair Lending Monitoring Program",
+      "file": "regulatory/fair-lending-program.md",
+      "format": "Policy Document",
+      "source": "Chief Compliance Officer",
+      "date_received": "2025-09-20",
+      "quality_scores": {
+        "completeness": 0.88,
+        "reliability": 0.94,
+        "freshness": 0.82,
+        "consistency": 0.90
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:e7f1a5b9c3d6..."
+    },
+    {
+      "id": "EV-012",
+      "category": "Regulatory and Policy",
+      "title": "BSA/AML Screening Requirements for Mortgage",
+      "file": "regulatory/bsa-aml-screening.md",
+      "format": "Procedure Document",
+      "source": "BSA Officer",
+      "date_received": "2025-09-22",
+      "quality_scores": {
+        "completeness": 0.84,
+        "reliability": 0.91,
+        "freshness": 0.78,
+        "consistency": 0.86
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:f3a7b1c5d9e2..."
+    },
+    {
+      "id": "EV-013",
+      "category": "Domain Communications",
+      "title": "Underwriter-Processor Email Thread Samples",
+      "file": "communications/underwriter-processor-emails.json",
+      "format": "JSON",
+      "source": "Email Archive (Exchange)",
+      "date_received": "2025-10-15",
+      "quality_scores": {
+        "completeness": 0.70,
+        "reliability": 0.85,
+        "freshness": 0.92,
+        "consistency": 0.65
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:a9b3c7d1e5f8...",
+      "record_count": 24,
+      "notes": "Sampled from 340 total threads; PII redacted"
+    },
+    {
+      "id": "EV-014",
+      "category": "Domain Communications",
+      "title": "Loan Officer Escalation Tickets",
+      "file": "communications/escalation-tickets.json",
+      "format": "JSON",
+      "source": "ServiceNow Export",
+      "date_received": "2025-10-15",
+      "quality_scores": {
+        "completeness": 0.75,
+        "reliability": 0.88,
+        "freshness": 0.90,
+        "consistency": 0.72
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:b5c9d3e7f1a4...",
+      "record_count": 18
+    },
+    {
+      "id": "EV-015",
+      "category": "BPM Process Models",
+      "title": "As-Is Loan Origination Process Model",
+      "file": "process-models/loan-origination-as-is.bpmn",
+      "format": "BPMN 2.0 XML",
+      "source": "Process Excellence Team",
+      "date_received": "2025-10-08",
+      "quality_scores": {
+        "completeness": 0.80,
+        "reliability": 0.75,
+        "freshness": 0.60,
+        "consistency": 0.68
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:c1d5e9f3a7b2...",
+      "notes": "Model dated 2023; may not reflect recent system changes"
+    },
+    {
+      "id": "EV-016",
+      "category": "Job Aids and Edge Cases",
+      "title": "Self-Employed Borrower Income Calculation Guide",
+      "file": "job-aids/self-employed-income-guide.md",
+      "format": "Job Aid",
+      "source": "Senior Underwriter",
+      "date_received": "2025-10-12",
+      "quality_scores": {
+        "completeness": 0.82,
+        "reliability": 0.78,
+        "freshness": 0.70,
+        "consistency": 0.62
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:d7e1f5a9b3c6...",
+      "notes": "Informally maintained by underwriting team; not in official SOP"
+    },
+    {
+      "id": "EV-017",
+      "category": "Job Aids and Edge Cases",
+      "title": "Condition Clearing Cheat Sheet",
+      "file": "job-aids/condition-clearing-cheatsheet.md",
+      "format": "Quick Reference",
+      "source": "Lead Processor",
+      "date_received": "2025-10-12",
+      "quality_scores": {
+        "completeness": 0.72,
+        "reliability": 0.70,
+        "freshness": 0.75,
+        "consistency": 0.58
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:e3f7a1b5c9d2...",
+      "notes": "Informal document; contains workarounds not in official procedures"
+    },
+    {
+      "id": "EV-018",
+      "category": "Interviews",
+      "title": "Interview - VP of Mortgage Lending",
+      "file": "interviews/interview-vp-mortgage-lending.md",
+      "format": "Transcript",
+      "source": "Engagement Team",
+      "date_received": "2025-10-18",
+      "quality_scores": {
+        "completeness": 0.88,
+        "reliability": 0.80,
+        "freshness": 0.95,
+        "consistency": 0.82
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:f5a9b3c7d1e4..."
+    },
+    {
+      "id": "EV-019",
+      "category": "Interviews",
+      "title": "Interview - Senior Loan Processor",
+      "file": "interviews/interview-senior-processor.md",
+      "format": "Transcript",
+      "source": "Engagement Team",
+      "date_received": "2025-10-20",
+      "quality_scores": {
+        "completeness": 0.90,
+        "reliability": 0.82,
+        "freshness": 0.95,
+        "consistency": 0.75
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:a2b6c1d5e9f3..."
+    },
+    {
+      "id": "EV-020",
+      "category": "Interviews",
+      "title": "Interview - Compliance Officer",
+      "file": "interviews/interview-compliance-officer.md",
+      "format": "Transcript",
+      "source": "Engagement Team",
+      "date_received": "2025-10-22",
+      "quality_scores": {
+        "completeness": 0.86,
+        "reliability": 0.85,
+        "freshness": 0.95,
+        "consistency": 0.88
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:b4c8d2e6f1a5..."
+    },
+    {
+      "id": "EV-021",
+      "category": "SaaS Exports",
+      "title": "Encompass LOS Configuration Export",
+      "file": "saas-exports/encompass-workflow-config.json",
+      "format": "JSON",
+      "source": "IT Department - Encompass Admin",
+      "date_received": "2025-10-25",
+      "quality_scores": {
+        "completeness": 0.80,
+        "reliability": 0.95,
+        "freshness": 0.92,
+        "consistency": 0.88
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:c6d1e5f9a3b7..."
+    },
+    {
+      "id": "EV-022",
+      "category": "Structured Data",
+      "title": "Vendor Management - Third Party Service Providers",
+      "file": "structured-data/vendor-registry.csv",
+      "format": "CSV",
+      "source": "Vendor Management Office",
+      "date_received": "2025-10-28",
+      "quality_scores": {
+        "completeness": 0.76,
+        "reliability": 0.88,
+        "freshness": 0.70,
+        "consistency": 0.82
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:d2e6f1a5b9c3..."
+    }
+  ]
+}

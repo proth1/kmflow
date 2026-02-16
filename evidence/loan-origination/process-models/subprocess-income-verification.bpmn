@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  id="Definitions_IncomeVerification"
+  targetNamespace="http://bpmn.io/schema/bpmn"
+  exporter="KMFlow Platform"
+  exporterVersion="1.0.0">
+
+  <bpmn:collaboration id="Collaboration_IncomeVerification">
+    <bpmn:participant id="Participant_Pool" name="Income Verification" processRef="Process_IncomeVerification" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_IncomeVerification" name="Income Verification" isExecutable="true">
+
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_Processor" name="Processor">
+        <bpmn:flowNodeRef>StartEvent_1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_GatherDocs</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_EmploymentType</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_VerifyW2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AnalyzeTaxReturns</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_VerifyOtherIncome</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_MergeEmployment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Calculate</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Underwriter" name="Underwriter">
+        <bpmn:flowNodeRef>Task_ReviewCalculation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_IncomeTrending</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DocumentDeclining</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_Verified</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_ConditionalVerified</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <!-- Start Event -->
+    <bpmn:startEvent id="StartEvent_1" name="Income&#10;Verification&#10;Initiated">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <!-- Gather Income Documentation -->
+    <bpmn:userTask id="Task_GatherDocs" name="Gather Income Documentation" camunda:candidateGroups="processors">
+      <bpmn:documentation>Evidence: EV-016, EV-018, EV-019</bpmn:documentation>
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- Employment Type Gateway -->
+    <bpmn:exclusiveGateway id="Gateway_EmploymentType" name="Employment&#10;Type?">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_W2</bpmn:outgoing>
+      <bpmn:outgoing>Flow_SelfEmployed</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Other</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- W-2/Salaried Path -->
+    <bpmn:userTask id="Task_VerifyW2" name="Verify W-2 &amp; Pay Stubs" camunda:candidateGroups="processors">
+      <bpmn:documentation>Evidence: EV-016</bpmn:documentation>
+      <bpmn:incoming>Flow_W2</bpmn:incoming>
+      <bpmn:outgoing>Flow_W2_Complete</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- Self-Employed Path -->
+    <bpmn:userTask id="Task_AnalyzeTaxReturns" name="Analyze Tax Returns &amp; P&amp;L" camunda:candidateGroups="processors">
+      <bpmn:documentation>Evidence: EV-018</bpmn:documentation>
+      <bpmn:incoming>Flow_SelfEmployed</bpmn:incoming>
+      <bpmn:outgoing>Flow_SE_Complete</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- Other Income Path -->
+    <bpmn:userTask id="Task_VerifyOtherIncome" name="Verify Other Income Sources" camunda:candidateGroups="processors">
+      <bpmn:documentation>Evidence: EV-019, EV-001</bpmn:documentation>
+      <bpmn:incoming>Flow_Other</bpmn:incoming>
+      <bpmn:outgoing>Flow_Other_Complete</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- Merge Gateway -->
+    <bpmn:exclusiveGateway id="Gateway_MergeEmployment">
+      <bpmn:incoming>Flow_W2_Complete</bpmn:incoming>
+      <bpmn:incoming>Flow_SE_Complete</bpmn:incoming>
+      <bpmn:incoming>Flow_Other_Complete</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Calculate Qualifying Income -->
+    <bpmn:serviceTask id="Task_Calculate" name="Calculate Qualifying Income" camunda:type="external" camunda:topic="income-calculation">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- Review Income Calculation (Underwriter) -->
+    <bpmn:userTask id="Task_ReviewCalculation" name="Review Income Calculation" camunda:candidateGroups="underwriters">
+      <bpmn:documentation>Evidence: EV-001, EV-002</bpmn:documentation>
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- Income Trending Gateway -->
+    <bpmn:exclusiveGateway id="Gateway_IncomeTrending" name="Income&#10;Trending?">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_Stable</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Declining</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Document Declining Income -->
+    <bpmn:userTask id="Task_DocumentDeclining" name="Document Declining Income Rationale" camunda:candidateGroups="underwriters">
+      <bpmn:incoming>Flow_Declining</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- End Events -->
+    <bpmn:endEvent id="EndEvent_Verified" name="Income&#10;Verified">
+      <bpmn:incoming>Flow_Stable</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:endEvent id="EndEvent_ConditionalVerified" name="Income&#10;Verified&#10;(Conditional)">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_GatherDocs" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_GatherDocs" targetRef="Gateway_EmploymentType" />
+    <bpmn:sequenceFlow id="Flow_W2" name="W-2 Employee" sourceRef="Gateway_EmploymentType" targetRef="Task_VerifyW2">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${employmentType == 'W2'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_SelfEmployed" name="Self-Employed" sourceRef="Gateway_EmploymentType" targetRef="Task_AnalyzeTaxReturns">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${employmentType == 'SelfEmployed'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Other" name="Other Income" sourceRef="Gateway_EmploymentType" targetRef="Task_VerifyOtherIncome">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${employmentType == 'Other'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_W2_Complete" sourceRef="Task_VerifyW2" targetRef="Gateway_MergeEmployment" />
+    <bpmn:sequenceFlow id="Flow_SE_Complete" sourceRef="Task_AnalyzeTaxReturns" targetRef="Gateway_MergeEmployment" />
+    <bpmn:sequenceFlow id="Flow_Other_Complete" sourceRef="Task_VerifyOtherIncome" targetRef="Gateway_MergeEmployment" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Gateway_MergeEmployment" targetRef="Task_Calculate" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_Calculate" targetRef="Task_ReviewCalculation" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_ReviewCalculation" targetRef="Gateway_IncomeTrending" />
+    <bpmn:sequenceFlow id="Flow_Stable" name="Stable" sourceRef="Gateway_IncomeTrending" targetRef="EndEvent_Verified">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${incomeTrend == 'Stable'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Declining" name="Declining" sourceRef="Gateway_IncomeTrending" targetRef="Task_DocumentDeclining">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${incomeTrend == 'Declining'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_DocumentDeclining" targetRef="EndEvent_ConditionalVerified" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_IncomeVerification">
+
+      <!-- Pool -->
+      <bpmndi:BPMNShape id="Participant_Pool" bpmnElement="Participant_Pool" isHorizontal="true">
+        <dc:Bounds x="155" y="47" width="1400" height="630" />
+      </bpmndi:BPMNShape>
+
+      <!-- Lanes -->
+      <bpmndi:BPMNShape id="Lane_Processor" bpmnElement="Lane_Processor" isHorizontal="true">
+        <dc:Bounds x="185" y="47" width="1370" height="315" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Lane_Underwriter" bpmnElement="Lane_Underwriter" isHorizontal="true">
+        <dc:Bounds x="185" y="362" width="1370" height="315" />
+      </bpmndi:BPMNShape>
+
+      <!-- Start Event -->
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="247" y="167" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="233" y="210" width="64" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Gather Docs Task -->
+      <bpmndi:BPMNShape id="Task_GatherDocs_di" bpmnElement="Task_GatherDocs">
+        <dc:Bounds x="335" y="147" width="151" height="76" />
+      </bpmndi:BPMNShape>
+
+      <!-- Employment Type Gateway -->
+      <bpmndi:BPMNShape id="Gateway_EmploymentType_di" bpmnElement="Gateway_EmploymentType" isMarkerVisible="true">
+        <dc:Bounds x="536" y="160" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="530" y="217" width="62" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- W-2 Path Task -->
+      <bpmndi:BPMNShape id="Task_VerifyW2_di" bpmnElement="Task_VerifyW2">
+        <dc:Bounds x="646" y="80" width="151" height="76" />
+      </bpmndi:BPMNShape>
+
+      <!-- Self-Employed Path Task -->
+      <bpmndi:BPMNShape id="Task_AnalyzeTaxReturns_di" bpmnElement="Task_AnalyzeTaxReturns">
+        <dc:Bounds x="646" y="170" width="151" height="76" />
+      </bpmndi:BPMNShape>
+
+      <!-- Other Income Path Task -->
+      <bpmndi:BPMNShape id="Task_VerifyOtherIncome_di" bpmnElement="Task_VerifyOtherIncome">
+        <dc:Bounds x="646" y="260" width="151" height="76" />
+      </bpmndi:BPMNShape>
+
+      <!-- Merge Gateway -->
+      <bpmndi:BPMNShape id="Gateway_MergeEmployment_di" bpmnElement="Gateway_MergeEmployment" isMarkerVisible="true">
+        <dc:Bounds x="847" y="160" width="50" height="50" />
+      </bpmndi:BPMNShape>
+
+      <!-- Calculate Task -->
+      <bpmndi:BPMNShape id="Task_Calculate_di" bpmnElement="Task_Calculate">
+        <dc:Bounds x="957" y="147" width="151" height="76" />
+      </bpmndi:BPMNShape>
+
+      <!-- Review Calculation Task (Underwriter Lane) -->
+      <bpmndi:BPMNShape id="Task_ReviewCalculation_di" bpmnElement="Task_ReviewCalculation">
+        <dc:Bounds x="957" y="481" width="151" height="76" />
+      </bpmndi:BPMNShape>
+
+      <!-- Income Trending Gateway -->
+      <bpmndi:BPMNShape id="Gateway_IncomeTrending_di" bpmnElement="Gateway_IncomeTrending" isMarkerVisible="true">
+        <dc:Bounds x="1158" y="494" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1153" y="551" width="60" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Document Declining Task -->
+      <bpmndi:BPMNShape id="Task_DocumentDeclining_di" bpmnElement="Task_DocumentDeclining">
+        <dc:Bounds x="1268" y="570" width="151" height="76" />
+      </bpmndi:BPMNShape>
+
+      <!-- End Event - Verified -->
+      <bpmndi:BPMNShape id="EndEvent_Verified_di" bpmnElement="EndEvent_Verified">
+        <dc:Bounds x="1268" y="501" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1260" y="544" width="52" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- End Event - Conditional Verified -->
+      <bpmndi:BPMNShape id="EndEvent_ConditionalVerified_di" bpmnElement="EndEvent_ConditionalVerified">
+        <dc:Bounds x="1469" y="590" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1455" y="633" width="64" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Sequence Flow Edges -->
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="283" y="185" />
+        <di:waypoint x="335" y="185" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="486" y="185" />
+        <di:waypoint x="536" y="185" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_W2_di" bpmnElement="Flow_W2">
+        <di:waypoint x="561" y="160" />
+        <di:waypoint x="561" y="118" />
+        <di:waypoint x="646" y="118" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_SelfEmployed_di" bpmnElement="Flow_SelfEmployed">
+        <di:waypoint x="586" y="185" />
+        <di:waypoint x="616" y="185" />
+        <di:waypoint x="616" y="208" />
+        <di:waypoint x="646" y="208" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Other_di" bpmnElement="Flow_Other">
+        <di:waypoint x="561" y="210" />
+        <di:waypoint x="561" y="298" />
+        <di:waypoint x="646" y="298" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_W2_Complete_di" bpmnElement="Flow_W2_Complete">
+        <di:waypoint x="797" y="118" />
+        <di:waypoint x="872" y="118" />
+        <di:waypoint x="872" y="160" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_SE_Complete_di" bpmnElement="Flow_SE_Complete">
+        <di:waypoint x="797" y="208" />
+        <di:waypoint x="822" y="208" />
+        <di:waypoint x="822" y="185" />
+        <di:waypoint x="847" y="185" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Other_Complete_di" bpmnElement="Flow_Other_Complete">
+        <di:waypoint x="797" y="298" />
+        <di:waypoint x="872" y="298" />
+        <di:waypoint x="872" y="210" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="897" y="185" />
+        <di:waypoint x="957" y="185" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="1032" y="223" />
+        <di:waypoint x="1032" y="481" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <di:waypoint x="1108" y="519" />
+        <di:waypoint x="1158" y="519" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Stable_di" bpmnElement="Flow_Stable">
+        <di:waypoint x="1208" y="519" />
+        <di:waypoint x="1268" y="519" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Declining_di" bpmnElement="Flow_Declining">
+        <di:waypoint x="1183" y="544" />
+        <di:waypoint x="1183" y="608" />
+        <di:waypoint x="1268" y="608" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
+        <di:waypoint x="1419" y="608" />
+        <di:waypoint x="1469" y="608" />
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+
+</bpmn:definitions>

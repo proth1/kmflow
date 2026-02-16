@@ -1,0 +1,636 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  id="Definitions_ExceptionHandling"
+  targetNamespace="http://bpmn.io/schema/bpmn"
+  exporter="KMFlow Platform"
+  exporterVersion="1.0.0">
+
+  <bpmn:collaboration id="Collaboration_ExceptionHandling">
+    <bpmn:participant id="Participant_Pool" name="Exception Handling" processRef="Process_ExceptionHandling" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_ExceptionHandling" name="Exception Handling" isExecutable="true">
+
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_Underwriter" name="Underwriter">
+        <bpmn:flowNodeRef>StartEvent_1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DocumentException</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ExceptionType</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PrepareDTI</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PrepareLTV</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PrepareGeneral</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_FICOFork</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_MergeException</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_UWManager" name="UW Manager">
+        <bpmn:flowNodeRef>Task_ReviewException</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>BoundaryEvent_Timer</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ManagerDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_ManagerApproved</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_ManagerDenied</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_FICOPrimary</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_SVP" name="SVP Lending">
+        <bpmn:flowNodeRef>Task_ReviewEscalated</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_SVPDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_SVPApproved</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_SVPDenied</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_FICOSecondary</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_FICOJoin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_FICOBothApproved</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_FICOApproved</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_FICODenied</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_CCO" name="CCO">
+        <bpmn:flowNodeRef>Task_FinalReview</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_CCODecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_CCOApproved</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_CCODenied</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <!-- Start Event -->
+    <bpmn:startEvent id="StartEvent_1" name="Exception&#10;Identified">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <!-- Document Exception Request -->
+    <bpmn:userTask id="Task_DocumentException" name="Document Exception Request" camunda:candidateGroups="underwriters">
+      <bpmn:documentation>Evidence: EV-001, EV-002, EV-006</bpmn:documentation>
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- Exception Type Gateway -->
+    <bpmn:exclusiveGateway id="Gateway_ExceptionType" name="Exception&#10;Type?">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_DTI</bpmn:outgoing>
+      <bpmn:outgoing>Flow_LTV</bpmn:outgoing>
+      <bpmn:outgoing>Flow_FICO</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Other</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- DTI Exception Path -->
+    <bpmn:userTask id="Task_PrepareDTI" name="Prepare DTI Justification" camunda:candidateGroups="underwriters">
+      <bpmn:incoming>Flow_DTI</bpmn:incoming>
+      <bpmn:outgoing>Flow_DTI_Complete</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- LTV Exception Path -->
+    <bpmn:userTask id="Task_PrepareLTV" name="Prepare LTV Justification" camunda:candidateGroups="underwriters">
+      <bpmn:incoming>Flow_LTV</bpmn:incoming>
+      <bpmn:outgoing>Flow_LTV_Complete</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- Other Exception Path -->
+    <bpmn:userTask id="Task_PrepareGeneral" name="Prepare General Exception" camunda:candidateGroups="underwriters">
+      <bpmn:incoming>Flow_Other</bpmn:incoming>
+      <bpmn:outgoing>Flow_Other_Complete</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- FICO Parallel Gateway Fork -->
+    <bpmn:parallelGateway id="Gateway_FICOFork">
+      <bpmn:incoming>Flow_FICO</bpmn:incoming>
+      <bpmn:outgoing>Flow_FICO_Primary</bpmn:outgoing>
+      <bpmn:outgoing>Flow_FICO_Secondary</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <!-- FICO Primary Review (UW Manager) -->
+    <bpmn:userTask id="Task_FICOPrimary" name="Review FICO Exception (Primary)" camunda:candidateGroups="uw-managers">
+      <bpmn:incoming>Flow_FICO_Primary</bpmn:incoming>
+      <bpmn:outgoing>Flow_FICO_Primary_Complete</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- FICO Secondary Review (SVP) -->
+    <bpmn:userTask id="Task_FICOSecondary" name="Review FICO Exception (Secondary)" camunda:candidateGroups="svp-lending">
+      <bpmn:incoming>Flow_FICO_Secondary</bpmn:incoming>
+      <bpmn:outgoing>Flow_FICO_Secondary_Complete</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- FICO Parallel Gateway Join -->
+    <bpmn:parallelGateway id="Gateway_FICOJoin">
+      <bpmn:incoming>Flow_FICO_Primary_Complete</bpmn:incoming>
+      <bpmn:incoming>Flow_FICO_Secondary_Complete</bpmn:incoming>
+      <bpmn:outgoing>Flow_FICO_Join_Complete</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <!-- FICO Both Approved Gateway -->
+    <bpmn:exclusiveGateway id="Gateway_FICOBothApproved" name="Both&#10;Approved?">
+      <bpmn:incoming>Flow_FICO_Join_Complete</bpmn:incoming>
+      <bpmn:outgoing>Flow_FICO_Approved</bpmn:outgoing>
+      <bpmn:outgoing>Flow_FICO_Denied</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- FICO End Events -->
+    <bpmn:endEvent id="EndEvent_FICOApproved" name="FICO Exception&#10;Approved">
+      <bpmn:incoming>Flow_FICO_Approved</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:endEvent id="EndEvent_FICODenied" name="FICO Exception&#10;Denied">
+      <bpmn:incoming>Flow_FICO_Denied</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Merge Gateway after Exception Type Paths -->
+    <bpmn:exclusiveGateway id="Gateway_MergeException">
+      <bpmn:incoming>Flow_DTI_Complete</bpmn:incoming>
+      <bpmn:incoming>Flow_LTV_Complete</bpmn:incoming>
+      <bpmn:incoming>Flow_Other_Complete</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Review Exception (UW Manager) -->
+    <bpmn:userTask id="Task_ReviewException" name="Review Exception" camunda:candidateGroups="uw-managers">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:incoming>Flow_TimerEscalation</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- Timer Boundary Event (72 hours) -->
+    <bpmn:boundaryEvent id="BoundaryEvent_Timer" name="72 Hour&#10;Escalation" attachedToRef="Task_ReviewException">
+      <bpmn:outgoing>Flow_TimerEscalation</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT72H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+
+    <!-- Manager Decision Gateway -->
+    <bpmn:exclusiveGateway id="Gateway_ManagerDecision" name="Manager&#10;Decision?">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_ManagerApproved</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ManagerDenied</bpmn:outgoing>
+      <bpmn:outgoing>Flow_EscalateToSVP</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Manager Approved/Denied End Events -->
+    <bpmn:endEvent id="EndEvent_ManagerApproved" name="Exception&#10;Approved">
+      <bpmn:incoming>Flow_ManagerApproved</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:endEvent id="EndEvent_ManagerDenied" name="Exception&#10;Denied">
+      <bpmn:incoming>Flow_ManagerDenied</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Review Escalated Exception (SVP) -->
+    <bpmn:userTask id="Task_ReviewEscalated" name="Review Escalated Exception" camunda:candidateGroups="svp-lending">
+      <bpmn:incoming>Flow_EscalateToSVP</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- SVP Decision Gateway -->
+    <bpmn:exclusiveGateway id="Gateway_SVPDecision" name="SVP&#10;Decision?">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_SVPApproved</bpmn:outgoing>
+      <bpmn:outgoing>Flow_SVPDenied</bpmn:outgoing>
+      <bpmn:outgoing>Flow_EscalateToCCO</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- SVP Approved/Denied End Events -->
+    <bpmn:endEvent id="EndEvent_SVPApproved" name="Exception&#10;Approved&#10;(SVP)">
+      <bpmn:incoming>Flow_SVPApproved</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:endEvent id="EndEvent_SVPDenied" name="Exception&#10;Denied&#10;(SVP)">
+      <bpmn:incoming>Flow_SVPDenied</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Final Exception Review (CCO) -->
+    <bpmn:userTask id="Task_FinalReview" name="Final Exception Review" camunda:candidateGroups="cco">
+      <bpmn:incoming>Flow_EscalateToCCO</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- CCO Decision Gateway -->
+    <bpmn:exclusiveGateway id="Gateway_CCODecision" name="CCO&#10;Decision?">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_CCOApproved</bpmn:outgoing>
+      <bpmn:outgoing>Flow_CCODenied</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- CCO Approved/Denied End Events -->
+    <bpmn:endEvent id="EndEvent_CCOApproved" name="Exception&#10;Approved&#10;(CCO)">
+      <bpmn:incoming>Flow_CCOApproved</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:endEvent id="EndEvent_CCODenied" name="Exception&#10;Denied&#10;(Final)">
+      <bpmn:incoming>Flow_CCODenied</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_DocumentException" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_DocumentException" targetRef="Gateway_ExceptionType" />
+    <bpmn:sequenceFlow id="Flow_DTI" name="DTI Exception" sourceRef="Gateway_ExceptionType" targetRef="Task_PrepareDTI">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${exceptionType == 'DTI'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_LTV" name="LTV Exception" sourceRef="Gateway_ExceptionType" targetRef="Task_PrepareLTV">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${exceptionType == 'LTV'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_FICO" name="FICO Exception" sourceRef="Gateway_ExceptionType" targetRef="Gateway_FICOFork">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${exceptionType == 'FICO'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Other" name="Other" sourceRef="Gateway_ExceptionType" targetRef="Task_PrepareGeneral">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${exceptionType == 'Other'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_DTI_Complete" sourceRef="Task_PrepareDTI" targetRef="Gateway_MergeException" />
+    <bpmn:sequenceFlow id="Flow_LTV_Complete" sourceRef="Task_PrepareLTV" targetRef="Gateway_MergeException" />
+    <bpmn:sequenceFlow id="Flow_Other_Complete" sourceRef="Task_PrepareGeneral" targetRef="Gateway_MergeException" />
+    <bpmn:sequenceFlow id="Flow_FICO_Primary" sourceRef="Gateway_FICOFork" targetRef="Task_FICOPrimary" />
+    <bpmn:sequenceFlow id="Flow_FICO_Secondary" sourceRef="Gateway_FICOFork" targetRef="Task_FICOSecondary" />
+    <bpmn:sequenceFlow id="Flow_FICO_Primary_Complete" sourceRef="Task_FICOPrimary" targetRef="Gateway_FICOJoin" />
+    <bpmn:sequenceFlow id="Flow_FICO_Secondary_Complete" sourceRef="Task_FICOSecondary" targetRef="Gateway_FICOJoin" />
+    <bpmn:sequenceFlow id="Flow_FICO_Join_Complete" sourceRef="Gateway_FICOJoin" targetRef="Gateway_FICOBothApproved" />
+    <bpmn:sequenceFlow id="Flow_FICO_Approved" name="Approved" sourceRef="Gateway_FICOBothApproved" targetRef="EndEvent_FICOApproved">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${ficoApproved == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_FICO_Denied" name="Denied" sourceRef="Gateway_FICOBothApproved" targetRef="EndEvent_FICODenied">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${ficoApproved == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Gateway_MergeException" targetRef="Task_ReviewException" />
+    <bpmn:sequenceFlow id="Flow_TimerEscalation" sourceRef="BoundaryEvent_Timer" targetRef="Task_ReviewException" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_ReviewException" targetRef="Gateway_ManagerDecision" />
+    <bpmn:sequenceFlow id="Flow_ManagerApproved" name="Approved" sourceRef="Gateway_ManagerDecision" targetRef="EndEvent_ManagerApproved">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${managerDecision == 'Approved'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_ManagerDenied" name="Denied" sourceRef="Gateway_ManagerDecision" targetRef="EndEvent_ManagerDenied">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${managerDecision == 'Denied'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_EscalateToSVP" name="Escalate" sourceRef="Gateway_ManagerDecision" targetRef="Task_ReviewEscalated">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${managerDecision == 'Escalate'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_ReviewEscalated" targetRef="Gateway_SVPDecision" />
+    <bpmn:sequenceFlow id="Flow_SVPApproved" name="Approved" sourceRef="Gateway_SVPDecision" targetRef="EndEvent_SVPApproved">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${svpDecision == 'Approved'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_SVPDenied" name="Denied" sourceRef="Gateway_SVPDecision" targetRef="EndEvent_SVPDenied">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${svpDecision == 'Denied'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_EscalateToCCO" name="Further Escalate" sourceRef="Gateway_SVPDecision" targetRef="Task_FinalReview">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${svpDecision == 'Escalate'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_FinalReview" targetRef="Gateway_CCODecision" />
+    <bpmn:sequenceFlow id="Flow_CCOApproved" name="Approved" sourceRef="Gateway_CCODecision" targetRef="EndEvent_CCOApproved">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${ccoDecision == 'Approved'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_CCODenied" name="Denied" sourceRef="Gateway_CCODecision" targetRef="EndEvent_CCODenied">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${ccoDecision == 'Denied'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_ExceptionHandling">
+
+      <!-- Start Event (Underwriter Lane) -->
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="247" y="128" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="235" y="171" width="60" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Document Exception Task (Underwriter Lane) -->
+      <bpmndi:BPMNShape id="Task_DocumentException_di" bpmnElement="Task_DocumentException">
+        <dc:Bounds x="335" y="108" width="151" height="76" />
+      </bpmndi:BPMNShape>
+
+      <!-- Exception Type Gateway (Underwriter Lane) -->
+      <bpmndi:BPMNShape id="Gateway_ExceptionType_di" bpmnElement="Gateway_ExceptionType" isMarkerVisible="true">
+        <dc:Bounds x="536" y="121" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="530" y="178" width="62" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- DTI Justification Task (Underwriter Lane) -->
+      <bpmndi:BPMNShape id="Task_PrepareDTI_di" bpmnElement="Task_PrepareDTI">
+        <dc:Bounds x="646" y="50" width="151" height="76" />
+      </bpmndi:BPMNShape>
+
+      <!-- LTV Justification Task (Underwriter Lane) -->
+      <bpmndi:BPMNShape id="Task_PrepareLTV_di" bpmnElement="Task_PrepareLTV">
+        <dc:Bounds x="646" y="140" width="151" height="76" />
+      </bpmndi:BPMNShape>
+
+      <!-- General Exception Task (Underwriter Lane) -->
+      <bpmndi:BPMNShape id="Task_PrepareGeneral_di" bpmnElement="Task_PrepareGeneral">
+        <dc:Bounds x="646" y="230" width="151" height="76" />
+      </bpmndi:BPMNShape>
+
+      <!-- FICO Fork Gateway (Underwriter Lane) -->
+      <bpmndi:BPMNShape id="Gateway_FICOFork_di" bpmnElement="Gateway_FICOFork">
+        <dc:Bounds x="847" y="121" width="50" height="50" />
+      </bpmndi:BPMNShape>
+
+      <!-- FICO Primary Review (UW Manager Lane) -->
+      <bpmndi:BPMNShape id="Task_FICOPrimary_di" bpmnElement="Task_FICOPrimary">
+        <dc:Bounds x="957" y="305" width="151" height="76" />
+      </bpmndi:BPMNShape>
+
+      <!-- FICO Secondary Review (SVP Lane) -->
+      <bpmndi:BPMNShape id="Task_FICOSecondary_di" bpmnElement="Task_FICOSecondary">
+        <dc:Bounds x="957" y="503" width="151" height="76" />
+      </bpmndi:BPMNShape>
+
+      <!-- FICO Join Gateway (SVP Lane) -->
+      <bpmndi:BPMNShape id="Gateway_FICOJoin_di" bpmnElement="Gateway_FICOJoin">
+        <dc:Bounds x="1158" y="516" width="50" height="50" />
+      </bpmndi:BPMNShape>
+
+      <!-- FICO Both Approved Gateway (SVP Lane) -->
+      <bpmndi:BPMNShape id="Gateway_FICOBothApproved_di" bpmnElement="Gateway_FICOBothApproved" isMarkerVisible="true">
+        <dc:Bounds x="1258" y="516" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1255" y="573" width="56" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- FICO Approved End Event (SVP Lane) -->
+      <bpmndi:BPMNShape id="EndEvent_FICOApproved_di" bpmnElement="EndEvent_FICOApproved">
+        <dc:Bounds x="1358" y="523" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1338" y="566" width="76" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- FICO Denied End Event (SVP Lane) -->
+      <bpmndi:BPMNShape id="EndEvent_FICODenied_di" bpmnElement="EndEvent_FICODenied">
+        <dc:Bounds x="1358" y="603" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1338" y="646" width="76" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Merge Exception Gateway (Underwriter Lane) -->
+      <bpmndi:BPMNShape id="Gateway_MergeException_di" bpmnElement="Gateway_MergeException" isMarkerVisible="true">
+        <dc:Bounds x="957" y="121" width="50" height="50" />
+      </bpmndi:BPMNShape>
+
+      <!-- Review Exception Task (UW Manager Lane) -->
+      <bpmndi:BPMNShape id="Task_ReviewException_di" bpmnElement="Task_ReviewException">
+        <dc:Bounds x="335" y="305" width="151" height="76" />
+      </bpmndi:BPMNShape>
+
+      <!-- Timer Boundary Event -->
+      <bpmndi:BPMNShape id="BoundaryEvent_Timer_di" bpmnElement="BoundaryEvent_Timer">
+        <dc:Bounds x="468" y="363" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="500" y="390" width="52" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Manager Decision Gateway (UW Manager Lane) -->
+      <bpmndi:BPMNShape id="Gateway_ManagerDecision_di" bpmnElement="Gateway_ManagerDecision" isMarkerVisible="true">
+        <dc:Bounds x="536" y="318" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="530" y="375" width="62" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Manager Approved End Event (UW Manager Lane) -->
+      <bpmndi:BPMNShape id="EndEvent_ManagerApproved_di" bpmnElement="EndEvent_ManagerApproved">
+        <dc:Bounds x="646" y="325" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="632" y="368" width="64" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Manager Denied End Event (UW Manager Lane) -->
+      <bpmndi:BPMNShape id="EndEvent_ManagerDenied_di" bpmnElement="EndEvent_ManagerDenied">
+        <dc:Bounds x="646" y="405" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="632" y="448" width="64" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Review Escalated Exception Task (SVP Lane) -->
+      <bpmndi:BPMNShape id="Task_ReviewEscalated_di" bpmnElement="Task_ReviewEscalated">
+        <dc:Bounds x="335" y="503" width="151" height="76" />
+      </bpmndi:BPMNShape>
+
+      <!-- SVP Decision Gateway (SVP Lane) -->
+      <bpmndi:BPMNShape id="Gateway_SVPDecision_di" bpmnElement="Gateway_SVPDecision" isMarkerVisible="true">
+        <dc:Bounds x="536" y="516" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="540" y="573" width="42" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- SVP Approved End Event (SVP Lane) -->
+      <bpmndi:BPMNShape id="EndEvent_SVPApproved_di" bpmnElement="EndEvent_SVPApproved">
+        <dc:Bounds x="646" y="523" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="632" y="566" width="64" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- SVP Denied End Event (SVP Lane) -->
+      <bpmndi:BPMNShape id="EndEvent_SVPDenied_di" bpmnElement="EndEvent_SVPDenied">
+        <dc:Bounds x="646" y="603" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="632" y="646" width="64" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Final Exception Review Task (CCO Lane) -->
+      <bpmndi:BPMNShape id="Task_FinalReview_di" bpmnElement="Task_FinalReview">
+        <dc:Bounds x="335" y="684" width="151" height="76" />
+      </bpmndi:BPMNShape>
+
+      <!-- CCO Decision Gateway (CCO Lane) -->
+      <bpmndi:BPMNShape id="Gateway_CCODecision_di" bpmnElement="Gateway_CCODecision" isMarkerVisible="true">
+        <dc:Bounds x="536" y="697" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="540" y="754" width="42" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- CCO Approved End Event (CCO Lane) -->
+      <bpmndi:BPMNShape id="EndEvent_CCOApproved_di" bpmnElement="EndEvent_CCOApproved">
+        <dc:Bounds x="646" y="704" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="632" y="747" width="64" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- CCO Denied End Event (CCO Lane) -->
+      <bpmndi:BPMNShape id="EndEvent_CCODenied_di" bpmnElement="EndEvent_CCODenied">
+        <dc:Bounds x="646" y="784" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="632" y="827" width="64" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Sequence Flow Edges -->
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="283" y="146" />
+        <di:waypoint x="335" y="146" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="486" y="146" />
+        <di:waypoint x="536" y="146" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_DTI_di" bpmnElement="Flow_DTI">
+        <di:waypoint x="561" y="121" />
+        <di:waypoint x="561" y="88" />
+        <di:waypoint x="646" y="88" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_LTV_di" bpmnElement="Flow_LTV">
+        <di:waypoint x="586" y="146" />
+        <di:waypoint x="616" y="146" />
+        <di:waypoint x="616" y="178" />
+        <di:waypoint x="646" y="178" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_FICO_di" bpmnElement="Flow_FICO">
+        <di:waypoint x="586" y="146" />
+        <di:waypoint x="847" y="146" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Other_di" bpmnElement="Flow_Other">
+        <di:waypoint x="561" y="171" />
+        <di:waypoint x="561" y="268" />
+        <di:waypoint x="646" y="268" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_DTI_Complete_di" bpmnElement="Flow_DTI_Complete">
+        <di:waypoint x="797" y="88" />
+        <di:waypoint x="982" y="88" />
+        <di:waypoint x="982" y="121" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_LTV_Complete_di" bpmnElement="Flow_LTV_Complete">
+        <di:waypoint x="797" y="178" />
+        <di:waypoint x="932" y="178" />
+        <di:waypoint x="932" y="146" />
+        <di:waypoint x="957" y="146" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Other_Complete_di" bpmnElement="Flow_Other_Complete">
+        <di:waypoint x="797" y="268" />
+        <di:waypoint x="982" y="268" />
+        <di:waypoint x="982" y="171" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_FICO_Primary_di" bpmnElement="Flow_FICO_Primary">
+        <di:waypoint x="872" y="171" />
+        <di:waypoint x="872" y="343" />
+        <di:waypoint x="957" y="343" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_FICO_Secondary_di" bpmnElement="Flow_FICO_Secondary">
+        <di:waypoint x="872" y="171" />
+        <di:waypoint x="872" y="541" />
+        <di:waypoint x="957" y="541" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_FICO_Primary_Complete_di" bpmnElement="Flow_FICO_Primary_Complete">
+        <di:waypoint x="1108" y="343" />
+        <di:waypoint x="1183" y="343" />
+        <di:waypoint x="1183" y="516" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_FICO_Secondary_Complete_di" bpmnElement="Flow_FICO_Secondary_Complete">
+        <di:waypoint x="1108" y="541" />
+        <di:waypoint x="1158" y="541" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_FICO_Join_Complete_di" bpmnElement="Flow_FICO_Join_Complete">
+        <di:waypoint x="1208" y="541" />
+        <di:waypoint x="1258" y="541" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_FICO_Approved_di" bpmnElement="Flow_FICO_Approved">
+        <di:waypoint x="1308" y="541" />
+        <di:waypoint x="1358" y="541" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_FICO_Denied_di" bpmnElement="Flow_FICO_Denied">
+        <di:waypoint x="1283" y="566" />
+        <di:waypoint x="1283" y="621" />
+        <di:waypoint x="1358" y="621" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="982" y="171" />
+        <di:waypoint x="982" y="238" />
+        <di:waypoint x="410" y="238" />
+        <di:waypoint x="410" y="305" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_TimerEscalation_di" bpmnElement="Flow_TimerEscalation">
+        <di:waypoint x="486" y="399" />
+        <di:waypoint x="486" y="381" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="486" y="343" />
+        <di:waypoint x="536" y="343" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_ManagerApproved_di" bpmnElement="Flow_ManagerApproved">
+        <di:waypoint x="586" y="343" />
+        <di:waypoint x="646" y="343" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_ManagerDenied_di" bpmnElement="Flow_ManagerDenied">
+        <di:waypoint x="561" y="368" />
+        <di:waypoint x="561" y="423" />
+        <di:waypoint x="646" y="423" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_EscalateToSVP_di" bpmnElement="Flow_EscalateToSVP">
+        <di:waypoint x="536" y="343" />
+        <di:waypoint x="410" y="343" />
+        <di:waypoint x="410" y="503" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <di:waypoint x="486" y="541" />
+        <di:waypoint x="536" y="541" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_SVPApproved_di" bpmnElement="Flow_SVPApproved">
+        <di:waypoint x="586" y="541" />
+        <di:waypoint x="646" y="541" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_SVPDenied_di" bpmnElement="Flow_SVPDenied">
+        <di:waypoint x="561" y="566" />
+        <di:waypoint x="561" y="621" />
+        <di:waypoint x="646" y="621" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_EscalateToCCO_di" bpmnElement="Flow_EscalateToCCO">
+        <di:waypoint x="536" y="541" />
+        <di:waypoint x="410" y="541" />
+        <di:waypoint x="410" y="684" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
+        <di:waypoint x="486" y="722" />
+        <di:waypoint x="536" y="722" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_CCOApproved_di" bpmnElement="Flow_CCOApproved">
+        <di:waypoint x="586" y="722" />
+        <di:waypoint x="646" y="722" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_CCODenied_di" bpmnElement="Flow_CCODenied">
+        <di:waypoint x="561" y="747" />
+        <di:waypoint x="561" y="802" />
+        <di:waypoint x="646" y="802" />
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+
+</bpmn:definitions>

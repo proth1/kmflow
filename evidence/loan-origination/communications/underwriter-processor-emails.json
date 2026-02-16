@@ -1,0 +1,271 @@
+{
+  "metadata": {
+    "source": "Exchange Email Archive",
+    "extraction_date": "2025-10-14",
+    "total_threads_in_sample_period": 340,
+    "sampled_threads": 8,
+    "sampling_method": "Stratified by loan complexity and outcome",
+    "pii_redaction": "All borrower names replaced with loan IDs; personal contact info removed",
+    "date_range": "2024-08-01 to 2024-12-15"
+  },
+  "threads": [
+    {
+      "thread_id": "THD-001",
+      "subject": "MNB-2024-08003 - FHA file, missing 4506-C results",
+      "loan_id": "MNB-2024-08003",
+      "participants": ["U.Patel", "P.Davis"],
+      "messages": [
+        {
+          "from": "U.Patel",
+          "to": "P.Davis",
+          "date": "2024-08-09T10:22:00",
+          "body": "File suspended. 4506-C transcript results not received from IRS. Cannot proceed with income verification without tax transcript. Also, the VOE shows employer as 'REDACTED Corp' but W-2 shows 'REDACTED Corporation LLC' - need clarification on whether this is same entity or if borrower has changed employers."
+        },
+        {
+          "from": "P.Davis",
+          "to": "U.Patel",
+          "date": "2024-08-09T14:15:00",
+          "body": "4506-C was submitted 7/30 but IRS turnaround has been 3-4 weeks lately. I'll expedite. On the employer name - same company, they reincorporated as LLC in 2023. I have the borrower's LOE already but forgot to upload. Will add to vault today."
+        },
+        {
+          "from": "P.Davis",
+          "to": "U.Patel",
+          "date": "2024-08-12T09:45:00",
+          "body": "4506-C results received and uploaded. Employer LOE also in the vault under 'General Correspondence.' Income figures match application. Please review when you get a chance - lock expires 9/5."
+        },
+        {
+          "from": "U.Patel",
+          "to": "P.Davis",
+          "date": "2024-08-14T11:30:00",
+          "body": "Reviewed and cleared. Approved with conditions - standard PTC items. Moving forward."
+        }
+      ]
+    },
+    {
+      "thread_id": "THD-002",
+      "subject": "MNB-2024-08007 - Jumbo file, income documentation concerns",
+      "loan_id": "MNB-2024-08007",
+      "participants": ["U.Ramirez", "P.Garcia", "M.Anderson"],
+      "messages": [
+        {
+          "from": "U.Ramirez",
+          "to": "P.Garcia",
+          "cc": "M.Anderson",
+          "date": "2024-08-22T08:50:00",
+          "body": "Suspending this file. The self-employed income calculation is complex. Borrower has three business entities and the tax returns show significant variance between years. I need a detailed income worksheet showing exactly how you derived the $28,500/month qualifying income. The P&L is also more than 120 days old - need a current one."
+        },
+        {
+          "from": "P.Garcia",
+          "to": "U.Ramirez",
+          "date": "2024-08-22T15:20:00",
+          "body": "Understood. I used the SE income guide that Lisa in underwriting put together - it says to add back depreciation from all entities and average the two years. I'll put together the detailed worksheet. On the P&L, I'll request an updated one from the borrower's CPA. Quick question though - do we add back the meals/entertainment deduction at 100% or 50%? The guide says 50% but I've seen other files where it was 100%."
+        },
+        {
+          "from": "U.Ramirez",
+          "to": "P.Garcia",
+          "date": "2024-08-23T09:15:00",
+          "body": "Per our SOP it should be 50% for meals/entertainment. I know the informal guide floating around says something different for certain entity types but stick with the SOP. Also - I need the addbacks broken out by entity. Don't combine them. Each entity should have its own income calc sheet, then we aggregate."
+        },
+        {
+          "from": "M.Anderson",
+          "to": "U.Ramirez",
+          "date": "2024-08-23T10:40:00",
+          "body": "Just flagging - the borrower's CPA is on vacation until 9/3. Lock expires 9/25 so we have time but wanted you aware. Also the appraisal came back - $1.25M against $1.25M purchase price so no value issues."
+        },
+        {
+          "from": "P.Garcia",
+          "to": "U.Ramirez",
+          "date": "2024-09-06T11:00:00",
+          "body": "Updated P&L received and all three entity income worksheets uploaded. Used 50% meals addback per your direction. Aggregate qualifying income comes to $27,200/month after correcting the calculation. DTI adjusts slightly but still within jumbo guidelines."
+        },
+        {
+          "from": "U.Ramirez",
+          "to": "P.Garcia",
+          "date": "2024-09-08T14:30:00",
+          "body": "Reviewed. Income calc looks correct now. Approved with conditions. The comparable adjustment on the appraisal is at 28.3% which exceeds our 25% guideline - logging exception EXC-2024-012. Compensating factors are strong so approving at my level."
+        }
+      ]
+    },
+    {
+      "thread_id": "THD-003",
+      "subject": "RE: MNB-2024-08008 - Employment verification issue",
+      "loan_id": "MNB-2024-08008",
+      "participants": ["U.Patel", "P.Johnson", "S.Williams"],
+      "messages": [
+        {
+          "from": "U.Patel",
+          "to": "P.Johnson",
+          "cc": "S.Williams",
+          "date": "2024-08-26T09:10:00",
+          "body": "Suspending file. VOE came back showing borrower terminated employment 6 months ago. Application shows current employment. This is a significant discrepancy. Need borrower contact immediately to explain - if they are unemployed, this file cannot proceed as submitted."
+        },
+        {
+          "from": "S.Williams",
+          "to": "U.Patel",
+          "date": "2024-08-26T11:45:00",
+          "body": "I spoke with the borrower. They say they started a new position in July but haven't received first paycheck yet. The original employer info was their prior job which ended in February. This was not communicated to me at application - borrower thought listing prior employer was acceptable since they'd 'just started' the new one."
+        },
+        {
+          "from": "U.Patel",
+          "to": "S.Williams",
+          "date": "2024-08-26T14:20:00",
+          "body": "We need a new VOE for the current employer, plus a written LOE for the employment gap from February to July. That's a 5-month gap. Per SOP, gaps >30 days require explanation. Also need first paystub when available. This will need to rerun through AUS with updated employment data. I'm keeping this suspended."
+        },
+        {
+          "from": "P.Johnson",
+          "to": "U.Patel",
+          "date": "2024-08-29T16:00:00",
+          "body": "Borrower has been non-responsive since 8/27. LO Williams has called three times. At this point the income pattern is too unstable even if we get the docs. New job is probationary for 6 months. Recommend denial."
+        },
+        {
+          "from": "U.Patel",
+          "to": "P.Johnson",
+          "cc": "S.Williams",
+          "date": "2024-08-30T10:00:00",
+          "body": "Agreed. Denying based on employment gap >6 months and unstable income pattern. Adverse action notice to be issued per ECOA requirements. Please generate the denial letter in Encompass and route to me for review before sending."
+        }
+      ]
+    },
+    {
+      "thread_id": "THD-004",
+      "subject": "MNB-2024-08014 - LTV exception request",
+      "loan_id": "MNB-2024-08014",
+      "participants": ["U.Ramirez", "P.Johnson", "R.Thompson"],
+      "messages": [
+        {
+          "from": "U.Ramirez",
+          "to": "P.Johnson",
+          "cc": "R.Thompson",
+          "date": "2024-09-18T10:15:00",
+          "body": "This file is at 97.33% LTV which exceeds our 97% max for conventional SFR. Appraisal came in at $375K against $365K purchase price. Borrower is putting minimum down. Need an exception request form with compensating factors if you want to proceed."
+        },
+        {
+          "from": "R.Thompson",
+          "to": "U.Ramirez",
+          "date": "2024-09-18T13:40:00",
+          "body": "Exception request attached. Compensating factors: borrower has 6 months reserves post-closing, DTI is well within limits at 44.9% (under 45% max), and has strong rental payment history for past 3 years with no lates. The 0.33% above guideline is marginal and MI company has already approved."
+        },
+        {
+          "from": "U.Ramirez",
+          "to": "R.Thompson",
+          "date": "2024-09-19T08:30:00",
+          "body": "The compensating factors are reasonable but this LTV exception requires SVP + CCO approval per our authority matrix. Routing to SVP Lending for sign-off. I'll process once I have both signatures."
+        }
+      ]
+    },
+    {
+      "thread_id": "THD-005",
+      "subject": "Quick question - condition clearing for MNB-2024-08012",
+      "loan_id": "MNB-2024-08012",
+      "participants": ["P.Davis", "U.Patel"],
+      "messages": [
+        {
+          "from": "P.Davis",
+          "to": "U.Patel",
+          "date": "2024-09-15T15:30:00",
+          "body": "USDA eligibility certificate is taking forever from Rural Development. It's been 2 weeks. Lock expires 10/15. Is there any way we can use the online eligibility check screenshot as a placeholder and get CTC, then swap in the certificate before funding?"
+        },
+        {
+          "from": "U.Patel",
+          "to": "P.Davis",
+          "date": "2024-09-15T16:45:00",
+          "body": "No - we cannot CTC without the actual certificate. The online check is not a substitute. However, I've seen processors call the local RD office directly to expedite. Try the San Antonio office. Also make sure the property address matches exactly between application and the eligibility request - mismatches cause delays."
+        },
+        {
+          "from": "P.Davis",
+          "to": "U.Patel",
+          "date": "2024-09-22T09:00:00",
+          "body": "Called RD office and they found the hold-up - property zip code was entered wrong on the request form. Corrected and resubmitted. They said 3-5 business days. Should be fine for lock."
+        }
+      ]
+    },
+    {
+      "thread_id": "THD-006",
+      "subject": "MNB-2024-08026 - Complex FHA manual underwrite",
+      "loan_id": "MNB-2024-08026",
+      "participants": ["U.Patel", "P.Johnson", "R.Thompson", "Maria.Santos"],
+      "messages": [
+        {
+          "from": "U.Patel",
+          "to": "P.Johnson",
+          "cc": "R.Thompson",
+          "date": "2024-11-02T09:30:00",
+          "body": "AUS returned Refer/Caution. This requires manual underwrite per policy. FICO is 595 which is above FHA minimum of 580 but the credit profile shows recent 90-day lates (March 2024) and a medical collection from 2023. DTI is actually within guidelines at 56.8%. The main concern is the credit history plus the borrower's income is 100% commission-based with only 18 months at current employer."
+        },
+        {
+          "from": "R.Thompson",
+          "to": "U.Patel",
+          "date": "2024-11-02T14:00:00",
+          "body": "Borrower has provided LOE for the late payments - medical emergency in family caused temporary income disruption. Collections were related to same event. Since then payment history is clean (7 consecutive months). Can we use the LOE as a compensating factor?"
+        },
+        {
+          "from": "U.Patel",
+          "to": "R.Thompson",
+          "date": "2024-11-04T10:20:00",
+          "body": "The LOE is noted but under manual underwrite guidelines, recent 90-day lates require 12 months of clean payment history to demonstrate recovery. We only have 7 months. Additionally, the commission income with <24 months history cannot be fully used for qualifying under manual UW. I'm suspending pending further documentation. Need to discuss with Maria Santos as this may require UW Manager authority."
+        },
+        {
+          "from": "Maria.Santos",
+          "to": "U.Patel",
+          "cc": "R.Thompson",
+          "date": "2024-11-06T11:00:00",
+          "body": "Reviewed. I agree with the suspension. The combination of credit issues and income qualification challenges makes this difficult under current FHA manual UW guidelines. Let's give the borrower 30 days to provide additional documentation: (1) verification of commission income from employer showing pipeline/pending deals, (2) updated credit report showing continued clean payments, (3) additional reserves documentation. If the profile improves, we can reconsider. Otherwise we'll need to decline."
+        }
+      ]
+    },
+    {
+      "thread_id": "THD-007",
+      "subject": "Heads up - stale docs on multiple files",
+      "loan_id": "GENERAL",
+      "participants": ["P.Garcia", "P.Johnson", "P.Davis", "James.Whitfield"],
+      "messages": [
+        {
+          "from": "P.Garcia",
+          "to": ["P.Johnson", "P.Davis"],
+          "cc": "James.Whitfield",
+          "date": "2024-10-28T08:15:00",
+          "body": "Just a heads-up - I noticed several files in our pipelines have pay stubs that will hit 30 days this week. MNB-2024-08022, 08023, and 08024 all need fresh stubs before we can submit to underwriting or close. Can everyone check their files? James - should we add an automated alert in Encompass for stale docs? Right now I'm tracking this manually on a spreadsheet."
+        },
+        {
+          "from": "James.Whitfield",
+          "to": "P.Garcia",
+          "date": "2024-10-28T09:30:00",
+          "body": "Good catch. I've asked IT about the automated alert twice this year but it hasn't been prioritized. For now keep using your spreadsheet - can you share it with the team on the shared drive? I'll add it to the next IT request queue."
+        },
+        {
+          "from": "P.Johnson",
+          "to": "P.Garcia",
+          "date": "2024-10-28T10:45:00",
+          "body": "Thanks - I already requested updated stubs for 08023. The borrower's payroll cycle is bi-weekly so I timed it for Friday. For 08024 the borrower is travelling - LO said docs will come in Monday."
+        }
+      ]
+    },
+    {
+      "thread_id": "THD-008",
+      "subject": "MNB-2024-08029 - Townhouse LTV exception + condition questions",
+      "loan_id": "MNB-2024-08029",
+      "participants": ["U.Patel", "P.Johnson", "S.Williams"],
+      "messages": [
+        {
+          "from": "U.Patel",
+          "to": "P.Johnson",
+          "date": "2024-11-12T14:00:00",
+          "body": "Approved with conditions but flagging - the LTV at 97.70% exceeds our 95% guideline for townhouse property type. I know we allow 97% for SFR but the townhouse guideline is stricter per our product matrix. Logging exception EXC-2024-011. This will need SVP + CCO since it's an LTV policy exception."
+        },
+        {
+          "from": "P.Johnson",
+          "to": "U.Patel",
+          "date": "2024-11-12T15:30:00",
+          "body": "I wasn't aware the townhouse limit was 95% - the cheat sheet I use says 97% for all property types. Is that outdated? Should I be checking the full product matrix for every file?"
+        },
+        {
+          "from": "U.Patel",
+          "to": "P.Johnson",
+          "cc": "S.Williams",
+          "date": "2024-11-13T08:45:00",
+          "body": "Yes, the policy matrix has different LTV limits by property type. The cheat sheet that's been circulating is a simplified version and doesn't capture all the nuances. I'd recommend always checking the official product matrix in LO-POL-001 Section 3. I'll mention this to Maria as a training opportunity."
+        }
+      ]
+    }
+  ]
+}

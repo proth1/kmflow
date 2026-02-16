@@ -1,0 +1,13 @@
+exception_id,loan_id,exception_date,exception_type,guideline_exceeded,original_limit,actual_value,compensating_factors,requested_by,approved_by,approval_level,risk_rating,post_close_qc_required,qc_finding
+EXC-2024-001,MNB-2024-08003,2024-08-05,DTI_Override,FHA_Back_DTI_Max,57.0,52.4,Stable_employment_8yrs;reserves_4mo_PITIA,R.Thompson,U.Ramirez,Senior_Underwriter,Low,Y,No_Finding
+EXC-2024-002,MNB-2024-08006,2024-08-18,LTV_Exception,Conv_LTV_Max_SFR,97.0,95.77,Strong_credit_672_improving;stable_income;low_payment_shock,R.Thompson,U.Chen,Underwriter_II,Low,Y,No_Finding
+EXC-2024-003,MNB-2024-08008,2024-08-22,DTI_Override,Conv_Back_DTI_Max,45.0,44.6,N/A_-_denied_for_employment_gap,S.Williams,U.Patel,Senior_Underwriter,High,Y,Denied_Correctly
+EXC-2024-004,MNB-2024-08010,2024-08-28,FICO_Exception,FHA_Min_FICO,580,602,N/A_-_denied_for_AUS_Refer+high_DTI,R.Thompson,U.Ramirez,Underwriting_Manager,High,Y,Denied_Correctly
+EXC-2024-005,MNB-2024-08011,2024-09-05,DTI_Override,Conv_Back_DTI_Max,45.0,40.1,No_exception_needed_-_within_guidelines,M.Anderson,U.Chen,Underwriter_II,N/A,N,N/A
+EXC-2024-006,MNB-2024-08014,2024-09-18,LTV_Exception,Conv_LTV_Max_SFR,97.0,97.33,Borrower_reserves_6mo;DTI_well_within_limits;strong_rental_history,R.Thompson,SVP_Lending+CCO,SVP+CCO,Medium,Y,Finding_Minor_-_Missing_LOE_for_credit_inquiry
+EXC-2024-007,MNB-2024-08019,2024-10-05,Product_Exception,Jumbo_LTV_Max,80.0,80.70,Excellent_credit_748;significant_liquid_assets_$450K;stable_employment_12yr,M.Anderson,SVP_Lending+CCO,SVP+CCO,Medium,Y,No_Finding
+EXC-2024-008,MNB-2024-08023,2024-10-18,DTI_Override,VA_Back_DTI_Max,60.0,48.5,No_exception_needed_-_within_guidelines,M.Anderson,U.Patel,Underwriter_II,N/A,N,N/A
+EXC-2024-009,MNB-2024-08026,2024-11-02,FICO_Exception,FHA_Min_FICO,580,595,Compensating_factors_insufficient;borderline_credit_with_recent_lates,R.Thompson,U.Patel,Underwriting_Manager,High,Y,Pending_Review
+EXC-2024-010,MNB-2024-08026,2024-11-02,DTI_Override,FHA_Back_DTI_Max,57.0,56.8,No_exception_needed_-_within_guidelines,R.Thompson,U.Patel,Underwriting_Manager,N/A,N,N/A
+EXC-2024-011,MNB-2024-08029,2024-11-12,LTV_Exception,Conv_LTV_Max_Townhouse,95.0,97.70,Strong_reserves_5mo;low_credit_utilization_18%;stable_2yr_employment,S.Williams,SVP_Lending+CCO,SVP+CCO,Medium,Y,No_Finding
+EXC-2024-012,MNB-2024-08007,2024-08-20,Appraisal_Exception,Comparable_Adjustment_Limit,25.0,28.3,Strong_market_data;limited_comparables_in_area;appraiser_provided_detailed_justification,M.Anderson,U.Ramirez,Senior_Underwriter,Low,Y,No_Finding
