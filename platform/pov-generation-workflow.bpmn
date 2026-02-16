@@ -399,8 +399,9 @@
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_FromAnalyst_di" bpmnElement="Flow_FromAnalyst">
-        <di:waypoint x="1389" y="542" />
-        <di:waypoint x="1491" y="542" />
+        <di:waypoint x="1313" y="504" />
+        <di:waypoint x="1313" y="480" />
+        <di:waypoint x="1491" y="480" />
         <di:waypoint x="1491" y="382" />
       </bpmndi:BPMNEdge>
 
@@ -411,8 +412,9 @@
 
       <bpmndi:BPMNEdge id="Flow_12_di" bpmnElement="Flow_12">
         <di:waypoint x="1692" y="306" />
-        <di:waypoint x="1692" y="146" />
-        <di:waypoint x="1367" y="146" />
+        <di:waypoint x="1692" y="80" />
+        <di:waypoint x="1342" y="80" />
+        <di:waypoint x="1342" y="121" />
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_HighConfidence_di" bpmnElement="Flow_HighConfidence">
@@ -425,7 +427,10 @@
 
       <bpmndi:BPMNEdge id="Flow_LowConfidence_di" bpmnElement="Flow_LowConfidence">
         <di:waypoint x="1342" y="171" />
-        <di:waypoint x="1342" y="679" />
+        <di:waypoint x="1342" y="460" />
+        <di:waypoint x="1210" y="460" />
+        <di:waypoint x="1210" y="717" />
+        <di:waypoint x="1267" y="717" />
         <bpmndi:BPMNLabel>
           <dc:Bounds x="1287" y="203" width="88" height="14" />
         </bpmndi:BPMNLabel>
@@ -433,8 +438,10 @@
 
       <bpmndi:BPMNEdge id="Flow_FromSME_di" bpmnElement="Flow_FromSME">
         <di:waypoint x="1418" y="717" />
-        <di:waypoint x="1552" y="717" />
-        <di:waypoint x="1552" y="184" />
+        <di:waypoint x="1840" y="717" />
+        <di:waypoint x="1840" y="70" />
+        <di:waypoint x="1552" y="70" />
+        <di:waypoint x="1552" y="108" />
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_15_di" bpmnElement="Flow_15">

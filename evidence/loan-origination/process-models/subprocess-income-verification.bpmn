@@ -7,8 +7,8 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   id="Definitions_IncomeVerification"
   targetNamespace="http://bpmn.io/schema/bpmn"
-  exporter="KMFlow Platform"
-  exporterVersion="1.0.0">
+  exporter="Camunda Modeler"
+  exporterVersion="5.31.0">
 
   <bpmn:collaboration id="Collaboration_IncomeVerification">
     <bpmn:participant id="Participant_Pool" name="Income Verification" processRef="Process_IncomeVerification" />
@@ -151,178 +151,189 @@
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_IncomeVerification">
 
-      <!-- Pool -->
-      <bpmndi:BPMNShape id="Participant_Pool" bpmnElement="Participant_Pool" isHorizontal="true">
-        <dc:Bounds x="155" y="47" width="1400" height="630" />
+      <!-- Pool (increased height from 630 to 800 for better spacing) -->
+      <bpmndi:BPMNShape id="Participant_Pool_di" bpmnElement="Participant_Pool" isHorizontal="true">
+        <dc:Bounds x="155" y="47" width="1400" height="800" />
       </bpmndi:BPMNShape>
 
-      <!-- Lanes -->
-      <bpmndi:BPMNShape id="Lane_Processor" bpmnElement="Lane_Processor" isHorizontal="true">
-        <dc:Bounds x="185" y="47" width="1370" height="315" />
+      <!-- Lanes (increased heights: 400px each) -->
+      <bpmndi:BPMNShape id="Lane_Processor_di" bpmnElement="Lane_Processor" isHorizontal="true">
+        <dc:Bounds x="185" y="47" width="1370" height="400" />
       </bpmndi:BPMNShape>
 
-      <bpmndi:BPMNShape id="Lane_Underwriter" bpmnElement="Lane_Underwriter" isHorizontal="true">
-        <dc:Bounds x="185" y="362" width="1370" height="315" />
+      <bpmndi:BPMNShape id="Lane_Underwriter_di" bpmnElement="Lane_Underwriter" isHorizontal="true">
+        <dc:Bounds x="185" y="447" width="1370" height="400" />
       </bpmndi:BPMNShape>
 
-      <!-- Start Event -->
+      <!-- Start Event (centered better in lane) -->
       <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
-        <dc:Bounds x="247" y="167" width="36" height="36" />
+        <dc:Bounds x="247" y="229" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="233" y="210" width="64" height="40" />
+          <dc:Bounds x="233" y="272" width="64" height="40" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- Gather Docs Task -->
+      <!-- Gather Docs Task (aligned with start event center) -->
       <bpmndi:BPMNShape id="Task_GatherDocs_di" bpmnElement="Task_GatherDocs">
-        <dc:Bounds x="335" y="147" width="151" height="76" />
+        <dc:Bounds x="335" y="209" width="151" height="76" />
       </bpmndi:BPMNShape>
 
-      <!-- Employment Type Gateway -->
+      <!-- Employment Type Gateway (aligned with center) -->
       <bpmndi:BPMNShape id="Gateway_EmploymentType_di" bpmnElement="Gateway_EmploymentType" isMarkerVisible="true">
-        <dc:Bounds x="536" y="160" width="50" height="50" />
+        <dc:Bounds x="536" y="222" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="530" y="217" width="62" height="27" />
+          <dc:Bounds x="530" y="279" width="62" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- W-2 Path Task -->
+      <!-- W-2 Path Task (top path, 120px spacing from center) -->
       <bpmndi:BPMNShape id="Task_VerifyW2_di" bpmnElement="Task_VerifyW2">
-        <dc:Bounds x="646" y="80" width="151" height="76" />
+        <dc:Bounds x="646" y="89" width="151" height="76" />
       </bpmndi:BPMNShape>
 
-      <!-- Self-Employed Path Task -->
+      <!-- Self-Employed Path Task (center path) -->
       <bpmndi:BPMNShape id="Task_AnalyzeTaxReturns_di" bpmnElement="Task_AnalyzeTaxReturns">
-        <dc:Bounds x="646" y="170" width="151" height="76" />
+        <dc:Bounds x="646" y="209" width="151" height="76" />
       </bpmndi:BPMNShape>
 
-      <!-- Other Income Path Task -->
+      <!-- Other Income Path Task (bottom path, 120px spacing from center) -->
       <bpmndi:BPMNShape id="Task_VerifyOtherIncome_di" bpmnElement="Task_VerifyOtherIncome">
-        <dc:Bounds x="646" y="260" width="151" height="76" />
+        <dc:Bounds x="646" y="329" width="151" height="76" />
       </bpmndi:BPMNShape>
 
-      <!-- Merge Gateway -->
+      <!-- Merge Gateway (aligned with center) -->
       <bpmndi:BPMNShape id="Gateway_MergeEmployment_di" bpmnElement="Gateway_MergeEmployment" isMarkerVisible="true">
-        <dc:Bounds x="847" y="160" width="50" height="50" />
+        <dc:Bounds x="847" y="222" width="50" height="50" />
       </bpmndi:BPMNShape>
 
-      <!-- Calculate Task -->
+      <!-- Calculate Task (aligned with center) -->
       <bpmndi:BPMNShape id="Task_Calculate_di" bpmnElement="Task_Calculate">
-        <dc:Bounds x="957" y="147" width="151" height="76" />
+        <dc:Bounds x="957" y="209" width="151" height="76" />
       </bpmndi:BPMNShape>
 
-      <!-- Review Calculation Task (Underwriter Lane) -->
+      <!-- Review Calculation Task (Underwriter Lane, better positioned) -->
       <bpmndi:BPMNShape id="Task_ReviewCalculation_di" bpmnElement="Task_ReviewCalculation">
-        <dc:Bounds x="957" y="481" width="151" height="76" />
+        <dc:Bounds x="957" y="609" width="151" height="76" />
       </bpmndi:BPMNShape>
 
-      <!-- Income Trending Gateway -->
+      <!-- Income Trending Gateway (aligned with review task) -->
       <bpmndi:BPMNShape id="Gateway_IncomeTrending_di" bpmnElement="Gateway_IncomeTrending" isMarkerVisible="true">
-        <dc:Bounds x="1158" y="494" width="50" height="50" />
+        <dc:Bounds x="1158" y="622" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1153" y="551" width="60" height="27" />
+          <dc:Bounds x="1153" y="679" width="60" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- Document Declining Task -->
+      <!-- Document Declining Task (positioned below for declining path) -->
       <bpmndi:BPMNShape id="Task_DocumentDeclining_di" bpmnElement="Task_DocumentDeclining">
-        <dc:Bounds x="1268" y="570" width="151" height="76" />
+        <dc:Bounds x="1268" y="729" width="151" height="76" />
       </bpmndi:BPMNShape>
 
-      <!-- End Event - Verified -->
+      <!-- End Event - Verified (aligned with gateway center) -->
       <bpmndi:BPMNShape id="EndEvent_Verified_di" bpmnElement="EndEvent_Verified">
-        <dc:Bounds x="1268" y="501" width="36" height="36" />
+        <dc:Bounds x="1268" y="629" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1260" y="544" width="52" height="27" />
+          <dc:Bounds x="1260" y="672" width="52" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- End Event - Conditional Verified -->
+      <!-- End Event - Conditional Verified (aligned with declining task center) -->
       <bpmndi:BPMNShape id="EndEvent_ConditionalVerified_di" bpmnElement="EndEvent_ConditionalVerified">
-        <dc:Bounds x="1469" y="590" width="36" height="36" />
+        <dc:Bounds x="1469" y="749" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1455" y="633" width="64" height="40" />
+          <dc:Bounds x="1455" y="792" width="64" height="40" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
       <!-- Sequence Flow Edges -->
       <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
-        <di:waypoint x="283" y="185" />
-        <di:waypoint x="335" y="185" />
+        <di:waypoint x="283" y="247" />
+        <di:waypoint x="335" y="247" />
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
-        <di:waypoint x="486" y="185" />
-        <di:waypoint x="536" y="185" />
+        <di:waypoint x="486" y="247" />
+        <di:waypoint x="536" y="247" />
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_W2_di" bpmnElement="Flow_W2">
-        <di:waypoint x="561" y="160" />
-        <di:waypoint x="561" y="118" />
-        <di:waypoint x="646" y="118" />
+        <di:waypoint x="561" y="222" />
+        <di:waypoint x="561" y="127" />
+        <di:waypoint x="646" y="127" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="568" y="165" width="68" height="14" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_SelfEmployed_di" bpmnElement="Flow_SelfEmployed">
-        <di:waypoint x="586" y="185" />
-        <di:waypoint x="616" y="185" />
-        <di:waypoint x="616" y="208" />
-        <di:waypoint x="646" y="208" />
+        <di:waypoint x="586" y="247" />
+        <di:waypoint x="646" y="247" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="591" y="229" width="73" height="14" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_Other_di" bpmnElement="Flow_Other">
-        <di:waypoint x="561" y="210" />
-        <di:waypoint x="561" y="298" />
-        <di:waypoint x="646" y="298" />
+        <di:waypoint x="561" y="272" />
+        <di:waypoint x="561" y="367" />
+        <di:waypoint x="646" y="367" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="568" y="312" width="67" height="14" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_W2_Complete_di" bpmnElement="Flow_W2_Complete">
-        <di:waypoint x="797" y="118" />
-        <di:waypoint x="872" y="118" />
-        <di:waypoint x="872" y="160" />
+        <di:waypoint x="797" y="127" />
+        <di:waypoint x="872" y="127" />
+        <di:waypoint x="872" y="222" />
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_SE_Complete_di" bpmnElement="Flow_SE_Complete">
-        <di:waypoint x="797" y="208" />
-        <di:waypoint x="822" y="208" />
-        <di:waypoint x="822" y="185" />
-        <di:waypoint x="847" y="185" />
+        <di:waypoint x="797" y="247" />
+        <di:waypoint x="847" y="247" />
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_Other_Complete_di" bpmnElement="Flow_Other_Complete">
-        <di:waypoint x="797" y="298" />
-        <di:waypoint x="872" y="298" />
-        <di:waypoint x="872" y="210" />
+        <di:waypoint x="797" y="367" />
+        <di:waypoint x="872" y="367" />
+        <di:waypoint x="872" y="272" />
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
-        <di:waypoint x="897" y="185" />
-        <di:waypoint x="957" y="185" />
+        <di:waypoint x="897" y="247" />
+        <di:waypoint x="957" y="247" />
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
-        <di:waypoint x="1032" y="223" />
-        <di:waypoint x="1032" y="481" />
+        <di:waypoint x="1032" y="285" />
+        <di:waypoint x="1032" y="609" />
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
-        <di:waypoint x="1108" y="519" />
-        <di:waypoint x="1158" y="519" />
+        <di:waypoint x="1108" y="647" />
+        <di:waypoint x="1158" y="647" />
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_Stable_di" bpmnElement="Flow_Stable">
-        <di:waypoint x="1208" y="519" />
-        <di:waypoint x="1268" y="519" />
+        <di:waypoint x="1208" y="647" />
+        <di:waypoint x="1268" y="647" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1225" y="629" width="32" height="14" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_Declining_di" bpmnElement="Flow_Declining">
-        <di:waypoint x="1183" y="544" />
-        <di:waypoint x="1183" y="608" />
-        <di:waypoint x="1268" y="608" />
+        <di:waypoint x="1183" y="672" />
+        <di:waypoint x="1183" y="767" />
+        <di:waypoint x="1268" y="767" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1180" y="716" width="46" height="14" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
-        <di:waypoint x="1419" y="608" />
-        <di:waypoint x="1469" y="608" />
+        <di:waypoint x="1419" y="767" />
+        <di:waypoint x="1469" y="767" />
       </bpmndi:BPMNEdge>
 
     </bpmndi:BPMNPlane>

@@ -247,10 +247,11 @@
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_04_di" bpmnElement="Flow_04">
-        <di:waypoint x="1037" y="147" />
-        <di:waypoint x="1137" y="147" />
-        <di:waypoint x="1137" y="362" />
-        <di:waypoint x="486" y="362" />
+        <di:waypoint x="987" y="187" />
+        <di:waypoint x="987" y="295" />
+        <di:waypoint x="260" y="295" />
+        <di:waypoint x="260" y="362" />
+        <di:waypoint x="335" y="362" />
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_07_di" bpmnElement="Flow_07">
@@ -270,8 +271,10 @@
 
       <bpmndi:BPMNEdge id="Flow_10_di" bpmnElement="Flow_10">
         <di:waypoint x="1013" y="400" />
-        <di:waypoint x="1013" y="572" />
-        <di:waypoint x="486" y="572" />
+        <di:waypoint x="1013" y="495" />
+        <di:waypoint x="260" y="495" />
+        <di:waypoint x="260" y="572" />
+        <di:waypoint x="335" y="572" />
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_11_di" bpmnElement="Flow_11">
@@ -280,10 +283,12 @@
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_12_Yes_di" bpmnElement="Flow_12_Yes">
-        <di:waypoint x="636" y="572" />
-        <di:waypoint x="1307" y="572" />
+        <di:waypoint x="611" y="547" />
+        <di:waypoint x="611" y="510" />
+        <di:waypoint x="1325" y="510" />
+        <di:waypoint x="1325" y="554" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="648" y="554" width="20" height="14" />
+          <dc:Bounds x="630" y="492" width="20" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 

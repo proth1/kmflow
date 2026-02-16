@@ -450,9 +450,10 @@
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_FromClient_di" bpmnElement="Flow_FromClient">
-        <di:waypoint x="1428" y="717" />
-        <di:waypoint x="611" y="717" />
-        <di:waypoint x="611" y="382" />
+        <di:waypoint x="1503" y="679" />
+        <di:waypoint x="1503" y="660" />
+        <di:waypoint x="590" y="660" />
+        <di:waypoint x="590" y="382" />
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_ToFollowUp_di" bpmnElement="Flow_ToFollowUp">
