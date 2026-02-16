@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  id="Definitions_EvidenceParser"
+  targetNamespace="http://bpmn.io/schema/bpmn"
+  exporter="KMFlow Platform"
+  exporterVersion="1.0.0">
+
+  <bpmn:process id="Process_EvidenceParser" name="Evidence Parser Template" isExecutable="true">
+
+    <!-- Start Event -->
+    <bpmn:startEvent id="StartEvent_1" name="Evidence&#10;Received">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <!-- Service Task: Detect Format -->
+    <bpmn:serviceTask id="Task_DetectFormat" name="Detect Format" camunda:type="external" camunda:topic="kmflow.evidence.parse">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- XOR Gateway: Format Type (3-way split) -->
+    <bpmn:exclusiveGateway id="Gateway_FormatType" name="Format&#10;Type?">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_Document</bpmn:outgoing>
+      <bpmn:outgoing>Flow_StructuredData</bpmn:outgoing>
+      <bpmn:outgoing>Flow_BPMModel</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Path A: Document Processing -->
+    <bpmn:serviceTask id="Task_ParseDoc" name="Parse Document" camunda:type="external" camunda:topic="kmflow.evidence.parse">
+      <bpmn:incoming>Flow_Document</bpmn:incoming>
+      <bpmn:outgoing>Flow_DocToEmbed</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_GenDocEmbeddings" name="Generate Doc Embeddings" camunda:type="external" camunda:topic="kmflow.semantic.extract">
+      <bpmn:incoming>Flow_DocToEmbed</bpmn:incoming>
+      <bpmn:outgoing>Flow_DocToStore</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_StoreDocFragments" name="Store Doc Fragments" camunda:type="external" camunda:topic="kmflow.evidence.store">
+      <bpmn:incoming>Flow_DocToStore</bpmn:incoming>
+      <bpmn:outgoing>Flow_DocComplete</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- Path B: Structured Data Processing -->
+    <bpmn:serviceTask id="Task_ParseData" name="Parse Structured Data" camunda:type="external" camunda:topic="kmflow.evidence.parse">
+      <bpmn:incoming>Flow_StructuredData</bpmn:incoming>
+      <bpmn:outgoing>Flow_DataToEmbed</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_GenDataEmbeddings" name="Generate Data Embeddings" camunda:type="external" camunda:topic="kmflow.semantic.extract">
+      <bpmn:incoming>Flow_DataToEmbed</bpmn:incoming>
+      <bpmn:outgoing>Flow_DataToStore</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_StoreDataFragments" name="Store Data Fragments" camunda:type="external" camunda:topic="kmflow.evidence.store">
+      <bpmn:incoming>Flow_DataToStore</bpmn:incoming>
+      <bpmn:outgoing>Flow_DataComplete</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- Path C: BPM Model Processing -->
+    <bpmn:serviceTask id="Task_ParseModel" name="Parse BPM Model" camunda:type="external" camunda:topic="kmflow.evidence.parse">
+      <bpmn:incoming>Flow_BPMModel</bpmn:incoming>
+      <bpmn:outgoing>Flow_ModelToEmbed</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_GenModelEmbeddings" name="Generate Model Embeddings" camunda:type="external" camunda:topic="kmflow.semantic.extract">
+      <bpmn:incoming>Flow_ModelToEmbed</bpmn:incoming>
+      <bpmn:outgoing>Flow_ModelToStore</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_StoreModelFragments" name="Store Model Fragments" camunda:type="external" camunda:topic="kmflow.evidence.store">
+      <bpmn:incoming>Flow_ModelToStore</bpmn:incoming>
+      <bpmn:outgoing>Flow_ModelComplete</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- XOR Gateway: Merge (Parsing Complete) -->
+    <bpmn:exclusiveGateway id="Gateway_Merge" name="Parsing&#10;Complete">
+      <bpmn:incoming>Flow_DocComplete</bpmn:incoming>
+      <bpmn:incoming>Flow_DataComplete</bpmn:incoming>
+      <bpmn:incoming>Flow_ModelComplete</bpmn:incoming>
+      <bpmn:outgoing>Flow_UpdateIndex</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Service Task: Update Evidence Index -->
+    <bpmn:serviceTask id="Task_UpdateIndex" name="Update Evidence Index" camunda:type="external" camunda:topic="kmflow.evidence.index">
+      <bpmn:incoming>Flow_UpdateIndex</bpmn:incoming>
+      <bpmn:outgoing>Flow_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- End Event -->
+    <bpmn:endEvent id="EndEvent_1" name="Parsing&#10;Done">
+      <bpmn:incoming>Flow_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_DetectFormat"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_DetectFormat" targetRef="Gateway_FormatType"/>
+
+    <bpmn:sequenceFlow id="Flow_Document" name="Document" sourceRef="Gateway_FormatType" targetRef="Task_ParseDoc">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${format == 'document'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_StructuredData" name="Structured" sourceRef="Gateway_FormatType" targetRef="Task_ParseData">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${format == 'structured'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_BPMModel" name="BPM Model" sourceRef="Gateway_FormatType" targetRef="Task_ParseModel">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${format == 'bpm'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_DocToEmbed" sourceRef="Task_ParseDoc" targetRef="Task_GenDocEmbeddings"/>
+    <bpmn:sequenceFlow id="Flow_DocToStore" sourceRef="Task_GenDocEmbeddings" targetRef="Task_StoreDocFragments"/>
+    <bpmn:sequenceFlow id="Flow_DocComplete" sourceRef="Task_StoreDocFragments" targetRef="Gateway_Merge"/>
+
+    <bpmn:sequenceFlow id="Flow_DataToEmbed" sourceRef="Task_ParseData" targetRef="Task_GenDataEmbeddings"/>
+    <bpmn:sequenceFlow id="Flow_DataToStore" sourceRef="Task_GenDataEmbeddings" targetRef="Task_StoreDataFragments"/>
+    <bpmn:sequenceFlow id="Flow_DataComplete" sourceRef="Task_StoreDataFragments" targetRef="Gateway_Merge"/>
+
+    <bpmn:sequenceFlow id="Flow_ModelToEmbed" sourceRef="Task_ParseModel" targetRef="Task_GenModelEmbeddings"/>
+    <bpmn:sequenceFlow id="Flow_ModelToStore" sourceRef="Task_GenModelEmbeddings" targetRef="Task_StoreModelFragments"/>
+    <bpmn:sequenceFlow id="Flow_ModelComplete" sourceRef="Task_StoreModelFragments" targetRef="Gateway_Merge"/>
+
+    <bpmn:sequenceFlow id="Flow_UpdateIndex" sourceRef="Gateway_Merge" targetRef="Task_UpdateIndex"/>
+    <bpmn:sequenceFlow id="Flow_End" sourceRef="Task_UpdateIndex" targetRef="EndEvent_1"/>
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_EvidenceParser">
+
+      <!-- Pool -->
+      <bpmndi:BPMNShape id="Participant_Pool" bpmnElement="Participant_Pool" isHorizontal="true">
+        <dc:Bounds x="155" y="47" width="1705" height="793"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Lane: Parser Dispatcher -->
+      <bpmndi:BPMNShape id="Lane_ParserDispatcher" bpmnElement="Lane_ParserDispatcher" isHorizontal="true">
+        <dc:Bounds x="185" y="47" width="1675" height="200"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Lane: Format Handlers -->
+      <bpmndi:BPMNShape id="Lane_FormatHandlers" bpmnElement="Lane_FormatHandlers" isHorizontal="true">
+        <dc:Bounds x="185" y="247" width="1675" height="593"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Start Event: Evidence Received (in Parser Dispatcher lane, centered) -->
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="247" y="129" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="240" y="172" width="50" height="27"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Service Task: Detect Format -->
+      <bpmndi:BPMNShape id="Task_DetectFormat_di" bpmnElement="Task_DetectFormat">
+        <dc:Bounds x="335" y="109" width="151" height="76"/>
+      </bpmndi:BPMNShape>
+
+      <!-- XOR Gateway: Format Type -->
+      <bpmndi:BPMNShape id="Gateway_FormatType_di" bpmnElement="Gateway_FormatType" isMarkerVisible="true">
+        <dc:Bounds x="536" y="122" width="50" height="50"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="539" y="92" width="45" height="27"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Path A: Document Processing (in Format Handlers lane, top row) -->
+      <bpmndi:BPMNShape id="Task_ParseDoc_di" bpmnElement="Task_ParseDoc">
+        <dc:Bounds x="486" y="307" width="151" height="76"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_GenDocEmbeddings_di" bpmnElement="Task_GenDocEmbeddings">
+        <dc:Bounds x="687" y="307" width="151" height="76"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_StoreDocFragments_di" bpmnElement="Task_StoreDocFragments">
+        <dc:Bounds x="888" y="307" width="151" height="76"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Path B: Structured Data Processing (in Format Handlers lane, middle row) -->
+      <bpmndi:BPMNShape id="Task_ParseData_di" bpmnElement="Task_ParseData">
+        <dc:Bounds x="486" y="483" width="151" height="76"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_GenDataEmbeddings_di" bpmnElement="Task_GenDataEmbeddings">
+        <dc:Bounds x="687" y="483" width="151" height="76"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_StoreDataFragments_di" bpmnElement="Task_StoreDataFragments">
+        <dc:Bounds x="888" y="483" width="151" height="76"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Path C: BPM Model Processing (in Format Handlers lane, bottom row) -->
+      <bpmndi:BPMNShape id="Task_ParseModel_di" bpmnElement="Task_ParseModel">
+        <dc:Bounds x="486" y="659" width="151" height="76"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_GenModelEmbeddings_di" bpmnElement="Task_GenModelEmbeddings">
+        <dc:Bounds x="687" y="659" width="151" height="76"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_StoreModelFragments_di" bpmnElement="Task_StoreModelFragments">
+        <dc:Bounds x="888" y="659" width="151" height="76"/>
+      </bpmndi:BPMNShape>
+
+      <!-- XOR Gateway: Merge (in Parser Dispatcher lane) -->
+      <bpmndi:BPMNShape id="Gateway_Merge_di" bpmnElement="Gateway_Merge" isMarkerVisible="true">
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1188" y="92" width="45" height="27"/>
+        </bpmndi:BPMNLabel>
+        <dc:Bounds x="1185" y="122" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Service Task: Update Evidence Index -->
+      <bpmndi:BPMNShape id="Task_UpdateIndex_di" bpmnElement="Task_UpdateIndex">
+        <dc:Bounds x="1335" y="109" width="151" height="76"/>
+      </bpmndi:BPMNShape>
+
+      <!-- End Event: Parsing Done -->
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1586" y="129" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1582" y="172" width="45" height="27"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Sequence Flow Edges -->
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="283" y="147"/>
+        <di:waypoint x="335" y="147"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="486" y="147"/>
+        <di:waypoint x="536" y="147"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- Path A: Document -->
+      <bpmndi:BPMNEdge id="Flow_Document_di" bpmnElement="Flow_Document">
+        <di:waypoint x="561" y="172"/>
+        <di:waypoint x="561" y="307"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="495" y="237" width="54" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_DocToEmbed_di" bpmnElement="Flow_DocToEmbed">
+        <di:waypoint x="637" y="345"/>
+        <di:waypoint x="687" y="345"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_DocToStore_di" bpmnElement="Flow_DocToStore">
+        <di:waypoint x="838" y="345"/>
+        <di:waypoint x="888" y="345"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_DocComplete_di" bpmnElement="Flow_DocComplete">
+        <di:waypoint x="1039" y="345"/>
+        <di:waypoint x="1210" y="345"/>
+        <di:waypoint x="1210" y="172"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- Path B: Structured Data -->
+      <bpmndi:BPMNEdge id="Flow_StructuredData_di" bpmnElement="Flow_StructuredData">
+        <di:waypoint x="561" y="172"/>
+        <di:waypoint x="561" y="483"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="487" y="325" width="51" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_DataToEmbed_di" bpmnElement="Flow_DataToEmbed">
+        <di:waypoint x="637" y="521"/>
+        <di:waypoint x="687" y="521"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_DataToStore_di" bpmnElement="Flow_DataToStore">
+        <di:waypoint x="838" y="521"/>
+        <di:waypoint x="888" y="521"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_DataComplete_di" bpmnElement="Flow_DataComplete">
+        <di:waypoint x="1039" y="521"/>
+        <di:waypoint x="1210" y="521"/>
+        <di:waypoint x="1210" y="172"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- Path C: BPM Model -->
+      <bpmndi:BPMNEdge id="Flow_BPMModel_di" bpmnElement="Flow_BPMModel">
+        <di:waypoint x="561" y="172"/>
+        <di:waypoint x="561" y="659"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="474" y="413" width="59" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_ModelToEmbed_di" bpmnElement="Flow_ModelToEmbed">
+        <di:waypoint x="637" y="697"/>
+        <di:waypoint x="687" y="697"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_ModelToStore_di" bpmnElement="Flow_ModelToStore">
+        <di:waypoint x="838" y="697"/>
+        <di:waypoint x="888" y="697"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_ModelComplete_di" bpmnElement="Flow_ModelComplete">
+        <di:waypoint x="1039" y="697"/>
+        <di:waypoint x="1210" y="697"/>
+        <di:waypoint x="1210" y="172"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- Merge and End -->
+      <bpmndi:BPMNEdge id="Flow_UpdateIndex_di" bpmnElement="Flow_UpdateIndex">
+        <di:waypoint x="1235" y="147"/>
+        <di:waypoint x="1335" y="147"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_End_di" bpmnElement="Flow_End">
+        <di:waypoint x="1486" y="147"/>
+        <di:waypoint x="1586" y="147"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+  <bpmn:collaboration id="Collaboration_1">
+    <bpmn:participant id="Participant_Pool" name="KMFlow Evidence Parser" processRef="Process_EvidenceParser"/>
+  </bpmn:collaboration>
+
+  <bpmn:laneSet id="LaneSet_1">
+    <bpmn:lane id="Lane_ParserDispatcher" name="Parser Dispatcher">
+      <bpmn:flowNodeRef>StartEvent_1</bpmn:flowNodeRef>
+      <bpmn:flowNodeRef>Task_DetectFormat</bpmn:flowNodeRef>
+      <bpmn:flowNodeRef>Gateway_FormatType</bpmn:flowNodeRef>
+      <bpmn:flowNodeRef>Gateway_Merge</bpmn:flowNodeRef>
+      <bpmn:flowNodeRef>Task_UpdateIndex</bpmn:flowNodeRef>
+      <bpmn:flowNodeRef>EndEvent_1</bpmn:flowNodeRef>
+    </bpmn:lane>
+    <bpmn:lane id="Lane_FormatHandlers" name="Format Handlers">
+      <bpmn:flowNodeRef>Task_ParseDoc</bpmn:flowNodeRef>
+      <bpmn:flowNodeRef>Task_GenDocEmbeddings</bpmn:flowNodeRef>
+      <bpmn:flowNodeRef>Task_StoreDocFragments</bpmn:flowNodeRef>
+      <bpmn:flowNodeRef>Task_ParseData</bpmn:flowNodeRef>
+      <bpmn:flowNodeRef>Task_GenDataEmbeddings</bpmn:flowNodeRef>
+      <bpmn:flowNodeRef>Task_StoreDataFragments</bpmn:flowNodeRef>
+      <bpmn:flowNodeRef>Task_ParseModel</bpmn:flowNodeRef>
+      <bpmn:flowNodeRef>Task_GenModelEmbeddings</bpmn:flowNodeRef>
+      <bpmn:flowNodeRef>Task_StoreModelFragments</bpmn:flowNodeRef>
+    </bpmn:lane>
+  </bpmn:laneSet>
+
+</bpmn:definitions>

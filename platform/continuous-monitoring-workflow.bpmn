@@ -1,0 +1,412 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  id="Definitions_Monitoring"
+  targetNamespace="http://bpmn.io/schema/bpmn"
+  exporter="KMFlow Platform"
+  exporterVersion="1.0.0">
+
+  <bpmn:collaboration id="Collaboration_Monitoring">
+    <bpmn:participant id="Participant_Monitoring" name="KMFlow Continuous Monitoring" processRef="Process_ContinuousMonitoring" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_ContinuousMonitoring" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_Monitoring">
+      <bpmn:lane id="Lane_MonitoringAgent" name="Monitoring Agent">
+        <bpmn:flowNodeRef>StartEvent_Activated</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ConfigureRules</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Timer_DailyCollection</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CollectEvidence</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CompareBaseline</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_DeviationEngine" name="Deviation Engine">
+        <bpmn:flowNodeRef>Gateway_DeviationDetected</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_SeverityLevel</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_GenerateCriticalAlert</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AddToBatchReport</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_EngagementLead2" name="Engagement Lead">
+        <bpmn:flowNodeRef>Task_ReviewCriticalDeviation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ActionRequired</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>CallActivity_TriggerPOV</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_MonitorControl</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_ManualStop</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_EngagementClosed</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_Stopped</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_Complete</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="StartEvent_Activated" name="Monitoring&#10;Activated">
+      <bpmn:outgoing>Flow_01</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask id="Task_ConfigureRules" name="Configure Monitoring Rules" camunda:type="external" camunda:topic="kmflow.monitor.collect">
+      <bpmn:incoming>Flow_01</bpmn:incoming>
+      <bpmn:outgoing>Flow_02</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:intermediateCatchEvent id="Timer_DailyCollection" name="Daily&#10;Collection">
+      <bpmn:incoming>Flow_02</bpmn:incoming>
+      <bpmn:incoming>Flow_13_Continue</bpmn:incoming>
+      <bpmn:outgoing>Flow_03</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P1D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:serviceTask id="Task_CollectEvidence" name="Collect Evidence Updates" camunda:type="external" camunda:topic="kmflow.monitor.collect">
+      <bpmn:incoming>Flow_03</bpmn:incoming>
+      <bpmn:outgoing>Flow_04</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_CompareBaseline" name="Compare Against Baseline" camunda:type="external" camunda:topic="kmflow.monitor.detect">
+      <bpmn:incoming>Flow_04</bpmn:incoming>
+      <bpmn:outgoing>Flow_05</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:exclusiveGateway id="Gateway_DeviationDetected" name="Deviation&#10;Detected?">
+      <bpmn:incoming>Flow_05</bpmn:incoming>
+      <bpmn:outgoing>Flow_06_No</bpmn:outgoing>
+      <bpmn:outgoing>Flow_06_Yes</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:exclusiveGateway id="Gateway_SeverityLevel" name="Severity&#10;Level?">
+      <bpmn:incoming>Flow_06_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_07_Critical</bpmn:outgoing>
+      <bpmn:outgoing>Flow_07_Low</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:serviceTask id="Task_GenerateCriticalAlert" name="Generate Critical Alert" camunda:type="external" camunda:topic="kmflow.monitor.alert">
+      <bpmn:incoming>Flow_07_Critical</bpmn:incoming>
+      <bpmn:outgoing>Flow_08</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_AddToBatchReport" name="Add to Batch Report" camunda:type="external" camunda:topic="kmflow.monitor.report">
+      <bpmn:incoming>Flow_07_Low</bpmn:incoming>
+      <bpmn:outgoing>Flow_09</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:userTask id="Task_ReviewCriticalDeviation" name="Review Critical Deviation" camunda:candidateGroups="engagement-leads">
+      <bpmn:incoming>Flow_08</bpmn:incoming>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="Gateway_ActionRequired" name="Action&#10;Required?">
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+      <bpmn:outgoing>Flow_11_Regenerate</bpmn:outgoing>
+      <bpmn:outgoing>Flow_11_Acknowledge</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:callActivity id="CallActivity_TriggerPOV" name="Trigger POV Regeneration" calledElement="Process_POVGeneration">
+      <bpmn:incoming>Flow_11_Regenerate</bpmn:incoming>
+      <bpmn:outgoing>Flow_12</bpmn:outgoing>
+    </bpmn:callActivity>
+
+    <bpmn:exclusiveGateway id="Gateway_MonitorControl" name="Monitor&#10;Control">
+      <bpmn:incoming>Flow_06_No</bpmn:incoming>
+      <bpmn:incoming>Flow_09</bpmn:incoming>
+      <bpmn:incoming>Flow_11_Acknowledge</bpmn:incoming>
+      <bpmn:incoming>Flow_12</bpmn:incoming>
+      <bpmn:outgoing>Flow_13_Continue</bpmn:outgoing>
+      <bpmn:outgoing>Flow_13_Stop</bpmn:outgoing>
+      <bpmn:outgoing>Flow_13_Close</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:intermediateCatchEvent id="Event_ManualStop" name="Manual&#10;Stop">
+      <bpmn:incoming>Flow_13_Stop</bpmn:incoming>
+      <bpmn:outgoing>Flow_14</bpmn:outgoing>
+      <bpmn:messageEventDefinition messageRef="Message_ManualStop" />
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:intermediateCatchEvent id="Event_EngagementClosed" name="Engagement&#10;Closed">
+      <bpmn:incoming>Flow_13_Close</bpmn:incoming>
+      <bpmn:outgoing>Flow_15</bpmn:outgoing>
+      <bpmn:messageEventDefinition messageRef="Message_EngagementClosed" />
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:endEvent id="EndEvent_Stopped" name="Monitoring&#10;Stopped">
+      <bpmn:incoming>Flow_14</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:endEvent id="EndEvent_Complete" name="Monitoring&#10;Complete">
+      <bpmn:incoming>Flow_15</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_01" sourceRef="StartEvent_Activated" targetRef="Task_ConfigureRules" />
+    <bpmn:sequenceFlow id="Flow_02" sourceRef="Task_ConfigureRules" targetRef="Timer_DailyCollection" />
+    <bpmn:sequenceFlow id="Flow_03" sourceRef="Timer_DailyCollection" targetRef="Task_CollectEvidence" />
+    <bpmn:sequenceFlow id="Flow_04" sourceRef="Task_CollectEvidence" targetRef="Task_CompareBaseline" />
+    <bpmn:sequenceFlow id="Flow_05" sourceRef="Task_CompareBaseline" targetRef="Gateway_DeviationDetected" />
+    <bpmn:sequenceFlow id="Flow_06_No" name="No" sourceRef="Gateway_DeviationDetected" targetRef="Gateway_MonitorControl" />
+    <bpmn:sequenceFlow id="Flow_06_Yes" name="Yes" sourceRef="Gateway_DeviationDetected" targetRef="Gateway_SeverityLevel" />
+    <bpmn:sequenceFlow id="Flow_07_Critical" name="Critical" sourceRef="Gateway_SeverityLevel" targetRef="Task_GenerateCriticalAlert" />
+    <bpmn:sequenceFlow id="Flow_07_Low" name="Low" sourceRef="Gateway_SeverityLevel" targetRef="Task_AddToBatchReport" />
+    <bpmn:sequenceFlow id="Flow_08" sourceRef="Task_GenerateCriticalAlert" targetRef="Task_ReviewCriticalDeviation" />
+    <bpmn:sequenceFlow id="Flow_09" sourceRef="Task_AddToBatchReport" targetRef="Gateway_MonitorControl" />
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_ReviewCriticalDeviation" targetRef="Gateway_ActionRequired" />
+    <bpmn:sequenceFlow id="Flow_11_Regenerate" name="Regenerate POV" sourceRef="Gateway_ActionRequired" targetRef="CallActivity_TriggerPOV" />
+    <bpmn:sequenceFlow id="Flow_11_Acknowledge" name="Acknowledge" sourceRef="Gateway_ActionRequired" targetRef="Gateway_MonitorControl" />
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="CallActivity_TriggerPOV" targetRef="Gateway_MonitorControl" />
+    <bpmn:sequenceFlow id="Flow_13_Continue" name="Continue" sourceRef="Gateway_MonitorControl" targetRef="Timer_DailyCollection">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${monitorAction == 'continue'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_13_Stop" sourceRef="Gateway_MonitorControl" targetRef="Event_ManualStop" />
+    <bpmn:sequenceFlow id="Flow_13_Close" sourceRef="Gateway_MonitorControl" targetRef="Event_EngagementClosed" />
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="Event_ManualStop" targetRef="EndEvent_Stopped" />
+    <bpmn:sequenceFlow id="Flow_15" sourceRef="Event_EngagementClosed" targetRef="EndEvent_Complete" />
+  </bpmn:process>
+
+  <bpmn:message id="Message_ManualStop" name="ManualStop" />
+  <bpmn:message id="Message_EngagementClosed" name="EngagementClosed" />
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Monitoring">
+    <bpmndi:BPMNPlane id="BPMNPlane_Monitoring" bpmnElement="Collaboration_Monitoring">
+      <bpmndi:BPMNShape id="Participant_Monitoring_di" bpmnElement="Participant_Monitoring" isHorizontal="true">
+        <dc:Bounds x="155" y="47" width="1400" height="630" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Lane_MonitoringAgent_di" bpmnElement="Lane_MonitoringAgent" isHorizontal="true">
+        <dc:Bounds x="185" y="47" width="1370" height="210" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Lane_DeviationEngine_di" bpmnElement="Lane_DeviationEngine" isHorizontal="true">
+        <dc:Bounds x="185" y="257" width="1370" height="210" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Lane_EngagementLead2_di" bpmnElement="Lane_EngagementLead2" isHorizontal="true">
+        <dc:Bounds x="185" y="467" width="1370" height="210" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="StartEvent_Activated_di" bpmnElement="StartEvent_Activated">
+        <dc:Bounds x="247" y="129" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="237" y="172" width="56" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_ConfigureRules_di" bpmnElement="Task_ConfigureRules">
+        <dc:Bounds x="335" y="109" width="151" height="76" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Timer_DailyCollection_di" bpmnElement="Timer_DailyCollection">
+        <dc:Bounds x="536" y="129" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="531" y="172" width="46" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_CollectEvidence_di" bpmnElement="Task_CollectEvidence">
+        <dc:Bounds x="622" y="109" width="151" height="76" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_CompareBaseline_di" bpmnElement="Task_CompareBaseline">
+        <dc:Bounds x="823" y="109" width="151" height="76" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_DeviationDetected_di" bpmnElement="Gateway_DeviationDetected" isMarkerVisible="true">
+        <dc:Bounds x="335" y="337" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="327" y="394" width="66" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_SeverityLevel_di" bpmnElement="Gateway_SeverityLevel" isMarkerVisible="true">
+        <dc:Bounds x="485" y="337" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="481" y="394" width="58" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_GenerateCriticalAlert_di" bpmnElement="Task_GenerateCriticalAlert">
+        <dc:Bounds x="635" y="324" width="151" height="76" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_AddToBatchReport_di" bpmnElement="Task_AddToBatchReport">
+        <dc:Bounds x="885" y="324" width="151" height="76" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_ReviewCriticalDeviation_di" bpmnElement="Task_ReviewCriticalDeviation">
+        <dc:Bounds x="335" y="534" width="151" height="76" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_ActionRequired_di" bpmnElement="Gateway_ActionRequired" isMarkerVisible="true">
+        <dc:Bounds x="536" y="547" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="532" y="604" width="58" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="CallActivity_TriggerPOV_di" bpmnElement="CallActivity_TriggerPOV">
+        <dc:Bounds x="686" y="532" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_MonitorControl_di" bpmnElement="Gateway_MonitorControl" isMarkerVisible="true">
+        <dc:Bounds x="886" y="547" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="882" y="604" width="58" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Event_ManualStop_di" bpmnElement="Event_ManualStop">
+        <dc:Bounds x="1036" y="554" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1031" y="597" width="46" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Event_EngagementClosed_di" bpmnElement="Event_EngagementClosed">
+        <dc:Bounds x="1186" y="554" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1173" y="597" width="62" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_Stopped_di" bpmnElement="EndEvent_Stopped">
+        <dc:Bounds x="1336" y="554" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1323" y="597" width="62" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_Complete_di" bpmnElement="EndEvent_Complete">
+        <dc:Bounds x="1486" y="554" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1473" y="597" width="62" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_01_di" bpmnElement="Flow_01">
+        <di:waypoint x="283" y="147" />
+        <di:waypoint x="335" y="147" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_02_di" bpmnElement="Flow_02">
+        <di:waypoint x="486" y="147" />
+        <di:waypoint x="536" y="147" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_03_di" bpmnElement="Flow_03">
+        <di:waypoint x="572" y="147" />
+        <di:waypoint x="622" y="147" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_04_di" bpmnElement="Flow_04">
+        <di:waypoint x="773" y="147" />
+        <di:waypoint x="823" y="147" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_05_di" bpmnElement="Flow_05">
+        <di:waypoint x="898" y="185" />
+        <di:waypoint x="898" y="362" />
+        <di:waypoint x="385" y="362" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_06_No_di" bpmnElement="Flow_06_No">
+        <di:waypoint x="360" y="387" />
+        <di:waypoint x="360" y="572" />
+        <di:waypoint x="886" y="572" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="368" y="400" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_06_Yes_di" bpmnElement="Flow_06_Yes">
+        <di:waypoint x="385" y="362" />
+        <di:waypoint x="485" y="362" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="397" y="344" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_07_Critical_di" bpmnElement="Flow_07_Critical">
+        <di:waypoint x="535" y="362" />
+        <di:waypoint x="635" y="362" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="545" y="344" width="36" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_07_Low_di" bpmnElement="Flow_07_Low">
+        <di:waypoint x="510" y="387" />
+        <di:waypoint x="510" y="440" />
+        <di:waypoint x="960" y="440" />
+        <di:waypoint x="960" y="400" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="518" y="400" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_08_di" bpmnElement="Flow_08">
+        <di:waypoint x="710" y="400" />
+        <di:waypoint x="710" y="572" />
+        <di:waypoint x="486" y="572" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_09_di" bpmnElement="Flow_09">
+        <di:waypoint x="960" y="400" />
+        <di:waypoint x="960" y="572" />
+        <di:waypoint x="936" y="572" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_10_di" bpmnElement="Flow_10">
+        <di:waypoint x="486" y="572" />
+        <di:waypoint x="536" y="572" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_11_Regenerate_di" bpmnElement="Flow_11_Regenerate">
+        <di:waypoint x="586" y="572" />
+        <di:waypoint x="686" y="572" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="590" y="554" width="82" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_11_Acknowledge_di" bpmnElement="Flow_11_Acknowledge">
+        <di:waypoint x="561" y="597" />
+        <di:waypoint x="561" y="630" />
+        <di:waypoint x="911" y="630" />
+        <di:waypoint x="911" y="597" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="568" y="613" width="67" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_12_di" bpmnElement="Flow_12">
+        <di:waypoint x="786" y="572" />
+        <di:waypoint x="886" y="572" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_13_Stop_di" bpmnElement="Flow_13_Stop">
+        <di:waypoint x="936" y="572" />
+        <di:waypoint x="1036" y="572" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_13_Close_di" bpmnElement="Flow_13_Close">
+        <di:waypoint x="936" y="572" />
+        <di:waypoint x="1186" y="572" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_14_di" bpmnElement="Flow_14">
+        <di:waypoint x="1072" y="572" />
+        <di:waypoint x="1336" y="572" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_15_di" bpmnElement="Flow_15">
+        <di:waypoint x="1222" y="572" />
+        <di:waypoint x="1486" y="572" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_13_Continue_di" bpmnElement="Flow_13_Continue">
+        <di:waypoint x="911" y="547" />
+        <di:waypoint x="911" y="490" />
+        <di:waypoint x="554" y="490" />
+        <di:waypoint x="554" y="165" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
