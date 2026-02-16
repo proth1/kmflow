@@ -15,7 +15,7 @@ interface Env {
 
 // Allowed email addresses and domains
 const ALLOWED_EMAILS = ['proth1@gmail.com', 'drj.infinity@gmail.com'];
-const ALLOWED_DOMAINS = ['northhighland.com', 'kpmg.com'];
+const ALLOWED_DOMAINS = ['kpmg.com'];
 
 // Descope session cookie names
 const SESSION_COOKIE = 'DS';
@@ -190,7 +190,7 @@ function renderUnauthorizedPage(email: string | undefined): Response {
     ${email ? `<p>Signed in as: <span class="email">${email}</span></p>` : ''}
     <div class="allowed">
       <p>Access is restricted to:</p>
-      <p><strong>@kpmg.com</strong>, <strong>@northhighland.com</strong>, or <strong>proth1@gmail.com</strong></p>
+      <p><strong>@kpmg.com</strong> or <strong>proth1@gmail.com</strong></p>
     </div>
     <a href="/auth/logout" class="logout-btn">Sign Out &amp; Try Another Account</a>
   </div>
@@ -364,7 +364,7 @@ async function handleSendOTP(request: Request, env: Env, url: URL): Promise<Resp
     }
 
     if (!isEmailAuthorized(email)) {
-      return redirectToLoginWithError(url, `Access denied for ${email}. Only @kpmg.com, @northhighland.com, or proth1@gmail.com emails are allowed.`, redirect);
+      return redirectToLoginWithError(url, `Access denied for ${email}. Only @kpmg.com or proth1@gmail.com emails are allowed.`, redirect);
     }
 
     const response = await fetch(`https://api.descope.com/v1/auth/otp/signup-in/email`, {
@@ -659,7 +659,7 @@ function renderLoginPage(env: Env, url: URL, request: Request): Response {
         <button type="submit" class="btn">Send Verification Code</button>
       </form>
       <div class="access-info">
-        <strong>Authorized access only.</strong> This presentation is restricted to KPMG, North Highland, and authorized personnel.
+        <strong>Authorized access only.</strong> This presentation is restricted to KPMG and authorized personnel.
       </div>
     </div>
 

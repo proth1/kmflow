@@ -7,7 +7,7 @@ compatibility_date = "2024-01-01"
 # This worker protects the KMFlow presentation with:
 # - Descope OTP authentication
 # - KPMG branding
-# - Email restrictions: proth1@gmail.com, @northhighland.com, @kpmg.com
+# - Email restrictions: proth1@gmail.com, @kpmg.com
 
 [vars]
 DESCOPE_PROJECT_ID = "P39ERvEl6A8ec0DKtrKBvzM4Ue5V"
@@ -16,4 +16,4 @@ WORKER_DOMAIN = "https://kmflow.agentic-innovations.com"
 
 # Email restrictions are hardcoded in src/index.ts:
 # - ALLOWED_EMAILS = ['proth1@gmail.com']
-# - ALLOWED_DOMAINS = ['northhighland.com', 'kpmg.com']
+# - ALLOWED_DOMAINS = ['kpmg.com']
