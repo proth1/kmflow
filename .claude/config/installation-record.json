@@ -1,0 +1,42 @@
+{
+  "platform": "agentic-sdlc-platform",
+  "version": "4.1.0",
+  "installed_at": "2026-02-15T22:50:00Z",
+  "installed_by": "claude-code",
+  "pm_tool": {
+    "name": "GitHub Issues",
+    "variant": "github-issues",
+    "repository": "proth1/kmflow",
+    "owner": "proth1",
+    "repo": "kmflow"
+  },
+  "vcs_provider": {
+    "name": "GitHub",
+    "remote": "origin"
+  },
+  "components_installed": {
+    "agents": [
+      "github-issues-manager.md"
+    ],
+    "config": [
+      "project-management.yaml",
+      "label-taxonomy.yaml",
+      "cdd-config.yaml"
+    ],
+    "scripts": [
+      "gh-setup.sh",
+      "gh-sync-labels.sh"
+    ],
+    "utils": [
+      "github-checkbox-updater.js",
+      "checkbox-updater-base.js"
+    ]
+  },
+  "features": {
+    "bdd_enforcement": true,
+    "cdd_methodology": true,
+    "sdlc_phases": true,
+    "label_taxonomy": true,
+    "pr_orchestration": true
+  }
+}

@@ -1,0 +1,158 @@
+# GitHub Issues Label Taxonomy
+# Defines the label structure for issue type, priority, and status tracking
+# Run: .claude/scripts/gh-sync-labels.sh to apply these labels to your repository
+
+version: "1.0.0"
+description: "Agentic SDLC label taxonomy for GitHub Issues"
+
+# Issue Type Labels (mutually exclusive - one per issue)
+types:
+  epic:
+    name: "epic"
+    description: "Major initiative containing multiple stories"
+    color: "7057ff"  # Purple
+  story:
+    name: "story"
+    description: "User-facing feature with acceptance criteria"
+    color: "0075ca"  # Blue
+  task:
+    name: "task"
+    description: "Technical work item"
+    color: "008672"  # Teal
+  bug:
+    name: "bug"
+    description: "Something isn't working"
+    color: "d73a4a"  # Red
+  feature:
+    name: "feature"
+    description: "New feature request"
+    color: "a2eeef"  # Light blue
+  documentation:
+    name: "documentation"
+    description: "Improvements or additions to documentation"
+    color: "0075ca"  # Blue
+  enhancement:
+    name: "enhancement"
+    description: "Improvement to existing functionality"
+    color: "84b6eb"  # Light blue
+
+# Priority Labels (mutually exclusive - one per issue)
+priorities:
+  critical:
+    name: "priority:critical"
+    description: "Must be fixed immediately - production down"
+    color: "b60205"  # Dark red
+  high:
+    name: "priority:high"
+    description: "Should be fixed soon - significant impact"
+    color: "d93f0b"  # Orange-red
+  medium:
+    name: "priority:medium"
+    description: "Normal priority - plan for next sprint"
+    color: "fbca04"  # Yellow
+  low:
+    name: "priority:low"
+    description: "Low priority - nice to have"
+    color: "0e8a16"  # Green
+
+# Status Labels (mutually exclusive - one per issue)
+statuses:
+  backlog:
+    name: "status:backlog"
+    description: "In backlog, not yet prioritized"
+    color: "ededed"  # Gray
+  ready:
+    name: "status:ready"
+    description: "Ready to be worked on"
+    color: "c5def5"  # Light blue
+  in-progress:
+    name: "status:in-progress"
+    description: "Currently being worked on"
+    color: "fbca04"  # Yellow
+  in-review:
+    name: "status:in-review"
+    description: "PR created, awaiting review"
+    color: "1d76db"  # Blue
+  blocked:
+    name: "status:blocked"
+    description: "Blocked by external dependency"
+    color: "d73a4a"  # Red
+  done:
+    name: "status:done"
+    description: "Completed and merged"
+    color: "0e8a16"  # Green
+
+# Component Labels (optional, multiple allowed)
+components:
+  frontend:
+    name: "component:frontend"
+    description: "Frontend/UI related"
+    color: "bfdadc"
+  backend:
+    name: "component:backend"
+    description: "Backend/API related"
+    color: "bfd4f2"
+  infrastructure:
+    name: "component:infrastructure"
+    description: "Infrastructure/DevOps related"
+    color: "d4c5f9"
+  testing:
+    name: "component:testing"
+    description: "Testing infrastructure"
+    color: "fef2c0"
+  security:
+    name: "component:security"
+    description: "Security related"
+    color: "f9d0c4"
+
+# Phase Labels (for SDLC tracking)
+phases:
+  phase1:
+    name: "phase:strategic"
+    description: "Phase 1 - Strategic Intelligence"
+    color: "c2e0c6"
+  phase2:
+    name: "phase:development"
+    description: "Phase 2 - Automated Development"
+    color: "fef2c0"
+  phase3:
+    name: "phase:deployment"
+    description: "Phase 3 - Orchestrated Deployment"
+    color: "f9d0c4"
+  phase4:
+    name: "phase:lifecycle"
+    description: "Phase 4 - Lifecycle Management"
+    color: "d4c5f9"
+
+# Compliance Labels (for CDD tracking)
+compliance:
+  cdd-evidence:
+    name: "cdd:evidence-required"
+    description: "Requires CDD evidence collection"
+    color: "5319e7"
+  cdd-verified:
+    name: "cdd:verified"
+    description: "CDD evidence verified"
+    color: "0e8a16"
+  bdd-scenarios:
+    name: "bdd:has-scenarios"
+    description: "Has BDD Gherkin scenarios"
+    color: "1d76db"
+
+# Automation Rules
+automation:
+  # When branch is created from issue, add in-progress label
+  on_branch_create:
+    add_labels: ["status:in-progress"]
+    remove_labels: ["status:backlog", "status:ready"]
+
+  # When PR is created, add in-review label
+  on_pr_create:
+    add_labels: ["status:in-review"]
+    remove_labels: ["status:in-progress"]
+
+  # When PR is merged, add done label and close issue
+  on_pr_merge:
+    add_labels: ["status:done"]
+    remove_labels: ["status:in-review", "status:in-progress"]
+    close_issue: true
