@@ -1,0 +1,2763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KMFlow Platform - AI-Powered Process Intelligence | KPMG</title>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans+Condensed:wght@300;700&family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <style>
+    :root {
+      --kpmg-blue: #00338D;
+      --kpmg-medium-blue: #005EB8;
+      --kpmg-light-blue: #0091DA;
+      --kpmg-dark-navy: #001D48;
+      --kpmg-white: #ffffff;
+      --kpmg-light-gray: #f5f5f5;
+      --kpmg-medium-gray: #666666;
+      --kpmg-dark-gray: #333333;
+      --font-heading: 'Open Sans Condensed', 'Arial Narrow', sans-serif;
+      --font-body: 'Open Sans', Arial, Helvetica, sans-serif;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      overflow: hidden;
+      height: 100%;
+    }
+
+    body {
+      font-family: var(--font-body);
+      color: var(--kpmg-dark-gray);
+      line-height: 1.6;
+      overflow: hidden;
+      height: 100%;
+      margin: 0;
+    }
+
+    .slides-container {
+      scroll-snap-type: y proximity;
+      overflow-y: scroll;
+      overflow-x: hidden;
+      height: 100vh;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .slides-container::-webkit-scrollbar {
+      width: 0;
+      background: transparent;
+    }
+    .slides-container {
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .slide {
+      min-height: 100vh;
+      height: auto;
+      scroll-snap-align: start;
+      padding: 80px 4rem 4rem;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow-y: visible;
+      box-sizing: border-box;
+    }
+
+    .slide-indicator {
+      position: fixed;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 999;
+    }
+
+    .slide-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(0, 51, 141, 0.3);
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .slide-dot:hover {
+      background: var(--kpmg-light-blue);
+      transform: scale(1.3);
+    }
+
+    .slide-dot.active {
+      background: var(--kpmg-blue);
+      transform: scale(1.2);
+    }
+
+    .fixed-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: var(--kpmg-blue);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .nav-logo svg {
+      height: 32px;
+    }
+
+    .nav-title {
+      color: var(--kpmg-white);
+      font-family: var(--font-heading);
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    .nav-links a {
+      color: var(--kpmg-white);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.8rem;
+      transition: opacity 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .nav-links a:hover {
+      opacity: 0.8;
+    }
+
+    .nav-version {
+      color: var(--kpmg-light-blue);
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .slide-hero {
+      background: linear-gradient(135deg, var(--kpmg-blue) 0%, var(--kpmg-medium-blue) 50%, var(--kpmg-light-blue) 100%);
+      color: var(--kpmg-white);
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    .slide-dark {
+      background: linear-gradient(135deg, var(--kpmg-dark-navy) 0%, var(--kpmg-blue) 100%);
+      color: var(--kpmg-white);
+    }
+
+    .slide-light {
+      background: var(--kpmg-white);
+    }
+
+    .slide-gray {
+      background: var(--kpmg-light-gray);
+    }
+
+    .slide-gradient {
+      background: linear-gradient(135deg, var(--kpmg-blue) 0%, var(--kpmg-medium-blue) 100%);
+      color: var(--kpmg-white);
+    }
+
+    h1 {
+      font-family: var(--font-heading);
+      font-size: 4rem;
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 1.5rem;
+    }
+
+    h2 {
+      font-family: var(--font-heading);
+      font-size: 2.75rem;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 1.5rem;
+      color: var(--kpmg-blue);
+    }
+
+    .slide-dark h2, .slide-gradient h2, .slide-hero h2 {
+      color: var(--kpmg-white);
+    }
+
+    h3 {
+      font-family: var(--font-body);
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: var(--kpmg-blue);
+    }
+
+    .slide-dark h3, .slide-gradient h3 {
+      color: var(--kpmg-light-blue);
+    }
+
+    .subtitle {
+      font-size: 1.5rem;
+      opacity: 0.9;
+      max-width: 700px;
+      margin: 0 auto 2rem;
+    }
+
+    .tagline {
+      font-family: var(--font-heading);
+      font-size: 1.25rem;
+      color: var(--kpmg-light-blue);
+      margin-bottom: 2rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 2rem;
+      margin: 2rem 0;
+      max-width: 1000px;
+    }
+
+    .stat-card {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      padding: 2rem;
+      text-align: center;
+      backdrop-filter: blur(10px);
+    }
+
+    .slide-light .stat-card, .slide-gray .stat-card {
+      background: var(--kpmg-white);
+      border: 1px solid #e0e0e0;
+      box-shadow: 0 4px 20px rgba(0, 51, 141, 0.1);
+    }
+
+    .stat-value {
+      font-family: var(--font-heading);
+      font-size: 3.5rem;
+      font-weight: 700;
+      color: var(--kpmg-light-blue);
+      line-height: 1;
+    }
+
+    .slide-light .stat-value, .slide-gray .stat-value {
+      color: var(--kpmg-blue);
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+      opacity: 0.9;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    .card {
+      background: var(--kpmg-white);
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 4px 20px rgba(0, 51, 141, 0.1);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 30px rgba(0, 51, 141, 0.15);
+    }
+
+    .slide-dark .card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .card-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--kpmg-blue);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      color: var(--kpmg-white);
+      font-size: 1.5rem;
+    }
+
+    .card h3 {
+      font-size: 1.25rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .card p {
+      font-size: 0.95rem;
+      color: var(--kpmg-medium-gray);
+      line-height: 1.6;
+    }
+
+    .slide-dark .card p {
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .table-container {
+      overflow-x: auto;
+      margin: 1.5rem 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: var(--kpmg-blue);
+      color: var(--kpmg-white);
+      padding: 1rem;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    td {
+      padding: 1rem;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    tr:nth-child(even) {
+      background: var(--kpmg-light-gray);
+    }
+
+    .slide-dark table th {
+      background: var(--kpmg-light-blue);
+      color: var(--kpmg-dark-navy);
+    }
+
+    .slide-dark table td {
+      border-color: rgba(255, 255, 255, 0.1);
+      color: var(--kpmg-white);
+    }
+
+    .slide-dark table tr:nth-child(even) {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .phase-card {
+      background: var(--kpmg-white);
+      border-radius: 12px;
+      padding: 1.5rem;
+      border-left: 4px solid var(--kpmg-blue);
+      box-shadow: 0 2px 10px rgba(0, 51, 141, 0.08);
+      margin-bottom: 1rem;
+    }
+
+    .phase-number {
+      font-family: var(--font-heading);
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--kpmg-blue);
+      margin-bottom: 0.5rem;
+    }
+
+    .phase-name {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--kpmg-dark-gray);
+      margin-bottom: 0.5rem;
+    }
+
+    .phase-desc {
+      font-size: 0.85rem;
+      color: var(--kpmg-medium-gray);
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      align-items: start;
+    }
+
+    .three-col {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+    }
+
+    .feature-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .feature-list li {
+      padding: 0.75rem 0;
+      padding-left: 2rem;
+      position: relative;
+      border-bottom: 1px solid rgba(0, 51, 141, 0.1);
+    }
+
+    .feature-list li::before {
+      content: "→";
+      position: absolute;
+      left: 0;
+      color: var(--kpmg-light-blue);
+      font-weight: bold;
+    }
+
+    .slide-dark .feature-list li {
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-blue {
+      background: var(--kpmg-blue);
+      color: var(--kpmg-white);
+    }
+
+    .badge-light {
+      background: var(--kpmg-light-blue);
+      color: var(--kpmg-white);
+    }
+
+    .badge-outline {
+      background: transparent;
+      border: 1px solid var(--kpmg-blue);
+      color: var(--kpmg-blue);
+    }
+
+    .section-header {
+      margin-bottom: 2rem;
+    }
+
+    .section-header .badge {
+      margin-bottom: 1rem;
+    }
+
+    .viz-container {
+      width: 100%;
+      height: 500px;
+      background: rgba(0, 51, 141, 0.02);
+      border-radius: 12px;
+      border: 1px solid rgba(0, 51, 141, 0.1);
+      margin: 1.5rem 0;
+    }
+
+    .slide-dark .viz-container {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .slide-footer {
+      margin-top: auto;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(0, 51, 141, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: var(--kpmg-medium-gray);
+    }
+
+    .slide-dark .slide-footer,
+    .slide-hero .slide-footer,
+    .slide-gradient .slide-footer {
+      border-color: rgba(255, 255, 255, 0.2);
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .presentation-footer {
+      background: var(--kpmg-dark-navy);
+      color: var(--kpmg-white);
+      padding: 3rem 4rem;
+      text-align: center;
+    }
+
+    .footer-tagline {
+      font-family: var(--font-heading);
+      font-size: 1.75rem;
+      color: var(--kpmg-light-blue);
+      margin-bottom: 1rem;
+    }
+
+    .footer-legal {
+      font-size: 0.75rem;
+      opacity: 0.6;
+      max-width: 800px;
+      margin: 0 auto;
+      line-height: 1.8;
+    }
+
+    @media (max-width: 1024px) {
+      .two-col, .three-col {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 3rem;
+      }
+
+      h2 {
+        font-size: 2.25rem;
+      }
+
+      .slide {
+        padding: 80px 2rem 2rem;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .nav-links {
+        display: none;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      h1 {
+        font-size: 2.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="fixed-nav">
+    <div class="nav-logo">
+      <svg viewBox="0 0 100 30" fill="white" xmlns="http://www.w3.org/2000/svg">
+        <text x="0" y="24" font-family="Open Sans Condensed, Arial Narrow, sans-serif" font-size="28" font-weight="700" fill="white">KPMG</text>
+      </svg>
+      <span class="nav-title">KMFlow Platform</span>
+    </div>
+    <div class="nav-links">
+      <a href="#slide-1">Home</a>
+      <a href="#slide-4">Summary</a>
+      <a href="#slide-8">Market</a>
+      <a href="#slide-13">Evidence</a>
+      <a href="#slide-18">Capabilities</a>
+      <a href="#slide-29">Architecture</a>
+      <a href="#slide-42">Implementation</a>
+    </div>
+    <div class="nav-version">v1.0.0</div>
+  </nav>
+
+  <div class="slide-indicator" id="slideIndicator"></div>
+
+  <main class="slides-container" id="slidesContainer">
+    <!-- Slide 1: Hero -->
+    <section id="slide-1" class="slide slide-hero">
+      <span class="tagline">Let insights reveal new opportunity</span>
+      <h1>KMFlow Platform</h1>
+      <p class="subtitle">AI-Powered Process Intelligence for Consulting Engagements</p>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value">12</div>
+          <div class="stat-label">Evidence Types</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">6</div>
+          <div class="stat-label">Core Capabilities</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">3</div>
+          <div class="stat-label">Delivery Phases</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">$42.69B</div>
+          <div class="stat-label">Market by 2032</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 1</span>
+      </div>
+    </section>
+
+    <!-- Slide 2: Key Stats -->
+    <section id="slide-2" class="slide slide-gradient">
+      <div class="section-header">
+        <span class="badge badge-light">At a Glance</span>
+        <h2>KMFlow by the Numbers</h2>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value">12</div>
+          <div class="stat-label">Evidence Categories</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">6</div>
+          <div class="stat-label">Core Capabilities</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">3</div>
+          <div class="stat-label">Implementation Phases</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">42%</div>
+          <div class="stat-label">Market CAGR</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">60-70%</div>
+          <div class="stat-label">Time Reduction</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">Days</div>
+          <div class="stat-label">Time-to-Insight</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 2</span>
+      </div>
+    </section>
+
+    <!-- Slide 3: Table of Contents -->
+    <section id="slide-3" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Navigation</span>
+        <h2>Presentation Roadmap</h2>
+        <p>48 slides across 10 sections</p>
+      </div>
+      <div class="cards-grid">
+        <div class="card">
+          <div class="card-icon">1</div>
+          <h3>Executive Summary</h3>
+          <p>Problem statement, market opportunity, solution overview, strategic positioning</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">2</div>
+          <h3>Market Landscape</h3>
+          <p>Competitive analysis, white space positioning, market sizing, differentiation</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">3</div>
+          <h3>Evidence Taxonomy</h3>
+          <p>12 evidence categories, lifecycle management, quality scoring framework</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">4</div>
+          <h3>Core Capabilities</h3>
+          <p>Evidence ingestion, semantic relationships, LCD algorithm, TOM alignment</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">5</div>
+          <h3>Architecture</h3>
+          <p>System design, tech stack, knowledge graph schema, data model</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">6</div>
+          <h3>Implementation</h3>
+          <p>Phased delivery roadmap, success metrics, next steps</p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 3</span>
+      </div>
+    </section>
+
+    <!-- Slide 4: Problem Statement -->
+    <section id="slide-4" class="slide slide-dark">
+      <div class="section-header">
+        <span class="badge badge-light">Executive Summary</span>
+        <h2>The Challenge</h2>
+      </div>
+      <p style="font-size: 1.1rem; margin-bottom: 2rem;">Organizations have fragmented process knowledge spread across BPM tools, regulations, policies, communications, and ad-hoc documentation. There is no consistent way to create a unified, evidence-based view of organizational processes.</p>
+      <div class="cards-grid">
+        <div class="card">
+          <h3>Manual Discovery is Slow</h3>
+          <p>Traditional process discovery takes weeks of workshops, interviews, and document reviews. Results vary by analyst and lack objective evidence backing.</p>
+        </div>
+        <div class="card">
+          <h3>Gap Analysis is Manual</h3>
+          <p>Consultants manually compare observed processes against target operating models, a process that is time-consuming, inconsistent, and difficult to defend with evidence.</p>
+        </div>
+        <div class="card">
+          <h3>Event Logs Required</h3>
+          <p>Process mining tools require structured event log extracts from IT systems. These take months to configure and miss processes that lack system event trails.</p>
+        </div>
+        <div class="card">
+          <h3>No Qualitative Support</h3>
+          <p>Existing tools cannot ingest interview transcripts, workshop outputs, observation notes, policy documents, and system data into a unified analysis.</p>
+        </div>
+        <div class="card">
+          <h3>37% Manual Routing</h3>
+          <p>37% of organizations report manual routing and process gaps that log-based tools miss entirely. These gaps exist in the informal, human-driven parts of processes.</p>
+        </div>
+        <div class="card">
+          <h3>Governance Disconnect</h3>
+          <p>Regulations, policies, and controls are disconnected from process models. The governance tissue that connects processes, policies, and regulations is not modeled.</p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 4</span>
+      </div>
+    </section>
+
+    <!-- Slide 5: Market Opportunity -->
+    <section id="slide-5" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Market Context</span>
+        <h2>Market Opportunity</h2>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value">$3.66B</div>
+          <div class="stat-label">2025 Market Size</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">$42.69B</div>
+          <div class="stat-label">2032 Projection</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">42%</div>
+          <div class="stat-label">CAGR Growth Rate</div>
+        </div>
+      </div>
+      <p style="font-size: 1.1rem; margin: 2rem 0;">The process mining market is experiencing explosive growth driven by digital transformation initiatives, regulatory compliance requirements, and the need for operational efficiency in regulated enterprises.</p>
+      <div class="two-col">
+        <div>
+          <h3>Target Market</h3>
+          <ul class="feature-list">
+            <li>Consulting firms serving regulated enterprises</li>
+            <li>Financial Services organizations</li>
+            <li>Healthcare providers and payers</li>
+            <li>Energy and utilities companies</li>
+            <li>Large-scale transformation programs</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Value Drivers</h3>
+          <ul class="feature-list">
+            <li>60-70% reduction in process discovery time</li>
+            <li>Evidence-backed recommendations</li>
+            <li>Days to insight, not months</li>
+            <li>Confidence-scored process models</li>
+            <li>Automated TOM gap analysis</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 5</span>
+      </div>
+    </section>
+
+    <!-- Slide 6: Solution Overview -->
+    <section id="slide-6" class="slide slide-gradient">
+      <div class="section-header">
+        <span class="badge badge-light">Solution</span>
+        <h2>What KMFlow Does</h2>
+      </div>
+      <ul class="feature-list" style="font-size: 1.1rem; max-width: 900px;">
+        <li>Ingests diverse client evidence per business area (not cross-enterprise)</li>
+        <li>Builds semantic relationships across all evidence items</li>
+        <li>Synthesizes a "least common denominator" first-pass process point of view</li>
+        <li>Scores every process element with confidence based on evidence coverage</li>
+        <li>Aligns against Target Operating Models, best practices, and industry benchmarks</li>
+        <li>Generates prioritized gap analysis with evidence-backed recommendations</li>
+        <li>Models regulations, policies, and controls as connective tissue between process elements</li>
+      </ul>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 6</span>
+      </div>
+    </section>
+
+    <!-- Slide 7: Strategic Positioning -->
+    <section id="slide-7" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Differentiation</span>
+        <h2>Strategic Positioning</h2>
+      </div>
+      <p style="font-size: 1.2rem; margin-bottom: 2rem; color: var(--kpmg-blue); font-weight: 600;">KMFlow occupies genuine white space at the intersection of Process Mining, AI-powered consulting tools, and qualitative evidence analysis.</p>
+      <div class="cards-grid">
+        <div class="card">
+          <h3>Evidence-First Approach</h3>
+          <p>Starts with the diverse evidence consultants actually collect, not structured event logs that take months to configure.</p>
+        </div>
+        <div class="card">
+          <h3>Consulting-Native Design</h3>
+          <p>Built for how consultants work. Engagement-scoped, evidence-driven, with shelf data request workflows and client deliverable packaging.</p>
+        </div>
+        <div class="card">
+          <h3>Confidence Transparency</h3>
+          <p>Every assertion is traceable to source evidence. Every score is explainable. No black-box outputs.</p>
+        </div>
+        <div class="card">
+          <h3>Governance as Connective Tissue</h3>
+          <p>Regulations, policies, and controls modeled as relationships between process elements, not disconnected documents.</p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 7</span>
+      </div>
+    </section>
+
+    <!-- Slide 8: Competitive Landscape -->
+    <section id="slide-8" class="slide slide-gray">
+      <div class="section-header">
+        <span class="badge badge-blue">Market Landscape</span>
+        <h2>Competitive Analysis</h2>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th>Approach</th>
+              <th>Gap</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Celonis</strong></td>
+              <td>Process Intelligence Graph from event logs</td>
+              <td>Requires structured event logs. Months to deploy. No qualitative evidence.</td>
+            </tr>
+            <tr>
+              <td><strong>Signavio</strong></td>
+              <td>Process modeling and mining</td>
+              <td>Similar event log dependency. Limited evidence ingestion.</td>
+            </tr>
+            <tr>
+              <td><strong>Soroco Scout</strong></td>
+              <td>Work Graph from desktop activity</td>
+              <td>Desktop-only. No document evidence. No consulting workflow.</td>
+            </tr>
+            <tr>
+              <td><strong>McKinsey Lilli</strong></td>
+              <td>General-purpose AI assistant</td>
+              <td>Not process-specific. No evidence graph. No confidence scoring.</td>
+            </tr>
+            <tr>
+              <td><strong>KPMG Workbench</strong></td>
+              <td>AI-assisted consulting</td>
+              <td>General-purpose. No semantic process graphs.</td>
+            </tr>
+            <tr>
+              <td><strong>NVivo</strong></td>
+              <td>Qualitative data analysis</td>
+              <td>Academic focus. No process model generation. No TOM alignment.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 8</span>
+      </div>
+    </section>
+
+    <!-- Slide 9: White Space Positioning -->
+    <section id="slide-9" class="slide slide-dark">
+      <div class="section-header">
+        <span class="badge badge-light">Market Position</span>
+        <h2>KMFlow's Unique White Space</h2>
+      </div>
+      <p style="font-size: 1.2rem; margin-bottom: 2rem;">KMFlow sits at the intersection of three market segments, combining capabilities no existing product offers:</p>
+      <div class="cards-grid">
+        <div class="card">
+          <h3>Process Mining Tools</h3>
+          <p>Event log extraction, process discovery, conformance checking</p>
+          <p style="margin-top: 1rem; color: var(--kpmg-light-blue); font-weight: 600;">→ KMFlow adds: Qualitative evidence, consulting workflows</p>
+        </div>
+        <div class="card">
+          <h3>AI Consulting Tools</h3>
+          <p>General-purpose AI assistance, document analysis, knowledge management</p>
+          <p style="margin-top: 1rem; color: var(--kpmg-light-blue); font-weight: 600;">→ KMFlow adds: Process-specific graphs, confidence scoring</p>
+        </div>
+        <div class="card">
+          <h3>Qualitative Analysis</h3>
+          <p>Interview coding, thematic analysis, cross-source synthesis</p>
+          <p style="margin-top: 1rem; color: var(--kpmg-light-blue); font-weight: 600;">→ KMFlow adds: Process model generation, TOM alignment</p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 9</span>
+      </div>
+    </section>
+
+    <!-- Slide 10: TAM SAM SOM -->
+    <section id="slide-10" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Market Sizing</span>
+        <h2>TAM, SAM, SOM Analysis</h2>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value">$42.69B</div>
+          <div class="stat-label">Total Addressable Market (2032)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">$8.5B</div>
+          <div class="stat-label">Serviceable Addressable Market</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">$850M</div>
+          <div class="stat-label">Serviceable Obtainable Market</div>
+        </div>
+      </div>
+      <div class="two-col" style="margin-top: 3rem;">
+        <div>
+          <h3>TAM: Process Mining Market</h3>
+          <p>Entire process intelligence and mining market projected to reach $42.69B by 2032 at 42% CAGR.</p>
+        </div>
+        <div>
+          <h3>SAM: Consulting-Led Engagements</h3>
+          <p>Consulting firms serving regulated enterprises in Financial Services, Healthcare, and Energy. ~20% of total market.</p>
+        </div>
+      </div>
+      <div style="margin-top: 2rem;">
+        <h3>SOM: Initial Target</h3>
+        <p>Large consulting firms (Big 4 and top-tier strategy firms) with active process transformation practices. Year 1-3 penetration of 10% of SAM.</p>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 10</span>
+      </div>
+    </section>
+
+    <!-- Slide 11: Differentiation Matrix -->
+    <section id="slide-11" class="slide slide-gray">
+      <div class="section-header">
+        <span class="badge badge-blue">Competitive Advantage</span>
+        <h2>What KMFlow Has That Competitors Lack</h2>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Capability</th>
+              <th>KMFlow</th>
+              <th>Celonis</th>
+              <th>Lilli</th>
+              <th>NVivo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Qualitative Evidence Ingestion</td>
+              <td style="color: #00A86B; font-weight: 700;">✓</td>
+              <td style="color: #D32F2F;">✗</td>
+              <td style="color: #F57C00;">Partial</td>
+              <td style="color: #00A86B; font-weight: 700;">✓</td>
+            </tr>
+            <tr>
+              <td>Process Model Generation</td>
+              <td style="color: #00A86B; font-weight: 700;">✓</td>
+              <td style="color: #00A86B; font-weight: 700;">✓</td>
+              <td style="color: #D32F2F;">✗</td>
+              <td style="color: #D32F2F;">✗</td>
+            </tr>
+            <tr>
+              <td>Confidence Scoring</td>
+              <td style="color: #00A86B; font-weight: 700;">✓</td>
+              <td style="color: #D32F2F;">✗</td>
+              <td style="color: #D32F2F;">✗</td>
+              <td style="color: #D32F2F;">✗</td>
+            </tr>
+            <tr>
+              <td>TOM Alignment & Gap Analysis</td>
+              <td style="color: #00A86B; font-weight: 700;">✓</td>
+              <td style="color: #F57C00;">Partial</td>
+              <td style="color: #D32F2F;">✗</td>
+              <td style="color: #D32F2F;">✗</td>
+            </tr>
+            <tr>
+              <td>Consulting Workflow Integration</td>
+              <td style="color: #00A86B; font-weight: 700;">✓</td>
+              <td style="color: #D32F2F;">✗</td>
+              <td style="color: #F57C00;">Partial</td>
+              <td style="color: #D32F2F;">✗</td>
+            </tr>
+            <tr>
+              <td>Regulatory-Policy-Control Overlay</td>
+              <td style="color: #00A86B; font-weight: 700;">✓</td>
+              <td style="color: #D32F2F;">✗</td>
+              <td style="color: #D32F2F;">✗</td>
+              <td style="color: #D32F2F;">✗</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 11</span>
+      </div>
+    </section>
+
+    <!-- Slide 12: Why Now -->
+    <section id="slide-12" class="slide slide-gradient">
+      <div class="section-header">
+        <span class="badge badge-light">Market Timing</span>
+        <h2>Why Now?</h2>
+      </div>
+      <div class="cards-grid">
+        <div class="card">
+          <h3>AI Maturation</h3>
+          <p>Large language models can now extract entities, relationships, and semantic meaning from unstructured documents at scale.</p>
+        </div>
+        <div class="card">
+          <h3>Consulting Evolution</h3>
+          <p>Consulting firms are moving from pure advisory to implementation-backed recommendations requiring evidence and defensibility.</p>
+        </div>
+        <div class="card">
+          <h3>Process Mining Limits</h3>
+          <p>Organizations realize event-log-based process mining misses 37% of actual process execution in manual and ad-hoc workflows.</p>
+        </div>
+        <div class="card">
+          <h3>Regulatory Pressure</h3>
+          <p>Financial services, healthcare, and energy face increasing regulatory scrutiny requiring auditable process documentation.</p>
+        </div>
+        <div class="card">
+          <h3>Knowledge Graph Tech</h3>
+          <p>Neo4j and similar graph databases enable relationship-first modeling at scale with sub-second query performance.</p>
+        </div>
+        <div class="card">
+          <h3>Engagement Efficiency</h3>
+          <p>Consulting firms need to reduce discovery time from weeks to days while maintaining or improving quality.</p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 12</span>
+      </div>
+    </section>
+
+    <!-- Slide 13: Evidence Taxonomy Overview -->
+    <section id="slide-13" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Evidence Taxonomy</span>
+        <h2>12 Evidence Categories</h2>
+      </div>
+      <p style="font-size: 1.1rem; margin-bottom: 2rem;">KMFlow processes diverse evidence types reflecting the inputs consultants actually encounter in client engagements.</p>
+      <div class="cards-grid">
+        <div class="card">
+          <span class="badge badge-blue">1</span>
+          <h3>Documents</h3>
+          <p>PDF, Word, PowerPoint, HTML with visual object parsing and layout preservation</p>
+        </div>
+        <div class="card">
+          <span class="badge badge-blue">2</span>
+          <h3>Images</h3>
+          <p>PNG, JPEG, TIFF, BMP with OCR and bounding box coordinates</p>
+        </div>
+        <div class="card">
+          <span class="badge badge-blue">3</span>
+          <h3>Audio</h3>
+          <p>MP3, WAV, M4A with spectrogram chunking and ASR transcription</p>
+        </div>
+        <div class="card">
+          <span class="badge badge-blue">4</span>
+          <h3>Video</h3>
+          <p>MP4, MOV, AVI with frame extraction and scene segmentation</p>
+        </div>
+        <div class="card">
+          <span class="badge badge-blue">5</span>
+          <h3>Structured Data</h3>
+          <p>Excel, CSV, JSON, SQL exports with schema discovery</p>
+        </div>
+        <div class="card">
+          <span class="badge badge-blue">6</span>
+          <h3>SaaS Exports</h3>
+          <p>Salesforce, SAP, ServiceNow with native connectors</p>
+        </div>
+        <div class="card">
+          <span class="badge badge-blue">7</span>
+          <h3>KM4Work</h3>
+          <p>Desktop task mining, log files, contextualized ways of working</p>
+        </div>
+        <div class="card">
+          <span class="badge badge-blue">8</span>
+          <h3>BPM Models</h3>
+          <p>BPMN 2.0 XML, EPC, ARIS, Flowable/Camunda</p>
+        </div>
+        <div class="card">
+          <span class="badge badge-blue">9</span>
+          <h3>Regulatory & Policy</h3>
+          <p>Regulatory filings, policy docs, compliance frameworks</p>
+        </div>
+        <div class="card">
+          <span class="badge badge-blue">10</span>
+          <h3>Controls & Evidence</h3>
+          <p>Control matrices, evidence logs, audit trails</p>
+        </div>
+        <div class="card">
+          <span class="badge badge-blue">11</span>
+          <h3>Communications</h3>
+          <p>Email archives, chat transcripts, tickets, incidents</p>
+        </div>
+        <div class="card">
+          <span class="badge badge-blue">12</span>
+          <h3>Job Aids</h3>
+          <p>Decision trees, quick reference cards, workarounds</p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 13</span>
+      </div>
+    </section>
+
+    <!-- Slide 14: Evidence Categories 1-6 Detail -->
+    <section id="slide-14" class="slide slide-gray">
+      <div class="section-header">
+        <span class="badge badge-blue">Evidence Detail</span>
+        <h2>Evidence Categories 1-6</h2>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Category</th>
+              <th>Formats</th>
+              <th>Processing Approach</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td><strong>Documents</strong></td>
+              <td>PDF, Word, PowerPoint, HTML</td>
+              <td>Visual object parsing with layout preservation</td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td><strong>Images</strong></td>
+              <td>PNG, JPEG, TIFF, BMP</td>
+              <td>OCR with bounding box coordinates</td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td><strong>Audio</strong></td>
+              <td>MP3, WAV, M4A, FLAC</td>
+              <td>Spectrogram chunking, ASR transcription (Whisper)</td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td><strong>Video</strong></td>
+              <td>MP4, MOV, AVI, WebM</td>
+              <td>Frame extraction, audio track separation, scene segmentation</td>
+            </tr>
+            <tr>
+              <td>5</td>
+              <td><strong>Structured Data</strong></td>
+              <td>Excel, CSV, JSON, SQL exports</td>
+              <td>Schema discovery with relationship detection, normalized into One-Column JSON</td>
+            </tr>
+            <tr>
+              <td>6</td>
+              <td><strong>SaaS Exports</strong></td>
+              <td>Salesforce, SAP, ServiceNow</td>
+              <td>Native connector with semantic alignment</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 14</span>
+      </div>
+    </section>
+
+    <!-- Slide 15: Evidence Categories 7-12 Detail -->
+    <section id="slide-15" class="slide slide-gray">
+      <div class="section-header">
+        <span class="badge badge-blue">Evidence Detail</span>
+        <h2>Evidence Categories 7-12</h2>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Category</th>
+              <th>Formats</th>
+              <th>Processing Approach</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>7</td>
+              <td><strong>KM4Work</strong></td>
+              <td>BPMN 2.0 XML, EPC, DMN</td>
+              <td>Contextualized ways of working from log files, desktop task mining, artifacts</td>
+            </tr>
+            <tr>
+              <td>8</td>
+              <td><strong>BPM Process Models</strong></td>
+              <td>BPMN 2.0 XML, EPC, ARIS, Flowable/Camunda</td>
+              <td>Extraction pipeline for activities, sequences, gateways, swim lanes, decision points</td>
+            </tr>
+            <tr>
+              <td>9</td>
+              <td><strong>Regulatory and Policy</strong></td>
+              <td>Regulatory filings, policy docs, compliance frameworks, SOP libraries</td>
+              <td>Clause-level extraction with requirement linkage and obligation mapping</td>
+            </tr>
+            <tr>
+              <td>10</td>
+              <td><strong>Controls and Evidence</strong></td>
+              <td>Control matrices, evidence logs, monitoring outputs, audit trails</td>
+              <td>Control-to-process linkage with compliance state tracking</td>
+            </tr>
+            <tr>
+              <td>11</td>
+              <td><strong>Domain Communications</strong></td>
+              <td>Email archives, chat transcripts, tickets, incident reports</td>
+              <td>Pattern extraction: actual process execution vs. documented procedures</td>
+            </tr>
+            <tr>
+              <td>12</td>
+              <td><strong>Job Aids and Edge Cases</strong></td>
+              <td>Decision trees, quick reference cards, exception guides, workarounds</td>
+              <td>Rule extraction for ambiguous edge cases and undocumented decision logic</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 15</span>
+      </div>
+    </section>
+
+    <!-- Slide 16: Evidence Lifecycle -->
+    <section id="slide-16" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Evidence Management</span>
+        <h2>Evidence Lifecycle</h2>
+      </div>
+      <p style="font-size: 1.1rem; margin-bottom: 2rem;">All evidence items progress through a managed lifecycle with automated transitions and human validation gates.</p>
+      <div class="cards-grid">
+        <div class="card">
+          <span class="badge badge-outline">Status 1</span>
+          <h3>PENDING</h3>
+          <p>Evidence requested from client. Awaiting delivery through intake portal. Shelf data request tracking active.</p>
+        </div>
+        <div class="card">
+          <span class="badge badge-outline">Status 2</span>
+          <h3>VALIDATED</h3>
+          <p>Evidence received and passed automated quality checks. Awaiting analyst review and approval for analysis.</p>
+        </div>
+        <div class="card">
+          <span class="badge badge-blue">Status 3</span>
+          <h3>ACTIVE</h3>
+          <p>Evidence approved and actively used in POV generation. Semantic relationships built. Confidence scoring applied.</p>
+        </div>
+        <div class="card">
+          <span class="badge badge-outline">Status 4</span>
+          <h3>EXPIRED</h3>
+          <p>Evidence freshness threshold exceeded. No longer used for new analysis. Available for historical reference.</p>
+        </div>
+        <div class="card">
+          <span class="badge badge-outline">Status 5</span>
+          <h3>ARCHIVED</h3>
+          <p>Evidence retention period complete. Moved to cold storage per engagement data retention policy.</p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 16</span>
+      </div>
+    </section>
+
+    <!-- Slide 17: Evidence Quality Scoring -->
+    <section id="slide-17" class="slide slide-dark">
+      <div class="section-header">
+        <span class="badge badge-light">Quality Framework</span>
+        <h2>Evidence Quality Scoring</h2>
+      </div>
+      <p style="font-size: 1.1rem; margin-bottom: 2rem;">Every evidence item receives multi-dimensional quality scoring to inform confidence calculations.</p>
+      <div class="two-col">
+        <div>
+          <h3>Four Quality Dimensions</h3>
+          <ul class="feature-list">
+            <li><strong>Completeness (0.0-1.0):</strong> How much of the requested evidence is present</li>
+            <li><strong>Reliability (0.0-1.0):</strong> Source credibility and document integrity</li>
+            <li><strong>Freshness (0.0-1.0):</strong> How current the evidence is</li>
+            <li><strong>Consistency (0.0-1.0):</strong> Agreement with other evidence items</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Shelf Data Request Workflow</h3>
+          <ul class="feature-list">
+            <li>Compose structured evidence request</li>
+            <li>Deliver to client via email or portal</li>
+            <li>Track response status per requested item</li>
+            <li>Match received evidence to request items</li>
+            <li>Automated follow-up for missing items</li>
+            <li>Quality validation on receipt</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 17</span>
+      </div>
+    </section>
+
+    <!-- Slide 18: Core Capabilities Overview -->
+    <section id="slide-18" class="slide slide-gradient">
+      <div class="section-header">
+        <span class="badge badge-light">Core Capabilities</span>
+        <h2>Six Core Platform Capabilities</h2>
+      </div>
+      <div class="cards-grid">
+        <div class="card">
+          <div class="card-icon">1</div>
+          <h3>Evidence Ingestion Engine</h3>
+          <p>Multi-format processing, quality scoring, shelf data request management, validation workflows</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">2</div>
+          <h3>Semantic Relationship Engine</h3>
+          <p>Knowledge graph construction, entity resolution, semantic bridges, hybrid retrieval</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">3</div>
+          <h3>LCD Algorithm</h3>
+          <p>Least common denominator process synthesis, confidence scoring, contradiction resolution</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">4</div>
+          <h3>Regulatory-Policy-Control Overlay</h3>
+          <p>Governance as connective tissue, compliance state tracking, effectiveness scoring</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">5</div>
+          <h3>TOM Alignment Engine</h3>
+          <p>Gap analysis, maturity scoring, best practices library, industry benchmarking</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">6</div>
+          <h3>Integration Framework</h3>
+          <p>Celonis, Soroco, ARIS, Visio, SaaS connectors, API/MCP server</p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 18</span>
+      </div>
+    </section>
+
+    <!-- Slide 19: Evidence Ingestion Engine -->
+    <section id="slide-19" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Capability 1</span>
+        <h2>Evidence Ingestion Engine</h2>
+      </div>
+      <div class="two-col">
+        <div>
+          <h3>Key Features</h3>
+          <ul class="feature-list">
+            <li>Shelf data request management: compose, deliver, track, match, follow-up</li>
+            <li>Evidence cataloging with automated metadata extraction</li>
+            <li>Multi-dimensional quality scoring</li>
+            <li>Evidence validation workflow</li>
+            <li>Duplicate detection and conflict flagging</li>
+            <li>Complete audit trail for provenance</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Processing Pipeline</h3>
+          <ul class="feature-list">
+            <li>Format-specific parsers for all 12 categories</li>
+            <li>Content hashing (SHA-256) for integrity</li>
+            <li>Automated classification and categorization</li>
+            <li>Human-in-the-loop validation</li>
+            <li>Evidence lifecycle state management</li>
+            <li>Quality threshold enforcement</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 19</span>
+      </div>
+    </section>
+
+    <!-- Slide 20: Semantic Relationship Engine -->
+    <section id="slide-20" class="slide slide-gray">
+      <div class="section-header">
+        <span class="badge badge-blue">Capability 2</span>
+        <h2>Semantic Relationship Engine</h2>
+      </div>
+      <p style="font-size: 1.1rem; margin-bottom: 2rem;">Knowledge graph construction using Neo4j with typed nodes and relationships.</p>
+      <div class="two-col">
+        <div>
+          <h3>Semantic Bridges</h3>
+          <ul class="feature-list">
+            <li><strong>ProcessEvidenceBridge:</strong> Process ↔ Evidence (confidence-weighted)</li>
+            <li><strong>EvidencePolicyBridge:</strong> Evidence ↔ Policy/Regulation/Control</li>
+            <li><strong>ProcessTOMBridge:</strong> Process ↔ Target Operating Model (gap-scored)</li>
+            <li><strong>CommunicationDeviationBridge:</strong> Communications ↔ Procedures (deviation detection)</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Capabilities</h3>
+          <ul class="feature-list">
+            <li>Entity resolution across heterogeneous sources</li>
+            <li>Relationship confidence scoring</li>
+            <li>Embedding-based semantic similarity</li>
+            <li>Hybrid retrieval: ID lookup + top-k search</li>
+            <li>Relationship types: SUPPORTED_BY, GOVERNED_BY, DEVIATES_FROM, IMPLEMENTS, CONTRADICTS</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 20</span>
+      </div>
+    </section>
+
+    <!-- Slide 21: LCD Algorithm Overview -->
+    <section id="slide-21" class="slide slide-dark">
+      <div class="section-header">
+        <span class="badge badge-light">Capability 3</span>
+        <h2>LCD Algorithm</h2>
+        <p>The Intellectual Core: Process Point of View Generator</p>
+      </div>
+      <p style="font-size: 1.2rem; margin-bottom: 2rem;">Synthesizes a "least common denominator" process view from diverse evidence sources using weighted consensus and cross-source triangulation.</p>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value">6</div>
+          <div class="stat-label">Algorithm Steps</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">5</div>
+          <div class="stat-label">Confidence Factors</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">5</div>
+          <div class="stat-label">Confidence Levels</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 21</span>
+      </div>
+    </section>
+
+    <!-- Slide 22: LCD Algorithm Steps -->
+    <section id="slide-22" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">LCD Algorithm</span>
+        <h2>Six-Step Process Synthesis</h2>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">1</div>
+        <div class="phase-name">Evidence Aggregation</div>
+        <div class="phase-desc">Collect all evidence related to a scoped business area</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">2</div>
+        <div class="phase-name">Entity Extraction</div>
+        <div class="phase-desc">Identify process elements (activities, decisions, roles, systems) from each evidence source</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">3</div>
+        <div class="phase-name">Cross-Source Triangulation</div>
+        <div class="phase-desc">Validate process elements by corroboration across multiple evidence types</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">4</div>
+        <div class="phase-name">Consensus Building</div>
+        <div class="phase-desc">Apply weighted voting: system data (highest), process docs (high), communications (medium), interviews (medium), job aids (lower)</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">5</div>
+        <div class="phase-name">Contradiction Resolution</div>
+        <div class="phase-desc">Flag conflicts, present alternatives, apply recency bias, default to "documented + observed" over "documented only"</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">6</div>
+        <div class="phase-name">Model Assembly</div>
+        <div class="phase-desc">Generate BPMN-style process model with element traceability, confidence scores, variant annotations, and gap markers</div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 22</span>
+      </div>
+    </section>
+
+    <!-- Slide 23: Confidence Scoring Model -->
+    <section id="slide-23" class="slide slide-gray">
+      <div class="section-header">
+        <span class="badge badge-blue">Confidence Scoring</span>
+        <h2>Evidence-Based Confidence Model</h2>
+      </div>
+      <div style="background: var(--kpmg-white); padding: 2rem; border-radius: 12px; margin-bottom: 2rem;">
+        <h3>Confidence Formula (per process element)</h3>
+        <pre style="font-family: monospace; font-size: 0.9rem; color: var(--kpmg-dark-gray); line-height: 1.8;">
+confidence = (
+    evidence_coverage  * 0.30 +    # How many evidence types support this
+    evidence_agreement * 0.25 +    # Cross-source corroboration
+    evidence_quality   * 0.20 +    # Quality scores of supporting evidence
+    source_reliability * 0.15 +    # Credibility of evidence sources
+    evidence_recency   * 0.10      # Freshness of supporting evidence
+)</pre>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Level</th>
+              <th>Range</th>
+              <th>Interpretation</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>VERY_HIGH</strong></td>
+              <td>0.9+</td>
+              <td>Multiple high-quality sources agree, recent evidence, comprehensive coverage</td>
+            </tr>
+            <tr>
+              <td><strong>HIGH</strong></td>
+              <td>0.75-0.89</td>
+              <td>Good source agreement, adequate coverage, reliable evidence</td>
+            </tr>
+            <tr>
+              <td><strong>MEDIUM</strong></td>
+              <td>0.50-0.74</td>
+              <td>Some corroboration, moderate coverage, acceptable quality</td>
+            </tr>
+            <tr>
+              <td><strong>LOW</strong></td>
+              <td>0.25-0.49</td>
+              <td>Limited support, gaps in coverage, quality concerns</td>
+            </tr>
+            <tr>
+              <td><strong>VERY_LOW</strong></td>
+              <td>&lt;0.25</td>
+              <td>Single source, old evidence, or conflicting information</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 23</span>
+      </div>
+    </section>
+
+    <!-- Slide 24: Regulatory-Policy-Control Overlay -->
+    <section id="slide-24" class="slide slide-dark">
+      <div class="section-header">
+        <span class="badge badge-light">Capability 4</span>
+        <h2>Regulatory-Policy-Control Overlay</h2>
+        <p>The Connective Tissue Between Process Elements</p>
+      </div>
+      <div style="background: rgba(255, 255, 255, 0.1); padding: 2rem; border-radius: 12px; margin-bottom: 2rem;">
+        <h3>Relationship Chain</h3>
+        <p style="font-size: 1.2rem; font-family: monospace; text-align: center; margin-top: 1rem;">
+          Process →governed_by→ Policy →enforced_by→ Control →satisfies→ Regulation
+        </p>
+      </div>
+      <div class="two-col">
+        <div>
+          <h3>Capabilities</h3>
+          <ul class="feature-list">
+            <li>Overlay visualization on process models showing governance coverage</li>
+            <li>Compliance state tracking per process element</li>
+            <li>Gap detection for ungoverned processes</li>
+            <li>Effectiveness scoring per control</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Effectiveness Levels</h3>
+          <ul class="feature-list">
+            <li><strong>HIGHLY_EFFECTIVE:</strong> &gt;90%</li>
+            <li><strong>EFFECTIVE:</strong> 70-90%</li>
+            <li><strong>MODERATELY_EFFECTIVE:</strong> 50-69%</li>
+            <li><strong>INEFFECTIVE:</strong> &lt;50%</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 24</span>
+      </div>
+    </section>
+
+    <!-- Slide 25: TOM Alignment Engine -->
+    <section id="slide-25" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Capability 5</span>
+        <h2>Target Operating Model Alignment Engine</h2>
+      </div>
+      <div class="two-col">
+        <div>
+          <h3>TOM Dimensions</h3>
+          <ul class="feature-list">
+            <li>Process Architecture</li>
+            <li>People and Organization</li>
+            <li>Technology and Data</li>
+            <li>Governance Structures</li>
+            <li>Performance Management</li>
+            <li>Risk and Compliance</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Gap Types</h3>
+          <ul class="feature-list">
+            <li><strong>FULL_GAP:</strong> Capability completely missing</li>
+            <li><strong>PARTIAL_GAP:</strong> Capability exists but incomplete</li>
+            <li><strong>DEVIATION:</strong> Capability exists but implemented differently</li>
+            <li><strong>NO_GAP:</strong> Aligned with TOM</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 25</span>
+      </div>
+    </section>
+
+    <!-- Slide 26: Gap Analysis Methodology -->
+    <section id="slide-26" class="slide slide-gray">
+      <div class="section-header">
+        <span class="badge badge-blue">Gap Analysis</span>
+        <h2>Prioritization Methodology</h2>
+      </div>
+      <div style="background: var(--kpmg-white); padding: 2rem; border-radius: 12px; margin-bottom: 2rem;">
+        <h3>Gap Prioritization Formula</h3>
+        <pre style="font-family: monospace; font-size: 0.9rem; color: var(--kpmg-dark-gray); line-height: 1.8;">
+priority_score = (
+    business_criticality * risk_exposure * regulatory_impact
+) / remediation_cost</pre>
+      </div>
+      <div class="two-col">
+        <div>
+          <h3>Analysis Steps</h3>
+          <ol style="padding-left: 1.5rem;">
+            <li>Graph traversal to find processes without TOM alignment</li>
+            <li>Embedding-based TOM deviation measurement</li>
+            <li>LLM-powered gap rationale generation</li>
+            <li>Gap prioritization by criticality × risk × regulatory × cost</li>
+          </ol>
+        </div>
+        <div>
+          <h3>Process Maturity Scoring</h3>
+          <ul class="feature-list">
+            <li>Level 1: INITIAL</li>
+            <li>Level 2: MANAGED</li>
+            <li>Level 3: DEFINED</li>
+            <li>Level 4: QUANTITATIVELY_MANAGED</li>
+            <li>Level 5: OPTIMIZING</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 26</span>
+      </div>
+    </section>
+
+    <!-- Slide 27: Integration Framework -->
+    <section id="slide-27" class="slide slide-dark">
+      <div class="section-header">
+        <span class="badge badge-light">Capability 6</span>
+        <h2>Integration Framework</h2>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Integration</th>
+              <th>Method</th>
+              <th>Data</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Celonis</strong></td>
+              <td>Celonis EMS API</td>
+              <td>Event log import, process model import, conformance results</td>
+            </tr>
+            <tr>
+              <td><strong>Soroco Scout</strong></td>
+              <td>Work Graph API</td>
+              <td>Desktop task mining evidence</td>
+            </tr>
+            <tr>
+              <td><strong>ARIS</strong></td>
+              <td>AML/XML import</td>
+              <td>Process model import</td>
+            </tr>
+            <tr>
+              <td><strong>Visio</strong></td>
+              <td>VSDX parsing</td>
+              <td>Process diagram conversion</td>
+            </tr>
+            <tr>
+              <td><strong>Salesforce/SAP/ServiceNow</strong></td>
+              <td>Native connectors</td>
+              <td>SaaS data with credential management, rate limiting</td>
+            </tr>
+            <tr>
+              <td><strong>XES Format</strong></td>
+              <td>Standard import</td>
+              <td>Event log interoperability</td>
+            </tr>
+            <tr>
+              <td><strong>API/MCP Server</strong></td>
+              <td>REST + MCP</td>
+              <td>Consulting firm AI platform integration</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 27</span>
+      </div>
+    </section>
+
+    <!-- Slide 28: Visualization and Reporting -->
+    <section id="slide-28" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Deliverables</span>
+        <h2>Visualization and Reporting</h2>
+      </div>
+      <div class="cards-grid">
+        <div class="card">
+          <h3>Interactive HTML Process Flows</h3>
+          <p>BPMN.js-powered process visualizations with pan, zoom, and element inspection</p>
+        </div>
+        <div class="card">
+          <h3>Evidence Mapping Overlays</h3>
+          <p>Visual mapping showing which evidence supports which process elements</p>
+        </div>
+        <div class="card">
+          <h3>Confidence Heatmaps</h3>
+          <p>Color-coded process models showing confidence scores across all elements</p>
+        </div>
+        <div class="card">
+          <h3>Gap Analysis Dashboards</h3>
+          <p>TOM alignment scoring with prioritized gap lists and remediation roadmaps</p>
+        </div>
+        <div class="card">
+          <h3>Governance Overlay</h3>
+          <p>Regulatory-policy-control visualization showing governance coverage</p>
+        </div>
+        <div class="card">
+          <h3>Executive Reports</h3>
+          <p>Client-ready PDF/HTML deliverables with evidence provenance and recommendations</p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 28</span>
+      </div>
+    </section>
+
+    <!-- Slide 29: System Architecture -->
+    <section id="slide-29" class="slide slide-gray">
+      <div class="section-header">
+        <span class="badge badge-blue">Architecture</span>
+        <h2>System Architecture</h2>
+      </div>
+      <div style="background: var(--kpmg-white); padding: 2rem; border-radius: 12px; font-family: monospace; font-size: 0.85rem;">
+        <div style="background: var(--kpmg-light-gray); padding: 1rem; margin-bottom: 0.5rem; border-radius: 6px;">
+          <strong>CLIENT / PORTAL LAYER</strong><br>
+          Next.js Frontend | Client Intake Portal | Report Viewer (Port 3000)
+        </div>
+        <div style="text-align: center; margin: 0.5rem 0;">↓</div>
+        <div style="background: var(--kpmg-blue); color: white; padding: 1rem; margin-bottom: 0.5rem; border-radius: 6px;">
+          <strong>API GATEWAY (FastAPI - Port 8000)</strong><br>
+          Evidence API | POV API | TOM API | Graph API | Engagement API
+        </div>
+        <div style="text-align: center; margin: 0.5rem 0;">↓</div>
+        <div style="background: var(--kpmg-medium-blue); color: white; padding: 1rem; margin-bottom: 0.5rem; border-radius: 6px;">
+          <strong>PROCESSING SERVICE LAYER</strong><br>
+          Evidence Ingestion | Semantic Bridge Engine | LCD Algorithm<br>
+          TOM Alignment | Gap Analysis | RAG Copilot
+        </div>
+        <div style="text-align: center; margin: 0.5rem 0;">↓</div>
+        <div style="background: var(--kpmg-dark-navy); color: white; padding: 1rem; border-radius: 6px;">
+          <strong>DATA & INTELLIGENCE LAYER</strong><br>
+          PostgreSQL 15 (pgvector) | Neo4j 5.x (Knowledge Graph) | Redis 7 (Cache/Queue)
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 29</span>
+      </div>
+    </section>
+
+    <!-- Slide 30: Tech Stack -->
+    <section id="slide-30" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Technology</span>
+        <h2>Tech Stack</h2>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Layer</th>
+              <th>Technology</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Backend</strong></td>
+              <td>Python 3.12+ (FastAPI, SQLAlchemy 2.x, Pydantic 2.x)</td>
+              <td>API and business logic</td>
+            </tr>
+            <tr>
+              <td><strong>Frontend</strong></td>
+              <td>Next.js 14+ (React 18, BPMN.js, D3/Cytoscape)</td>
+              <td>UI and visualization</td>
+            </tr>
+            <tr>
+              <td><strong>Knowledge Graph</strong></td>
+              <td>Neo4j 5.x with APOC plugin</td>
+              <td>Semantic relationships</td>
+            </tr>
+            <tr>
+              <td><strong>Vector Store</strong></td>
+              <td>PostgreSQL 15 with pgvector</td>
+              <td>Embedding storage and similarity search</td>
+            </tr>
+            <tr>
+              <td><strong>Embeddings</strong></td>
+              <td>all-mpnet-base-v2 (768-dim)</td>
+              <td>Semantic similarity</td>
+            </tr>
+            <tr>
+              <td><strong>AI/ML</strong></td>
+              <td>Claude API</td>
+              <td>Analysis, gap rationale, RAG copilot</td>
+            </tr>
+            <tr>
+              <td><strong>Cache/Queue</strong></td>
+              <td>Redis 7</td>
+              <td>Caching, background job queue</td>
+            </tr>
+            <tr>
+              <td><strong>Process Viz</strong></td>
+              <td>BPMN.js</td>
+              <td>Interactive process modeling</td>
+            </tr>
+            <tr>
+              <td><strong>Infrastructure</strong></td>
+              <td>Docker Compose</td>
+              <td>Environment management</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 30</span>
+      </div>
+    </section>
+
+    <!-- Slide 31: Knowledge Graph Schema -->
+    <section id="slide-31" class="slide slide-dark">
+      <div class="section-header">
+        <span class="badge badge-light">Data Model</span>
+        <h2>Knowledge Graph Schema</h2>
+      </div>
+      <div class="two-col">
+        <div>
+          <h3>Node Types</h3>
+          <ul class="feature-list">
+            <li>Process</li>
+            <li>Subprocess</li>
+            <li>Activity</li>
+            <li>Decision</li>
+            <li>Evidence</li>
+            <li>Policy</li>
+            <li>Control</li>
+            <li>Regulation</li>
+            <li>TOM</li>
+            <li>Gap</li>
+            <li>Role</li>
+            <li>System</li>
+            <li>Document</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Relationship Types</h3>
+          <ul class="feature-list">
+            <li><strong>SUPPORTED_BY</strong> (confidence, evidence_count)</li>
+            <li><strong>GOVERNED_BY</strong> (effectiveness)</li>
+            <li><strong>ENFORCED_BY</strong> (coverage)</li>
+            <li><strong>SATISFIES</strong> (compliance_level)</li>
+            <li><strong>DEVIATES_FROM</strong> (gap_score, severity)</li>
+            <li><strong>CONTRADICTS</strong> (severity, resolution)</li>
+            <li><strong>FOLLOWED_BY</strong> (frequency, variants)</li>
+            <li><strong>OWNED_BY</strong></li>
+            <li><strong>USES</strong></li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 31</span>
+      </div>
+    </section>
+
+    <!-- Slide 32: Data Model -->
+    <section id="slide-32" class="slide slide-gray">
+      <div class="section-header">
+        <span class="badge badge-blue">Data Model</span>
+        <h2>Core Entities (PostgreSQL)</h2>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Entity</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Engagement</strong></td>
+              <td>Consulting engagement scope: id, name, client, business_area, status, team</td>
+            </tr>
+            <tr>
+              <td><strong>ShelfDataRequest</strong></td>
+              <td>Evidence request to client: id, engagement_id, status, items_requested, items_received</td>
+            </tr>
+            <tr>
+              <td><strong>EvidenceItem</strong></td>
+              <td>Individual piece of evidence: id, category, format, quality_score, validation_status, content_hash</td>
+            </tr>
+            <tr>
+              <td><strong>EvidenceFragment</strong></td>
+              <td>Extracted component: id, evidence_id, type, content, embedding_vector, metadata</td>
+            </tr>
+            <tr>
+              <td><strong>ProcessModel</strong></td>
+              <td>Generated process POV: id, engagement_id, version, confidence_score, status</td>
+            </tr>
+            <tr>
+              <td><strong>ProcessElement</strong></td>
+              <td>Activity/decision/gateway: id, model_id, type, name, confidence_score, evidence_count</td>
+            </tr>
+            <tr>
+              <td><strong>Policy</strong></td>
+              <td>Regulatory/organizational policy: id, name, type, source_evidence_id, clauses</td>
+            </tr>
+            <tr>
+              <td><strong>TargetOperatingModel</strong></td>
+              <td>TOM definition: id, engagement_id, dimensions, maturity_targets</td>
+            </tr>
+            <tr>
+              <td><strong>GapAnalysisResult</strong></td>
+              <td>Gap finding: id, type, severity, confidence, rationale, recommendation</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 32</span>
+      </div>
+    </section>
+
+    <!-- Slide 33: API Surface -->
+    <section id="slide-33" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">API</span>
+        <h2>API Surface Overview</h2>
+      </div>
+      <div class="two-col">
+        <div>
+          <h3>Evidence APIs</h3>
+          <ul class="feature-list" style="font-size: 0.85rem;">
+            <li>POST /api/v1/evidence/upload</li>
+            <li>GET /api/v1/evidence/{id}</li>
+            <li>GET /api/v1/evidence?engagement_id=X</li>
+            <li>PATCH /api/v1/evidence/{id}/validate</li>
+          </ul>
+          <h3>Process POV APIs</h3>
+          <ul class="feature-list" style="font-size: 0.85rem;">
+            <li>POST /api/v1/pov/generate</li>
+            <li>GET /api/v1/pov/{id}</li>
+            <li>GET /api/v1/pov/{id}/evidence-map</li>
+            <li>GET /api/v1/pov/{id}/gaps</li>
+          </ul>
+        </div>
+        <div>
+          <h3>TOM Alignment APIs</h3>
+          <ul class="feature-list" style="font-size: 0.85rem;">
+            <li>POST /api/v1/tom</li>
+            <li>POST /api/v1/tom/{id}/align</li>
+            <li>GET /api/v1/tom/{id}/gaps</li>
+            <li>GET /api/v1/tom/{id}/recommendations</li>
+          </ul>
+          <h3>Knowledge Graph APIs</h3>
+          <ul class="feature-list" style="font-size: 0.85rem;">
+            <li>GET /api/v1/graph/query</li>
+            <li>GET /api/v1/graph/traverse</li>
+            <li>GET /api/v1/graph/search</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 33</span>
+      </div>
+    </section>
+
+    <!-- Slide 34: Personas and Dashboards -->
+    <section id="slide-34" class="slide slide-dark">
+      <div class="section-header">
+        <span class="badge badge-light">User Experience</span>
+        <h2>Personas and Dashboards</h2>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Persona</th>
+              <th>Dashboard KPIs</th>
+              <th>Access Level</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Engagement Lead</strong></td>
+              <td>Evidence coverage %, overall confidence score, TOM alignment %, gap count by severity, team progress</td>
+              <td>Full engagement access</td>
+            </tr>
+            <tr>
+              <td><strong>Process Analyst</strong></td>
+              <td>Evidence processing status, classification accuracy, relationship mapping progress, assigned review items</td>
+              <td>Assigned processes only</td>
+            </tr>
+            <tr>
+              <td><strong>Subject Matter Expert</strong></td>
+              <td>Process elements pending review, annotation count, confidence impact of reviews</td>
+              <td>Assigned domain only</td>
+            </tr>
+            <tr>
+              <td><strong>Client Stakeholder</strong></td>
+              <td>Read-only findings view, confidence scores, gap analysis results, recommendation status</td>
+              <td>Read-only, filtered view</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 34</span>
+      </div>
+    </section>
+
+    <!-- Slide 35: Flow 1 - Engagement Setup -->
+    <section id="slide-35" class="slide slide-gray">
+      <div class="section-header">
+        <span class="badge badge-blue">User Flow 1</span>
+        <h2>Engagement Setup & Evidence Collection</h2>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">1</div>
+        <div class="phase-name">Create Engagement</div>
+        <div class="phase-desc">Define engagement scope with specific business area focus</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">2</div>
+        <div class="phase-name">Define Evidence Requirements</div>
+        <div class="phase-desc">Specify needed evidence per the 12-category taxonomy</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">3</div>
+        <div class="phase-name">Generate Shelf Data Request</div>
+        <div class="phase-desc">Create structured evidence request document</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">4</div>
+        <div class="phase-name">Deliver Request to Client</div>
+        <div class="phase-desc">Send request via email or client intake portal</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">5</div>
+        <div class="phase-name">Client Uploads Evidence</div>
+        <div class="phase-desc">Client submits evidence through secure intake portal</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">6</div>
+        <div class="phase-name">Auto-Classify and Validate</div>
+        <div class="phase-desc">System classifies, validates, and catalogs evidence with quality scoring</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">7</div>
+        <div class="phase-name">Review Flagged Items</div>
+        <div class="phase-desc">Analyst reviews low-quality, unclassified, or potential duplicate items</div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 35</span>
+      </div>
+    </section>
+
+    <!-- Slide 36: Flow 2 - POV Generation -->
+    <section id="slide-36" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">User Flow 2</span>
+        <h2>Process Point of View Generation</h2>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">1</div>
+        <div class="phase-name">Trigger POV Generation</div>
+        <div class="phase-desc">Initiate LCD algorithm for engagement scope</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">2</div>
+        <div class="phase-name">Evidence Aggregation & Entity Extraction</div>
+        <div class="phase-desc">System aggregates evidence and extracts process elements</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">3</div>
+        <div class="phase-name">Cross-Source Triangulation</div>
+        <div class="phase-desc">System validates elements through corroboration</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">4</div>
+        <div class="phase-name">Consensus Building</div>
+        <div class="phase-desc">LCD algorithm synthesizes consensus process model</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">5</div>
+        <div class="phase-name">Assign Confidence Scores</div>
+        <div class="phase-desc">Every element receives evidence-based confidence score</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">6</div>
+        <div class="phase-name">Flag Contradictions</div>
+        <div class="phase-desc">System identifies and presents conflicting evidence with alternatives</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">7</div>
+        <div class="phase-name">Generate BPMN Model</div>
+        <div class="phase-desc">Create process model with evidence citations</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">8</div>
+        <div class="phase-name">Analyst Review & SME Validation</div>
+        <div class="phase-desc">Team reviews, annotates, and refines model based on expertise</div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 36</span>
+      </div>
+    </section>
+
+    <!-- Slide 37: Flow 3 - TOM Alignment -->
+    <section id="slide-37" class="slide slide-gray">
+      <div class="section-header">
+        <span class="badge badge-blue">User Flow 3</span>
+        <h2>TOM Alignment & Gap Analysis</h2>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">1</div>
+        <div class="phase-name">Upload/Select Target Operating Model</div>
+        <div class="phase-desc">Define TOM across six dimensions</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">2</div>
+        <div class="phase-name">Import Best Practices & Benchmarks</div>
+        <div class="phase-desc">Load industry-specific reference models and benchmarks</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">3</div>
+        <div class="phase-name">Automated Alignment Analysis</div>
+        <div class="phase-desc">System performs automated alignment across TOM dimensions</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">4</div>
+        <div class="phase-name">Generate Gap Findings</div>
+        <div class="phase-desc">Gap analysis produces findings with evidence-backed rationale</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">5</div>
+        <div class="phase-name">Prioritize Recommendations</div>
+        <div class="phase-desc">Recommendations prioritized by criticality × risk × cost</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">6</div>
+        <div class="phase-name">Engagement Lead Review</div>
+        <div class="phase-desc">Lead reviews and curates findings for client presentation</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">7</div>
+        <div class="phase-name">Generate Deliverables</div>
+        <div class="phase-desc">Create client-ready HTML/PDF reports with evidence provenance</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">8</div>
+        <div class="phase-name">Facilitate Consulting Conversation</div>
+        <div class="phase-desc">Use evidence-backed POV to drive client discussions</div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 37</span>
+      </div>
+    </section>
+
+    <!-- Slide 38: Flow 4 - Continuous Monitoring -->
+    <section id="slide-38" class="slide slide-dark">
+      <div class="section-header">
+        <span class="badge badge-light">User Flow 4</span>
+        <h2>Continuous Monitoring (Phase 3)</h2>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">1</div>
+        <div class="phase-name">Configure Monitoring Agents</div>
+        <div class="phase-desc">Set up agents for specific data sources (logs, task mining, systems)</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">2</div>
+        <div class="phase-name">Continuous Evidence Collection</div>
+        <div class="phase-desc">Agents collect evidence continuously from configured sources</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">3</div>
+        <div class="phase-name">Real-Time Deviation Detection</div>
+        <div class="phase-desc">System detects deviations against established process POV</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">4</div>
+        <div class="phase-name">Generate Alerts</div>
+        <div class="phase-desc">Alerts triggered for significant process deviations</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">5</div>
+        <div class="phase-name">Dashboard Updates</div>
+        <div class="phase-desc">Live process intelligence dashboard reflects current state</div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 38</span>
+      </div>
+    </section>
+
+    <!-- Slide 39: Security Architecture -->
+    <section id="slide-39" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Security & Compliance</span>
+        <h2>Security Architecture</h2>
+      </div>
+      <div class="cards-grid">
+        <div class="card">
+          <h3>Engagement-Level Isolation</h3>
+          <p>All data scoped to engagement. Complete separation between client engagements with row-level security.</p>
+        </div>
+        <div class="card">
+          <h3>Encryption</h3>
+          <p>AES-256 at rest for all stored data. TLS 1.3 in transit for all API communications.</p>
+        </div>
+        <div class="card">
+          <h3>Authentication</h3>
+          <p>OAuth2/OIDC with consulting firm SSO integration. Multi-factor authentication support.</p>
+        </div>
+        <div class="card">
+          <h3>Authorization</h3>
+          <p>Role-based access control per persona type. Granular permissions at engagement and process level.</p>
+        </div>
+        <div class="card">
+          <h3>Audit Logging</h3>
+          <p>Complete trail of all data access and modifications. Immutable audit logs with timestamping.</p>
+        </div>
+        <div class="card">
+          <h3>Data Classification</h3>
+          <p>Evidence tagged with sensitivity levels: Public, Internal, Confidential, Restricted.</p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 39</span>
+      </div>
+    </section>
+
+    <!-- Slide 40: Multi-Tenancy Model -->
+    <section id="slide-40" class="slide slide-gray">
+      <div class="section-header">
+        <span class="badge badge-blue">Security</span>
+        <h2>Multi-Tenancy Model</h2>
+      </div>
+      <div class="two-col">
+        <div>
+          <h3>Data Isolation</h3>
+          <ul class="feature-list">
+            <li>Engagement-level data partitioning</li>
+            <li>Row-level security in PostgreSQL</li>
+            <li>Engagement-scoped Neo4j subgraphs</li>
+            <li>No cross-engagement data leakage</li>
+            <li>Isolated processing pipelines</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Client Data Handling</h3>
+          <ul class="feature-list">
+            <li>Configurable retention policies per engagement</li>
+            <li>Automated cleanup on engagement closure</li>
+            <li>Data export for client archival</li>
+            <li>Right-to-deletion compliance (GDPR)</li>
+            <li>Chain of custody documentation</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 40</span>
+      </div>
+    </section>
+
+    <!-- Slide 41: Compliance -->
+    <section id="slide-41" class="slide slide-dark">
+      <div class="section-header">
+        <span class="badge badge-light">Compliance</span>
+        <h2>Compliance Posture</h2>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value">SOC2</div>
+          <div class="stat-label">Type II Certification Target</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">GDPR</div>
+          <div class="stat-label">Data Processing Agreements</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">100%</div>
+          <div class="stat-label">Audit Trail Coverage</div>
+        </div>
+      </div>
+      <div class="two-col" style="margin-top: 2rem;">
+        <div>
+          <h3>Compliance Features</h3>
+          <ul class="feature-list">
+            <li>Comprehensive audit logging</li>
+            <li>Data classification and tagging</li>
+            <li>Retention policy enforcement</li>
+            <li>Access control matrices</li>
+            <li>Encryption key management</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Privacy Controls</h3>
+          <ul class="feature-list">
+            <li>PII detection and masking</li>
+            <li>Consent management</li>
+            <li>Right to access/deletion</li>
+            <li>Data minimization</li>
+            <li>Cross-border transfer controls</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 41</span>
+      </div>
+    </section>
+
+    <!-- Slide 42: Phased Delivery Overview -->
+    <section id="slide-42" class="slide slide-gradient">
+      <div class="section-header">
+        <span class="badge badge-light">Implementation</span>
+        <h2>Phased Delivery Roadmap</h2>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">Phase 1</div>
+        <div class="phase-name">Foundation (MVP)</div>
+        <div class="phase-desc">Evidence ingestion for core categories, LCD algorithm, basic POV generation, engagement management</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">Phase 2</div>
+        <div class="phase-name">Intelligence</div>
+        <div class="phase-desc">Full evidence taxonomy, regulatory-policy-control overlay, TOM alignment, gap analysis, integrations</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-number">Phase 3</div>
+        <div class="phase-name">Scale & Autonomy</div>
+        <div class="phase-desc">Continuous monitoring, agentic capabilities, cross-engagement patterns, advanced analytics</div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 42</span>
+      </div>
+    </section>
+
+    <!-- Slide 43: Phase 1 - Foundation -->
+    <section id="slide-43" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Phase 1</span>
+        <h2>Foundation (MVP)</h2>
+      </div>
+      <div class="two-col">
+        <div>
+          <h3>Core Capabilities</h3>
+          <ul class="feature-list">
+            <li>Engagement management (create, scope, team)</li>
+            <li>Evidence ingestion for categories 1, 5, 8 (documents, structured data, BPM models)</li>
+            <li>Shelf data request workflow</li>
+            <li>Evidence quality scoring and validation</li>
+            <li>Basic semantic relationship engine (Neo4j)</li>
+            <li>Process POV generation with LCD algorithm</li>
+            <li>Confidence scoring engine</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Deliverables</h3>
+          <ul class="feature-list">
+            <li>Simple HTML process flow visualization</li>
+            <li>Evidence provenance tracking</li>
+            <li>Engagement Lead dashboard</li>
+            <li>Process Analyst dashboard</li>
+            <li>Engagement-level isolation</li>
+            <li>Authentication and audit logging</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 43</span>
+      </div>
+    </section>
+
+    <!-- Slide 44: Phase 2 - Intelligence -->
+    <section id="slide-44" class="slide slide-gray">
+      <div class="section-header">
+        <span class="badge badge-blue">Phase 2</span>
+        <h2>Intelligence</h2>
+      </div>
+      <div class="two-col">
+        <div>
+          <h3>Extended Capabilities</h3>
+          <ul class="feature-list">
+            <li>Full evidence taxonomy (all 12 categories including audio/video)</li>
+            <li>Advanced semantic bridges across all domain pairs</li>
+            <li>Regulatory-policy-control overlay engine</li>
+            <li>TOM alignment and automated gap analysis</li>
+            <li>Best practices library and benchmarking</li>
+            <li>Celonis and Soroco Scout integration</li>
+            <li>Conformance checking against reference models</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Enhanced Deliverables</h3>
+          <ul class="feature-list">
+            <li>SME and Client Stakeholder portals</li>
+            <li>Executive report generation</li>
+            <li>Gap-prioritized transformation roadmap</li>
+            <li>Confidence heatmap visualizations</li>
+            <li>Governance overlay visualizations</li>
+            <li>Industry-specific best practice libraries</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 44</span>
+      </div>
+    </section>
+
+    <!-- Slide 45: Phase 3 - Scale & Autonomy -->
+    <section id="slide-45" class="slide slide-dark">
+      <div class="section-header">
+        <span class="badge badge-light">Phase 3</span>
+        <h2>Scale & Autonomy</h2>
+      </div>
+      <div class="two-col">
+        <div>
+          <h3>Advanced Capabilities</h3>
+          <ul class="feature-list">
+            <li>Monitoring agent integration (log analysis, task mining)</li>
+            <li>Continuous evidence collection</li>
+            <li>Real-time process deviation detection</li>
+            <li>Agentic capabilities (proactive evidence gap identification)</li>
+            <li>Cross-engagement pattern library (with strict isolation)</li>
+            <li>Process simulation and what-if analysis</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Enterprise Features</h3>
+          <ul class="feature-list">
+            <li>SaaS connectors (Salesforce, SAP, ServiceNow)</li>
+            <li>Client portal with interactive exploration</li>
+            <li>API/MCP server for consulting platform integration</li>
+            <li>Automated knowledge transfer</li>
+            <li>Advanced analytics and predictive modeling</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 45</span>
+      </div>
+    </section>
+
+    <!-- Slide 46: Success Metrics -->
+    <section id="slide-46" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Success Metrics</span>
+        <h2>Measuring Success</h2>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Target</th>
+              <th>Measurement</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Evidence Processing Accuracy</strong></td>
+              <td>&gt;90% correct classification</td>
+              <td>Validated against analyst review</td>
+            </tr>
+            <tr>
+              <td><strong>POV Generation Time</strong></td>
+              <td>&lt;4 hours for typical scope</td>
+              <td>End-to-end from trigger to model</td>
+            </tr>
+            <tr>
+              <td><strong>Confidence Score Correlation</strong></td>
+              <td>&gt;0.8 with expert assessment</td>
+              <td>Pearson correlation coefficient</td>
+            </tr>
+            <tr>
+              <td><strong>Consultant Time Savings</strong></td>
+              <td>60-70% reduction in process discovery</td>
+              <td>Before/after engagement comparison</td>
+            </tr>
+            <tr>
+              <td><strong>Evidence Coverage</strong></td>
+              <td>&gt;80% of requested items received</td>
+              <td>Shelf data request fulfillment rate</td>
+            </tr>
+            <tr>
+              <td><strong>Gap Detection Recall</strong></td>
+              <td>&gt;85% of gaps identified by experts</td>
+              <td>Compared to manual gap analysis</td>
+            </tr>
+            <tr>
+              <td><strong>Client Satisfaction</strong></td>
+              <td>&gt;4.5/5.0</td>
+              <td>Post-engagement survey</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 46</span>
+      </div>
+    </section>
+
+    <!-- Slide 47: Next Steps -->
+    <section id="slide-47" class="slide slide-gradient">
+      <div class="section-header">
+        <span class="badge badge-light">Next Steps</span>
+        <h2>Launch Plan</h2>
+      </div>
+      <div class="cards-grid">
+        <div class="card">
+          <h3>Pilot Engagement</h3>
+          <p>Select initial client engagement for pilot. Financial Services or Healthcare preferred. Scope: single business area (e.g., Claims Processing, Loan Origination).</p>
+        </div>
+        <div class="card">
+          <h3>Team Composition</h3>
+          <p>Core team: 1 Engagement Lead, 2 Process Analysts, 1 Tech Lead, 2 Engineers. SME pool available for domain validation.</p>
+        </div>
+        <div class="card">
+          <h3>Timeline</h3>
+          <p>Phase 1 MVP: 12 weeks. Phase 2 Intelligence: +16 weeks. Phase 3 Scale: +20 weeks. Total: 48 weeks to full capability.</p>
+        </div>
+        <div class="card">
+          <h3>Investment</h3>
+          <p>Initial development: Phase 1 foundation. Infrastructure: cloud hosting, Neo4j enterprise, LLM API costs. Ongoing: maintenance and enhancement.</p>
+        </div>
+        <div class="card">
+          <h3>Success Criteria</h3>
+          <p>Pilot demonstrates 60%+ time reduction. Confidence scores correlate &gt;0.8 with expert assessment. Client satisfaction &gt;4.5/5.0.</p>
+        </div>
+        <div class="card">
+          <h3>Decision Point</h3>
+          <p>Post-pilot review at week 16. Evaluate metrics, gather feedback, decide on Phase 2 investment based on demonstrated value.</p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 47</span>
+      </div>
+    </section>
+
+    <!-- Slide 48: Final Hero -->
+    <section id="slide-48" class="slide slide-hero">
+      <span class="tagline">Let insights reveal new opportunity</span>
+      <h1>KMFlow Platform</h1>
+      <p class="subtitle">Transforming Process Intelligence Through Evidence-First Analysis</p>
+      <div style="margin-top: 3rem;">
+        <p style="font-size: 1.2rem; margin-bottom: 1rem;">Your process transformation starts with insight.</p>
+        <p style="font-size: 1rem; opacity: 0.9;">Contact your KPMG engagement team to explore how KMFlow can accelerate your next consulting engagement.</p>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 48</span>
+      </div>
+    </section>
+  </main>
+
+  <div class="presentation-footer">
+    <div class="footer-tagline">Let insights reveal new opportunity</div>
+    <div class="footer-legal">
+      © 2026 KPMG International Limited. KPMG International Limited is a private English company limited by guarantee and does not provide services to clients.
+      All information provided is of a general nature and is not intended to address the circumstances of any particular individual or entity.
+      The information contained herein is confidential and proprietary. Do not distribute without authorization.
+    </div>
+  </div>
+
+  <script>
+    // Slide indicator functionality
+    const slidesContainer = document.getElementById('slidesContainer');
+    const slides = document.querySelectorAll('.slide');
+    const slideIndicator = document.getElementById('slideIndicator');
+
+    // Create dots
+    slides.forEach((slide, index) => {
+      const dot = document.createElement('div');
+      dot.className = 'slide-dot';
+      dot.addEventListener('click', () => {
+        slide.scrollIntoView({ behavior: 'smooth' });
+      });
+      slideIndicator.appendChild(dot);
+    });
+
+    // Update active dot on scroll
+    const updateActiveDot = () => {
+      const scrollPosition = slidesContainer.scrollTop;
+      const windowHeight = window.innerHeight;
+
+      let activeIndex = 0;
+      slides.forEach((slide, index) => {
+        const slideTop = slide.offsetTop;
+        if (scrollPosition >= slideTop - windowHeight / 2) {
+          activeIndex = index;
+        }
+      });
+
+      document.querySelectorAll('.slide-dot').forEach((dot, index) => {
+        dot.classList.toggle('active', index === activeIndex);
+      });
+    };
+
+    slidesContainer.addEventListener('scroll', updateActiveDot);
+    updateActiveDot();
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      const currentScroll = slidesContainer.scrollTop;
+      const windowHeight = window.innerHeight;
+
+      if (e.key === 'ArrowDown' || e.key === 'PageDown') {
+        e.preventDefault();
+        slidesContainer.scrollBy({ top: windowHeight, behavior: 'smooth' });
+      } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+        e.preventDefault();
+        slidesContainer.scrollBy({ top: -windowHeight, behavior: 'smooth' });
+      }
+    });
+  </script>
+</body>
+</html>
