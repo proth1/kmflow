@@ -76,6 +76,16 @@ class Settings(BaseSettings):
     rate_limit_requests: int = 100
     rate_limit_window_seconds: int = 60
 
+    # ── Copilot Rate Limiting (Phase 5) ─────────────────────────
+    copilot_rate_limit_per_user: int = 10
+    copilot_rate_limit_window: int = 60  # seconds
+
+    # ── Data Retention (Phase 5) ──────────────────────────────
+    retention_cleanup_enabled: bool = False
+
+    # ── Encryption Key Rotation (Phase 5) ──────────────────────
+    encryption_key_previous: str = ""  # Previous key for rotation
+
     # ── Embeddings ───────────────────────────────────────────────
     embedding_model: str = "all-mpnet-base-v2"
     embedding_dimension: int = 768
