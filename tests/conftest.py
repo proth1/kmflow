@@ -6,6 +6,7 @@ test client configured with overridden dependencies.
 
 from __future__ import annotations
 
+import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -39,14 +40,29 @@ def test_settings() -> Settings:
     )
 
 
+def _default_refresh_side_effect(obj: Any) -> None:
+    """Simulate session.refresh by ensuring the object has an id."""
+    if hasattr(obj, "id") and obj.id is None:
+        obj.id = uuid.uuid4()
+
+
 @pytest.fixture
 def mock_db_session() -> AsyncMock:
-    """Create a mock async database session."""
+    """Create a mock async database session.
+
+    Note: session.add() is synchronous in SQLAlchemy, so we use
+    MagicMock for it. All async methods (execute, commit, flush,
+    refresh, rollback, close) use AsyncMock.
+    """
     session = AsyncMock()
     session.execute = AsyncMock()
     session.commit = AsyncMock()
     session.rollback = AsyncMock()
     session.close = AsyncMock()
+    session.flush = AsyncMock()
+    session.refresh = AsyncMock(side_effect=_default_refresh_side_effect)
+    # session.add is synchronous in real SQLAlchemy
+    session.add = MagicMock()
     return session
 
 

@@ -35,6 +35,13 @@ class TestAppCreation:
         assert "/api/v1/engagements/" in route_paths
         assert "/api/v1/engagements/{engagement_id}" in route_paths
 
+    def test_new_routes_registered(self) -> None:
+        """App should have dashboard and audit log routes."""
+        app = create_app()
+        route_paths = [route.path for route in app.routes]
+        assert "/api/v1/engagements/{engagement_id}/dashboard" in route_paths
+        assert "/api/v1/engagements/{engagement_id}/audit-logs" in route_paths
+
     def test_cors_middleware_configured(self) -> None:
         """App should have CORS middleware."""
         app = create_app()
