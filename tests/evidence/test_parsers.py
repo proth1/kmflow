@@ -59,7 +59,7 @@ class TestParserFactory:
 
     def test_get_parser_unknown(self) -> None:
         """Should return None for unsupported formats."""
-        parser = get_parser("video.mp4")
+        parser = get_parser("archive.7z")
         assert parser is None
 
     def test_classify_by_extension(self) -> None:
@@ -336,7 +336,7 @@ class TestParseFileIntegration:
     @pytest.mark.asyncio
     async def test_parse_unsupported_file(self) -> None:
         """Should return error for unsupported file types."""
-        result = await parse_file("/tmp/fake.mp4", "video.mp4")
+        result = await parse_file("/tmp/fake.7z", "archive.7z")
         assert result.error is not None
         assert "No parser" in result.error
 

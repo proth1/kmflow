@@ -9,10 +9,15 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from src.evidence.parsers.audio_parser import AudioParser
 from src.evidence.parsers.base import BaseParser, ParseResult
 from src.evidence.parsers.bpmn_parser import BpmnParser
+from src.evidence.parsers.communication_parser import CommunicationParser
 from src.evidence.parsers.document_parser import DocumentParser
+from src.evidence.parsers.image_parser import ImageParser
+from src.evidence.parsers.regulatory_parser import RegulatoryParser
 from src.evidence.parsers.structured_data_parser import StructuredDataParser
+from src.evidence.parsers.video_parser import VideoParser
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +26,11 @@ _PARSERS: list[BaseParser] = [
     DocumentParser(),
     StructuredDataParser(),
     BpmnParser(),
+    ImageParser(),
+    AudioParser(),
+    VideoParser(),
+    RegulatoryParser(),
+    CommunicationParser(),
 ]
 
 # Extension to EvidenceCategory mapping for auto-classification
@@ -45,6 +55,29 @@ EXTENSION_TO_CATEGORY: dict[str, str] = {
     ".jpeg": "images",
     ".gif": "images",
     ".svg": "images",
+    ".tiff": "images",
+    ".tif": "images",
+    ".bmp": "images",
+    # Audio
+    ".mp3": "audio",
+    ".wav": "audio",
+    ".m4a": "audio",
+    ".ogg": "audio",
+    ".flac": "audio",
+    # Video
+    ".mp4": "video",
+    ".avi": "video",
+    ".mov": "video",
+    ".mkv": "video",
+    ".webm": "video",
+    # Regulatory/Policy
+    ".reg": "regulatory_policy",
+    ".policy": "regulatory_policy",
+    # Communications
+    ".eml": "domain_communications",
+    ".mbox": "domain_communications",
+    ".chat": "domain_communications",
+    ".msg": "domain_communications",
 }
 
 # MIME type to file extension mapping

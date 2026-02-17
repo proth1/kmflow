@@ -3,12 +3,14 @@
 Configures the FastAPI app with:
 - CORS middleware
 - Lifespan events for database/cache connections
-- Route registration
+- Route registration (14 Phase 1-2 routers + 6 Phase 3 routers)
+- MCP server mounted at /mcp
 - OpenAPI documentation at /docs
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -21,11 +23,27 @@ from src.api.middleware.security import (
     RequestIDMiddleware,
     SecurityHeadersMiddleware,
 )
-from src.api.routes import auth, dashboard, engagements, evidence, graph, health, pov, shelf_requests, users
+from src.api.routes import (
+    auth,
+    dashboard,
+    engagements,
+    evidence,
+    graph,
+    health,
+    integrations,
+    pov,
+    regulatory,
+    reports,
+    shelf_requests,
+    tom,
+    users,
+)
+from src.api.routes import monitoring, patterns, portal, simulations, websocket
 from src.core.config import get_settings
 from src.core.database import create_engine
 from src.core.neo4j import create_neo4j_driver, setup_neo4j_constraints, verify_neo4j_connectivity
 from src.core.redis import create_redis_client, verify_redis_connectivity
+from src.mcp.server import router as mcp_router
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +52,9 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Manage application startup and shutdown.
 
-    On startup: initialize database connections, run Neo4j constraints.
-    On shutdown: close all connections gracefully.
+    On startup: initialize database connections, run Neo4j constraints,
+    start monitoring workers.
+    On shutdown: close all connections and stop workers gracefully.
     """
     settings = get_settings()
 
@@ -65,9 +84,33 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     else:
         logger.warning("Redis is not reachable; starting in degraded mode")
 
+    # -- Monitoring Workers ---
+    shutdown_event = asyncio.Event()
+    app.state.monitoring_shutdown = shutdown_event
+    worker_tasks = []
+
+    if settings.monitoring_worker_count > 0:
+        from src.monitoring.worker import run_worker
+
+        for i in range(settings.monitoring_worker_count):
+            task = asyncio.create_task(
+                run_worker(redis_client, f"worker-{i}", shutdown_event)
+            )
+            worker_tasks.append(task)
+        logger.info("Started %d monitoring workers", settings.monitoring_worker_count)
+
+    app.state.worker_tasks = worker_tasks
+
     yield
 
     # -- Shutdown ---
+    shutdown_event.set()
+    for task in worker_tasks:
+        task.cancel()
+    if worker_tasks:
+        await asyncio.gather(*worker_tasks, return_exceptions=True)
+        logger.info("Monitoring workers stopped")
+
     await redis_client.aclose()
     await neo4j_driver.close()
     await engine.dispose()
@@ -81,7 +124,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.app_name,
         description="AI-powered Process Intelligence platform for consulting engagements",
-        version="0.1.0",
+        version="0.3.0",
         docs_url="/docs",
         redoc_url="/redoc",
         lifespan=lifespan,
@@ -104,7 +147,7 @@ def create_app() -> FastAPI:
         window_seconds=settings.rate_limit_window_seconds,
     )
 
-    # -- Routes ---
+    # -- Phase 1-2 Routes ---
     app.include_router(health.router)
     app.include_router(engagements.router)
     app.include_router(evidence.router)
@@ -114,6 +157,18 @@ def create_app() -> FastAPI:
     app.include_router(dashboard.router)
     app.include_router(auth.router)
     app.include_router(users.router)
+    app.include_router(regulatory.router)
+    app.include_router(tom.router)
+    app.include_router(integrations.router)
+    app.include_router(reports.router)
+
+    # -- Phase 3 Routes ---
+    app.include_router(monitoring.router)
+    app.include_router(websocket.router)
+    app.include_router(patterns.router)
+    app.include_router(simulations.router)
+    app.include_router(portal.router)
+    app.include_router(mcp_router)
 
     return app
 

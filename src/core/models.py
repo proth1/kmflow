@@ -1,8 +1,9 @@
 """SQLAlchemy ORM models for the KMFlow platform.
 
 Core tables: engagements, evidence_items, evidence_fragments, audit_logs,
-shelf_data_requests, shelf_data_request_items.
-These match the data model from PRD Section 7.1.
+shelf_data_requests, shelf_data_request_items, policies, controls, regulations,
+target_operating_models, gap_analysis_results, best_practices, benchmarks.
+These match the data model from PRD Section 7.1 (Phase 1) and Section 7.2 (Phase 2).
 """
 
 from __future__ import annotations
@@ -105,6 +106,89 @@ class AuditAction(enum.StrEnum):
     PERMISSION_DENIED = "permission_denied"
     DATA_ACCESS = "data_access"
     POV_GENERATED = "pov_generated"
+    POLICY_CREATED = "policy_created"
+    CONTROL_CREATED = "control_created"
+    REGULATION_CREATED = "regulation_created"
+    TOM_CREATED = "tom_created"
+    GAP_ANALYSIS_RUN = "gap_analysis_run"
+    REPORT_GENERATED = "report_generated"
+    # -- Phase 3: Monitoring / Alerting / Patterns / Simulation -----------------
+    INTEGRATION_CONNECTED = "integration_connected"
+    INTEGRATION_SYNCED = "integration_synced"
+    MONITORING_CONFIGURED = "monitoring_configured"
+    MONITORING_ACTIVATED = "monitoring_activated"
+    MONITORING_STOPPED = "monitoring_stopped"
+    ALERT_GENERATED = "alert_generated"
+    ALERT_ACKNOWLEDGED = "alert_acknowledged"
+    ALERT_RESOLVED = "alert_resolved"
+    AGENT_GAP_SCAN = "agent_gap_scan"
+    PATTERN_CREATED = "pattern_created"
+    PATTERN_APPLIED = "pattern_applied"
+    SIMULATION_CREATED = "simulation_created"
+    SIMULATION_EXECUTED = "simulation_executed"
+
+
+# -- Phase 2: Regulatory / Policy / Control enums ----------------------------
+
+
+class PolicyType(enum.StrEnum):
+    """Types of policies that govern processes."""
+
+    ORGANIZATIONAL = "organizational"
+    REGULATORY = "regulatory"
+    OPERATIONAL = "operational"
+    SECURITY = "security"
+
+
+class ControlEffectiveness(enum.StrEnum):
+    """Effectiveness rating for controls."""
+
+    HIGHLY_EFFECTIVE = "highly_effective"
+    EFFECTIVE = "effective"
+    MODERATELY_EFFECTIVE = "moderately_effective"
+    INEFFECTIVE = "ineffective"
+
+
+class ComplianceLevel(enum.StrEnum):
+    """Compliance assessment levels."""
+
+    FULLY_COMPLIANT = "fully_compliant"
+    PARTIALLY_COMPLIANT = "partially_compliant"
+    NON_COMPLIANT = "non_compliant"
+    NOT_ASSESSED = "not_assessed"
+
+
+# -- Phase 2: TOM enums -------------------------------------------------------
+
+
+class TOMDimension(enum.StrEnum):
+    """Target Operating Model dimensions."""
+
+    PROCESS_ARCHITECTURE = "process_architecture"
+    PEOPLE_AND_ORGANIZATION = "people_and_organization"
+    TECHNOLOGY_AND_DATA = "technology_and_data"
+    GOVERNANCE_STRUCTURES = "governance_structures"
+    PERFORMANCE_MANAGEMENT = "performance_management"
+    RISK_AND_COMPLIANCE = "risk_and_compliance"
+
+
+class TOMGapType(enum.StrEnum):
+    """Types of TOM gaps."""
+
+    FULL_GAP = "full_gap"
+    PARTIAL_GAP = "partial_gap"
+    DEVIATION = "deviation"
+    NO_GAP = "no_gap"
+
+
+class ProcessMaturity(enum.StrEnum):
+    """Process maturity levels (CMMI-inspired)."""
+
+    INITIAL = "initial"
+    MANAGED = "managed"
+    DEFINED = "defined"
+    QUANTITATIVELY_MANAGED = "quantitatively_managed"
+    OPTIMIZING = "optimizing"
 
 
 class ShelfRequestStatus(enum.StrEnum):
@@ -588,3 +672,573 @@ class EngagementMember(Base):
 
     def __repr__(self) -> str:
         return f"<EngagementMember(engagement_id={self.engagement_id}, user_id={self.user_id})>"
+
+
+# =============================================================================
+# Phase 2: Regulatory / Policy / Control models
+# =============================================================================
+
+
+class Policy(Base):
+    """A policy that governs processes within an engagement."""
+
+    __tablename__ = "policies"
+    __table_args__ = (Index("ix_policies_engagement_id", "engagement_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(512), nullable=False)
+    policy_type: Mapped[PolicyType] = mapped_column(Enum(PolicyType), nullable=False)
+    source_evidence_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("evidence_items.id", ondelete="SET NULL"), nullable=True
+    )
+    clauses: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    # Relationships
+    engagement: Mapped[Engagement] = relationship("Engagement")
+
+    def __repr__(self) -> str:
+        return f"<Policy(id={self.id}, name='{self.name}', type={self.policy_type})>"
+
+
+class Control(Base):
+    """A control that enforces policies within an engagement."""
+
+    __tablename__ = "controls"
+    __table_args__ = (Index("ix_controls_engagement_id", "engagement_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(512), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    effectiveness: Mapped[ControlEffectiveness] = mapped_column(
+        Enum(ControlEffectiveness), default=ControlEffectiveness.EFFECTIVE, nullable=False
+    )
+    effectiveness_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    linked_policy_ids: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    # Relationships
+    engagement: Mapped[Engagement] = relationship("Engagement")
+
+    def __repr__(self) -> str:
+        return f"<Control(id={self.id}, name='{self.name}', effectiveness={self.effectiveness})>"
+
+
+class Regulation(Base):
+    """A regulation or compliance framework relevant to an engagement."""
+
+    __tablename__ = "regulations"
+    __table_args__ = (Index("ix_regulations_engagement_id", "engagement_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(512), nullable=False)
+    framework: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    jurisdiction: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    obligations: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    # Relationships
+    engagement: Mapped[Engagement] = relationship("Engagement")
+
+    def __repr__(self) -> str:
+        return f"<Regulation(id={self.id}, name='{self.name}', framework='{self.framework}')>"
+
+
+# =============================================================================
+# Phase 2: TOM models
+# =============================================================================
+
+
+class TargetOperatingModel(Base):
+    """A Target Operating Model definition for an engagement."""
+
+    __tablename__ = "target_operating_models"
+    __table_args__ = (Index("ix_tom_engagement_id", "engagement_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(512), nullable=False)
+    dimensions: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    maturity_targets: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    # Relationships
+    engagement: Mapped[Engagement] = relationship("Engagement")
+    gap_results: Mapped[list[GapAnalysisResult]] = relationship(
+        "GapAnalysisResult", back_populates="tom", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self) -> str:
+        return f"<TargetOperatingModel(id={self.id}, name='{self.name}')>"
+
+
+class GapAnalysisResult(Base):
+    """A gap identified between current state and TOM target."""
+
+    __tablename__ = "gap_analysis_results"
+    __table_args__ = (
+        Index("ix_gap_results_engagement_id", "engagement_id"),
+        Index("ix_gap_results_tom_id", "tom_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    tom_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("target_operating_models.id", ondelete="CASCADE"), nullable=False
+    )
+    gap_type: Mapped[TOMGapType] = mapped_column(Enum(TOMGapType), nullable=False)
+    dimension: Mapped[TOMDimension] = mapped_column(Enum(TOMDimension), nullable=False)
+    severity: Mapped[float] = mapped_column(Float, default=0.5, nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recommendation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # Relationships
+    engagement: Mapped[Engagement] = relationship("Engagement")
+    tom: Mapped[TargetOperatingModel] = relationship("TargetOperatingModel", back_populates="gap_results")
+
+    @property
+    def priority_score(self) -> float:
+        """Computed priority: severity * confidence."""
+        return round(self.severity * self.confidence, 4)
+
+    def __repr__(self) -> str:
+        return f"<GapAnalysisResult(id={self.id}, gap_type={self.gap_type}, dimension={self.dimension})>"
+
+
+class BestPractice(Base):
+    """An industry best practice for TOM alignment benchmarking."""
+
+    __tablename__ = "best_practices"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    domain: Mapped[str] = mapped_column(String(255), nullable=False)
+    industry: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    source: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    tom_dimension: Mapped[TOMDimension] = mapped_column(Enum(TOMDimension), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<BestPractice(id={self.id}, domain='{self.domain}', industry='{self.industry}')>"
+
+
+class Benchmark(Base):
+    """An industry benchmark for process performance comparison."""
+
+    __tablename__ = "benchmarks"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    metric_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    industry: Mapped[str] = mapped_column(String(255), nullable=False)
+    p25: Mapped[float] = mapped_column(Float, nullable=False)
+    p50: Mapped[float] = mapped_column(Float, nullable=False)
+    p75: Mapped[float] = mapped_column(Float, nullable=False)
+    p90: Mapped[float] = mapped_column(Float, nullable=False)
+    source: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<Benchmark(id={self.id}, metric='{self.metric_name}', industry='{self.industry}')>"
+
+
+# =============================================================================
+# Phase 3: Monitoring / Alerting / Patterns / Simulation enums
+# =============================================================================
+
+
+class MonitoringStatus(enum.StrEnum):
+    """Status of a monitoring job."""
+
+    CONFIGURING = "configuring"
+    ACTIVE = "active"
+    PAUSED = "paused"
+    ERROR = "error"
+    STOPPED = "stopped"
+
+
+class AlertSeverity(enum.StrEnum):
+    """Severity levels for monitoring alerts."""
+
+    CRITICAL = "critical"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+    INFO = "info"
+
+
+class AlertStatus(enum.StrEnum):
+    """Lifecycle status of a monitoring alert."""
+
+    NEW = "new"
+    ACKNOWLEDGED = "acknowledged"
+    RESOLVED = "resolved"
+    DISMISSED = "dismissed"
+
+
+class DeviationCategory(enum.StrEnum):
+    """Categories of process deviations."""
+
+    SEQUENCE_CHANGE = "sequence_change"
+    MISSING_ACTIVITY = "missing_activity"
+    NEW_ACTIVITY = "new_activity"
+    ROLE_CHANGE = "role_change"
+    TIMING_ANOMALY = "timing_anomaly"
+    FREQUENCY_CHANGE = "frequency_change"
+    CONTROL_BYPASS = "control_bypass"
+
+
+class MonitoringSourceType(enum.StrEnum):
+    """Types of monitoring data sources."""
+
+    EVENT_LOG = "event_log"
+    TASK_MINING = "task_mining"
+    SYSTEM_API = "system_api"
+    FILE_WATCH = "file_watch"
+
+
+class SimulationStatus(enum.StrEnum):
+    """Lifecycle status of a simulation run."""
+
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class SimulationType(enum.StrEnum):
+    """Types of process simulation scenarios."""
+
+    WHAT_IF = "what_if"
+    CAPACITY = "capacity"
+    PROCESS_CHANGE = "process_change"
+    CONTROL_REMOVAL = "control_removal"
+
+
+class PatternCategory(enum.StrEnum):
+    """Categories for cross-engagement patterns."""
+
+    PROCESS_OPTIMIZATION = "process_optimization"
+    CONTROL_IMPROVEMENT = "control_improvement"
+    TECHNOLOGY_ENABLEMENT = "technology_enablement"
+    ORGANIZATIONAL_CHANGE = "organizational_change"
+    RISK_MITIGATION = "risk_mitigation"
+
+
+# =============================================================================
+# Phase 3: Integration Persistence
+# =============================================================================
+
+
+class IntegrationConnection(Base):
+    """Persisted integration connection configuration (replaces in-memory dict)."""
+
+    __tablename__ = "integration_connections"
+    __table_args__ = (Index("ix_integration_connections_engagement_id", "engagement_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    connector_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="configured", nullable=False)
+    config_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    field_mappings: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_sync_records: Mapped[int] = mapped_column(default=0, nullable=False)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    engagement: Mapped[Engagement] = relationship("Engagement")
+
+    def __repr__(self) -> str:
+        return f"<IntegrationConnection(id={self.id}, type='{self.connector_type}', name='{self.name}')>"
+
+
+# =============================================================================
+# Phase 3: Monitoring models
+# =============================================================================
+
+
+class ProcessBaseline(Base):
+    """Frozen snapshot of process model state for comparison."""
+
+    __tablename__ = "process_baselines"
+    __table_args__ = (Index("ix_process_baselines_engagement_id", "engagement_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    process_model_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("process_models.id", ondelete="SET NULL"), nullable=True
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    snapshot_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    element_count: Mapped[int] = mapped_column(default=0, nullable=False)
+    process_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    engagement: Mapped[Engagement] = relationship("Engagement")
+
+    def __repr__(self) -> str:
+        return f"<ProcessBaseline(id={self.id}, name='{self.name}')>"
+
+
+class MonitoringJob(Base):
+    """Monitoring configuration per engagement+source."""
+
+    __tablename__ = "monitoring_jobs"
+    __table_args__ = (Index("ix_monitoring_jobs_engagement_id", "engagement_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    connection_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("integration_connections.id", ondelete="SET NULL"), nullable=True
+    )
+    baseline_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("process_baselines.id", ondelete="SET NULL"), nullable=True
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_type: Mapped[MonitoringSourceType] = mapped_column(Enum(MonitoringSourceType), nullable=False)
+    status: Mapped[MonitoringStatus] = mapped_column(
+        Enum(MonitoringStatus), default=MonitoringStatus.CONFIGURING, nullable=False
+    )
+    schedule_cron: Mapped[str] = mapped_column(String(100), default="0 0 * * *", nullable=False)
+    config_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    engagement: Mapped[Engagement] = relationship("Engagement")
+
+    def __repr__(self) -> str:
+        return f"<MonitoringJob(id={self.id}, name='{self.name}', status={self.status})>"
+
+
+# =============================================================================
+# Phase 3: Deviation Detection
+# =============================================================================
+
+
+class ProcessDeviation(Base):
+    """A detected deviation from baseline process model."""
+
+    __tablename__ = "process_deviations"
+    __table_args__ = (
+        Index("ix_process_deviations_job_id", "monitoring_job_id"),
+        Index("ix_process_deviations_engagement_id", "engagement_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    monitoring_job_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("monitoring_jobs.id", ondelete="CASCADE"), nullable=False
+    )
+    baseline_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("process_baselines.id", ondelete="SET NULL"), nullable=True
+    )
+    category: Mapped[DeviationCategory] = mapped_column(Enum(DeviationCategory), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    affected_element: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    magnitude: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    details_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    detected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    engagement: Mapped[Engagement] = relationship("Engagement")
+
+    def __repr__(self) -> str:
+        return f"<ProcessDeviation(id={self.id}, category={self.category}, magnitude={self.magnitude})>"
+
+
+# =============================================================================
+# Phase 3: Alerting
+# =============================================================================
+
+
+class MonitoringAlert(Base):
+    """An alert triggered by process deviations."""
+
+    __tablename__ = "monitoring_alerts"
+    __table_args__ = (
+        Index("ix_monitoring_alerts_engagement_id", "engagement_id"),
+        Index("ix_monitoring_alerts_status", "status"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    monitoring_job_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("monitoring_jobs.id", ondelete="CASCADE"), nullable=False
+    )
+    severity: Mapped[AlertSeverity] = mapped_column(Enum(AlertSeverity), nullable=False)
+    status: Mapped[AlertStatus] = mapped_column(Enum(AlertStatus), default=AlertStatus.NEW, nullable=False)
+    title: Mapped[str] = mapped_column(String(512), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    deviation_ids: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
+    dedup_key: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    acknowledged_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    engagement: Mapped[Engagement] = relationship("Engagement")
+
+    def __repr__(self) -> str:
+        return f"<MonitoringAlert(id={self.id}, severity={self.severity}, status={self.status})>"
+
+
+# =============================================================================
+# Phase 3: Cross-Engagement Pattern Library
+# =============================================================================
+
+
+class PatternLibraryEntry(Base):
+    """An anonymized cross-engagement reusable pattern."""
+
+    __tablename__ = "pattern_library_entries"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    source_engagement_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="SET NULL"), nullable=True
+    )
+    category: Mapped[PatternCategory] = mapped_column(Enum(PatternCategory), nullable=False)
+    title: Mapped[str] = mapped_column(String(512), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    anonymized_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    industry: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    tags: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
+    embedding: Mapped[list[float] | None] = mapped_column(Vector(768), nullable=True)
+    usage_count: Mapped[int] = mapped_column(default=0, nullable=False)
+    effectiveness_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return f"<PatternLibraryEntry(id={self.id}, title='{self.title}', category={self.category})>"
+
+
+class PatternAccessRule(Base):
+    """Controls which engagements can consume patterns."""
+
+    __tablename__ = "pattern_access_rules"
+    __table_args__ = (
+        UniqueConstraint("pattern_id", "engagement_id", name="uq_pattern_engagement"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    pattern_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("pattern_library_entries.id", ondelete="CASCADE"), nullable=False
+    )
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    granted_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<PatternAccessRule(pattern_id={self.pattern_id}, engagement_id={self.engagement_id})>"
+
+
+# =============================================================================
+# Phase 3: Process Simulation
+# =============================================================================
+
+
+class SimulationScenario(Base):
+    """A what-if simulation scenario definition."""
+
+    __tablename__ = "simulation_scenarios"
+    __table_args__ = (Index("ix_simulation_scenarios_engagement_id", "engagement_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    process_model_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("process_models.id", ondelete="SET NULL"), nullable=True
+    )
+    name: Mapped[str] = mapped_column(String(512), nullable=False)
+    simulation_type: Mapped[SimulationType] = mapped_column(Enum(SimulationType), nullable=False)
+    parameters: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    engagement: Mapped[Engagement] = relationship("Engagement")
+
+    def __repr__(self) -> str:
+        return f"<SimulationScenario(id={self.id}, name='{self.name}', type={self.simulation_type})>"
+
+
+class SimulationResult(Base):
+    """Output from a simulation run."""
+
+    __tablename__ = "simulation_results"
+    __table_args__ = (Index("ix_simulation_results_scenario_id", "scenario_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    scenario_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("simulation_scenarios.id", ondelete="CASCADE"), nullable=False
+    )
+    status: Mapped[SimulationStatus] = mapped_column(
+        Enum(SimulationStatus), default=SimulationStatus.PENDING, nullable=False
+    )
+    metrics: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    impact_analysis: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    recommendations: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
+    execution_time_ms: Mapped[int] = mapped_column(default=0, nullable=False)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    scenario: Mapped[SimulationScenario] = relationship("SimulationScenario")
+
+    def __repr__(self) -> str:
+        return f"<SimulationResult(id={self.id}, status={self.status})>"
