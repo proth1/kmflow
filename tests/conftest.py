@@ -127,7 +127,7 @@ async def test_app(
         RequestIDMiddleware,
         SecurityHeadersMiddleware,
     )
-    from src.api.routes import auth, engagements, evidence, graph, health, shelf_requests, users
+    from src.api.routes import auth, dashboard, engagements, evidence, graph, health, pov, shelf_requests, users
 
     @asynccontextmanager
     async def test_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -153,6 +153,8 @@ async def test_app(
     app.include_router(evidence.router)
     app.include_router(shelf_requests.router)
     app.include_router(graph.router)
+    app.include_router(pov.router)
+    app.include_router(dashboard.router)
     app.include_router(auth.router)
     app.include_router(users.router)
 

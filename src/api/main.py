@@ -21,7 +21,7 @@ from src.api.middleware.security import (
     RequestIDMiddleware,
     SecurityHeadersMiddleware,
 )
-from src.api.routes import auth, engagements, evidence, graph, health, shelf_requests, users
+from src.api.routes import auth, dashboard, engagements, evidence, graph, health, pov, shelf_requests, users
 from src.core.config import get_settings
 from src.core.database import create_engine
 from src.core.neo4j import create_neo4j_driver, setup_neo4j_constraints, verify_neo4j_connectivity
@@ -110,6 +110,8 @@ def create_app() -> FastAPI:
     app.include_router(evidence.router)
     app.include_router(shelf_requests.router)
     app.include_router(graph.router)
+    app.include_router(pov.router)
+    app.include_router(dashboard.router)
     app.include_router(auth.router)
     app.include_router(users.router)
 
