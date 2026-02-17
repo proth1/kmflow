@@ -16,7 +16,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routes import engagements, evidence, health, shelf_requests
+from src.api.routes import engagements, evidence, graph, health, shelf_requests
 from src.core.config import get_settings
 from src.core.database import create_engine
 from src.core.neo4j import create_neo4j_driver, setup_neo4j_constraints, verify_neo4j_connectivity
@@ -96,6 +96,7 @@ def create_app() -> FastAPI:
     app.include_router(engagements.router)
     app.include_router(evidence.router)
     app.include_router(shelf_requests.router)
+    app.include_router(graph.router)
 
     return app
 
