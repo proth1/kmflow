@@ -20,7 +20,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.models import (
     AuditAction,
     AuditLog,
-    ComplianceLevel,
     Control,
     ControlEffectiveness,
     Engagement,

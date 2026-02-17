@@ -17,13 +17,12 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.models import (
+    AlertStatus,
     Engagement,
-    EvidenceGap,
     EvidenceItem,
     GapAnalysisResult,
     MonitoringAlert,
     ProcessModel,
-    AlertStatus,
     User,
 )
 from src.core.permissions import require_permission

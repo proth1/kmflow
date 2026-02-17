@@ -9,7 +9,8 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from typing import Any
-import defusedxml.ElementTree as ET
+
+import defusedxml.ElementTree as ET  # noqa: N817
 
 logger = logging.getLogger(__name__)
 

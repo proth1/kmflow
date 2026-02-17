@@ -7,7 +7,7 @@ and stale data to generate actionable recommendations.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -91,7 +91,7 @@ def scan_evidence_gaps(
         })
 
     # Check for stale evidence
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     for item in evidence_items:
         source_date = item.get("source_date")
         if source_date:

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import AsyncGenerator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -309,7 +309,7 @@ async def sync_connection(
     connector = connector_cls(config)
     try:
         sync_result = await connector.sync_data(engagement_id=str(conn.engagement_id))
-        conn.last_sync_at = datetime.now(timezone.utc)
+        conn.last_sync_at = datetime.now(UTC)
         conn.last_sync_records = sync_result.get("records_synced", 0)
         conn.status = "connected"
         conn.error_message = None

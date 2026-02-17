@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import AsyncGenerator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -184,7 +184,7 @@ async def run_scenario(
 
     from src.simulation.engine import run_simulation
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     sim_result = SimulationResult(
         scenario_id=scenario_id,
         status=SimulationStatus.RUNNING,
@@ -206,7 +206,7 @@ async def run_scenario(
         sim_result.status = SimulationStatus.COMPLETED
         sim_result.metrics = engine_result.get("metrics")
         sim_result.execution_time_ms = engine_result.get("execution_time_ms", 0)
-        sim_result.completed_at = datetime.now(timezone.utc)
+        sim_result.completed_at = datetime.now(UTC)
 
         # Generate impact analysis
         from src.simulation.impact import calculate_cascading_impact
@@ -220,7 +220,7 @@ async def run_scenario(
     except Exception as e:
         sim_result.status = SimulationStatus.FAILED
         sim_result.error_message = str(e)
-        sim_result.completed_at = datetime.now(timezone.utc)
+        sim_result.completed_at = datetime.now(UTC)
 
     await session.commit()
     await session.refresh(sim_result)

@@ -25,21 +25,26 @@ from src.api.middleware.security import (
 )
 from src.api.routes import (
     auth,
+    conformance,
+    copilot,
     dashboard,
     engagements,
     evidence,
     graph,
     health,
     integrations,
+    monitoring,
+    patterns,
+    portal,
     pov,
     regulatory,
     reports,
     shelf_requests,
+    simulations,
     tom,
     users,
+    websocket,
 )
-from src.api.routes import monitoring, patterns, portal, simulations, websocket
-from src.api.routes import conformance, copilot
 from src.core.config import get_settings
 from src.core.database import create_engine
 from src.core.neo4j import create_neo4j_driver, setup_neo4j_constraints, verify_neo4j_connectivity

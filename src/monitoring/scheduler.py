@@ -7,7 +7,7 @@ Calculates next run times and determines which jobs need execution.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ def should_run_now(cron_expr: str, now: datetime | None = None) -> bool:
         True if the cron matches the current minute.
     """
     if now is None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
     fields = cron_expr.strip().split()
     if len(fields) != 5:
@@ -74,7 +74,7 @@ def calculate_next_run(cron_expr: str, from_time: datetime | None = None) -> dat
     Simple implementation that checks the next 1440 minutes (24 hours).
     """
     if from_time is None:
-        from_time = datetime.now(timezone.utc)
+        from_time = datetime.now(UTC)
 
     from datetime import timedelta
 

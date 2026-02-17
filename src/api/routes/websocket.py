@@ -168,7 +168,7 @@ async def monitoring_websocket(
                 # Handle client messages (ping/pong)
                 if data == "ping":
                     await websocket.send_text("pong")
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 # Send heartbeat
                 await websocket.send_json({"type": "heartbeat"})
     except WebSocketDisconnect:
@@ -250,7 +250,7 @@ async def alerts_websocket(
                 data = await asyncio.wait_for(websocket.receive_text(), timeout=0.1)
                 if data == "ping":
                     await websocket.send_text("pong")
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
     except WebSocketDisconnect:
         pass

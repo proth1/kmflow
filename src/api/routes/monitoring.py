@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import AsyncGenerator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -545,7 +545,7 @@ async def alert_action(
     if not alert:
         raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if payload.action == "acknowledge":
         alert.status = AlertStatus.ACKNOWLEDGED
         alert.acknowledged_by = payload.actor

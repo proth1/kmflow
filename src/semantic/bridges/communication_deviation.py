@@ -7,7 +7,6 @@ communication patterns, creating DEVIATES_FROM relationships.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from src.semantic.bridges.process_evidence import BridgeResult
 from src.semantic.graph import KnowledgeGraphService

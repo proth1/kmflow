@@ -24,7 +24,6 @@ from src.core.models import (
     BestPractice,
     Engagement,
     GapAnalysisResult,
-    ProcessMaturity,
     TargetOperatingModel,
     TOMDimension,
     TOMGapType,

@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from typing import Any
-from uuid import UUID
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession

@@ -13,7 +13,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.models import GapAnalysisResult, TOMDimension, TOMGapType
+from src.core.models import GapAnalysisResult, TOMGapType
 
 logger = logging.getLogger(__name__)
 

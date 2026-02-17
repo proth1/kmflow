@@ -7,7 +7,7 @@ applying field mappings and quality scoring.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from src.integrations.base import ConnectionConfig, ConnectorRegistry
@@ -42,7 +42,7 @@ async def collect_evidence(
         return {
             "records_collected": 0,
             "errors": [f"Unknown connector type: {connector_type}"],
-            "collected_at": datetime.now(timezone.utc).isoformat(),
+            "collected_at": datetime.now(UTC).isoformat(),
         }
 
     conn_config = ConnectionConfig(
@@ -68,12 +68,12 @@ async def collect_evidence(
             "records_collected": result.get("records_synced", 0),
             "mapped_records": len(records),
             "errors": result.get("errors", []),
-            "collected_at": datetime.now(timezone.utc).isoformat(),
+            "collected_at": datetime.now(UTC).isoformat(),
         }
     except Exception as e:
         logger.exception("Evidence collection failed for %s", connector_type)
         return {
             "records_collected": 0,
             "errors": [str(e)],
-            "collected_at": datetime.now(timezone.utc).isoformat(),
+            "collected_at": datetime.now(UTC).isoformat(),
         }

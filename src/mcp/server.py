@@ -148,7 +148,9 @@ async def _execute_tool(
 
 async def _tool_get_engagement(session_factory: Any, args: dict[str, Any]) -> dict[str, Any]:
     from uuid import UUID
-    from sqlalchemy import select, func
+
+    from sqlalchemy import func, select
+
     from src.core.models import Engagement, EvidenceItem
 
     eid = UUID(args["engagement_id"])
@@ -173,7 +175,9 @@ async def _tool_get_engagement(session_factory: Any, args: dict[str, Any]) -> di
 
 async def _tool_list_evidence(session_factory: Any, args: dict[str, Any]) -> dict[str, Any]:
     from uuid import UUID
+
     from sqlalchemy import select
+
     from src.core.models import EvidenceItem
 
     eid = UUID(args["engagement_id"])
@@ -190,7 +194,9 @@ async def _tool_list_evidence(session_factory: Any, args: dict[str, Any]) -> dic
 
 async def _tool_get_process_model(session_factory: Any, args: dict[str, Any]) -> dict[str, Any]:
     from uuid import UUID
+
     from sqlalchemy import select
+
     from src.core.models import ProcessModel
 
     eid = UUID(args["engagement_id"])
@@ -211,7 +217,9 @@ async def _tool_get_process_model(session_factory: Any, args: dict[str, Any]) ->
 
 async def _tool_get_gaps(session_factory: Any, args: dict[str, Any]) -> dict[str, Any]:
     from uuid import UUID
+
     from sqlalchemy import select
+
     from src.core.models import GapAnalysisResult
 
     eid = UUID(args["engagement_id"])
@@ -233,8 +241,10 @@ async def _tool_get_gaps(session_factory: Any, args: dict[str, Any]) -> dict[str
 
 async def _tool_get_monitoring_status(session_factory: Any, args: dict[str, Any]) -> dict[str, Any]:
     from uuid import UUID
-    from sqlalchemy import select, func
-    from src.core.models import MonitoringJob, MonitoringAlert, MonitoringStatus, AlertStatus
+
+    from sqlalchemy import func, select
+
+    from src.core.models import AlertStatus, MonitoringAlert, MonitoringJob, MonitoringStatus
 
     eid = UUID(args["engagement_id"])
     async with session_factory() as session:
@@ -254,7 +264,9 @@ async def _tool_get_monitoring_status(session_factory: Any, args: dict[str, Any]
 
 async def _tool_get_deviations(session_factory: Any, args: dict[str, Any]) -> dict[str, Any]:
     from uuid import UUID
+
     from sqlalchemy import select
+
     from src.core.models import ProcessDeviation
 
     eid = UUID(args["engagement_id"])
@@ -277,6 +289,7 @@ async def _tool_get_deviations(session_factory: Any, args: dict[str, Any]) -> di
 
 async def _tool_search_patterns(session_factory: Any, args: dict[str, Any]) -> dict[str, Any]:
     from sqlalchemy import select
+
     from src.core.models import PatternLibraryEntry
 
     async with session_factory() as session:
