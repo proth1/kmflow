@@ -309,6 +309,7 @@
         <di:waypoint x="410" y="400" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
 
     <bpmndi:BPMNDiagram id="BPMNDiagram_SubAlignment">
       <bpmndi:BPMNPlane id="BPMNPlane_SubAlignment" bpmnElement="SubProcess_Alignment">
@@ -380,5 +381,4 @@
         </bpmndi:BPMNEdge>
       </bpmndi:BPMNPlane>
     </bpmndi:BPMNDiagram>
-  </bpmndi:BPMNDiagram>
 </bpmn:definitions>

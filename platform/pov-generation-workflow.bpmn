@@ -461,6 +461,7 @@
       </bpmndi:BPMNEdge>
 
     </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
 
     <!-- Subprocess Diagram: LCD Algorithm Core -->
     <bpmndi:BPMNDiagram id="BPMNDiagram_LCDAlgorithm">
@@ -555,7 +556,5 @@
 
       </bpmndi:BPMNPlane>
     </bpmndi:BPMNDiagram>
-
-  </bpmndi:BPMNDiagram>
 
 </bpmn:definitions>

@@ -462,6 +462,7 @@
       </bpmndi:BPMNEdge>
 
     </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
 
     <!-- Subprocess Diagram: Format-Specific Parsing -->
     <bpmndi:BPMNDiagram id="BPMNDiagram_FormatParsing">
@@ -556,7 +557,5 @@
 
       </bpmndi:BPMNPlane>
     </bpmndi:BPMNDiagram>
-
-  </bpmndi:BPMNDiagram>
 
 </bpmn:definitions>
