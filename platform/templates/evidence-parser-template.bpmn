@@ -155,20 +155,20 @@
 
       <!-- Pool -->
       <bpmndi:BPMNShape id="Participant_Pool_di" bpmnElement="Participant_Pool" isHorizontal="true">
-        <dc:Bounds x="155" y="47" width="1705" height="793"/>
+        <dc:Bounds x="155" y="47" width="1600" height="760"/>
       </bpmndi:BPMNShape>
 
       <!-- Lane: Parser Dispatcher -->
       <bpmndi:BPMNShape id="Lane_ParserDispatcher_di" bpmnElement="Lane_ParserDispatcher" isHorizontal="true">
-        <dc:Bounds x="185" y="47" width="1675" height="200"/>
+        <dc:Bounds x="185" y="47" width="1570" height="200"/>
       </bpmndi:BPMNShape>
 
       <!-- Lane: Format Handlers -->
       <bpmndi:BPMNShape id="Lane_FormatHandlers_di" bpmnElement="Lane_FormatHandlers" isHorizontal="true">
-        <dc:Bounds x="185" y="247" width="1675" height="593"/>
+        <dc:Bounds x="185" y="247" width="1570" height="560"/>
       </bpmndi:BPMNShape>
 
-      <!-- Start Event -->
+      <!-- Start Event (Lane 1, centered vertically: 147 = 47 + (200/2) - (36/2) = 47 + 100 - 18 = 129 ❌ wait... 47+200=247, center=147, event=147-18=129 ✓) -->
       <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
         <dc:Bounds x="247" y="129" width="36" height="36"/>
         <bpmndi:BPMNLabel>
@@ -176,157 +176,183 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- Detect Format -->
+      <!-- Detect Format (100x80, centered at y=147: 147-40=107) -->
       <bpmndi:BPMNShape id="Task_DetectFormat_di" bpmnElement="Task_DetectFormat">
-        <dc:Bounds x="335" y="109" width="151" height="76"/>
+        <dc:Bounds x="335" y="107" width="100" height="80"/>
       </bpmndi:BPMNShape>
 
-      <!-- Gateway: Format Type -->
+      <!-- Gateway: Format Type (50x50, centered at y=147: 147-25=122) -->
       <bpmndi:BPMNShape id="Gateway_FormatType_di" bpmnElement="Gateway_FormatType" isMarkerVisible="true">
-        <dc:Bounds x="536" y="122" width="50" height="50"/>
+        <dc:Bounds x="487" y="122" width="50" height="50"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="539" y="85" width="45" height="27"/>
+          <dc:Bounds x="490" y="92" width="45" height="27"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- Path A: Document (top row y=307) -->
+      <!-- Path A: Document (top row in Lane 2)
+           Lane 2 starts at y=247, height=560, so lane center = 247+280=527
+           Top row tasks should be at y=327 (centered in top third of lane)
+      -->
       <bpmndi:BPMNShape id="Task_ParseDoc_di" bpmnElement="Task_ParseDoc">
-        <dc:Bounds x="486" y="307" width="151" height="76"/>
+        <dc:Bounds x="462" y="327" width="100" height="80"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_GenDocEmbeddings_di" bpmnElement="Task_GenDocEmbeddings">
-        <dc:Bounds x="687" y="307" width="151" height="76"/>
+        <dc:Bounds x="614" y="327" width="100" height="80"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_StoreDocFragments_di" bpmnElement="Task_StoreDocFragments">
-        <dc:Bounds x="888" y="307" width="151" height="76"/>
+        <dc:Bounds x="766" y="327" width="100" height="80"/>
       </bpmndi:BPMNShape>
 
-      <!-- Path B: Structured Data (middle row y=483) -->
+      <!-- Path B: Structured Data (middle row, y=487) -->
       <bpmndi:BPMNShape id="Task_ParseData_di" bpmnElement="Task_ParseData">
-        <dc:Bounds x="486" y="483" width="151" height="76"/>
+        <dc:Bounds x="462" y="487" width="100" height="80"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_GenDataEmbeddings_di" bpmnElement="Task_GenDataEmbeddings">
-        <dc:Bounds x="687" y="483" width="151" height="76"/>
+        <dc:Bounds x="614" y="487" width="100" height="80"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_StoreDataFragments_di" bpmnElement="Task_StoreDataFragments">
-        <dc:Bounds x="888" y="483" width="151" height="76"/>
+        <dc:Bounds x="766" y="487" width="100" height="80"/>
       </bpmndi:BPMNShape>
 
-      <!-- Path C: BPM Model (bottom row y=659) -->
+      <!-- Path C: BPM Model (bottom row, y=647) -->
       <bpmndi:BPMNShape id="Task_ParseModel_di" bpmnElement="Task_ParseModel">
-        <dc:Bounds x="486" y="659" width="151" height="76"/>
+        <dc:Bounds x="462" y="647" width="100" height="80"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_GenModelEmbeddings_di" bpmnElement="Task_GenModelEmbeddings">
-        <dc:Bounds x="687" y="659" width="151" height="76"/>
+        <dc:Bounds x="614" y="647" width="100" height="80"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_StoreModelFragments_di" bpmnElement="Task_StoreModelFragments">
-        <dc:Bounds x="888" y="659" width="151" height="76"/>
+        <dc:Bounds x="766" y="647" width="100" height="80"/>
       </bpmndi:BPMNShape>
 
-      <!-- Gateway: Merge -->
+      <!-- Gateway: Merge (back in Lane 1) -->
       <bpmndi:BPMNShape id="Gateway_Merge_di" bpmnElement="Gateway_Merge" isMarkerVisible="true">
-        <dc:Bounds x="1185" y="122" width="50" height="50"/>
+        <dc:Bounds x="970" y="122" width="50" height="50"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1181" y="85" width="58" height="27"/>
+          <dc:Bounds x="966" y="92" width="58" height="27"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
       <!-- Update Evidence Index -->
       <bpmndi:BPMNShape id="Task_UpdateIndex_di" bpmnElement="Task_UpdateIndex">
-        <dc:Bounds x="1335" y="109" width="151" height="76"/>
+        <dc:Bounds x="1072" y="107" width="100" height="80"/>
       </bpmndi:BPMNShape>
 
       <!-- End Event -->
       <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
-        <dc:Bounds x="1586" y="129" width="36" height="36"/>
+        <dc:Bounds x="1224" y="129" width="36" height="36"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1579" y="172" width="50" height="27"/>
+          <dc:Bounds x="1217" y="172" width="50" height="27"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
       <!-- Sequence Flow Edges -->
+      <!-- Lane 1: Start -> DetectFormat -->
       <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
         <di:waypoint x="283" y="147"/>
         <di:waypoint x="335" y="147"/>
       </bpmndi:BPMNEdge>
+
+      <!-- Lane 1: DetectFormat -> Gateway_FormatType -->
       <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
-        <di:waypoint x="486" y="147"/>
-        <di:waypoint x="536" y="147"/>
+        <di:waypoint x="435" y="147"/>
+        <di:waypoint x="487" y="147"/>
       </bpmndi:BPMNEdge>
 
-      <!-- Path A: Document -->
+      <!-- Path A: Document - Gateway to ParseDoc (vertical drop to y=367, then right) -->
       <bpmndi:BPMNEdge id="Flow_Document_di" bpmnElement="Flow_Document">
-        <di:waypoint x="561" y="172"/>
-        <di:waypoint x="561" y="307"/>
+        <di:waypoint x="512" y="172"/>
+        <di:waypoint x="512" y="327"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="495" y="237" width="54" height="14"/>
+          <dc:Bounds x="446" y="247" width="54" height="14"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
+
+      <!-- Path A: ParseDoc -> GenDocEmbeddings -->
       <bpmndi:BPMNEdge id="Flow_DocToEmbed_di" bpmnElement="Flow_DocToEmbed">
-        <di:waypoint x="637" y="345"/>
-        <di:waypoint x="687" y="345"/>
+        <di:waypoint x="562" y="367"/>
+        <di:waypoint x="614" y="367"/>
       </bpmndi:BPMNEdge>
+
+      <!-- Path A: GenDocEmbeddings -> StoreDocFragments -->
       <bpmndi:BPMNEdge id="Flow_DocToStore_di" bpmnElement="Flow_DocToStore">
-        <di:waypoint x="838" y="345"/>
-        <di:waypoint x="888" y="345"/>
+        <di:waypoint x="714" y="367"/>
+        <di:waypoint x="766" y="367"/>
       </bpmndi:BPMNEdge>
+
+      <!-- Path A: StoreDocFragments -> Gateway_Merge (right then up) -->
       <bpmndi:BPMNEdge id="Flow_DocComplete_di" bpmnElement="Flow_DocComplete">
-        <di:waypoint x="1039" y="345"/>
-        <di:waypoint x="1210" y="345"/>
-        <di:waypoint x="1210" y="172"/>
+        <di:waypoint x="866" y="367"/>
+        <di:waypoint x="995" y="367"/>
+        <di:waypoint x="995" y="172"/>
       </bpmndi:BPMNEdge>
 
-      <!-- Path B: Structured Data -->
+      <!-- Path B: Structured Data - Gateway to ParseData -->
       <bpmndi:BPMNEdge id="Flow_StructuredData_di" bpmnElement="Flow_StructuredData">
-        <di:waypoint x="561" y="172"/>
-        <di:waypoint x="561" y="483"/>
+        <di:waypoint x="512" y="172"/>
+        <di:waypoint x="512" y="487"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="487" y="413" width="51" height="14"/>
+          <dc:Bounds x="438" y="407" width="51" height="14"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
+
+      <!-- Path B: ParseData -> GenDataEmbeddings -->
       <bpmndi:BPMNEdge id="Flow_DataToEmbed_di" bpmnElement="Flow_DataToEmbed">
-        <di:waypoint x="637" y="521"/>
-        <di:waypoint x="687" y="521"/>
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_DataToStore_di" bpmnElement="Flow_DataToStore">
-        <di:waypoint x="838" y="521"/>
-        <di:waypoint x="888" y="521"/>
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_DataComplete_di" bpmnElement="Flow_DataComplete">
-        <di:waypoint x="1039" y="521"/>
-        <di:waypoint x="1210" y="521"/>
-        <di:waypoint x="1210" y="172"/>
+        <di:waypoint x="562" y="527"/>
+        <di:waypoint x="614" y="527"/>
       </bpmndi:BPMNEdge>
 
-      <!-- Path C: BPM Model -->
+      <!-- Path B: GenDataEmbeddings -> StoreDataFragments -->
+      <bpmndi:BPMNEdge id="Flow_DataToStore_di" bpmnElement="Flow_DataToStore">
+        <di:waypoint x="714" y="527"/>
+        <di:waypoint x="766" y="527"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- Path B: StoreDataFragments -> Gateway_Merge -->
+      <bpmndi:BPMNEdge id="Flow_DataComplete_di" bpmnElement="Flow_DataComplete">
+        <di:waypoint x="866" y="527"/>
+        <di:waypoint x="995" y="527"/>
+        <di:waypoint x="995" y="172"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- Path C: BPM Model - Gateway to ParseModel -->
       <bpmndi:BPMNEdge id="Flow_BPMModel_di" bpmnElement="Flow_BPMModel">
-        <di:waypoint x="561" y="172"/>
-        <di:waypoint x="561" y="659"/>
+        <di:waypoint x="512" y="172"/>
+        <di:waypoint x="512" y="647"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="474" y="588" width="59" height="14"/>
+          <dc:Bounds x="425" y="567" width="59" height="14"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
+
+      <!-- Path C: ParseModel -> GenModelEmbeddings -->
       <bpmndi:BPMNEdge id="Flow_ModelToEmbed_di" bpmnElement="Flow_ModelToEmbed">
-        <di:waypoint x="637" y="697"/>
-        <di:waypoint x="687" y="697"/>
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_ModelToStore_di" bpmnElement="Flow_ModelToStore">
-        <di:waypoint x="838" y="697"/>
-        <di:waypoint x="888" y="697"/>
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_ModelComplete_di" bpmnElement="Flow_ModelComplete">
-        <di:waypoint x="1039" y="697"/>
-        <di:waypoint x="1210" y="697"/>
-        <di:waypoint x="1210" y="172"/>
+        <di:waypoint x="562" y="687"/>
+        <di:waypoint x="614" y="687"/>
       </bpmndi:BPMNEdge>
 
-      <!-- Merge and End -->
-      <bpmndi:BPMNEdge id="Flow_UpdateIndex_di" bpmnElement="Flow_UpdateIndex">
-        <di:waypoint x="1235" y="147"/>
-        <di:waypoint x="1335" y="147"/>
+      <!-- Path C: GenModelEmbeddings -> StoreModelFragments -->
+      <bpmndi:BPMNEdge id="Flow_ModelToStore_di" bpmnElement="Flow_ModelToStore">
+        <di:waypoint x="714" y="687"/>
+        <di:waypoint x="766" y="687"/>
       </bpmndi:BPMNEdge>
+
+      <!-- Path C: StoreModelFragments -> Gateway_Merge -->
+      <bpmndi:BPMNEdge id="Flow_ModelComplete_di" bpmnElement="Flow_ModelComplete">
+        <di:waypoint x="866" y="687"/>
+        <di:waypoint x="995" y="687"/>
+        <di:waypoint x="995" y="172"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- Merge and End: Gateway_Merge -> UpdateIndex -->
+      <bpmndi:BPMNEdge id="Flow_UpdateIndex_di" bpmnElement="Flow_UpdateIndex">
+        <di:waypoint x="1020" y="147"/>
+        <di:waypoint x="1072" y="147"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- UpdateIndex -> End -->
       <bpmndi:BPMNEdge id="Flow_End_di" bpmnElement="Flow_End">
-        <di:waypoint x="1486" y="147"/>
-        <di:waypoint x="1586" y="147"/>
+        <di:waypoint x="1172" y="147"/>
+        <di:waypoint x="1224" y="147"/>
       </bpmndi:BPMNEdge>
 
     </bpmndi:BPMNPlane>

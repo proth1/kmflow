@@ -109,156 +109,166 @@
   <bpmndi:BPMNDiagram id="BPMNDiagram_Engagement">
     <bpmndi:BPMNPlane id="BPMNPlane_Engagement" bpmnElement="Collaboration_Engagement">
       <bpmndi:BPMNShape id="Participant_Engagement_di" bpmnElement="Participant_Engagement" isHorizontal="true">
-        <dc:Bounds x="155" y="47" width="1400" height="630" />
+        <dc:Bounds x="155" y="47" width="1570" height="630" />
       </bpmndi:BPMNShape>
 
       <bpmndi:BPMNShape id="Lane_EngagementManagement_di" bpmnElement="Lane_EngagementManagement" isHorizontal="true">
-        <dc:Bounds x="185" y="47" width="1370" height="210" />
+        <dc:Bounds x="185" y="47" width="1540" height="210" />
       </bpmndi:BPMNShape>
 
       <bpmndi:BPMNShape id="Lane_CoreProcessing_di" bpmnElement="Lane_CoreProcessing" isHorizontal="true">
-        <dc:Bounds x="185" y="257" width="1370" height="210" />
+        <dc:Bounds x="185" y="257" width="1540" height="210" />
       </bpmndi:BPMNShape>
 
       <bpmndi:BPMNShape id="Lane_DeliverableGeneration_di" bpmnElement="Lane_DeliverableGeneration" isHorizontal="true">
-        <dc:Bounds x="185" y="467" width="1370" height="210" />
+        <dc:Bounds x="185" y="467" width="1540" height="210" />
       </bpmndi:BPMNShape>
 
+      <!-- Lane 1: Engagement Management -->
       <bpmndi:BPMNShape id="StartEvent_Created_di" bpmnElement="StartEvent_Created">
-        <dc:Bounds x="247" y="129" width="36" height="36" />
+        <dc:Bounds x="247" y="134" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="237" y="172" width="56" height="27" />
+          <dc:Bounds x="237" y="177" width="56" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
       <bpmndi:BPMNShape id="Task_ConfigureEngagement_di" bpmnElement="Task_ConfigureEngagement">
-        <dc:Bounds x="335" y="109" width="151" height="76" />
+        <dc:Bounds x="335" y="112" width="100" height="80" />
       </bpmndi:BPMNShape>
 
+      <bpmndi:BPMNShape id="Task_CloseEngagement_di" bpmnElement="Task_CloseEngagement">
+        <dc:Bounds x="1437" y="112" width="100" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_Closed_di" bpmnElement="EndEvent_Closed">
+        <dc:Bounds x="1589" y="134" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1579" y="177" width="56" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Lane 2: Core Processing -->
       <bpmndi:BPMNShape id="CallActivity_EvidenceCollection_di" bpmnElement="CallActivity_EvidenceCollection">
-        <dc:Bounds x="335" y="324" width="151" height="76" />
+        <dc:Bounds x="335" y="322" width="100" height="80" />
       </bpmndi:BPMNShape>
 
       <bpmndi:BPMNShape id="CallActivity_POVGeneration_di" bpmnElement="CallActivity_POVGeneration">
-        <dc:Bounds x="536" y="324" width="151" height="76" />
+        <dc:Bounds x="487" y="322" width="100" height="80" />
       </bpmndi:BPMNShape>
 
       <bpmndi:BPMNShape id="Gateway_Phase2Required_di" bpmnElement="Gateway_Phase2Required" isMarkerVisible="true">
-        <dc:Bounds x="737" y="337" width="50" height="50" />
+        <dc:Bounds x="639" y="337" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="733" y="394" width="58" height="27" />
+          <dc:Bounds x="635" y="394" width="58" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
       <bpmndi:BPMNShape id="CallActivity_TOMAlignment_di" bpmnElement="CallActivity_TOMAlignment">
-        <dc:Bounds x="837" y="324" width="151" height="76" />
-      </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="Task_GenerateReport_di" bpmnElement="Task_GenerateReport">
-        <dc:Bounds x="335" y="534" width="151" height="76" />
-      </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="Gateway_Phase3Required_di" bpmnElement="Gateway_Phase3Required" isMarkerVisible="true">
-        <dc:Bounds x="536" y="547" width="50" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="532" y="604" width="58" height="27" />
-        </bpmndi:BPMNLabel>
+        <dc:Bounds x="741" y="322" width="100" height="80" />
       </bpmndi:BPMNShape>
 
       <bpmndi:BPMNShape id="CallActivity_ContinuousMonitoring_di" bpmnElement="CallActivity_ContinuousMonitoring">
-        <dc:Bounds x="1038" y="324" width="151" height="76" />
+        <dc:Bounds x="1437" y="322" width="100" height="80" />
       </bpmndi:BPMNShape>
 
-      <bpmndi:BPMNShape id="Task_CloseEngagement_di" bpmnElement="Task_CloseEngagement">
-        <dc:Bounds x="1038" y="109" width="151" height="76" />
+      <!-- Lane 3: Deliverable Generation -->
+      <bpmndi:BPMNShape id="Task_GenerateReport_di" bpmnElement="Task_GenerateReport">
+        <dc:Bounds x="893" y="532" width="100" height="80" />
       </bpmndi:BPMNShape>
 
-      <bpmndi:BPMNShape id="EndEvent_Closed_di" bpmnElement="EndEvent_Closed">
-        <dc:Bounds x="1239" y="129" width="36" height="36" />
+      <bpmndi:BPMNShape id="Gateway_Phase3Required_di" bpmnElement="Gateway_Phase3Required" isMarkerVisible="true">
+        <dc:Bounds x="1045" y="547" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1229" y="172" width="56" height="27" />
+          <dc:Bounds x="1041" y="604" width="58" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
+      <!-- Lane 1 flows -->
       <bpmndi:BPMNEdge id="Flow_01_di" bpmnElement="Flow_01">
-        <di:waypoint x="283" y="147" />
-        <di:waypoint x="335" y="147" />
-      </bpmndi:BPMNEdge>
-
-      <bpmndi:BPMNEdge id="Flow_02_di" bpmnElement="Flow_02">
-        <di:waypoint x="410" y="185" />
-        <di:waypoint x="410" y="324" />
-      </bpmndi:BPMNEdge>
-
-      <bpmndi:BPMNEdge id="Flow_03_di" bpmnElement="Flow_03">
-        <di:waypoint x="486" y="362" />
-        <di:waypoint x="536" y="362" />
-      </bpmndi:BPMNEdge>
-
-      <bpmndi:BPMNEdge id="Flow_04_di" bpmnElement="Flow_04">
-        <di:waypoint x="687" y="362" />
-        <di:waypoint x="737" y="362" />
-      </bpmndi:BPMNEdge>
-
-      <bpmndi:BPMNEdge id="Flow_05_Yes_di" bpmnElement="Flow_05_Yes">
-        <di:waypoint x="787" y="362" />
-        <di:waypoint x="837" y="362" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="799" y="344" width="20" height="14" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNEdge>
-
-      <bpmndi:BPMNEdge id="Flow_05_No_di" bpmnElement="Flow_05_No">
-        <di:waypoint x="762" y="387" />
-        <di:waypoint x="762" y="572" />
-        <di:waypoint x="486" y="572" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="770" y="400" width="15" height="14" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNEdge>
-
-      <bpmndi:BPMNEdge id="Flow_06_di" bpmnElement="Flow_06">
-        <di:waypoint x="912" y="400" />
-        <di:waypoint x="912" y="572" />
-        <di:waypoint x="486" y="572" />
-      </bpmndi:BPMNEdge>
-
-      <bpmndi:BPMNEdge id="Flow_07_di" bpmnElement="Flow_07">
-        <di:waypoint x="486" y="572" />
-        <di:waypoint x="536" y="572" />
-      </bpmndi:BPMNEdge>
-
-      <bpmndi:BPMNEdge id="Flow_08_Yes_di" bpmnElement="Flow_08_Yes">
-        <di:waypoint x="561" y="547" />
-        <di:waypoint x="561" y="440" />
-        <di:waypoint x="1113" y="440" />
-        <di:waypoint x="1113" y="400" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="569" y="530" width="20" height="14" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNEdge>
-
-      <bpmndi:BPMNEdge id="Flow_08_No_di" bpmnElement="Flow_08_No">
-        <di:waypoint x="586" y="572" />
-        <di:waypoint x="1113" y="572" />
-        <di:waypoint x="1113" y="185" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="598" y="554" width="15" height="14" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNEdge>
-
-      <bpmndi:BPMNEdge id="Flow_09_di" bpmnElement="Flow_09">
-        <di:waypoint x="1189" y="362" />
-        <di:waypoint x="1210" y="362" />
-        <di:waypoint x="1210" y="80" />
-        <di:waypoint x="1113" y="80" />
-        <di:waypoint x="1113" y="109" />
+        <di:waypoint x="283" y="152" />
+        <di:waypoint x="335" y="152" />
       </bpmndi:BPMNEdge>
 
       <bpmndi:BPMNEdge id="Flow_10_di" bpmnElement="Flow_10">
-        <di:waypoint x="1189" y="147" />
-        <di:waypoint x="1239" y="147" />
+        <di:waypoint x="1537" y="152" />
+        <di:waypoint x="1589" y="152" />
       </bpmndi:BPMNEdge>
+
+      <!-- ConfigureEngagement -> EvidenceCollection: vertical drop -->
+      <bpmndi:BPMNEdge id="Flow_02_di" bpmnElement="Flow_02">
+        <di:waypoint x="385" y="192" />
+        <di:waypoint x="385" y="322" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Lane 2 flows: straight left to right -->
+      <bpmndi:BPMNEdge id="Flow_03_di" bpmnElement="Flow_03">
+        <di:waypoint x="435" y="362" />
+        <di:waypoint x="487" y="362" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_04_di" bpmnElement="Flow_04">
+        <di:waypoint x="587" y="362" />
+        <di:waypoint x="639" y="362" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Gateway Phase2Required: Yes path straight right to TOMAlignment -->
+      <bpmndi:BPMNEdge id="Flow_05_Yes_di" bpmnElement="Flow_05_Yes">
+        <di:waypoint x="689" y="362" />
+        <di:waypoint x="741" y="362" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="703" y="344" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Gateway Phase2Required: No path - down then left to GenerateReport -->
+      <bpmndi:BPMNEdge id="Flow_05_No_di" bpmnElement="Flow_05_No">
+        <di:waypoint x="664" y="387" />
+        <di:waypoint x="664" y="572" />
+        <di:waypoint x="893" y="572" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="672" y="477" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- TOMAlignment -> GenerateReport: down then right -->
+      <bpmndi:BPMNEdge id="Flow_06_di" bpmnElement="Flow_06">
+        <di:waypoint x="791" y="402" />
+        <di:waypoint x="791" y="572" />
+        <di:waypoint x="893" y="572" />
+      </bpmndi:BPMNEdge>
+
+      <!-- GenerateReport -> Gateway Phase3Required: straight right -->
+      <bpmndi:BPMNEdge id="Flow_07_di" bpmnElement="Flow_07">
+        <di:waypoint x="993" y="572" />
+        <di:waypoint x="1045" y="572" />
+      </bpmndi:BPMNEdge>
+
+      <!-- Gateway Phase3Required: Yes path - up and right to ContinuousMonitoring -->
+      <bpmndi:BPMNEdge id="Flow_08_Yes_di" bpmnElement="Flow_08_Yes">
+        <di:waypoint x="1070" y="547" />
+        <di:waypoint x="1070" y="362" />
+        <di:waypoint x="1437" y="362" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1078" y="450" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- Gateway Phase3Required: No path - right along margin to CloseEngagement -->
+      <bpmndi:BPMNEdge id="Flow_08_No_di" bpmnElement="Flow_08_No">
+        <di:waypoint x="1095" y="572" />
+        <di:waypoint x="1487" y="572" />
+        <di:waypoint x="1487" y="192" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1107" y="554" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <!-- ContinuousMonitoring -> CloseEngagement: up through margin -->
+      <bpmndi:BPMNEdge id="Flow_09_di" bpmnElement="Flow_09">
+        <di:waypoint x="1487" y="322" />
+        <di:waypoint x="1487" y="192" />
+      </bpmndi:BPMNEdge>
+
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>

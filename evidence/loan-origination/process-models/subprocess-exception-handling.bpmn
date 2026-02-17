@@ -314,7 +314,7 @@
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
 
-      <!-- Start Event (Underwriter Lane) -->
+      <!-- Start Event (Underwriter Lane) - centered at y=182 (lane 47+350=397, center=222-40=182) -->
       <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
         <dc:Bounds x="247" y="182" width="36" height="36" />
         <bpmndi:BPMNLabel>
@@ -322,383 +322,409 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- Document Exception Task (Underwriter Lane) -->
+      <!-- Document Exception Task: x=335 (247+36+52), y=162, w=100, h=80 -->
       <bpmndi:BPMNShape id="Task_DocumentException_di" bpmnElement="Task_DocumentException">
-        <dc:Bounds x="335" y="162" width="151" height="76" />
+        <dc:Bounds x="335" y="162" width="100" height="80" />
       </bpmndi:BPMNShape>
 
-      <!-- Exception Type Gateway (Underwriter Lane) -->
+      <!-- Exception Type Gateway: x=487 (335+100+52), y=177 (centered with task at 202) -->
       <bpmndi:BPMNShape id="Gateway_ExceptionType_di" bpmnElement="Gateway_ExceptionType" isMarkerVisible="true">
-        <dc:Bounds x="586" y="175" width="50" height="50" />
+        <dc:Bounds x="487" y="177" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="580" y="232" width="62" height="27" />
+          <dc:Bounds x="481" y="234" width="62" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- DTI Justification Task (Underwriter Lane) -->
+      <!-- DTI Justification Task: x=589 (487+50+52), y=75 -->
       <bpmndi:BPMNShape id="Task_PrepareDTI_di" bpmnElement="Task_PrepareDTI">
-        <dc:Bounds x="736" y="75" width="151" height="76" />
+        <dc:Bounds x="589" y="75" width="100" height="80" />
       </bpmndi:BPMNShape>
 
-      <!-- LTV Justification Task (Underwriter Lane) -->
+      <!-- LTV Justification Task: x=589, y=162 (aligned with Document Exception) -->
       <bpmndi:BPMNShape id="Task_PrepareLTV_di" bpmnElement="Task_PrepareLTV">
-        <dc:Bounds x="736" y="162" width="151" height="76" />
+        <dc:Bounds x="589" y="162" width="100" height="80" />
       </bpmndi:BPMNShape>
 
-      <!-- General Exception Task (Underwriter Lane) -->
+      <!-- General Exception Task: x=589, y=249 -->
       <bpmndi:BPMNShape id="Task_PrepareGeneral_di" bpmnElement="Task_PrepareGeneral">
-        <dc:Bounds x="736" y="249" width="151" height="76" />
+        <dc:Bounds x="589" y="249" width="100" height="80" />
       </bpmndi:BPMNShape>
 
-      <!-- FICO Fork Gateway (Underwriter Lane) -->
+      <!-- FICO Fork Gateway: x=741 (589+100+52), y=177 -->
       <bpmndi:BPMNShape id="Gateway_FICOFork_di" bpmnElement="Gateway_FICOFork">
-        <dc:Bounds x="947" y="175" width="50" height="50" />
+        <dc:Bounds x="741" y="177" width="50" height="50" />
       </bpmndi:BPMNShape>
 
-      <!-- Merge Exception Gateway (Underwriter Lane) -->
+      <!-- Merge Exception Gateway: x=843 (741+50+52), y=177 -->
       <bpmndi:BPMNShape id="Gateway_MergeException_di" bpmnElement="Gateway_MergeException" isMarkerVisible="true">
-        <dc:Bounds x="1097" y="175" width="50" height="50" />
+        <dc:Bounds x="843" y="177" width="50" height="50" />
       </bpmndi:BPMNShape>
 
-      <!-- FICO Primary Review (UW Manager Lane) -->
+      <!-- FICO Primary Review (UW Manager Lane): x=1047 (far right), y=457 (lane 397+200=597, center=497-40=457) -->
       <bpmndi:BPMNShape id="Task_FICOPrimary_di" bpmnElement="Task_FICOPrimary">
-        <dc:Bounds x="1247" y="459" width="151" height="76" />
+        <dc:Bounds x="1047" y="457" width="100" height="80" />
       </bpmndi:BPMNShape>
 
-      <!-- Review Exception Task (UW Manager Lane) -->
+      <!-- Review Exception Task (UW Manager Lane): x=335, y=457 -->
       <bpmndi:BPMNShape id="Task_ReviewException_di" bpmnElement="Task_ReviewException">
-        <dc:Bounds x="335" y="459" width="151" height="76" />
+        <dc:Bounds x="335" y="457" width="100" height="80" />
       </bpmndi:BPMNShape>
 
-      <!-- Timer Boundary Event -->
+      <!-- Timer Boundary Event: attach to right-center of Task_ReviewException -->
       <bpmndi:BPMNShape id="BoundaryEvent_Timer_di" bpmnElement="BoundaryEvent_Timer">
-        <dc:Bounds x="468" y="517" width="36" height="36" />
+        <dc:Bounds x="417" y="519" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="503" y="545" width="52" height="27" />
+          <dc:Bounds x="453" y="545" width="52" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- Manager Decision Gateway (UW Manager Lane) -->
+      <!-- Manager Decision Gateway: x=487 (335+100+52), y=472 -->
       <bpmndi:BPMNShape id="Gateway_ManagerDecision_di" bpmnElement="Gateway_ManagerDecision" isMarkerVisible="true">
-        <dc:Bounds x="586" y="472" width="50" height="50" />
+        <dc:Bounds x="487" y="472" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="580" y="529" width="62" height="27" />
+          <dc:Bounds x="481" y="529" width="62" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- Manager Approved End Event (UW Manager Lane) -->
+      <!-- Manager Approved End Event: x=589 (487+50+52), y=467 -->
       <bpmndi:BPMNShape id="EndEvent_ManagerApproved_di" bpmnElement="EndEvent_ManagerApproved">
-        <dc:Bounds x="736" y="459" width="36" height="36" />
+        <dc:Bounds x="589" y="467" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="722" y="502" width="64" height="27" />
+          <dc:Bounds x="575" y="510" width="64" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- Manager Denied End Event (UW Manager Lane) -->
+      <!-- Manager Denied End Event: x=589, y=527 (below Approved) -->
       <bpmndi:BPMNShape id="EndEvent_ManagerDenied_di" bpmnElement="EndEvent_ManagerDenied">
-        <dc:Bounds x="736" y="539" width="36" height="36" />
+        <dc:Bounds x="589" y="527" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="722" y="582" width="64" height="27" />
+          <dc:Bounds x="575" y="570" width="64" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- FICO Secondary Review (SVP Lane) -->
+      <!-- FICO Secondary Review (SVP Lane): x=1047, y=657 (lane 597+200=797, center=697-40=657) -->
       <bpmndi:BPMNShape id="Task_FICOSecondary_di" bpmnElement="Task_FICOSecondary">
-        <dc:Bounds x="1247" y="659" width="151" height="76" />
+        <dc:Bounds x="1047" y="657" width="100" height="80" />
       </bpmndi:BPMNShape>
 
-      <!-- Review Escalated Exception Task (SVP Lane) -->
+      <!-- Review Escalated Exception Task (SVP Lane): x=335, y=657 -->
       <bpmndi:BPMNShape id="Task_ReviewEscalated_di" bpmnElement="Task_ReviewEscalated">
-        <dc:Bounds x="335" y="659" width="151" height="76" />
+        <dc:Bounds x="335" y="657" width="100" height="80" />
       </bpmndi:BPMNShape>
 
-      <!-- SVP Decision Gateway (SVP Lane) -->
+      <!-- SVP Decision Gateway: x=487 (335+100+52), y=672 -->
       <bpmndi:BPMNShape id="Gateway_SVPDecision_di" bpmnElement="Gateway_SVPDecision" isMarkerVisible="true">
-        <dc:Bounds x="586" y="672" width="50" height="50" />
+        <dc:Bounds x="487" y="672" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="590" y="729" width="42" height="27" />
+          <dc:Bounds x="491" y="729" width="42" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- SVP Approved End Event (SVP Lane) -->
+      <!-- SVP Approved End Event: x=589 (487+50+52), y=667 -->
       <bpmndi:BPMNShape id="EndEvent_SVPApproved_di" bpmnElement="EndEvent_SVPApproved">
-        <dc:Bounds x="736" y="659" width="36" height="36" />
+        <dc:Bounds x="589" y="667" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="722" y="702" width="64" height="40" />
+          <dc:Bounds x="575" y="710" width="64" height="40" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- SVP Denied End Event (SVP Lane) -->
+      <!-- SVP Denied End Event: x=589, y=727 -->
       <bpmndi:BPMNShape id="EndEvent_SVPDenied_di" bpmnElement="EndEvent_SVPDenied">
-        <dc:Bounds x="736" y="739" width="36" height="36" />
+        <dc:Bounds x="589" y="727" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="722" y="782" width="64" height="40" />
+          <dc:Bounds x="575" y="770" width="64" height="40" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- FICO Join Gateway (SVP Lane) -->
+      <!-- FICO Join Gateway (SVP Lane): x=1199 (1047+100+52), y=672 -->
       <bpmndi:BPMNShape id="Gateway_FICOJoin_di" bpmnElement="Gateway_FICOJoin">
-        <dc:Bounds x="1598" y="672" width="50" height="50" />
+        <dc:Bounds x="1199" y="672" width="50" height="50" />
       </bpmndi:BPMNShape>
 
-      <!-- FICO Both Approved Gateway (SVP Lane) -->
+      <!-- FICO Both Approved Gateway: x=1301 (1199+50+52), y=672 -->
       <bpmndi:BPMNShape id="Gateway_FICOBothApproved_di" bpmnElement="Gateway_FICOBothApproved" isMarkerVisible="true">
-        <dc:Bounds x="1798" y="672" width="50" height="50" />
+        <dc:Bounds x="1301" y="672" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1795" y="729" width="56" height="27" />
+          <dc:Bounds x="1298" y="729" width="56" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- FICO Approved End Event (SVP Lane) -->
+      <!-- FICO Approved End Event: x=1403 (1301+50+52), y=682 -->
       <bpmndi:BPMNShape id="EndEvent_FICOApproved_di" bpmnElement="EndEvent_FICOApproved">
-        <dc:Bounds x="1998" y="679" width="36" height="36" />
+        <dc:Bounds x="1403" y="682" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1978" y="722" width="76" height="27" />
+          <dc:Bounds x="1383" y="725" width="76" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- FICO Denied End Event (SVP Lane) -->
+      <!-- FICO Denied End Event: x=1403, y=742 -->
       <bpmndi:BPMNShape id="EndEvent_FICODenied_di" bpmnElement="EndEvent_FICODenied">
-        <dc:Bounds x="1998" y="739" width="36" height="36" />
+        <dc:Bounds x="1403" y="742" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1978" y="782" width="76" height="27" />
+          <dc:Bounds x="1383" y="785" width="76" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- Final Exception Review Task (CCO Lane) -->
+      <!-- Final Exception Review Task (CCO Lane): x=335, y=842 (lane 797+170=967, center=882-40=842) -->
       <bpmndi:BPMNShape id="Task_FinalReview_di" bpmnElement="Task_FinalReview">
-        <dc:Bounds x="335" y="839" width="151" height="76" />
+        <dc:Bounds x="335" y="842" width="100" height="80" />
       </bpmndi:BPMNShape>
 
-      <!-- CCO Decision Gateway (CCO Lane) -->
+      <!-- CCO Decision Gateway: x=487 (335+100+52), y=857 -->
       <bpmndi:BPMNShape id="Gateway_CCODecision_di" bpmnElement="Gateway_CCODecision" isMarkerVisible="true">
-        <dc:Bounds x="586" y="852" width="50" height="50" />
+        <dc:Bounds x="487" y="857" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="590" y="909" width="42" height="27" />
+          <dc:Bounds x="491" y="914" width="42" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- CCO Approved End Event (CCO Lane) -->
+      <!-- CCO Approved End Event: x=589 (487+50+52), y=852 -->
       <bpmndi:BPMNShape id="EndEvent_CCOApproved_di" bpmnElement="EndEvent_CCOApproved">
-        <dc:Bounds x="736" y="839" width="36" height="36" />
+        <dc:Bounds x="589" y="852" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="722" y="882" width="64" height="40" />
+          <dc:Bounds x="575" y="895" width="64" height="40" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- CCO Denied End Event (CCO Lane) -->
+      <!-- CCO Denied End Event: x=589, y=912 -->
       <bpmndi:BPMNShape id="EndEvent_CCODenied_di" bpmnElement="EndEvent_CCODenied">
-        <dc:Bounds x="736" y="919" width="36" height="36" />
+        <dc:Bounds x="589" y="912" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="722" y="962" width="64" height="40" />
+          <dc:Bounds x="575" y="955" width="64" height="40" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
       <!-- Sequence Flow Edges -->
+      <!-- Flow_1: Start -> Document Exception -->
       <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
         <di:waypoint x="283" y="200" />
         <di:waypoint x="335" y="200" />
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_2: Document Exception -> Exception Type Gateway -->
       <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
-        <di:waypoint x="486" y="200" />
-        <di:waypoint x="586" y="200" />
+        <di:waypoint x="435" y="202" />
+        <di:waypoint x="487" y="202" />
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_DTI: Gateway -> DTI Task (up and right) -->
       <bpmndi:BPMNEdge id="Flow_DTI_di" bpmnElement="Flow_DTI">
-        <di:waypoint x="611" y="175" />
-        <di:waypoint x="611" y="113" />
-        <di:waypoint x="736" y="113" />
+        <di:waypoint x="512" y="177" />
+        <di:waypoint x="512" y="115" />
+        <di:waypoint x="589" y="115" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="642" y="96" width="67" height="14" />
+          <dc:Bounds x="520" y="97" width="67" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_LTV: Gateway -> LTV Task (straight right) -->
       <bpmndi:BPMNEdge id="Flow_LTV_di" bpmnElement="Flow_LTV">
-        <di:waypoint x="636" y="200" />
-        <di:waypoint x="736" y="200" />
+        <di:waypoint x="537" y="202" />
+        <di:waypoint x="589" y="202" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="653" y="182" width="66" height="14" />
+          <dc:Bounds x="540" y="184" width="66" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_FICO: Gateway -> FICO Fork (skip LTV/DTI/General, long horizontal) -->
       <bpmndi:BPMNEdge id="Flow_FICO_di" bpmnElement="Flow_FICO">
-        <di:waypoint x="636" y="200" />
-        <di:waypoint x="947" y="200" />
+        <di:waypoint x="537" y="202" />
+        <di:waypoint x="741" y="202" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="756" y="182" width="72" height="14" />
+          <dc:Bounds x="610" y="184" width="72" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_Other: Gateway -> General Task (down and right) -->
       <bpmndi:BPMNEdge id="Flow_Other_di" bpmnElement="Flow_Other">
-        <di:waypoint x="611" y="225" />
-        <di:waypoint x="611" y="287" />
-        <di:waypoint x="736" y="287" />
+        <di:waypoint x="512" y="227" />
+        <di:waypoint x="512" y="289" />
+        <di:waypoint x="589" y="289" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="660" y="269" width="29" height="14" />
+          <dc:Bounds x="520" y="271" width="29" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_DTI_Complete: DTI Task -> Merge Gateway (down-right diagonal) -->
       <bpmndi:BPMNEdge id="Flow_DTI_Complete_di" bpmnElement="Flow_DTI_Complete">
-        <di:waypoint x="887" y="113" />
-        <di:waypoint x="1122" y="113" />
-        <di:waypoint x="1122" y="175" />
+        <di:waypoint x="689" y="115" />
+        <di:waypoint x="868" y="115" />
+        <di:waypoint x="868" y="177" />
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_LTV_Complete: LTV Task -> Merge Gateway (straight right) -->
       <bpmndi:BPMNEdge id="Flow_LTV_Complete_di" bpmnElement="Flow_LTV_Complete">
-        <di:waypoint x="887" y="200" />
-        <di:waypoint x="1097" y="200" />
+        <di:waypoint x="689" y="202" />
+        <di:waypoint x="843" y="202" />
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_Other_Complete: General Task -> Merge Gateway (up-right diagonal) -->
       <bpmndi:BPMNEdge id="Flow_Other_Complete_di" bpmnElement="Flow_Other_Complete">
-        <di:waypoint x="887" y="287" />
-        <di:waypoint x="1122" y="287" />
-        <di:waypoint x="1122" y="225" />
+        <di:waypoint x="689" y="289" />
+        <di:waypoint x="868" y="289" />
+        <di:waypoint x="868" y="227" />
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_FICO_Primary: FICO Fork -> Primary Review (down to UW Manager lane) -->
       <bpmndi:BPMNEdge id="Flow_FICO_Primary_di" bpmnElement="Flow_FICO_Primary">
-        <di:waypoint x="972" y="225" />
-        <di:waypoint x="972" y="497" />
-        <di:waypoint x="1247" y="497" />
+        <di:waypoint x="766" y="227" />
+        <di:waypoint x="766" y="497" />
+        <di:waypoint x="1047" y="497" />
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_FICO_Secondary: FICO Fork -> Secondary Review (down to SVP lane) -->
       <bpmndi:BPMNEdge id="Flow_FICO_Secondary_di" bpmnElement="Flow_FICO_Secondary">
-        <di:waypoint x="972" y="225" />
-        <di:waypoint x="972" y="697" />
-        <di:waypoint x="1247" y="697" />
+        <di:waypoint x="766" y="227" />
+        <di:waypoint x="766" y="697" />
+        <di:waypoint x="1047" y="697" />
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_FICO_Primary_Complete: Primary -> FICO Join (down to SVP lane) -->
       <bpmndi:BPMNEdge id="Flow_FICO_Primary_Complete_di" bpmnElement="Flow_FICO_Primary_Complete">
-        <di:waypoint x="1398" y="497" />
-        <di:waypoint x="1623" y="497" />
-        <di:waypoint x="1623" y="672" />
+        <di:waypoint x="1147" y="497" />
+        <di:waypoint x="1224" y="497" />
+        <di:waypoint x="1224" y="672" />
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_FICO_Secondary_Complete: Secondary -> FICO Join (straight right) -->
       <bpmndi:BPMNEdge id="Flow_FICO_Secondary_Complete_di" bpmnElement="Flow_FICO_Secondary_Complete">
-        <di:waypoint x="1398" y="697" />
-        <di:waypoint x="1598" y="697" />
+        <di:waypoint x="1147" y="697" />
+        <di:waypoint x="1199" y="697" />
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_FICO_Join_Complete: FICO Join -> Both Approved Gateway -->
       <bpmndi:BPMNEdge id="Flow_FICO_Join_Complete_di" bpmnElement="Flow_FICO_Join_Complete">
-        <di:waypoint x="1648" y="697" />
-        <di:waypoint x="1798" y="697" />
+        <di:waypoint x="1249" y="697" />
+        <di:waypoint x="1301" y="697" />
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_FICO_Approved: Both Approved -> FICO Approved End -->
       <bpmndi:BPMNEdge id="Flow_FICO_Approved_di" bpmnElement="Flow_FICO_Approved">
-        <di:waypoint x="1848" y="697" />
-        <di:waypoint x="1998" y="697" />
+        <di:waypoint x="1351" y="700" />
+        <di:waypoint x="1403" y="700" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1900" y="679" width="47" height="14" />
+          <dc:Bounds x="1355" y="682" width="47" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_FICO_Denied: Both Approved -> FICO Denied End -->
       <bpmndi:BPMNEdge id="Flow_FICO_Denied_di" bpmnElement="Flow_FICO_Denied">
-        <di:waypoint x="1823" y="722" />
-        <di:waypoint x="1823" y="757" />
-        <di:waypoint x="1998" y="757" />
+        <di:waypoint x="1326" y="722" />
+        <di:waypoint x="1326" y="760" />
+        <di:waypoint x="1403" y="760" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1887" y="739" width="34" height="14" />
+          <dc:Bounds x="1340" y="742" width="34" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_3: Merge Gateway -> Review Exception (down through margin, left, down) -->
       <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
-        <di:waypoint x="1122" y="225" />
-        <di:waypoint x="1122" y="360" />
-        <di:waypoint x="410" y="360" />
-        <di:waypoint x="410" y="459" />
+        <di:waypoint x="868" y="227" />
+        <di:waypoint x="868" y="360" />
+        <di:waypoint x="385" y="360" />
+        <di:waypoint x="385" y="457" />
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_TimerEscalation: Timer Boundary -> Review Exception (loop back) -->
       <bpmndi:BPMNEdge id="Flow_TimerEscalation_di" bpmnElement="Flow_TimerEscalation">
-        <di:waypoint x="486" y="553" />
-        <di:waypoint x="486" y="535" />
+        <di:waypoint x="435" y="555" />
+        <di:waypoint x="435" y="537" />
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_4: Review Exception -> Manager Decision -->
       <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
-        <di:waypoint x="486" y="497" />
-        <di:waypoint x="586" y="497" />
+        <di:waypoint x="435" y="497" />
+        <di:waypoint x="487" y="497" />
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_ManagerApproved: Manager Decision -> Approved End (up-right) -->
       <bpmndi:BPMNEdge id="Flow_ManagerApproved_di" bpmnElement="Flow_ManagerApproved">
-        <di:waypoint x="611" y="472" />
-        <di:waypoint x="611" y="477" />
-        <di:waypoint x="736" y="477" />
+        <di:waypoint x="537" y="485" />
+        <di:waypoint x="589" y="485" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="643" y="459" width="47" height="14" />
+          <dc:Bounds x="540" y="467" width="47" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_ManagerDenied: Manager Decision -> Denied End (down-right) -->
       <bpmndi:BPMNEdge id="Flow_ManagerDenied_di" bpmnElement="Flow_ManagerDenied">
-        <di:waypoint x="611" y="522" />
-        <di:waypoint x="611" y="557" />
-        <di:waypoint x="736" y="557" />
+        <di:waypoint x="512" y="522" />
+        <di:waypoint x="512" y="545" />
+        <di:waypoint x="589" y="545" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="643" y="539" width="34" height="14" />
+          <dc:Bounds x="520" y="527" width="34" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_EscalateToSVP: Manager Decision -> Review Escalated (down, left in margin, down) -->
       <bpmndi:BPMNEdge id="Flow_EscalateToSVP_di" bpmnElement="Flow_EscalateToSVP">
-        <di:waypoint x="611" y="522" />
-        <di:waypoint x="611" y="610" />
-        <di:waypoint x="410" y="610" />
-        <di:waypoint x="410" y="659" />
+        <di:waypoint x="512" y="522" />
+        <di:waypoint x="512" y="610" />
+        <di:waypoint x="385" y="610" />
+        <di:waypoint x="385" y="657" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="488" y="592" width="43" height="14" />
+          <dc:Bounds x="430" y="592" width="43" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_5: Review Escalated -> SVP Decision -->
       <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
-        <di:waypoint x="486" y="697" />
-        <di:waypoint x="586" y="697" />
+        <di:waypoint x="435" y="697" />
+        <di:waypoint x="487" y="697" />
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_SVPApproved: SVP Decision -> Approved End (up-right) -->
       <bpmndi:BPMNEdge id="Flow_SVPApproved_di" bpmnElement="Flow_SVPApproved">
-        <di:waypoint x="611" y="672" />
-        <di:waypoint x="611" y="677" />
-        <di:waypoint x="736" y="677" />
+        <di:waypoint x="537" y="685" />
+        <di:waypoint x="589" y="685" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="643" y="659" width="47" height="14" />
+          <dc:Bounds x="540" y="667" width="47" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_SVPDenied: SVP Decision -> Denied End (down-right) -->
       <bpmndi:BPMNEdge id="Flow_SVPDenied_di" bpmnElement="Flow_SVPDenied">
-        <di:waypoint x="611" y="722" />
-        <di:waypoint x="611" y="757" />
-        <di:waypoint x="736" y="757" />
+        <di:waypoint x="512" y="722" />
+        <di:waypoint x="512" y="745" />
+        <di:waypoint x="589" y="745" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="643" y="739" width="34" height="14" />
+          <dc:Bounds x="520" y="727" width="34" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_EscalateToCCO: SVP Decision -> Final Review (down, left in margin, down) -->
       <bpmndi:BPMNEdge id="Flow_EscalateToCCO_di" bpmnElement="Flow_EscalateToCCO">
-        <di:waypoint x="611" y="722" />
-        <di:waypoint x="611" y="810" />
-        <di:waypoint x="410" y="810" />
-        <di:waypoint x="410" y="839" />
+        <di:waypoint x="512" y="722" />
+        <di:waypoint x="512" y="810" />
+        <di:waypoint x="385" y="810" />
+        <di:waypoint x="385" y="842" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="464" y="792" width="78" height="14" />
+          <dc:Bounds x="415" y="792" width="78" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_6: Final Review -> CCO Decision -->
       <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
-        <di:waypoint x="486" y="877" />
-        <di:waypoint x="586" y="877" />
+        <di:waypoint x="435" y="882" />
+        <di:waypoint x="487" y="882" />
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_CCOApproved: CCO Decision -> Approved End (up-right) -->
       <bpmndi:BPMNEdge id="Flow_CCOApproved_di" bpmnElement="Flow_CCOApproved">
-        <di:waypoint x="611" y="852" />
-        <di:waypoint x="611" y="857" />
-        <di:waypoint x="736" y="857" />
+        <di:waypoint x="537" y="870" />
+        <di:waypoint x="589" y="870" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="643" y="839" width="47" height="14" />
+          <dc:Bounds x="540" y="852" width="47" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
+      <!-- Flow_CCODenied: CCO Decision -> Denied End (down-right) -->
       <bpmndi:BPMNEdge id="Flow_CCODenied_di" bpmnElement="Flow_CCODenied">
-        <di:waypoint x="611" y="902" />
-        <di:waypoint x="611" y="937" />
-        <di:waypoint x="736" y="937" />
+        <di:waypoint x="512" y="907" />
+        <di:waypoint x="512" y="930" />
+        <di:waypoint x="589" y="930" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="643" y="919" width="34" height="14" />
+          <dc:Bounds x="520" y="912" width="34" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
