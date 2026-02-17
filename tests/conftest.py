@@ -37,6 +37,7 @@ def test_settings() -> Settings:
         redis_port=6379,
         redis_url="redis://localhost:6379/1",
         cors_origins=["http://localhost:3000"],
+        monitoring_worker_count=0,
     )
 
 
@@ -61,6 +62,7 @@ def mock_db_session() -> AsyncMock:
     session.close = AsyncMock()
     session.flush = AsyncMock()
     session.refresh = AsyncMock(side_effect=_default_refresh_side_effect)
+    session.delete = AsyncMock()
     # session.add is synchronous in real SQLAlchemy
     session.add = MagicMock()
     return session
@@ -85,6 +87,15 @@ def mock_redis_client() -> AsyncMock:
     # get returns None by default (no token blacklisted)
     client.get = AsyncMock(return_value=None)
     client.setex = AsyncMock()
+    # Redis Streams support
+    client.xadd = AsyncMock(return_value="1-0")
+    client.xread = AsyncMock(return_value=[])
+    client.xreadgroup = AsyncMock(return_value=[])
+    client.xack = AsyncMock(return_value=1)
+    client.xgroup_create = AsyncMock()
+    # Pub/Sub support
+    client.publish = AsyncMock(return_value=0)
+    client.pubsub = MagicMock()
     return client
 
 
@@ -127,7 +138,12 @@ async def test_app(
         RequestIDMiddleware,
         SecurityHeadersMiddleware,
     )
-    from src.api.routes import auth, dashboard, engagements, evidence, graph, health, pov, shelf_requests, users
+    from src.api.routes import (
+        auth, dashboard, engagements, evidence, graph, health,
+        integrations, pov, regulatory, reports, shelf_requests, tom, users,
+    )
+    from src.api.routes import monitoring, patterns, portal, simulations, websocket
+    from src.mcp.server import router as mcp_router
 
     @asynccontextmanager
     async def test_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -148,6 +164,8 @@ async def test_app(
         max_requests=100,
         window_seconds=60,
     )
+
+    # Phase 1-2 routes
     app.include_router(health.router)
     app.include_router(engagements.router)
     app.include_router(evidence.router)
@@ -157,6 +175,18 @@ async def test_app(
     app.include_router(dashboard.router)
     app.include_router(auth.router)
     app.include_router(users.router)
+    app.include_router(regulatory.router)
+    app.include_router(tom.router)
+    app.include_router(integrations.router)
+    app.include_router(reports.router)
+
+    # Phase 3 routes
+    app.include_router(monitoring.router)
+    app.include_router(websocket.router)
+    app.include_router(patterns.router)
+    app.include_router(simulations.router)
+    app.include_router(portal.router)
+    app.include_router(mcp_router)
 
     # Override get_settings so auth uses the same JWT secret as tests
     test_settings_instance = Settings(
@@ -165,6 +195,7 @@ async def test_app(
         jwt_access_token_expire_minutes=30,
         jwt_refresh_token_expire_minutes=10080,
         auth_dev_mode=True,
+        monitoring_worker_count=0,
     )
     app.dependency_overrides[get_settings] = lambda: test_settings_instance
 

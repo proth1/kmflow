@@ -216,7 +216,7 @@ class TestAuditLog:
     def test_audit_actions(self) -> None:
         """All expected audit actions should be defined."""
         actions = list(AuditAction)
-        assert len(actions) == 12
+        assert len(actions) == 31
         assert AuditAction.ENGAGEMENT_CREATED in actions
         assert AuditAction.ENGAGEMENT_UPDATED in actions
         assert AuditAction.ENGAGEMENT_ARCHIVED in actions
@@ -396,3 +396,110 @@ class TestShelfDataRequestItem:
         )
         r = repr(item)
         assert "P2P Process Map" in r
+
+
+class TestPhase3Enums:
+    """Test suite for Phase 3 enum values."""
+
+    def test_monitoring_status_values(self) -> None:
+        """MonitoringStatus should have all expected values."""
+        from src.core.models import MonitoringStatus
+
+        assert MonitoringStatus.CONFIGURING == "configuring"
+        assert MonitoringStatus.ACTIVE == "active"
+        assert MonitoringStatus.PAUSED == "paused"
+        assert MonitoringStatus.ERROR == "error"
+        assert MonitoringStatus.STOPPED == "stopped"
+
+    def test_alert_severity_values(self) -> None:
+        """AlertSeverity should have all expected values."""
+        from src.core.models import AlertSeverity
+
+        assert AlertSeverity.CRITICAL == "critical"
+        assert AlertSeverity.HIGH == "high"
+        assert AlertSeverity.MEDIUM == "medium"
+        assert AlertSeverity.LOW == "low"
+        assert AlertSeverity.INFO == "info"
+
+    def test_alert_status_values(self) -> None:
+        """AlertStatus should have all expected values."""
+        from src.core.models import AlertStatus
+
+        assert AlertStatus.NEW == "new"
+        assert AlertStatus.ACKNOWLEDGED == "acknowledged"
+        assert AlertStatus.RESOLVED == "resolved"
+        assert AlertStatus.DISMISSED == "dismissed"
+
+    def test_deviation_category_values(self) -> None:
+        """DeviationCategory should have all expected values."""
+        from src.core.models import DeviationCategory
+
+        assert DeviationCategory.SEQUENCE_CHANGE == "sequence_change"
+        assert DeviationCategory.MISSING_ACTIVITY == "missing_activity"
+        assert DeviationCategory.NEW_ACTIVITY == "new_activity"
+        assert DeviationCategory.ROLE_CHANGE == "role_change"
+        assert DeviationCategory.TIMING_ANOMALY == "timing_anomaly"
+        assert DeviationCategory.FREQUENCY_CHANGE == "frequency_change"
+        assert DeviationCategory.CONTROL_BYPASS == "control_bypass"
+
+    def test_monitoring_source_type_values(self) -> None:
+        """MonitoringSourceType should have all expected values."""
+        from src.core.models import MonitoringSourceType
+
+        assert MonitoringSourceType.EVENT_LOG == "event_log"
+        assert MonitoringSourceType.TASK_MINING == "task_mining"
+        assert MonitoringSourceType.SYSTEM_API == "system_api"
+        assert MonitoringSourceType.FILE_WATCH == "file_watch"
+
+    def test_simulation_status_values(self) -> None:
+        """SimulationStatus should have all expected values."""
+        from src.core.models import SimulationStatus
+
+        assert SimulationStatus.PENDING == "pending"
+        assert SimulationStatus.RUNNING == "running"
+        assert SimulationStatus.COMPLETED == "completed"
+        assert SimulationStatus.FAILED == "failed"
+
+    def test_simulation_type_values(self) -> None:
+        """SimulationType should have all expected values."""
+        from src.core.models import SimulationType
+
+        assert SimulationType.WHAT_IF == "what_if"
+        assert SimulationType.CAPACITY == "capacity"
+        assert SimulationType.PROCESS_CHANGE == "process_change"
+        assert SimulationType.CONTROL_REMOVAL == "control_removal"
+
+    def test_pattern_category_values(self) -> None:
+        """PatternCategory should have all expected values."""
+        from src.core.models import PatternCategory
+
+        assert PatternCategory.PROCESS_OPTIMIZATION == "process_optimization"
+        assert PatternCategory.CONTROL_IMPROVEMENT == "control_improvement"
+        assert PatternCategory.TECHNOLOGY_ENABLEMENT == "technology_enablement"
+        assert PatternCategory.ORGANIZATIONAL_CHANGE == "organizational_change"
+        assert PatternCategory.RISK_MITIGATION == "risk_mitigation"
+
+    def test_audit_action_phase3_values(self) -> None:
+        """AuditAction should have all Phase 3 values."""
+        # Phase 3 integration/monitoring actions
+        assert AuditAction.INTEGRATION_CONNECTED == "integration_connected"
+        assert AuditAction.INTEGRATION_SYNCED == "integration_synced"
+        assert AuditAction.MONITORING_CONFIGURED == "monitoring_configured"
+        assert AuditAction.MONITORING_ACTIVATED == "monitoring_activated"
+        assert AuditAction.MONITORING_STOPPED == "monitoring_stopped"
+        assert AuditAction.ALERT_GENERATED == "alert_generated"
+        assert AuditAction.ALERT_ACKNOWLEDGED == "alert_acknowledged"
+        assert AuditAction.ALERT_RESOLVED == "alert_resolved"
+        assert AuditAction.AGENT_GAP_SCAN == "agent_gap_scan"
+        assert AuditAction.PATTERN_CREATED == "pattern_created"
+        assert AuditAction.PATTERN_APPLIED == "pattern_applied"
+        assert AuditAction.SIMULATION_CREATED == "simulation_created"
+        assert AuditAction.SIMULATION_EXECUTED == "simulation_executed"
+
+    def test_audit_action_total_count(self) -> None:
+        """AuditAction should have all expected actions including Phase 3."""
+        actions = list(AuditAction)
+        # Phase 1+2: 18 actions
+        # Phase 3: 13 new actions
+        # Total: 31 actions
+        assert len(actions) == 31

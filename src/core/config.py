@@ -71,6 +71,26 @@ class Settings(BaseSettings):
     embedding_model: str = "all-mpnet-base-v2"
     embedding_dimension: int = 768
 
+    # ── Monitoring (Phase 3) ─────────────────────────────────────
+    monitoring_worker_count: int = 2
+    monitoring_stream_max_len: int = 10000
+    monitoring_default_interval: str = "0 0 * * *"
+
+    # ── WebSocket (Phase 3) ──────────────────────────────────────
+    ws_heartbeat_interval: int = 30
+    ws_heartbeat_timeout: int = 10
+
+    # ── MCP Server (Phase 3) ─────────────────────────────────────
+    mcp_enabled: bool = True
+    mcp_rate_limit: int = 1000
+
+    # ── Simulation (Phase 3) ─────────────────────────────────────
+    simulation_max_concurrent: int = 3
+    simulation_timeout_seconds: int = 300
+
+    # ── Pattern Library (Phase 3) ────────────────────────────────
+    pattern_anonymization_enabled: bool = True
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_cors_origins(cls, v: Any) -> list[str]:
