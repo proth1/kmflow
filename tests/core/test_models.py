@@ -13,6 +13,11 @@ from src.core.models import (
     EvidenceFragment,
     EvidenceItem,
     FragmentType,
+    ShelfDataRequest,
+    ShelfDataRequestItem,
+    ShelfRequestItemPriority,
+    ShelfRequestItemStatus,
+    ShelfRequestStatus,
     ValidationStatus,
 )
 
@@ -145,6 +150,44 @@ class TestEvidenceItem:
         assert EvidenceCategory.DOCUMENTS in categories
         assert EvidenceCategory.JOB_AIDS_EDGE_CASES in categories
 
+    def test_file_storage_fields(self) -> None:
+        """Evidence items should accept file storage fields."""
+        item = EvidenceItem(
+            name="report.pdf",
+            category=EvidenceCategory.DOCUMENTS,
+            format="pdf",
+            engagement_id=uuid.uuid4(),
+            file_path="/evidence_store/abc/report.pdf",
+            size_bytes=102400,
+            mime_type="application/pdf",
+        )
+        assert item.file_path == "/evidence_store/abc/report.pdf"
+        assert item.size_bytes == 102400
+        assert item.mime_type == "application/pdf"
+
+    def test_duplicate_of_field(self) -> None:
+        """Evidence items should accept duplicate_of_id."""
+        original_id = uuid.uuid4()
+        item = EvidenceItem(
+            name="duplicate.pdf",
+            category=EvidenceCategory.DOCUMENTS,
+            format="pdf",
+            engagement_id=uuid.uuid4(),
+            duplicate_of_id=original_id,
+        )
+        assert item.duplicate_of_id == original_id
+
+    def test_metadata_json_field(self) -> None:
+        """Evidence items should accept metadata_json."""
+        item = EvidenceItem(
+            name="test.pdf",
+            category=EvidenceCategory.DOCUMENTS,
+            format="pdf",
+            engagement_id=uuid.uuid4(),
+            metadata_json={"source_type": "official", "author": "John"},
+        )
+        assert item.metadata_json["source_type"] == "official"
+
 
 class TestEvidenceFragment:
     """Test suite for the EvidenceFragment model."""
@@ -173,10 +216,14 @@ class TestAuditLog:
     def test_audit_actions(self) -> None:
         """All expected audit actions should be defined."""
         actions = list(AuditAction)
-        assert len(actions) == 3
+        assert len(actions) == 7
         assert AuditAction.ENGAGEMENT_CREATED in actions
         assert AuditAction.ENGAGEMENT_UPDATED in actions
         assert AuditAction.ENGAGEMENT_ARCHIVED in actions
+        assert AuditAction.EVIDENCE_UPLOADED in actions
+        assert AuditAction.EVIDENCE_VALIDATED in actions
+        assert AuditAction.SHELF_REQUEST_CREATED in actions
+        assert AuditAction.SHELF_REQUEST_UPDATED in actions
 
     def test_create_audit_log(self) -> None:
         """AuditLog should accept all required fields."""
@@ -209,3 +256,137 @@ class TestAuditLog:
         col = AuditLog.__table__.columns["actor"]
         assert col.default is not None
         assert col.default.arg == "system"
+
+
+class TestShelfDataRequest:
+    """Test suite for the ShelfDataRequest model."""
+
+    def test_shelf_request_statuses(self) -> None:
+        """All expected shelf request statuses should be defined."""
+        statuses = list(ShelfRequestStatus)
+        assert len(statuses) == 5
+        assert ShelfRequestStatus.DRAFT in statuses
+        assert ShelfRequestStatus.SENT in statuses
+        assert ShelfRequestStatus.COMPLETED in statuses
+        assert ShelfRequestStatus.OVERDUE in statuses
+
+    def test_status_column_default(self) -> None:
+        """The status column should default to DRAFT."""
+        col = ShelfDataRequest.__table__.columns["status"]
+        assert col.default is not None
+        assert col.default.arg == ShelfRequestStatus.DRAFT
+
+    def test_repr(self) -> None:
+        """ShelfDataRequest repr should include title and status."""
+        req = ShelfDataRequest(
+            id=uuid.uuid4(),
+            engagement_id=uuid.uuid4(),
+            title="Evidence Request Q1",
+            status=ShelfRequestStatus.DRAFT,
+        )
+        r = repr(req)
+        assert "Evidence Request Q1" in r
+
+    def test_fulfillment_percentage_no_items(self) -> None:
+        """Fulfillment should be 0% when there are no items."""
+        req = ShelfDataRequest(
+            id=uuid.uuid4(),
+            engagement_id=uuid.uuid4(),
+            title="Empty Request",
+        )
+        req.items = []
+        assert req.fulfillment_percentage == 0.0
+
+    def test_fulfillment_percentage_all_received(self) -> None:
+        """Fulfillment should be 100% when all items are received."""
+        req = ShelfDataRequest(
+            id=uuid.uuid4(),
+            engagement_id=uuid.uuid4(),
+            title="Full Request",
+        )
+        req.items = [
+            ShelfDataRequestItem(
+                id=uuid.uuid4(),
+                request_id=req.id,
+                category=EvidenceCategory.DOCUMENTS,
+                item_name="Doc 1",
+                status=ShelfRequestItemStatus.RECEIVED,
+            ),
+            ShelfDataRequestItem(
+                id=uuid.uuid4(),
+                request_id=req.id,
+                category=EvidenceCategory.IMAGES,
+                item_name="Img 1",
+                status=ShelfRequestItemStatus.RECEIVED,
+            ),
+        ]
+        assert req.fulfillment_percentage == 100.0
+
+    def test_fulfillment_percentage_partial(self) -> None:
+        """Fulfillment should reflect partial completion."""
+        req = ShelfDataRequest(
+            id=uuid.uuid4(),
+            engagement_id=uuid.uuid4(),
+            title="Partial Request",
+        )
+        req.items = [
+            ShelfDataRequestItem(
+                id=uuid.uuid4(),
+                request_id=req.id,
+                category=EvidenceCategory.DOCUMENTS,
+                item_name="Doc 1",
+                status=ShelfRequestItemStatus.RECEIVED,
+            ),
+            ShelfDataRequestItem(
+                id=uuid.uuid4(),
+                request_id=req.id,
+                category=EvidenceCategory.IMAGES,
+                item_name="Img 1",
+                status=ShelfRequestItemStatus.PENDING,
+            ),
+        ]
+        assert req.fulfillment_percentage == 50.0
+
+
+class TestShelfDataRequestItem:
+    """Test suite for the ShelfDataRequestItem model."""
+
+    def test_item_statuses(self) -> None:
+        """All expected item statuses should be defined."""
+        statuses = list(ShelfRequestItemStatus)
+        assert len(statuses) == 3
+        assert ShelfRequestItemStatus.PENDING in statuses
+        assert ShelfRequestItemStatus.RECEIVED in statuses
+        assert ShelfRequestItemStatus.OVERDUE in statuses
+
+    def test_item_priorities(self) -> None:
+        """All expected priorities should be defined."""
+        priorities = list(ShelfRequestItemPriority)
+        assert len(priorities) == 3
+        assert ShelfRequestItemPriority.HIGH in priorities
+        assert ShelfRequestItemPriority.MEDIUM in priorities
+        assert ShelfRequestItemPriority.LOW in priorities
+
+    def test_status_column_default(self) -> None:
+        """The status column should default to PENDING."""
+        col = ShelfDataRequestItem.__table__.columns["status"]
+        assert col.default is not None
+        assert col.default.arg == ShelfRequestItemStatus.PENDING
+
+    def test_priority_column_default(self) -> None:
+        """The priority column should default to MEDIUM."""
+        col = ShelfDataRequestItem.__table__.columns["priority"]
+        assert col.default is not None
+        assert col.default.arg == ShelfRequestItemPriority.MEDIUM
+
+    def test_repr(self) -> None:
+        """ShelfDataRequestItem repr should include name and status."""
+        item = ShelfDataRequestItem(
+            id=uuid.uuid4(),
+            request_id=uuid.uuid4(),
+            category=EvidenceCategory.DOCUMENTS,
+            item_name="P2P Process Map",
+            status=ShelfRequestItemStatus.PENDING,
+        )
+        r = repr(item)
+        assert "P2P Process Map" in r

@@ -19,6 +19,8 @@ from src.core.models import (  # noqa: F401
     Engagement,
     EvidenceFragment,
     EvidenceItem,
+    ShelfDataRequest,
+    ShelfDataRequestItem,
 )
 
 # Alembic Config object
