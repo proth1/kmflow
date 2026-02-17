@@ -14,6 +14,7 @@ from datetime import datetime
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     Date,
     DateTime,
     Enum,
@@ -22,6 +23,7 @@ from sqlalchemy import (
     Index,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSON, UUID
@@ -78,6 +80,16 @@ class FragmentType(enum.StrEnum):
     PROCESS_ELEMENT = "process_element"
 
 
+class UserRole(enum.StrEnum):
+    """User role levels for RBAC."""
+
+    PLATFORM_ADMIN = "platform_admin"
+    ENGAGEMENT_LEAD = "engagement_lead"
+    PROCESS_ANALYST = "process_analyst"
+    EVIDENCE_REVIEWER = "evidence_reviewer"
+    CLIENT_VIEWER = "client_viewer"
+
+
 class AuditAction(enum.StrEnum):
     """Audit log action types for engagement mutations."""
 
@@ -88,6 +100,11 @@ class AuditAction(enum.StrEnum):
     EVIDENCE_VALIDATED = "evidence_validated"
     SHELF_REQUEST_CREATED = "shelf_request_created"
     SHELF_REQUEST_UPDATED = "shelf_request_updated"
+    LOGIN = "login"
+    LOGOUT = "logout"
+    PERMISSION_DENIED = "permission_denied"
+    DATA_ACCESS = "data_access"
+    POV_GENERATED = "pov_generated"
 
 
 class ShelfRequestStatus(enum.StrEnum):
@@ -512,3 +529,62 @@ class ShelfDataRequestItem(Base):
 
     def __repr__(self) -> str:
         return f"<ShelfDataRequestItem(id={self.id}, name='{self.item_name}', status={self.status})>"
+
+
+class User(Base):
+    """A platform user with role-based access control."""
+
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[UserRole] = mapped_column(
+        Enum(UserRole), default=UserRole.PROCESS_ANALYST, insert_default=UserRole.PROCESS_ANALYST, nullable=False
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, insert_default=True, nullable=False)
+    external_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True, index=True)
+    hashed_password: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    # Relationships
+    engagement_memberships: Mapped[list[EngagementMember]] = relationship(
+        "EngagementMember", back_populates="user", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self) -> str:
+        return f"<User(id={self.id}, email='{self.email}', role={self.role})>"
+
+
+class EngagementMember(Base):
+    """Links users to engagements with a role-in-engagement override."""
+
+    __tablename__ = "engagement_members"
+    __table_args__ = (
+        UniqueConstraint("engagement_id", "user_id", name="uq_engagement_user"),
+        Index("ix_engagement_members_engagement_id", "engagement_id"),
+        Index("ix_engagement_members_user_id", "user_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    role_in_engagement: Mapped[str] = mapped_column(String(100), nullable=False, default="member")
+    added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # Relationships
+    engagement: Mapped[Engagement] = relationship("Engagement")
+    user: Mapped[User] = relationship("User", back_populates="engagement_memberships")
+
+    def __repr__(self) -> str:
+        return f"<EngagementMember(engagement_id={self.engagement_id}, user_id={self.user_id})>"

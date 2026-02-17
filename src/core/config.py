@@ -56,6 +56,17 @@ class Settings(BaseSettings):
     backend_port: int = 8000
     cors_origins: list[str] = ["http://localhost:3000"]
 
+    # ── Security / Auth ───────────────────────────────────────────
+    jwt_secret_key: str = "dev-secret-key-change-in-production"
+    jwt_algorithm: str = "HS256"
+    jwt_access_token_expire_minutes: int = 30
+    jwt_refresh_token_expire_minutes: int = 10080  # 7 days
+    auth_dev_mode: bool = True  # Allow local dev tokens
+
+    # ── Rate Limiting ─────────────────────────────────────────────
+    rate_limit_requests: int = 100
+    rate_limit_window_seconds: int = 60
+
     # ── Embeddings ───────────────────────────────────────────────
     embedding_model: str = "all-mpnet-base-v2"
     embedding_dimension: int = 768

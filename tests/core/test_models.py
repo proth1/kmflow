@@ -216,7 +216,7 @@ class TestAuditLog:
     def test_audit_actions(self) -> None:
         """All expected audit actions should be defined."""
         actions = list(AuditAction)
-        assert len(actions) == 7
+        assert len(actions) == 12
         assert AuditAction.ENGAGEMENT_CREATED in actions
         assert AuditAction.ENGAGEMENT_UPDATED in actions
         assert AuditAction.ENGAGEMENT_ARCHIVED in actions
@@ -224,6 +224,12 @@ class TestAuditLog:
         assert AuditAction.EVIDENCE_VALIDATED in actions
         assert AuditAction.SHELF_REQUEST_CREATED in actions
         assert AuditAction.SHELF_REQUEST_UPDATED in actions
+        # Security audit actions (Story #12)
+        assert AuditAction.LOGIN in actions
+        assert AuditAction.LOGOUT in actions
+        assert AuditAction.PERMISSION_DENIED in actions
+        assert AuditAction.DATA_ACCESS in actions
+        assert AuditAction.POV_GENERATED in actions
 
     def test_create_audit_log(self) -> None:
         """AuditLog should accept all required fields."""

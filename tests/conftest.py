@@ -15,7 +15,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from src.core.config import Settings
+from src.core.config import Settings, get_settings
 
 
 @pytest.fixture
@@ -82,6 +82,9 @@ def mock_redis_client() -> AsyncMock:
     client = AsyncMock()
     client.ping = AsyncMock(return_value=True)
     client.aclose = AsyncMock()
+    # get returns None by default (no token blacklisted)
+    client.get = AsyncMock(return_value=None)
+    client.setex = AsyncMock()
     return client
 
 
@@ -119,7 +122,12 @@ async def test_app(
     from fastapi import FastAPI
     from fastapi.middleware.cors import CORSMiddleware
 
-    from src.api.routes import dashboard, engagements, evidence, graph, health, pov, shelf_requests
+    from src.api.middleware.security import (
+        RateLimitMiddleware,
+        RequestIDMiddleware,
+        SecurityHeadersMiddleware,
+    )
+    from src.api.routes import auth, dashboard, engagements, evidence, graph, health, pov, shelf_requests, users
 
     @asynccontextmanager
     async def test_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -133,6 +141,13 @@ async def test_app(
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(RequestIDMiddleware)
+    app.add_middleware(
+        RateLimitMiddleware,
+        max_requests=100,
+        window_seconds=60,
+    )
     app.include_router(health.router)
     app.include_router(engagements.router)
     app.include_router(evidence.router)
@@ -140,6 +155,18 @@ async def test_app(
     app.include_router(graph.router)
     app.include_router(pov.router)
     app.include_router(dashboard.router)
+    app.include_router(auth.router)
+    app.include_router(users.router)
+
+    # Override get_settings so auth uses the same JWT secret as tests
+    test_settings_instance = Settings(
+        jwt_secret_key="test-secret-key-for-tests",
+        jwt_algorithm="HS256",
+        jwt_access_token_expire_minutes=30,
+        jwt_refresh_token_expire_minutes=10080,
+        auth_dev_mode=True,
+    )
+    app.dependency_overrides[get_settings] = lambda: test_settings_instance
 
     # Set mock state using the proper session factory mock
     app.state.db_session_factory = MockSessionFactory(mock_db_session)
