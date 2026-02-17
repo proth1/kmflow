@@ -293,6 +293,69 @@ class TestGetContradictions:
         assert data[0]["element_name"] == "Process Invoice"
 
 
+class TestGetBPMNXml:
+    """Tests for GET /api/v1/pov/{model_id}/bpmn."""
+
+    @pytest.mark.asyncio
+    async def test_get_bpmn_found(self, client, mock_db_session, mock_process_model, mock_process_element):
+        """Returns BPMN XML and element confidences when model exists."""
+        call_count = 0
+
+        async def side_effect(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            result = MagicMock()
+            if call_count == 1:
+                # Model lookup
+                result.scalar_one_or_none.return_value = mock_process_model
+            elif call_count == 2:
+                # Elements lookup
+                result.scalars.return_value.all.return_value = [mock_process_element]
+            return result
+
+        mock_db_session.execute = AsyncMock(side_effect=side_effect)
+
+        response = await client.get(f"/api/v1/pov/{mock_process_model.id}/bpmn")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["model_id"] == str(mock_process_model.id)
+        assert data["bpmn_xml"] == "<bpmn>test</bpmn>"
+        assert "Submit Request" in data["element_confidences"]
+        assert data["element_confidences"]["Submit Request"] == 0.8
+
+    @pytest.mark.asyncio
+    async def test_get_bpmn_not_found(self, client, mock_db_session):
+        """Returns 404 when model not found."""
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        mock_db_session.execute = AsyncMock(return_value=mock_result)
+
+        model_id = str(uuid.uuid4())
+        response = await client.get(f"/api/v1/pov/{model_id}/bpmn")
+
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_get_bpmn_no_xml(self, client, mock_db_session, mock_process_model):
+        """Returns 404 when model has no BPMN XML."""
+        mock_process_model.bpmn_xml = None
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = mock_process_model
+        mock_db_session.execute = AsyncMock(return_value=mock_result)
+
+        response = await client.get(f"/api/v1/pov/{mock_process_model.id}/bpmn")
+
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_get_bpmn_invalid_id(self, client, mock_db_session):
+        """Returns 400 for invalid model ID format."""
+        response = await client.get("/api/v1/pov/not-a-uuid/bpmn")
+
+        assert response.status_code == 400
+
+
 class TestGetJobStatus:
     """Tests for GET /api/v1/pov/job/{job_id}."""
 

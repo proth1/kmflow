@@ -132,6 +132,14 @@ class EvidenceMapEntry(BaseModel):
     element_ids: list[str]
 
 
+class BPMNResponse(BaseModel):
+    """Response containing BPMN XML and element confidence metadata."""
+
+    model_id: str
+    bpmn_xml: str
+    element_confidences: dict[str, float] = {}
+
+
 class JobStatusResponse(BaseModel):
     """Response for job status check."""
 
@@ -445,3 +453,49 @@ async def get_contradictions(
     contradictions = list(result.scalars().all())
 
     return [_contradiction_to_response(c) for c in contradictions]
+
+
+@router.get("/{model_id}/bpmn", response_model=BPMNResponse)
+async def get_bpmn_xml(
+    model_id: str,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    """Get BPMN XML for a process model with element confidence scores.
+
+    Returns the BPMN XML string and a mapping of element names
+    to their confidence scores for visualization overlays.
+    """
+    try:
+        model_uuid = uuid.UUID(model_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid model ID format",
+        ) from None
+
+    result = await session.execute(select(ProcessModel).where(ProcessModel.id == model_uuid))
+    model = result.scalar_one_or_none()
+
+    if not model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Process model {model_id} not found",
+        )
+
+    if not model.bpmn_xml:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Process model {model_id} has no BPMN XML",
+        )
+
+    # Get element confidence scores
+    elements_result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == model_uuid))
+    elements = list(elements_result.scalars().all())
+
+    element_confidences = {elem.name: elem.confidence_score for elem in elements}
+
+    return {
+        "model_id": str(model.id),
+        "bpmn_xml": model.bpmn_xml,
+        "element_confidences": element_confidences,
+    }
