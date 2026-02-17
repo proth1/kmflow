@@ -7,6 +7,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import KPICard, { type KPIStatus } from "@/components/KPICard";
 import GapTable, { type GapEntry } from "@/components/GapTable";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
@@ -18,10 +19,6 @@ import {
   type EvidenceCoverageData,
   type ConfidenceDistributionData,
 } from "@/lib/api";
-
-interface PageParams {
-  params: { engagementId: string };
-}
 
 // Confidence level colors for the donut chart
 const CONFIDENCE_LEVEL_COLORS: Record<string, string> = {
@@ -38,8 +35,9 @@ function getKPIStatus(value: number, good: number, warn: number): KPIStatus {
   return "critical";
 }
 
-export default function DashboardPage({ params }: PageParams) {
-  const { engagementId } = params;
+export default function DashboardPage() {
+  const params = useParams();
+  const engagementId = params.engagementId as string;
 
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [coverage, setCoverage] = useState<EvidenceCoverageData | null>(null);

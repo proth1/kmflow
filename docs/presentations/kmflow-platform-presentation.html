@@ -686,6 +686,11 @@
       color: var(--kpmg-white);
     }
 
+    .badge-green {
+      background: #1a7a3a;
+      color: var(--kpmg-white);
+    }
+
     .badge-outline {
       background: transparent;
       border: 1px solid var(--kpmg-blue);
@@ -806,7 +811,7 @@
       <a href="#slide-24">Architecture</a>
       <a href="#slide-36">Implementation</a>
     </div>
-    <div class="nav-version">v1.0.0</div>
+    <div class="nav-version">v1.0.0 &mdash; Phase 1 Delivered</div>
   </nav>
 
   <div class="slide-indicator" id="slideIndicator"></div>
@@ -2092,39 +2097,61 @@ priority_score = (
     <!-- Slide 28: API Surface -->
     <section id="slide-28" class="slide slide-light">
       <div class="section-header">
-        <span class="badge badge-blue">API</span>
+        <span class="badge badge-green">47 Endpoints Live</span>
         <h2>API Surface Overview</h2>
       </div>
       <div class="two-col">
         <div>
-          <h3>Evidence APIs</h3>
-          <ul class="feature-list" style="font-size: 0.85rem;">
-            <li>POST /api/v1/evidence/upload</li>
-            <li>GET /api/v1/evidence/{id}</li>
-            <li>GET /api/v1/evidence?engagement_id=X</li>
-            <li>PATCH /api/v1/evidence/{id}/validate</li>
+          <h3>Engagement APIs (7)</h3>
+          <ul class="feature-list" style="font-size: 0.8rem;">
+            <li>POST /api/v1/engagements</li>
+            <li>GET /api/v1/engagements</li>
+            <li>GET/PATCH/DELETE /api/v1/engagements/{id}</li>
+            <li>GET /api/v1/engagements/{id}/dashboard</li>
+            <li>GET /api/v1/engagements/{id}/audit-logs</li>
           </ul>
-          <h3>Process POV APIs</h3>
-          <ul class="feature-list" style="font-size: 0.85rem;">
+          <h3>Evidence APIs (6)</h3>
+          <ul class="feature-list" style="font-size: 0.8rem;">
+            <li>POST /api/v1/evidence/upload</li>
+            <li>GET /api/v1/evidence &amp; /api/v1/evidence/{id}</li>
+            <li>PATCH /api/v1/evidence/{id}/validate</li>
+            <li>POST /api/v1/evidence/validate-batch</li>
+            <li>GET /api/v1/evidence/{id}/fragments</li>
+          </ul>
+          <h3>Process POV APIs (8)</h3>
+          <ul class="feature-list" style="font-size: 0.8rem;">
             <li>POST /api/v1/pov/generate</li>
-            <li>GET /api/v1/pov/{id}</li>
+            <li>GET /api/v1/pov/{id} &amp; /api/v1/pov/{id}/elements</li>
             <li>GET /api/v1/pov/{id}/evidence-map</li>
-            <li>GET /api/v1/pov/{id}/gaps</li>
+            <li>GET /api/v1/pov/{id}/gaps &amp; /contradictions</li>
+            <li>GET /api/v1/pov/{id}/bpmn</li>
+            <li>GET /api/v1/pov/job/{id}</li>
           </ul>
         </div>
         <div>
-          <h3>TOM Alignment APIs</h3>
-          <ul class="feature-list" style="font-size: 0.85rem;">
-            <li>POST /api/v1/tom</li>
-            <li>POST /api/v1/tom/{id}/align</li>
-            <li>GET /api/v1/tom/{id}/gaps</li>
-            <li>GET /api/v1/tom/{id}/recommendations</li>
-          </ul>
-          <h3>Knowledge Graph APIs</h3>
-          <ul class="feature-list" style="font-size: 0.85rem;">
-            <li>GET /api/v1/graph/query</li>
-            <li>GET /api/v1/graph/traverse</li>
+          <h3>Knowledge Graph APIs (6)</h3>
+          <ul class="feature-list" style="font-size: 0.8rem;">
+            <li>POST /api/v1/graph/build &amp; /query</li>
+            <li>GET /api/v1/graph/traverse/{id}</li>
             <li>GET /api/v1/graph/search</li>
+            <li>GET /api/v1/graph/{id}/stats &amp; /subgraph</li>
+          </ul>
+          <h3>Auth &amp; User APIs (11)</h3>
+          <ul class="feature-list" style="font-size: 0.8rem;">
+            <li>POST /api/v1/auth/token &amp; /refresh &amp; /logout</li>
+            <li>GET /api/v1/auth/me</li>
+            <li>CRUD /api/v1/users</li>
+            <li>POST/DELETE /api/v1/engagements/{id}/members</li>
+            <li>GET /api/v1/engagements/{id}/members</li>
+          </ul>
+          <h3>Shelf &amp; Dashboard APIs (9)</h3>
+          <ul class="feature-list" style="font-size: 0.8rem;">
+            <li>CRUD /api/v1/shelf-requests</li>
+            <li>GET /api/v1/shelf-requests/{id}/status</li>
+            <li>POST /api/v1/shelf-requests/{id}/intake</li>
+            <li>GET /api/v1/dashboard/{id}</li>
+            <li>GET /api/v1/dashboard/{id}/evidence-coverage</li>
+            <li>GET /api/v1/dashboard/{id}/confidence-distribution</li>
           </ul>
         </div>
       </div>
@@ -2444,31 +2471,49 @@ priority_score = (
     <!-- Slide 36: Phase 1 - Foundation -->
     <section id="slide-36" class="slide slide-light">
       <div class="section-header">
-        <span class="badge badge-blue">Phase 1</span>
-        <h2>Foundation (MVP)</h2>
+        <span class="badge badge-green">Delivered</span>
+        <h2>Foundation (MVP) &mdash; Complete</h2>
+      </div>
+      <div class="stats-grid" style="margin-bottom: 1.5rem;">
+        <div class="stat-card">
+          <div class="stat-value" style="color: var(--kpmg-blue);">47</div>
+          <div class="stat-label">API Endpoints</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: var(--kpmg-blue);">471</div>
+          <div class="stat-label">Automated Tests</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: var(--kpmg-blue);">7</div>
+          <div class="stat-label">Stories Delivered</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color: var(--kpmg-blue);">53</div>
+          <div class="stat-label">Source Modules</div>
+        </div>
       </div>
       <div class="two-col">
         <div>
-          <h3>Core Capabilities</h3>
+          <h3>Implemented Capabilities</h3>
           <ul class="feature-list">
-            <li>Engagement management (create, scope, team)</li>
-            <li>Evidence ingestion for categories 1, 5, 8 (documents, structured data, BPM models)</li>
-            <li>Shelf data request workflow</li>
-            <li>Evidence quality scoring and validation</li>
-            <li>Basic semantic relationship engine (Neo4j)</li>
-            <li>Process POV generation with LCD algorithm</li>
-            <li>Confidence scoring engine</li>
+            <li>Engagement management with CRUD, scoping, and audit logging</li>
+            <li>Evidence ingestion with multi-format upload and fragment extraction</li>
+            <li>Shelf data request workflow with status tracking</li>
+            <li>Evidence quality scoring (4-dimension model) and batch validation</li>
+            <li>Semantic relationship engine with Neo4j knowledge graph and pgvector embeddings</li>
+            <li>8-step LCD algorithm for Process POV generation</li>
+            <li>5-factor confidence scoring engine</li>
           </ul>
         </div>
         <div>
-          <h3>Deliverables</h3>
+          <h3>Delivered Artifacts</h3>
           <ul class="feature-list">
-            <li>Simple HTML process flow visualization</li>
-            <li>Evidence provenance tracking</li>
-            <li>Engagement Lead dashboard</li>
-            <li>Process Analyst dashboard</li>
-            <li>Engagement-level isolation</li>
-            <li>Authentication and audit logging</li>
+            <li>BPMN.js interactive process viewer with confidence heatmaps</li>
+            <li>Evidence provenance tracking with SUPPORTED_BY graph edges</li>
+            <li>Engagement dashboard with KPI cards, charts, and gap tables</li>
+            <li>JWT authentication with role-based access control (5 roles)</li>
+            <li>Engagement-level data isolation and security middleware</li>
+            <li>Rate limiting, security headers, and audit logging</li>
           </ul>
         </div>
       </div>

@@ -8,6 +8,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Legend from "@/components/Legend";
 import Sidebar, { type ElementDetail } from "@/components/Sidebar";
@@ -36,12 +37,9 @@ const BPMNViewer = dynamic(() => import("@/components/BPMNViewer"), {
   ),
 });
 
-interface PageParams {
-  params: { modelId: string };
-}
-
-export default function VisualizePage({ params }: PageParams) {
-  const { modelId } = params;
+export default function VisualizePage() {
+  const params = useParams();
+  const modelId = params.modelId as string;
 
   const [bpmnData, setBpmnData] = useState<BPMNData | null>(null);
   const [elements, setElements] = useState<ProcessElementData[]>([]);
