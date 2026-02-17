@@ -43,6 +43,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("key_id", name="uq_mcp_api_keys_key_id"),
     )
     op.create_index("ix_mcp_api_keys_user_id", "mcp_api_keys", ["user_id"])
+    op.create_index("ix_mcp_api_keys_user_active", "mcp_api_keys", ["user_id", "is_active"])
 
 
 def downgrade() -> None:

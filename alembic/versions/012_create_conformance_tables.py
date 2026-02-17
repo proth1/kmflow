@@ -49,6 +49,7 @@ def upgrade() -> None:
     )
     op.create_index("ix_conformance_results_engagement_id", "conformance_results", ["engagement_id"])
     op.create_index("ix_conformance_results_reference_model_id", "conformance_results", ["reference_model_id"])
+    op.create_index("ix_conformance_results_engagement_reference", "conformance_results", ["engagement_id", "reference_model_id"])
 
 
 def downgrade() -> None:
