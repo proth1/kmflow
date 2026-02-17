@@ -5,6 +5,8 @@ from __future__ import annotations
 import uuid
 
 from src.core.models import (
+    AuditAction,
+    AuditLog,
     Engagement,
     EngagementStatus,
     EvidenceCategory,
@@ -56,6 +58,31 @@ class TestEngagement:
         )
         assert "Test" in repr(engagement)
         assert "Client" in repr(engagement)
+
+    def test_team_field(self) -> None:
+        """Engagement should accept a team list."""
+        engagement = Engagement(
+            name="Team Test",
+            client="Client A",
+            business_area="Operations",
+            team=["alice@example.com", "bob@example.com"],
+        )
+        assert engagement.team == ["alice@example.com", "bob@example.com"]
+
+    def test_team_field_default(self) -> None:
+        """Team field column should have a default of list."""
+        col = Engagement.__table__.columns["team"]
+        assert col.nullable is True
+
+    def test_team_field_empty(self) -> None:
+        """Engagement team can be an empty list."""
+        engagement = Engagement(
+            name="Empty Team",
+            client="Client B",
+            business_area="Finance",
+            team=[],
+        )
+        assert engagement.team == []
 
 
 class TestEvidenceItem:
@@ -138,3 +165,47 @@ class TestEvidenceFragment:
             content="sample",
         )
         assert "TEXT" in repr(frag) or "text" in repr(frag)
+
+
+class TestAuditLog:
+    """Test suite for the AuditLog model."""
+
+    def test_audit_actions(self) -> None:
+        """All expected audit actions should be defined."""
+        actions = list(AuditAction)
+        assert len(actions) == 3
+        assert AuditAction.ENGAGEMENT_CREATED in actions
+        assert AuditAction.ENGAGEMENT_UPDATED in actions
+        assert AuditAction.ENGAGEMENT_ARCHIVED in actions
+
+    def test_create_audit_log(self) -> None:
+        """AuditLog should accept all required fields."""
+        log = AuditLog(
+            id=uuid.uuid4(),
+            engagement_id=uuid.uuid4(),
+            action=AuditAction.ENGAGEMENT_CREATED,
+            actor="test-user",
+            details='{"name": "Test"}',
+        )
+        assert log.action == AuditAction.ENGAGEMENT_CREATED
+        assert log.actor == "test-user"
+        assert log.details == '{"name": "Test"}'
+
+    def test_repr(self) -> None:
+        """AuditLog repr should include action and engagement_id."""
+        eid = uuid.uuid4()
+        log = AuditLog(
+            id=uuid.uuid4(),
+            engagement_id=eid,
+            action=AuditAction.ENGAGEMENT_UPDATED,
+            actor="system",
+        )
+        r = repr(log)
+        assert "engagement_updated" in r or "ENGAGEMENT_UPDATED" in r
+        assert str(eid) in r
+
+    def test_actor_column_default(self) -> None:
+        """The actor column should have a default of 'system'."""
+        col = AuditLog.__table__.columns["actor"]
+        assert col.default is not None
+        assert col.default.arg == "system"

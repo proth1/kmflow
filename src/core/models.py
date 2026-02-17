@@ -1,6 +1,6 @@
 """SQLAlchemy ORM models for the KMFlow platform.
 
-Core tables: engagements, evidence_items, evidence_fragments.
+Core tables: engagements, evidence_items, evidence_fragments, audit_logs.
 These match the data model from PRD Section 7.1.
 """
 
@@ -21,7 +21,7 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.database import Base
@@ -75,6 +75,14 @@ class FragmentType(enum.StrEnum):
     PROCESS_ELEMENT = "process_element"
 
 
+class AuditAction(enum.StrEnum):
+    """Audit log action types for engagement mutations."""
+
+    ENGAGEMENT_CREATED = "engagement_created"
+    ENGAGEMENT_UPDATED = "engagement_updated"
+    ENGAGEMENT_ARCHIVED = "engagement_archived"
+
+
 class Engagement(Base):
     """A consulting engagement scope."""
 
@@ -88,6 +96,7 @@ class Engagement(Base):
     status: Mapped[EngagementStatus] = mapped_column(
         Enum(EngagementStatus), default=EngagementStatus.DRAFT, nullable=False
     )
+    team: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -99,6 +108,9 @@ class Engagement(Base):
     # Relationships
     evidence_items: Mapped[list[EvidenceItem]] = relationship(
         "EvidenceItem", back_populates="engagement", cascade="all, delete-orphan"
+    )
+    audit_logs: Mapped[list[AuditLog]] = relationship(
+        "AuditLog", back_populates="engagement", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
@@ -179,3 +191,25 @@ class EvidenceFragment(Base):
 
     def __repr__(self) -> str:
         return f"<EvidenceFragment(id={self.id}, type={self.fragment_type})>"
+
+
+class AuditLog(Base):
+    """Audit log for tracking engagement mutation operations."""
+
+    __tablename__ = "audit_logs"
+    __table_args__ = (Index("ix_audit_logs_engagement_id", "engagement_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    action: Mapped[AuditAction] = mapped_column(Enum(AuditAction), nullable=False)
+    actor: Mapped[str] = mapped_column(String(255), nullable=False, default="system")
+    details: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # Relationships
+    engagement: Mapped[Engagement] = relationship("Engagement", back_populates="audit_logs")
+
+    def __repr__(self) -> str:
+        return f"<AuditLog(id={self.id}, action={self.action}, engagement_id={self.engagement_id})>"

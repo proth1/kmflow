@@ -14,7 +14,12 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from src.core.database import Base
-from src.core.models import Engagement, EvidenceFragment, EvidenceItem  # noqa: F401
+from src.core.models import (  # noqa: F401
+    AuditLog,
+    Engagement,
+    EvidenceFragment,
+    EvidenceItem,
+)
 
 # Alembic Config object
 config = context.config
