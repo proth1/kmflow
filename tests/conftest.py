@@ -119,7 +119,7 @@ async def test_app(
     from fastapi import FastAPI
     from fastapi.middleware.cors import CORSMiddleware
 
-    from src.api.routes import engagements, evidence, health, shelf_requests
+    from src.api.routes import engagements, evidence, graph, health, shelf_requests
 
     @asynccontextmanager
     async def test_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -137,6 +137,7 @@ async def test_app(
     app.include_router(engagements.router)
     app.include_router(evidence.router)
     app.include_router(shelf_requests.router)
+    app.include_router(graph.router)
 
     # Set mock state using the proper session factory mock
     app.state.db_session_factory = MockSessionFactory(mock_db_session)
