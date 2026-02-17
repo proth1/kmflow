@@ -1,0 +1,28 @@
+{
+  "name": "kmflow",
+  "version": "1.0.0",
+  "description": "AI-powered Process Intelligence platform that transforms diverse consulting evidence into confidence-scored process views, automated TOM alignment, and evidence-backed gap analysis.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test:e2e": "npx playwright test",
+    "test:e2e:headed": "npx playwright test --headed"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/proth1/kmflow.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/proth1/kmflow/issues"
+  },
+  "homepage": "https://github.com/proth1/kmflow#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
+  }
+}
