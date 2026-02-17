@@ -29,9 +29,11 @@ env/
 
 # Testing
 .coverage
+coverage.json
 htmlcov/
 .pytest_cache/
 .mypy_cache/
+test-results/
 
 # Node.js
 node_modules/
