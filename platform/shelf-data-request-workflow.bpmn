@@ -1,83 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
-  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
-  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
-  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
-  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  id="Definitions_ShelfDataRequest"
-  targetNamespace="http://bpmn.io/schema/bpmn"
-  exporter="KMFlow Platform"
-  exporterVersion="1.0.0">
-
-  <bpmn:collaboration id="Collaboration_ShelfDataRequest">
-    <bpmn:participant id="Participant_Pool" name="KMFlow Shelf Data Request" processRef="Process_ShelfDataRequest"/>
-  </bpmn:collaboration>
-
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_ShelfDataRequest" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.42.0">
   <bpmn:process id="Process_ShelfDataRequest" name="Shelf Data Request Management" isExecutable="true">
-
-    <bpmn:laneSet id="LaneSet_1">
-      <bpmn:lane id="Lane_EngagementLead" name="Engagement Lead">
-        <bpmn:flowNodeRef>StartEvent_1</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Task_DefineRequirements</bpmn:flowNodeRef>
-      </bpmn:lane>
-      <bpmn:lane id="Lane_RequestEngine" name="Request Engine">
-        <bpmn:flowNodeRef>Task_GenerateRequest</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Task_DeliverRequest</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Task_ClassifyReceived</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Gateway_Fulfillment</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Task_MarkComplete</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Task_IdentifyGaps</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>EndEvent_Fulfilled</bpmn:flowNodeRef>
-      </bpmn:lane>
-      <bpmn:lane id="Lane_Client" name="Client">
-        <bpmn:flowNodeRef>Gateway_AwaitResponse</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Event_EvidenceReceived</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Event_Timeout</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Task_SendReminder</bpmn:flowNodeRef>
-      </bpmn:lane>
-    </bpmn:laneSet>
-
-    <!-- Start Event -->
     <bpmn:startEvent id="StartEvent_1" name="Request&#10;Initiated">
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
     </bpmn:startEvent>
-
-    <!-- User Task: Define Data Requirements -->
     <bpmn:userTask id="Task_DefineRequirements" name="Define Data Requirements" camunda:candidateGroups="engagement-leads">
       <bpmn:incoming>Flow_1</bpmn:incoming>
       <bpmn:outgoing>Flow_2</bpmn:outgoing>
     </bpmn:userTask>
-
-    <!-- Service Task: Generate Request Document -->
     <bpmn:serviceTask id="Task_GenerateRequest" name="Generate Request Document" camunda:type="external" camunda:topic="kmflow.evidence.classify">
       <bpmn:incoming>Flow_2</bpmn:incoming>
       <bpmn:outgoing>Flow_3</bpmn:outgoing>
     </bpmn:serviceTask>
-
-    <!-- Send Task: Deliver Request to Client -->
-    <bpmn:sendTask id="Task_DeliverRequest" name="Deliver Request to Client">
+    <bpmn:exclusiveGateway id="Gateway_MergeDeliver">
       <bpmn:incoming>Flow_3</bpmn:incoming>
       <bpmn:incoming>Flow_GapLoop</bpmn:incoming>
+      <bpmn:outgoing>Flow_MergeToDeliver</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="Task_DeliverRequest" name="Deliver Request to Client">
+      <bpmn:incoming>Flow_MergeToDeliver</bpmn:incoming>
       <bpmn:outgoing>Flow_4</bpmn:outgoing>
     </bpmn:sendTask>
-
-    <!-- Event-Based Gateway: Await Response -->
-    <bpmn:eventBasedGateway id="Gateway_AwaitResponse" name="Await&#10;Response">
+    <bpmn:exclusiveGateway id="Gateway_MergeAwait">
       <bpmn:incoming>Flow_4</bpmn:incoming>
       <bpmn:incoming>Flow_ReminderLoop</bpmn:incoming>
+      <bpmn:outgoing>Flow_MergeToAwait</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:eventBasedGateway id="Gateway_AwaitResponse" name="Await&#10;Response">
+      <bpmn:incoming>Flow_MergeToAwait</bpmn:incoming>
       <bpmn:outgoing>Flow_EvidenceReceived</bpmn:outgoing>
       <bpmn:outgoing>Flow_Timeout</bpmn:outgoing>
     </bpmn:eventBasedGateway>
-
-    <!-- Message Intermediate Catch Event: Evidence Received -->
     <bpmn:intermediateCatchEvent id="Event_EvidenceReceived" name="Evidence&#10;Received">
       <bpmn:incoming>Flow_EvidenceReceived</bpmn:incoming>
       <bpmn:outgoing>Flow_6</bpmn:outgoing>
-      <bpmn:messageEventDefinition messageRef="Message_EvidenceReceived"/>
+      <bpmn:messageEventDefinition messageRef="Message_EvidenceReceived" />
     </bpmn:intermediateCatchEvent>
-
-    <!-- Timer Intermediate Catch Event: 7-Day Timeout -->
     <bpmn:intermediateCatchEvent id="Event_Timeout" name="7-Day&#10;Timeout">
       <bpmn:incoming>Flow_Timeout</bpmn:incoming>
       <bpmn:outgoing>Flow_7</bpmn:outgoing>
@@ -85,293 +43,191 @@
         <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P7D</bpmn:timeDuration>
       </bpmn:timerEventDefinition>
     </bpmn:intermediateCatchEvent>
-
-    <!-- Send Task: Send Follow-Up Reminder -->
     <bpmn:sendTask id="Task_SendReminder" name="Send Follow-Up Reminder">
       <bpmn:incoming>Flow_7</bpmn:incoming>
       <bpmn:outgoing>Flow_ReminderLoop</bpmn:outgoing>
     </bpmn:sendTask>
-
-    <!-- Service Task: Classify Received Evidence -->
     <bpmn:serviceTask id="Task_ClassifyReceived" name="Classify Received Evidence" camunda:type="external" camunda:topic="kmflow.evidence.classify">
       <bpmn:incoming>Flow_6</bpmn:incoming>
       <bpmn:outgoing>Flow_8</bpmn:outgoing>
     </bpmn:serviceTask>
-
-    <!-- XOR Gateway: Fulfillment Check -->
-    <bpmn:exclusiveGateway id="Gateway_Fulfillment" name="Fulfillment&#10;Check?">
+    <bpmn:exclusiveGateway id="Gateway_Fulfillment" name="Fulfilled?">
       <bpmn:incoming>Flow_8</bpmn:incoming>
       <bpmn:outgoing>Flow_Complete</bpmn:outgoing>
       <bpmn:outgoing>Flow_IdentifyGaps</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-
-    <!-- Service Task: Mark Request Complete -->
     <bpmn:serviceTask id="Task_MarkComplete" name="Mark Request Complete" camunda:type="external" camunda:topic="kmflow.request.complete">
       <bpmn:incoming>Flow_Complete</bpmn:incoming>
       <bpmn:outgoing>Flow_10</bpmn:outgoing>
     </bpmn:serviceTask>
-
-    <!-- Service Task: Identify Gaps -->
     <bpmn:serviceTask id="Task_IdentifyGaps" name="Identify Gaps" camunda:type="external" camunda:topic="kmflow.request.gaps">
       <bpmn:incoming>Flow_IdentifyGaps</bpmn:incoming>
       <bpmn:outgoing>Flow_GapLoop</bpmn:outgoing>
     </bpmn:serviceTask>
-
-    <!-- End Event: Request Fulfilled -->
     <bpmn:endEvent id="EndEvent_Fulfilled" name="Request&#10;Fulfilled">
       <bpmn:incoming>Flow_10</bpmn:incoming>
     </bpmn:endEvent>
-
-    <!-- Sequence Flows -->
-    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_DefineRequirements"/>
-    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_DefineRequirements" targetRef="Task_GenerateRequest"/>
-    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_GenerateRequest" targetRef="Task_DeliverRequest"/>
-    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_DeliverRequest" targetRef="Gateway_AwaitResponse"/>
-    <bpmn:sequenceFlow id="Flow_EvidenceReceived" sourceRef="Gateway_AwaitResponse" targetRef="Event_EvidenceReceived"/>
-    <bpmn:sequenceFlow id="Flow_Timeout" sourceRef="Gateway_AwaitResponse" targetRef="Event_Timeout"/>
-    <bpmn:sequenceFlow id="Flow_6" sourceRef="Event_EvidenceReceived" targetRef="Task_ClassifyReceived"/>
-    <bpmn:sequenceFlow id="Flow_7" sourceRef="Event_Timeout" targetRef="Task_SendReminder"/>
-    <bpmn:sequenceFlow id="Flow_ReminderLoop" sourceRef="Task_SendReminder" targetRef="Gateway_AwaitResponse"/>
-    <bpmn:sequenceFlow id="Flow_8" sourceRef="Task_ClassifyReceived" targetRef="Gateway_Fulfillment"/>
-    <bpmn:sequenceFlow id="Flow_Complete" name="&#8805; 80%" sourceRef="Gateway_Fulfillment" targetRef="Task_MarkComplete">
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_DefineRequirements" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_DefineRequirements" targetRef="Task_GenerateRequest" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_GenerateRequest" targetRef="Gateway_MergeDeliver" />
+    <bpmn:sequenceFlow id="Flow_MergeToDeliver" sourceRef="Gateway_MergeDeliver" targetRef="Task_DeliverRequest" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_DeliverRequest" targetRef="Gateway_MergeAwait" />
+    <bpmn:sequenceFlow id="Flow_MergeToAwait" sourceRef="Gateway_MergeAwait" targetRef="Gateway_AwaitResponse" />
+    <bpmn:sequenceFlow id="Flow_EvidenceReceived" sourceRef="Gateway_AwaitResponse" targetRef="Event_EvidenceReceived" />
+    <bpmn:sequenceFlow id="Flow_Timeout" sourceRef="Gateway_AwaitResponse" targetRef="Event_Timeout" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Event_EvidenceReceived" targetRef="Task_ClassifyReceived" />
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Event_Timeout" targetRef="Task_SendReminder" />
+    <bpmn:sequenceFlow id="Flow_ReminderLoop" sourceRef="Task_SendReminder" targetRef="Gateway_MergeAwait" />
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Task_ClassifyReceived" targetRef="Gateway_Fulfillment" />
+    <bpmn:sequenceFlow id="Flow_Complete" name="Yes" sourceRef="Gateway_Fulfillment" targetRef="Task_MarkComplete">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${fulfillment &gt;= 80}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_IdentifyGaps" name="&lt; 80%" sourceRef="Gateway_Fulfillment" targetRef="Task_IdentifyGaps">
+    <bpmn:sequenceFlow id="Flow_IdentifyGaps" name="No" sourceRef="Gateway_Fulfillment" targetRef="Task_IdentifyGaps">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${fulfillment &lt; 80}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_GapLoop" sourceRef="Task_IdentifyGaps" targetRef="Task_DeliverRequest"/>
-    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_MarkComplete" targetRef="EndEvent_Fulfilled"/>
-
+    <bpmn:sequenceFlow id="Flow_GapLoop" sourceRef="Task_IdentifyGaps" targetRef="Gateway_MergeDeliver" />
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_MarkComplete" targetRef="EndEvent_Fulfilled" />
   </bpmn:process>
-
-  <bpmn:message id="Message_EvidenceReceived" name="EvidenceReceived"/>
-
+  <bpmn:message id="Message_EvidenceReceived" name="EvidenceReceived" />
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
-    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_ShelfDataRequest">
-
-      <!-- Pool: 1500x700 -->
-      <bpmndi:BPMNShape id="Participant_Pool_di" bpmnElement="Participant_Pool" isHorizontal="true">
-        <dc:Bounds x="155" y="47" width="1500" height="700"/>
-      </bpmndi:BPMNShape>
-
-      <!-- Lane: Engagement Lead (top, height=190) -->
-      <bpmndi:BPMNShape id="Lane_EngagementLead_di" bpmnElement="Lane_EngagementLead" isHorizontal="true">
-        <dc:Bounds x="185" y="47" width="1470" height="190"/>
-      </bpmndi:BPMNShape>
-
-      <!-- Lane: Request Engine (middle, height=260) -->
-      <bpmndi:BPMNShape id="Lane_RequestEngine_di" bpmnElement="Lane_RequestEngine" isHorizontal="true">
-        <dc:Bounds x="185" y="237" width="1470" height="260"/>
-      </bpmndi:BPMNShape>
-
-      <!-- Lane: Client (bottom, height=250) -->
-      <bpmndi:BPMNShape id="Lane_Client_di" bpmnElement="Lane_Client" isHorizontal="true">
-        <dc:Bounds x="185" y="497" width="1470" height="250"/>
-      </bpmndi:BPMNShape>
-
-      <!-- ===== Engagement Lead Lane (y=47, height=190, center y=142) ===== -->
-
-      <!-- Start Event (36x36, center y=142 -> y=124) -->
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_ShelfDataRequest">
       <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
-        <dc:Bounds x="247" y="124" width="36" height="36"/>
+        <dc:Bounds x="180" y="132" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="237" y="167" width="55" height="27"/>
+          <dc:Bounds x="170" y="170" width="55" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-
-      <!-- Define Data Requirements (100x80, center y=142 -> y=102) -->
-      <!-- x=335 (start x=283+52) -->
       <bpmndi:BPMNShape id="Task_DefineRequirements_di" bpmnElement="Task_DefineRequirements">
-        <dc:Bounds x="335" y="102" width="100" height="80"/>
+        <dc:Bounds x="268" y="110" width="100" height="80" />
       </bpmndi:BPMNShape>
-
-      <!-- ===== Request Engine Lane (y=237, height=260, center y=367) ===== -->
-
-      <!-- Generate Request Document (100x80, center y=367 -> y=327) -->
-      <!-- x=335 (aligned with Task_DefineRequirements) -->
       <bpmndi:BPMNShape id="Task_GenerateRequest_di" bpmnElement="Task_GenerateRequest">
-        <dc:Bounds x="335" y="327" width="100" height="80"/>
+        <dc:Bounds x="420" y="110" width="100" height="80" />
       </bpmndi:BPMNShape>
-
-      <!-- Deliver Request to Client (100x80, center y=367 -> y=327) -->
-      <!-- x=487 (previous end 435 + 52 gap) -->
+      <bpmndi:BPMNShape id="Gateway_MergeDeliver_di" bpmnElement="Gateway_MergeDeliver" isMarkerVisible="true">
+        <dc:Bounds x="572" y="125" width="50" height="50" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_DeliverRequest_di" bpmnElement="Task_DeliverRequest">
-        <dc:Bounds x="487" y="327" width="100" height="80"/>
+        <dc:Bounds x="674" y="110" width="100" height="80" />
       </bpmndi:BPMNShape>
-
-      <!-- Classify Received Evidence (100x80, center y=367 -> y=327) -->
-      <!-- x=791 (after event-based gateway and message event) -->
-      <bpmndi:BPMNShape id="Task_ClassifyReceived_di" bpmnElement="Task_ClassifyReceived">
-        <dc:Bounds x="791" y="327" width="100" height="80"/>
+      <bpmndi:BPMNShape id="Gateway_MergeAwait_di" bpmnElement="Gateway_MergeAwait" isMarkerVisible="true">
+        <dc:Bounds x="826" y="125" width="50" height="50" />
       </bpmndi:BPMNShape>
-
-      <!-- Gateway: Fulfillment Check (50x50, center y=367 -> y=342) -->
-      <!-- x=943 (previous end 891 + 52 gap) -->
-      <bpmndi:BPMNShape id="Gateway_Fulfillment_di" bpmnElement="Gateway_Fulfillment" isMarkerVisible="true">
-        <dc:Bounds x="943" y="342" width="50" height="50"/>
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="931" y="304" width="75" height="27"/>
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
-
-      <!-- Mark Request Complete (100x80, center y=367 -> y=327) -->
-      <!-- x=1045 (previous end 993 + 52 gap) -->
-      <bpmndi:BPMNShape id="Task_MarkComplete_di" bpmnElement="Task_MarkComplete">
-        <dc:Bounds x="1045" y="327" width="100" height="80"/>
-      </bpmndi:BPMNShape>
-
-      <!-- Identify Gaps (100x80, positioned below gateway) -->
-      <!-- x=918 (centered under gateway: gateway center 968 - 50) -->
-      <!-- y=427 (below gateway: 392 + 35 gap) -->
-      <bpmndi:BPMNShape id="Task_IdentifyGaps_di" bpmnElement="Task_IdentifyGaps">
-        <dc:Bounds x="918" y="427" width="100" height="80"/>
-      </bpmndi:BPMNShape>
-
-      <!-- End Event: Request Fulfilled (36x36, center y=367 -> y=349) -->
-      <!-- x=1197 (previous end 1145 + 52 gap) -->
-      <bpmndi:BPMNShape id="EndEvent_Fulfilled_di" bpmnElement="EndEvent_Fulfilled">
-        <dc:Bounds x="1197" y="349" width="36" height="36"/>
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="1187" y="392" width="55" height="27"/>
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
-
-      <!-- ===== Client Lane (y=497, height=250, center y=622) ===== -->
-
-      <!-- Event-Based Gateway: Await Response (50x50, center y=622 -> y=597) -->
-      <!-- x=512 (aligned below Task_DeliverRequest center 537 - 25) -->
       <bpmndi:BPMNShape id="Gateway_AwaitResponse_di" bpmnElement="Gateway_AwaitResponse">
-        <dc:Bounds x="512" y="597" width="50" height="50"/>
+        <dc:Bounds x="928" y="125" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="510" y="654" width="55" height="27"/>
+          <dc:Bounds x="925" y="90" width="55" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-
-      <!-- Message Event: Evidence Received (36x36, center y=622 -> y=604) -->
-      <!-- x=614 (previous end 562 + 52 gap) -->
       <bpmndi:BPMNShape id="Event_EvidenceReceived_di" bpmnElement="Event_EvidenceReceived">
-        <dc:Bounds x="614" y="604" width="36" height="36"/>
+        <dc:Bounds x="1030" y="132" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="604" y="647" width="55" height="27"/>
+          <dc:Bounds x="1020" y="170" width="55" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-
-      <!-- Timer Event: 7-Day Timeout (36x36, positioned above gateway) -->
-      <!-- x=519 (centered above gateway: gateway center 537 - 18) -->
-      <!-- y=540 (above gateway: 597 - 57 gap) -->
       <bpmndi:BPMNShape id="Event_Timeout_di" bpmnElement="Event_Timeout">
-        <dc:Bounds x="519" y="540" width="36" height="36"/>
+        <dc:Bounds x="935" y="282" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="461" y="551" width="48" height="27"/>
+          <dc:Bounds x="974" y="267" width="40" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-
-      <!-- Send Follow-Up Reminder (100x80, center y=622 -> y=582) -->
-      <!-- x=360 (previous timer event, left side) -->
+      <bpmndi:BPMNShape id="Task_ClassifyReceived_di" bpmnElement="Task_ClassifyReceived">
+        <dc:Bounds x="1118" y="110" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Fulfillment_di" bpmnElement="Gateway_Fulfillment" isMarkerVisible="true">
+        <dc:Bounds x="1270" y="125" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1270" y="107" width="50" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_MarkComplete_di" bpmnElement="Task_MarkComplete">
+        <dc:Bounds x="1372" y="110" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_IdentifyGaps_di" bpmnElement="Task_IdentifyGaps">
+        <dc:Bounds x="1245" y="260" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Fulfilled_di" bpmnElement="EndEvent_Fulfilled">
+        <dc:Bounds x="1524" y="132" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1514" y="170" width="55" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_SendReminder_di" bpmnElement="Task_SendReminder">
-        <dc:Bounds x="335" y="582" width="100" height="80"/>
+        <dc:Bounds x="1030" y="260" width="100" height="80" />
       </bpmndi:BPMNShape>
-
-      <!-- ===== Sequence Flow Edges ===== -->
-
-      <!-- Flow_1: Start -> Define Requirements -->
       <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
-        <di:waypoint x="283" y="142"/>
-        <di:waypoint x="335" y="142"/>
+        <di:waypoint x="216" y="150" />
+        <di:waypoint x="268" y="150" />
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_2: Define Requirements -> Generate Request (down to Request Engine) -->
       <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
-        <di:waypoint x="385" y="182"/>
-        <di:waypoint x="385" y="327"/>
+        <di:waypoint x="368" y="150" />
+        <di:waypoint x="420" y="150" />
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_3: Generate -> Deliver -->
       <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
-        <di:waypoint x="435" y="367"/>
-        <di:waypoint x="487" y="367"/>
+        <di:waypoint x="520" y="150" />
+        <di:waypoint x="572" y="150" />
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_4: Deliver -> Await Response (down to Client) -->
+      <bpmndi:BPMNEdge id="Flow_MergeToDeliver_di" bpmnElement="Flow_MergeToDeliver">
+        <di:waypoint x="622" y="150" />
+        <di:waypoint x="674" y="150" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
-        <di:waypoint x="537" y="407"/>
-        <di:waypoint x="537" y="597"/>
+        <di:waypoint x="774" y="150" />
+        <di:waypoint x="826" y="150" />
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_EvidenceReceived: Await -> Evidence Received -->
+      <bpmndi:BPMNEdge id="Flow_MergeToAwait_di" bpmnElement="Flow_MergeToAwait">
+        <di:waypoint x="876" y="150" />
+        <di:waypoint x="928" y="150" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_EvidenceReceived_di" bpmnElement="Flow_EvidenceReceived">
-        <di:waypoint x="562" y="622"/>
-        <di:waypoint x="614" y="622"/>
+        <di:waypoint x="978" y="150" />
+        <di:waypoint x="1030" y="150" />
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_Timeout: Await -> Timeout (up) -->
       <bpmndi:BPMNEdge id="Flow_Timeout_di" bpmnElement="Flow_Timeout">
-        <di:waypoint x="537" y="597"/>
-        <di:waypoint x="537" y="576"/>
+        <di:waypoint x="953" y="175" />
+        <di:waypoint x="953" y="282" />
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_6: Evidence Received -> Classify (up to Request Engine) -->
       <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
-        <di:waypoint x="650" y="622"/>
-        <di:waypoint x="841" y="622"/>
-        <di:waypoint x="841" y="407"/>
+        <di:waypoint x="1066" y="150" />
+        <di:waypoint x="1118" y="150" />
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_7: Timeout -> Send Reminder (left) -->
       <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7">
-        <di:waypoint x="519" y="558"/>
-        <di:waypoint x="460" y="558"/>
-        <di:waypoint x="460" y="622"/>
-        <di:waypoint x="435" y="622"/>
+        <di:waypoint x="971" y="300" />
+        <di:waypoint x="1030" y="300" />
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_ReminderLoop: Send Reminder -> Await Response (loop back right) -->
       <bpmndi:BPMNEdge id="Flow_ReminderLoop_di" bpmnElement="Flow_ReminderLoop">
-        <di:waypoint x="385" y="662"/>
-        <di:waypoint x="385" y="710"/>
-        <di:waypoint x="537" y="710"/>
-        <di:waypoint x="537" y="647"/>
+        <di:waypoint x="1080" y="340" />
+        <di:waypoint x="1080" y="370" />
+        <di:waypoint x="851" y="370" />
+        <di:waypoint x="851" y="175" />
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_8: Classify -> Fulfillment Check -->
       <bpmndi:BPMNEdge id="Flow_8_di" bpmnElement="Flow_8">
-        <di:waypoint x="891" y="367"/>
-        <di:waypoint x="943" y="367"/>
+        <di:waypoint x="1218" y="150" />
+        <di:waypoint x="1270" y="150" />
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_Complete: Fulfillment >= 80% -> Mark Complete -->
       <bpmndi:BPMNEdge id="Flow_Complete_di" bpmnElement="Flow_Complete">
-        <di:waypoint x="993" y="367"/>
-        <di:waypoint x="1045" y="367"/>
+        <di:waypoint x="1320" y="150" />
+        <di:waypoint x="1372" y="150" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1000" y="349" width="40" height="14"/>
+          <dc:Bounds x="1338" y="132" width="18" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_IdentifyGaps: Fulfillment < 80% -> Identify Gaps (down) -->
       <bpmndi:BPMNEdge id="Flow_IdentifyGaps_di" bpmnElement="Flow_IdentifyGaps">
-        <di:waypoint x="968" y="392"/>
-        <di:waypoint x="968" y="427"/>
+        <di:waypoint x="1295" y="175" />
+        <di:waypoint x="1295" y="260" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="975" y="405" width="35" height="14"/>
+          <dc:Bounds x="1303" y="210" width="15" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_GapLoop: Identify Gaps -> Deliver Request (loop back left through margin) -->
       <bpmndi:BPMNEdge id="Flow_GapLoop_di" bpmnElement="Flow_GapLoop">
-        <di:waypoint x="918" y="467"/>
-        <di:waypoint x="280" y="467"/>
-        <di:waypoint x="280" y="367"/>
-        <di:waypoint x="487" y="367"/>
+        <di:waypoint x="1295" y="340" />
+        <di:waypoint x="1295" y="420" />
+        <di:waypoint x="597" y="420" />
+        <di:waypoint x="597" y="175" />
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_10: Mark Complete -> End -->
       <bpmndi:BPMNEdge id="Flow_10_di" bpmnElement="Flow_10">
-        <di:waypoint x="1145" y="367"/>
-        <di:waypoint x="1197" y="367"/>
+        <di:waypoint x="1472" y="150" />
+        <di:waypoint x="1524" y="150" />
       </bpmndi:BPMNEdge>
-
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
-
 </bpmn:definitions>
