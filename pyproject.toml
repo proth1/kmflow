@@ -1,0 +1,104 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kmflow"
+version = "0.1.0"
+description = "AI-powered Process Intelligence platform for consulting engagements"
+requires-python = ">=3.12"
+license = {text = "Proprietary"}
+authors = [
+    {name = "KMFlow Team"},
+]
+
+dependencies = [
+    # Web framework
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    # Database - PostgreSQL
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30.0",
+    "alembic>=1.14.0",
+    "pgvector>=0.3.6",
+    # Database - Neo4j
+    "neo4j>=5.27.0",
+    # Cache / Queue
+    "redis[hiredis]>=5.2.0",
+    # Configuration
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+    # Utilities
+    "python-dotenv>=1.0.1",
+    "httpx>=0.28.0",
+    "python-multipart>=0.0.18",
+]
+
+[project.optional-dependencies]
+dev = [
+    # Testing
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.25.0",
+    "pytest-cov>=6.0.0",
+    "httpx>=0.28.0",
+    # Linting and formatting
+    "ruff>=0.8.0",
+    "mypy>=1.14.0",
+    # Type stubs
+    "types-redis>=4.6.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+]
+ignore = [
+    "E501",  # line length handled by formatter
+    "B008",  # Depends() in function args is standard FastAPI pattern
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = [
+    "neo4j.*",
+    "pgvector.*",
+    "redis.*",
+]
+ignore_missing_imports = true
