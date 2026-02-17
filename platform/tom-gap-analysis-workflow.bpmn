@@ -1,19 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
-  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
-  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
-  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
-  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  id="Definitions_TOMGapAnalysis"
-  targetNamespace="http://bpmn.io/schema/bpmn"
-  exporter="KMFlow Platform"
-  exporterVersion="1.0.0">
-
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_TOMGapAnalysis" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.42.0">
   <bpmn:collaboration id="Collaboration_TOMGap">
     <bpmn:participant id="Participant_TOMGap" name="KMFlow TOM Gap Analysis" processRef="Process_TOMGapAnalysis" />
   </bpmn:collaboration>
-
   <bpmn:process id="Process_TOMGapAnalysis" isExecutable="true">
     <bpmn:laneSet id="LaneSet_TOMGap">
       <bpmn:lane id="Lane_TOMEngine" name="TOM Engine">
@@ -35,63 +24,50 @@
         <bpmn:flowNodeRef>EndEvent_Complete</bpmn:flowNodeRef>
       </bpmn:lane>
     </bpmn:laneSet>
-
     <bpmn:startEvent id="StartEvent_TOMRequested" name="TOM&#10;Analysis&#10;Requested">
       <bpmn:outgoing>Flow_01</bpmn:outgoing>
     </bpmn:startEvent>
-
     <bpmn:serviceTask id="Task_LoadTOM" name="Load Target Operating Model" camunda:type="external" camunda:topic="kmflow.tom.align">
       <bpmn:incoming>Flow_01</bpmn:incoming>
       <bpmn:outgoing>Flow_02</bpmn:outgoing>
     </bpmn:serviceTask>
-
     <bpmn:serviceTask id="Task_LoadAsIs" name="Load As-Is Process Views" camunda:type="external" camunda:topic="kmflow.tom.align">
       <bpmn:incoming>Flow_02</bpmn:incoming>
       <bpmn:outgoing>Flow_03</bpmn:outgoing>
     </bpmn:serviceTask>
-
     <bpmn:subProcess id="SubProcess_Alignment" name="Multi-Dimensional&#10;Alignment">
       <bpmn:incoming>Flow_03</bpmn:incoming>
       <bpmn:outgoing>Flow_04</bpmn:outgoing>
-
       <bpmn:startEvent id="StartEvent_Align">
         <bpmn:outgoing>Flow_Sub01</bpmn:outgoing>
       </bpmn:startEvent>
-
       <bpmn:task id="Task_AlignPeople" name="Align People">
         <bpmn:incoming>Flow_Sub01</bpmn:incoming>
         <bpmn:outgoing>Flow_Sub02</bpmn:outgoing>
       </bpmn:task>
-
       <bpmn:task id="Task_AlignProcess" name="Align Process">
         <bpmn:incoming>Flow_Sub02</bpmn:incoming>
         <bpmn:outgoing>Flow_Sub03</bpmn:outgoing>
       </bpmn:task>
-
       <bpmn:task id="Task_AlignTechnology" name="Align Technology">
         <bpmn:incoming>Flow_Sub03</bpmn:incoming>
         <bpmn:outgoing>Flow_Sub04</bpmn:outgoing>
       </bpmn:task>
-
       <bpmn:task id="Task_AlignData" name="Align Data">
         <bpmn:incoming>Flow_Sub04</bpmn:incoming>
         <bpmn:outgoing>Flow_Sub05</bpmn:outgoing>
       </bpmn:task>
-
       <bpmn:task id="Task_AlignGovernance" name="Align Governance">
         <bpmn:incoming>Flow_Sub05</bpmn:incoming>
         <bpmn:outgoing>Flow_Sub06</bpmn:outgoing>
       </bpmn:task>
-
       <bpmn:task id="Task_AlignOrganization" name="Align Organization">
         <bpmn:incoming>Flow_Sub06</bpmn:incoming>
         <bpmn:outgoing>Flow_Sub07</bpmn:outgoing>
       </bpmn:task>
-
       <bpmn:endEvent id="EndEvent_Align">
         <bpmn:incoming>Flow_Sub07</bpmn:incoming>
       </bpmn:endEvent>
-
       <bpmn:sequenceFlow id="Flow_Sub01" sourceRef="StartEvent_Align" targetRef="Task_AlignPeople" />
       <bpmn:sequenceFlow id="Flow_Sub02" sourceRef="Task_AlignPeople" targetRef="Task_AlignProcess" />
       <bpmn:sequenceFlow id="Flow_Sub03" sourceRef="Task_AlignProcess" targetRef="Task_AlignTechnology" />
@@ -100,48 +76,39 @@
       <bpmn:sequenceFlow id="Flow_Sub06" sourceRef="Task_AlignGovernance" targetRef="Task_AlignOrganization" />
       <bpmn:sequenceFlow id="Flow_Sub07" sourceRef="Task_AlignOrganization" targetRef="EndEvent_Align" />
     </bpmn:subProcess>
-
     <bpmn:serviceTask id="Task_IdentifyGaps" name="Identify Gaps" camunda:type="external" camunda:topic="kmflow.tom.gaps">
       <bpmn:incoming>Flow_04</bpmn:incoming>
       <bpmn:incoming>Flow_Feedback</bpmn:incoming>
       <bpmn:outgoing>Flow_07</bpmn:outgoing>
     </bpmn:serviceTask>
-
     <bpmn:serviceTask id="Task_GenerateRationale" name="Generate LLM Rationale" camunda:type="external" camunda:topic="kmflow.llm.rationale">
       <bpmn:incoming>Flow_07</bpmn:incoming>
       <bpmn:outgoing>Flow_08</bpmn:outgoing>
     </bpmn:serviceTask>
-
     <bpmn:serviceTask id="Task_CalculatePriority" name="Calculate Gap Priority" camunda:type="external" camunda:topic="kmflow.tom.gaps">
       <bpmn:incoming>Flow_08</bpmn:incoming>
       <bpmn:outgoing>Flow_09</bpmn:outgoing>
     </bpmn:serviceTask>
-
     <bpmn:serviceTask id="Task_CompileReport" name="Compile Gap Report" camunda:type="external" camunda:topic="kmflow.tom.gaps">
       <bpmn:incoming>Flow_09</bpmn:incoming>
       <bpmn:outgoing>Flow_10</bpmn:outgoing>
     </bpmn:serviceTask>
-
     <bpmn:userTask id="Task_ReviewGaps" name="Review Gap Analysis" camunda:candidateGroups="engagement-leads">
       <bpmn:incoming>Flow_10</bpmn:incoming>
       <bpmn:outgoing>Flow_11</bpmn:outgoing>
     </bpmn:userTask>
-
     <bpmn:exclusiveGateway id="Gateway_Approved" name="Approved?">
       <bpmn:incoming>Flow_11</bpmn:incoming>
       <bpmn:outgoing>Flow_12_Yes</bpmn:outgoing>
       <bpmn:outgoing>Flow_12_No</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-
     <bpmn:userTask id="Task_ProvideFeedback" name="Provide Feedback" camunda:candidateGroups="engagement-leads">
       <bpmn:incoming>Flow_12_No</bpmn:incoming>
       <bpmn:outgoing>Flow_Feedback</bpmn:outgoing>
     </bpmn:userTask>
-
     <bpmn:endEvent id="EndEvent_Complete" name="Analysis&#10;Complete">
       <bpmn:incoming>Flow_12_Yes</bpmn:incoming>
     </bpmn:endEvent>
-
     <bpmn:sequenceFlow id="Flow_01" sourceRef="StartEvent_TOMRequested" targetRef="Task_LoadTOM" />
     <bpmn:sequenceFlow id="Flow_02" sourceRef="Task_LoadTOM" targetRef="Task_LoadAsIs" />
     <bpmn:sequenceFlow id="Flow_03" sourceRef="Task_LoadAsIs" targetRef="SubProcess_Alignment" />
@@ -155,137 +122,101 @@
     <bpmn:sequenceFlow id="Flow_12_No" name="No" sourceRef="Gateway_Approved" targetRef="Task_ProvideFeedback" />
     <bpmn:sequenceFlow id="Flow_Feedback" sourceRef="Task_ProvideFeedback" targetRef="Task_IdentifyGaps" />
   </bpmn:process>
-
   <bpmndi:BPMNDiagram id="BPMNDiagram_TOMGap">
     <bpmndi:BPMNPlane id="BPMNPlane_TOMGap" bpmnElement="Collaboration_TOMGap">
-
       <bpmndi:BPMNShape id="Participant_TOMGap_di" bpmnElement="Participant_TOMGap" isHorizontal="true">
-        <dc:Bounds x="155" y="47" width="1600" height="760" />
+        <dc:Bounds x="155" y="47" width="1275" height="760" />
       </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="Lane_TOMEngine_di" bpmnElement="Lane_TOMEngine" isHorizontal="true">
-        <dc:Bounds x="185" y="47" width="1570" height="230" />
-      </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="Lane_GapAnalysis_di" bpmnElement="Lane_GapAnalysis" isHorizontal="true">
-        <dc:Bounds x="185" y="277" width="1570" height="230" />
-      </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Lane_EngagementLead_di" bpmnElement="Lane_EngagementLead" isHorizontal="true">
-        <dc:Bounds x="185" y="507" width="1570" height="300" />
+        <dc:Bounds x="185" y="507" width="1245" height="300" />
       </bpmndi:BPMNShape>
-
-      <!-- Lane 1: TOM Engine -->
+      <bpmndi:BPMNShape id="Lane_GapAnalysis_di" bpmnElement="Lane_GapAnalysis" isHorizontal="true">
+        <dc:Bounds x="185" y="277" width="1245" height="230" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_TOMEngine_di" bpmnElement="Lane_TOMEngine" isHorizontal="true">
+        <dc:Bounds x="185" y="47" width="1245" height="230" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="StartEvent_TOMRequested_di" bpmnElement="StartEvent_TOMRequested">
         <dc:Bounds x="247" y="144" width="36" height="36" />
         <bpmndi:BPMNLabel>
           <dc:Bounds x="232" y="187" width="66" height="40" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Task_LoadTOM_di" bpmnElement="Task_LoadTOM">
         <dc:Bounds x="335" y="122" width="100" height="80" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Task_LoadAsIs_di" bpmnElement="Task_LoadAsIs">
         <dc:Bounds x="487" y="122" width="100" height="80" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="SubProcess_Alignment_di" bpmnElement="SubProcess_Alignment" isExpanded="false">
         <dc:Bounds x="639" y="122" width="100" height="80" />
       </bpmndi:BPMNShape>
-
-      <!-- Lane 2: Gap Analysis - starts below Alignment, flows right -->
       <bpmndi:BPMNShape id="Task_IdentifyGaps_di" bpmnElement="Task_IdentifyGaps">
         <dc:Bounds x="639" y="352" width="100" height="80" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Task_GenerateRationale_di" bpmnElement="Task_GenerateRationale">
         <dc:Bounds x="791" y="352" width="100" height="80" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Task_CalculatePriority_di" bpmnElement="Task_CalculatePriority">
         <dc:Bounds x="943" y="352" width="100" height="80" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Task_CompileReport_di" bpmnElement="Task_CompileReport">
         <dc:Bounds x="1095" y="352" width="100" height="80" />
       </bpmndi:BPMNShape>
-
-      <!-- Lane 3: Engagement Lead - ReviewGaps below CompileReport -->
       <bpmndi:BPMNShape id="Task_ReviewGaps_di" bpmnElement="Task_ReviewGaps">
         <dc:Bounds x="1095" y="582" width="100" height="80" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Gateway_Approved_di" bpmnElement="Gateway_Approved" isMarkerVisible="true">
         <dc:Bounds x="1247" y="597" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1245" y="654" width="54" height="14" />
+          <dc:Bounds x="1245" y="573" width="54" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-
+      <bpmndi:BPMNShape id="Task_ProvideFeedback_di" bpmnElement="Task_ProvideFeedback">
+        <dc:Bounds x="1222" y="707" width="100" height="80" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="EndEvent_Complete_di" bpmnElement="EndEvent_Complete">
         <dc:Bounds x="1349" y="604" width="36" height="36" />
         <bpmndi:BPMNLabel>
           <dc:Bounds x="1335" y="647" width="64" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="Task_ProvideFeedback_di" bpmnElement="Task_ProvideFeedback">
-        <dc:Bounds x="1222" y="707" width="100" height="80" />
-      </bpmndi:BPMNShape>
-
-      <!-- Lane 1 flows: straight left to right -->
       <bpmndi:BPMNEdge id="Flow_01_di" bpmnElement="Flow_01">
         <di:waypoint x="283" y="162" />
         <di:waypoint x="335" y="162" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_02_di" bpmnElement="Flow_02">
         <di:waypoint x="435" y="162" />
         <di:waypoint x="487" y="162" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_03_di" bpmnElement="Flow_03">
         <di:waypoint x="587" y="162" />
         <di:waypoint x="639" y="162" />
       </bpmndi:BPMNEdge>
-
-      <!-- Alignment -> IdentifyGaps: nearly vertical drop -->
       <bpmndi:BPMNEdge id="Flow_04_di" bpmnElement="Flow_04">
         <di:waypoint x="689" y="202" />
         <di:waypoint x="689" y="352" />
       </bpmndi:BPMNEdge>
-
-      <!-- Lane 2 flows: straight left to right -->
       <bpmndi:BPMNEdge id="Flow_07_di" bpmnElement="Flow_07">
         <di:waypoint x="739" y="392" />
         <di:waypoint x="791" y="392" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_08_di" bpmnElement="Flow_08">
         <di:waypoint x="891" y="392" />
         <di:waypoint x="943" y="392" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_09_di" bpmnElement="Flow_09">
         <di:waypoint x="1043" y="392" />
         <di:waypoint x="1095" y="392" />
       </bpmndi:BPMNEdge>
-
-      <!-- CompileReport -> ReviewGaps: pure vertical drop -->
       <bpmndi:BPMNEdge id="Flow_10_di" bpmnElement="Flow_10">
         <di:waypoint x="1145" y="432" />
         <di:waypoint x="1145" y="582" />
       </bpmndi:BPMNEdge>
-
-      <!-- ReviewGaps -> Gateway: straight right -->
       <bpmndi:BPMNEdge id="Flow_11_di" bpmnElement="Flow_11">
         <di:waypoint x="1195" y="622" />
         <di:waypoint x="1247" y="622" />
       </bpmndi:BPMNEdge>
-
-      <!-- Yes: Gateway -> End, straight right -->
       <bpmndi:BPMNEdge id="Flow_12_Yes_di" bpmnElement="Flow_12_Yes">
         <di:waypoint x="1297" y="622" />
         <di:waypoint x="1349" y="622" />
@@ -293,8 +224,6 @@
           <dc:Bounds x="1311" y="604" width="20" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-
-      <!-- No: Gateway -> ProvideFeedback, vertical drop -->
       <bpmndi:BPMNEdge id="Flow_12_No_di" bpmnElement="Flow_12_No">
         <di:waypoint x="1272" y="647" />
         <di:waypoint x="1272" y="707" />
@@ -302,88 +231,68 @@
           <dc:Bounds x="1280" y="670" width="15" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-
-      <!-- Feedback: ProvideFeedback -> left through empty space, up left margin, right to IdentifyGaps -->
       <bpmndi:BPMNEdge id="Flow_Feedback_di" bpmnElement="Flow_Feedback">
         <di:waypoint x="1222" y="747" />
         <di:waypoint x="582" y="747" />
         <di:waypoint x="582" y="392" />
         <di:waypoint x="639" y="392" />
       </bpmndi:BPMNEdge>
-
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
-
   <bpmndi:BPMNDiagram id="BPMNDiagram_SubAlignment">
     <bpmndi:BPMNPlane id="BPMNPlane_SubAlignment" bpmnElement="SubProcess_Alignment">
-
       <bpmndi:BPMNShape id="StartEvent_Align_di" bpmnElement="StartEvent_Align">
         <dc:Bounds x="50" y="75" width="36" height="36" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Task_AlignPeople_di" bpmnElement="Task_AlignPeople">
         <dc:Bounds x="136" y="53" width="100" height="80" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Task_AlignProcess_di" bpmnElement="Task_AlignProcess">
         <dc:Bounds x="288" y="53" width="100" height="80" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Task_AlignTechnology_di" bpmnElement="Task_AlignTechnology">
         <dc:Bounds x="440" y="53" width="100" height="80" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Task_AlignData_di" bpmnElement="Task_AlignData">
         <dc:Bounds x="592" y="53" width="100" height="80" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Task_AlignGovernance_di" bpmnElement="Task_AlignGovernance">
         <dc:Bounds x="744" y="53" width="100" height="80" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Task_AlignOrganization_di" bpmnElement="Task_AlignOrganization">
         <dc:Bounds x="896" y="53" width="100" height="80" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="EndEvent_Align_di" bpmnElement="EndEvent_Align">
         <dc:Bounds x="1048" y="75" width="36" height="36" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNEdge id="Flow_Sub01_di" bpmnElement="Flow_Sub01">
         <di:waypoint x="86" y="93" />
         <di:waypoint x="136" y="93" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_Sub02_di" bpmnElement="Flow_Sub02">
         <di:waypoint x="236" y="93" />
         <di:waypoint x="288" y="93" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_Sub03_di" bpmnElement="Flow_Sub03">
         <di:waypoint x="388" y="93" />
         <di:waypoint x="440" y="93" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_Sub04_di" bpmnElement="Flow_Sub04">
         <di:waypoint x="540" y="93" />
         <di:waypoint x="592" y="93" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_Sub05_di" bpmnElement="Flow_Sub05">
         <di:waypoint x="692" y="93" />
         <di:waypoint x="744" y="93" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_Sub06_di" bpmnElement="Flow_Sub06">
         <di:waypoint x="844" y="93" />
         <di:waypoint x="896" y="93" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_Sub07_di" bpmnElement="Flow_Sub07">
         <di:waypoint x="996" y="93" />
         <di:waypoint x="1048" y="93" />
       </bpmndi:BPMNEdge>
-
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>
