@@ -74,7 +74,7 @@ def generate_dedup_key(
     Alerts with the same dedup key within a window are considered duplicates.
     """
     parts = f"{engagement_id}:{category}:{affected_element or 'global'}"
-    return hashlib.md5(parts.encode()).hexdigest()[:16]
+    return hashlib.md5(parts.encode(), usedforsecurity=False).hexdigest()[:16]
 
 
 def create_alert_from_deviations(

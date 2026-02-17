@@ -15,7 +15,9 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from src.core.auth import get_current_user
 from src.core.config import Settings, get_settings
+from src.core.models import User, UserRole
 
 
 @pytest.fixture
@@ -143,6 +145,7 @@ async def test_app(
         integrations, pov, regulatory, reports, shelf_requests, tom, users,
     )
     from src.api.routes import monitoring, patterns, portal, simulations, websocket
+    from src.api.routes import conformance, copilot
     from src.mcp.server import router as mcp_router
 
     @asynccontextmanager
@@ -188,6 +191,10 @@ async def test_app(
     app.include_router(portal.router)
     app.include_router(mcp_router)
 
+    # Phase 4 routes
+    app.include_router(copilot.router)
+    app.include_router(conformance.router)
+
     # Override get_settings so auth uses the same JWT secret as tests
     test_settings_instance = Settings(
         jwt_secret_key="test-secret-key-for-tests",
@@ -198,6 +205,17 @@ async def test_app(
         monitoring_worker_count=0,
     )
     app.dependency_overrides[get_settings] = lambda: test_settings_instance
+
+    # Override get_current_user so all require_permission deps resolve
+    # without needing a real JWT token in test requests.
+    # Auth-specific tests clear this override via their own fixture.
+    mock_user = MagicMock(spec=User)
+    mock_user.id = uuid.uuid4()
+    mock_user.email = "testuser@kmflow.dev"
+    mock_user.name = "Test User"
+    mock_user.role = UserRole.PLATFORM_ADMIN  # Admin so all permissions pass
+    mock_user.is_active = True
+    app.dependency_overrides[get_current_user] = lambda: mock_user
 
     # Set mock state using the proper session factory mock
     app.state.db_session_factory = MockSessionFactory(mock_db_session)

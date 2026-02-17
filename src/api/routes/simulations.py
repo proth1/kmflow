@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import AsyncGenerator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -16,7 +16,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.models import SimulationResult, SimulationScenario, SimulationStatus, SimulationType
+from src.core.models import SimulationResult, SimulationScenario, SimulationStatus, SimulationType, User
+from src.core.permissions import require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +114,7 @@ def _result_to_response(r: SimulationResult) -> dict[str, Any]:
 async def create_scenario(
     payload: ScenarioCreate,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:create")),
 ) -> dict[str, Any]:
     """Create a new simulation scenario."""
     scenario = SimulationScenario(
@@ -134,6 +136,7 @@ async def list_scenarios(
     engagement_id: UUID | None = None,
     simulation_type: SimulationType | None = None,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """List simulation scenarios."""
     query = select(SimulationScenario)
@@ -150,6 +153,7 @@ async def list_scenarios(
 async def get_scenario(
     scenario_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """Get a scenario by ID."""
     result = await session.execute(
@@ -168,6 +172,7 @@ async def get_scenario(
 async def run_scenario(
     scenario_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:run")),
 ) -> dict[str, Any]:
     """Run a simulation scenario."""
     result = await session.execute(
@@ -179,7 +184,7 @@ async def run_scenario(
 
     from src.simulation.engine import run_simulation
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     sim_result = SimulationResult(
         scenario_id=scenario_id,
         status=SimulationStatus.RUNNING,
@@ -201,7 +206,7 @@ async def run_scenario(
         sim_result.status = SimulationStatus.COMPLETED
         sim_result.metrics = engine_result.get("metrics")
         sim_result.execution_time_ms = engine_result.get("execution_time_ms", 0)
-        sim_result.completed_at = datetime.now(timezone.utc)
+        sim_result.completed_at = datetime.now(UTC)
 
         # Generate impact analysis
         from src.simulation.impact import calculate_cascading_impact
@@ -215,7 +220,7 @@ async def run_scenario(
     except Exception as e:
         sim_result.status = SimulationStatus.FAILED
         sim_result.error_message = str(e)
-        sim_result.completed_at = datetime.now(timezone.utc)
+        sim_result.completed_at = datetime.now(UTC)
 
     await session.commit()
     await session.refresh(sim_result)
@@ -229,6 +234,7 @@ async def run_scenario(
 async def list_results(
     scenario_id: UUID | None = None,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """List simulation results."""
     query = select(SimulationResult)
@@ -243,6 +249,7 @@ async def list_results(
 async def get_result(
     result_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """Get a simulation result by ID."""
     result = await session.execute(

@@ -6,7 +6,7 @@ for real-time dashboard consumption via WebSocket.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -27,7 +27,7 @@ def deviation_event(
         "magnitude": magnitude,
         "affected_element": affected_element,
         "description": description,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
@@ -46,7 +46,7 @@ def alert_event(
         "severity": severity,
         "title": title,
         "description": description,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
@@ -63,7 +63,7 @@ def monitoring_status_event(
         "job_id": job_id,
         "status": status,
         "message": message,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
@@ -80,5 +80,5 @@ def collection_complete_event(
         "job_id": job_id,
         "records_collected": records_collected,
         "errors": errors or [],
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }

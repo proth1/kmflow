@@ -55,7 +55,7 @@ def _hash_based_embedding(text_input: str, dimension: int = EMBEDDING_DIMENSION)
         for i in range(len(normalized) - ngram_size + 1):
             ngram = normalized[i : i + ngram_size]
             # Hash the n-gram to get a deterministic index and value
-            h = hashlib.md5(ngram.encode()).digest()
+            h = hashlib.md5(ngram.encode(), usedforsecurity=False).digest()
             # Use first 4 bytes for index, next 4 for value
             idx = struct.unpack("<I", h[:4])[0] % dimension
             val = struct.unpack("<f", h[4:8])[0]

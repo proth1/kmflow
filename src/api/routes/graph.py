@@ -15,6 +15,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.models import User
+from src.core.permissions import require_permission
 from src.semantic.builder import KnowledgeGraphBuilder
 from src.semantic.embeddings import EmbeddingService
 from src.semantic.graph import (
@@ -151,6 +153,7 @@ async def build_graph(
     payload: BuildRequest,
     session: AsyncSession = Depends(get_session),
     builder: KnowledgeGraphBuilder = Depends(get_builder),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """Trigger knowledge graph construction for an engagement.
 
@@ -192,6 +195,7 @@ async def build_graph(
 async def execute_query(
     payload: CypherQueryRequest,
     graph_service: KnowledgeGraphService = Depends(get_graph_service),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> list[dict[str, Any]]:
     """Execute a read-only Cypher query against the knowledge graph.
 
@@ -224,6 +228,7 @@ async def traverse_graph(
     depth: int = 2,
     relationship_types: str | None = None,
     graph_service: KnowledgeGraphService = Depends(get_graph_service),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> list[dict[str, Any]]:
     """Traverse the knowledge graph from a starting node.
 
@@ -263,6 +268,7 @@ async def semantic_search(
     top_k: int = 10,
     engagement_id: UUID | None = None,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> list[dict[str, Any]]:
     """Search the knowledge graph using semantic similarity.
 
@@ -296,6 +302,7 @@ async def semantic_search(
 async def get_graph_stats(
     engagement_id: UUID,
     graph_service: KnowledgeGraphService = Depends(get_graph_service),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """Get statistics for an engagement's knowledge graph.
 
@@ -314,6 +321,7 @@ async def get_graph_stats(
 async def get_engagement_subgraph(
     engagement_id: UUID,
     graph_service: KnowledgeGraphService = Depends(get_graph_service),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """Get the full knowledge graph for an engagement as JSON.
 

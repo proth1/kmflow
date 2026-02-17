@@ -7,7 +7,6 @@ push via Redis Pub/Sub. Can be extended with email, Slack, etc.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 import redis.asyncio as aioredis
 

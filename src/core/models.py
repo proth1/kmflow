@@ -971,6 +971,7 @@ class IntegrationConnection(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="configured", nullable=False)
     config_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    encrypted_config: Mapped[str | None] = mapped_column(Text, nullable=True)
     field_mappings: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_sync_records: Mapped[int] = mapped_column(default=0, nullable=False)
@@ -1242,3 +1243,88 @@ class SimulationResult(Base):
 
     def __repr__(self) -> str:
         return f"<SimulationResult(id={self.id}, status={self.status})>"
+
+
+# =============================================================================
+# Phase 4: MCP API Key Persistence
+# =============================================================================
+
+
+class MCPAPIKey(Base):
+    """DB-persisted MCP API key for external tool access."""
+
+    __tablename__ = "mcp_api_keys"
+    __table_args__ = (
+        UniqueConstraint("key_id", name="uq_mcp_api_keys_key_id"),
+        Index("ix_mcp_api_keys_user_id", "user_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    key_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    key_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    client_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped[User] = relationship("User")
+
+    def __repr__(self) -> str:
+        return f"<MCPAPIKey(id={self.id}, key_id='{self.key_id}', client='{self.client_name}')>"
+
+
+# =============================================================================
+# Phase 4: Conformance Checking
+# =============================================================================
+
+
+class ReferenceProcessModel(Base):
+    """BPMN reference model for conformance checking."""
+
+    __tablename__ = "reference_process_models"
+    __table_args__ = (Index("ix_reference_process_models_industry", "industry"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(512), nullable=False)
+    industry: Mapped[str] = mapped_column(String(255), nullable=False)
+    process_area: Mapped[str] = mapped_column(String(255), nullable=False)
+    bpmn_xml: Mapped[str] = mapped_column(Text, nullable=False)
+    graph_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<ReferenceProcessModel(id={self.id}, name='{self.name}')>"
+
+
+class ConformanceResult(Base):
+    """Output of a conformance check between observed and reference models."""
+
+    __tablename__ = "conformance_results"
+    __table_args__ = (
+        Index("ix_conformance_results_engagement_id", "engagement_id"),
+        Index("ix_conformance_results_reference_model_id", "reference_model_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    reference_model_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("reference_process_models.id", ondelete="CASCADE"), nullable=False
+    )
+    pov_model_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("process_models.id", ondelete="SET NULL"), nullable=True
+    )
+    fitness_score: Mapped[float] = mapped_column(Float, nullable=False)
+    precision_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    deviations: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    engagement: Mapped[Engagement] = relationship("Engagement")
+    reference_model: Mapped[ReferenceProcessModel] = relationship("ReferenceProcessModel")
+
+    def __repr__(self) -> str:
+        return f"<ConformanceResult(id={self.id}, fitness={self.fitness_score})>"

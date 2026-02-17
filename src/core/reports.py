@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import func, select
@@ -22,7 +22,6 @@ from src.core.models import (
     GapAnalysisResult,
     Policy,
     Regulation,
-    TargetOperatingModel,
 )
 
 logger = logging.getLogger(__name__)
@@ -98,7 +97,7 @@ class ReportEngine:
                 "status": str(engagement.status),
             },
             report_type="engagement_summary",
-            generated_at=datetime.now(timezone.utc).isoformat(),
+            generated_at=datetime.now(UTC).isoformat(),
             data={
                 "evidence_count": evidence_count,
                 "evidence_by_category": evidence_by_category,
@@ -161,7 +160,7 @@ class ReportEngine:
                 "client": engagement.client,
             },
             report_type="gap_analysis",
-            generated_at=datetime.now(timezone.utc).isoformat(),
+            generated_at=datetime.now(UTC).isoformat(),
             data={
                 "gaps": gap_data,
                 "total_gaps": len(gap_data),
@@ -213,7 +212,7 @@ class ReportEngine:
                 "client": engagement.client,
             },
             report_type="governance_overlay",
-            generated_at=datetime.now(timezone.utc).isoformat(),
+            generated_at=datetime.now(UTC).isoformat(),
             data={
                 "policy_count": len(policies),
                 "control_count": len(controls),

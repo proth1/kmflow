@@ -7,7 +7,6 @@ linking discovered processes to target operating model specifications.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from src.core.models import TOMDimension
 from src.semantic.bridges.process_evidence import BridgeResult

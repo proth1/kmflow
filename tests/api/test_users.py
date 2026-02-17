@@ -18,9 +18,16 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from httpx import AsyncClient
 
-from src.core.auth import create_access_token, hash_password
+from src.core.auth import create_access_token, get_current_user, hash_password
 from src.core.config import Settings
 from src.core.models import Engagement, EngagementMember, EngagementStatus, User, UserRole
+
+
+@pytest.fixture(autouse=True)
+def _restore_real_auth(test_app):
+    """Remove the global get_current_user override so user tests use real JWT flow."""
+    test_app.dependency_overrides.pop(get_current_user, None)
+    yield
 
 # ---------------------------------------------------------------------------
 # Helpers

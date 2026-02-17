@@ -6,17 +6,19 @@ access control, and embedding-based search.
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import AsyncGenerator
 from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.models import PatternAccessRule, PatternCategory, PatternLibraryEntry
+from src.core.models import PatternAccessRule, PatternCategory, PatternLibraryEntry, User
+from src.core.permissions import require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +36,15 @@ class PatternCreate(BaseModel):
     data: dict[str, Any] | None = None
     industry: str | None = None
     tags: list[str] | None = None
+
+    @field_validator("data")
+    @classmethod
+    def validate_data_size(cls, v: dict[str, Any] | None) -> dict[str, Any] | None:
+        if v is not None:
+            serialized = json.dumps(v)
+            if len(serialized.encode()) > 1_048_576:
+                raise ValueError("Pattern data exceeds maximum size of 1MB")
+        return v
 
 
 class PatternUpdate(BaseModel):
@@ -119,6 +130,7 @@ def _pattern_to_response(p: PatternLibraryEntry) -> dict[str, Any]:
 async def create_pattern(
     payload: PatternCreate,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("patterns:create")),
 ) -> dict[str, Any]:
     """Create a new pattern in the library."""
     from src.patterns.anonymizer import anonymize_pattern_data
@@ -147,6 +159,7 @@ async def list_patterns(
     limit: int = 50,
     offset: int = 0,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("patterns:read")),
 ) -> dict[str, Any]:
     """List patterns with optional filters."""
     query = select(PatternLibraryEntry)
@@ -165,6 +178,7 @@ async def list_patterns(
 async def get_pattern(
     pattern_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("patterns:read")),
 ) -> dict[str, Any]:
     """Get a pattern by ID."""
     result = await session.execute(
@@ -181,6 +195,7 @@ async def update_pattern(
     pattern_id: UUID,
     payload: PatternUpdate,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("patterns:create")),
 ) -> dict[str, Any]:
     """Update a pattern."""
     result = await session.execute(
@@ -208,6 +223,7 @@ async def update_pattern(
 async def delete_pattern(
     pattern_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("patterns:create")),
 ) -> None:
     """Delete a pattern."""
     result = await session.execute(
@@ -224,6 +240,7 @@ async def delete_pattern(
 async def search_patterns(
     payload: PatternSearchRequest,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("patterns:read")),
 ) -> dict[str, Any]:
     """Search patterns by text query, industry, and categories."""
     query = select(PatternLibraryEntry)
@@ -243,6 +260,7 @@ async def apply_pattern(
     pattern_id: UUID,
     payload: PatternApplyRequest,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("patterns:apply")),
 ) -> dict[str, Any]:
     """Apply a pattern to an engagement (increments usage count)."""
     result = await session.execute(
@@ -262,6 +280,7 @@ async def apply_pattern(
 async def create_access_rule(
     payload: AccessRuleCreate,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("patterns:create")),
 ) -> dict[str, Any]:
     """Grant an engagement access to a pattern."""
     rule = PatternAccessRule(
