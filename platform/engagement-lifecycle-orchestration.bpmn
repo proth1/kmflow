@@ -1,19 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
-  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
-  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
-  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
-  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  id="Definitions_Engagement"
-  targetNamespace="http://bpmn.io/schema/bpmn"
-  exporter="KMFlow Platform"
-  exporterVersion="1.0.0">
-
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Engagement" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.42.0">
   <bpmn:collaboration id="Collaboration_Engagement">
     <bpmn:participant id="Participant_Engagement" name="KMFlow Engagement Lifecycle" processRef="Process_EngagementLifecycle" />
   </bpmn:collaboration>
-
   <bpmn:process id="Process_EngagementLifecycle" isExecutable="true">
     <bpmn:laneSet id="LaneSet_Engagement">
       <bpmn:lane id="Lane_EngagementManagement" name="Engagement Management">
@@ -30,188 +19,153 @@
         <bpmn:flowNodeRef>CallActivity_ContinuousMonitoring</bpmn:flowNodeRef>
       </bpmn:lane>
       <bpmn:lane id="Lane_DeliverableGeneration" name="Deliverable Generation">
+        <bpmn:flowNodeRef>Gateway_0rzk0dn</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_GenerateReport</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Gateway_Phase3Required</bpmn:flowNodeRef>
       </bpmn:lane>
     </bpmn:laneSet>
-
     <bpmn:startEvent id="StartEvent_Created" name="Engagement&#10;Created">
       <bpmn:outgoing>Flow_01</bpmn:outgoing>
     </bpmn:startEvent>
-
     <bpmn:userTask id="Task_ConfigureEngagement" name="Configure Engagement" camunda:candidateGroups="engagement-leads">
       <bpmn:incoming>Flow_01</bpmn:incoming>
       <bpmn:outgoing>Flow_02</bpmn:outgoing>
     </bpmn:userTask>
-
     <bpmn:callActivity id="CallActivity_EvidenceCollection" name="Evidence&#10;Collection" calledElement="Process_EvidenceCollection">
       <bpmn:incoming>Flow_02</bpmn:incoming>
       <bpmn:outgoing>Flow_03</bpmn:outgoing>
     </bpmn:callActivity>
-
     <bpmn:callActivity id="CallActivity_POVGeneration" name="POV&#10;Generation" calledElement="Process_POVGeneration">
       <bpmn:incoming>Flow_03</bpmn:incoming>
       <bpmn:outgoing>Flow_04</bpmn:outgoing>
     </bpmn:callActivity>
-
     <bpmn:exclusiveGateway id="Gateway_Phase2Required" name="Phase 2&#10;Required?">
       <bpmn:incoming>Flow_04</bpmn:incoming>
       <bpmn:outgoing>Flow_05_Yes</bpmn:outgoing>
       <bpmn:outgoing>Flow_05_No</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-
     <bpmn:callActivity id="CallActivity_TOMAlignment" name="TOM&#10;Alignment" calledElement="Process_TOMAlignment">
       <bpmn:incoming>Flow_05_Yes</bpmn:incoming>
       <bpmn:outgoing>Flow_06</bpmn:outgoing>
     </bpmn:callActivity>
-
-    <bpmn:serviceTask id="Task_GenerateReport" name="Generate Engagement Report" camunda:type="external" camunda:topic="kmflow.report.generate">
-      <bpmn:incoming>Flow_05_No</bpmn:incoming>
-      <bpmn:incoming>Flow_06</bpmn:incoming>
-      <bpmn:outgoing>Flow_07</bpmn:outgoing>
-    </bpmn:serviceTask>
-
-    <bpmn:exclusiveGateway id="Gateway_Phase3Required" name="Phase 3&#10;Required?">
-      <bpmn:incoming>Flow_07</bpmn:incoming>
-      <bpmn:outgoing>Flow_08_Yes</bpmn:outgoing>
-      <bpmn:outgoing>Flow_08_No</bpmn:outgoing>
-    </bpmn:exclusiveGateway>
-
-    <bpmn:callActivity id="CallActivity_ContinuousMonitoring" name="Continuous&#10;Monitoring" calledElement="Process_ContinuousMonitoring">
-      <bpmn:incoming>Flow_08_Yes</bpmn:incoming>
-      <bpmn:outgoing>Flow_09</bpmn:outgoing>
-    </bpmn:callActivity>
-
-    <bpmn:userTask id="Task_CloseEngagement" name="Close Engagement" camunda:candidateGroups="engagement-leads">
-      <bpmn:incoming>Flow_08_No</bpmn:incoming>
-      <bpmn:incoming>Flow_09</bpmn:incoming>
-      <bpmn:outgoing>Flow_10</bpmn:outgoing>
-    </bpmn:userTask>
-
-    <bpmn:endEvent id="EndEvent_Closed" name="Engagement&#10;Closed">
-      <bpmn:incoming>Flow_10</bpmn:incoming>
-    </bpmn:endEvent>
-
     <bpmn:sequenceFlow id="Flow_01" sourceRef="StartEvent_Created" targetRef="Task_ConfigureEngagement" />
     <bpmn:sequenceFlow id="Flow_02" sourceRef="Task_ConfigureEngagement" targetRef="CallActivity_EvidenceCollection" />
     <bpmn:sequenceFlow id="Flow_03" sourceRef="CallActivity_EvidenceCollection" targetRef="CallActivity_POVGeneration" />
     <bpmn:sequenceFlow id="Flow_04" sourceRef="CallActivity_POVGeneration" targetRef="Gateway_Phase2Required" />
     <bpmn:sequenceFlow id="Flow_05_Yes" name="Yes" sourceRef="Gateway_Phase2Required" targetRef="CallActivity_TOMAlignment" />
-    <bpmn:sequenceFlow id="Flow_05_No" name="No" sourceRef="Gateway_Phase2Required" targetRef="Task_GenerateReport" />
-    <bpmn:sequenceFlow id="Flow_06" sourceRef="CallActivity_TOMAlignment" targetRef="Task_GenerateReport" />
+    <bpmn:sequenceFlow id="Flow_05_No" name="No" sourceRef="Gateway_Phase2Required" targetRef="Gateway_0rzk0dn" />
+    <bpmn:sequenceFlow id="Flow_06" sourceRef="CallActivity_TOMAlignment" targetRef="Gateway_0rzk0dn" />
     <bpmn:sequenceFlow id="Flow_07" sourceRef="Task_GenerateReport" targetRef="Gateway_Phase3Required" />
     <bpmn:sequenceFlow id="Flow_08_Yes" name="Yes" sourceRef="Gateway_Phase3Required" targetRef="CallActivity_ContinuousMonitoring" />
     <bpmn:sequenceFlow id="Flow_08_No" name="No" sourceRef="Gateway_Phase3Required" targetRef="Task_CloseEngagement" />
     <bpmn:sequenceFlow id="Flow_09" sourceRef="CallActivity_ContinuousMonitoring" targetRef="Task_CloseEngagement" />
     <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_CloseEngagement" targetRef="EndEvent_Closed" />
+    <bpmn:exclusiveGateway id="Gateway_0rzk0dn">
+      <bpmn:incoming>Flow_06</bpmn:incoming>
+      <bpmn:incoming>Flow_05_No</bpmn:incoming>
+      <bpmn:outgoing>Flow_1ieh0cz</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_1ieh0cz" sourceRef="Gateway_0rzk0dn" targetRef="Task_GenerateReport" />
+    <bpmn:serviceTask id="Task_GenerateReport" name="Generate Engagement Report" camunda:type="external" camunda:topic="kmflow.report.generate">
+      <bpmn:incoming>Flow_1ieh0cz</bpmn:incoming>
+      <bpmn:outgoing>Flow_07</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_Phase3Required" name="Phase 3&#10;Required?">
+      <bpmn:incoming>Flow_07</bpmn:incoming>
+      <bpmn:outgoing>Flow_08_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_08_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:callActivity id="CallActivity_ContinuousMonitoring" name="Continuous&#10;Monitoring" calledElement="Process_ContinuousMonitoring">
+      <bpmn:incoming>Flow_08_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_09</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:userTask id="Task_CloseEngagement" name="Close Engagement" camunda:candidateGroups="engagement-leads">
+      <bpmn:incoming>Flow_08_No</bpmn:incoming>
+      <bpmn:incoming>Flow_09</bpmn:incoming>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="EndEvent_Closed" name="Engagement&#10;Closed">
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+    </bpmn:endEvent>
   </bpmn:process>
-
   <bpmndi:BPMNDiagram id="BPMNDiagram_Engagement">
     <bpmndi:BPMNPlane id="BPMNPlane_Engagement" bpmnElement="Collaboration_Engagement">
       <bpmndi:BPMNShape id="Participant_Engagement_di" bpmnElement="Participant_Engagement" isHorizontal="true">
-        <dc:Bounds x="155" y="47" width="1570" height="630" />
+        <dc:Bounds x="155" y="47" width="1445" height="630" />
       </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="Lane_EngagementManagement_di" bpmnElement="Lane_EngagementManagement" isHorizontal="true">
-        <dc:Bounds x="185" y="47" width="1540" height="210" />
-      </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="Lane_CoreProcessing_di" bpmnElement="Lane_CoreProcessing" isHorizontal="true">
-        <dc:Bounds x="185" y="257" width="1540" height="210" />
-      </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Lane_DeliverableGeneration_di" bpmnElement="Lane_DeliverableGeneration" isHorizontal="true">
-        <dc:Bounds x="185" y="467" width="1540" height="210" />
+        <dc:Bounds x="185" y="467" width="1415" height="210" />
       </bpmndi:BPMNShape>
-
-      <!-- Lane 1: Engagement Management -->
+      <bpmndi:BPMNShape id="Lane_CoreProcessing_di" bpmnElement="Lane_CoreProcessing" isHorizontal="true">
+        <dc:Bounds x="185" y="257" width="1415" height="210" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_EngagementManagement_di" bpmnElement="Lane_EngagementManagement" isHorizontal="true">
+        <dc:Bounds x="185" y="47" width="1415" height="210" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="StartEvent_Created_di" bpmnElement="StartEvent_Created">
         <dc:Bounds x="247" y="134" width="36" height="36" />
         <bpmndi:BPMNLabel>
           <dc:Bounds x="237" y="177" width="56" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Task_ConfigureEngagement_di" bpmnElement="Task_ConfigureEngagement">
         <dc:Bounds x="335" y="112" width="100" height="80" />
       </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="Task_CloseEngagement_di" bpmnElement="Task_CloseEngagement">
-        <dc:Bounds x="1437" y="112" width="100" height="80" />
-      </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="EndEvent_Closed_di" bpmnElement="EndEvent_Closed">
-        <dc:Bounds x="1589" y="134" width="36" height="36" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="1579" y="177" width="56" height="27" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
-
-      <!-- Lane 2: Core Processing -->
       <bpmndi:BPMNShape id="CallActivity_EvidenceCollection_di" bpmnElement="CallActivity_EvidenceCollection">
         <dc:Bounds x="335" y="322" width="100" height="80" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="CallActivity_POVGeneration_di" bpmnElement="CallActivity_POVGeneration">
         <dc:Bounds x="487" y="322" width="100" height="80" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Gateway_Phase2Required_di" bpmnElement="Gateway_Phase2Required" isMarkerVisible="true">
         <dc:Bounds x="639" y="337" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="635" y="394" width="58" height="27" />
+          <dc:Bounds x="634" y="306" width="51" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="CallActivity_TOMAlignment_di" bpmnElement="CallActivity_TOMAlignment">
         <dc:Bounds x="741" y="322" width="100" height="80" />
       </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="CallActivity_ContinuousMonitoring_di" bpmnElement="CallActivity_ContinuousMonitoring">
-        <dc:Bounds x="1437" y="322" width="100" height="80" />
+      <bpmndi:BPMNShape id="Gateway_0rzk0dn_di" bpmnElement="Gateway_0rzk0dn" isMarkerVisible="true">
+        <dc:Bounds x="766" y="547" width="50" height="50" />
       </bpmndi:BPMNShape>
-
-      <!-- Lane 3: Deliverable Generation -->
       <bpmndi:BPMNShape id="Task_GenerateReport_di" bpmnElement="Task_GenerateReport">
-        <dc:Bounds x="893" y="532" width="100" height="80" />
+        <dc:Bounds x="860" y="532" width="100" height="80" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Gateway_Phase3Required_di" bpmnElement="Gateway_Phase3Required" isMarkerVisible="true">
-        <dc:Bounds x="1045" y="547" width="50" height="50" />
+        <dc:Bounds x="1005" y="547" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1041" y="604" width="58" height="27" />
+          <dc:Bounds x="1005" y="604" width="51" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-
-      <!-- Lane 1 flows -->
+      <bpmndi:BPMNShape id="CallActivity_ContinuousMonitoring_di" bpmnElement="CallActivity_ContinuousMonitoring">
+        <dc:Bounds x="1150" y="322" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CloseEngagement_di" bpmnElement="Task_CloseEngagement">
+        <dc:Bounds x="1360" y="112" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Closed_di" bpmnElement="EndEvent_Closed">
+        <dc:Bounds x="1512" y="134" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1499" y="177" width="63" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_01_di" bpmnElement="Flow_01">
         <di:waypoint x="283" y="152" />
         <di:waypoint x="335" y="152" />
       </bpmndi:BPMNEdge>
-
-      <bpmndi:BPMNEdge id="Flow_10_di" bpmnElement="Flow_10">
-        <di:waypoint x="1537" y="152" />
-        <di:waypoint x="1589" y="152" />
-      </bpmndi:BPMNEdge>
-
-      <!-- ConfigureEngagement -> EvidenceCollection: vertical drop -->
       <bpmndi:BPMNEdge id="Flow_02_di" bpmnElement="Flow_02">
         <di:waypoint x="385" y="192" />
         <di:waypoint x="385" y="322" />
       </bpmndi:BPMNEdge>
-
-      <!-- Lane 2 flows: straight left to right -->
       <bpmndi:BPMNEdge id="Flow_03_di" bpmnElement="Flow_03">
         <di:waypoint x="435" y="362" />
         <di:waypoint x="487" y="362" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_04_di" bpmnElement="Flow_04">
         <di:waypoint x="587" y="362" />
         <di:waypoint x="639" y="362" />
       </bpmndi:BPMNEdge>
-
-      <!-- Gateway Phase2Required: Yes path straight right to TOMAlignment -->
       <bpmndi:BPMNEdge id="Flow_05_Yes_di" bpmnElement="Flow_05_Yes">
         <di:waypoint x="689" y="362" />
         <di:waypoint x="741" y="362" />
@@ -219,56 +173,51 @@
           <dc:Bounds x="703" y="344" width="20" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-
-      <!-- Gateway Phase2Required: No path - down then left to GenerateReport -->
       <bpmndi:BPMNEdge id="Flow_05_No_di" bpmnElement="Flow_05_No">
         <di:waypoint x="664" y="387" />
         <di:waypoint x="664" y="572" />
-        <di:waypoint x="893" y="572" />
+        <di:waypoint x="766" y="572" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="672" y="477" width="15" height="14" />
+          <dc:Bounds x="672" y="503" width="15" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-
-      <!-- TOMAlignment -> GenerateReport: down then right -->
       <bpmndi:BPMNEdge id="Flow_06_di" bpmnElement="Flow_06">
         <di:waypoint x="791" y="402" />
-        <di:waypoint x="791" y="572" />
-        <di:waypoint x="893" y="572" />
+        <di:waypoint x="791" y="547" />
       </bpmndi:BPMNEdge>
-
-      <!-- GenerateReport -> Gateway Phase3Required: straight right -->
       <bpmndi:BPMNEdge id="Flow_07_di" bpmnElement="Flow_07">
-        <di:waypoint x="993" y="572" />
-        <di:waypoint x="1045" y="572" />
+        <di:waypoint x="960" y="572" />
+        <di:waypoint x="1005" y="572" />
       </bpmndi:BPMNEdge>
-
-      <!-- Gateway Phase3Required: Yes path - up and right to ContinuousMonitoring -->
       <bpmndi:BPMNEdge id="Flow_08_Yes_di" bpmnElement="Flow_08_Yes">
-        <di:waypoint x="1070" y="547" />
-        <di:waypoint x="1070" y="362" />
-        <di:waypoint x="1437" y="362" />
+        <di:waypoint x="1030" y="547" />
+        <di:waypoint x="1030" y="362" />
+        <di:waypoint x="1150" y="362" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1078" y="450" width="20" height="14" />
+          <dc:Bounds x="1039" y="503" width="18" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-
-      <!-- Gateway Phase3Required: No path - right along margin to CloseEngagement -->
       <bpmndi:BPMNEdge id="Flow_08_No_di" bpmnElement="Flow_08_No">
-        <di:waypoint x="1095" y="572" />
-        <di:waypoint x="1487" y="572" />
-        <di:waypoint x="1487" y="192" />
+        <di:waypoint x="1055" y="572" />
+        <di:waypoint x="1410" y="572" />
+        <di:waypoint x="1410" y="192" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1107" y="554" width="15" height="14" />
+          <dc:Bounds x="1066" y="554" width="15" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-
-      <!-- ContinuousMonitoring -> CloseEngagement: up through margin -->
       <bpmndi:BPMNEdge id="Flow_09_di" bpmnElement="Flow_09">
-        <di:waypoint x="1487" y="322" />
-        <di:waypoint x="1487" y="192" />
+        <di:waypoint x="1200" y="322" />
+        <di:waypoint x="1200" y="152" />
+        <di:waypoint x="1360" y="152" />
       </bpmndi:BPMNEdge>
-
+      <bpmndi:BPMNEdge id="Flow_10_di" bpmnElement="Flow_10">
+        <di:waypoint x="1460" y="152" />
+        <di:waypoint x="1512" y="152" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1ieh0cz_di" bpmnElement="Flow_1ieh0cz">
+        <di:waypoint x="816" y="572" />
+        <di:waypoint x="860" y="572" />
+      </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>
