@@ -1,83 +1,100 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
-  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
-  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
-  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
-  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  id="Definitions_1"
-  targetNamespace="http://bpmn.io/schema/bpmn"
-  exporter="KMFlow Platform"
-  exporterVersion="1.0.0">
-
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.42.0">
   <bpmn:collaboration id="Collaboration_Evidence">
     <bpmn:participant id="Participant_Evidence" name="KMFlow Evidence Collection" processRef="Process_Evidence" />
   </bpmn:collaboration>
-
   <bpmn:process id="Process_Evidence" isExecutable="true">
-
-    <!-- Lane: Engagement Lead -->
     <bpmn:laneSet id="LaneSet_1">
       <bpmn:lane id="Lane_EngagementLead" name="Engagement Lead">
         <bpmn:flowNodeRef>StartEvent_1</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_Upload</bpmn:flowNodeRef>
       </bpmn:lane>
-
-      <!-- Lane: Evidence Processing Engine -->
       <bpmn:lane id="Lane_ProcessingEngine" name="Evidence Processing Engine">
-        <bpmn:flowNodeRef>Task_Classify</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Gateway_ParallelFork</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Subprocess_FormatParsing</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Subprocess_QualityScoring</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Gateway_ParallelJoin</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Gateway_QualityThreshold</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_13lmtvz</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Classify</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_AutoApprove</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Task_ActivateEvidence</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>EndEvent_Active</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_1kzqckk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ActivateEvidence</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Subprocess_FormatParsing</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Subprocess_QualityScoring</bpmn:flowNodeRef>
       </bpmn:lane>
-
-      <!-- Lane: Process Analyst -->
       <bpmn:lane id="Lane_ProcessAnalyst" name="Process Analyst">
         <bpmn:flowNodeRef>Task_ReviewQuality</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Gateway_ValidationDecision</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>EndEvent_Rejected</bpmn:flowNodeRef>
       </bpmn:lane>
-
-      <!-- Lane: Client -->
       <bpmn:lane id="Lane_Client" name="Client">
         <bpmn:flowNodeRef>Task_ProvideAdditional</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Task_SendFollowUp</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_004p822</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>BoundaryEvent_Timer</bpmn:flowNodeRef>
       </bpmn:lane>
     </bpmn:laneSet>
-
-    <!-- Start Event -->
-    <bpmn:startEvent id="StartEvent_1" name="Evidence&#10;Submitted">
-      <bpmn:outgoing>Flow_1</bpmn:outgoing>
-    </bpmn:startEvent>
-
-    <!-- Engagement Lead Lane -->
-    <bpmn:userTask id="Task_Upload" name="Upload Evidence" camunda:candidateGroups="engagement-leads">
-      <bpmn:incoming>Flow_1</bpmn:incoming>
-      <bpmn:outgoing>Flow_2</bpmn:outgoing>
-    </bpmn:userTask>
-
-    <!-- Evidence Processing Engine Lane -->
-    <bpmn:serviceTask id="Task_Classify" name="Classify Evidence" camunda:type="external" camunda:topic="kmflow.evidence.classify">
-      <bpmn:incoming>Flow_2</bpmn:incoming>
-      <bpmn:incoming>Flow_FromClient</bpmn:incoming>
-      <bpmn:outgoing>Flow_3</bpmn:outgoing>
-    </bpmn:serviceTask>
-
-    <bpmn:parallelGateway id="Gateway_ParallelFork" name="Process&#10;Formats">
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Upload" targetRef="Gateway_13lmtvz" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_Classify" targetRef="Gateway_ParallelFork" />
+    <bpmn:sequenceFlow id="Flow_4a" sourceRef="Gateway_ParallelFork" targetRef="Subprocess_FormatParsing" />
+    <bpmn:sequenceFlow id="Flow_4b" sourceRef="Gateway_ParallelFork" targetRef="Subprocess_QualityScoring" />
+    <bpmn:sequenceFlow id="Flow_5a" sourceRef="Subprocess_FormatParsing" targetRef="Gateway_ParallelJoin" />
+    <bpmn:sequenceFlow id="Flow_5b" sourceRef="Subprocess_QualityScoring" targetRef="Gateway_ParallelJoin" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Gateway_ParallelJoin" targetRef="Gateway_QualityThreshold" />
+    <bpmn:sequenceFlow id="Flow_HighQuality" name="Score &#62;= 0.7" sourceRef="Gateway_QualityThreshold" targetRef="Task_AutoApprove">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${qualityScore &gt;= 0.7}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_LowQuality" name="Score &#60; 0.7" sourceRef="Gateway_QualityThreshold" targetRef="Task_ReviewQuality">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${qualityScore &lt; 0.7}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_ToActivate1" sourceRef="Task_AutoApprove" targetRef="Gateway_1kzqckk" />
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Task_ActivateEvidence" targetRef="EndEvent_Active" />
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Task_ReviewQuality" targetRef="Gateway_ValidationDecision" />
+    <bpmn:sequenceFlow id="Flow_ApprovedByAnalyst" name="Approved" sourceRef="Gateway_ValidationDecision" targetRef="Gateway_1kzqckk">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${validationDecision == 'approved'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Rejected" name="Rejected" sourceRef="Gateway_ValidationDecision" targetRef="EndEvent_Rejected">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${validationDecision == 'rejected'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_RequestAdditional" name="Request Additional Evidence" sourceRef="Gateway_ValidationDecision" targetRef="Task_ProvideAdditional">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${validationDecision == 'requestAdditional'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_FromClient" sourceRef="Task_ProvideAdditional" targetRef="Gateway_13lmtvz" />
+    <bpmn:parallelGateway id="Gateway_ParallelFork">
       <bpmn:incoming>Flow_3</bpmn:incoming>
       <bpmn:outgoing>Flow_4a</bpmn:outgoing>
       <bpmn:outgoing>Flow_4b</bpmn:outgoing>
     </bpmn:parallelGateway>
-
+    <bpmn:parallelGateway id="Gateway_ParallelJoin">
+      <bpmn:incoming>Flow_5a</bpmn:incoming>
+      <bpmn:incoming>Flow_5b</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:exclusiveGateway id="Gateway_QualityThreshold" name="Quality&#10;Threshold?">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_HighQuality</bpmn:outgoing>
+      <bpmn:outgoing>Flow_LowQuality</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gateway_13lmtvz">
+      <bpmn:incoming>Flow_FromClient</bpmn:incoming>
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_0uv7g2g</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_0uv7g2g" sourceRef="Gateway_13lmtvz" targetRef="Task_Classify" />
+    <bpmn:serviceTask id="Task_Classify" name="Classify Evidence" camunda:type="external" camunda:topic="kmflow.evidence.classify">
+      <bpmn:incoming>Flow_0uv7g2g</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:startEvent id="StartEvent_1" name="Evidence&#10;Submitted">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_Upload" name="Upload Evidence" camunda:candidateGroups="engagement-leads">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_Upload" />
     <bpmn:subProcess id="Subprocess_FormatParsing" name="Format-Specific Parsing">
       <bpmn:incoming>Flow_4a</bpmn:incoming>
       <bpmn:outgoing>Flow_5a</bpmn:outgoing>
-
       <bpmn:startEvent id="Start_FormatParsing">
         <bpmn:outgoing>Flow_FP1</bpmn:outgoing>
       </bpmn:startEvent>
@@ -96,17 +113,22 @@
       <bpmn:endEvent id="End_FormatParsing">
         <bpmn:incoming>Flow_FP4</bpmn:incoming>
       </bpmn:endEvent>
-
       <bpmn:sequenceFlow id="Flow_FP1" sourceRef="Start_FormatParsing" targetRef="Task_DetectFormat" />
       <bpmn:sequenceFlow id="Flow_FP2" sourceRef="Task_DetectFormat" targetRef="Task_ExtractContent" />
       <bpmn:sequenceFlow id="Flow_FP3" sourceRef="Task_ExtractContent" targetRef="Task_GenerateFragments" />
       <bpmn:sequenceFlow id="Flow_FP4" sourceRef="Task_GenerateFragments" targetRef="End_FormatParsing" />
     </bpmn:subProcess>
-
+    <bpmn:serviceTask id="Task_AutoApprove" name="Auto-Approve Evidence" camunda:type="external" camunda:topic="kmflow.evidence.approve">
+      <bpmn:incoming>Flow_HighQuality</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToActivate1</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_ReviewQuality" name="Review Evidence Quality" camunda:candidateGroups="process-analysts">
+      <bpmn:incoming>Flow_LowQuality</bpmn:incoming>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+    </bpmn:userTask>
     <bpmn:subProcess id="Subprocess_QualityScoring" name="Quality Scoring">
       <bpmn:incoming>Flow_4b</bpmn:incoming>
       <bpmn:outgoing>Flow_5b</bpmn:outgoing>
-
       <bpmn:startEvent id="Start_QualityScoring">
         <bpmn:outgoing>Flow_QS1</bpmn:outgoing>
       </bpmn:startEvent>
@@ -125,436 +147,318 @@
       <bpmn:endEvent id="End_QualityScoring">
         <bpmn:incoming>Flow_QS4</bpmn:incoming>
       </bpmn:endEvent>
-
       <bpmn:sequenceFlow id="Flow_QS1" sourceRef="Start_QualityScoring" targetRef="Task_ComputeCompleteness" />
       <bpmn:sequenceFlow id="Flow_QS2" sourceRef="Task_ComputeCompleteness" targetRef="Task_ScoreQuality" />
       <bpmn:sequenceFlow id="Flow_QS3" sourceRef="Task_ScoreQuality" targetRef="Task_GenerateReport" />
       <bpmn:sequenceFlow id="Flow_QS4" sourceRef="Task_GenerateReport" targetRef="End_QualityScoring" />
     </bpmn:subProcess>
-
-    <bpmn:parallelGateway id="Gateway_ParallelJoin">
-      <bpmn:incoming>Flow_5a</bpmn:incoming>
-      <bpmn:incoming>Flow_5b</bpmn:incoming>
-      <bpmn:outgoing>Flow_6</bpmn:outgoing>
-    </bpmn:parallelGateway>
-
-    <bpmn:exclusiveGateway id="Gateway_QualityThreshold" name="Quality&#10;Threshold?">
-      <bpmn:incoming>Flow_6</bpmn:incoming>
-      <bpmn:outgoing>Flow_HighQuality</bpmn:outgoing>
-      <bpmn:outgoing>Flow_LowQuality</bpmn:outgoing>
-    </bpmn:exclusiveGateway>
-
-    <bpmn:serviceTask id="Task_AutoApprove" name="Auto-Approve Evidence" camunda:type="external" camunda:topic="kmflow.evidence.approve">
-      <bpmn:incoming>Flow_HighQuality</bpmn:incoming>
-      <bpmn:outgoing>Flow_ToActivate1</bpmn:outgoing>
-    </bpmn:serviceTask>
-
-    <bpmn:serviceTask id="Task_ActivateEvidence" name="Activate Evidence" camunda:type="external" camunda:topic="kmflow.evidence.score">
-      <bpmn:incoming>Flow_ToActivate1</bpmn:incoming>
-      <bpmn:incoming>Flow_ApprovedByAnalyst</bpmn:incoming>
-      <bpmn:outgoing>Flow_8</bpmn:outgoing>
-    </bpmn:serviceTask>
-
-    <bpmn:endEvent id="EndEvent_Active" name="Evidence&#10;Active">
-      <bpmn:incoming>Flow_8</bpmn:incoming>
-    </bpmn:endEvent>
-
-    <!-- Process Analyst Lane -->
-    <bpmn:userTask id="Task_ReviewQuality" name="Review Evidence Quality" camunda:candidateGroups="process-analysts">
-      <bpmn:incoming>Flow_LowQuality</bpmn:incoming>
-      <bpmn:outgoing>Flow_9</bpmn:outgoing>
-    </bpmn:userTask>
-
-    <bpmn:boundaryEvent id="BoundaryEvent_Timer" name="7 Days" cancelActivity="false" attachedToRef="Task_ReviewQuality">
-      <bpmn:outgoing>Flow_ToFollowUp</bpmn:outgoing>
-      <bpmn:timerEventDefinition>
-        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P7D</bpmn:timeDuration>
-      </bpmn:timerEventDefinition>
-    </bpmn:boundaryEvent>
-
+    <bpmn:sequenceFlow id="Flow_08jdki8" sourceRef="BoundaryEvent_Timer" targetRef="Event_004p822" />
+    <bpmn:sequenceFlow id="Flow_1ffs6sx" sourceRef="Gateway_1kzqckk" targetRef="Task_ActivateEvidence" />
     <bpmn:exclusiveGateway id="Gateway_ValidationDecision" name="Validation&#10;Decision?">
       <bpmn:incoming>Flow_9</bpmn:incoming>
       <bpmn:outgoing>Flow_ApprovedByAnalyst</bpmn:outgoing>
       <bpmn:outgoing>Flow_Rejected</bpmn:outgoing>
       <bpmn:outgoing>Flow_RequestAdditional</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-
     <bpmn:endEvent id="EndEvent_Rejected" name="Evidence&#10;Rejected">
       <bpmn:incoming>Flow_Rejected</bpmn:incoming>
     </bpmn:endEvent>
-
-    <!-- Client Lane -->
-    <bpmn:sendTask id="Task_SendFollowUp" name="Send Follow-Up to Client" camunda:type="external" camunda:topic="kmflow.notification.followup">
-      <bpmn:incoming>Flow_ToFollowUp</bpmn:incoming>
-    </bpmn:sendTask>
-
     <bpmn:userTask id="Task_ProvideAdditional" name="Provide Additional Evidence" camunda:candidateGroups="clients">
       <bpmn:incoming>Flow_RequestAdditional</bpmn:incoming>
       <bpmn:outgoing>Flow_FromClient</bpmn:outgoing>
     </bpmn:userTask>
-
-    <!-- Sequence Flows -->
-    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_Upload" />
-    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Upload" targetRef="Task_Classify" />
-    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_Classify" targetRef="Gateway_ParallelFork" />
-    <bpmn:sequenceFlow id="Flow_4a" sourceRef="Gateway_ParallelFork" targetRef="Subprocess_FormatParsing" />
-    <bpmn:sequenceFlow id="Flow_4b" sourceRef="Gateway_ParallelFork" targetRef="Subprocess_QualityScoring" />
-    <bpmn:sequenceFlow id="Flow_5a" sourceRef="Subprocess_FormatParsing" targetRef="Gateway_ParallelJoin" />
-    <bpmn:sequenceFlow id="Flow_5b" sourceRef="Subprocess_QualityScoring" targetRef="Gateway_ParallelJoin" />
-    <bpmn:sequenceFlow id="Flow_6" sourceRef="Gateway_ParallelJoin" targetRef="Gateway_QualityThreshold" />
-    <bpmn:sequenceFlow id="Flow_HighQuality" name="Score >= 0.7" sourceRef="Gateway_QualityThreshold" targetRef="Task_AutoApprove">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${qualityScore >= 0.7}</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_LowQuality" name="Score &lt; 0.7" sourceRef="Gateway_QualityThreshold" targetRef="Task_ReviewQuality">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${qualityScore &lt; 0.7}</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_ToActivate1" sourceRef="Task_AutoApprove" targetRef="Task_ActivateEvidence" />
-    <bpmn:sequenceFlow id="Flow_8" sourceRef="Task_ActivateEvidence" targetRef="EndEvent_Active" />
-    <bpmn:sequenceFlow id="Flow_9" sourceRef="Task_ReviewQuality" targetRef="Gateway_ValidationDecision" />
-    <bpmn:sequenceFlow id="Flow_ApprovedByAnalyst" name="Approved" sourceRef="Gateway_ValidationDecision" targetRef="Task_ActivateEvidence">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${validationDecision == 'approved'}</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_Rejected" name="Rejected" sourceRef="Gateway_ValidationDecision" targetRef="EndEvent_Rejected">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${validationDecision == 'rejected'}</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_RequestAdditional" name="Request Additional" sourceRef="Gateway_ValidationDecision" targetRef="Task_ProvideAdditional">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${validationDecision == 'requestAdditional'}</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_FromClient" sourceRef="Task_ProvideAdditional" targetRef="Task_Classify" />
-    <bpmn:sequenceFlow id="Flow_ToFollowUp" sourceRef="BoundaryEvent_Timer" targetRef="Task_SendFollowUp" />
-
+    <bpmn:endEvent id="Event_004p822">
+      <bpmn:incoming>Flow_08jdki8</bpmn:incoming>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_17aoe26" camunda:type="external" camunda:topic="kmflow.notification.followup" />
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_Active" name="Evidence&#10;Active">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="Gateway_1kzqckk">
+      <bpmn:incoming>Flow_ApprovedByAnalyst</bpmn:incoming>
+      <bpmn:incoming>Flow_ToActivate1</bpmn:incoming>
+      <bpmn:outgoing>Flow_1ffs6sx</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_ActivateEvidence" name="Activate Evidence" camunda:type="external" camunda:topic="kmflow.evidence.score">
+      <bpmn:incoming>Flow_1ffs6sx</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="BoundaryEvent_Timer" name="7 Days" cancelActivity="false" attachedToRef="Task_ProvideAdditional">
+      <bpmn:outgoing>Flow_08jdki8</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P7D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
   </bpmn:process>
-
-  <!-- BPMN Diagram -->
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_Evidence">
-
-      <!-- Pool -->
       <bpmndi:BPMNShape id="Participant_Evidence_di" bpmnElement="Participant_Evidence" isHorizontal="true">
-        <dc:Bounds x="155" y="47" width="1705" height="793" />
+        <dc:Bounds x="155" y="47" width="1645" height="863" />
       </bpmndi:BPMNShape>
-
-      <!-- Lanes -->
-      <bpmndi:BPMNShape id="Lane_EngagementLead_di" bpmnElement="Lane_EngagementLead" isHorizontal="true">
-        <dc:Bounds x="185" y="47" width="1675" height="198" />
-      </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="Lane_ProcessingEngine_di" bpmnElement="Lane_ProcessingEngine" isHorizontal="true">
-        <dc:Bounds x="185" y="245" width="1675" height="198" />
-      </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="Lane_ProcessAnalyst_di" bpmnElement="Lane_ProcessAnalyst" isHorizontal="true">
-        <dc:Bounds x="185" y="443" width="1675" height="198" />
-      </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Lane_Client_di" bpmnElement="Lane_Client" isHorizontal="true">
-        <dc:Bounds x="185" y="641" width="1675" height="152" />
+        <dc:Bounds x="185" y="641" width="1615" height="269" />
       </bpmndi:BPMNShape>
-
-      <!-- Engagement Lead Lane Elements -->
-      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
-        <dc:Bounds x="247" y="128" width="36" height="36" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="239" y="171" width="52" height="27" />
-        </bpmndi:BPMNLabel>
+      <bpmndi:BPMNShape id="Lane_ProcessAnalyst_di" bpmnElement="Lane_ProcessAnalyst" isHorizontal="true">
+        <dc:Bounds x="185" y="480" width="1615" height="161" />
       </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="Task_Upload_di" bpmnElement="Task_Upload">
-        <dc:Bounds x="335" y="106" width="100" height="80" />
+      <bpmndi:BPMNShape id="Lane_ProcessingEngine_di" bpmnElement="Lane_ProcessingEngine" isHorizontal="true">
+        <dc:Bounds x="185" y="220" width="1615" height="260" />
       </bpmndi:BPMNShape>
-
-      <!-- Evidence Processing Engine Lane Elements -->
-      <bpmndi:BPMNShape id="Task_Classify_di" bpmnElement="Task_Classify">
-        <dc:Bounds x="487" y="304" width="100" height="80" />
+      <bpmndi:BPMNShape id="Lane_EngagementLead_di" bpmnElement="Lane_EngagementLead" isHorizontal="true">
+        <dc:Bounds x="185" y="47" width="1615" height="173" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Gateway_ParallelFork_di" bpmnElement="Gateway_ParallelFork">
-        <dc:Bounds x="639" y="319" width="50" height="50" />
+        <dc:Bounds x="709" y="319" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="636" y="376" width="56" height="27" />
+          <dc:Bounds x="768.5" y="330" width="41" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="Subprocess_FormatParsing_di" bpmnElement="Subprocess_FormatParsing" isExpanded="false">
-        <dc:Bounds x="741" y="284" width="100" height="80" />
-      </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="Subprocess_QualityScoring_di" bpmnElement="Subprocess_QualityScoring" isExpanded="false">
-        <dc:Bounds x="741" y="384" width="100" height="80" />
-      </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Gateway_ParallelJoin_di" bpmnElement="Gateway_ParallelJoin">
-        <dc:Bounds x="893" y="319" width="50" height="50" />
+        <dc:Bounds x="963" y="319" width="50" height="50" />
       </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="Gateway_QualityThreshold_di" bpmnElement="Gateway_QualityThreshold">
-        <dc:Bounds x="995" y="319" width="50" height="50" />
+      <bpmndi:BPMNShape id="Gateway_QualityThreshold_di" bpmnElement="Gateway_QualityThreshold" isMarkerVisible="true">
+        <dc:Bounds x="1065" y="319" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="989" y="376" width="62" height="27" />
+          <dc:Bounds x="1062" y="281.5" width="56" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-
+      <bpmndi:BPMNShape id="Gateway_13lmtvz_di" bpmnElement="Gateway_13lmtvz" isMarkerVisible="true">
+        <dc:Bounds x="475" y="319" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Classify_di" bpmnElement="Task_Classify">
+        <dc:Bounds x="570" y="304" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="247" y="112" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="240" y="155" width="50" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Upload_di" bpmnElement="Task_Upload">
+        <dc:Bounds x="335" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_AutoApprove_di" bpmnElement="Task_AutoApprove">
-        <dc:Bounds x="1097" y="304" width="100" height="80" />
+        <dc:Bounds x="1210" y="304" width="100" height="80" />
       </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="Task_ActivateEvidence_di" bpmnElement="Task_ActivateEvidence">
-        <dc:Bounds x="1249" y="304" width="100" height="80" />
-      </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="EndEvent_Active_di" bpmnElement="EndEvent_Active">
-        <dc:Bounds x="1401" y="326" width="36" height="36" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="1393" y="369" width="52" height="27" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
-
-      <!-- Process Analyst Lane Elements -->
       <bpmndi:BPMNShape id="Task_ReviewQuality_di" bpmnElement="Task_ReviewQuality">
-        <dc:Bounds x="1097" y="502" width="100" height="80" />
+        <dc:Bounds x="1210" y="502" width="100" height="80" />
       </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="BoundaryEvent_Timer_di" bpmnElement="BoundaryEvent_Timer">
-        <dc:Bounds x="1129" y="564" width="36" height="36" />
+      <bpmndi:BPMNShape id="Gateway_ValidationDecision_di" bpmnElement="Gateway_ValidationDecision" isMarkerVisible="true">
+        <dc:Bounds x="1399" y="517" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1167" y="574" width="36" height="14" />
+          <dc:Bounds x="1362" y="496" width="49" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="Gateway_ValidationDecision_di" bpmnElement="Gateway_ValidationDecision">
-        <dc:Bounds x="1249" y="517" width="50" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="1243" y="574" width="62" height="27" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="EndEvent_Rejected_di" bpmnElement="EndEvent_Rejected">
-        <dc:Bounds x="1401" y="524" width="36" height="36" />
+        <dc:Bounds x="1551" y="524" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1393" y="567" width="52" height="27" />
+          <dc:Bounds x="1546" y="567" width="46" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-
-      <!-- Client Lane Elements -->
-      <bpmndi:BPMNShape id="Task_SendFollowUp_di" bpmnElement="Task_SendFollowUp">
-        <dc:Bounds x="1097" y="677" width="100" height="80" />
-      </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Task_ProvideAdditional_di" bpmnElement="Task_ProvideAdditional">
-        <dc:Bounds x="1224" y="677" width="100" height="80" />
+        <dc:Bounds x="1374" y="677" width="100" height="80" />
       </bpmndi:BPMNShape>
-
-      <!-- Sequence Flow Edges -->
-      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
-        <di:waypoint x="283" y="146" />
-        <di:waypoint x="335" y="146" />
-      </bpmndi:BPMNEdge>
-
+      <bpmndi:BPMNShape id="Event_17ycp5x_di" bpmnElement="Event_004p822">
+        <dc:Bounds x="1551" y="822" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Active_di" bpmnElement="EndEvent_Active">
+        <dc:Bounds x="1672" y="326" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1667" y="369" width="46" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1kzqckk_di" bpmnElement="Gateway_1kzqckk" isMarkerVisible="true">
+        <dc:Bounds x="1399" y="319" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ActivateEvidence_di" bpmnElement="Task_ActivateEvidence">
+        <dc:Bounds x="1519" y="304" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Subprocess_FormatParsing_di" bpmnElement="Subprocess_FormatParsing" isExpanded="false">
+        <dc:Bounds x="811" y="240" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Subprocess_QualityScoring_di" bpmnElement="Subprocess_QualityScoring" isExpanded="false">
+        <dc:Bounds x="811" y="380" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BoundaryEvent_Timer_di" bpmnElement="BoundaryEvent_Timer">
+        <dc:Bounds x="1456" y="739" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1495" y="768" width="35" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
-        <di:waypoint x="435" y="146" />
-        <di:waypoint x="461" y="146" />
-        <di:waypoint x="461" y="344" />
-        <di:waypoint x="487" y="344" />
+        <di:waypoint x="435" y="130" />
+        <di:waypoint x="500" y="130" />
+        <di:waypoint x="500" y="319" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
-        <di:waypoint x="587" y="344" />
-        <di:waypoint x="639" y="344" />
+        <di:waypoint x="670" y="344" />
+        <di:waypoint x="709" y="344" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_4a_di" bpmnElement="Flow_4a">
-        <di:waypoint x="664" y="319" />
-        <di:waypoint x="664" y="304" />
-        <di:waypoint x="741" y="304" />
+        <di:waypoint x="734" y="319" />
+        <di:waypoint x="734" y="280" />
+        <di:waypoint x="811" y="280" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_4b_di" bpmnElement="Flow_4b">
-        <di:waypoint x="664" y="369" />
-        <di:waypoint x="664" y="404" />
-        <di:waypoint x="741" y="404" />
+        <di:waypoint x="734" y="369" />
+        <di:waypoint x="734" y="420" />
+        <di:waypoint x="811" y="420" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_5a_di" bpmnElement="Flow_5a">
-        <di:waypoint x="841" y="304" />
-        <di:waypoint x="918" y="304" />
-        <di:waypoint x="918" y="319" />
+        <di:waypoint x="911" y="280" />
+        <di:waypoint x="988" y="280" />
+        <di:waypoint x="988" y="319" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_5b_di" bpmnElement="Flow_5b">
-        <di:waypoint x="841" y="404" />
-        <di:waypoint x="918" y="404" />
-        <di:waypoint x="918" y="369" />
+        <di:waypoint x="911" y="420" />
+        <di:waypoint x="988" y="420" />
+        <di:waypoint x="988" y="369" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
-        <di:waypoint x="943" y="344" />
-        <di:waypoint x="995" y="344" />
+        <di:waypoint x="1013" y="344" />
+        <di:waypoint x="1065" y="344" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_HighQuality_di" bpmnElement="Flow_HighQuality">
-        <di:waypoint x="1045" y="344" />
-        <di:waypoint x="1097" y="344" />
+        <di:waypoint x="1115" y="344" />
+        <di:waypoint x="1210" y="344" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1046" y="326" width="68" height="14" />
+          <dc:Bounds x="1118" y="326" width="63" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_LowQuality_di" bpmnElement="Flow_LowQuality">
-        <di:waypoint x="1020" y="369" />
-        <di:waypoint x="1020" y="542" />
-        <di:waypoint x="1097" y="542" />
+        <di:waypoint x="1090" y="369" />
+        <di:waypoint x="1090" y="542" />
+        <di:waypoint x="1210" y="542" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1036" y="403" width="68" height="14" />
+          <dc:Bounds x="1114" y="524" width="57" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_ToActivate1_di" bpmnElement="Flow_ToActivate1">
-        <di:waypoint x="1197" y="344" />
-        <di:waypoint x="1249" y="344" />
+        <di:waypoint x="1310" y="344" />
+        <di:waypoint x="1399" y="344" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_8_di" bpmnElement="Flow_8">
-        <di:waypoint x="1349" y="344" />
-        <di:waypoint x="1401" y="344" />
+        <di:waypoint x="1619" y="344" />
+        <di:waypoint x="1672" y="344" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_9_di" bpmnElement="Flow_9">
-        <di:waypoint x="1197" y="542" />
-        <di:waypoint x="1249" y="542" />
+        <di:waypoint x="1310" y="542" />
+        <di:waypoint x="1399" y="542" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_ApprovedByAnalyst_di" bpmnElement="Flow_ApprovedByAnalyst">
-        <di:waypoint x="1274" y="517" />
-        <di:waypoint x="1274" y="344" />
-        <di:waypoint x="1249" y="344" />
+        <di:waypoint x="1424" y="517" />
+        <di:waypoint x="1424" y="369" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1213" y="426" width="48" height="14" />
+          <dc:Bounds x="1438" y="393" width="48" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_Rejected_di" bpmnElement="Flow_Rejected">
-        <di:waypoint x="1299" y="542" />
-        <di:waypoint x="1401" y="542" />
+        <di:waypoint x="1449" y="542" />
+        <di:waypoint x="1551" y="542" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1327" y="524" width="45" height="14" />
+          <dc:Bounds x="1468" y="524" width="44" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_RequestAdditional_di" bpmnElement="Flow_RequestAdditional">
-        <di:waypoint x="1274" y="567" />
-        <di:waypoint x="1274" y="677" />
+        <di:waypoint x="1424" y="567" />
+        <di:waypoint x="1424" y="677" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1289" y="603" width="56" height="27" />
+          <dc:Bounds x="1435" y="580" width="49" height="40" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_FromClient_di" bpmnElement="Flow_FromClient">
-        <di:waypoint x="1224" y="717" />
-        <di:waypoint x="430" y="717" />
-        <di:waypoint x="430" y="344" />
-        <di:waypoint x="487" y="344" />
+        <di:waypoint x="1424" y="757" />
+        <di:waypoint x="1424" y="850" />
+        <di:waypoint x="500" y="850" />
+        <di:waypoint x="500" y="369" />
       </bpmndi:BPMNEdge>
-
-      <bpmndi:BPMNEdge id="Flow_ToFollowUp_di" bpmnElement="Flow_ToFollowUp">
-        <di:waypoint x="1147" y="600" />
-        <di:waypoint x="1147" y="677" />
+      <bpmndi:BPMNEdge id="Flow_0uv7g2g_di" bpmnElement="Flow_0uv7g2g">
+        <di:waypoint x="525" y="344" />
+        <di:waypoint x="570" y="344" />
       </bpmndi:BPMNEdge>
-
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="283" y="130" />
+        <di:waypoint x="335" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_08jdki8_di" bpmnElement="Flow_08jdki8">
+        <di:waypoint x="1474" y="775" />
+        <di:waypoint x="1474" y="840" />
+        <di:waypoint x="1551" y="840" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1ffs6sx_di" bpmnElement="Flow_1ffs6sx">
+        <di:waypoint x="1449" y="344" />
+        <di:waypoint x="1519" y="344" />
+      </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
-
-  <!-- Subprocess Diagram: Format-Specific Parsing -->
   <bpmndi:BPMNDiagram id="BPMNDiagram_FormatParsing">
     <bpmndi:BPMNPlane id="BPMNPlane_FormatParsing" bpmnElement="Subprocess_FormatParsing">
-
       <bpmndi:BPMNShape id="Start_FormatParsing_di" bpmnElement="Start_FormatParsing">
         <dc:Bounds x="50" y="102" width="36" height="36" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Task_DetectFormat_di" bpmnElement="Task_DetectFormat">
         <dc:Bounds x="136" y="80" width="100" height="80" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Task_ExtractContent_di" bpmnElement="Task_ExtractContent">
         <dc:Bounds x="288" y="80" width="100" height="80" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Task_GenerateFragments_di" bpmnElement="Task_GenerateFragments">
         <dc:Bounds x="440" y="80" width="100" height="80" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="End_FormatParsing_di" bpmnElement="End_FormatParsing">
         <dc:Bounds x="592" y="102" width="36" height="36" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNEdge id="Flow_FP1_di" bpmnElement="Flow_FP1">
         <di:waypoint x="86" y="120" />
         <di:waypoint x="136" y="120" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_FP2_di" bpmnElement="Flow_FP2">
         <di:waypoint x="236" y="120" />
         <di:waypoint x="288" y="120" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_FP3_di" bpmnElement="Flow_FP3">
         <di:waypoint x="388" y="120" />
         <di:waypoint x="440" y="120" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_FP4_di" bpmnElement="Flow_FP4">
         <di:waypoint x="540" y="120" />
         <di:waypoint x="592" y="120" />
       </bpmndi:BPMNEdge>
-
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
-
-  <!-- Subprocess Diagram: Quality Scoring -->
   <bpmndi:BPMNDiagram id="BPMNDiagram_QualityScoring">
     <bpmndi:BPMNPlane id="BPMNPlane_QualityScoring" bpmnElement="Subprocess_QualityScoring">
-
       <bpmndi:BPMNShape id="Start_QualityScoring_di" bpmnElement="Start_QualityScoring">
         <dc:Bounds x="50" y="102" width="36" height="36" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Task_ComputeCompleteness_di" bpmnElement="Task_ComputeCompleteness">
         <dc:Bounds x="136" y="80" width="100" height="80" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Task_ScoreQuality_di" bpmnElement="Task_ScoreQuality">
         <dc:Bounds x="288" y="80" width="100" height="80" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="Task_GenerateReport_di" bpmnElement="Task_GenerateReport">
         <dc:Bounds x="440" y="80" width="100" height="80" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="End_QualityScoring_di" bpmnElement="End_QualityScoring">
         <dc:Bounds x="592" y="102" width="36" height="36" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNEdge id="Flow_QS1_di" bpmnElement="Flow_QS1">
         <di:waypoint x="86" y="120" />
         <di:waypoint x="136" y="120" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_QS2_di" bpmnElement="Flow_QS2">
         <di:waypoint x="236" y="120" />
         <di:waypoint x="288" y="120" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_QS3_di" bpmnElement="Flow_QS3">
         <di:waypoint x="388" y="120" />
         <di:waypoint x="440" y="120" />
       </bpmndi:BPMNEdge>
-
       <bpmndi:BPMNEdge id="Flow_QS4_di" bpmnElement="Flow_QS4">
         <di:waypoint x="540" y="120" />
         <di:waypoint x="592" y="120" />
       </bpmndi:BPMNEdge>
-
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
-
 </bpmn:definitions>
