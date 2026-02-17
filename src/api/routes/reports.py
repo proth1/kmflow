@@ -15,6 +15,8 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.models import User
+from src.core.permissions import require_permission
 from src.core.reports import ReportEngine
 
 logger = logging.getLogger(__name__)
@@ -40,6 +42,7 @@ async def get_engagement_summary(
     engagement_id: UUID,
     format: str = "json",
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> Any:
     """Generate engagement summary report.
 
@@ -68,6 +71,7 @@ async def get_gap_report(
     tom_id: UUID | None = None,
     format: str = "json",
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> Any:
     """Generate gap analysis report.
 
@@ -96,6 +100,7 @@ async def get_governance_report(
     engagement_id: UUID,
     format: str = "json",
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> Any:
     """Generate governance overlay report.
 

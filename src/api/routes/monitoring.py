@@ -27,7 +27,9 @@ from src.core.models import (
     MonitoringStatus,
     ProcessBaseline,
     ProcessDeviation,
+    User,
 )
+from src.core.permissions import require_permission
 from src.monitoring.baseline import compute_process_hash, create_baseline_snapshot
 from src.monitoring.config import validate_cron_expression, validate_monitoring_config
 
@@ -228,6 +230,7 @@ def _alert_to_response(a: MonitoringAlert) -> dict[str, Any]:
 async def create_monitoring_job(
     payload: MonitoringJobCreate,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("monitoring:configure")),
 ) -> dict[str, Any]:
     """Create a new monitoring job."""
     if not validate_cron_expression(payload.schedule_cron):
@@ -258,6 +261,7 @@ async def list_monitoring_jobs(
     engagement_id: UUID | None = None,
     status_filter: MonitoringStatus | None = None,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("monitoring:read")),
 ) -> dict[str, Any]:
     """List monitoring jobs with optional filters."""
     query = select(MonitoringJob)
@@ -274,6 +278,7 @@ async def list_monitoring_jobs(
 async def get_monitoring_job(
     job_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("monitoring:read")),
 ) -> dict[str, Any]:
     """Get a monitoring job by ID."""
     result = await session.execute(select(MonitoringJob).where(MonitoringJob.id == job_id))
@@ -288,6 +293,7 @@ async def update_monitoring_job(
     job_id: UUID,
     payload: MonitoringJobUpdate,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("monitoring:manage")),
 ) -> dict[str, Any]:
     """Update a monitoring job."""
     result = await session.execute(select(MonitoringJob).where(MonitoringJob.id == job_id))
@@ -315,6 +321,7 @@ async def update_monitoring_job(
 async def activate_monitoring_job(
     job_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("monitoring:manage")),
 ) -> dict[str, Any]:
     """Activate a monitoring job."""
     result = await session.execute(select(MonitoringJob).where(MonitoringJob.id == job_id))
@@ -332,6 +339,7 @@ async def activate_monitoring_job(
 async def pause_monitoring_job(
     job_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("monitoring:manage")),
 ) -> dict[str, Any]:
     """Pause a monitoring job."""
     result = await session.execute(select(MonitoringJob).where(MonitoringJob.id == job_id))
@@ -349,6 +357,7 @@ async def pause_monitoring_job(
 async def stop_monitoring_job(
     job_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("monitoring:manage")),
 ) -> dict[str, Any]:
     """Stop a monitoring job."""
     result = await session.execute(select(MonitoringJob).where(MonitoringJob.id == job_id))
@@ -369,6 +378,7 @@ async def stop_monitoring_job(
 async def create_baseline(
     payload: BaselineCreate,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("monitoring:configure")),
 ) -> dict[str, Any]:
     """Create a process baseline snapshot."""
     snapshot = payload.snapshot_data or {}
@@ -397,6 +407,7 @@ async def create_baseline(
 async def list_baselines(
     engagement_id: UUID | None = None,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("monitoring:read")),
 ) -> dict[str, Any]:
     """List process baselines."""
     query = select(ProcessBaseline)
@@ -411,6 +422,7 @@ async def list_baselines(
 async def get_baseline(
     baseline_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("monitoring:read")),
 ) -> dict[str, Any]:
     """Get a baseline by ID."""
     result = await session.execute(select(ProcessBaseline).where(ProcessBaseline.id == baseline_id))
@@ -431,6 +443,7 @@ async def list_deviations(
     limit: int = 50,
     offset: int = 0,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("monitoring:read")),
 ) -> dict[str, Any]:
     """List process deviations with filters."""
     query = select(ProcessDeviation)
@@ -458,6 +471,7 @@ async def list_deviations(
 async def get_deviation(
     deviation_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("monitoring:read")),
 ) -> dict[str, Any]:
     """Get a deviation by ID."""
     result = await session.execute(select(ProcessDeviation).where(ProcessDeviation.id == deviation_id))
@@ -478,6 +492,7 @@ async def list_alerts(
     limit: int = 50,
     offset: int = 0,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("monitoring:read")),
 ) -> dict[str, Any]:
     """List monitoring alerts with filters."""
     query = select(MonitoringAlert)
@@ -507,6 +522,7 @@ async def list_alerts(
 async def get_alert(
     alert_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("monitoring:read")),
 ) -> dict[str, Any]:
     """Get an alert by ID."""
     result = await session.execute(select(MonitoringAlert).where(MonitoringAlert.id == alert_id))
@@ -521,6 +537,7 @@ async def alert_action(
     alert_id: UUID,
     payload: AlertActionRequest,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("monitoring:manage")),
 ) -> dict[str, Any]:
     """Perform an action on an alert (acknowledge, resolve, dismiss)."""
     result = await session.execute(select(MonitoringAlert).where(MonitoringAlert.id == alert_id))
@@ -551,6 +568,7 @@ async def alert_action(
 async def get_monitoring_stats(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("monitoring:read")),
 ) -> dict[str, Any]:
     """Get monitoring statistics for an engagement."""
     active_q = await session.execute(

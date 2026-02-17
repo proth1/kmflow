@@ -21,7 +21,9 @@ from src.core.models import (
     EvidenceGap,
     ProcessElement,
     ProcessModel,
+    User,
 )
+from src.core.permissions import require_permission
 from src.pov.generator import generate_pov
 
 logger = logging.getLogger(__name__)
@@ -231,6 +233,7 @@ def _gap_to_response(g: EvidenceGap) -> dict[str, Any]:
 async def trigger_pov_generation(
     payload: POVGenerateRequest,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("pov:generate")),
 ) -> dict[str, Any]:
     """Trigger POV generation for an engagement.
 
@@ -287,7 +290,10 @@ async def trigger_pov_generation(
 
 
 @router.get("/job/{job_id}", response_model=JobStatusResponse)
-async def get_job_status(job_id: str) -> dict[str, Any]:
+async def get_job_status(
+    job_id: str,
+    user: User = Depends(require_permission("pov:read")),
+) -> dict[str, Any]:
     """Get the status of a POV generation job."""
     if job_id not in _jobs:
         raise HTTPException(
@@ -308,6 +314,7 @@ async def get_job_status(job_id: str) -> dict[str, Any]:
 async def get_process_model(
     model_id: str,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("pov:read")),
 ) -> dict[str, Any]:
     """Get a process model by ID."""
     try:
@@ -336,6 +343,7 @@ async def get_process_elements(
     limit: int = 50,
     offset: int = 0,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("pov:read")),
 ) -> dict[str, Any]:
     """Get elements for a process model with pagination."""
     try:
@@ -375,6 +383,7 @@ async def get_process_elements(
 async def get_evidence_map(
     model_id: str,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("pov:read")),
 ) -> list[dict[str, Any]]:
     """Get evidence-to-element mappings for a process model."""
     try:
@@ -419,6 +428,7 @@ async def get_evidence_map(
 async def get_evidence_gaps(
     model_id: str,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("pov:read")),
 ) -> list[dict[str, Any]]:
     """Get evidence gaps for a process model."""
     try:
@@ -439,6 +449,7 @@ async def get_evidence_gaps(
 async def get_contradictions(
     model_id: str,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("pov:read")),
 ) -> list[dict[str, Any]]:
     """Get contradictions for a process model."""
     try:
@@ -459,6 +470,7 @@ async def get_contradictions(
 async def get_bpmn_xml(
     model_id: str,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("pov:read")),
 ) -> dict[str, Any]:
     """Get BPMN XML for a process model with element confidence scores.
 

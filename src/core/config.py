@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     redis_url: str | None = None
 
     # ── Backend ──────────────────────────────────────────────────
-    backend_host: str = "0.0.0.0"
+    backend_host: str = "0.0.0.0"  # noqa: S104 - intentional for container deployments  # nosec B104
     backend_port: int = 8000
     cors_origins: list[str] = ["http://localhost:3000"]
 
@@ -62,6 +62,15 @@ class Settings(BaseSettings):
     jwt_access_token_expire_minutes: int = 30
     jwt_refresh_token_expire_minutes: int = 10080  # 7 days
     auth_dev_mode: bool = True  # Allow local dev tokens
+    encryption_key: str = "dev-encryption-key-change-in-production"
+
+    # ── RAG Copilot (Phase 4) ─────────────────────────────────────
+    copilot_model: str = "claude-sonnet-4-5-20250929"
+    copilot_max_context_tokens: int = 4000
+    copilot_max_response_tokens: int = 2000
+
+    # ── WebSocket Limits (Phase 4) ────────────────────────────────
+    ws_max_connections_per_engagement: int = 10
 
     # ── Rate Limiting ─────────────────────────────────────────────
     rate_limit_requests: int = 100

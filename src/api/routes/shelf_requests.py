@@ -28,7 +28,9 @@ from src.core.models import (
     ShelfRequestItemPriority,
     ShelfRequestItemStatus,
     ShelfRequestStatus,
+    User,
 )
+from src.core.permissions import require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -169,6 +171,7 @@ async def _get_request_or_404(
 async def create_shelf_request(
     payload: ShelfRequestCreate,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> ShelfDataRequest:
     """Create a new shelf data request with items.
 
@@ -222,6 +225,7 @@ async def list_shelf_requests(
     limit: int = 20,
     offset: int = 0,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """List shelf data requests with optional filtering.
 
@@ -258,6 +262,7 @@ async def list_shelf_requests(
 async def get_shelf_request(
     request_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> ShelfDataRequest:
     """Get a shelf data request by ID with items."""
     return await _get_request_or_404(session, request_id)
@@ -267,6 +272,7 @@ async def get_shelf_request(
 async def get_shelf_request_status(
     request_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """Get fulfillment status for a shelf data request.
 
@@ -297,6 +303,7 @@ async def update_shelf_request(
     request_id: UUID,
     payload: ShelfRequestUpdate,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> ShelfDataRequest:
     """Update a shelf data request.
 
@@ -340,6 +347,7 @@ async def submit_evidence_intake(
     request_id: UUID,
     payload: IntakeRequest,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> dict[str, Any]:
     """Submit evidence for a shelf data request.
 

@@ -16,7 +16,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.models import SimulationResult, SimulationScenario, SimulationStatus, SimulationType
+from src.core.models import SimulationResult, SimulationScenario, SimulationStatus, SimulationType, User
+from src.core.permissions import require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +114,7 @@ def _result_to_response(r: SimulationResult) -> dict[str, Any]:
 async def create_scenario(
     payload: ScenarioCreate,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:create")),
 ) -> dict[str, Any]:
     """Create a new simulation scenario."""
     scenario = SimulationScenario(
@@ -134,6 +136,7 @@ async def list_scenarios(
     engagement_id: UUID | None = None,
     simulation_type: SimulationType | None = None,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """List simulation scenarios."""
     query = select(SimulationScenario)
@@ -150,6 +153,7 @@ async def list_scenarios(
 async def get_scenario(
     scenario_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """Get a scenario by ID."""
     result = await session.execute(
@@ -168,6 +172,7 @@ async def get_scenario(
 async def run_scenario(
     scenario_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:run")),
 ) -> dict[str, Any]:
     """Run a simulation scenario."""
     result = await session.execute(
@@ -229,6 +234,7 @@ async def run_scenario(
 async def list_results(
     scenario_id: UUID | None = None,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """List simulation results."""
     query = select(SimulationResult)
@@ -243,6 +249,7 @@ async def list_results(
 async def get_result(
     result_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """Get a simulation result by ID."""
     result = await session.execute(

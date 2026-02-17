@@ -3,7 +3,7 @@
 Configures the FastAPI app with:
 - CORS middleware
 - Lifespan events for database/cache connections
-- Route registration (14 Phase 1-2 routers + 6 Phase 3 routers)
+- Route registration (14 Phase 1-2 routers + 6 Phase 3 routers + 2 Phase 4 routers)
 - MCP server mounted at /mcp
 - OpenAPI documentation at /docs
 """
@@ -39,6 +39,7 @@ from src.api.routes import (
     users,
 )
 from src.api.routes import monitoring, patterns, portal, simulations, websocket
+from src.api.routes import conformance, copilot
 from src.core.config import get_settings
 from src.core.database import create_engine
 from src.core.neo4j import create_neo4j_driver, setup_neo4j_constraints, verify_neo4j_connectivity
@@ -124,7 +125,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.app_name,
         description="AI-powered Process Intelligence platform for consulting engagements",
-        version="0.3.0",
+        version="0.4.0",
         docs_url="/docs",
         redoc_url="/redoc",
         lifespan=lifespan,
@@ -169,6 +170,10 @@ def create_app() -> FastAPI:
     app.include_router(simulations.router)
     app.include_router(portal.router)
     app.include_router(mcp_router)
+
+    # -- Phase 4 Routes ---
+    app.include_router(copilot.router)
+    app.include_router(conformance.router)
 
     return app
 

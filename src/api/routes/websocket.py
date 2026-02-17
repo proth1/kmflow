@@ -14,6 +14,8 @@ from typing import Any
 
 from fastapi import APIRouter, Query, Request, WebSocket, WebSocketDisconnect
 
+from src.core.auth import decode_token
+from src.core.config import get_settings
 from src.core.redis import CHANNEL_ALERTS, CHANNEL_DEVIATIONS, CHANNEL_MONITORING
 
 logger = logging.getLogger(__name__)
@@ -63,6 +65,12 @@ class ConnectionManager:
     def get_engagement_ids(self) -> list[str]:
         return list(self._connections.keys())
 
+    def get_connection_count(self, engagement_id: str) -> int:
+        """Get the number of active connections for an engagement."""
+        if engagement_id not in self._connections:
+            return 0
+        return len(self._connections[engagement_id])
+
 
 manager = ConnectionManager()
 
@@ -102,12 +110,49 @@ async def _redis_subscriber(
 async def monitoring_websocket(
     websocket: WebSocket,
     engagement_id: str,
+    token: str | None = Query(default=None),
 ) -> None:
     """WebSocket endpoint for real-time monitoring events.
 
     Subscribes to Redis Pub/Sub and forwards matching events.
     Sends heartbeats every 30 seconds.
+
+    Authentication:
+        Requires JWT token as query parameter: ?token=<jwt>
+
+    Connection Limits:
+        Max connections per engagement is configurable (default: 10).
+        Exceeding the limit results in close code 1008 (Policy Violation).
     """
+    # Authenticate the connection
+    if not token:
+        await websocket.close(code=1008, reason="Missing authentication token")
+        return
+
+    try:
+        settings = get_settings()
+        decode_token(token, settings)
+    except Exception as e:
+        logger.warning("WebSocket authentication failed: %s", e)
+        await websocket.close(code=1008, reason="Invalid or expired token")
+        return
+
+    # Check connection limit
+    settings = get_settings()
+    current_count = manager.get_connection_count(engagement_id)
+    if current_count >= settings.ws_max_connections_per_engagement:
+        logger.warning(
+            "Connection limit reached for engagement %s (%d/%d)",
+            engagement_id,
+            current_count,
+            settings.ws_max_connections_per_engagement,
+        )
+        await websocket.close(
+            code=1008,
+            reason=f"Connection limit reached ({settings.ws_max_connections_per_engagement} max)",
+        )
+        return
+
     await manager.connect(websocket, engagement_id)
     shutdown = asyncio.Event()
 
@@ -140,8 +185,46 @@ async def monitoring_websocket(
 async def alerts_websocket(
     websocket: WebSocket,
     engagement_id: str,
+    token: str | None = Query(default=None),
 ) -> None:
-    """WebSocket endpoint for real-time alert notifications only."""
+    """WebSocket endpoint for real-time alert notifications only.
+
+    Authentication:
+        Requires JWT token as query parameter: ?token=<jwt>
+
+    Connection Limits:
+        Max connections per engagement is configurable (default: 10).
+        Exceeding the limit results in close code 1008 (Policy Violation).
+    """
+    # Authenticate the connection
+    if not token:
+        await websocket.close(code=1008, reason="Missing authentication token")
+        return
+
+    try:
+        settings = get_settings()
+        decode_token(token, settings)
+    except Exception as e:
+        logger.warning("WebSocket authentication failed: %s", e)
+        await websocket.close(code=1008, reason="Invalid or expired token")
+        return
+
+    # Check connection limit
+    settings = get_settings()
+    current_count = manager.get_connection_count(engagement_id)
+    if current_count >= settings.ws_max_connections_per_engagement:
+        logger.warning(
+            "Connection limit reached for engagement %s (%d/%d)",
+            engagement_id,
+            current_count,
+            settings.ws_max_connections_per_engagement,
+        )
+        await websocket.close(
+            code=1008,
+            reason=f"Connection limit reached ({settings.ws_max_connections_per_engagement} max)",
+        )
+        return
+
     await manager.connect(websocket, engagement_id)
     shutdown = asyncio.Event()
 

@@ -1,0 +1,140 @@
+"""RAG copilot API routes.
+
+Provides chat interface for evidence-based Q&A using hybrid retrieval
+and Claude API generation.
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import Any
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.core.models import User
+from src.core.permissions import require_permission
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/api/v1/copilot", tags=["copilot"])
+
+
+# -- Schemas ------------------------------------------------------------------
+
+
+class ChatRequest(BaseModel):
+    """Request for copilot chat."""
+    engagement_id: UUID
+    query: str = Field(..., min_length=1, max_length=5000)
+    query_type: str = Field(default="general", pattern="^(general|process_discovery|evidence_traceability|gap_analysis|regulatory)$")
+    history: list[dict[str, str]] | None = None
+
+
+class CitationResponse(BaseModel):
+    """A citation from retrieved evidence."""
+    source_id: str
+    source_type: str
+    content_preview: str
+    similarity_score: float
+
+
+class ChatResponse(BaseModel):
+    """Response from copilot chat."""
+    answer: str
+    citations: list[CitationResponse]
+    query_type: str
+    context_tokens_used: int
+
+
+class ChatHistoryEntry(BaseModel):
+    """A single entry in chat history."""
+    role: str
+    content: str
+    timestamp: str
+
+
+class ChatHistoryResponse(BaseModel):
+    """Response for chat history retrieval."""
+    engagement_id: str
+    messages: list[ChatHistoryEntry]
+    total: int
+
+
+# -- Dependency ---------------------------------------------------------------
+
+
+async def get_session(request: Request):
+    session_factory = request.app.state.db_session_factory
+    async with session_factory() as session:
+        yield session
+
+
+# -- Routes -------------------------------------------------------------------
+
+
+@router.post("/chat", response_model=ChatResponse)
+async def copilot_chat(
+    payload: ChatRequest,
+    user: User = Depends(require_permission("copilot:query")),
+    session: AsyncSession = Depends(get_session),
+    request: Request = None,
+) -> dict[str, Any]:
+    """Chat with the evidence copilot.
+
+    Retrieves relevant evidence context and generates an AI response
+    with citations to source documents.
+    """
+    from src.rag.copilot import CopilotOrchestrator
+
+    neo4j_driver = getattr(request.app.state, "neo4j_driver", None) if request else None
+    orchestrator = CopilotOrchestrator(neo4j_driver=neo4j_driver)
+
+    try:
+        response = await orchestrator.chat(
+            query=payload.query,
+            engagement_id=str(payload.engagement_id),
+            session=session,
+            query_type=payload.query_type,
+            history=payload.history,
+        )
+    except Exception as e:
+        logger.exception("Copilot chat failed")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Copilot error: {e}",
+        ) from e
+
+    return {
+        "answer": response.answer,
+        "citations": [
+            {
+                "source_id": c["source_id"],
+                "source_type": c["source_type"],
+                "content_preview": c["content_preview"],
+                "similarity_score": c["similarity_score"],
+            }
+            for c in response.citations
+        ],
+        "query_type": response.query_type,
+        "context_tokens_used": response.context_tokens_used,
+    }
+
+
+@router.get("/history/{engagement_id}", response_model=ChatHistoryResponse)
+async def get_chat_history(
+    engagement_id: UUID,
+    user: User = Depends(require_permission("copilot:query")),
+) -> dict[str, Any]:
+    """Get chat history for an engagement.
+
+    Note: Chat history is currently not persisted (MVP).
+    Returns empty list until persistence is added.
+    """
+    return {
+        "engagement_id": str(engagement_id),
+        "messages": [],
+        "total": 0,
+    }

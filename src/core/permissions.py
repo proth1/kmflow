@@ -50,6 +50,9 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "patterns:read",
         "portal:manage",
         "portal:read",
+        "copilot:query",
+        "conformance:check",
+        "conformance:manage",
     ],
     "process_analyst": [
         "engagement:read",
@@ -63,6 +66,8 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "alerts:acknowledge",
         "simulation:read",
         "patterns:read",
+        "copilot:query",
+        "conformance:check",
     ],
     "evidence_reviewer": [
         "engagement:read",

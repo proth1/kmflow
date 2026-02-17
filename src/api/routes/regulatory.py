@@ -27,7 +27,9 @@ from src.core.models import (
     Policy,
     PolicyType,
     Regulation,
+    User,
 )
+from src.core.permissions import require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -202,6 +204,7 @@ async def _verify_engagement(session: AsyncSession, engagement_id: UUID) -> None
 async def create_policy(
     payload: PolicyCreate,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> Policy:
     """Create a new policy."""
     await _verify_engagement(session, payload.engagement_id)
@@ -228,6 +231,7 @@ async def list_policies(
     offset: int = 0,
     policy_type: PolicyType | None = None,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """List policies for an engagement."""
     query = select(Policy).where(Policy.engagement_id == engagement_id)
@@ -249,6 +253,7 @@ async def list_policies(
 async def get_policy(
     policy_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> Policy:
     """Get a specific policy by ID."""
     result = await session.execute(select(Policy).where(Policy.id == policy_id))
@@ -265,6 +270,7 @@ async def get_policy(
 async def create_control(
     payload: ControlCreate,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> Control:
     """Create a new control."""
     await _verify_engagement(session, payload.engagement_id)
@@ -290,6 +296,7 @@ async def list_controls(
     limit: int = 20,
     offset: int = 0,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """List controls for an engagement."""
     query = select(Control).where(Control.engagement_id == engagement_id)
@@ -306,6 +313,7 @@ async def list_controls(
 async def get_control(
     control_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> Control:
     """Get a specific control by ID."""
     result = await session.execute(select(Control).where(Control.id == control_id))
@@ -322,6 +330,7 @@ async def get_control(
 async def create_regulation(
     payload: RegulationCreate,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> Regulation:
     """Create a new regulation."""
     await _verify_engagement(session, payload.engagement_id)
@@ -348,6 +357,7 @@ async def list_regulations(
     limit: int = 20,
     offset: int = 0,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """List regulations for an engagement."""
     query = select(Regulation).where(Regulation.engagement_id == engagement_id)
@@ -365,6 +375,7 @@ async def update_regulation(
     regulation_id: UUID,
     payload: RegulationUpdate,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> Regulation:
     """Update a regulation's fields (partial update)."""
     result = await session.execute(select(Regulation).where(Regulation.id == regulation_id))
@@ -389,6 +400,7 @@ async def build_governance_overlay(
     engagement_id: UUID,
     request: Request,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """Build governance chains in the knowledge graph for an engagement."""
     from src.core.regulatory import RegulatoryOverlayEngine
@@ -414,6 +426,7 @@ async def get_compliance_state(
     engagement_id: UUID,
     request: Request,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """Assess compliance state for an engagement."""
     from src.core.regulatory import RegulatoryOverlayEngine
@@ -438,6 +451,7 @@ async def get_compliance_state(
 async def get_ungoverned_processes(
     engagement_id: UUID,
     request: Request,
+    user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """Find processes without governance links."""
     from src.core.regulatory import RegulatoryOverlayEngine

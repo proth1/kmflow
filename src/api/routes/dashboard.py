@@ -27,7 +27,9 @@ from src.core.models import (
     ShelfDataRequest,
     ShelfDataRequestItem,
     ShelfRequestItemStatus,
+    User,
 )
+from src.core.permissions import require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -166,6 +168,7 @@ def _validate_engagement_id(engagement_id: str) -> uuid.UUID:
 async def get_dashboard(
     engagement_id: str,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """Get aggregated dashboard data for an engagement.
 
@@ -278,6 +281,7 @@ async def get_dashboard(
 async def get_evidence_coverage(
     engagement_id: str,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """Get detailed evidence coverage by category.
 
@@ -341,6 +345,7 @@ async def get_evidence_coverage(
 async def get_confidence_distribution(
     engagement_id: str,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """Get confidence distribution across process elements.
 

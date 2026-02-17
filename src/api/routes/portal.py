@@ -24,7 +24,9 @@ from src.core.models import (
     MonitoringAlert,
     ProcessModel,
     AlertStatus,
+    User,
 )
+from src.core.permissions import require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +87,7 @@ async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
 async def portal_overview(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("portal:read")),
 ) -> dict[str, Any]:
     """Get high-level overview for client portal."""
     result = await session.execute(
@@ -135,6 +138,7 @@ async def portal_findings(
     limit: int = 50,
     offset: int = 0,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("portal:read")),
 ) -> dict[str, Any]:
     """Get gap analysis findings for client review."""
     result = await session.execute(
@@ -164,6 +168,7 @@ async def portal_findings(
 async def portal_evidence_status(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("portal:read")),
 ) -> dict[str, Any]:
     """Get evidence status summary for client portal."""
     result = await session.execute(
@@ -198,6 +203,7 @@ async def portal_evidence_status(
 async def portal_process(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("portal:read")),
 ) -> dict[str, Any]:
     """Get process model data for the interactive explorer."""
     result = await session.execute(

@@ -17,7 +17,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.models import IntegrationConnection
+from src.core.models import IntegrationConnection, User
+from src.core.permissions import require_permission
 from src.integrations.base import ConnectionConfig, ConnectorRegistry
 from src.integrations.field_mapping import get_default_mapping
 
@@ -124,7 +125,9 @@ def _conn_to_response(conn: IntegrationConnection) -> dict[str, Any]:
 
 
 @router.get("/connectors", response_model=list[dict[str, str]])
-async def list_connectors() -> list[dict[str, str]]:
+async def list_connectors(
+    user: User = Depends(require_permission("engagement:read")),
+) -> list[dict[str, str]]:
     """List available connector types."""
     return [
         {"type": name, "description": connector.description}
@@ -136,6 +139,7 @@ async def list_connectors() -> list[dict[str, str]]:
 async def create_connection(
     payload: ConnectionCreate,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> dict[str, Any]:
     """Create a new integration connection (persisted to database)."""
     connector_cls = ConnectorRegistry.get(payload.connector_type)
@@ -168,6 +172,7 @@ async def create_connection(
 async def list_connections(
     engagement_id: UUID | None = None,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """List all connections, optionally filtered by engagement."""
     query = select(IntegrationConnection)
@@ -182,6 +187,7 @@ async def list_connections(
 async def get_connection(
     connection_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """Get a single connection by ID."""
     result = await session.execute(
@@ -198,6 +204,7 @@ async def update_connection(
     connection_id: UUID,
     payload: ConnectionUpdate,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> dict[str, Any]:
     """Update a connection's config or field mappings."""
     result = await session.execute(
@@ -223,6 +230,7 @@ async def update_connection(
 async def delete_connection(
     connection_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> None:
     """Delete a connection."""
     result = await session.execute(
@@ -239,6 +247,7 @@ async def delete_connection(
 async def test_connection(
     connection_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """Test connectivity for an existing connection."""
     result = await session.execute(
@@ -278,6 +287,7 @@ async def test_connection(
 async def sync_connection(
     connection_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> dict[str, Any]:
     """Trigger a data sync for a connection."""
     result = await session.execute(
@@ -320,6 +330,7 @@ async def sync_connection(
 async def get_field_mapping(
     connection_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """Get field mapping config for a connection."""
     result = await session.execute(
@@ -353,6 +364,7 @@ async def update_field_mapping(
     connection_id: UUID,
     mapping: dict[str, str],
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> dict[str, Any]:
     """Update field mapping for a connection."""
     result = await session.execute(

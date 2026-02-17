@@ -24,8 +24,10 @@ from src.core.models import (
     EvidenceFragment,
     EvidenceItem,
     FragmentType,
+    User,
     ValidationStatus,
 )
+from src.core.permissions import require_permission
 from src.evidence.pipeline import ingest_evidence
 from src.evidence.quality import score_evidence
 
@@ -141,6 +143,7 @@ async def upload_evidence(
     category: EvidenceCategory | None = Form(None),
     metadata: str | None = Form(None),
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("evidence:create")),
 ) -> dict[str, Any]:
     """Upload a file as evidence for an engagement.
 
@@ -203,6 +206,7 @@ async def upload_evidence(
 async def get_evidence(
     evidence_id: UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("evidence:read")),
 ) -> dict[str, Any]:
     """Get evidence item details including fragment count."""
     result = await session.execute(select(EvidenceItem).where(EvidenceItem.id == evidence_id))
@@ -254,6 +258,7 @@ async def list_evidence(
     limit: int = 20,
     offset: int = 0,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("evidence:read")),
 ) -> dict[str, Any]:
     """List evidence items with optional filtering.
 
@@ -293,6 +298,7 @@ async def update_validation_status(
     evidence_id: UUID,
     payload: ValidationUpdate,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("evidence:update")),
 ) -> EvidenceItem:
     """Update the validation status of an evidence item.
 
@@ -334,6 +340,7 @@ async def update_validation_status(
 async def batch_validate(
     payload: BatchValidationRequest,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("evidence:update")),
 ) -> dict[str, Any]:
     """Batch update validation status for multiple evidence items."""
     updated_count = 0
@@ -374,6 +381,7 @@ async def get_fragments(
     evidence_id: UUID,
     fragment_type: FragmentType | None = None,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("evidence:read")),
 ) -> list[EvidenceFragment]:
     """Get extracted fragments for an evidence item.
 
