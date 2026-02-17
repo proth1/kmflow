@@ -9,7 +9,7 @@
     "engagement_manager": "David Okonkwo"
   },
   "evidence_summary": {
-    "total_items": 47,
+    "total_items": 53,
     "categories_covered": 12,
     "collection_start": "2025-09-15",
     "collection_end": "2025-11-08",
@@ -637,6 +637,115 @@
       "hash": "sha256:e1f5a9b3c7d6...",
       "record_count": 56,
       "notes": "4 case traces: funded (08001), denied (08010, 08008), withdrawn (08017)"
+    },
+    {
+      "id": "EV-036",
+      "category": "Documents",
+      "title": "Q3 2025 Lending Division Performance Review",
+      "file": "documents/q3-2025-lending-performance-review.pptx",
+      "format": "PPTX",
+      "source": "SVP Retail Lending (Board Risk Committee)",
+      "date_received": "2025-10-15",
+      "quality_scores": {
+        "completeness": 0.90,
+        "reliability": 0.88,
+        "freshness": 0.95,
+        "consistency": 0.85
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:g1h5i9j3k7l2...",
+      "notes": "8-slide executive presentation; references WF-008 disabled rule and shadow tracking findings"
+    },
+    {
+      "id": "EV-037",
+      "category": "Documents",
+      "title": "Loan Officer Onboarding - Process & Systems Training",
+      "file": "documents/loan-officer-onboarding-training.pptx",
+      "format": "PPTX",
+      "source": "HR Training & Development",
+      "date_received": "2025-09-15",
+      "quality_scores": {
+        "completeness": 0.85,
+        "reliability": 0.82,
+        "freshness": 0.88,
+        "consistency": 0.80
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:h3i7j1k5l9m2...",
+      "notes": "10-slide training deck; notes WF-008 alerts disabled and realistic 40-45 day timeline guidance"
+    },
+    {
+      "id": "EV-038",
+      "category": "Structured Data",
+      "title": "Rate Lock Management & Pipeline Aging Report",
+      "file": "structured-data/rate-lock-pipeline-aging.xlsx",
+      "format": "XLSX",
+      "source": "Secondary Marketing",
+      "date_received": "2025-10-01",
+      "quality_scores": {
+        "completeness": 0.92,
+        "reliability": 0.95,
+        "freshness": 0.95,
+        "consistency": 0.90
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:i5j9k3l7m1n4...",
+      "record_count": 100,
+      "notes": "3 sheets: Active Rate Locks (85 rows), Pipeline Aging Summary, Extensions & Relocks (15 rows)"
+    },
+    {
+      "id": "EV-039",
+      "category": "Structured Data",
+      "title": "Branch Origination Scorecard - Q3 2025",
+      "file": "structured-data/branch-origination-scorecard-q3.xlsx",
+      "format": "XLSX",
+      "source": "Division Finance / SVP Retail Lending",
+      "date_received": "2025-10-10",
+      "quality_scores": {
+        "completeness": 0.88,
+        "reliability": 0.90,
+        "freshness": 0.95,
+        "consistency": 0.86
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:j7k1l5m9n3o6...",
+      "notes": "2 sheets: Q3 Summary (7 branches + Consumer Direct) and Monthly Detail; Eastview and Consumer Direct rated Below"
+    },
+    {
+      "id": "EV-040",
+      "category": "Controls and Evidence",
+      "title": "Internal Audit Report - Mortgage Origination Controls FY2025",
+      "file": "documents/internal-audit-report-mortgage-fy2025.docx",
+      "format": "DOCX",
+      "source": "Internal Audit Department",
+      "date_received": "2025-09-28",
+      "quality_scores": {
+        "completeness": 0.94,
+        "reliability": 0.96,
+        "freshness": 0.92,
+        "consistency": 0.93
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:k9l3m7n1o5p8...",
+      "notes": "Overall rating: Needs Improvement; 3 findings (2 NI, 1 Satisfactory); references WF-008, shadow tracking, pipeline gaps"
+    },
+    {
+      "id": "EV-041",
+      "category": "Documents",
+      "title": "Change Management Request - Encompass Workflow Rule Updates (CR-2025-0892)",
+      "file": "documents/change-request-encompass-wf008.docx",
+      "format": "DOCX",
+      "source": "IT Change Management",
+      "date_received": "2025-09-30",
+      "quality_scores": {
+        "completeness": 0.90,
+        "reliability": 0.92,
+        "freshness": 0.95,
+        "consistency": 0.88
+      },
+      "status": "VALIDATED",
+      "hash": "sha256:l1m5n9o3p7q2...",
+      "notes": "CR-2025-0892 to re-enable WF-008 with optimized batch processing; references original CR-2025-0247 disable"
     }
   ]
 }
