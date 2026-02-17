@@ -157,19 +157,19 @@
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_EvidenceLifecycle">
 
-      <!-- Pool: 1400x630, starts at x=155 y=47 -->
+      <!-- Pool: adjusted width for new layout -->
       <bpmndi:BPMNShape id="Participant_Pool_di" bpmnElement="Participant_Pool" isHorizontal="true">
-        <dc:Bounds x="155" y="47" width="1400" height="630"/>
+        <dc:Bounds x="155" y="47" width="1120" height="630"/>
       </bpmndi:BPMNShape>
 
       <!-- Lane: Evidence Engine (top, height=350) -->
       <bpmndi:BPMNShape id="Lane_EvidenceEngine_di" bpmnElement="Lane_EvidenceEngine" isHorizontal="true">
-        <dc:Bounds x="185" y="47" width="1370" height="350"/>
+        <dc:Bounds x="185" y="47" width="1090" height="350"/>
       </bpmndi:BPMNShape>
 
       <!-- Lane: Process Analyst (bottom, height=280) -->
       <bpmndi:BPMNShape id="Lane_ProcessAnalyst_di" bpmnElement="Lane_ProcessAnalyst" isHorizontal="true">
-        <dc:Bounds x="185" y="397" width="1370" height="280"/>
+        <dc:Bounds x="185" y="397" width="1090" height="280"/>
       </bpmndi:BPMNShape>
 
       <!-- Row 1: Main flow (y=135 center line in Evidence Engine lane) -->
@@ -184,45 +184,45 @@
 
       <!-- Classify Evidence -->
       <bpmndi:BPMNShape id="Task_Classify_di" bpmnElement="Task_Classify">
-        <dc:Bounds x="335" y="97" width="151" height="76"/>
+        <dc:Bounds x="335" y="95" width="100" height="80"/>
       </bpmndi:BPMNShape>
 
       <!-- Score Quality -->
       <bpmndi:BPMNShape id="Task_Score_di" bpmnElement="Task_Score">
-        <dc:Bounds x="536" y="97" width="151" height="76"/>
+        <dc:Bounds x="487" y="95" width="100" height="80"/>
       </bpmndi:BPMNShape>
 
       <!-- Gateway: Validation Threshold -->
       <bpmndi:BPMNShape id="Gateway_Validation_di" bpmnElement="Gateway_Validation" isMarkerVisible="true">
-        <dc:Bounds x="737" y="110" width="50" height="50"/>
+        <dc:Bounds x="639" y="110" width="50" height="50"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="725" y="72" width="75" height="27"/>
+          <dc:Bounds x="627" y="72" width="75" height="27"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
       <!-- Auto-Validate -->
       <bpmndi:BPMNShape id="Task_AutoValidate_di" bpmnElement="Task_AutoValidate">
-        <dc:Bounds x="847" y="97" width="151" height="76"/>
+        <dc:Bounds x="741" y="95" width="100" height="80"/>
       </bpmndi:BPMNShape>
 
       <!-- Activate Evidence -->
       <bpmndi:BPMNShape id="Task_Activate_di" bpmnElement="Task_Activate">
-        <dc:Bounds x="1048" y="97" width="151" height="76"/>
+        <dc:Bounds x="893" y="95" width="100" height="80"/>
       </bpmndi:BPMNShape>
 
       <!-- End Event: Evidence Active -->
       <bpmndi:BPMNShape id="EndEvent_Active_di" bpmnElement="EndEvent_Active">
-        <dc:Bounds x="1249" y="117" width="36" height="36"/>
+        <dc:Bounds x="1045" y="117" width="36" height="36"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1239" y="160" width="55" height="27"/>
+          <dc:Bounds x="1035" y="160" width="55" height="27"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
       <!-- Timer Boundary Event (on bottom of Activate Evidence) -->
       <bpmndi:BPMNShape id="BoundaryTimer_Age_di" bpmnElement="BoundaryTimer_Age">
-        <dc:Bounds x="1106" y="155" width="36" height="36"/>
+        <dc:Bounds x="925" y="157" width="36" height="36"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1148" y="168" width="41" height="14"/>
+          <dc:Bounds x="967" y="168" width="41" height="14"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
@@ -230,22 +230,22 @@
 
       <!-- Gateway: Age Check -->
       <bpmndi:BPMNShape id="Gateway_AgeCheck_di" bpmnElement="Gateway_AgeCheck" isMarkerVisible="true">
-        <dc:Bounds x="1099" y="245" width="50" height="50"/>
+        <dc:Bounds x="918" y="245" width="50" height="50"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1155" y="263" width="60" height="14"/>
+          <dc:Bounds x="974" y="263" width="60" height="14"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
       <!-- Expire Evidence -->
       <bpmndi:BPMNShape id="Task_Expire_di" bpmnElement="Task_Expire">
-        <dc:Bounds x="847" y="232" width="151" height="76"/>
+        <dc:Bounds x="714" y="230" width="100" height="80"/>
       </bpmndi:BPMNShape>
 
       <!-- End Event: Evidence Expired -->
       <bpmndi:BPMNShape id="EndEvent_Expired_di" bpmnElement="EndEvent_Expired">
-        <dc:Bounds x="737" y="252" width="36" height="36"/>
+        <dc:Bounds x="610" y="252" width="36" height="36"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="727" y="295" width="55" height="27"/>
+          <dc:Bounds x="600" y="295" width="55" height="27"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
@@ -253,22 +253,22 @@
 
       <!-- Review Evidence -->
       <bpmndi:BPMNShape id="Task_Review_di" bpmnElement="Task_Review">
-        <dc:Bounds x="847" y="482" width="151" height="76"/>
+        <dc:Bounds x="741" y="480" width="100" height="80"/>
       </bpmndi:BPMNShape>
 
       <!-- Gateway: Analyst Decision -->
       <bpmndi:BPMNShape id="Gateway_Decision_di" bpmnElement="Gateway_Decision" isMarkerVisible="true">
-        <dc:Bounds x="1099" y="495" width="50" height="50"/>
+        <dc:Bounds x="893" y="495" width="50" height="50"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1093" y="552" width="62" height="27"/>
+          <dc:Bounds x="887" y="552" width="62" height="27"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
       <!-- End Event: Evidence Rejected -->
       <bpmndi:BPMNShape id="EndEvent_Rejected_di" bpmnElement="EndEvent_Rejected">
-        <dc:Bounds x="1249" y="502" width="36" height="36"/>
+        <dc:Bounds x="995" y="502" width="36" height="36"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1239" y="545" width="55" height="27"/>
+          <dc:Bounds x="985" y="545" width="55" height="27"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
@@ -282,100 +282,100 @@
 
       <!-- Flow_2: Classify -> Score -->
       <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
-        <di:waypoint x="486" y="135"/>
-        <di:waypoint x="536" y="135"/>
+        <di:waypoint x="435" y="135"/>
+        <di:waypoint x="487" y="135"/>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_3: Score -> Gateway_Validation -->
       <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
-        <di:waypoint x="687" y="135"/>
-        <di:waypoint x="737" y="135"/>
+        <di:waypoint x="587" y="135"/>
+        <di:waypoint x="639" y="135"/>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_AutoValidate: Gateway -> Auto-Validate (right) -->
       <bpmndi:BPMNEdge id="Flow_AutoValidate_di" bpmnElement="Flow_AutoValidate">
-        <di:waypoint x="787" y="135"/>
-        <di:waypoint x="847" y="135"/>
+        <di:waypoint x="689" y="135"/>
+        <di:waypoint x="741" y="135"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="790" y="117" width="60" height="14"/>
+          <dc:Bounds x="692" y="117" width="60" height="14"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_ManualReview: Gateway -> Review (down to analyst lane) -->
       <bpmndi:BPMNEdge id="Flow_ManualReview_di" bpmnElement="Flow_ManualReview">
-        <di:waypoint x="762" y="160"/>
-        <di:waypoint x="762" y="520"/>
-        <di:waypoint x="847" y="520"/>
+        <di:waypoint x="664" y="160"/>
+        <di:waypoint x="664" y="520"/>
+        <di:waypoint x="741" y="520"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="770" y="337" width="60" height="14"/>
+          <dc:Bounds x="672" y="337" width="60" height="14"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_5: Auto-Validate -> Activate -->
       <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
-        <di:waypoint x="998" y="135"/>
-        <di:waypoint x="1048" y="135"/>
+        <di:waypoint x="841" y="135"/>
+        <di:waypoint x="893" y="135"/>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_6: Activate -> EndEvent_Active -->
       <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
-        <di:waypoint x="1199" y="135"/>
-        <di:waypoint x="1249" y="135"/>
+        <di:waypoint x="993" y="135"/>
+        <di:waypoint x="1045" y="135"/>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_AgeCheck: Timer -> Gateway_AgeCheck (down) -->
       <bpmndi:BPMNEdge id="Flow_AgeCheck_di" bpmnElement="Flow_AgeCheck">
-        <di:waypoint x="1124" y="191"/>
-        <di:waypoint x="1124" y="245"/>
+        <di:waypoint x="943" y="193"/>
+        <di:waypoint x="943" y="245"/>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_Expire: Gateway_AgeCheck -> Expire (left) -->
       <bpmndi:BPMNEdge id="Flow_Expire_di" bpmnElement="Flow_Expire">
-        <di:waypoint x="1099" y="270"/>
-        <di:waypoint x="998" y="270"/>
+        <di:waypoint x="918" y="270"/>
+        <di:waypoint x="814" y="270"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1020" y="252" width="55" height="14"/>
+          <dc:Bounds x="836" y="252" width="55" height="14"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_Continue: Gateway_AgeCheck -> EndEvent_Active (up-right) -->
       <bpmndi:BPMNEdge id="Flow_Continue_di" bpmnElement="Flow_Continue">
-        <di:waypoint x="1149" y="270"/>
-        <di:waypoint x="1267" y="270"/>
-        <di:waypoint x="1267" y="153"/>
+        <di:waypoint x="968" y="270"/>
+        <di:waypoint x="1063" y="270"/>
+        <di:waypoint x="1063" y="153"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1177" y="252" width="55" height="14"/>
+          <dc:Bounds x="984" y="252" width="60" height="14"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_8: Expire -> EndEvent_Expired (left) -->
       <bpmndi:BPMNEdge id="Flow_8_di" bpmnElement="Flow_8">
-        <di:waypoint x="847" y="270"/>
-        <di:waypoint x="773" y="270"/>
+        <di:waypoint x="714" y="270"/>
+        <di:waypoint x="646" y="270"/>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_ReviewComplete: Review -> Gateway_Decision -->
       <bpmndi:BPMNEdge id="Flow_ReviewComplete_di" bpmnElement="Flow_ReviewComplete">
-        <di:waypoint x="998" y="520"/>
-        <di:waypoint x="1099" y="520"/>
+        <di:waypoint x="841" y="520"/>
+        <di:waypoint x="893" y="520"/>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_Approved: Gateway_Decision -> Auto-Validate (up) -->
       <bpmndi:BPMNEdge id="Flow_Approved_di" bpmnElement="Flow_Approved">
-        <di:waypoint x="1124" y="495"/>
-        <di:waypoint x="1124" y="135"/>
-        <di:waypoint x="998" y="135"/>
+        <di:waypoint x="918" y="495"/>
+        <di:waypoint x="918" y="135"/>
+        <di:waypoint x="841" y="135"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1130" y="410" width="48" height="14"/>
+          <dc:Bounds x="924" y="312" width="48" height="14"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_Rejected: Gateway_Decision -> EndEvent_Rejected -->
       <bpmndi:BPMNEdge id="Flow_Rejected_di" bpmnElement="Flow_Rejected">
-        <di:waypoint x="1149" y="520"/>
-        <di:waypoint x="1249" y="520"/>
+        <di:waypoint x="943" y="520"/>
+        <di:waypoint x="995" y="520"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1172" y="502" width="45" height="14"/>
+          <dc:Bounds x="951" y="502" width="45" height="14"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 

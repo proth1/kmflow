@@ -169,9 +169,9 @@
         <dc:Bounds x="185" y="497" width="1470" height="250"/>
       </bpmndi:BPMNShape>
 
-      <!-- ===== Engagement Lead Lane (y center ~142) ===== -->
+      <!-- ===== Engagement Lead Lane (y=47, height=190, center y=142) ===== -->
 
-      <!-- Start Event -->
+      <!-- Start Event (36x36, center y=142 -> y=124) -->
       <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
         <dc:Bounds x="247" y="124" width="36" height="36"/>
         <bpmndi:BPMNLabel>
@@ -179,83 +179,97 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- Define Data Requirements -->
+      <!-- Define Data Requirements (100x80, center y=142 -> y=102) -->
+      <!-- x=335 (start x=283+52) -->
       <bpmndi:BPMNShape id="Task_DefineRequirements_di" bpmnElement="Task_DefineRequirements">
-        <dc:Bounds x="335" y="104" width="151" height="76"/>
+        <dc:Bounds x="335" y="102" width="100" height="80"/>
       </bpmndi:BPMNShape>
 
-      <!-- ===== Request Engine Lane (y center ~367) ===== -->
+      <!-- ===== Request Engine Lane (y=237, height=260, center y=367) ===== -->
 
-      <!-- Generate Request Document -->
+      <!-- Generate Request Document (100x80, center y=367 -> y=327) -->
+      <!-- x=335 (aligned with Task_DefineRequirements) -->
       <bpmndi:BPMNShape id="Task_GenerateRequest_di" bpmnElement="Task_GenerateRequest">
-        <dc:Bounds x="335" y="310" width="151" height="76"/>
+        <dc:Bounds x="335" y="327" width="100" height="80"/>
       </bpmndi:BPMNShape>
 
-      <!-- Deliver Request to Client -->
+      <!-- Deliver Request to Client (100x80, center y=367 -> y=327) -->
+      <!-- x=487 (previous end 435 + 52 gap) -->
       <bpmndi:BPMNShape id="Task_DeliverRequest_di" bpmnElement="Task_DeliverRequest">
-        <dc:Bounds x="536" y="310" width="151" height="76"/>
+        <dc:Bounds x="487" y="327" width="100" height="80"/>
       </bpmndi:BPMNShape>
 
-      <!-- Classify Received Evidence -->
+      <!-- Classify Received Evidence (100x80, center y=367 -> y=327) -->
+      <!-- x=791 (after event-based gateway and message event) -->
       <bpmndi:BPMNShape id="Task_ClassifyReceived_di" bpmnElement="Task_ClassifyReceived">
-        <dc:Bounds x="847" y="310" width="151" height="76"/>
+        <dc:Bounds x="791" y="327" width="100" height="80"/>
       </bpmndi:BPMNShape>
 
-      <!-- Gateway: Fulfillment Check -->
+      <!-- Gateway: Fulfillment Check (50x50, center y=367 -> y=342) -->
+      <!-- x=943 (previous end 891 + 52 gap) -->
       <bpmndi:BPMNShape id="Gateway_Fulfillment_di" bpmnElement="Gateway_Fulfillment" isMarkerVisible="true">
-        <dc:Bounds x="1048" y="323" width="50" height="50"/>
+        <dc:Bounds x="943" y="342" width="50" height="50"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1036" y="285" width="75" height="27"/>
+          <dc:Bounds x="931" y="304" width="75" height="27"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- Mark Request Complete -->
+      <!-- Mark Request Complete (100x80, center y=367 -> y=327) -->
+      <!-- x=1045 (previous end 993 + 52 gap) -->
       <bpmndi:BPMNShape id="Task_MarkComplete_di" bpmnElement="Task_MarkComplete">
-        <dc:Bounds x="1158" y="310" width="151" height="76"/>
+        <dc:Bounds x="1045" y="327" width="100" height="80"/>
       </bpmndi:BPMNShape>
 
-      <!-- Identify Gaps -->
+      <!-- Identify Gaps (100x80, positioned below gateway) -->
+      <!-- x=918 (centered under gateway: gateway center 968 - 50) -->
+      <!-- y=427 (below gateway: 392 + 35 gap) -->
       <bpmndi:BPMNShape id="Task_IdentifyGaps_di" bpmnElement="Task_IdentifyGaps">
-        <dc:Bounds x="1048" y="410" width="151" height="76"/>
+        <dc:Bounds x="918" y="427" width="100" height="80"/>
       </bpmndi:BPMNShape>
 
-      <!-- End Event: Request Fulfilled -->
+      <!-- End Event: Request Fulfilled (36x36, center y=367 -> y=349) -->
+      <!-- x=1197 (previous end 1145 + 52 gap) -->
       <bpmndi:BPMNShape id="EndEvent_Fulfilled_di" bpmnElement="EndEvent_Fulfilled">
-        <dc:Bounds x="1359" y="330" width="36" height="36"/>
+        <dc:Bounds x="1197" y="349" width="36" height="36"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1349" y="373" width="55" height="27"/>
+          <dc:Bounds x="1187" y="392" width="55" height="27"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- ===== Client Lane (y center ~622) ===== -->
+      <!-- ===== Client Lane (y=497, height=250, center y=622) ===== -->
 
-      <!-- Event-Based Gateway: Await Response -->
+      <!-- Event-Based Gateway: Await Response (50x50, center y=622 -> y=597) -->
+      <!-- x=512 (aligned below Task_DeliverRequest center 537 - 25) -->
       <bpmndi:BPMNShape id="Gateway_AwaitResponse_di" bpmnElement="Gateway_AwaitResponse">
-        <dc:Bounds x="586" y="567" width="50" height="50"/>
+        <dc:Bounds x="512" y="597" width="50" height="50"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="584" y="624" width="55" height="27"/>
+          <dc:Bounds x="510" y="654" width="55" height="27"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- Message Event: Evidence Received -->
+      <!-- Message Event: Evidence Received (36x36, center y=622 -> y=604) -->
+      <!-- x=614 (previous end 562 + 52 gap) -->
       <bpmndi:BPMNShape id="Event_EvidenceReceived_di" bpmnElement="Event_EvidenceReceived">
-        <dc:Bounds x="738" y="574" width="36" height="36"/>
+        <dc:Bounds x="614" y="604" width="36" height="36"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="728" y="617" width="55" height="27"/>
+          <dc:Bounds x="604" y="647" width="55" height="27"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- Timer Event: 7-Day Timeout -->
+      <!-- Timer Event: 7-Day Timeout (36x36, positioned above gateway) -->
+      <!-- x=519 (centered above gateway: gateway center 537 - 18) -->
+      <!-- y=540 (above gateway: 597 - 57 gap) -->
       <bpmndi:BPMNShape id="Event_Timeout_di" bpmnElement="Event_Timeout">
-        <dc:Bounds x="593" y="520" width="36" height="36"/>
+        <dc:Bounds x="519" y="540" width="36" height="36"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="535" y="531" width="48" height="27"/>
+          <dc:Bounds x="461" y="551" width="48" height="27"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
 
-      <!-- Send Follow-Up Reminder -->
+      <!-- Send Follow-Up Reminder (100x80, center y=622 -> y=582) -->
+      <!-- x=360 (previous timer event, left side) -->
       <bpmndi:BPMNShape id="Task_SendReminder_di" bpmnElement="Task_SendReminder">
-        <dc:Bounds x="335" y="554" width="151" height="76"/>
+        <dc:Bounds x="335" y="582" width="100" height="80"/>
       </bpmndi:BPMNShape>
 
       <!-- ===== Sequence Flow Edges ===== -->
@@ -268,92 +282,93 @@
 
       <!-- Flow_2: Define Requirements -> Generate Request (down to Request Engine) -->
       <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
-        <di:waypoint x="410" y="180"/>
-        <di:waypoint x="410" y="310"/>
+        <di:waypoint x="385" y="182"/>
+        <di:waypoint x="385" y="327"/>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_3: Generate -> Deliver -->
       <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
-        <di:waypoint x="486" y="348"/>
-        <di:waypoint x="536" y="348"/>
+        <di:waypoint x="435" y="367"/>
+        <di:waypoint x="487" y="367"/>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_4: Deliver -> Await Response (down to Client) -->
       <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
-        <di:waypoint x="611" y="386"/>
-        <di:waypoint x="611" y="567"/>
+        <di:waypoint x="537" y="407"/>
+        <di:waypoint x="537" y="597"/>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_EvidenceReceived: Await -> Evidence Received -->
       <bpmndi:BPMNEdge id="Flow_EvidenceReceived_di" bpmnElement="Flow_EvidenceReceived">
-        <di:waypoint x="636" y="592"/>
-        <di:waypoint x="738" y="592"/>
+        <di:waypoint x="562" y="622"/>
+        <di:waypoint x="614" y="622"/>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_Timeout: Await -> Timeout (up) -->
       <bpmndi:BPMNEdge id="Flow_Timeout_di" bpmnElement="Flow_Timeout">
-        <di:waypoint x="611" y="567"/>
-        <di:waypoint x="611" y="556"/>
+        <di:waypoint x="537" y="597"/>
+        <di:waypoint x="537" y="576"/>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_6: Evidence Received -> Classify (up to Request Engine) -->
       <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
-        <di:waypoint x="774" y="592"/>
-        <di:waypoint x="922" y="592"/>
-        <di:waypoint x="922" y="386"/>
+        <di:waypoint x="650" y="622"/>
+        <di:waypoint x="841" y="622"/>
+        <di:waypoint x="841" y="407"/>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_7: Timeout -> Send Reminder (left) -->
       <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7">
-        <di:waypoint x="593" y="538"/>
-        <di:waypoint x="540" y="538"/>
-        <di:waypoint x="540" y="592"/>
-        <di:waypoint x="486" y="592"/>
+        <di:waypoint x="519" y="558"/>
+        <di:waypoint x="460" y="558"/>
+        <di:waypoint x="460" y="622"/>
+        <di:waypoint x="435" y="622"/>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_ReminderLoop: Send Reminder -> Await Response (loop back right) -->
       <bpmndi:BPMNEdge id="Flow_ReminderLoop_di" bpmnElement="Flow_ReminderLoop">
-        <di:waypoint x="410" y="630"/>
-        <di:waypoint x="410" y="700"/>
-        <di:waypoint x="611" y="700"/>
-        <di:waypoint x="611" y="617"/>
+        <di:waypoint x="385" y="662"/>
+        <di:waypoint x="385" y="710"/>
+        <di:waypoint x="537" y="710"/>
+        <di:waypoint x="537" y="647"/>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_8: Classify -> Fulfillment Check -->
       <bpmndi:BPMNEdge id="Flow_8_di" bpmnElement="Flow_8">
-        <di:waypoint x="998" y="348"/>
-        <di:waypoint x="1048" y="348"/>
+        <di:waypoint x="891" y="367"/>
+        <di:waypoint x="943" y="367"/>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_Complete: Fulfillment >= 80% -> Mark Complete -->
       <bpmndi:BPMNEdge id="Flow_Complete_di" bpmnElement="Flow_Complete">
-        <di:waypoint x="1098" y="348"/>
-        <di:waypoint x="1158" y="348"/>
+        <di:waypoint x="993" y="367"/>
+        <di:waypoint x="1045" y="367"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1105" y="330" width="40" height="14"/>
+          <dc:Bounds x="1000" y="349" width="40" height="14"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_IdentifyGaps: Fulfillment < 80% -> Identify Gaps (down) -->
       <bpmndi:BPMNEdge id="Flow_IdentifyGaps_di" bpmnElement="Flow_IdentifyGaps">
-        <di:waypoint x="1073" y="373"/>
-        <di:waypoint x="1073" y="410"/>
+        <di:waypoint x="968" y="392"/>
+        <di:waypoint x="968" y="427"/>
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1080" y="388" width="35" height="14"/>
+          <dc:Bounds x="975" y="405" width="35" height="14"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
 
-      <!-- Flow_GapLoop: Identify Gaps -> Deliver Request (loop back left) -->
+      <!-- Flow_GapLoop: Identify Gaps -> Deliver Request (loop back left through margin) -->
       <bpmndi:BPMNEdge id="Flow_GapLoop_di" bpmnElement="Flow_GapLoop">
-        <di:waypoint x="1048" y="448"/>
-        <di:waypoint x="611" y="448"/>
-        <di:waypoint x="611" y="386"/>
+        <di:waypoint x="918" y="467"/>
+        <di:waypoint x="280" y="467"/>
+        <di:waypoint x="280" y="367"/>
+        <di:waypoint x="487" y="367"/>
       </bpmndi:BPMNEdge>
 
       <!-- Flow_10: Mark Complete -> End -->
       <bpmndi:BPMNEdge id="Flow_10_di" bpmnElement="Flow_10">
-        <di:waypoint x="1309" y="348"/>
-        <di:waypoint x="1359" y="348"/>
+        <di:waypoint x="1145" y="367"/>
+        <di:waypoint x="1197" y="367"/>
       </bpmndi:BPMNEdge>
 
     </bpmndi:BPMNPlane>

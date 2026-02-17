@@ -294,6 +294,237 @@
       box-shadow: 0 8px 30px rgba(0, 51, 141, 0.15);
     }
 
+    /* Evidence Portfolio Styles */
+    .evidence-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    .evidence-category-card {
+      background: var(--kpmg-white);
+      border-radius: 10px;
+      padding: 1.25rem;
+      box-shadow: 0 2px 12px rgba(0, 51, 141, 0.08);
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s, border-top 0.2s;
+      border-top: 3px solid transparent;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .evidence-category-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 24px rgba(0, 51, 141, 0.15);
+      border-top-color: var(--kpmg-blue);
+    }
+
+    .evidence-icon {
+      width: 52px;
+      height: 52px;
+      min-width: 52px;
+      background: var(--kpmg-blue);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+
+    .evidence-card-info h4 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--kpmg-dark-gray);
+      margin-bottom: 0.25rem;
+    }
+
+    .evidence-card-meta {
+      font-size: 0.75rem;
+      color: var(--kpmg-medium-gray);
+    }
+
+    .evidence-card-meta strong {
+      color: var(--kpmg-blue);
+    }
+
+    /* Evidence Modal */
+    .evidence-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 20, 50, 0.85);
+      backdrop-filter: blur(6px);
+      z-index: 10000;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    .evidence-modal.active {
+      display: flex;
+    }
+
+    .evidence-modal-content {
+      background: var(--kpmg-white);
+      border-radius: 16px;
+      max-width: 1200px;
+      width: 100%;
+      max-height: 85vh;
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+      animation: modalIn 0.3s ease-out;
+    }
+
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .evidence-modal-header {
+      background: linear-gradient(135deg, var(--kpmg-blue) 0%, var(--kpmg-medium-blue) 100%);
+      color: var(--kpmg-white);
+      padding: 1.5rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .evidence-modal-header .evidence-icon {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .evidence-modal-header h3 {
+      flex: 1;
+      font-size: 1.4rem;
+      color: var(--kpmg-white);
+      margin: 0;
+    }
+
+    .evidence-modal-header .modal-count {
+      font-size: 0.85rem;
+      opacity: 0.8;
+    }
+
+    .evidence-modal-close {
+      background: rgba(255, 255, 255, 0.15);
+      border: none;
+      color: var(--kpmg-white);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      font-size: 1.25rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+
+    .evidence-modal-close:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .evidence-modal-body {
+      overflow-y: auto;
+      max-height: calc(85vh - 80px);
+      padding: 0;
+    }
+
+    .evidence-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .evidence-table thead {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .evidence-table th {
+      background: var(--kpmg-dark-navy);
+      color: var(--kpmg-white);
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .evidence-table td {
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid #eee;
+      vertical-align: middle;
+    }
+
+    .evidence-table tbody tr:hover {
+      background: #f8faff;
+    }
+
+    .evidence-table .ev-id {
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      color: var(--kpmg-blue);
+      font-size: 0.8rem;
+    }
+
+    .format-pill {
+      display: inline-block;
+      background: #e8f0fe;
+      color: var(--kpmg-blue);
+      padding: 0.15rem 0.6rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .quality-scores {
+      display: flex;
+      gap: 3px;
+      align-items: center;
+    }
+
+    .quality-score-bar {
+      width: 28px;
+      height: 8px;
+      background: #eee;
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .quality-score-bar .bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s;
+    }
+
+    .bar-fill.score-high { background: #22c55e; }
+    .bar-fill.score-medium { background: #eab308; }
+    .bar-fill.score-low { background: #f97316; }
+    .bar-fill.score-critical { background: #ef4444; }
+
+    .evidence-flag {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .flag-inconsistency { background: #fef2f2; color: #dc2626; }
+    .flag-control-gap { background: #fff7ed; color: #ea580c; }
+    .flag-process-inefficiency { background: #fefce8; color: #ca8a04; }
+
     .slide-dark .card {
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.1);
@@ -567,9 +798,9 @@
       <a href="#slide-3">Summary</a>
       <a href="#slide-7">Market</a>
       <a href="#slide-11">Evidence</a>
-      <a href="#slide-14">Capabilities</a>
-      <a href="#slide-23">Architecture</a>
-      <a href="#slide-35">Implementation</a>
+      <a href="#slide-15">Capabilities</a>
+      <a href="#slide-24">Architecture</a>
+      <a href="#slide-36">Implementation</a>
     </div>
     <div class="nav-version">v1.0.0</div>
   </nav>
@@ -1159,8 +1390,115 @@
       </div>
     </section>
 
-    <!-- Slide 14: Evidence Ingestion Engine -->
+    <!-- Slide 14: Synthetic Evidence Portfolio -->
     <section id="slide-14" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Evidence Collection</span>
+        <h2>Synthetic Evidence Portfolio</h2>
+      </div>
+      <p style="font-size: 1.05rem; margin-bottom: 1.25rem; color: var(--kpmg-medium-gray);">41 evidence items across 13 categories for the Meridian National Bank loan origination engagement. Click any category to explore items.</p>
+      <div class="evidence-cards-grid" id="evidenceCardsGrid">
+        <div class="evidence-category-card" tabindex="0" role="button" data-category="Documents" aria-label="Documents - 6 items">
+          <div class="evidence-icon">📄</div>
+          <div class="evidence-card-info">
+            <h4>Documents</h4>
+            <div class="evidence-card-meta"><strong>6</strong> items &middot; MD, PPTX, DOCX</div>
+          </div>
+        </div>
+        <div class="evidence-category-card" tabindex="0" role="button" data-category="Structured Data" aria-label="Structured Data - 7 items">
+          <div class="evidence-icon">📊</div>
+          <div class="evidence-card-info">
+            <h4>Structured Data</h4>
+            <div class="evidence-card-meta"><strong>7</strong> items &middot; CSV, XLSX</div>
+          </div>
+        </div>
+        <div class="evidence-category-card" tabindex="0" role="button" data-category="Images" aria-label="Images - 4 items">
+          <div class="evidence-icon">🖼️</div>
+          <div class="evidence-card-info">
+            <h4>Images</h4>
+            <div class="evidence-card-meta"><strong>4</strong> items &middot; PNG, JPEG</div>
+          </div>
+        </div>
+        <div class="evidence-category-card" tabindex="0" role="button" data-category="Audio" aria-label="Audio - 3 items">
+          <div class="evidence-icon">🎙️</div>
+          <div class="evidence-card-info">
+            <h4>Audio</h4>
+            <div class="evidence-card-meta"><strong>3</strong> items &middot; M4A, MP3</div>
+          </div>
+        </div>
+        <div class="evidence-category-card" tabindex="0" role="button" data-category="Video" aria-label="Video - 3 items">
+          <div class="evidence-icon">🎬</div>
+          <div class="evidence-card-info">
+            <h4>Video</h4>
+            <div class="evidence-card-meta"><strong>3</strong> items &middot; MP4, MOV</div>
+          </div>
+        </div>
+        <div class="evidence-category-card" tabindex="0" role="button" data-category="Interviews" aria-label="Interviews - 3 items">
+          <div class="evidence-icon">🗣️</div>
+          <div class="evidence-card-info">
+            <h4>Interviews</h4>
+            <div class="evidence-card-meta"><strong>3</strong> items &middot; Transcript (MD)</div>
+          </div>
+        </div>
+        <div class="evidence-category-card" tabindex="0" role="button" data-category="Controls and Evidence" aria-label="Controls and Evidence - 3 items">
+          <div class="evidence-icon">🛡️</div>
+          <div class="evidence-card-info">
+            <h4>Controls &amp; Evidence</h4>
+            <div class="evidence-card-meta"><strong>3</strong> items &middot; CSV, DOCX</div>
+          </div>
+        </div>
+        <div class="evidence-category-card" tabindex="0" role="button" data-category="Regulatory and Policy" aria-label="Regulatory and Policy - 3 items">
+          <div class="evidence-icon">⚖️</div>
+          <div class="evidence-card-info">
+            <h4>Regulatory &amp; Policy</h4>
+            <div class="evidence-card-meta"><strong>3</strong> items &middot; MD</div>
+          </div>
+        </div>
+        <div class="evidence-category-card" tabindex="0" role="button" data-category="Domain Communications" aria-label="Domain Communications - 2 items">
+          <div class="evidence-icon">💬</div>
+          <div class="evidence-card-info">
+            <h4>Domain Communications</h4>
+            <div class="evidence-card-meta"><strong>2</strong> items &middot; JSON</div>
+          </div>
+        </div>
+        <div class="evidence-category-card" tabindex="0" role="button" data-category="Job Aids and Edge Cases" aria-label="Job Aids and Edge Cases - 2 items">
+          <div class="evidence-icon">📋</div>
+          <div class="evidence-card-info">
+            <h4>Job Aids &amp; Edge Cases</h4>
+            <div class="evidence-card-meta"><strong>2</strong> items &middot; MD</div>
+          </div>
+        </div>
+        <div class="evidence-category-card" tabindex="0" role="button" data-category="KM4Work" aria-label="KM4Work - 3 items">
+          <div class="evidence-icon">⚙️</div>
+          <div class="evidence-card-info">
+            <h4>KM4Work</h4>
+            <div class="evidence-card-meta"><strong>3</strong> items &middot; DMN, JSON, CSV</div>
+          </div>
+        </div>
+        <div class="evidence-category-card" tabindex="0" role="button" data-category="BPM Process Models" aria-label="BPM Process Models - 1 item">
+          <div class="evidence-icon">🔄</div>
+          <div class="evidence-card-info">
+            <h4>BPM Process Models</h4>
+            <div class="evidence-card-meta"><strong>1</strong> item &middot; BPMN 2.0 XML</div>
+          </div>
+        </div>
+        <div class="evidence-category-card" tabindex="0" role="button" data-category="SaaS Exports" aria-label="SaaS Exports - 1 item">
+          <div class="evidence-icon">☁️</div>
+          <div class="evidence-card-info">
+            <h4>SaaS Exports</h4>
+            <div class="evidence-card-meta"><strong>1</strong> item &middot; JSON</div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 14</span>
+      </div>
+    </section>
+
+    <!-- Slide 15: Evidence Ingestion Engine -->
+    <section id="slide-15" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Capability 1</span>
         <h2>Evidence Ingestion Engine</h2>
@@ -1192,12 +1530,12 @@
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 14</span>
+        <span>Slide 15</span>
       </div>
     </section>
 
-    <!-- Slide 15: Semantic Relationship Engine -->
-    <section id="slide-15" class="slide slide-gray">
+    <!-- Slide 16: Semantic Relationship Engine -->
+    <section id="slide-16" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Capability 2</span>
         <h2>Semantic Relationship Engine</h2>
@@ -1227,12 +1565,12 @@
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 15</span>
+        <span>Slide 16</span>
       </div>
     </section>
 
-    <!-- Slide 16: LCD Algorithm Steps -->
-    <section id="slide-16" class="slide slide-light">
+    <!-- Slide 17: LCD Algorithm Steps -->
+    <section id="slide-17" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Capability 3</span>
         <h2>LCD Algorithm: The Intellectual Core</h2>
@@ -1271,12 +1609,12 @@
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 16</span>
+        <span>Slide 17</span>
       </div>
     </section>
 
-    <!-- Slide 17: Confidence Scoring Model -->
-    <section id="slide-17" class="slide slide-gray">
+    <!-- Slide 18: Confidence Scoring Model -->
+    <section id="slide-18" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Confidence Scoring</span>
         <h2>Evidence-Based Confidence Model</h2>
@@ -1333,12 +1671,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 17</span>
+        <span>Slide 18</span>
       </div>
     </section>
 
-    <!-- Slide 18: Regulatory-Policy-Control Overlay -->
-    <section id="slide-18" class="slide slide-dark">
+    <!-- Slide 19: Regulatory-Policy-Control Overlay -->
+    <section id="slide-19" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-light">Capability 4</span>
         <h2>Regulatory-Policy-Control Overlay</h2>
@@ -1373,12 +1711,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 18</span>
+        <span>Slide 19</span>
       </div>
     </section>
 
-    <!-- Slide 19: TOM Alignment Engine -->
-    <section id="slide-19" class="slide slide-light">
+    <!-- Slide 20: TOM Alignment Engine -->
+    <section id="slide-20" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Capability 5</span>
         <h2>Target Operating Model Alignment Engine</h2>
@@ -1408,12 +1746,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 19</span>
+        <span>Slide 20</span>
       </div>
     </section>
 
-    <!-- Slide 20: Gap Analysis Methodology -->
-    <section id="slide-20" class="slide slide-gray">
+    <!-- Slide 21: Gap Analysis Methodology -->
+    <section id="slide-21" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Gap Analysis</span>
         <h2>Prioritization Methodology</h2>
@@ -1449,12 +1787,12 @@ priority_score = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 20</span>
+        <span>Slide 21</span>
       </div>
     </section>
 
-    <!-- Slide 21: Integration Framework -->
-    <section id="slide-21" class="slide slide-dark">
+    <!-- Slide 22: Integration Framework -->
+    <section id="slide-22" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-light">Capability 6</span>
         <h2>Integration Framework</h2>
@@ -1510,12 +1848,12 @@ priority_score = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 21</span>
+        <span>Slide 22</span>
       </div>
     </section>
 
-    <!-- Slide 22: Visualization and Reporting -->
-    <section id="slide-22" class="slide slide-light">
+    <!-- Slide 23: Visualization and Reporting -->
+    <section id="slide-23" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Deliverables</span>
         <h2>Visualization and Reporting</h2>
@@ -1549,12 +1887,12 @@ priority_score = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 22</span>
+        <span>Slide 23</span>
       </div>
     </section>
 
-    <!-- Slide 23: System Architecture -->
-    <section id="slide-23" class="slide slide-gray">
+    <!-- Slide 24: System Architecture -->
+    <section id="slide-24" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Architecture</span>
         <h2>System Architecture</h2>
@@ -1584,12 +1922,12 @@ priority_score = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 23</span>
+        <span>Slide 24</span>
       </div>
     </section>
 
-    <!-- Slide 24: Tech Stack -->
-    <section id="slide-24" class="slide slide-light">
+    <!-- Slide 25: Tech Stack -->
+    <section id="slide-25" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Technology</span>
         <h2>Tech Stack</h2>
@@ -1655,59 +1993,39 @@ priority_score = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 24</span>
+        <span>Slide 25</span>
       </div>
     </section>
 
-    <!-- Slide 25: Knowledge Graph Schema -->
-    <section id="slide-25" class="slide slide-dark">
+    <!-- Slide 26: Knowledge Graph Schema -->
+    <section id="slide-26" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-light">Data Model</span>
-        <h2>Knowledge Graph Schema</h2>
+        <h2>Knowledge Graph Visualization</h2>
+        <p>Neo4j-powered graph connecting processes, evidence, governance, and gap analysis</p>
       </div>
-      <div class="two-col">
-        <div>
-          <h3>Node Types</h3>
-          <ul class="feature-list">
-            <li>Process</li>
-            <li>Subprocess</li>
-            <li>Activity</li>
-            <li>Decision</li>
-            <li>Evidence</li>
-            <li>Policy</li>
-            <li>Control</li>
-            <li>Regulation</li>
-            <li>TOM</li>
-            <li>Gap</li>
-            <li>Role</li>
-            <li>System</li>
-            <li>Document</li>
-          </ul>
-        </div>
-        <div>
-          <h3>Relationship Types</h3>
-          <ul class="feature-list">
-            <li><strong>SUPPORTED_BY</strong> (confidence, evidence_count)</li>
-            <li><strong>GOVERNED_BY</strong> (effectiveness)</li>
-            <li><strong>ENFORCED_BY</strong> (coverage)</li>
-            <li><strong>SATISFIES</strong> (compliance_level)</li>
-            <li><strong>DEVIATES_FROM</strong> (gap_score, severity)</li>
-            <li><strong>CONTRADICTS</strong> (severity, resolution)</li>
-            <li><strong>FOLLOWED_BY</strong> (frequency, variants)</li>
-            <li><strong>OWNED_BY</strong></li>
-            <li><strong>USES</strong></li>
-          </ul>
+      <div class="viz-container" id="knowledge-graph-2d" style="background: rgba(255,255,255,0.1); position: relative; overflow: hidden;">
+        <svg id="knowledge-graph-svg" width="100%" height="100%"></svg>
+        <div id="graph-tooltip" style="position: absolute; background: rgba(0,51,141,0.95); color: white; padding: 8px 12px; border-radius: 6px; font-size: 12px; pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 100;"></div>
+        <!-- Legend -->
+        <div style="position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.6); padding: 12px 16px; border-radius: 8px; display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px;">
+          <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; border-radius: 50%; background: #00338D;"></span><span style="color: white;">Core Process</span></div>
+          <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; border-radius: 50%; background: #7AB800;"></span><span style="color: white;">Evidence</span></div>
+          <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; border-radius: 50%; background: #BC204B;"></span><span style="color: white;">Governance</span></div>
+          <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; border-radius: 50%; background: #F7A800;"></span><span style="color: white;">TOM & Gaps</span></div>
+          <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; border-radius: 50%; background: #00A3A1;"></span><span style="color: white;">Roles & Systems</span></div>
+          <div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; border-radius: 50%; background: #0091DA;"></span><span style="color: white;">Decisions</span></div>
         </div>
       </div>
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 25</span>
+        <span>Slide 26</span>
       </div>
     </section>
 
-    <!-- Slide 26: Data Model -->
-    <section id="slide-26" class="slide slide-gray">
+    <!-- Slide 27: Data Model -->
+    <section id="slide-27" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Data Model</span>
         <h2>Core Entities (PostgreSQL)</h2>
@@ -1763,12 +2081,12 @@ priority_score = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 26</span>
+        <span>Slide 27</span>
       </div>
     </section>
 
-    <!-- Slide 27: API Surface -->
-    <section id="slide-27" class="slide slide-light">
+    <!-- Slide 28: API Surface -->
+    <section id="slide-28" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">API</span>
         <h2>API Surface Overview</h2>
@@ -1809,12 +2127,12 @@ priority_score = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 27</span>
+        <span>Slide 28</span>
       </div>
     </section>
 
-    <!-- Slide 28: Personas and Dashboards -->
-    <section id="slide-28" class="slide slide-dark">
+    <!-- Slide 29: Personas and Dashboards -->
+    <section id="slide-29" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-light">User Experience</span>
         <h2>Personas and Dashboards</h2>
@@ -1855,12 +2173,12 @@ priority_score = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 28</span>
+        <span>Slide 29</span>
       </div>
     </section>
 
-    <!-- Slide 29: Flow 1 - Engagement Setup -->
-    <section id="slide-29" class="slide slide-gray">
+    <!-- Slide 30: Flow 1 - Engagement Setup -->
+    <section id="slide-30" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">User Flow 1</span>
         <h2>Engagement Setup & Evidence Collection</h2>
@@ -1903,12 +2221,12 @@ priority_score = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 29</span>
+        <span>Slide 30</span>
       </div>
     </section>
 
-    <!-- Slide 30: Flow 2 - POV Generation -->
-    <section id="slide-30" class="slide slide-light">
+    <!-- Slide 31: Flow 2 - POV Generation -->
+    <section id="slide-31" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">User Flow 2</span>
         <h2>Process Point of View Generation</h2>
@@ -1936,12 +2254,12 @@ priority_score = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 30</span>
+        <span>Slide 31</span>
       </div>
     </section>
 
-    <!-- Slide 31: Flow 3 - TOM Alignment -->
-    <section id="slide-31" class="slide slide-gray">
+    <!-- Slide 32: Flow 3 - TOM Alignment -->
+    <section id="slide-32" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">User Flow 3</span>
         <h2>TOM Alignment & Gap Analysis</h2>
@@ -1989,12 +2307,12 @@ priority_score = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 31</span>
+        <span>Slide 32</span>
       </div>
     </section>
 
-    <!-- Slide 32: Flow 4 - Continuous Monitoring -->
-    <section id="slide-32" class="slide slide-dark">
+    <!-- Slide 33: Flow 4 - Continuous Monitoring -->
+    <section id="slide-33" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-light">User Flow 4</span>
         <h2>Continuous Monitoring (Phase 3)</h2>
@@ -2027,12 +2345,12 @@ priority_score = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 32</span>
+        <span>Slide 33</span>
       </div>
     </section>
 
-    <!-- Slide 33: Security & Data Isolation -->
-    <section id="slide-33" class="slide slide-light">
+    <!-- Slide 34: Security & Data Isolation -->
+    <section id="slide-34" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Security & Compliance</span>
         <h2>Security & Data Isolation</h2>
@@ -2066,12 +2384,12 @@ priority_score = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 33</span>
+        <span>Slide 34</span>
       </div>
     </section>
 
-    <!-- Slide 34: Compliance -->
-    <section id="slide-34" class="slide slide-dark">
+    <!-- Slide 35: Compliance -->
+    <section id="slide-35" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-light">Compliance</span>
         <h2>Compliance Posture</h2>
@@ -2115,12 +2433,12 @@ priority_score = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 34</span>
+        <span>Slide 35</span>
       </div>
     </section>
 
-    <!-- Slide 35: Phase 1 - Foundation -->
-    <section id="slide-35" class="slide slide-light">
+    <!-- Slide 36: Phase 1 - Foundation -->
+    <section id="slide-36" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Phase 1</span>
         <h2>Foundation (MVP)</h2>
@@ -2153,12 +2471,12 @@ priority_score = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 35</span>
+        <span>Slide 36</span>
       </div>
     </section>
 
-    <!-- Slide 36: Phase 2 - Intelligence -->
-    <section id="slide-36" class="slide slide-gray">
+    <!-- Slide 37: Phase 2 - Intelligence -->
+    <section id="slide-37" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Phase 2</span>
         <h2>Intelligence</h2>
@@ -2191,12 +2509,12 @@ priority_score = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 36</span>
+        <span>Slide 37</span>
       </div>
     </section>
 
-    <!-- Slide 37: Phase 3 - Scale & Autonomy -->
-    <section id="slide-37" class="slide slide-dark">
+    <!-- Slide 38: Phase 3 - Scale & Autonomy -->
+    <section id="slide-38" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-light">Phase 3</span>
         <h2>Scale & Autonomy</h2>
@@ -2227,12 +2545,12 @@ priority_score = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 37</span>
+        <span>Slide 38</span>
       </div>
     </section>
 
-    <!-- Slide 38: Success Metrics -->
-    <section id="slide-38" class="slide slide-light">
+    <!-- Slide 39: Success Metrics -->
+    <section id="slide-39" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Success Metrics</span>
         <h2>Measuring Success</h2>
@@ -2288,12 +2606,12 @@ priority_score = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 38</span>
+        <span>Slide 39</span>
       </div>
     </section>
 
-    <!-- Slide 39: Next Steps -->
-    <section id="slide-39" class="slide slide-gradient">
+    <!-- Slide 40: Next Steps -->
+    <section id="slide-40" class="slide slide-gradient">
       <div class="section-header">
         <span class="badge badge-light">Next Steps</span>
         <h2>Launch Plan</h2>
@@ -2327,12 +2645,12 @@ priority_score = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 39</span>
+        <span>Slide 40</span>
       </div>
     </section>
 
-    <!-- Slide 40: Final Hero -->
-    <section id="slide-40" class="slide slide-hero">
+    <!-- Slide 41: Final Hero -->
+    <section id="slide-41" class="slide slide-hero">
       <span class="tagline">Let insights reveal new opportunity</span>
       <h1>KMFlow Platform</h1>
       <p class="subtitle">Transforming Process Intelligence Through Evidence-First Analysis</p>
@@ -2343,7 +2661,7 @@ priority_score = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 40</span>
+        <span>Slide 41</span>
       </div>
     </section>
   </main>
@@ -2354,6 +2672,35 @@ priority_score = (
       © 2026 KPMG International Limited. KPMG International Limited is a private English company limited by guarantee and does not provide services to clients.
       All information provided is of a general nature and is not intended to address the circumstances of any particular individual or entity.
       The information contained herein is confidential and proprietary. Do not distribute without authorization.
+    </div>
+  </div>
+
+  <!-- Evidence Portfolio Modal -->
+  <div class="evidence-modal" id="evidenceModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="evidence-modal-content">
+      <div class="evidence-modal-header">
+        <div class="evidence-icon" id="modalIcon"></div>
+        <div>
+          <h3 id="modalTitle"></h3>
+          <div class="modal-count" id="modalCount"></div>
+        </div>
+        <button class="evidence-modal-close" id="modalCloseBtn" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="evidence-modal-body">
+        <table class="evidence-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Title</th>
+              <th>Format</th>
+              <th>Source</th>
+              <th>Quality</th>
+              <th>Flags</th>
+            </tr>
+          </thead>
+          <tbody id="modalTableBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -2399,6 +2746,11 @@ priority_score = (
       const currentScroll = slidesContainer.scrollTop;
       const windowHeight = window.innerHeight;
 
+      if (e.key === 'Escape') {
+        closeEvidenceModal();
+        return;
+      }
+      if (document.getElementById('evidenceModal').classList.contains('active')) return;
       if (e.key === 'ArrowDown' || e.key === 'PageDown') {
         e.preventDefault();
         slidesContainer.scrollBy({ top: windowHeight, behavior: 'smooth' });
@@ -2407,6 +2759,479 @@ priority_score = (
         slidesContainer.scrollBy({ top: -windowHeight, behavior: 'smooth' });
       }
     });
+
+    // Evidence Portfolio Data
+    const categoryMeta = {
+      'Documents': { icon: '📄', count: 6 },
+      'Structured Data': { icon: '📊', count: 7 },
+      'Images': { icon: '🖼️', count: 4 },
+      'Audio': { icon: '🎙️', count: 3 },
+      'Video': { icon: '🎬', count: 3 },
+      'Interviews': { icon: '🗣️', count: 3 },
+      'Controls and Evidence': { icon: '🛡️', count: 3 },
+      'Regulatory and Policy': { icon: '⚖️', count: 3 },
+      'Domain Communications': { icon: '💬', count: 2 },
+      'Job Aids and Edge Cases': { icon: '📋', count: 2 },
+      'KM4Work': { icon: '⚙️', count: 3 },
+      'BPM Process Models': { icon: '🔄', count: 1 },
+      'SaaS Exports': { icon: '☁️', count: 1 }
+    };
+
+    const evidenceData = {
+      'Documents': [
+        { id: 'EV-001', title: 'Residential Mortgage Origination Policy v4.2', format: 'MD', source: 'Chief Lending Officer', scores: { completeness: 0.92, reliability: 0.95, freshness: 0.88, consistency: 0.90 } },
+        { id: 'EV-002', title: 'Underwriting Standard Operating Procedures', format: 'MD', source: 'VP Underwriting', scores: { completeness: 0.85, reliability: 0.90, freshness: 0.72, consistency: 0.78 } },
+        { id: 'EV-003', title: 'Loan Processor Desktop Procedure Guide', format: 'MD', source: 'Loan Processing Manager', scores: { completeness: 0.78, reliability: 0.82, freshness: 0.65, consistency: 0.70 } },
+        { id: 'EV-036', title: 'Q3 2025 Lending Division Performance Review', format: 'PPTX', source: 'SVP Retail Lending', scores: { completeness: 0.90, reliability: 0.88, freshness: 0.95, consistency: 0.85 } },
+        { id: 'EV-037', title: 'Loan Officer Onboarding - Process & Systems Training', format: 'PPTX', source: 'HR Training & Development', scores: { completeness: 0.85, reliability: 0.82, freshness: 0.88, consistency: 0.80 } },
+        { id: 'EV-041', title: 'Change Management Request - Encompass Workflow Rule Updates', format: 'DOCX', source: 'IT Change Management', scores: { completeness: 0.90, reliability: 0.92, freshness: 0.95, consistency: 0.88 } }
+      ],
+      'Structured Data': [
+        { id: 'EV-004', title: 'Loan Application Pipeline - 12 Month Extract', format: 'CSV', source: 'LOS System (Encompass)', scores: { completeness: 0.96, reliability: 0.98, freshness: 0.95, consistency: 0.92 } },
+        { id: 'EV-005', title: 'Processing Time Metrics by Stage', format: 'CSV', source: 'LOS System (Encompass)', scores: { completeness: 0.88, reliability: 0.94, freshness: 0.95, consistency: 0.85 } },
+        { id: 'EV-006', title: 'Exception and Override Log', format: 'CSV', source: 'Compliance Department', scores: { completeness: 0.82, reliability: 0.91, freshness: 0.90, consistency: 0.76 } },
+        { id: 'EV-007', title: 'Underwriting Decision Outcomes', format: 'CSV', source: 'LOS System (Encompass)', scores: { completeness: 0.94, reliability: 0.97, freshness: 0.95, consistency: 0.91 } },
+        { id: 'EV-022', title: 'Vendor Management - Third Party Service Providers', format: 'CSV', source: 'Vendor Management Office', scores: { completeness: 0.76, reliability: 0.88, freshness: 0.70, consistency: 0.82 } },
+        { id: 'EV-038', title: 'Rate Lock Management & Pipeline Aging Report', format: 'XLSX', source: 'Secondary Marketing', scores: { completeness: 0.92, reliability: 0.95, freshness: 0.95, consistency: 0.90 } },
+        { id: 'EV-039', title: 'Branch Origination Scorecard - Q3 2025', format: 'XLSX', source: 'Division Finance', scores: { completeness: 0.88, reliability: 0.90, freshness: 0.95, consistency: 0.86 } }
+      ],
+      'Images': [
+        { id: 'EV-023', title: 'Encompass LOS Pipeline Dashboard Screenshot', format: 'PNG', source: 'System Walkthrough', scores: { completeness: 0.85, reliability: 0.92, freshness: 0.95, consistency: 0.88 } },
+        { id: 'EV-024', title: 'Process Discovery Workshop Whiteboard Capture', format: 'JPEG', source: 'Workshop Facilitation', scores: { completeness: 0.78, reliability: 0.72, freshness: 0.95, consistency: 0.60 } },
+        { id: 'EV-025', title: 'Branch Office Loan Process Wall Poster', format: 'JPEG', source: 'Branch Observation', scores: { completeness: 0.65, reliability: 0.55, freshness: 0.30, consistency: 0.45 }, flag: 'INCONSISTENCY' },
+        { id: 'EV-026', title: 'Shadow Document Tracking Spreadsheet Screenshot', format: 'PNG', source: 'Processor Desktop Capture', scores: { completeness: 0.72, reliability: 0.68, freshness: 0.90, consistency: 0.50 }, flag: 'CONTROL_GAP' }
+      ],
+      'Audio': [
+        { id: 'EV-027', title: 'Audio Recording - VP of Mortgage Lending Interview', format: 'M4A', source: 'Engagement Team', scores: { completeness: 0.88, reliability: 0.80, freshness: 0.95, consistency: 0.82 } },
+        { id: 'EV-028', title: 'Audio Recording - Senior Loan Processor Interview', format: 'M4A', source: 'Engagement Team', scores: { completeness: 0.90, reliability: 0.82, freshness: 0.95, consistency: 0.75 } },
+        { id: 'EV-029', title: 'Compliance Training Session Audio - TRID Q&A Excerpt', format: 'MP3', source: 'Compliance Department', scores: { completeness: 0.75, reliability: 0.88, freshness: 0.90, consistency: 0.82 } }
+      ],
+      'Video': [
+        { id: 'EV-030', title: 'Encompass LOS Workflow Walkthrough - Screen Recording', format: 'MP4', source: 'IT Department', scores: { completeness: 0.85, reliability: 0.90, freshness: 0.95, consistency: 0.88 } },
+        { id: 'EV-031', title: 'Branch Observation - Loan Officer Borrower Interaction', format: 'MOV', source: 'Branch Observation', scores: { completeness: 0.82, reliability: 0.85, freshness: 0.95, consistency: 0.70 }, flag: 'PROCESS_INEFFICIENCY' },
+        { id: 'EV-032', title: 'Post-Close QC Review Process - Screen Recording', format: 'MP4', source: 'Quality Control', scores: { completeness: 0.80, reliability: 0.88, freshness: 0.95, consistency: 0.85 } }
+      ],
+      'Interviews': [
+        { id: 'EV-018', title: 'Interview - VP of Mortgage Lending', format: 'MD', source: 'Engagement Team', scores: { completeness: 0.88, reliability: 0.80, freshness: 0.95, consistency: 0.82 } },
+        { id: 'EV-019', title: 'Interview - Senior Loan Processor', format: 'MD', source: 'Engagement Team', scores: { completeness: 0.90, reliability: 0.82, freshness: 0.95, consistency: 0.75 } },
+        { id: 'EV-020', title: 'Interview - Compliance Officer', format: 'MD', source: 'Engagement Team', scores: { completeness: 0.86, reliability: 0.85, freshness: 0.95, consistency: 0.88 } }
+      ],
+      'Controls and Evidence': [
+        { id: 'EV-008', title: 'Loan Origination Control Matrix', format: 'CSV', source: 'Internal Audit', scores: { completeness: 0.90, reliability: 0.93, freshness: 0.80, consistency: 0.88 } },
+        { id: 'EV-009', title: 'QC Post-Close Audit Sample Results', format: 'CSV', source: 'Quality Control Manager', scores: { completeness: 0.86, reliability: 0.92, freshness: 0.88, consistency: 0.84 } },
+        { id: 'EV-040', title: 'Internal Audit Report - Mortgage Origination Controls FY2025', format: 'DOCX', source: 'Internal Audit Department', scores: { completeness: 0.94, reliability: 0.96, freshness: 0.92, consistency: 0.93 } }
+      ],
+      'Regulatory and Policy': [
+        { id: 'EV-010', title: 'TRID Compliance Procedures', format: 'MD', source: 'Compliance Officer', scores: { completeness: 0.91, reliability: 0.96, freshness: 0.85, consistency: 0.93 } },
+        { id: 'EV-011', title: 'Fair Lending Monitoring Program', format: 'MD', source: 'Chief Compliance Officer', scores: { completeness: 0.88, reliability: 0.94, freshness: 0.82, consistency: 0.90 } },
+        { id: 'EV-012', title: 'BSA/AML Screening Requirements for Mortgage', format: 'MD', source: 'BSA Officer', scores: { completeness: 0.84, reliability: 0.91, freshness: 0.78, consistency: 0.86 } }
+      ],
+      'Domain Communications': [
+        { id: 'EV-013', title: 'Underwriter-Processor Email Thread Samples', format: 'JSON', source: 'Email Archive (Exchange)', scores: { completeness: 0.70, reliability: 0.85, freshness: 0.92, consistency: 0.65 } },
+        { id: 'EV-014', title: 'Loan Officer Escalation Tickets', format: 'JSON', source: 'ServiceNow Export', scores: { completeness: 0.75, reliability: 0.88, freshness: 0.90, consistency: 0.72 } }
+      ],
+      'Job Aids and Edge Cases': [
+        { id: 'EV-016', title: 'Self-Employed Borrower Income Calculation Guide', format: 'MD', source: 'Senior Underwriter', scores: { completeness: 0.82, reliability: 0.78, freshness: 0.70, consistency: 0.62 } },
+        { id: 'EV-017', title: 'Condition Clearing Cheat Sheet', format: 'MD', source: 'Lead Processor', scores: { completeness: 0.72, reliability: 0.70, freshness: 0.75, consistency: 0.58 } }
+      ],
+      'KM4Work': [
+        { id: 'EV-033', title: 'Underwriting Decision Rules - DMN Decision Table', format: 'DMN', source: 'Extracted from Encompass', scores: { completeness: 0.88, reliability: 0.92, freshness: 0.85, consistency: 0.90 } },
+        { id: 'EV-034', title: 'Desktop Task Mining Analysis - Loan Processing Operations', format: 'JSON', source: 'UiPath Task Mining', scores: { completeness: 0.82, reliability: 0.85, freshness: 0.95, consistency: 0.78 } },
+        { id: 'EV-035', title: 'Encompass Event Log Extract - Process Mining Dataset', format: 'CSV', source: 'LOS System (Encompass)', scores: { completeness: 0.78, reliability: 0.95, freshness: 0.90, consistency: 0.92 } }
+      ],
+      'BPM Process Models': [
+        { id: 'EV-015', title: 'As-Is Loan Origination Process Model', format: 'BPMN', source: 'Process Excellence Team', scores: { completeness: 0.80, reliability: 0.75, freshness: 0.60, consistency: 0.68 } }
+      ],
+      'SaaS Exports': [
+        { id: 'EV-021', title: 'Encompass LOS Configuration Export', format: 'JSON', source: 'IT Department', scores: { completeness: 0.80, reliability: 0.95, freshness: 0.92, consistency: 0.88 } }
+      ]
+    };
+
+    function getScoreClass(value) {
+      if (value >= 0.85) return 'score-high';
+      if (value >= 0.70) return 'score-medium';
+      if (value >= 0.50) return 'score-low';
+      return 'score-critical';
+    }
+
+    function createScoreBars(scores) {
+      const dims = ['completeness', 'reliability', 'freshness', 'consistency'];
+      const labels = ['C', 'R', 'F', 'S'];
+      const container = document.createElement('div');
+      container.className = 'quality-scores';
+      dims.forEach(function(dim, i) {
+        const val = scores[dim];
+        const pct = Math.round(val * 100);
+        const bar = document.createElement('div');
+        bar.className = 'quality-score-bar';
+        bar.title = labels[i] + ': ' + pct + '%';
+        const fill = document.createElement('div');
+        fill.className = 'bar-fill ' + getScoreClass(val);
+        fill.style.width = pct + '%';
+        bar.appendChild(fill);
+        container.appendChild(bar);
+      });
+      return container;
+    }
+
+    function createFlagElement(item) {
+      if (!item.flag) {
+        const dash = document.createElement('span');
+        dash.style.cssText = 'color:#999;font-size:0.75rem;';
+        dash.textContent = '\u2014';
+        return dash;
+      }
+      const flagMap = {
+        'INCONSISTENCY': 'flag-inconsistency',
+        'CONTROL_GAP': 'flag-control-gap',
+        'PROCESS_INEFFICIENCY': 'flag-process-inefficiency'
+      };
+      const span = document.createElement('span');
+      span.className = 'evidence-flag ' + (flagMap[item.flag] || '');
+      span.textContent = item.flag.replace(/_/g, ' ');
+      return span;
+    }
+
+    function createEvidenceRow(item) {
+      const tr = document.createElement('tr');
+      var td;
+      td = document.createElement('td'); td.className = 'ev-id'; td.textContent = item.id; tr.appendChild(td);
+      td = document.createElement('td'); td.textContent = item.title; tr.appendChild(td);
+      td = document.createElement('td'); var pill = document.createElement('span'); pill.className = 'format-pill'; pill.textContent = item.format; td.appendChild(pill); tr.appendChild(td);
+      td = document.createElement('td'); td.textContent = item.source; tr.appendChild(td);
+      td = document.createElement('td'); td.appendChild(createScoreBars(item.scores)); tr.appendChild(td);
+      td = document.createElement('td'); td.appendChild(createFlagElement(item)); tr.appendChild(td);
+      return tr;
+    }
+
+    let previouslyFocusedElement = null;
+
+    function openEvidenceModal(category) {
+      const modal = document.getElementById('evidenceModal');
+      const meta = categoryMeta[category];
+      const items = evidenceData[category] || [];
+
+      previouslyFocusedElement = document.activeElement;
+      document.getElementById('modalIcon').textContent = meta.icon;
+      document.getElementById('modalTitle').textContent = category;
+      document.getElementById('modalCount').textContent = items.length + ' evidence item' + (items.length !== 1 ? 's' : '');
+
+      var tbody = document.getElementById('modalTableBody');
+      tbody.textContent = '';
+      items.forEach(function(item) { tbody.appendChild(createEvidenceRow(item)); });
+
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+      document.getElementById('modalCloseBtn').focus();
+    }
+
+    function closeEvidenceModal() {
+      var modal = document.getElementById('evidenceModal');
+      if (!modal.classList.contains('active')) return;
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+      if (previouslyFocusedElement) { previouslyFocusedElement.focus(); previouslyFocusedElement = null; }
+    }
+
+    // Event delegation for cards (replaces inline onclick)
+    var cardsGrid = document.getElementById('evidenceCardsGrid');
+    if (cardsGrid) {
+      cardsGrid.addEventListener('click', function(e) {
+        var card = e.target.closest('.evidence-category-card');
+        if (card && card.dataset.category) openEvidenceModal(card.dataset.category);
+      });
+      cardsGrid.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          var card = e.target.closest('.evidence-category-card');
+          if (card && card.dataset.category) { e.preventDefault(); openEvidenceModal(card.dataset.category); }
+        }
+      });
+    }
+
+    // Modal close handlers (replaces inline onclick)
+    document.getElementById('modalCloseBtn').addEventListener('click', closeEvidenceModal);
+    document.getElementById('evidenceModal').addEventListener('click', function(e) {
+      if (e.target === this) closeEvidenceModal();
+    });
+
+    // Focus trap within modal
+    document.getElementById('evidenceModal').addEventListener('keydown', function(e) {
+      if (e.key !== 'Tab') return;
+      var focusable = this.querySelectorAll('button, [tabindex]:not([tabindex="-1"])');
+      if (focusable.length === 0) return;
+      var first = focusable[0], last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+  </script>
+
+  <script>
+    // D3.js Force-Directed Knowledge Graph - Meridian National Bank Loan Origination
+    (function() {
+      const container = document.getElementById('knowledge-graph-2d');
+      const svg = d3.select('#knowledge-graph-svg');
+      const tooltip = document.getElementById('graph-tooltip');
+
+      const graphData = {
+        nodes: [
+          // Core Process (group: 'process') - 7 nodes
+          { id: 'loan-orig', label: 'Loan Origination', group: 'process', size: 26 },
+          { id: 'app-intake', label: 'Application Intake', group: 'process', size: 16 },
+          { id: 'income-ver', label: 'Income Verification', group: 'process', size: 16 },
+          { id: 'credit-uw', label: 'Credit Underwriting', group: 'process', size: 16 },
+          { id: 'appraisal', label: 'Appraisal Review', group: 'process', size: 16 },
+          { id: 'loan-close', label: 'Loan Closing', group: 'process', size: 16 },
+          { id: 'post-qc', label: 'Post-Close QC', group: 'process', size: 16 },
+
+          // Evidence (group: 'evidence') - 8 nodes
+          { id: 'ev001', label: 'EV-001', group: 'evidence', size: 12 },
+          { id: 'ev002', label: 'EV-002', group: 'evidence', size: 12 },
+          { id: 'ev004', label: 'EV-004', group: 'evidence', size: 12 },
+          { id: 'ev008', label: 'EV-008', group: 'evidence', size: 12 },
+          { id: 'ev015', label: 'EV-015', group: 'evidence', size: 12 },
+          { id: 'ev033', label: 'EV-033', group: 'evidence', size: 12 },
+          { id: 'ev035', label: 'EV-035', group: 'evidence', size: 12 },
+          { id: 'ev040', label: 'EV-040', group: 'evidence', size: 12 },
+
+          // Governance (group: 'governance') - 6 nodes
+          { id: 'trid', label: 'TRID', group: 'governance', size: 14 },
+          { id: 'fair-lend', label: 'Fair Lending', group: 'governance', size: 14 },
+          { id: 'bsa-aml', label: 'BSA/AML', group: 'governance', size: 14 },
+          { id: 'wf008-ctrl', label: 'WF-008 Control', group: 'governance', size: 13 },
+          { id: 'inc-ver-ctrl', label: 'Income Ver. Control', group: 'governance', size: 13 },
+          { id: 'qc-samp-ctrl', label: 'QC Sampling Control', group: 'governance', size: 13 },
+
+          // TOM & Gaps (group: 'gap') - 4 nodes
+          { id: 'lo-tom', label: 'Loan Orig. TOM', group: 'gap', size: 15 },
+          { id: 'gap001', label: 'GAP-001 WF-008', group: 'gap', size: 13 },
+          { id: 'gap002', label: 'GAP-002 Shadow', group: 'gap', size: 13 },
+          { id: 'gap003', label: 'GAP-003 Cycle Time', group: 'gap', size: 13 },
+
+          // Roles & Systems (group: 'role') - 6 nodes
+          { id: 'loan-off', label: 'Loan Officer', group: 'role', size: 14 },
+          { id: 'processor', label: 'Processor', group: 'role', size: 14 },
+          { id: 'underwriter', label: 'Underwriter', group: 'role', size: 14 },
+          { id: 'comp-off', label: 'Compliance Officer', group: 'role', size: 14 },
+          { id: 'encompass', label: 'Encompass LOS', group: 'role', size: 15 },
+          { id: 'servicenow', label: 'ServiceNow', group: 'role', size: 14 },
+
+          // Decisions (group: 'decision') - 4 nodes
+          { id: 'credit-dec', label: 'Credit Decision', group: 'decision', size: 14 },
+          { id: 'exception', label: 'Exception Approval', group: 'decision', size: 14 },
+          { id: 'rate-lock', label: 'Rate Lock', group: 'decision', size: 13 },
+          { id: 'appr-waiver', label: 'Appraisal Waiver', group: 'decision', size: 13 }
+        ],
+        links: [
+          // Process flow (FOLLOWED_BY)
+          { source: 'loan-orig', target: 'app-intake', type: 'FOLLOWED_BY', value: 3 },
+          { source: 'app-intake', target: 'income-ver', type: 'FOLLOWED_BY', value: 2 },
+          { source: 'income-ver', target: 'credit-uw', type: 'FOLLOWED_BY', value: 2 },
+          { source: 'credit-uw', target: 'appraisal', type: 'FOLLOWED_BY', value: 2 },
+          { source: 'appraisal', target: 'loan-close', type: 'FOLLOWED_BY', value: 2 },
+          { source: 'loan-close', target: 'post-qc', type: 'FOLLOWED_BY', value: 2 },
+
+          // Evidence support (SUPPORTED_BY)
+          { source: 'app-intake', target: 'ev001', type: 'SUPPORTED_BY', value: 1 },
+          { source: 'app-intake', target: 'ev002', type: 'SUPPORTED_BY', value: 1 },
+          { source: 'income-ver', target: 'ev004', type: 'SUPPORTED_BY', value: 1 },
+          { source: 'credit-uw', target: 'ev008', type: 'SUPPORTED_BY', value: 1 },
+          { source: 'appraisal', target: 'ev015', type: 'SUPPORTED_BY', value: 1 },
+          { source: 'loan-close', target: 'ev033', type: 'SUPPORTED_BY', value: 1 },
+          { source: 'loan-close', target: 'ev035', type: 'SUPPORTED_BY', value: 1 },
+          { source: 'post-qc', target: 'ev040', type: 'SUPPORTED_BY', value: 1 },
+
+          // Governance (GOVERNED_BY)
+          { source: 'loan-orig', target: 'trid', type: 'GOVERNED_BY', value: 2 },
+          { source: 'loan-orig', target: 'fair-lend', type: 'GOVERNED_BY', value: 2 },
+          { source: 'app-intake', target: 'bsa-aml', type: 'GOVERNED_BY', value: 1 },
+
+          // Controls enforcement (ENFORCED_BY)
+          { source: 'trid', target: 'wf008-ctrl', type: 'ENFORCED_BY', value: 1 },
+          { source: 'income-ver', target: 'inc-ver-ctrl', type: 'ENFORCED_BY', value: 1 },
+          { source: 'post-qc', target: 'qc-samp-ctrl', type: 'ENFORCED_BY', value: 1 },
+
+          // TOM alignment
+          { source: 'loan-orig', target: 'lo-tom', type: 'GOVERNED_BY', value: 2 },
+
+          // Gaps (DEVIATES_FROM)
+          { source: 'lo-tom', target: 'gap001', type: 'DEVIATES_FROM', value: 2 },
+          { source: 'lo-tom', target: 'gap002', type: 'DEVIATES_FROM', value: 2 },
+          { source: 'lo-tom', target: 'gap003', type: 'DEVIATES_FROM', value: 2 },
+          { source: 'gap001', target: 'wf008-ctrl', type: 'DEVIATES_FROM', value: 1 },
+
+          // Role ownership (OWNED_BY)
+          { source: 'app-intake', target: 'loan-off', type: 'OWNED_BY', value: 1 },
+          { source: 'income-ver', target: 'processor', type: 'OWNED_BY', value: 1 },
+          { source: 'credit-uw', target: 'underwriter', type: 'OWNED_BY', value: 1 },
+          { source: 'post-qc', target: 'comp-off', type: 'OWNED_BY', value: 1 },
+
+          // System usage (USES)
+          { source: 'loan-off', target: 'encompass', type: 'USES', value: 1 },
+          { source: 'processor', target: 'encompass', type: 'USES', value: 1 },
+          { source: 'underwriter', target: 'encompass', type: 'USES', value: 1 },
+          { source: 'comp-off', target: 'servicenow', type: 'USES', value: 1 },
+
+          // Decisions
+          { source: 'credit-uw', target: 'credit-dec', type: 'FOLLOWED_BY', value: 1 },
+          { source: 'credit-dec', target: 'exception', type: 'FOLLOWED_BY', value: 1 },
+          { source: 'app-intake', target: 'rate-lock', type: 'FOLLOWED_BY', value: 1 },
+          { source: 'appraisal', target: 'appr-waiver', type: 'FOLLOWED_BY', value: 1 },
+
+          // Cross-connections
+          { source: 'gap002', target: 'processor', type: 'OWNED_BY', value: 1 },
+          { source: 'gap003', target: 'loan-close', type: 'DEVIATES_FROM', value: 1 },
+          { source: 'ev008', target: 'wf008-ctrl', type: 'SUPPORTED_BY', value: 1 },
+          { source: 'fair-lend', target: 'credit-dec', type: 'GOVERNED_BY', value: 1 },
+          { source: 'bsa-aml', target: 'comp-off', type: 'ENFORCED_BY', value: 1 },
+          { source: 'underwriter', target: 'credit-dec', type: 'OWNED_BY', value: 1 },
+          { source: 'appraisal', target: 'loan-off', type: 'OWNED_BY', value: 1 },
+          { source: 'encompass', target: 'rate-lock', type: 'USES', value: 1 }
+        ]
+      };
+
+      const groupColors = {
+        process: '#00338D',
+        evidence: '#7AB800',
+        governance: '#BC204B',
+        gap: '#F7A800',
+        role: '#00A3A1',
+        decision: '#0091DA'
+      };
+
+      const groupLabels = {
+        process: 'Core Process',
+        evidence: 'Evidence',
+        governance: 'Governance',
+        gap: 'TOM & Gaps',
+        role: 'Roles & Systems',
+        decision: 'Decisions'
+      };
+
+      function initGraph() {
+        const rect = container.getBoundingClientRect();
+        const width = rect.width || 800;
+        const height = rect.height || 500;
+
+        svg.selectAll('*').remove();
+        svg.attr('viewBox', `0 0 ${width} ${height}`);
+
+        // Arrow marker for directed edges
+        svg.append('defs').append('marker')
+          .attr('id', 'kg-arrowhead')
+          .attr('viewBox', '-0 -5 10 10')
+          .attr('refX', 20)
+          .attr('refY', 0)
+          .attr('orient', 'auto')
+          .attr('markerWidth', 6)
+          .attr('markerHeight', 6)
+          .append('path')
+          .attr('d', 'M 0,-5 L 10,0 L 0,5')
+          .attr('fill', 'rgba(255,255,255,0.4)');
+
+        const simulation = d3.forceSimulation(graphData.nodes)
+          .force('link', d3.forceLink(graphData.links).id(d => d.id).distance(80))
+          .force('charge', d3.forceManyBody().strength(-300))
+          .force('center', d3.forceCenter(width / 2, height / 2))
+          .force('collision', d3.forceCollide().radius(d => d.size + 10));
+
+        const link = svg.append('g')
+          .attr('class', 'links')
+          .selectAll('line')
+          .data(graphData.links)
+          .enter().append('line')
+          .attr('stroke', 'rgba(255,255,255,0.3)')
+          .attr('stroke-width', d => Math.sqrt(d.value))
+          .attr('marker-end', 'url(#kg-arrowhead)');
+
+        const node = svg.append('g')
+          .attr('class', 'nodes')
+          .selectAll('g')
+          .data(graphData.nodes)
+          .enter().append('g')
+          .call(d3.drag()
+            .on('start', dragstarted)
+            .on('drag', dragged)
+            .on('end', dragended));
+
+        node.append('circle')
+          .attr('r', d => d.size)
+          .attr('fill', d => groupColors[d.group])
+          .attr('stroke', '#fff')
+          .attr('stroke-width', 2)
+          .style('cursor', 'pointer')
+          .on('mouseover', function(event, d) {
+            d3.select(this).attr('stroke-width', 3);
+            tooltip.innerHTML = '<strong>' + d.label + '</strong><br>Type: ' + groupLabels[d.group];
+            tooltip.style.opacity = 1;
+            tooltip.style.left = (event.offsetX + 10) + 'px';
+            tooltip.style.top = (event.offsetY - 10) + 'px';
+          })
+          .on('mouseout', function() {
+            d3.select(this).attr('stroke-width', 2);
+            tooltip.style.opacity = 0;
+          });
+
+        node.append('text')
+          .text(d => d.label)
+          .attr('x', 0)
+          .attr('y', d => d.size + 14)
+          .attr('text-anchor', 'middle')
+          .attr('fill', 'white')
+          .attr('font-size', '10px')
+          .attr('font-weight', '600')
+          .style('pointer-events', 'none');
+
+        simulation.on('tick', () => {
+          link
+            .attr('x1', d => Math.max(20, Math.min(width - 20, d.source.x)))
+            .attr('y1', d => Math.max(20, Math.min(height - 20, d.source.y)))
+            .attr('x2', d => Math.max(20, Math.min(width - 20, d.target.x)))
+            .attr('y2', d => Math.max(20, Math.min(height - 20, d.target.y)));
+
+          node.attr('transform', d => {
+            d.x = Math.max(20, Math.min(width - 20, d.x));
+            d.y = Math.max(20, Math.min(height - 20, d.y));
+            return 'translate(' + d.x + ',' + d.y + ')';
+          });
+        });
+
+        function dragstarted(event) {
+          if (!event.active) simulation.alphaTarget(0.3).restart();
+          event.subject.fx = event.subject.x;
+          event.subject.fy = event.subject.y;
+        }
+
+        function dragged(event) {
+          event.subject.fx = event.x;
+          event.subject.fy = event.y;
+        }
+
+        function dragended(event) {
+          if (!event.active) simulation.alphaTarget(0);
+          event.subject.fx = null;
+          event.subject.fy = null;
+        }
+      }
+
+      // Lazy init when slide becomes visible
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            initGraph();
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.1 });
+
+      observer.observe(container);
+
+      // Debounced resize
+      let resizeTimeout;
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(initGraph, 250);
+      });
+    })();
   </script>
 </body>
 </html>
