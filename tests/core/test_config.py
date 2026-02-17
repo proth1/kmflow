@@ -1,0 +1,94 @@
+"""Tests for the configuration module."""
+
+from __future__ import annotations
+
+import os
+from unittest.mock import patch
+
+from src.core.config import Settings, get_settings
+
+
+class TestSettings:
+    """Test suite for application Settings."""
+
+    def test_default_values(self) -> None:
+        """Settings should have sensible defaults."""
+        with patch.dict(os.environ, {}, clear=True):
+            settings = Settings(
+                _env_file=None,  # type: ignore[call-arg]
+            )
+        assert settings.app_name == "KMFlow"
+        assert settings.app_env == "development"
+        assert settings.debug is True
+        assert settings.postgres_port == 5432
+        assert settings.redis_port == 6379
+
+    def test_database_url_built_from_components(self) -> None:
+        """database_url should be derived from components when not set."""
+        settings = Settings(
+            postgres_host="db-host",
+            postgres_port=5433,
+            postgres_db="testdb",
+            postgres_user="testuser",
+            postgres_password="testpass",
+            database_url=None,
+            _env_file=None,  # type: ignore[call-arg]
+        )
+        assert settings.database_url == "postgresql+asyncpg://testuser:testpass@db-host:5433/testdb"
+
+    def test_redis_url_built_from_components(self) -> None:
+        """redis_url should be derived from host/port when not set."""
+        settings = Settings(
+            redis_host="cache-host",
+            redis_port=6380,
+            redis_url=None,
+            _env_file=None,  # type: ignore[call-arg]
+        )
+        assert settings.redis_url == "redis://cache-host:6380/0"
+
+    def test_explicit_database_url_not_overwritten(self) -> None:
+        """An explicit database_url should be preserved."""
+        explicit_url = "postgresql+asyncpg://explicit@host/db"
+        settings = Settings(
+            database_url=explicit_url,
+            _env_file=None,  # type: ignore[call-arg]
+        )
+        assert settings.database_url == explicit_url
+
+    def test_cors_origins_from_json_string(self) -> None:
+        """CORS origins should parse from a JSON array string."""
+        settings = Settings(
+            cors_origins='["http://a.com","http://b.com"]',  # type: ignore[arg-type]
+            _env_file=None,  # type: ignore[call-arg]
+        )
+        assert settings.cors_origins == ["http://a.com", "http://b.com"]
+
+    def test_cors_origins_from_comma_string(self) -> None:
+        """CORS origins should parse from a comma-separated string."""
+        settings = Settings(
+            cors_origins="http://a.com, http://b.com",  # type: ignore[arg-type]
+            _env_file=None,  # type: ignore[call-arg]
+        )
+        assert settings.cors_origins == ["http://a.com", "http://b.com"]
+
+    def test_cors_origins_from_list(self) -> None:
+        """CORS origins should accept a list directly."""
+        origins = ["http://a.com", "http://b.com"]
+        settings = Settings(
+            cors_origins=origins,
+            _env_file=None,  # type: ignore[call-arg]
+        )
+        assert settings.cors_origins == origins
+
+    def test_get_settings_returns_settings(self) -> None:
+        """get_settings should return a Settings instance."""
+        settings = get_settings()
+        assert isinstance(settings, Settings)
+        assert settings.app_name == "KMFlow"
+
+    def test_environment_variable_override(self) -> None:
+        """Environment variables should override defaults."""
+        with patch.dict(os.environ, {"APP_NAME": "TestApp", "POSTGRES_PORT": "9999"}):
+            settings = Settings(_env_file=None)  # type: ignore[call-arg]
+        assert settings.app_name == "TestApp"
+        assert settings.postgres_port == 9999
