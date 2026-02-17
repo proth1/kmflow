@@ -16,7 +16,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routes import engagements, health
+from src.api.routes import engagements, evidence, health, shelf_requests
 from src.core.config import get_settings
 from src.core.database import create_engine
 from src.core.neo4j import create_neo4j_driver, setup_neo4j_constraints, verify_neo4j_connectivity
@@ -34,13 +34,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     settings = get_settings()
 
-    # ── PostgreSQL ───────────────────────────────────────────
+    # -- PostgreSQL ---
     engine, session_factory = create_engine(settings)
     app.state.db_engine = engine
     app.state.db_session_factory = session_factory
     logger.info("PostgreSQL connection pool initialized")
 
-    # ── Neo4j ────────────────────────────────────────────────
+    # -- Neo4j ---
     neo4j_driver = create_neo4j_driver(settings)
     app.state.neo4j_driver = neo4j_driver
     if await verify_neo4j_connectivity(neo4j_driver):
@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     else:
         logger.warning("Neo4j is not reachable; starting in degraded mode")
 
-    # ── Redis ────────────────────────────────────────────────
+    # -- Redis ---
     redis_client = create_redis_client(settings)
     app.state.redis_client = redis_client
     if await verify_redis_connectivity(redis_client):
@@ -62,7 +62,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     yield
 
-    # ── Shutdown ─────────────────────────────────────────────
+    # -- Shutdown ---
     await redis_client.aclose()
     await neo4j_driver.close()
     await engine.dispose()
@@ -82,7 +82,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # ── CORS Middleware ──────────────────────────────────────
+    # -- CORS Middleware ---
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -91,9 +91,11 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # ── Routes ───────────────────────────────────────────────
+    # -- Routes ---
     app.include_router(health.router)
     app.include_router(engagements.router)
+    app.include_router(evidence.router)
+    app.include_router(shelf_requests.router)
 
     return app
 

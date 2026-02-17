@@ -1,6 +1,7 @@
 """SQLAlchemy ORM models for the KMFlow platform.
 
-Core tables: engagements, evidence_items, evidence_fragments, audit_logs.
+Core tables: engagements, evidence_items, evidence_fragments, audit_logs,
+shelf_data_requests, shelf_data_request_items.
 These match the data model from PRD Section 7.1.
 """
 
@@ -12,6 +13,8 @@ from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
+    BigInteger,
+    Date,
     DateTime,
     Enum,
     Float,
@@ -81,6 +84,36 @@ class AuditAction(enum.StrEnum):
     ENGAGEMENT_CREATED = "engagement_created"
     ENGAGEMENT_UPDATED = "engagement_updated"
     ENGAGEMENT_ARCHIVED = "engagement_archived"
+    EVIDENCE_UPLOADED = "evidence_uploaded"
+    EVIDENCE_VALIDATED = "evidence_validated"
+    SHELF_REQUEST_CREATED = "shelf_request_created"
+    SHELF_REQUEST_UPDATED = "shelf_request_updated"
+
+
+class ShelfRequestStatus(enum.StrEnum):
+    """Status values for a shelf data request."""
+
+    DRAFT = "draft"
+    SENT = "sent"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    OVERDUE = "overdue"
+
+
+class ShelfRequestItemStatus(enum.StrEnum):
+    """Status values for a shelf data request item."""
+
+    PENDING = "pending"
+    RECEIVED = "received"
+    OVERDUE = "overdue"
+
+
+class ShelfRequestItemPriority(enum.StrEnum):
+    """Priority values for a shelf data request item."""
+
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
 
 
 class Engagement(Base):
@@ -112,6 +145,9 @@ class Engagement(Base):
     audit_logs: Mapped[list[AuditLog]] = relationship(
         "AuditLog", back_populates="engagement", cascade="all, delete-orphan"
     )
+    shelf_data_requests: Mapped[list[ShelfDataRequest]] = relationship(
+        "ShelfDataRequest", back_populates="engagement", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return f"<Engagement(id={self.id}, name='{self.name}', client='{self.client}')>"
@@ -132,11 +168,25 @@ class EvidenceItem(Base):
     format: Mapped[str] = mapped_column(String(50), nullable=False)
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
+    # File storage fields
+    file_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    mime_type: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    # Metadata
+    metadata_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    source_date: Mapped[datetime | None] = mapped_column(Date, nullable=True)
+
     # Quality scores (0.0 - 1.0)
     completeness_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     reliability_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     freshness_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     consistency_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+
+    # Duplicate detection
+    duplicate_of_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("evidence_items.id", ondelete="SET NULL"), nullable=True
+    )
 
     validation_status: Mapped[ValidationStatus] = mapped_column(
         Enum(ValidationStatus), default=ValidationStatus.PENDING, nullable=False
@@ -213,3 +263,82 @@ class AuditLog(Base):
 
     def __repr__(self) -> str:
         return f"<AuditLog(id={self.id}, action={self.action}, engagement_id={self.engagement_id})>"
+
+
+class ShelfDataRequest(Base):
+    """A shelf data request sent to a client to gather evidence."""
+
+    __tablename__ = "shelf_data_requests"
+    __table_args__ = (Index("ix_shelf_requests_engagement_id", "engagement_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    title: Mapped[str] = mapped_column(String(512), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[ShelfRequestStatus] = mapped_column(
+        Enum(ShelfRequestStatus), default=ShelfRequestStatus.DRAFT, nullable=False
+    )
+    due_date: Mapped[datetime | None] = mapped_column(Date, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    # Relationships
+    engagement: Mapped[Engagement] = relationship("Engagement", back_populates="shelf_data_requests")
+    items: Mapped[list[ShelfDataRequestItem]] = relationship(
+        "ShelfDataRequestItem", back_populates="request", cascade="all, delete-orphan"
+    )
+
+    @property
+    def fulfillment_percentage(self) -> float:
+        """Calculate the percentage of items that have been received."""
+        if not self.items:
+            return 0.0
+        received = sum(1 for item in self.items if item.status == ShelfRequestItemStatus.RECEIVED)
+        return round(received / len(self.items) * 100.0, 2)
+
+    def __repr__(self) -> str:
+        return f"<ShelfDataRequest(id={self.id}, title='{self.title}', status={self.status})>"
+
+
+class ShelfDataRequestItem(Base):
+    """An individual item requested within a shelf data request."""
+
+    __tablename__ = "shelf_data_request_items"
+    __table_args__ = (Index("ix_shelf_request_items_request_id", "request_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    request_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("shelf_data_requests.id", ondelete="CASCADE"), nullable=False
+    )
+    category: Mapped[EvidenceCategory] = mapped_column(Enum(EvidenceCategory), nullable=False)
+    item_name: Mapped[str] = mapped_column(String(512), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    priority: Mapped[ShelfRequestItemPriority] = mapped_column(
+        Enum(ShelfRequestItemPriority), default=ShelfRequestItemPriority.MEDIUM, nullable=False
+    )
+    status: Mapped[ShelfRequestItemStatus] = mapped_column(
+        Enum(ShelfRequestItemStatus), default=ShelfRequestItemStatus.PENDING, nullable=False
+    )
+    matched_evidence_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("evidence_items.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    # Relationships
+    request: Mapped[ShelfDataRequest] = relationship("ShelfDataRequest", back_populates="items")
+
+    def __repr__(self) -> str:
+        return f"<ShelfDataRequestItem(id={self.id}, name='{self.item_name}', status={self.status})>"

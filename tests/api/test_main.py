@@ -42,6 +42,26 @@ class TestAppCreation:
         assert "/api/v1/engagements/{engagement_id}/dashboard" in route_paths
         assert "/api/v1/engagements/{engagement_id}/audit-logs" in route_paths
 
+    def test_evidence_routes_registered(self) -> None:
+        """App should have evidence routes."""
+        app = create_app()
+        route_paths = [route.path for route in app.routes]
+        assert "/api/v1/evidence/upload" in route_paths
+        assert "/api/v1/evidence/" in route_paths
+        assert "/api/v1/evidence/{evidence_id}" in route_paths
+        assert "/api/v1/evidence/{evidence_id}/validate" in route_paths
+        assert "/api/v1/evidence/{evidence_id}/fragments" in route_paths
+        assert "/api/v1/evidence/validate-batch" in route_paths
+
+    def test_shelf_request_routes_registered(self) -> None:
+        """App should have shelf data request routes."""
+        app = create_app()
+        route_paths = [route.path for route in app.routes]
+        assert "/api/v1/shelf-requests/" in route_paths
+        assert "/api/v1/shelf-requests/{request_id}" in route_paths
+        assert "/api/v1/shelf-requests/{request_id}/status" in route_paths
+        assert "/api/v1/shelf-requests/{request_id}/intake" in route_paths
+
     def test_cors_middleware_configured(self) -> None:
         """App should have CORS middleware."""
         app = create_app()
