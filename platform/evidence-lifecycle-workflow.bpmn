@@ -1,385 +1,259 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
-  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
-  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
-  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
-  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  id="Definitions_EvidenceLifecycle"
-  targetNamespace="http://bpmn.io/schema/bpmn"
-  exporter="KMFlow Platform"
-  exporterVersion="1.0.0">
-
-  <bpmn:collaboration id="Collaboration_EvidenceLifecycle">
-    <bpmn:participant id="Participant_Pool" name="KMFlow Evidence Lifecycle" processRef="Process_EvidenceLifecycle"/>
-  </bpmn:collaboration>
-
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_EvidenceLifecycle" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.42.0">
   <bpmn:process id="Process_EvidenceLifecycle" name="Evidence Lifecycle State Machine" isExecutable="true">
-
-    <bpmn:laneSet id="LaneSet_1">
-      <bpmn:lane id="Lane_EvidenceEngine" name="Evidence Engine">
-        <bpmn:flowNodeRef>StartEvent_1</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Task_Classify</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Task_Score</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Gateway_Validation</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Task_AutoValidate</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Task_Activate</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>BoundaryTimer_Age</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Gateway_AgeCheck</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Task_Expire</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>EndEvent_Expired</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>EndEvent_Active</bpmn:flowNodeRef>
-      </bpmn:lane>
-      <bpmn:lane id="Lane_ProcessAnalyst" name="Process Analyst">
-        <bpmn:flowNodeRef>Task_Review</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Gateway_Decision</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>EndEvent_Rejected</bpmn:flowNodeRef>
-      </bpmn:lane>
-    </bpmn:laneSet>
-
-    <!-- Start Event -->
     <bpmn:startEvent id="StartEvent_1" name="Evidence&#10;Received">
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
     </bpmn:startEvent>
-
-    <!-- Service Task: Classify Evidence -->
     <bpmn:serviceTask id="Task_Classify" name="Classify Evidence" camunda:type="external" camunda:topic="kmflow.evidence.classify">
       <bpmn:incoming>Flow_1</bpmn:incoming>
       <bpmn:outgoing>Flow_2</bpmn:outgoing>
     </bpmn:serviceTask>
-
-    <!-- Service Task: Score Quality -->
     <bpmn:serviceTask id="Task_Score" name="Score Quality" camunda:type="external" camunda:topic="kmflow.evidence.score">
       <bpmn:incoming>Flow_2</bpmn:incoming>
       <bpmn:outgoing>Flow_3</bpmn:outgoing>
     </bpmn:serviceTask>
-
-    <!-- XOR Gateway: Validation Threshold -->
-    <bpmn:exclusiveGateway id="Gateway_Validation" name="Validation&#10;Threshold?">
+    <bpmn:exclusiveGateway id="Gateway_Validation" name="Valid Score?">
       <bpmn:incoming>Flow_3</bpmn:incoming>
       <bpmn:outgoing>Flow_AutoValidate</bpmn:outgoing>
       <bpmn:outgoing>Flow_ManualReview</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-
-    <!-- Service Task: Auto-Validate -->
-    <bpmn:serviceTask id="Task_AutoValidate" name="Auto-Validate" camunda:type="external" camunda:topic="kmflow.evidence.validate">
+    <bpmn:exclusiveGateway id="Gateway_MergeValidate">
       <bpmn:incoming>Flow_AutoValidate</bpmn:incoming>
       <bpmn:incoming>Flow_Approved</bpmn:incoming>
+      <bpmn:outgoing>Flow_MergeToValidate</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_AutoValidate" name="Auto-Validate" camunda:type="external" camunda:topic="kmflow.evidence.validate">
+      <bpmn:incoming>Flow_MergeToValidate</bpmn:incoming>
       <bpmn:outgoing>Flow_5</bpmn:outgoing>
     </bpmn:serviceTask>
-
-    <!-- Service Task: Activate Evidence -->
     <bpmn:serviceTask id="Task_Activate" name="Activate Evidence" camunda:type="external" camunda:topic="kmflow.evidence.activate">
       <bpmn:incoming>Flow_5</bpmn:incoming>
       <bpmn:outgoing>Flow_6</bpmn:outgoing>
     </bpmn:serviceTask>
-
-    <!-- Timer Boundary Event: 90-day freshness check -->
     <bpmn:boundaryEvent id="BoundaryTimer_Age" name="90 Days" cancelActivity="false" attachedToRef="Task_Activate">
       <bpmn:outgoing>Flow_AgeCheck</bpmn:outgoing>
       <bpmn:timerEventDefinition>
         <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P90D</bpmn:timeDuration>
       </bpmn:timerEventDefinition>
     </bpmn:boundaryEvent>
-
-    <!-- XOR Gateway: Age Check -->
-    <bpmn:exclusiveGateway id="Gateway_AgeCheck" name="Age Check?">
+    <bpmn:exclusiveGateway id="Gateway_AgeCheck" name="Expired?">
       <bpmn:incoming>Flow_AgeCheck</bpmn:incoming>
       <bpmn:outgoing>Flow_Expire</bpmn:outgoing>
       <bpmn:outgoing>Flow_Continue</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-
-    <!-- Service Task: Expire Evidence -->
     <bpmn:serviceTask id="Task_Expire" name="Expire Evidence" camunda:type="external" camunda:topic="kmflow.evidence.expire">
       <bpmn:incoming>Flow_Expire</bpmn:incoming>
       <bpmn:outgoing>Flow_8</bpmn:outgoing>
     </bpmn:serviceTask>
-
-    <!-- End Event: Evidence Expired -->
     <bpmn:endEvent id="EndEvent_Expired" name="Evidence&#10;Expired">
       <bpmn:incoming>Flow_8</bpmn:incoming>
     </bpmn:endEvent>
-
-    <!-- End Event: Evidence Active -->
     <bpmn:endEvent id="EndEvent_Active" name="Evidence&#10;Active">
-      <bpmn:incoming>Flow_6</bpmn:incoming>
-      <bpmn:incoming>Flow_Continue</bpmn:incoming>
+      <bpmn:incoming>Flow_0rdz7ac</bpmn:incoming>
     </bpmn:endEvent>
-
-    <!-- User Task: Review Evidence -->
     <bpmn:userTask id="Task_Review" name="Review Evidence" camunda:candidateGroups="process-analysts">
       <bpmn:incoming>Flow_ManualReview</bpmn:incoming>
       <bpmn:outgoing>Flow_ReviewComplete</bpmn:outgoing>
     </bpmn:userTask>
-
-    <!-- XOR Gateway: Analyst Decision -->
-    <bpmn:exclusiveGateway id="Gateway_Decision" name="Analyst&#10;Decision?">
+    <bpmn:exclusiveGateway id="Gateway_Decision" name="Approved?">
       <bpmn:incoming>Flow_ReviewComplete</bpmn:incoming>
       <bpmn:outgoing>Flow_Approved</bpmn:outgoing>
       <bpmn:outgoing>Flow_Rejected</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-
-    <!-- End Event: Evidence Rejected -->
     <bpmn:endEvent id="EndEvent_Rejected" name="Evidence&#10;Rejected">
       <bpmn:incoming>Flow_Rejected</bpmn:incoming>
     </bpmn:endEvent>
-
-    <!-- Sequence Flows -->
-    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_Classify"/>
-    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Classify" targetRef="Task_Score"/>
-    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_Score" targetRef="Gateway_Validation"/>
-    <bpmn:sequenceFlow id="Flow_AutoValidate" name="Score &#8805; 0.7" sourceRef="Gateway_Validation" targetRef="Task_AutoValidate">
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_Classify" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Classify" targetRef="Task_Score" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_Score" targetRef="Gateway_Validation" />
+    <bpmn:sequenceFlow id="Flow_AutoValidate" name="Yes" sourceRef="Gateway_Validation" targetRef="Gateway_MergeValidate">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${score &gt;= 0.7}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_ManualReview" name="Score &lt; 0.7" sourceRef="Gateway_Validation" targetRef="Task_Review">
+    <bpmn:sequenceFlow id="Flow_ManualReview" name="No" sourceRef="Gateway_Validation" targetRef="Task_Review">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${score &lt; 0.7}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_AutoValidate" targetRef="Task_Activate"/>
-    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_Activate" targetRef="EndEvent_Active"/>
-    <bpmn:sequenceFlow id="Flow_AgeCheck" sourceRef="BoundaryTimer_Age" targetRef="Gateway_AgeCheck"/>
-    <bpmn:sequenceFlow id="Flow_Expire" name="&gt; 365 days" sourceRef="Gateway_AgeCheck" targetRef="Task_Expire">
+    <bpmn:sequenceFlow id="Flow_MergeToValidate" sourceRef="Gateway_MergeValidate" targetRef="Task_AutoValidate" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_AutoValidate" targetRef="Task_Activate" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_Activate" targetRef="Gateway_1kvjaef" />
+    <bpmn:sequenceFlow id="Flow_AgeCheck" sourceRef="BoundaryTimer_Age" targetRef="Gateway_AgeCheck" />
+    <bpmn:sequenceFlow id="Flow_Expire" name="Yes" sourceRef="Gateway_AgeCheck" targetRef="Task_Expire">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${age &gt; 365}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_Continue" name="&#8804; 365 days" sourceRef="Gateway_AgeCheck" targetRef="EndEvent_Active">
+    <bpmn:sequenceFlow id="Flow_Continue" name="No" sourceRef="Gateway_AgeCheck" targetRef="Gateway_1kvjaef">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${age &lt;= 365}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_8" sourceRef="Task_Expire" targetRef="EndEvent_Expired"/>
-    <bpmn:sequenceFlow id="Flow_ReviewComplete" sourceRef="Task_Review" targetRef="Gateway_Decision"/>
-    <bpmn:sequenceFlow id="Flow_Approved" name="Approved" sourceRef="Gateway_Decision" targetRef="Task_AutoValidate">
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Task_Expire" targetRef="EndEvent_Expired" />
+    <bpmn:sequenceFlow id="Flow_ReviewComplete" sourceRef="Task_Review" targetRef="Gateway_Decision" />
+    <bpmn:sequenceFlow id="Flow_Approved" name="Yes" sourceRef="Gateway_Decision" targetRef="Gateway_MergeValidate">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approved == true}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_Rejected" name="Rejected" sourceRef="Gateway_Decision" targetRef="EndEvent_Rejected">
+    <bpmn:sequenceFlow id="Flow_Rejected" name="No" sourceRef="Gateway_Decision" targetRef="EndEvent_Rejected">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approved == false}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-
+    <bpmn:exclusiveGateway id="Gateway_1kvjaef">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:incoming>Flow_Continue</bpmn:incoming>
+      <bpmn:outgoing>Flow_0rdz7ac</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_0rdz7ac" sourceRef="Gateway_1kvjaef" targetRef="EndEvent_Active" />
   </bpmn:process>
-
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
-    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_EvidenceLifecycle">
-
-      <!-- Pool: adjusted width for new layout -->
-      <bpmndi:BPMNShape id="Participant_Pool_di" bpmnElement="Participant_Pool" isHorizontal="true">
-        <dc:Bounds x="155" y="47" width="1120" height="630"/>
-      </bpmndi:BPMNShape>
-
-      <!-- Lane: Evidence Engine (top, height=350) -->
-      <bpmndi:BPMNShape id="Lane_EvidenceEngine_di" bpmnElement="Lane_EvidenceEngine" isHorizontal="true">
-        <dc:Bounds x="185" y="47" width="1090" height="350"/>
-      </bpmndi:BPMNShape>
-
-      <!-- Lane: Process Analyst (bottom, height=280) -->
-      <bpmndi:BPMNShape id="Lane_ProcessAnalyst_di" bpmnElement="Lane_ProcessAnalyst" isHorizontal="true">
-        <dc:Bounds x="185" y="397" width="1090" height="280"/>
-      </bpmndi:BPMNShape>
-
-      <!-- Row 1: Main flow (y=135 center line in Evidence Engine lane) -->
-
-      <!-- Start Event -->
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_EvidenceLifecycle">
       <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
-        <dc:Bounds x="247" y="117" width="36" height="36"/>
+        <dc:Bounds x="180" y="132" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="237" y="160" width="55" height="27"/>
+          <dc:Bounds x="170" y="170" width="55" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-
-      <!-- Classify Evidence -->
       <bpmndi:BPMNShape id="Task_Classify_di" bpmnElement="Task_Classify">
-        <dc:Bounds x="335" y="95" width="100" height="80"/>
+        <dc:Bounds x="268" y="110" width="100" height="80" />
       </bpmndi:BPMNShape>
-
-      <!-- Score Quality -->
       <bpmndi:BPMNShape id="Task_Score_di" bpmnElement="Task_Score">
-        <dc:Bounds x="487" y="95" width="100" height="80"/>
+        <dc:Bounds x="420" y="110" width="100" height="80" />
       </bpmndi:BPMNShape>
-
-      <!-- Gateway: Validation Threshold -->
       <bpmndi:BPMNShape id="Gateway_Validation_di" bpmnElement="Gateway_Validation" isMarkerVisible="true">
-        <dc:Bounds x="639" y="110" width="50" height="50"/>
+        <dc:Bounds x="572" y="125" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="627" y="72" width="75" height="27"/>
+          <dc:Bounds x="562" y="107" width="70" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-
-      <!-- Auto-Validate -->
+      <bpmndi:BPMNShape id="Gateway_MergeValidate_di" bpmnElement="Gateway_MergeValidate" isMarkerVisible="true">
+        <dc:Bounds x="722" y="125" width="50" height="50" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_AutoValidate_di" bpmnElement="Task_AutoValidate">
-        <dc:Bounds x="741" y="95" width="100" height="80"/>
+        <dc:Bounds x="824" y="110" width="100" height="80" />
       </bpmndi:BPMNShape>
-
-      <!-- Activate Evidence -->
       <bpmndi:BPMNShape id="Task_Activate_di" bpmnElement="Task_Activate">
-        <dc:Bounds x="893" y="95" width="100" height="80"/>
+        <dc:Bounds x="976" y="110" width="100" height="80" />
       </bpmndi:BPMNShape>
-
-      <!-- End Event: Evidence Active -->
-      <bpmndi:BPMNShape id="EndEvent_Active_di" bpmnElement="EndEvent_Active">
-        <dc:Bounds x="1045" y="117" width="36" height="36"/>
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="1035" y="160" width="55" height="27"/>
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
-
-      <!-- Timer Boundary Event (on bottom of Activate Evidence) -->
-      <bpmndi:BPMNShape id="BoundaryTimer_Age_di" bpmnElement="BoundaryTimer_Age">
-        <dc:Bounds x="925" y="157" width="36" height="36"/>
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="967" y="168" width="41" height="14"/>
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
-
-      <!-- Row 2: Age check flow (y=270 center in Evidence Engine lane) -->
-
-      <!-- Gateway: Age Check -->
       <bpmndi:BPMNShape id="Gateway_AgeCheck_di" bpmnElement="Gateway_AgeCheck" isMarkerVisible="true">
-        <dc:Bounds x="918" y="245" width="50" height="50"/>
+        <dc:Bounds x="1001" y="385" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="974" y="263" width="60" height="14"/>
+          <dc:Bounds x="968" y="373" width="44" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-
-      <!-- Expire Evidence -->
       <bpmndi:BPMNShape id="Task_Expire_di" bpmnElement="Task_Expire">
-        <dc:Bounds x="714" y="230" width="100" height="80"/>
+        <dc:Bounds x="976" y="490" width="100" height="80" />
       </bpmndi:BPMNShape>
-
-      <!-- End Event: Evidence Expired -->
       <bpmndi:BPMNShape id="EndEvent_Expired_di" bpmnElement="EndEvent_Expired">
-        <dc:Bounds x="610" y="252" width="36" height="36"/>
+        <dc:Bounds x="1128" y="512" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="600" y="295" width="55" height="27"/>
+          <dc:Bounds x="1118" y="550" width="55" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-
-      <!-- Row 3: Analyst review (y=520 center in Process Analyst lane) -->
-
-      <!-- Review Evidence -->
       <bpmndi:BPMNShape id="Task_Review_di" bpmnElement="Task_Review">
-        <dc:Bounds x="741" y="480" width="100" height="80"/>
+        <dc:Bounds x="547" y="260" width="100" height="80" />
       </bpmndi:BPMNShape>
-
-      <!-- Gateway: Analyst Decision -->
       <bpmndi:BPMNShape id="Gateway_Decision_di" bpmnElement="Gateway_Decision" isMarkerVisible="true">
-        <dc:Bounds x="893" y="495" width="50" height="50"/>
+        <dc:Bounds x="722" y="275" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="887" y="552" width="62" height="27"/>
+          <dc:Bounds x="683" y="263" width="54" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-
-      <!-- End Event: Evidence Rejected -->
       <bpmndi:BPMNShape id="EndEvent_Rejected_di" bpmnElement="EndEvent_Rejected">
-        <dc:Bounds x="995" y="502" width="36" height="36"/>
+        <dc:Bounds x="824" y="282" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="985" y="545" width="55" height="27"/>
+          <dc:Bounds x="814" y="320" width="55" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-
-      <!-- Sequence Flow Edges -->
-
-      <!-- Flow_1: Start -> Classify -->
+      <bpmndi:BPMNShape id="EndEvent_Active_di" bpmnElement="EndEvent_Active">
+        <dc:Bounds x="1202" y="132" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1197" y="176.5" width="46" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1kvjaef_di" bpmnElement="Gateway_1kvjaef" isMarkerVisible="true">
+        <dc:Bounds x="1115" y="125" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BoundaryTimer_Age_di" bpmnElement="BoundaryTimer_Age">
+        <dc:Bounds x="1008" y="172" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1050" y="203" width="41" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
-        <di:waypoint x="283" y="135"/>
-        <di:waypoint x="335" y="135"/>
+        <di:waypoint x="216" y="150" />
+        <di:waypoint x="268" y="150" />
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_2: Classify -> Score -->
       <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
-        <di:waypoint x="435" y="135"/>
-        <di:waypoint x="487" y="135"/>
+        <di:waypoint x="368" y="150" />
+        <di:waypoint x="420" y="150" />
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_3: Score -> Gateway_Validation -->
       <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
-        <di:waypoint x="587" y="135"/>
-        <di:waypoint x="639" y="135"/>
+        <di:waypoint x="520" y="150" />
+        <di:waypoint x="572" y="150" />
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_AutoValidate: Gateway -> Auto-Validate (right) -->
       <bpmndi:BPMNEdge id="Flow_AutoValidate_di" bpmnElement="Flow_AutoValidate">
-        <di:waypoint x="689" y="135"/>
-        <di:waypoint x="741" y="135"/>
+        <di:waypoint x="622" y="150" />
+        <di:waypoint x="722" y="150" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="692" y="117" width="60" height="14"/>
+          <dc:Bounds x="664" y="132" width="18" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_ManualReview: Gateway -> Review (down to analyst lane) -->
       <bpmndi:BPMNEdge id="Flow_ManualReview_di" bpmnElement="Flow_ManualReview">
-        <di:waypoint x="664" y="160"/>
-        <di:waypoint x="664" y="520"/>
-        <di:waypoint x="741" y="520"/>
+        <di:waypoint x="597" y="175" />
+        <di:waypoint x="597" y="260" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="672" y="337" width="60" height="14"/>
+          <dc:Bounds x="605" y="210" width="15" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_5: Auto-Validate -> Activate -->
+      <bpmndi:BPMNEdge id="Flow_MergeToValidate_di" bpmnElement="Flow_MergeToValidate">
+        <di:waypoint x="772" y="150" />
+        <di:waypoint x="824" y="150" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
-        <di:waypoint x="841" y="135"/>
-        <di:waypoint x="893" y="135"/>
+        <di:waypoint x="924" y="150" />
+        <di:waypoint x="976" y="150" />
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_6: Activate -> EndEvent_Active -->
       <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
-        <di:waypoint x="993" y="135"/>
-        <di:waypoint x="1045" y="135"/>
+        <di:waypoint x="1076" y="150" />
+        <di:waypoint x="1115" y="150" />
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_AgeCheck: Timer -> Gateway_AgeCheck (down) -->
       <bpmndi:BPMNEdge id="Flow_AgeCheck_di" bpmnElement="Flow_AgeCheck">
-        <di:waypoint x="943" y="193"/>
-        <di:waypoint x="943" y="245"/>
+        <di:waypoint x="1026" y="208" />
+        <di:waypoint x="1026" y="385" />
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_Expire: Gateway_AgeCheck -> Expire (left) -->
       <bpmndi:BPMNEdge id="Flow_Expire_di" bpmnElement="Flow_Expire">
-        <di:waypoint x="918" y="270"/>
-        <di:waypoint x="814" y="270"/>
+        <di:waypoint x="1026" y="435" />
+        <di:waypoint x="1026" y="490" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="836" y="252" width="55" height="14"/>
+          <dc:Bounds x="1034" y="455" width="18" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_Continue: Gateway_AgeCheck -> EndEvent_Active (up-right) -->
       <bpmndi:BPMNEdge id="Flow_Continue_di" bpmnElement="Flow_Continue">
-        <di:waypoint x="968" y="270"/>
-        <di:waypoint x="1063" y="270"/>
-        <di:waypoint x="1063" y="153"/>
+        <di:waypoint x="1051" y="410" />
+        <di:waypoint x="1140" y="410" />
+        <di:waypoint x="1140" y="175" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="984" y="252" width="60" height="14"/>
+          <dc:Bounds x="1084" y="392" width="15" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_8: Expire -> EndEvent_Expired (left) -->
       <bpmndi:BPMNEdge id="Flow_8_di" bpmnElement="Flow_8">
-        <di:waypoint x="714" y="270"/>
-        <di:waypoint x="646" y="270"/>
+        <di:waypoint x="1076" y="530" />
+        <di:waypoint x="1128" y="530" />
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_ReviewComplete: Review -> Gateway_Decision -->
       <bpmndi:BPMNEdge id="Flow_ReviewComplete_di" bpmnElement="Flow_ReviewComplete">
-        <di:waypoint x="841" y="520"/>
-        <di:waypoint x="893" y="520"/>
+        <di:waypoint x="647" y="300" />
+        <di:waypoint x="722" y="300" />
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_Approved: Gateway_Decision -> Auto-Validate (up) -->
       <bpmndi:BPMNEdge id="Flow_Approved_di" bpmnElement="Flow_Approved">
-        <di:waypoint x="918" y="495"/>
-        <di:waypoint x="918" y="135"/>
-        <di:waypoint x="841" y="135"/>
+        <di:waypoint x="747" y="275" />
+        <di:waypoint x="747" y="175" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="924" y="312" width="48" height="14"/>
+          <dc:Bounds x="753" y="220" width="18" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-
-      <!-- Flow_Rejected: Gateway_Decision -> EndEvent_Rejected -->
       <bpmndi:BPMNEdge id="Flow_Rejected_di" bpmnElement="Flow_Rejected">
-        <di:waypoint x="943" y="520"/>
-        <di:waypoint x="995" y="520"/>
+        <di:waypoint x="772" y="300" />
+        <di:waypoint x="824" y="300" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="951" y="502" width="45" height="14"/>
+          <dc:Bounds x="786" y="282" width="15" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-
+      <bpmndi:BPMNEdge id="Flow_0rdz7ac_di" bpmnElement="Flow_0rdz7ac">
+        <di:waypoint x="1165" y="150" />
+        <di:waypoint x="1202" y="150" />
+      </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
-
 </bpmn:definitions>
