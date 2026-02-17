@@ -231,6 +231,7 @@ class Engagement(Base):
         Enum(EngagementStatus), default=EngagementStatus.DRAFT, nullable=False
     )
     team: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
+    retention_days: Mapped[int | None] = mapped_column(BigInteger, nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -1328,3 +1329,30 @@ class ConformanceResult(Base):
 
     def __repr__(self) -> str:
         return f"<ConformanceResult(id={self.id}, fitness={self.fitness_score})>"
+
+
+class CopilotMessage(Base):
+    """Persisted copilot chat message for conversation history."""
+
+    __tablename__ = "copilot_messages"
+    __table_args__ = (
+        Index("ix_copilot_messages_engagement_id", "engagement_id"),
+        Index("ix_copilot_messages_user_id", "user_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    role: Mapped[str] = mapped_column(String(20), nullable=False)  # "user" or "assistant"
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    query_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    citations: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    context_tokens_used: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<CopilotMessage(id={self.id}, role='{self.role}')>"

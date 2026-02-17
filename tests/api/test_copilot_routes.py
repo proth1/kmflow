@@ -109,6 +109,18 @@ class TestCopilotRoutes:
     async def test_get_history_returns_empty(self, client, mock_db_session):
         engagement_id = "00000000-0000-0000-0000-000000000001"
 
+        # Mock for count query (first execute call)
+        count_mock = MagicMock()
+        count_mock.scalar.return_value = 0
+
+        # Mock for messages query (second execute call)
+        scalars_mock = MagicMock()
+        scalars_mock.all.return_value = []
+        messages_mock = MagicMock()
+        messages_mock.scalars.return_value = scalars_mock
+
+        mock_db_session.execute.side_effect = [count_mock, messages_mock]
+
         response = await client.get(f"/api/v1/copilot/history/{engagement_id}")
 
         assert response.status_code == 200

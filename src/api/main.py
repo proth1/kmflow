@@ -18,12 +18,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.api.middleware.audit import AuditLoggingMiddleware
 from src.api.middleware.security import (
     RateLimitMiddleware,
     RequestIDMiddleware,
     SecurityHeadersMiddleware,
 )
 from src.api.routes import (
+    admin,
     auth,
     conformance,
     copilot,
@@ -130,7 +132,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.app_name,
         description="AI-powered Process Intelligence platform for consulting engagements",
-        version="0.4.0",
+        version="0.5.0",
         docs_url="/docs",
         redoc_url="/redoc",
         lifespan=lifespan,
@@ -146,6 +148,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(AuditLoggingMiddleware)
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(
         RateLimitMiddleware,
@@ -179,6 +182,9 @@ def create_app() -> FastAPI:
     # -- Phase 4 Routes ---
     app.include_router(copilot.router)
     app.include_router(conformance.router)
+
+    # -- Phase 5 Routes ---
+    app.include_router(admin.router)
 
     return app
 

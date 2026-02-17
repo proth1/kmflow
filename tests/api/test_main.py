@@ -19,7 +19,7 @@ class TestAppCreation:
         """App should have correct metadata."""
         app = create_app()
         assert app.title == "KMFlow"
-        assert app.version == "0.4.0"
+        assert app.version == "0.5.0"
 
     def test_app_has_docs(self) -> None:
         """App should have OpenAPI docs enabled."""

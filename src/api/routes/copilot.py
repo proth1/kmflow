@@ -1,7 +1,7 @@
 """RAG copilot API routes.
 
 Provides chat interface for evidence-based Q&A using hybrid retrieval
-and Claude API generation.
+and Claude API generation. Persists chat history per engagement.
 """
 
 from __future__ import annotations
@@ -10,12 +10,14 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.models import User
+from src.core.models import CopilotMessage, User
 from src.core.permissions import require_permission
+from src.core.rate_limiter import copilot_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +55,7 @@ class ChatHistoryEntry(BaseModel):
     """A single entry in chat history."""
     role: str
     content: str
+    query_type: str | None = None
     timestamp: str
 
 
@@ -78,14 +81,14 @@ async def get_session(request: Request):
 @router.post("/chat", response_model=ChatResponse)
 async def copilot_chat(
     payload: ChatRequest,
-    user: User = Depends(require_permission("copilot:query")),
+    user: User = Depends(copilot_rate_limit),
     session: AsyncSession = Depends(get_session),
     request: Request = None,
 ) -> dict[str, Any]:
     """Chat with the evidence copilot.
 
     Retrieves relevant evidence context and generates an AI response
-    with citations to source documents.
+    with citations to source documents. Rate-limited to 10 queries/min per user.
     """
     from src.rag.copilot import CopilotOrchestrator
 
@@ -107,17 +110,42 @@ async def copilot_chat(
             detail=f"Copilot error: {e}",
         ) from e
 
+    citations = [
+        {
+            "source_id": c["source_id"],
+            "source_type": c["source_type"],
+            "content_preview": c["content_preview"],
+            "similarity_score": c["similarity_score"],
+        }
+        for c in response.citations
+    ]
+
+    # Persist user query
+    user_msg = CopilotMessage(
+        engagement_id=payload.engagement_id,
+        user_id=user.id,
+        role="user",
+        content=payload.query,
+        query_type=payload.query_type,
+    )
+    session.add(user_msg)
+
+    # Persist assistant response
+    assistant_msg = CopilotMessage(
+        engagement_id=payload.engagement_id,
+        user_id=user.id,
+        role="assistant",
+        content=response.answer,
+        query_type=payload.query_type,
+        citations=citations,
+        context_tokens_used=response.context_tokens_used,
+    )
+    session.add(assistant_msg)
+    await session.commit()
+
     return {
         "answer": response.answer,
-        "citations": [
-            {
-                "source_id": c["source_id"],
-                "source_type": c["source_type"],
-                "content_preview": c["content_preview"],
-                "similarity_score": c["similarity_score"],
-            }
-            for c in response.citations
-        ],
+        "citations": citations,
         "query_type": response.query_type,
         "context_tokens_used": response.context_tokens_used,
     }
@@ -127,14 +155,39 @@ async def copilot_chat(
 async def get_chat_history(
     engagement_id: UUID,
     user: User = Depends(require_permission("copilot:query")),
+    session: AsyncSession = Depends(get_session),
+    limit: int = Query(default=50, le=200),
+    offset: int = Query(default=0, ge=0),
 ) -> dict[str, Any]:
-    """Get chat history for an engagement.
+    """Get chat history for an engagement with pagination."""
+    # Count total messages
+    count_result = await session.execute(
+        select(func.count(CopilotMessage.id)).where(
+            CopilotMessage.engagement_id == engagement_id
+        )
+    )
+    total = count_result.scalar() or 0
 
-    Note: Chat history is currently not persisted (MVP).
-    Returns empty list until persistence is added.
-    """
+    # Fetch paginated messages
+    result = await session.execute(
+        select(CopilotMessage)
+        .where(CopilotMessage.engagement_id == engagement_id)
+        .order_by(CopilotMessage.created_at.asc())
+        .offset(offset)
+        .limit(limit)
+    )
+    messages = list(result.scalars().all())
+
     return {
         "engagement_id": str(engagement_id),
-        "messages": [],
-        "total": 0,
+        "messages": [
+            {
+                "role": msg.role,
+                "content": msg.content,
+                "query_type": msg.query_type,
+                "timestamp": msg.created_at.isoformat(),
+            }
+            for msg in messages
+        ],
+        "total": total,
     }
