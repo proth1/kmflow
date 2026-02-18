@@ -85,7 +85,9 @@ def _scenario_to_response(s: SimulationScenario) -> dict[str, Any]:
         "engagement_id": str(s.engagement_id),
         "process_model_id": str(s.process_model_id) if s.process_model_id else None,
         "name": s.name,
-        "simulation_type": s.simulation_type.value if isinstance(s.simulation_type, SimulationType) else s.simulation_type,
+        "simulation_type": s.simulation_type.value
+        if isinstance(s.simulation_type, SimulationType)
+        else s.simulation_type,
         "parameters": s.parameters,
         "description": s.description,
         "created_at": s.created_at.isoformat() if s.created_at else "",
@@ -156,9 +158,7 @@ async def get_scenario(
     user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """Get a scenario by ID."""
-    result = await session.execute(
-        select(SimulationScenario).where(SimulationScenario.id == scenario_id)
-    )
+    result = await session.execute(select(SimulationScenario).where(SimulationScenario.id == scenario_id))
     scenario = result.scalar_one_or_none()
     if not scenario:
         raise HTTPException(status_code=404, detail=f"Scenario {scenario_id} not found")
@@ -175,9 +175,7 @@ async def run_scenario(
     user: User = Depends(require_permission("simulation:run")),
 ) -> dict[str, Any]:
     """Run a simulation scenario."""
-    result = await session.execute(
-        select(SimulationScenario).where(SimulationScenario.id == scenario_id)
-    )
+    result = await session.execute(select(SimulationScenario).where(SimulationScenario.id == scenario_id))
     scenario = result.scalar_one_or_none()
     if not scenario:
         raise HTTPException(status_code=404, detail=f"Scenario {scenario_id} not found")
@@ -200,7 +198,9 @@ async def run_scenario(
         engine_result = run_simulation(
             process_graph=process_graph.get("process_graph", {"elements": [], "connections": []}),
             parameters=scenario.parameters or {},
-            simulation_type=scenario.simulation_type.value if isinstance(scenario.simulation_type, SimulationType) else scenario.simulation_type,
+            simulation_type=scenario.simulation_type.value
+            if isinstance(scenario.simulation_type, SimulationType)
+            else scenario.simulation_type,
         )
 
         sim_result.status = SimulationStatus.COMPLETED
@@ -210,11 +210,10 @@ async def run_scenario(
 
         # Generate impact analysis
         from src.simulation.impact import calculate_cascading_impact
+
         changed = list((scenario.parameters or {}).get("element_changes", {}).keys())
         if changed:
-            impact = calculate_cascading_impact(
-                changed, process_graph.get("process_graph", {"connections": []})
-            )
+            impact = calculate_cascading_impact(changed, process_graph.get("process_graph", {"connections": []}))
             sim_result.impact_analysis = impact
 
     except Exception as e:
@@ -252,9 +251,7 @@ async def get_result(
     user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """Get a simulation result by ID."""
-    result = await session.execute(
-        select(SimulationResult).where(SimulationResult.id == result_id)
-    )
+    result = await session.execute(select(SimulationResult).where(SimulationResult.id == result_id))
     sim_result = result.scalar_one_or_none()
     if not sim_result:
         raise HTTPException(status_code=404, detail=f"Result {result_id} not found")

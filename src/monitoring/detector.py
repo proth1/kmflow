@@ -44,20 +44,24 @@ def detect_deviations(
     current_elements = set(current_data.get("element_names", []))
 
     for missing in baseline_elements - current_elements:
-        deviations.append({
-            "category": DeviationCategory.MISSING_ACTIVITY,
-            "description": f"Activity '{missing}' from baseline not found in current data",
-            "affected_element": missing,
-            "magnitude": 0.8,
-        })
+        deviations.append(
+            {
+                "category": DeviationCategory.MISSING_ACTIVITY,
+                "description": f"Activity '{missing}' from baseline not found in current data",
+                "affected_element": missing,
+                "magnitude": 0.8,
+            }
+        )
 
     for new_elem in current_elements - baseline_elements:
-        deviations.append({
-            "category": DeviationCategory.NEW_ACTIVITY,
-            "description": f"New activity '{new_elem}' not in baseline",
-            "affected_element": new_elem,
-            "magnitude": 0.6,
-        })
+        deviations.append(
+            {
+                "category": DeviationCategory.NEW_ACTIVITY,
+                "description": f"New activity '{new_elem}' not in baseline",
+                "affected_element": new_elem,
+                "magnitude": 0.6,
+            }
+        )
 
     # Sequence deviations
     seq_devs = detect_sequence_changes(

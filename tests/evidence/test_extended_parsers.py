@@ -161,9 +161,7 @@ Organizations are required to maintain comprehensive audit trails.
         assert result.metadata["clause_count"] >= 3
 
         # Check obligation detection
-        obligation_frags = [
-            f for f in result.fragments if f.metadata.get("has_obligation")
-        ]
+        obligation_frags = [f for f in result.fragments if f.metadata.get("has_obligation")]
         assert len(obligation_frags) >= 2  # "shall" and "must" and "required"
 
     @pytest.mark.asyncio

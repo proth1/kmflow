@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CopilotMessage:
     """A single message in a copilot conversation."""
+
     role: str  # "user" or "assistant"
     content: str
     citations: list[dict[str, Any]] = field(default_factory=list)
@@ -33,6 +34,7 @@ class CopilotMessage:
 @dataclass
 class CopilotResponse:
     """Response from the copilot."""
+
     answer: str
     citations: list[dict[str, Any]]
     query_type: str

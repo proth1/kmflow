@@ -232,7 +232,8 @@ async def list_toms(
     """List target operating models for an engagement."""
     query = select(TargetOperatingModel).where(TargetOperatingModel.engagement_id == engagement_id)
     count_query = (
-        select(func.count()).select_from(TargetOperatingModel)
+        select(func.count())
+        .select_from(TargetOperatingModel)
         .where(TargetOperatingModel.engagement_id == engagement_id)
     )
     query = query.offset(offset).limit(limit)
@@ -303,7 +304,9 @@ async def create_gap(
     session.add(gap)
     await session.flush()
     await _log_audit(
-        session, payload.engagement_id, AuditAction.GAP_ANALYSIS_RUN,
+        session,
+        payload.engagement_id,
+        AuditAction.GAP_ANALYSIS_RUN,
         json.dumps({"dimension": payload.dimension, "gap_type": payload.gap_type}),
     )
     await session.commit()
@@ -324,8 +327,7 @@ async def list_gaps(
     """List gap analysis results for an engagement."""
     query = select(GapAnalysisResult).where(GapAnalysisResult.engagement_id == engagement_id)
     count_query = (
-        select(func.count()).select_from(GapAnalysisResult)
-        .where(GapAnalysisResult.engagement_id == engagement_id)
+        select(func.count()).select_from(GapAnalysisResult).where(GapAnalysisResult.engagement_id == engagement_id)
     )
 
     if tom_id is not None:
@@ -467,15 +469,17 @@ async def prioritize_gaps(
     prioritized = []
     for gap in gaps:
         priority = TOMAlignmentEngine.calculate_priority(gap.severity, gap.confidence, str(gap.dimension))
-        prioritized.append({
-            "gap_id": str(gap.id),
-            "dimension": str(gap.dimension),
-            "gap_type": str(gap.gap_type),
-            "severity": gap.severity,
-            "confidence": gap.confidence,
-            "priority_score": priority,
-            "recommendation": gap.recommendation,
-        })
+        prioritized.append(
+            {
+                "gap_id": str(gap.id),
+                "dimension": str(gap.dimension),
+                "gap_type": str(gap.gap_type),
+                "severity": gap.severity,
+                "confidence": gap.confidence,
+                "priority_score": priority,
+                "recommendation": gap.recommendation,
+            }
+        )
 
     prioritized.sort(key=lambda x: x["priority_score"], reverse=True)
     return {"engagement_id": str(engagement_id), "gaps": prioritized, "total": len(prioritized)}

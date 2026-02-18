@@ -40,13 +40,15 @@ def generate_recommendations(
         if rec_text.lower() in existing_items:
             continue
 
-        recommendations.append({
-            "gap_type": gap["gap_type"],
-            "severity": gap["severity"],
-            "recommendation": rec_text,
-            "element_name": gap.get("element_name"),
-            "auto_request": gap["severity"] in ("high", "medium"),
-        })
+        recommendations.append(
+            {
+                "gap_type": gap["gap_type"],
+                "severity": gap["severity"],
+                "recommendation": rec_text,
+                "element_name": gap.get("element_name"),
+                "auto_request": gap["severity"] in ("high", "medium"),
+            }
+        )
 
     return recommendations
 
@@ -77,12 +79,14 @@ def build_shelf_request_items(
 
         priority = "high" if rec["severity"] == "high" else "medium"
 
-        items.append({
-            "engagement_id": engagement_id,
-            "category": category,
-            "item_name": rec["recommendation"],
-            "description": f"Auto-generated from gap analysis: {rec.get('gap_type', '')}",
-            "priority": priority,
-        })
+        items.append(
+            {
+                "engagement_id": engagement_id,
+                "category": category,
+                "item_name": rec["recommendation"],
+                "description": f"Auto-generated from gap analysis: {rec.get('gap_type', '')}",
+                "priority": priority,
+            }
+        )
 
     return items

@@ -56,7 +56,8 @@ class ServiceNowConnector(BaseConnector):
         try:
             async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, auth=self._auth()) as client:
                 response = await retry_request(
-                    client, "GET",
+                    client,
+                    "GET",
                     f"{self._base_url}/api/now/table/sys_properties",
                     headers=self._headers(),
                     params={"sysparm_limit": "1"},
@@ -98,7 +99,8 @@ class ServiceNowConnector(BaseConnector):
                 url = f"{self._base_url}/api/now/table/{table_name}"
 
                 async for page in paginate_offset(
-                    client, url,
+                    client,
+                    url,
                     params=params,
                     headers=self._headers(),
                     results_key="result",
@@ -129,9 +131,16 @@ class ServiceNowConnector(BaseConnector):
     async def get_schema(self) -> list[str]:
         """Return available fields for the configured table."""
         return [
-            "sys_id", "number", "short_description", "description",
-            "state", "priority", "sys_created_on", "sys_updated_on",
-            "assigned_to", "category",
+            "sys_id",
+            "number",
+            "short_description",
+            "description",
+            "state",
+            "priority",
+            "sys_created_on",
+            "sys_updated_on",
+            "assigned_to",
+            "category",
         ]
 
     async def sync_incremental(self, engagement_id: str, since: str | None = None, **kwargs: Any) -> dict[str, Any]:

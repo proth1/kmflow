@@ -34,9 +34,7 @@ def _get_fernet() -> Fernet:
     settings = get_settings()
     key = settings.encryption_key
     if not key:
-        raise RuntimeError(
-            "ENCRYPTION_KEY not configured. Set it in environment or .env file."
-        )
+        raise RuntimeError("ENCRYPTION_KEY not configured. Set it in environment or .env file.")
     return Fernet(_derive_fernet_key(key))
 
 

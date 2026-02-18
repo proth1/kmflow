@@ -29,6 +29,7 @@ def _restore_real_auth(test_app):
     test_app.dependency_overrides.pop(get_current_user, None)
     yield
 
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

@@ -21,9 +21,7 @@ class TestScenarioRoutes:
     """Tests for simulation scenario routes."""
 
     @pytest.mark.asyncio
-    async def test_create_scenario(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_create_scenario(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test creating a simulation scenario."""
         scenario_id = uuid.uuid4()
         engagement_id = uuid.uuid4()
@@ -51,9 +49,7 @@ class TestScenarioRoutes:
         assert data["simulation_type"] == "what_if"
 
     @pytest.mark.asyncio
-    async def test_list_scenarios(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_list_scenarios(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test listing simulation scenarios."""
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = []
@@ -66,9 +62,7 @@ class TestScenarioRoutes:
         assert "total" in data
 
     @pytest.mark.asyncio
-    async def test_get_scenario(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_get_scenario(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting a scenario by ID."""
         scenario_id = uuid.uuid4()
         engagement_id = uuid.uuid4()
@@ -93,9 +87,7 @@ class TestScenarioRoutes:
         assert data["id"] == str(scenario_id)
 
     @pytest.mark.asyncio
-    async def test_get_scenario_not_found(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_get_scenario_not_found(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting a scenario that does not exist."""
         scenario_id = uuid.uuid4()
         mock_result = MagicMock()
@@ -110,9 +102,7 @@ class TestRunSimulation:
     """Tests for running simulation scenarios."""
 
     @pytest.mark.asyncio
-    async def test_run_scenario(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_run_scenario(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test running a simulation scenario creates a result."""
         scenario_id = uuid.uuid4()
         result_id = uuid.uuid4()
@@ -148,9 +138,7 @@ class TestRunSimulation:
         assert "status" in data
 
     @pytest.mark.asyncio
-    async def test_run_scenario_not_found(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_run_scenario_not_found(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test running a scenario that does not exist."""
         scenario_id = uuid.uuid4()
         mock_result = MagicMock()
@@ -165,9 +153,7 @@ class TestResultRoutes:
     """Tests for simulation result routes."""
 
     @pytest.mark.asyncio
-    async def test_list_results(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_list_results(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test listing simulation results."""
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = []
@@ -180,9 +166,7 @@ class TestResultRoutes:
         assert "total" in data
 
     @pytest.mark.asyncio
-    async def test_get_result(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_get_result(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting a simulation result by ID."""
         result_id = uuid.uuid4()
         scenario_id = uuid.uuid4()
@@ -209,9 +193,7 @@ class TestResultRoutes:
         assert data["id"] == str(result_id)
 
     @pytest.mark.asyncio
-    async def test_get_result_not_found(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_get_result_not_found(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting a result that does not exist."""
         result_id = uuid.uuid4()
         mock_result = MagicMock()

@@ -157,14 +157,16 @@ class RoadmapGenerator:
         """Convert gap results to initiative descriptions."""
         initiatives = []
         for gap in gaps:
-            initiatives.append({
-                "gap_id": str(gap.id),
-                "dimension": str(gap.dimension),
-                "gap_type": str(gap.gap_type),
-                "severity": gap.severity,
-                "priority_score": gap.priority_score,
-                "recommendation": gap.recommendation or "Assessment needed",
-            })
+            initiatives.append(
+                {
+                    "gap_id": str(gap.id),
+                    "dimension": str(gap.dimension),
+                    "gap_type": str(gap.gap_type),
+                    "severity": gap.severity,
+                    "priority_score": gap.priority_score,
+                    "recommendation": gap.recommendation or "Assessment needed",
+                }
+            )
         return sorted(initiatives, key=lambda x: x["priority_score"], reverse=True)
 
     async def _fetch_gaps(

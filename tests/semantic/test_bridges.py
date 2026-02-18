@@ -41,20 +41,22 @@ async def test_process_evidence_creates_relationships(process_evidence_bridge, m
     process_node = GraphNode(
         id="proc-1",
         label="Process",
-        properties={"name": "Customer Onboarding Workflow", "engagement_id": engagement_id}
+        properties={"name": "Customer Onboarding Workflow", "engagement_id": engagement_id},
     )
 
     evidence_node = GraphNode(
         id="ev-1",
         label="Evidence",
-        properties={"name": "Customer Onboarding Guide Document", "engagement_id": engagement_id}
+        properties={"name": "Customer Onboarding Guide Document", "engagement_id": engagement_id},
     )
 
-    mock_graph.find_nodes = AsyncMock(side_effect=[
-        [process_node],  # Process nodes
-        [],              # Activity nodes
-        [evidence_node], # Evidence nodes
-    ])
+    mock_graph.find_nodes = AsyncMock(
+        side_effect=[
+            [process_node],  # Process nodes
+            [],  # Activity nodes
+            [evidence_node],  # Evidence nodes
+        ]
+    )
     mock_graph.create_relationship = AsyncMock()
 
     # Execute
@@ -66,7 +68,7 @@ async def test_process_evidence_creates_relationships(process_evidence_bridge, m
         from_id="proc-1",
         to_id="ev-1",
         relationship_type="SUPPORTED_BY",
-        properties={"source": "process_evidence_bridge", "confidence": 0.7}
+        properties={"source": "process_evidence_bridge", "confidence": 0.7},
     )
 
 
@@ -77,22 +79,20 @@ async def test_process_evidence_no_overlap(process_evidence_bridge, mock_graph):
 
     # Process and evidence with no common words
     process_node = GraphNode(
-        id="proc-1",
-        label="Process",
-        properties={"name": "Invoice Processing", "engagement_id": engagement_id}
+        id="proc-1", label="Process", properties={"name": "Invoice Processing", "engagement_id": engagement_id}
     )
 
     evidence_node = GraphNode(
-        id="ev-1",
-        label="Evidence",
-        properties={"name": "Customer Feedback Survey", "engagement_id": engagement_id}
+        id="ev-1", label="Evidence", properties={"name": "Customer Feedback Survey", "engagement_id": engagement_id}
     )
 
-    mock_graph.find_nodes = AsyncMock(side_effect=[
-        [process_node],
-        [],
-        [evidence_node],
-    ])
+    mock_graph.find_nodes = AsyncMock(
+        side_effect=[
+            [process_node],
+            [],
+            [evidence_node],
+        ]
+    )
     mock_graph.create_relationship = AsyncMock()
 
     # Execute
@@ -109,22 +109,22 @@ async def test_process_evidence_includes_activities(process_evidence_bridge, moc
     engagement_id = "eng-1"
 
     activity_node = GraphNode(
-        id="act-1",
-        label="Activity",
-        properties={"name": "Verify Customer Documents", "engagement_id": engagement_id}
+        id="act-1", label="Activity", properties={"name": "Verify Customer Documents", "engagement_id": engagement_id}
     )
 
     evidence_node = GraphNode(
         id="ev-1",
         label="Evidence",
-        properties={"name": "Customer Document Verification Checklist", "engagement_id": engagement_id}
+        properties={"name": "Customer Document Verification Checklist", "engagement_id": engagement_id},
     )
 
-    mock_graph.find_nodes = AsyncMock(side_effect=[
-        [],              # Process nodes
-        [activity_node], # Activity nodes
-        [evidence_node], # Evidence nodes
-    ])
+    mock_graph.find_nodes = AsyncMock(
+        side_effect=[
+            [],  # Process nodes
+            [activity_node],  # Activity nodes
+            [evidence_node],  # Evidence nodes
+        ]
+    )
     mock_graph.create_relationship = AsyncMock()
 
     # Execute
@@ -154,19 +154,19 @@ async def test_evidence_policy_creates_governed_by(evidence_policy_bridge, mock_
     evidence_node = GraphNode(
         id="ev-1",
         label="Evidence",
-        properties={"name": "Data Retention Policy Compliance Report", "engagement_id": engagement_id}
+        properties={"name": "Data Retention Policy Compliance Report", "engagement_id": engagement_id},
     )
 
     policy_node = GraphNode(
-        id="policy-1",
-        label="Policy",
-        properties={"name": "Data Retention Policy", "engagement_id": engagement_id}
+        id="policy-1", label="Policy", properties={"name": "Data Retention Policy", "engagement_id": engagement_id}
     )
 
-    mock_graph.find_nodes = AsyncMock(side_effect=[
-        [evidence_node],
-        [policy_node],
-    ])
+    mock_graph.find_nodes = AsyncMock(
+        side_effect=[
+            [evidence_node],
+            [policy_node],
+        ]
+    )
     mock_graph.create_relationship = AsyncMock()
 
     # Execute
@@ -178,7 +178,7 @@ async def test_evidence_policy_creates_governed_by(evidence_policy_bridge, mock_
         from_id="ev-1",
         to_id="policy-1",
         relationship_type="GOVERNED_BY",
-        properties={"source": "evidence_policy_bridge"}
+        properties={"source": "evidence_policy_bridge"},
     )
 
 
@@ -188,21 +188,19 @@ async def test_evidence_policy_no_match(evidence_policy_bridge, mock_graph):
     engagement_id = "eng-1"
 
     evidence_node = GraphNode(
-        id="ev-1",
-        label="Evidence",
-        properties={"name": "Customer Survey Results", "engagement_id": engagement_id}
+        id="ev-1", label="Evidence", properties={"name": "Customer Survey Results", "engagement_id": engagement_id}
     )
 
     policy_node = GraphNode(
-        id="policy-1",
-        label="Policy",
-        properties={"name": "Data Retention Policy", "engagement_id": engagement_id}
+        id="policy-1", label="Policy", properties={"name": "Data Retention Policy", "engagement_id": engagement_id}
     )
 
-    mock_graph.find_nodes = AsyncMock(side_effect=[
-        [evidence_node],
-        [policy_node],
-    ])
+    mock_graph.find_nodes = AsyncMock(
+        side_effect=[
+            [evidence_node],
+            [policy_node],
+        ]
+    )
     mock_graph.create_relationship = AsyncMock()
 
     # Execute
@@ -230,22 +228,20 @@ async def test_process_tom_classifies_dimensions(process_tom_bridge, mock_graph)
     engagement_id = "eng-1"
 
     process_node = GraphNode(
-        id="proc-1",
-        label="Process",
-        properties={"name": "Workflow Management Process", "engagement_id": engagement_id}
+        id="proc-1", label="Process", properties={"name": "Workflow Management Process", "engagement_id": engagement_id}
     )
 
     tom_node = GraphNode(
-        id="tom-1",
-        label="TOM",
-        properties={"name": "Target Operating Model", "engagement_id": engagement_id}
+        id="tom-1", label="TOM", properties={"name": "Target Operating Model", "engagement_id": engagement_id}
     )
 
-    mock_graph.find_nodes = AsyncMock(side_effect=[
-        [process_node],
-        [],  # Activity nodes
-        [tom_node],
-    ])
+    mock_graph.find_nodes = AsyncMock(
+        side_effect=[
+            [process_node],
+            [],  # Activity nodes
+            [tom_node],
+        ]
+    )
     mock_graph.create_relationship = AsyncMock()
 
     # Execute
@@ -269,20 +265,20 @@ async def test_process_tom_risk_keywords(process_tom_bridge, mock_graph):
     process_node = GraphNode(
         id="proc-1",
         label="Process",
-        properties={"name": "Risk Assessment Control Process", "engagement_id": engagement_id}
+        properties={"name": "Risk Assessment Control Process", "engagement_id": engagement_id},
     )
 
     tom_node = GraphNode(
-        id="tom-1",
-        label="TOM",
-        properties={"name": "Target Operating Model", "engagement_id": engagement_id}
+        id="tom-1", label="TOM", properties={"name": "Target Operating Model", "engagement_id": engagement_id}
     )
 
-    mock_graph.find_nodes = AsyncMock(side_effect=[
-        [process_node],
-        [],
-        [tom_node],
-    ])
+    mock_graph.find_nodes = AsyncMock(
+        side_effect=[
+            [process_node],
+            [],
+            [tom_node],
+        ]
+    )
     mock_graph.create_relationship = AsyncMock()
 
     # Execute
@@ -304,22 +300,20 @@ async def test_process_tom_no_match(process_tom_bridge, mock_graph):
 
     # Generic name with no matching keywords
     process_node = GraphNode(
-        id="proc-1",
-        label="Process",
-        properties={"name": "ABC XYZ", "engagement_id": engagement_id}
+        id="proc-1", label="Process", properties={"name": "ABC XYZ", "engagement_id": engagement_id}
     )
 
     tom_node = GraphNode(
-        id="tom-1",
-        label="TOM",
-        properties={"name": "Target Operating Model", "engagement_id": engagement_id}
+        id="tom-1", label="TOM", properties={"name": "Target Operating Model", "engagement_id": engagement_id}
     )
 
-    mock_graph.find_nodes = AsyncMock(side_effect=[
-        [process_node],
-        [],
-        [tom_node],
-    ])
+    mock_graph.find_nodes = AsyncMock(
+        side_effect=[
+            [process_node],
+            [],
+            [tom_node],
+        ]
+    )
     mock_graph.create_relationship = AsyncMock()
 
     # Execute
@@ -349,20 +343,20 @@ async def test_deviation_detected(communication_deviation_bridge, mock_graph):
     evidence_node = GraphNode(
         id="ev-1",
         label="Evidence",
-        properties={"name": "Email about approval workaround process", "engagement_id": engagement_id}
+        properties={"name": "Email about approval workaround process", "engagement_id": engagement_id},
     )
 
     process_node = GraphNode(
-        id="proc-1",
-        label="Process",
-        properties={"name": "Approval Process", "engagement_id": engagement_id}
+        id="proc-1", label="Process", properties={"name": "Approval Process", "engagement_id": engagement_id}
     )
 
-    mock_graph.find_nodes = AsyncMock(side_effect=[
-        [evidence_node],
-        [process_node],
-        [],  # Activity nodes
-    ])
+    mock_graph.find_nodes = AsyncMock(
+        side_effect=[
+            [evidence_node],
+            [process_node],
+            [],  # Activity nodes
+        ]
+    )
     mock_graph.create_relationship = AsyncMock()
 
     # Execute
@@ -374,7 +368,7 @@ async def test_deviation_detected(communication_deviation_bridge, mock_graph):
         from_id="ev-1",
         to_id="proc-1",
         relationship_type="DEVIATES_FROM",
-        properties={"source": "communication_deviation_bridge"}
+        properties={"source": "communication_deviation_bridge"},
     )
 
 
@@ -386,20 +380,20 @@ async def test_no_deviation_keywords(communication_deviation_bridge, mock_graph)
     evidence_node = GraphNode(
         id="ev-1",
         label="Evidence",
-        properties={"name": "Standard approval process documentation", "engagement_id": engagement_id}
+        properties={"name": "Standard approval process documentation", "engagement_id": engagement_id},
     )
 
     process_node = GraphNode(
-        id="proc-1",
-        label="Process",
-        properties={"name": "Approval Process", "engagement_id": engagement_id}
+        id="proc-1", label="Process", properties={"name": "Approval Process", "engagement_id": engagement_id}
     )
 
-    mock_graph.find_nodes = AsyncMock(side_effect=[
-        [evidence_node],
-        [process_node],
-        [],
-    ])
+    mock_graph.find_nodes = AsyncMock(
+        side_effect=[
+            [evidence_node],
+            [process_node],
+            [],
+        ]
+    )
     mock_graph.create_relationship = AsyncMock()
 
     # Execute
@@ -418,20 +412,20 @@ async def test_deviation_multiple_keywords(communication_deviation_bridge, mock_
     evidence_node = GraphNode(
         id="ev-1",
         label="Evidence",
-        properties={"name": "We bypass the normal review process", "engagement_id": engagement_id}
+        properties={"name": "We bypass the normal review process", "engagement_id": engagement_id},
     )
 
     process_node = GraphNode(
-        id="proc-1",
-        label="Process",
-        properties={"name": "Review Process", "engagement_id": engagement_id}
+        id="proc-1", label="Process", properties={"name": "Review Process", "engagement_id": engagement_id}
     )
 
-    mock_graph.find_nodes = AsyncMock(side_effect=[
-        [evidence_node],
-        [process_node],
-        [],
-    ])
+    mock_graph.find_nodes = AsyncMock(
+        side_effect=[
+            [evidence_node],
+            [process_node],
+            [],
+        ]
+    )
     mock_graph.create_relationship = AsyncMock()
 
     # Execute

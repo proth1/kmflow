@@ -57,7 +57,7 @@ async def test_check_conformance_perfect_match(conformance_engine, mock_session)
     async def mock_execute(query):
         result = MagicMock()
         # First call returns POV elements, second returns reference elements
-        if not hasattr(mock_execute, 'call_count'):
+        if not hasattr(mock_execute, "call_count"):
             mock_execute.call_count = 0
         mock_execute.call_count += 1
 
@@ -297,19 +297,9 @@ async def test_check_conformance_case_insensitive(conformance_engine, mock_sessi
 def test_deviation_severity():
     """Test that deviation severity values are correct."""
     # Missing elements have severity 0.7
-    missing = Deviation(
-        element_name="Test",
-        deviation_type="missing",
-        severity=0.7,
-        description="Test missing"
-    )
+    missing = Deviation(element_name="Test", deviation_type="missing", severity=0.7, description="Test missing")
     assert missing.severity == 0.7
 
     # Extra elements have severity 0.3
-    extra = Deviation(
-        element_name="Test",
-        deviation_type="extra",
-        severity=0.3,
-        description="Test extra"
-    )
+    extra = Deviation(element_name="Test", deviation_type="extra", severity=0.3, description="Test extra")
     assert extra.severity == 0.3

@@ -56,7 +56,11 @@ async def retry_request(
                 delay = retry_delays[min(attempt, len(retry_delays) - 1)]
                 logger.warning(
                     "Request to %s returned %d, retrying in %.1fs (attempt %d/%d)",
-                    url, response.status_code, delay, attempt + 1, max_retries,
+                    url,
+                    response.status_code,
+                    delay,
+                    attempt + 1,
+                    max_retries,
                 )
                 await asyncio.sleep(delay)
                 continue
@@ -72,7 +76,11 @@ async def retry_request(
                 delay = retry_delays[min(attempt, len(retry_delays) - 1)]
                 logger.warning(
                     "Request to %s failed: %s, retrying in %.1fs (attempt %d/%d)",
-                    url, exc, delay, attempt + 1, max_retries,
+                    url,
+                    exc,
+                    delay,
+                    attempt + 1,
+                    max_retries,
                 )
                 await asyncio.sleep(delay)
             else:
@@ -122,7 +130,9 @@ async def paginate_offset(
         request_params[limit_param] = page_size
 
         response = await retry_request(
-            client, "GET", url,
+            client,
+            "GET",
+            url,
             params=request_params,
             headers=headers,
         )
@@ -175,7 +185,9 @@ async def paginate_cursor(
             break
 
         response = await retry_request(
-            client, "GET", current_url,
+            client,
+            "GET",
+            current_url,
             params=params if is_first else None,
             headers=headers,
         )

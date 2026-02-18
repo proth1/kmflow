@@ -101,9 +101,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         from src.monitoring.worker import run_worker
 
         for i in range(settings.monitoring_worker_count):
-            task = asyncio.create_task(
-                run_worker(redis_client, f"worker-{i}", shutdown_event)
-            )
+            task = asyncio.create_task(run_worker(redis_client, f"worker-{i}", shutdown_event))
             worker_tasks.append(task)
         logger.info("Started %d monitoring workers", settings.monitoring_worker_count)
 

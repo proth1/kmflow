@@ -29,14 +29,18 @@ router = APIRouter(prefix="/api/v1/copilot", tags=["copilot"])
 
 class ChatRequest(BaseModel):
     """Request for copilot chat."""
+
     engagement_id: UUID
     query: str = Field(..., min_length=1, max_length=5000)
-    query_type: str = Field(default="general", pattern="^(general|process_discovery|evidence_traceability|gap_analysis|regulatory)$")
+    query_type: str = Field(
+        default="general", pattern="^(general|process_discovery|evidence_traceability|gap_analysis|regulatory)$"
+    )
     history: list[dict[str, str]] | None = None
 
 
 class CitationResponse(BaseModel):
     """A citation from retrieved evidence."""
+
     source_id: str
     source_type: str
     content_preview: str
@@ -45,6 +49,7 @@ class CitationResponse(BaseModel):
 
 class ChatResponse(BaseModel):
     """Response from copilot chat."""
+
     answer: str
     citations: list[CitationResponse]
     query_type: str
@@ -53,6 +58,7 @@ class ChatResponse(BaseModel):
 
 class ChatHistoryEntry(BaseModel):
     """A single entry in chat history."""
+
     role: str
     content: str
     query_type: str | None = None
@@ -61,6 +67,7 @@ class ChatHistoryEntry(BaseModel):
 
 class ChatHistoryResponse(BaseModel):
     """Response for chat history retrieval."""
+
     engagement_id: str
     messages: list[ChatHistoryEntry]
     total: int
@@ -162,9 +169,7 @@ async def get_chat_history(
     """Get chat history for an engagement with pagination."""
     # Count total messages
     count_result = await session.execute(
-        select(func.count(CopilotMessage.id)).where(
-            CopilotMessage.engagement_id == engagement_id
-        )
+        select(func.count(CopilotMessage.id)).where(CopilotMessage.engagement_id == engagement_id)
     )
     total = count_result.scalar() or 0
 

@@ -39,8 +39,8 @@ def sample_tom():
     tom.id = uuid.uuid4()
     tom.maturity_targets = {
         TOMDimension.PROCESS_ARCHITECTURE: ProcessMaturity.OPTIMIZING,  # target 5.0
-        TOMDimension.GOVERNANCE_STRUCTURES: ProcessMaturity.DEFINED,    # target 3.0
-        TOMDimension.TECHNOLOGY_AND_DATA: ProcessMaturity.MANAGED,      # target 2.0
+        TOMDimension.GOVERNANCE_STRUCTURES: ProcessMaturity.DEFINED,  # target 3.0
+        TOMDimension.TECHNOLOGY_AND_DATA: ProcessMaturity.MANAGED,  # target 2.0
     }
     return tom
 
@@ -58,10 +58,7 @@ async def test_run_alignment_finds_gaps(alignment_engine, mock_graph, mock_sessi
 
     # Mock low graph stats (will result in low maturity scores)
     stats = GraphStats(
-        node_count=5,
-        relationship_count=3,
-        nodes_by_label={"Process": 2},
-        relationships_by_type={"SUPPORTED_BY": 3}
+        node_count=5, relationship_count=3, nodes_by_label={"Process": 2}, relationships_by_type={"SUPPORTED_BY": 3}
     )
     mock_graph.get_stats = AsyncMock(return_value=stats)
 
@@ -128,7 +125,7 @@ async def test_run_alignment_high_maturity(alignment_engine, mock_graph, mock_se
         node_count=150,
         relationship_count=200,
         nodes_by_label={"Process": 50, "Activity": 30, "Policy": 10},
-        relationships_by_type={"SUPPORTED_BY": 100}
+        relationships_by_type={"SUPPORTED_BY": 100},
     )
     mock_graph.get_stats = AsyncMock(return_value=stats)
 
@@ -280,10 +277,7 @@ def test_dimension_weights():
 
 def test_generate_recommendation_critical(alignment_engine):
     """Test recommendation generation for full gaps."""
-    rec = alignment_engine._generate_recommendation(
-        TOMDimension.PROCESS_ARCHITECTURE,
-        TOMGapType.FULL_GAP
-    )
+    rec = alignment_engine._generate_recommendation(TOMDimension.PROCESS_ARCHITECTURE, TOMGapType.FULL_GAP)
 
     assert rec.startswith("CRITICAL:")
     assert "process" in rec.lower()
@@ -291,10 +285,7 @@ def test_generate_recommendation_critical(alignment_engine):
 
 def test_generate_recommendation_high(alignment_engine):
     """Test recommendation generation for partial gaps."""
-    rec = alignment_engine._generate_recommendation(
-        TOMDimension.GOVERNANCE_STRUCTURES,
-        TOMGapType.PARTIAL_GAP
-    )
+    rec = alignment_engine._generate_recommendation(TOMDimension.GOVERNANCE_STRUCTURES, TOMGapType.PARTIAL_GAP)
 
     assert rec.startswith("HIGH:")
     assert "governance" in rec.lower()

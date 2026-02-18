@@ -42,7 +42,9 @@ class TestRetryRequest:
         ]
 
         result = await retry_request(
-            mock_client, "GET", "https://api.example.com/test",
+            mock_client,
+            "GET",
+            "https://api.example.com/test",
             retry_delays=(0.01, 0.02, 0.04),
         )
         assert result.status_code == 200
@@ -58,7 +60,9 @@ class TestRetryRequest:
         ]
 
         result = await retry_request(
-            mock_client, "GET", "https://api.example.com/test",
+            mock_client,
+            "GET",
+            "https://api.example.com/test",
             retry_delays=(0.01,),
         )
         assert result.status_code == 200
@@ -71,7 +75,9 @@ class TestRetryRequest:
 
         with pytest.raises(httpx.ConnectError):
             await retry_request(
-                mock_client, "GET", "https://api.example.com/test",
+                mock_client,
+                "GET",
+                "https://api.example.com/test",
                 max_retries=2,
                 retry_delays=(0.01, 0.01),
             )
@@ -97,7 +103,9 @@ class TestRetryRequest:
         ]
 
         result = await retry_request(
-            mock_client, "GET", "https://api.example.com/test",
+            mock_client,
+            "GET",
+            "https://api.example.com/test",
             retry_delays=(0.01,),
         )
         assert result.status_code == 200
@@ -112,10 +120,13 @@ class TestPaginateOffset:
         mock_client = AsyncMock(spec=httpx.AsyncClient)
 
         async def mock_request(method, url, **kwargs):
-            return _make_response(200, {
-                "results": [{"id": 1}, {"id": 2}],
-                "total": 2,
-            })
+            return _make_response(
+                200,
+                {
+                    "results": [{"id": 1}, {"id": 2}],
+                    "total": 2,
+                },
+            )
 
         mock_client.request = mock_request
 
@@ -137,16 +148,22 @@ class TestPaginateOffset:
             offset = params.get("offset", 0)
             if offset == 0:
                 call_count += 1
-                return _make_response(200, {
-                    "results": [{"id": 1}, {"id": 2}],
-                    "total": 3,
-                })
+                return _make_response(
+                    200,
+                    {
+                        "results": [{"id": 1}, {"id": 2}],
+                        "total": 3,
+                    },
+                )
             else:
                 call_count += 1
-                return _make_response(200, {
-                    "results": [{"id": 3}],
-                    "total": 3,
-                })
+                return _make_response(
+                    200,
+                    {
+                        "results": [{"id": 3}],
+                        "total": 3,
+                    },
+                )
 
         mock_client = AsyncMock(spec=httpx.AsyncClient)
         mock_client.request = mock_request
@@ -184,9 +201,12 @@ class TestPaginateCursor:
         mock_client = AsyncMock(spec=httpx.AsyncClient)
 
         async def mock_request(method, url, **kwargs):
-            return _make_response(200, {
-                "results": [{"id": 1}],
-            })
+            return _make_response(
+                200,
+                {
+                    "results": [{"id": 1}],
+                },
+            )
 
         mock_client.request = mock_request
 
@@ -204,14 +224,20 @@ class TestPaginateCursor:
         async def mock_request(method, url, **kwargs):
             call_urls.append(url)
             if "page2" not in url:
-                return _make_response(200, {
-                    "results": [{"id": 1}],
-                    "next": "https://api.example.com/data?page2",
-                })
+                return _make_response(
+                    200,
+                    {
+                        "results": [{"id": 1}],
+                        "next": "https://api.example.com/data?page2",
+                    },
+                )
             else:
-                return _make_response(200, {
-                    "results": [{"id": 2}],
-                })
+                return _make_response(
+                    200,
+                    {
+                        "results": [{"id": 2}],
+                    },
+                )
 
         mock_client = AsyncMock(spec=httpx.AsyncClient)
         mock_client.request = mock_request

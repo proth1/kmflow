@@ -42,7 +42,8 @@ class CelonisConnector(BaseConnector):
         try:
             async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
                 response = await retry_request(
-                    client, "GET",
+                    client,
+                    "GET",
                     f"{self._base_url}/api/v1/status",
                     headers=self._headers(),
                     max_retries=1,
@@ -80,7 +81,8 @@ class CelonisConnector(BaseConnector):
                 url = f"{self._base_url}/api/v1/data-pools/{data_pool_id}/events"
 
                 async for page in paginate_offset(
-                    client, url,
+                    client,
+                    url,
                     headers=self._headers(),
                     results_key="data",
                     total_key="totalCount",
@@ -110,6 +112,11 @@ class CelonisConnector(BaseConnector):
     async def get_schema(self) -> list[str]:
         """Return available source fields from Celonis."""
         return [
-            "case_id", "activity", "timestamp", "resource",
-            "variant", "duration", "cost",
+            "case_id",
+            "activity",
+            "timestamp",
+            "resource",
+            "variant",
+            "duration",
+            "cost",
         ]

@@ -53,8 +53,7 @@ class VisioParser(BaseParser):
 
             with zipfile.ZipFile(file_path, "r") as zf:
                 page_files = [
-                    name for name in zf.namelist()
-                    if name.startswith("visio/pages/page") and name.endswith(".xml")
+                    name for name in zf.namelist() if name.startswith("visio/pages/page") and name.endswith(".xml")
                 ]
 
                 result.metadata = {

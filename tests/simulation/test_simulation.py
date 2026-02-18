@@ -37,11 +37,7 @@ class TestRunSimulation:
             ],
             "connections": [],
         }
-        parameters = {
-            "element_changes": {
-                "Task1": {"duration": 20}
-            }
-        }
+        parameters = {"element_changes": {"Task1": {"duration": 20}}}
         result = run_simulation(process_graph, parameters, "what_if")
         assert result["metrics"]["total_estimated_time"] == 20
 

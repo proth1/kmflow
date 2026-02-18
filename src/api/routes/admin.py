@@ -50,10 +50,7 @@ async def run_retention_cleanup(
         return {
             "dry_run": True,
             "would_clean_up": len(expired),
-            "engagements": [
-                {"id": str(eng.id), "name": eng.name}
-                for eng in expired
-            ],
+            "engagements": [{"id": str(eng.id), "name": eng.name} for eng in expired],
             "status": "preview",
         }
 
@@ -85,9 +82,7 @@ async def rotate_encryption_key(
     from src.core.models import IntegrationConnection
 
     result = await session.execute(
-        select(IntegrationConnection).where(
-            IntegrationConnection.encrypted_config.isnot(None)
-        )
+        select(IntegrationConnection).where(IntegrationConnection.encrypted_config.isnot(None))
     )
     connections = result.scalars().all()
 

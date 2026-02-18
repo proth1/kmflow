@@ -83,9 +83,7 @@ class BaseConnector(abc.ABC):
         """
         return []
 
-    async def sync_incremental(
-        self, engagement_id: str, since: str | None = None, **kwargs: Any
-    ) -> dict[str, Any]:
+    async def sync_incremental(self, engagement_id: str, since: str | None = None, **kwargs: Any) -> dict[str, Any]:
         """Incremental sync - only records modified since a timestamp.
 
         Default implementation falls back to full sync.

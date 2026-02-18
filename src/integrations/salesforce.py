@@ -48,7 +48,8 @@ class SalesforceConnector(BaseConnector):
             login_url = self._instance_url or "https://login.salesforce.com"
             async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
                 response = await retry_request(
-                    client, "POST",
+                    client,
+                    "POST",
                     f"{login_url}/services/oauth2/token",
                     data={
                         "grant_type": "client_credentials",
@@ -78,7 +79,8 @@ class SalesforceConnector(BaseConnector):
         try:
             async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
                 response = await retry_request(
-                    client, "GET",
+                    client,
+                    "GET",
                     f"{self._instance_url}/services/data/{self._api_version}/",
                     headers=self._headers(),
                     max_retries=1,
@@ -113,7 +115,8 @@ class SalesforceConnector(BaseConnector):
                 url = f"{self._instance_url}/services/data/{self._api_version}/query/"
 
                 async for page in paginate_cursor(
-                    client, url,
+                    client,
+                    url,
                     params={"q": soql},
                     headers=self._headers(),
                     results_key="records",
@@ -147,8 +150,5 @@ class SalesforceConnector(BaseConnector):
         if since:
             object_type = kwargs.get("object_type", "Case")
             fields = kwargs.get("fields", ["Id", "Name", "Description", "CreatedDate", "Status"])
-            kwargs["soql_query"] = (
-                f"SELECT {', '.join(fields)} FROM {object_type} "
-                f"WHERE LastModifiedDate > {since}"
-            )
+            kwargs["soql_query"] = f"SELECT {', '.join(fields)} FROM {object_type} WHERE LastModifiedDate > {since}"
         return await self.sync_data(engagement_id, **kwargs)

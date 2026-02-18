@@ -27,10 +27,18 @@ _CLAUSE_PATTERNS = [
 ]
 
 # Keywords indicating obligations
-_OBLIGATION_KEYWORDS = frozenset({
-    "shall", "must", "required", "obligated", "mandatory",
-    "prohibited", "shall not", "must not",
-})
+_OBLIGATION_KEYWORDS = frozenset(
+    {
+        "shall",
+        "must",
+        "required",
+        "obligated",
+        "mandatory",
+        "prohibited",
+        "shall not",
+        "must not",
+    }
+)
 
 
 class RegulatoryParser(BaseParser):

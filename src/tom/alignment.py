@@ -98,9 +98,7 @@ class TOMAlignmentEngine:
         result = AlignmentResult(engagement_id=engagement_id, tom_id=tom_id)
 
         # Fetch TOM
-        tom_result = await session.execute(
-            select(TargetOperatingModel).where(TargetOperatingModel.id == tom_id)
-        )
+        tom_result = await session.execute(select(TargetOperatingModel).where(TargetOperatingModel.id == tom_id))
         tom = tom_result.scalar_one_or_none()
         if not tom:
             logger.warning("TOM %s not found", tom_id)
@@ -123,21 +121,22 @@ class TOMAlignmentEngine:
                 confidence = min(0.5 + stats.node_count * 0.01, 1.0)
                 priority = self.calculate_priority(severity, confidence, dimension)
 
-                result.gaps.append({
-                    "dimension": dimension,
-                    "gap_type": gap_type,
-                    "current_maturity": current_score,
-                    "target_maturity": target_score,
-                    "severity": severity,
-                    "confidence": confidence,
-                    "priority_score": priority,
-                })
+                result.gaps.append(
+                    {
+                        "dimension": dimension,
+                        "gap_type": gap_type,
+                        "current_maturity": current_score,
+                        "target_maturity": target_score,
+                        "severity": severity,
+                        "confidence": confidence,
+                        "priority_score": priority,
+                    }
+                )
 
         # Calculate overall alignment
         if result.maturity_scores:
             total_target = sum(
-                MATURITY_SCORES.get((tom.maturity_targets or {}).get(d, "defined"), 3.0)
-                for d in TOMDimension
+                MATURITY_SCORES.get((tom.maturity_targets or {}).get(d, "defined"), 3.0) for d in TOMDimension
             )
             total_current = sum(result.maturity_scores.values())
             result.overall_alignment = round(min(total_current / total_target * 100, 100), 2) if total_target > 0 else 0

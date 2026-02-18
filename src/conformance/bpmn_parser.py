@@ -20,6 +20,7 @@ BPMN_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"
 @dataclass
 class BPMNElement:
     """A parsed BPMN element (task, gateway, event, etc.)."""
+
     id: str
     name: str
     element_type: str  # "task", "gateway", "startEvent", "endEvent", etc.
@@ -29,6 +30,7 @@ class BPMNElement:
 @dataclass
 class BPMNFlow:
     """A sequence flow connecting two BPMN elements."""
+
     id: str
     source_id: str
     target_id: str
@@ -39,13 +41,28 @@ class BPMNFlow:
 @dataclass
 class BPMNGraph:
     """Graph representation of a BPMN process model."""
+
     elements: dict[str, BPMNElement] = field(default_factory=dict)
     flows: list[BPMNFlow] = field(default_factory=list)
     adjacency: dict[str, list[str]] = field(default_factory=dict)
 
     @property
     def tasks(self) -> list[BPMNElement]:
-        return [e for e in self.elements.values() if e.element_type in ("task", "userTask", "serviceTask", "sendTask", "receiveTask", "scriptTask", "manualTask", "businessRuleTask")]
+        return [
+            e
+            for e in self.elements.values()
+            if e.element_type
+            in (
+                "task",
+                "userTask",
+                "serviceTask",
+                "sendTask",
+                "receiveTask",
+                "scriptTask",
+                "manualTask",
+                "businessRuleTask",
+            )
+        ]
 
     @property
     def gateways(self) -> list[BPMNElement]:
@@ -94,13 +111,26 @@ def parse_bpmn_xml(bpmn_xml: str) -> BPMNGraph:
 def _parse_process(process: ET.Element, graph: BPMNGraph) -> None:
     """Parse a single BPMN process element."""
     element_types = [
-        "task", "userTask", "serviceTask", "sendTask", "receiveTask",
-        "scriptTask", "manualTask", "businessRuleTask",
-        "exclusiveGateway", "parallelGateway", "inclusiveGateway",
-        "eventBasedGateway", "complexGateway",
-        "startEvent", "endEvent", "intermediateThrowEvent",
-        "intermediateCatchEvent", "boundaryEvent",
-        "subProcess", "callActivity",
+        "task",
+        "userTask",
+        "serviceTask",
+        "sendTask",
+        "receiveTask",
+        "scriptTask",
+        "manualTask",
+        "businessRuleTask",
+        "exclusiveGateway",
+        "parallelGateway",
+        "inclusiveGateway",
+        "eventBasedGateway",
+        "complexGateway",
+        "startEvent",
+        "endEvent",
+        "intermediateThrowEvent",
+        "intermediateCatchEvent",
+        "boundaryEvent",
+        "subProcess",
+        "callActivity",
     ]
 
     for elem_type in element_types:
@@ -148,10 +178,12 @@ def _add_flow(flow: ET.Element, graph: BPMNGraph) -> None:
     if cond_elem is not None and cond_elem.text:
         condition = cond_elem.text
 
-    graph.flows.append(BPMNFlow(
-        id=flow_id,
-        source_id=source,
-        target_id=target,
-        name=flow.get("name", ""),
-        condition=condition,
-    ))
+    graph.flows.append(
+        BPMNFlow(
+            id=flow_id,
+            source_id=source,
+            target_id=target,
+            name=flow.get("name", ""),
+            condition=condition,
+        )
+    )

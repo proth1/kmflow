@@ -74,7 +74,7 @@ async def validate_api_key(db: AsyncSession, api_key: str) -> dict[str, Any] | N
     # Query the database for this key_id
     stmt = select(MCPAPIKey).where(
         MCPAPIKey.key_id == key_id,
-        MCPAPIKey.is_active == True  # noqa: E712
+        MCPAPIKey.is_active == True,  # noqa: E712
     )
     result = await db.execute(stmt)
     key_record = result.scalar_one_or_none()

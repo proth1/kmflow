@@ -43,7 +43,8 @@ class SorocoConnector(BaseConnector):
         try:
             async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
                 response = await retry_request(
-                    client, "GET",
+                    client,
+                    "GET",
                     f"{self._base_url}/api/health",
                     headers=self._headers(),
                     max_retries=1,
@@ -78,7 +79,8 @@ class SorocoConnector(BaseConnector):
                 url = f"{self._base_url}/api/workgraph/projects/{project_id}/tasks"
 
                 async for page in paginate_offset(
-                    client, url,
+                    client,
+                    url,
                     headers=self._headers(),
                     results_key="tasks",
                     total_key="total",
@@ -107,6 +109,12 @@ class SorocoConnector(BaseConnector):
     async def get_schema(self) -> list[str]:
         """Return available fields from Soroco Scout."""
         return [
-            "task_id", "task_name", "application", "user",
-            "start_time", "end_time", "duration_ms", "actions",
+            "task_id",
+            "task_name",
+            "application",
+            "user",
+            "start_time",
+            "end_time",
+            "duration_ms",
+            "actions",
         ]

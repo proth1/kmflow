@@ -352,16 +352,19 @@ async def get_engagement_subgraph(
 
 class CytoscapeNode(BaseModel):
     """Cytoscape.js node data."""
+
     data: dict[str, Any]
 
 
 class CytoscapeEdge(BaseModel):
     """Cytoscape.js edge data."""
+
     data: dict[str, Any]
 
 
 class CytoscapeExport(BaseModel):
     """Cytoscape.js compatible graph export."""
+
     nodes: list[CytoscapeNode]
     edges: list[CytoscapeEdge]
 

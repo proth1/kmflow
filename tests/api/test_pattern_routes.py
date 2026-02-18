@@ -21,9 +21,7 @@ class TestPatternRoutes:
     """Tests for pattern library CRUD routes."""
 
     @pytest.mark.asyncio
-    async def test_create_pattern(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_create_pattern(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test creating a pattern in the library."""
         pattern_id = uuid.uuid4()
         engagement_id = uuid.uuid4()
@@ -55,9 +53,7 @@ class TestPatternRoutes:
         assert data["category"] == "process_optimization"
 
     @pytest.mark.asyncio
-    async def test_list_patterns(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_list_patterns(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test listing patterns."""
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = []
@@ -70,9 +66,7 @@ class TestPatternRoutes:
         assert "total" in data
 
     @pytest.mark.asyncio
-    async def test_get_pattern(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_get_pattern(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting a pattern by ID."""
         pattern_id = uuid.uuid4()
         engagement_id = uuid.uuid4()
@@ -100,9 +94,7 @@ class TestPatternRoutes:
         assert data["id"] == str(pattern_id)
 
     @pytest.mark.asyncio
-    async def test_get_pattern_not_found(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_get_pattern_not_found(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting a pattern that does not exist."""
         pattern_id = uuid.uuid4()
         mock_result = MagicMock()
@@ -113,9 +105,7 @@ class TestPatternRoutes:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_update_pattern(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_update_pattern(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test updating a pattern's title."""
         pattern_id = uuid.uuid4()
         engagement_id = uuid.uuid4()
@@ -146,9 +136,7 @@ class TestPatternRoutes:
         assert data["title"] == "New Title"
 
     @pytest.mark.asyncio
-    async def test_delete_pattern(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_delete_pattern(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test deleting a pattern."""
         pattern_id = uuid.uuid4()
 
@@ -163,9 +151,7 @@ class TestPatternRoutes:
         assert response.status_code == 204
 
     @pytest.mark.asyncio
-    async def test_delete_pattern_not_found(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_delete_pattern_not_found(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test deleting a pattern that does not exist."""
         pattern_id = uuid.uuid4()
         mock_result = MagicMock()
@@ -180,9 +166,7 @@ class TestPatternSearch:
     """Tests for pattern search endpoint."""
 
     @pytest.mark.asyncio
-    async def test_search_patterns(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_search_patterns(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test searching patterns with filters."""
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = []
@@ -207,9 +191,7 @@ class TestPatternApply:
     """Tests for pattern apply endpoint."""
 
     @pytest.mark.asyncio
-    async def test_apply_pattern(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_apply_pattern(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test applying a pattern increments usage_count."""
         pattern_id = uuid.uuid4()
         engagement_id = uuid.uuid4()
@@ -244,9 +226,7 @@ class TestAccessRules:
     """Tests for pattern access rule routes."""
 
     @pytest.mark.asyncio
-    async def test_create_access_rule(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_create_access_rule(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test creating a pattern access rule."""
         rule_id = uuid.uuid4()
         pattern_id = uuid.uuid4()

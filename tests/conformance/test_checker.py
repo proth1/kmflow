@@ -5,7 +5,7 @@ from __future__ import annotations
 from src.conformance.checker import ConformanceChecker
 from src.conformance.metrics import calculate_metrics
 
-REF_BPMN = '''<?xml version="1.0" encoding="UTF-8"?>
+REF_BPMN = """<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">
   <bpmn:process id="P1" isExecutable="true">
     <bpmn:startEvent id="S" name="Start"/>
@@ -18,7 +18,7 @@ REF_BPMN = '''<?xml version="1.0" encoding="UTF-8"?>
     <bpmn:sequenceFlow id="F3" sourceRef="T2" targetRef="T3"/>
     <bpmn:sequenceFlow id="F4" sourceRef="T3" targetRef="E"/>
   </bpmn:process>
-</bpmn:definitions>'''
+</bpmn:definitions>"""
 
 
 class TestConformanceChecker:
@@ -31,10 +31,7 @@ class TestConformanceChecker:
         assert len(result.deviations) == 0
 
     def test_missing_activity(self) -> None:
-        observed = REF_BPMN.replace(
-            '<bpmn:task id="T3" name="Ship Order"/>',
-            ''
-        )
+        observed = REF_BPMN.replace('<bpmn:task id="T3" name="Ship Order"/>', "")
         checker = ConformanceChecker()
         result = checker.check_from_xml(REF_BPMN, observed)
         assert result.fitness_score < 1.0
@@ -45,7 +42,7 @@ class TestConformanceChecker:
     def test_extra_activity(self) -> None:
         observed = REF_BPMN.replace(
             '<bpmn:endEvent id="E" name="End"/>',
-            '<bpmn:task id="T4" name="Send Invoice"/>\n    <bpmn:endEvent id="E" name="End"/>'
+            '<bpmn:task id="T4" name="Send Invoice"/>\n    <bpmn:endEvent id="E" name="End"/>',
         )
         checker = ConformanceChecker()
         result = checker.check_from_xml(REF_BPMN, observed)
@@ -63,10 +60,7 @@ class TestConformanceChecker:
         assert metrics.deviation_count == 0
 
     def test_partial_conformance_metrics(self) -> None:
-        observed = REF_BPMN.replace(
-            '<bpmn:task id="T3" name="Ship Order"/>',
-            ''
-        )
+        observed = REF_BPMN.replace('<bpmn:task id="T3" name="Ship Order"/>', "")
         checker = ConformanceChecker()
         result = checker.check_from_xml(REF_BPMN, observed)
         metrics = calculate_metrics(result)

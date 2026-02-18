@@ -208,48 +208,60 @@ class TestCompareBaselines:
     """Tests for compare_baselines()."""
 
     def test_added_elements(self):
-        baseline = create_baseline_snapshot({
-            "elements": [{"name": "Task A", "type": "task"}],
-            "connections": [],
-        })
-        current = create_baseline_snapshot({
-            "elements": [
-                {"name": "Task A", "type": "task"},
-                {"name": "Task B", "type": "task"},
-            ],
-            "connections": [],
-        })
+        baseline = create_baseline_snapshot(
+            {
+                "elements": [{"name": "Task A", "type": "task"}],
+                "connections": [],
+            }
+        )
+        current = create_baseline_snapshot(
+            {
+                "elements": [
+                    {"name": "Task A", "type": "task"},
+                    {"name": "Task B", "type": "task"},
+                ],
+                "connections": [],
+            }
+        )
         result = compare_baselines(baseline, current)
         assert result["added_elements"] == ["Task B"]
         assert result["removed_elements"] == []
         assert result["has_changes"] is True
 
     def test_removed_elements(self):
-        baseline = create_baseline_snapshot({
-            "elements": [
-                {"name": "Task A", "type": "task"},
-                {"name": "Task B", "type": "task"},
-            ],
-            "connections": [],
-        })
-        current = create_baseline_snapshot({
-            "elements": [{"name": "Task A", "type": "task"}],
-            "connections": [],
-        })
+        baseline = create_baseline_snapshot(
+            {
+                "elements": [
+                    {"name": "Task A", "type": "task"},
+                    {"name": "Task B", "type": "task"},
+                ],
+                "connections": [],
+            }
+        )
+        current = create_baseline_snapshot(
+            {
+                "elements": [{"name": "Task A", "type": "task"}],
+                "connections": [],
+            }
+        )
         result = compare_baselines(baseline, current)
         assert result["added_elements"] == []
         assert result["removed_elements"] == ["Task B"]
         assert result["has_changes"] is True
 
     def test_modified_element_types(self):
-        baseline = create_baseline_snapshot({
-            "elements": [{"name": "Task A", "type": "task"}],
-            "connections": [],
-        })
-        current = create_baseline_snapshot({
-            "elements": [{"name": "Task A", "type": "subprocess"}],
-            "connections": [],
-        })
+        baseline = create_baseline_snapshot(
+            {
+                "elements": [{"name": "Task A", "type": "task"}],
+                "connections": [],
+            }
+        )
+        current = create_baseline_snapshot(
+            {
+                "elements": [{"name": "Task A", "type": "subprocess"}],
+                "connections": [],
+            }
+        )
         result = compare_baselines(baseline, current)
         assert len(result["modified_elements"]) == 1
         mod = result["modified_elements"][0]
@@ -259,52 +271,64 @@ class TestCompareBaselines:
         assert result["has_changes"] is True
 
     def test_added_connections(self):
-        baseline = create_baseline_snapshot({
-            "elements": [
-                {"name": "A", "type": "task"},
-                {"name": "B", "type": "task"},
-            ],
-            "connections": [],
-        })
-        current = create_baseline_snapshot({
-            "elements": [
-                {"name": "A", "type": "task"},
-                {"name": "B", "type": "task"},
-            ],
-            "connections": [{"source": "A", "target": "B"}],
-        })
+        baseline = create_baseline_snapshot(
+            {
+                "elements": [
+                    {"name": "A", "type": "task"},
+                    {"name": "B", "type": "task"},
+                ],
+                "connections": [],
+            }
+        )
+        current = create_baseline_snapshot(
+            {
+                "elements": [
+                    {"name": "A", "type": "task"},
+                    {"name": "B", "type": "task"},
+                ],
+                "connections": [{"source": "A", "target": "B"}],
+            }
+        )
         result = compare_baselines(baseline, current)
         assert ("A", "B") in result["added_connections"]
         assert result["has_changes"] is True
 
     def test_removed_connections(self):
-        baseline = create_baseline_snapshot({
-            "elements": [
-                {"name": "A", "type": "task"},
-                {"name": "B", "type": "task"},
-            ],
-            "connections": [{"source": "A", "target": "B"}],
-        })
-        current = create_baseline_snapshot({
-            "elements": [
-                {"name": "A", "type": "task"},
-                {"name": "B", "type": "task"},
-            ],
-            "connections": [],
-        })
+        baseline = create_baseline_snapshot(
+            {
+                "elements": [
+                    {"name": "A", "type": "task"},
+                    {"name": "B", "type": "task"},
+                ],
+                "connections": [{"source": "A", "target": "B"}],
+            }
+        )
+        current = create_baseline_snapshot(
+            {
+                "elements": [
+                    {"name": "A", "type": "task"},
+                    {"name": "B", "type": "task"},
+                ],
+                "connections": [],
+            }
+        )
         result = compare_baselines(baseline, current)
         assert ("A", "B") in result["removed_connections"]
         assert result["has_changes"] is True
 
     def test_no_changes(self):
-        baseline = create_baseline_snapshot({
-            "elements": [{"name": "A", "type": "task"}],
-            "connections": [],
-        })
-        current = create_baseline_snapshot({
-            "elements": [{"name": "A", "type": "task"}],
-            "connections": [],
-        })
+        baseline = create_baseline_snapshot(
+            {
+                "elements": [{"name": "A", "type": "task"}],
+                "connections": [],
+            }
+        )
+        current = create_baseline_snapshot(
+            {
+                "elements": [{"name": "A", "type": "task"}],
+                "connections": [],
+            }
+        )
         result = compare_baselines(baseline, current)
         assert result["added_elements"] == []
         assert result["removed_elements"] == []

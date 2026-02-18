@@ -80,5 +80,6 @@ def _replace_in_dict(obj: Any, old: str, new: str) -> Any:
 def compute_anonymization_hash(original_data: dict[str, Any]) -> str:
     """Generate a hash to verify anonymization was applied."""
     import json
+
     canonical = json.dumps(original_data, sort_keys=True, default=str)
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]

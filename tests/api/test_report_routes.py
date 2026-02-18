@@ -241,10 +241,7 @@ async def test_get_governance_report_html(client):
     }
 
     html_content = (
-        "<html><body>"
-        "<h1>Governance Overlay</h1>"
-        "<div>3 Policies | 7 Controls | 2 Regulations</div>"
-        "</body></html>"
+        "<html><body><h1>Governance Overlay</h1><div>3 Policies | 7 Controls | 2 Regulations</div></body></html>"
     )
 
     with patch("src.api.routes.reports.ReportEngine") as mock_engine:

@@ -87,14 +87,8 @@ def find_applicable_patterns(
     """
     results: list[dict[str, Any]] = []
     for pattern in patterns:
-        industry_match = (
-            not pattern.get("industry")
-            or pattern["industry"].lower() == industry.lower()
-        )
-        category_match = (
-            not categories
-            or pattern.get("category", "") in categories
-        )
+        industry_match = not pattern.get("industry") or pattern["industry"].lower() == industry.lower()
+        category_match = not categories or pattern.get("category", "") in categories
         if industry_match and category_match:
             results.append(pattern)
     return results

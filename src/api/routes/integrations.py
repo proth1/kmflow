@@ -190,9 +190,7 @@ async def get_connection(
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """Get a single connection by ID."""
-    result = await session.execute(
-        select(IntegrationConnection).where(IntegrationConnection.id == connection_id)
-    )
+    result = await session.execute(select(IntegrationConnection).where(IntegrationConnection.id == connection_id))
     conn = result.scalar_one_or_none()
     if not conn:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Connection {connection_id} not found")
@@ -207,9 +205,7 @@ async def update_connection(
     user: User = Depends(require_permission("engagement:update")),
 ) -> dict[str, Any]:
     """Update a connection's config or field mappings."""
-    result = await session.execute(
-        select(IntegrationConnection).where(IntegrationConnection.id == connection_id)
-    )
+    result = await session.execute(select(IntegrationConnection).where(IntegrationConnection.id == connection_id))
     conn = result.scalar_one_or_none()
     if not conn:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Connection {connection_id} not found")
@@ -233,9 +229,7 @@ async def delete_connection(
     user: User = Depends(require_permission("engagement:update")),
 ) -> None:
     """Delete a connection."""
-    result = await session.execute(
-        select(IntegrationConnection).where(IntegrationConnection.id == connection_id)
-    )
+    result = await session.execute(select(IntegrationConnection).where(IntegrationConnection.id == connection_id))
     conn = result.scalar_one_or_none()
     if not conn:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Connection {connection_id} not found")
@@ -250,9 +244,7 @@ async def test_connection(
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """Test connectivity for an existing connection."""
-    result = await session.execute(
-        select(IntegrationConnection).where(IntegrationConnection.id == connection_id)
-    )
+    result = await session.execute(select(IntegrationConnection).where(IntegrationConnection.id == connection_id))
     conn = result.scalar_one_or_none()
     if not conn:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Connection {connection_id} not found")
@@ -290,9 +282,7 @@ async def sync_connection(
     user: User = Depends(require_permission("engagement:update")),
 ) -> dict[str, Any]:
     """Trigger a data sync for a connection."""
-    result = await session.execute(
-        select(IntegrationConnection).where(IntegrationConnection.id == connection_id)
-    )
+    result = await session.execute(select(IntegrationConnection).where(IntegrationConnection.id == connection_id))
     conn = result.scalar_one_or_none()
     if not conn:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Connection {connection_id} not found")
@@ -333,9 +323,7 @@ async def get_field_mapping(
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """Get field mapping config for a connection."""
-    result = await session.execute(
-        select(IntegrationConnection).where(IntegrationConnection.id == connection_id)
-    )
+    result = await session.execute(select(IntegrationConnection).where(IntegrationConnection.id == connection_id))
     conn = result.scalar_one_or_none()
     if not conn:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Connection {connection_id} not found")
@@ -367,9 +355,7 @@ async def update_field_mapping(
     user: User = Depends(require_permission("engagement:update")),
 ) -> dict[str, Any]:
     """Update field mapping for a connection."""
-    result = await session.execute(
-        select(IntegrationConnection).where(IntegrationConnection.id == connection_id)
-    )
+    result = await session.execute(select(IntegrationConnection).where(IntegrationConnection.id == connection_id))
     conn = result.scalar_one_or_none()
     if not conn:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Connection {connection_id} not found")

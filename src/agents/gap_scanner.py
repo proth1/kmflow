@@ -39,56 +39,66 @@ def scan_evidence_gaps(
         supported_count = sum(1 for eid in element_evidence if eid in evidence_ids)
 
         if supported_count == 0:
-            gaps.append({
-                "gap_type": "missing_evidence",
-                "severity": "high",
-                "element_name": element.get("name", "Unknown"),
-                "element_id": str(element.get("id", "")),
-                "description": f"No evidence supports element '{element.get('name', 'Unknown')}'",
-                "recommendation": f"Collect evidence for '{element.get('name', 'Unknown')}'",
-            })
+            gaps.append(
+                {
+                    "gap_type": "missing_evidence",
+                    "severity": "high",
+                    "element_name": element.get("name", "Unknown"),
+                    "element_id": str(element.get("id", "")),
+                    "description": f"No evidence supports element '{element.get('name', 'Unknown')}'",
+                    "recommendation": f"Collect evidence for '{element.get('name', 'Unknown')}'",
+                }
+            )
         elif supported_count == 1:
-            gaps.append({
-                "gap_type": "single_source",
-                "severity": "medium",
-                "element_name": element.get("name", "Unknown"),
-                "element_id": str(element.get("id", "")),
-                "description": (
-                    f"Only one evidence source for '{element.get('name', 'Unknown')}' - "
-                    "triangulation not possible"
-                ),
-                "recommendation": f"Add corroborating evidence for '{element.get('name', 'Unknown')}'",
-            })
+            gaps.append(
+                {
+                    "gap_type": "single_source",
+                    "severity": "medium",
+                    "element_name": element.get("name", "Unknown"),
+                    "element_id": str(element.get("id", "")),
+                    "description": (
+                        f"Only one evidence source for '{element.get('name', 'Unknown')}' - triangulation not possible"
+                    ),
+                    "recommendation": f"Add corroborating evidence for '{element.get('name', 'Unknown')}'",
+                }
+            )
 
     # Check for low quality evidence
     for item in evidence_items:
         quality = item.get("quality_score", 0)
         if quality < coverage_threshold:
-            gaps.append({
-                "gap_type": "weak_evidence",
-                "severity": "medium",
-                "element_name": item.get("name", "Unknown"),
-                "element_id": str(item.get("id", "")),
-                "description": f"Low quality evidence: '{item.get('name', '')}' (score: {quality:.2f})",
-                "recommendation": f"Improve or replace evidence '{item.get('name', '')}'",
-            })
+            gaps.append(
+                {
+                    "gap_type": "weak_evidence",
+                    "severity": "medium",
+                    "element_name": item.get("name", "Unknown"),
+                    "element_id": str(item.get("id", "")),
+                    "description": f"Low quality evidence: '{item.get('name', '')}' (score: {quality:.2f})",
+                    "recommendation": f"Improve or replace evidence '{item.get('name', '')}'",
+                }
+            )
 
     # Check for category coverage gaps
     categories_present = {e.get("category") for e in evidence_items}
     expected_categories = {
-        "documents", "structured_data", "bpm_process_models",
-        "controls_evidence", "domain_communications",
+        "documents",
+        "structured_data",
+        "bpm_process_models",
+        "controls_evidence",
+        "domain_communications",
     }
     missing_categories = expected_categories - categories_present
     for cat in missing_categories:
-        gaps.append({
-            "gap_type": "missing_category",
-            "severity": "low",
-            "element_name": cat,
-            "element_id": None,
-            "description": f"No evidence in category: {cat}",
-            "recommendation": f"Collect {cat.replace('_', ' ')} evidence",
-        })
+        gaps.append(
+            {
+                "gap_type": "missing_category",
+                "severity": "low",
+                "element_name": cat,
+                "element_id": None,
+                "description": f"No evidence in category: {cat}",
+                "recommendation": f"Collect {cat.replace('_', ' ')} evidence",
+            }
+        )
 
     # Check for stale evidence
     now = datetime.now(UTC)
@@ -101,13 +111,15 @@ def scan_evidence_gaps(
                 except ValueError:
                     continue
             if hasattr(source_date, "year") and (now.year - source_date.year) > 1:
-                gaps.append({
-                    "gap_type": "stale_evidence",
-                    "severity": "medium",
-                    "element_name": item.get("name", "Unknown"),
-                    "element_id": str(item.get("id", "")),
-                    "description": f"Evidence '{item.get('name', '')}' is over a year old",
-                    "recommendation": f"Request updated version of '{item.get('name', '')}'",
-                })
+                gaps.append(
+                    {
+                        "gap_type": "stale_evidence",
+                        "severity": "medium",
+                        "element_name": item.get("name", "Unknown"),
+                        "element_id": str(item.get("id", "")),
+                        "description": f"Evidence '{item.get('name', '')}' is over a year old",
+                        "recommendation": f"Request updated version of '{item.get('name', '')}'",
+                    }
+                )
 
     return gaps

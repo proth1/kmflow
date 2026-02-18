@@ -342,9 +342,7 @@ async def create_regulation(
     )
     session.add(regulation)
     await session.flush()
-    await _log_audit(
-        session, payload.engagement_id, AuditAction.REGULATION_CREATED, json.dumps({"name": payload.name})
-    )
+    await _log_audit(session, payload.engagement_id, AuditAction.REGULATION_CREATED, json.dumps({"name": payload.name}))
     await session.commit()
     await session.refresh(regulation)
     return regulation

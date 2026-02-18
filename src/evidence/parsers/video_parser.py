@@ -115,10 +115,7 @@ class VideoParser(BaseParser):
             height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             cap.release()
 
-            return (
-                f"Video properties: {width}x{height}, {fps:.1f} FPS, "
-                f"{frame_count} frames, {duration:.1f}s duration"
-            )
+            return f"Video properties: {width}x{height}, {fps:.1f} FPS, {frame_count} frames, {duration:.1f}s duration"
         except ImportError:
             logger.info("OpenCV not installed; frame extraction unavailable")
             return ""
@@ -150,12 +147,17 @@ class VideoParser(BaseParser):
         try:
             # Extract audio track using ffmpeg
             process = await asyncio.create_subprocess_exec(
-                "ffmpeg", "-i", file_path,
-                "-vn",                    # No video
-                "-acodec", "pcm_s16le",   # PCM 16-bit
-                "-ar", "16000",           # 16kHz sample rate
-                "-ac", "1",               # Mono
-                "-y",                     # Overwrite
+                "ffmpeg",
+                "-i",
+                file_path,
+                "-vn",  # No video
+                "-acodec",
+                "pcm_s16le",  # PCM 16-bit
+                "-ar",
+                "16000",  # 16kHz sample rate
+                "-ac",
+                "1",  # Mono
+                "-y",  # Overwrite
                 wav_path,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -180,10 +182,7 @@ class VideoParser(BaseParser):
             # (actual transcription would require speech_recognition or whisper)
             size_kb = wav_file.stat().st_size / 1024
             duration_est = wav_file.stat().st_size / (16000 * 2)  # 16kHz, 16-bit mono
-            return (
-                f"Audio extracted: {size_kb:.0f}KB WAV, "
-                f"~{duration_est:.1f}s duration at 16kHz mono"
-            )
+            return f"Audio extracted: {size_kb:.0f}KB WAV, ~{duration_est:.1f}s duration at 16kHz mono"
 
         except FileNotFoundError:
             logger.info("ffmpeg not found; video audio extraction unavailable")
@@ -194,5 +193,6 @@ class VideoParser(BaseParser):
         finally:
             # Clean up temp file
             import contextlib
+
             with contextlib.suppress(OSError):
                 Path(wav_path).unlink(missing_ok=True)

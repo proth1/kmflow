@@ -212,9 +212,7 @@ class TestIntegrationRoutes:
         assert "soroco" in types
 
     @pytest.mark.asyncio
-    async def test_create_connection(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_create_connection(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """POST /api/v1/integrations/connections creates a connection."""
         from typing import Any
 
@@ -260,9 +258,7 @@ class TestIntegrationRoutes:
         assert response.status_code == 400
 
     @pytest.mark.asyncio
-    async def test_list_connections(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_list_connections(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """GET /api/v1/integrations/connections lists connections."""
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = []
@@ -275,9 +271,7 @@ class TestIntegrationRoutes:
         assert "total" in data
 
     @pytest.mark.asyncio
-    async def test_test_connection_not_found(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_test_connection_not_found(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """POST /api/v1/integrations/connections/{id}/test returns 404."""
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = None

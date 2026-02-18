@@ -26,22 +26,26 @@ def detect_sequence_changes(
     deviations: list[dict[str, Any]] = []
 
     for removed in baseline_set - current_set:
-        deviations.append({
-            "category": DeviationCategory.SEQUENCE_CHANGE,
-            "description": f"Sequence flow removed: {removed[0]} -> {removed[1]}",
-            "affected_element": f"{removed[0]}->{removed[1]}",
-            "magnitude": 0.7,
-            "details": {"change_type": "removed", "source": removed[0], "target": removed[1]},
-        })
+        deviations.append(
+            {
+                "category": DeviationCategory.SEQUENCE_CHANGE,
+                "description": f"Sequence flow removed: {removed[0]} -> {removed[1]}",
+                "affected_element": f"{removed[0]}->{removed[1]}",
+                "magnitude": 0.7,
+                "details": {"change_type": "removed", "source": removed[0], "target": removed[1]},
+            }
+        )
 
     for added in current_set - baseline_set:
-        deviations.append({
-            "category": DeviationCategory.SEQUENCE_CHANGE,
-            "description": f"New sequence flow: {added[0]} -> {added[1]}",
-            "affected_element": f"{added[0]}->{added[1]}",
-            "magnitude": 0.5,
-            "details": {"change_type": "added", "source": added[0], "target": added[1]},
-        })
+        deviations.append(
+            {
+                "category": DeviationCategory.SEQUENCE_CHANGE,
+                "description": f"New sequence flow: {added[0]} -> {added[1]}",
+                "affected_element": f"{added[0]}->{added[1]}",
+                "magnitude": 0.5,
+                "details": {"change_type": "added", "source": added[0], "target": added[1]},
+            }
+        )
 
     return deviations
 
@@ -74,21 +78,23 @@ def detect_timing_anomalies(
         z_score = abs(c_mean - b_mean) / b_std
         if z_score >= threshold:
             magnitude = min(z_score / 5.0, 1.0)
-            deviations.append({
-                "category": DeviationCategory.TIMING_ANOMALY,
-                "description": (
-                    f"Timing anomaly for '{activity}': "
-                    f"baseline mean={b_mean:.1f}, current mean={c_mean:.1f}, z={z_score:.2f}"
-                ),
-                "affected_element": activity,
-                "magnitude": magnitude,
-                "details": {
-                    "baseline_mean": b_mean,
-                    "baseline_stddev": b_std,
-                    "current_mean": c_mean,
-                    "z_score": round(z_score, 2),
-                },
-            })
+            deviations.append(
+                {
+                    "category": DeviationCategory.TIMING_ANOMALY,
+                    "description": (
+                        f"Timing anomaly for '{activity}': "
+                        f"baseline mean={b_mean:.1f}, current mean={c_mean:.1f}, z={z_score:.2f}"
+                    ),
+                    "affected_element": activity,
+                    "magnitude": magnitude,
+                    "details": {
+                        "baseline_mean": b_mean,
+                        "baseline_stddev": b_std,
+                        "current_mean": c_mean,
+                        "z_score": round(z_score, 2),
+                    },
+                }
+            )
 
     return deviations
 
@@ -103,19 +109,18 @@ def detect_role_changes(
     for activity, baseline_role in baseline_roles.items():
         current_role = current_roles.get(activity)
         if current_role and current_role != baseline_role:
-            deviations.append({
-                "category": DeviationCategory.ROLE_CHANGE,
-                "description": (
-                    f"Role change for '{activity}': "
-                    f"was '{baseline_role}', now '{current_role}'"
-                ),
-                "affected_element": activity,
-                "magnitude": 0.6,
-                "details": {
-                    "baseline_role": baseline_role,
-                    "current_role": current_role,
-                },
-            })
+            deviations.append(
+                {
+                    "category": DeviationCategory.ROLE_CHANGE,
+                    "description": (f"Role change for '{activity}': was '{baseline_role}', now '{current_role}'"),
+                    "affected_element": activity,
+                    "magnitude": 0.6,
+                    "details": {
+                        "baseline_role": baseline_role,
+                        "current_role": current_role,
+                    },
+                }
+            )
 
     return deviations
 
@@ -142,21 +147,23 @@ def detect_frequency_changes(
         relative_change = abs(c_freq - b_freq) / b_freq
         if relative_change >= threshold:
             magnitude = min(relative_change, 1.0)
-            deviations.append({
-                "category": DeviationCategory.FREQUENCY_CHANGE,
-                "description": (
-                    f"Frequency change for '{activity}': "
-                    f"baseline={b_freq:.1f}, current={c_freq:.1f} "
-                    f"({relative_change:.0%} change)"
-                ),
-                "affected_element": activity,
-                "magnitude": magnitude,
-                "details": {
-                    "baseline_frequency": b_freq,
-                    "current_frequency": c_freq,
-                    "relative_change": round(relative_change, 3),
-                },
-            })
+            deviations.append(
+                {
+                    "category": DeviationCategory.FREQUENCY_CHANGE,
+                    "description": (
+                        f"Frequency change for '{activity}': "
+                        f"baseline={b_freq:.1f}, current={c_freq:.1f} "
+                        f"({relative_change:.0%} change)"
+                    ),
+                    "affected_element": activity,
+                    "magnitude": magnitude,
+                    "details": {
+                        "baseline_frequency": b_freq,
+                        "current_frequency": c_freq,
+                        "relative_change": round(relative_change, 3),
+                    },
+                }
+            )
 
     return deviations
 
@@ -171,12 +178,14 @@ def detect_control_bypass(
 
     for control in required_controls:
         if control not in executed_set:
-            deviations.append({
-                "category": DeviationCategory.CONTROL_BYPASS,
-                "description": f"Control '{control}' was not executed",
-                "affected_element": control,
-                "magnitude": 0.9,
-                "details": {"control_name": control, "bypass_type": "not_executed"},
-            })
+            deviations.append(
+                {
+                    "category": DeviationCategory.CONTROL_BYPASS,
+                    "description": f"Control '{control}' was not executed",
+                    "affected_element": control,
+                    "magnitude": 0.9,
+                    "details": {"control_name": control, "bypass_type": "not_executed"},
+                }
+            )
 
     return deviations

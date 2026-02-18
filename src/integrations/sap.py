@@ -58,7 +58,8 @@ class SAPConnector(BaseConnector):
         try:
             async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, auth=self._auth()) as client:
                 response = await retry_request(
-                    client, "GET",
+                    client,
+                    "GET",
                     f"{self._base_url}/sap/opu/odata/sap/API_BUSINESS_PARTNER/",
                     headers=self._headers(),
                     max_retries=1,
@@ -98,7 +99,8 @@ class SAPConnector(BaseConnector):
                 url = f"{self._base_url}/sap/opu/odata/sap/{entity_set}"
 
                 async for page in paginate_cursor(
-                    client, url,
+                    client,
+                    url,
                     params=params,
                     headers=self._headers(),
                     results_key="d",

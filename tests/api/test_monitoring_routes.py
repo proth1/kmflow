@@ -26,9 +26,7 @@ class TestMonitoringJobRoutes:
     """Tests for monitoring job lifecycle routes."""
 
     @pytest.mark.asyncio
-    async def test_create_monitoring_job(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_create_monitoring_job(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test creating a monitoring job with valid data."""
         engagement_id = uuid.uuid4()
         job_id = uuid.uuid4()
@@ -56,9 +54,7 @@ class TestMonitoringJobRoutes:
         assert data["source_type"] == "event_log"
 
     @pytest.mark.asyncio
-    async def test_create_monitoring_job_invalid_cron(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_create_monitoring_job_invalid_cron(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test creating a monitoring job with invalid cron expression."""
         engagement_id = uuid.uuid4()
         response = await client.post(
@@ -75,9 +71,7 @@ class TestMonitoringJobRoutes:
         assert "cron" in response.json()["detail"].lower()
 
     @pytest.mark.asyncio
-    async def test_create_monitoring_job_missing_config(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_create_monitoring_job_missing_config(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test creating a monitoring job with missing required config."""
         engagement_id = uuid.uuid4()
         response = await client.post(
@@ -93,9 +87,7 @@ class TestMonitoringJobRoutes:
         assert response.status_code == 400
 
     @pytest.mark.asyncio
-    async def test_list_monitoring_jobs(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_list_monitoring_jobs(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test listing all monitoring jobs."""
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = []
@@ -134,17 +126,13 @@ class TestMonitoringJobRoutes:
         mock_result.scalars.return_value.all.return_value = [mock_job]
         mock_db_session.execute.return_value = mock_result
 
-        response = await client.get(
-            f"/api/v1/monitoring/jobs?engagement_id={engagement_id}"
-        )
+        response = await client.get(f"/api/v1/monitoring/jobs?engagement_id={engagement_id}")
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 1
 
     @pytest.mark.asyncio
-    async def test_get_monitoring_job(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_get_monitoring_job(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting a monitoring job by ID."""
         job_id = uuid.uuid4()
         engagement_id = uuid.uuid4()
@@ -173,9 +161,7 @@ class TestMonitoringJobRoutes:
         assert data["id"] == str(job_id)
 
     @pytest.mark.asyncio
-    async def test_get_monitoring_job_not_found(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_get_monitoring_job_not_found(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting a monitoring job that does not exist."""
         job_id = uuid.uuid4()
         mock_result = MagicMock()
@@ -186,9 +172,7 @@ class TestMonitoringJobRoutes:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_update_monitoring_job(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_update_monitoring_job(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test updating a monitoring job's name."""
         job_id = uuid.uuid4()
         engagement_id = uuid.uuid4()
@@ -220,9 +204,7 @@ class TestMonitoringJobRoutes:
         assert data["name"] == "New Name"
 
     @pytest.mark.asyncio
-    async def test_activate_monitoring_job(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_activate_monitoring_job(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test activating a monitoring job."""
         job_id = uuid.uuid4()
         engagement_id = uuid.uuid4()
@@ -251,9 +233,7 @@ class TestMonitoringJobRoutes:
         assert data["status"] == "active"
 
     @pytest.mark.asyncio
-    async def test_pause_monitoring_job(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_pause_monitoring_job(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test pausing a monitoring job."""
         job_id = uuid.uuid4()
         engagement_id = uuid.uuid4()
@@ -282,9 +262,7 @@ class TestMonitoringJobRoutes:
         assert data["status"] == "paused"
 
     @pytest.mark.asyncio
-    async def test_stop_monitoring_job(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_stop_monitoring_job(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test stopping a monitoring job."""
         job_id = uuid.uuid4()
         engagement_id = uuid.uuid4()
@@ -317,9 +295,7 @@ class TestBaselineRoutes:
     """Tests for process baseline routes."""
 
     @pytest.mark.asyncio
-    async def test_create_baseline(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_create_baseline(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test creating a process baseline."""
         engagement_id = uuid.uuid4()
         baseline_id = uuid.uuid4()
@@ -344,9 +320,7 @@ class TestBaselineRoutes:
         assert data["name"] == "Test Baseline"
 
     @pytest.mark.asyncio
-    async def test_list_baselines(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_list_baselines(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test listing process baselines."""
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = []
@@ -359,9 +333,7 @@ class TestBaselineRoutes:
         assert "total" in data
 
     @pytest.mark.asyncio
-    async def test_get_baseline(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_get_baseline(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting a baseline by ID."""
         baseline_id = uuid.uuid4()
         engagement_id = uuid.uuid4()
@@ -386,9 +358,7 @@ class TestBaselineRoutes:
         assert data["id"] == str(baseline_id)
 
     @pytest.mark.asyncio
-    async def test_get_baseline_not_found(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_get_baseline_not_found(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting a baseline that does not exist."""
         baseline_id = uuid.uuid4()
         mock_result = MagicMock()
@@ -403,9 +373,7 @@ class TestDeviationRoutes:
     """Tests for process deviation routes."""
 
     @pytest.mark.asyncio
-    async def test_list_deviations(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_list_deviations(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test listing process deviations."""
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = []
@@ -418,9 +386,7 @@ class TestDeviationRoutes:
         assert "total" in data
 
     @pytest.mark.asyncio
-    async def test_get_deviation_not_found(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_get_deviation_not_found(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting a deviation that does not exist."""
         deviation_id = uuid.uuid4()
         mock_result = MagicMock()
@@ -435,9 +401,7 @@ class TestAlertRoutes:
     """Tests for monitoring alert routes."""
 
     @pytest.mark.asyncio
-    async def test_list_alerts(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_list_alerts(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test listing monitoring alerts."""
         mock_scalars_result = MagicMock()
         mock_scalars_result.all.return_value = []
@@ -458,9 +422,7 @@ class TestAlertRoutes:
         assert "total" in data
 
     @pytest.mark.asyncio
-    async def test_get_alert_not_found(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_get_alert_not_found(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting an alert that does not exist."""
         alert_id = uuid.uuid4()
         mock_result = MagicMock()
@@ -471,9 +433,7 @@ class TestAlertRoutes:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_alert_action_not_found(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_alert_action_not_found(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test performing an action on an alert that does not exist."""
         alert_id = uuid.uuid4()
         mock_result = MagicMock()
@@ -491,9 +451,7 @@ class TestMonitoringStats:
     """Tests for monitoring statistics route."""
 
     @pytest.mark.asyncio
-    async def test_get_monitoring_stats(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_get_monitoring_stats(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting monitoring stats for an engagement."""
         engagement_id = uuid.uuid4()
 

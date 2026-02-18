@@ -10,6 +10,7 @@ from src.conformance.checker import ConformanceCheckResult, Deviation
 @dataclass
 class ConformanceMetrics:
     """Aggregated conformance metrics."""
+
     fitness: float
     precision: float
     f1_score: float
