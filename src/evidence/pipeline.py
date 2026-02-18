@@ -74,32 +74,50 @@ async def store_file(
     file_name: str,
     engagement_id: uuid.UUID,
     evidence_store: str = DEFAULT_EVIDENCE_STORE,
-) -> str:
-    """Store an uploaded file to the local filesystem.
+    storage_backend: Any | None = None,
+) -> tuple[str, dict[str, Any]]:
+    """Store an uploaded file using the configured storage backend.
 
-    Files are organized by engagement_id for easy management.
+    When a ``StorageBackend`` is provided, delegates to it for ACID
+    writes (Delta Lake) or future backends. Falls back to direct
+    filesystem writes for backward compatibility.
 
     Args:
         file_content: The raw bytes of the file.
         file_name: Original filename.
         engagement_id: The engagement this evidence belongs to.
-        evidence_store: Base directory for evidence storage.
+        evidence_store: Base directory for evidence storage (legacy).
+        storage_backend: Optional StorageBackend instance.
 
     Returns:
-        The relative file path where the file was stored.
+        Tuple of (file_path, storage_metadata_dict).
     """
-    # Create directory structure: evidence_store/{engagement_id}/
+    if storage_backend is not None:
+        from src.datalake.backend import StorageBackend
+
+        if isinstance(storage_backend, StorageBackend):
+            result = await storage_backend.write(
+                engagement_id=str(engagement_id),
+                file_name=file_name,
+                content=file_content,
+            )
+            return result.path, {
+                "storage_version": result.version,
+                "content_hash": result.content_hash,
+                **result.extra,
+            }
+
+    # Legacy local filesystem fallback
     engagement_dir = Path(evidence_store) / str(engagement_id)
     engagement_dir.mkdir(parents=True, exist_ok=True)
 
-    # Use a unique filename to avoid collisions
     unique_name = f"{uuid.uuid4().hex[:8]}_{file_name}"
     file_path = engagement_dir / unique_name
 
     with open(file_path, "wb") as f:
         f.write(file_content)
 
-    return str(file_path)
+    return str(file_path), {}
 
 
 async def process_evidence(
@@ -555,6 +573,7 @@ async def ingest_evidence(
     mime_type: str | None = None,
     evidence_store: str = DEFAULT_EVIDENCE_STORE,
     neo4j_driver: AsyncDriver | None = None,
+    storage_backend: Any | None = None,
 ) -> tuple[EvidenceItem, list[EvidenceFragment], uuid.UUID | None]:
     """Full evidence ingestion pipeline: upload -> classify -> parse -> store -> intelligence.
 
@@ -572,6 +591,7 @@ async def ingest_evidence(
         mime_type: MIME type of the file.
         evidence_store: Base directory for file storage.
         neo4j_driver: Neo4j driver for intelligence pipeline (optional).
+        storage_backend: Optional StorageBackend for Delta Lake / custom storage.
 
     Returns:
         Tuple of (evidence_item, fragments, duplicate_of_id).
@@ -591,10 +611,13 @@ async def ingest_evidence(
     # Step 4: Detect format
     file_format = detect_format(file_name)
 
-    # Step 5: Store file
-    file_path = await store_file(file_content, file_name, engagement_id, evidence_store)
+    # Step 5: Store file (via storage backend if provided)
+    file_path, storage_meta = await store_file(
+        file_content, file_name, engagement_id, evidence_store, storage_backend
+    )
 
     # Step 6: Create evidence item
+    delta_path = storage_meta.get("delta_table") if storage_meta else None
     evidence_item = EvidenceItem(
         engagement_id=engagement_id,
         name=file_name,
@@ -606,6 +629,7 @@ async def ingest_evidence(
         mime_type=mime_type,
         metadata_json=metadata,
         duplicate_of_id=duplicate_of_id,
+        delta_path=delta_path,
     )
     session.add(evidence_item)
     await session.flush()
