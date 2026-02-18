@@ -348,6 +348,20 @@ async def list_gaps(
 # -- Best Practices Routes ----------------------------------------------------
 
 
+class BestPracticeList(BaseModel):
+    """Schema for listing best practices."""
+
+    items: list[BestPracticeResponse]
+    total: int
+
+
+class BenchmarkList(BaseModel):
+    """Schema for listing benchmarks."""
+
+    items: list[BenchmarkResponse]
+    total: int
+
+
 @router.post("/best-practices", response_model=BestPracticeResponse, status_code=status.HTTP_201_CREATED)
 async def create_best_practice(
     payload: BestPracticeCreate,
@@ -365,6 +379,55 @@ async def create_best_practice(
     session.add(bp)
     await session.commit()
     await session.refresh(bp)
+    return bp
+
+
+@router.get("/best-practices", response_model=BestPracticeList)
+async def list_best_practices(
+    industry: str | None = None,
+    dimension: TOMDimension | None = None,
+    limit: int = 50,
+    offset: int = 0,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+) -> dict[str, Any]:
+    """List best practices with optional filters.
+
+    Args:
+        industry: Filter by industry name.
+        dimension: Filter by TOM dimension.
+        limit: Max results.
+        offset: Pagination offset.
+    """
+    query = select(BestPractice)
+    count_query = select(func.count()).select_from(BestPractice)
+
+    if industry is not None:
+        query = query.where(BestPractice.industry == industry)
+        count_query = count_query.where(BestPractice.industry == industry)
+    if dimension is not None:
+        query = query.where(BestPractice.tom_dimension == dimension)
+        count_query = count_query.where(BestPractice.tom_dimension == dimension)
+
+    query = query.order_by(BestPractice.created_at.desc()).offset(offset).limit(limit)
+    result = await session.execute(query)
+    items = list(result.scalars().all())
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
+    return {"items": items, "total": total}
+
+
+@router.get("/best-practices/{bp_id}", response_model=BestPracticeResponse)
+async def get_best_practice(
+    bp_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+) -> BestPractice:
+    """Get a single best practice by ID."""
+    result = await session.execute(select(BestPractice).where(BestPractice.id == bp_id))
+    bp = result.scalar_one_or_none()
+    if not bp:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Best practice {bp_id} not found")
     return bp
 
 
@@ -391,6 +454,77 @@ async def create_benchmark(
     await session.commit()
     await session.refresh(bm)
     return bm
+
+
+@router.get("/benchmarks", response_model=BenchmarkList)
+async def list_benchmarks(
+    industry: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+) -> dict[str, Any]:
+    """List benchmarks with optional filters.
+
+    Args:
+        industry: Filter by industry name.
+        limit: Max results.
+        offset: Pagination offset.
+    """
+    query = select(Benchmark)
+    count_query = select(func.count()).select_from(Benchmark)
+
+    if industry is not None:
+        query = query.where(Benchmark.industry == industry)
+        count_query = count_query.where(Benchmark.industry == industry)
+
+    query = query.order_by(Benchmark.created_at.desc()).offset(offset).limit(limit)
+    result = await session.execute(query)
+    items = list(result.scalars().all())
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
+    return {"items": items, "total": total}
+
+
+@router.get("/benchmarks/{benchmark_id}", response_model=BenchmarkResponse)
+async def get_benchmark(
+    benchmark_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+) -> Benchmark:
+    """Get a single benchmark by ID."""
+    result = await session.execute(select(Benchmark).where(Benchmark.id == benchmark_id))
+    bm = result.scalar_one_or_none()
+    if not bm:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Benchmark {benchmark_id} not found")
+    return bm
+
+
+@router.post("/seed", status_code=status.HTTP_201_CREATED)
+async def seed_best_practices_and_benchmarks(
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+) -> dict[str, Any]:
+    """Seed the database with standard best practices and benchmarks."""
+    from src.data.seeds import get_benchmark_seeds, get_best_practice_seeds
+
+    bp_seeds = get_best_practice_seeds()
+    bm_seeds = get_benchmark_seeds()
+
+    bp_count = 0
+    for bp_data in bp_seeds:
+        bp = BestPractice(**bp_data)
+        session.add(bp)
+        bp_count += 1
+
+    bm_count = 0
+    for bm_data in bm_seeds:
+        bm = Benchmark(**bm_data)
+        session.add(bm)
+        bm_count += 1
+
+    await session.commit()
+    return {"best_practices_seeded": bp_count, "benchmarks_seeded": bm_count}
 
 
 # -- Alignment Engine Routes (Story #30) --------------------------------------

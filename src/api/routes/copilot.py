@@ -11,6 +11,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -196,3 +197,46 @@ async def get_chat_history(
         ],
         "total": total,
     }
+
+
+@router.post("/chat/stream")
+async def copilot_chat_stream(
+    payload: ChatRequest,
+    request: Request,
+    user: User = Depends(copilot_rate_limit),
+    session: AsyncSession = Depends(get_session),
+) -> StreamingResponse:
+    """Stream a copilot response via Server-Sent Events.
+
+    Returns an SSE stream where each event contains a text chunk.
+    The stream ends with a "data: [DONE]" event.
+    """
+    from src.rag.copilot import CopilotOrchestrator
+
+    neo4j_driver = getattr(request.app.state, "neo4j_driver", None)
+    orchestrator = CopilotOrchestrator(neo4j_driver=neo4j_driver)
+
+    async def event_generator():
+        try:
+            async for chunk in orchestrator.chat_streaming(
+                query=payload.query,
+                engagement_id=str(payload.engagement_id),
+                session=session,
+                query_type=payload.query_type,
+                history=payload.history,
+            ):
+                yield chunk
+        except Exception as e:
+            logger.exception("Copilot streaming failed")
+            yield f"data: Error: {e}\n\n"
+            yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

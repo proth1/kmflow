@@ -9,15 +9,18 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from src.evidence.parsers.aris_parser import ArisParser
 from src.evidence.parsers.audio_parser import AudioParser
 from src.evidence.parsers.base import BaseParser, ParseResult
 from src.evidence.parsers.bpmn_parser import BpmnParser
 from src.evidence.parsers.communication_parser import CommunicationParser
+from src.evidence.parsers.controls_parser import ControlsParser
 from src.evidence.parsers.document_parser import DocumentParser
 from src.evidence.parsers.image_parser import ImageParser
 from src.evidence.parsers.job_aids_parser import JobAidsParser
 from src.evidence.parsers.km4work_parser import KM4WorkParser
 from src.evidence.parsers.regulatory_parser import RegulatoryParser
+from src.evidence.parsers.saas_parser import SaaSExportsParser
 from src.evidence.parsers.structured_data_parser import StructuredDataParser
 from src.evidence.parsers.video_parser import VideoParser
 from src.evidence.parsers.visio_parser import VisioParser
@@ -39,6 +42,9 @@ _PARSERS: list[BaseParser] = [
     XesParser(),
     KM4WorkParser(),
     JobAidsParser(),
+    SaaSExportsParser(),
+    ControlsParser(),
+    ArisParser(),
 ]
 
 # Extension to EvidenceCategory mapping for auto-classification
@@ -96,6 +102,16 @@ EXTENSION_TO_CATEGORY: dict[str, str] = {
     # Job Aids
     ".jobaid": "job_aids_edge_cases",
     ".edgecase": "job_aids_edge_cases",
+    # SaaS Exports
+    ".salesforce": "saas_exports",
+    ".sap_export": "saas_exports",
+    ".servicenow_export": "saas_exports",
+    # Controls / Evidence
+    ".ctrl": "controls_evidence",
+    ".audit": "controls_evidence",
+    ".monitor": "controls_evidence",
+    # ARIS Process Models
+    ".aml": "bpm_process_models",
 }
 
 # MIME type to file extension mapping

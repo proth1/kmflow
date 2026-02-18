@@ -30,17 +30,12 @@ from src.semantic.entity_extraction import (
     resolve_entities,
 )
 from src.semantic.graph import KnowledgeGraphService
+from src.semantic.ontology.loader import get_entity_type_to_label
 
 logger = logging.getLogger(__name__)
 
-# Map entity types to Neo4j node labels
-_ENTITY_TYPE_TO_LABEL: dict[str, str] = {
-    EntityType.ACTIVITY: "Activity",
-    EntityType.DECISION: "Decision",
-    EntityType.ROLE: "Role",
-    EntityType.SYSTEM: "System",
-    EntityType.DOCUMENT: "Document",
-}
+# Map entity types to Neo4j node labels (loaded from ontology YAML)
+_ENTITY_TYPE_TO_LABEL: dict[str, str] = get_entity_type_to_label()
 
 
 @dataclass

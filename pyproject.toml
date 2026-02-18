@@ -63,6 +63,10 @@ ml = [
     # Semantic similarity (optional, for enhanced embeddings)
     "scikit-learn>=1.5.0",
 ]
+pdf = [
+    # PDF report generation
+    "weasyprint>=62.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]

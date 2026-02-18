@@ -795,3 +795,40 @@ export async function fetchGraphData(
     `/api/v1/graph/${engagementId}/subgraph`,
   );
 }
+
+// -- Phase 8: Auth / Metrics / Annotations ------------------------------------
+
+export type UserRole =
+  | "platform_admin"
+  | "engagement_lead"
+  | "process_analyst"
+  | "evidence_reviewer"
+  | "client_viewer";
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  role: UserRole;
+  name: string;
+}
+
+export async function fetchCurrentUser(): Promise<UserProfile> {
+  return apiGet<UserProfile>("/api/v1/auth/me");
+}
+
+export async function uploadPortalEvidence(
+  engagementId: string,
+  file: File,
+): Promise<Record<string, unknown>> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(
+    `${API_BASE_URL}/api/v1/portal/${engagementId}/upload`,
+    { method: "POST", body: formData },
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Upload failed" }));
+    throw new Error(err.detail || `Upload failed (${res.status})`);
+  }
+  return res.json();
+}

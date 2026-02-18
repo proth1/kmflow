@@ -285,6 +285,13 @@ class EvidenceItem(Base):
     freshness_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     consistency_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
 
+    # Data lineage fields (Phase A: Data Layer Evolution)
+    source_system: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    delta_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    lineage_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True,
+    )
+
     # Duplicate detection
     duplicate_of_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("evidence_items.id", ondelete="SET NULL"), nullable=True
@@ -871,6 +878,83 @@ class Benchmark(Base):
 
 
 # =============================================================================
+# Phase 8: Success Metrics, Annotations
+# =============================================================================
+
+
+class MetricCategory(enum.StrEnum):
+    """Categories for success metrics."""
+
+    PROCESS_EFFICIENCY = "process_efficiency"
+    QUALITY = "quality"
+    COMPLIANCE = "compliance"
+    CUSTOMER_SATISFACTION = "customer_satisfaction"
+    COST = "cost"
+    TIMELINESS = "timeliness"
+
+
+class SuccessMetric(Base):
+    """Definition of a success metric for engagement measurement."""
+
+    __tablename__ = "success_metrics"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    unit: Mapped[str] = mapped_column(String(100), nullable=False)
+    target_value: Mapped[float] = mapped_column(Float, nullable=False)
+    category: Mapped[MetricCategory] = mapped_column(Enum(MetricCategory), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    readings: Mapped[list[MetricReading]] = relationship("MetricReading", back_populates="metric")
+
+    def __repr__(self) -> str:
+        return f"<SuccessMetric(id={self.id}, name='{self.name}', category='{self.category}')>"
+
+
+class MetricReading(Base):
+    """A recorded value for a success metric at a point in time."""
+
+    __tablename__ = "metric_readings"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    metric_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("success_metrics.id"), nullable=False)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id"), nullable=False
+    )
+    value: Mapped[float] = mapped_column(Float, nullable=False)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    metric: Mapped[SuccessMetric] = relationship("SuccessMetric", back_populates="readings")
+
+    def __repr__(self) -> str:
+        return f"<MetricReading(id={self.id}, metric_id={self.metric_id}, value={self.value})>"
+
+
+class Annotation(Base):
+    """SME annotation attached to engagement artifacts."""
+
+    __tablename__ = "annotations"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id"), nullable=False
+    )
+    target_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    target_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    author_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return f"<Annotation(id={self.id}, target_type='{self.target_type}', target_id='{self.target_id}')>"
+
+
+# =============================================================================
 # Phase 3: Monitoring / Alerting / Patterns / Simulation enums
 # =============================================================================
 
@@ -1354,3 +1438,117 @@ class CopilotMessage(Base):
 
     def __repr__(self) -> str:
         return f"<CopilotMessage(id={self.id}, role='{self.role}')>"
+
+
+# =============================================================================
+# Data Layer Evolution: Evidence Lineage & Data Catalog
+# =============================================================================
+
+
+class DataLayer(enum.StrEnum):
+    """Medallion architecture layers for data catalog entries."""
+
+    BRONZE = "bronze"
+    SILVER = "silver"
+    GOLD = "gold"
+
+
+class DataClassification(enum.StrEnum):
+    """Data sensitivity classification levels."""
+
+    PUBLIC = "public"
+    INTERNAL = "internal"
+    CONFIDENTIAL = "confidential"
+    RESTRICTED = "restricted"
+
+
+class EvidenceLineage(Base):
+    """Tracks the provenance and transformation history of evidence.
+
+    Records where evidence came from (source system, URL), how it was
+    transformed through the pipeline, and supports versioning for
+    incremental refresh scenarios.
+    """
+
+    __tablename__ = "evidence_lineage"
+    __table_args__ = (
+        Index("ix_evidence_lineage_evidence_item_id", "evidence_item_id"),
+        Index("ix_evidence_lineage_source_system", "source_system"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    evidence_item_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("evidence_items.id", ondelete="CASCADE"), nullable=False
+    )
+    source_system: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    source_identifier: Mapped[str | None] = mapped_column(
+        String(512), nullable=True,
+    )
+    transformation_chain: Mapped[list | None] = mapped_column(
+        JSON, nullable=True, default=list,
+    )
+    version: Mapped[int] = mapped_column(default=1, nullable=False)
+    version_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    parent_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("evidence_lineage.id", ondelete="SET NULL"), nullable=True
+    )
+    refresh_schedule: Mapped[str | None] = mapped_column(
+        String(100), nullable=True,
+    )
+    last_refreshed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    evidence_item: Mapped[EvidenceItem] = relationship("EvidenceItem")
+
+    def __repr__(self) -> str:
+        return (
+            f"<EvidenceLineage(id={self.id}, source='{self.source_system}', "
+            f"version={self.version})>"
+        )
+
+
+class DataCatalogEntry(Base):
+    """A dataset entry in the data governance catalog.
+
+    Tracks datasets across medallion layers (bronze/silver/gold), their
+    owners, classification, quality SLAs, and retention policies. Designed
+    to be portable for client deployment.
+    """
+
+    __tablename__ = "data_catalog_entries"
+    __table_args__ = (
+        Index("ix_data_catalog_entries_layer", "layer"),
+        Index("ix_data_catalog_entries_engagement_id", "engagement_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=True,
+    )
+    dataset_name: Mapped[str] = mapped_column(String(512), nullable=False)
+    dataset_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    layer: Mapped[DataLayer] = mapped_column(Enum(DataLayer), nullable=False)
+    schema_definition: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    owner: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    classification: Mapped[DataClassification] = mapped_column(
+        Enum(DataClassification), default=DataClassification.INTERNAL, nullable=False
+    )
+    quality_sla: Mapped[dict | None] = mapped_column(
+        JSON, nullable=True,
+    )
+    retention_days: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    row_count: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    delta_table_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<DataCatalogEntry(id={self.id}, name='{self.dataset_name}', "
+            f"layer={self.layer})>"
+        )
