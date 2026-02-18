@@ -98,12 +98,17 @@ export default function AnnotationPanel({
 
   const handleDelete = async (annotationId: string) => {
     try {
-      await fetch(`${API_BASE}/api/v1/annotations/${annotationId}`, {
+      const res = await fetch(`${API_BASE}/api/v1/annotations/${annotationId}`, {
         method: "DELETE",
       });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ detail: "Delete failed" }));
+        setError(errData.detail || "Failed to delete annotation");
+        return;
+      }
       setAnnotations((prev) => prev.filter((a) => a.id !== annotationId));
     } catch {
-      // Silently handle
+      setError("Failed to delete annotation");
     }
   };
 
@@ -177,6 +182,7 @@ export default function AnnotationPanel({
                 </span>
                 <button
                   onClick={() => handleDelete(ann.id)}
+                  aria-label={`Delete annotation by ${ann.author_id}`}
                   style={{
                     background: "none",
                     border: "none",
@@ -207,7 +213,11 @@ export default function AnnotationPanel({
 
       {/* New annotation form */}
       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        <label htmlFor="annotation-input" style={{ fontSize: "13px", fontWeight: 500, color: "#374151" }}>
+          Add annotation
+        </label>
         <textarea
+          id="annotation-input"
           value={newContent}
           onChange={(e) => setNewContent(e.target.value)}
           placeholder="Add an annotation..."

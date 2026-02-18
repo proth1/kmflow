@@ -251,30 +251,46 @@ async def get_metric_summary(
     metrics_result = await session.execute(select(SuccessMetric).order_by(SuccessMetric.name))
     metrics = list(metrics_result.scalars().all())
 
+    # Query 1: aggregates for all metrics in a single GROUP BY query
+    agg_query = (
+        select(
+            MetricReading.metric_id,
+            func.count(MetricReading.id).label("count"),
+            func.avg(MetricReading.value).label("avg"),
+            func.min(MetricReading.value).label("min"),
+            func.max(MetricReading.value).label("max"),
+        )
+        .where(MetricReading.engagement_id == engagement_id)
+        .group_by(MetricReading.metric_id)
+    )
+    agg_result = await session.execute(agg_query)
+    agg_by_metric: dict[Any, Any] = {row.metric_id: row for row in agg_result}
+
+    # Query 2: latest reading per metric using a window function subquery
+    latest_subq = (
+        select(
+            MetricReading.metric_id,
+            MetricReading.value,
+            func.row_number()
+            .over(
+                partition_by=MetricReading.metric_id,
+                order_by=MetricReading.recorded_at.desc(),
+            )
+            .label("rn"),
+        )
+        .where(MetricReading.engagement_id == engagement_id)
+        .subquery()
+    )
+    latest_query = select(latest_subq.c.metric_id, latest_subq.c.value).where(
+        latest_subq.c.rn == 1
+    )
+    latest_result = await session.execute(latest_query)
+    latest_by_metric: dict[Any, float] = {row.metric_id: row.value for row in latest_result}
+
     summaries = []
     for metric in metrics:
-        # Aggregate readings for this metric and engagement
-        agg_result = await session.execute(
-            select(
-                func.count(MetricReading.id).label("count"),
-                func.avg(MetricReading.value).label("avg"),
-                func.min(MetricReading.value).label("min"),
-                func.max(MetricReading.value).label("max"),
-            )
-            .where(MetricReading.metric_id == metric.id)
-            .where(MetricReading.engagement_id == engagement_id)
-        )
-        row = agg_result.one()
-
-        # Get latest reading
-        latest_result = await session.execute(
-            select(MetricReading.value)
-            .where(MetricReading.metric_id == metric.id)
-            .where(MetricReading.engagement_id == engagement_id)
-            .order_by(MetricReading.recorded_at.desc())
-            .limit(1)
-        )
-        latest = latest_result.scalar()
+        row = agg_by_metric.get(metric.id)
+        latest = latest_by_metric.get(metric.id)
 
         on_target = latest is not None and latest >= metric.target_value
 
@@ -285,11 +301,11 @@ async def get_metric_summary(
                 "unit": metric.unit,
                 "target_value": metric.target_value,
                 "category": str(metric.category),
-                "reading_count": row.count or 0,
+                "reading_count": row.count if row else 0,
                 "latest_value": float(latest) if latest is not None else None,
-                "avg_value": round(float(row.avg), 3) if row.avg is not None else None,
-                "min_value": float(row.min) if row.min is not None else None,
-                "max_value": float(row.max) if row.max is not None else None,
+                "avg_value": round(float(row.avg), 3) if row and row.avg is not None else None,
+                "min_value": float(row.min) if row and row.min is not None else None,
+                "max_value": float(row.max) if row and row.max is not None else None,
                 "on_target": on_target,
             }
         )
@@ -313,9 +329,13 @@ async def seed_metrics(
     seeds = get_metric_seeds()
     count = 0
     for seed_data in seeds:
-        metric = SuccessMetric(**seed_data)
-        session.add(metric)
-        count += 1
+        existing = await session.execute(
+            select(SuccessMetric).where(SuccessMetric.name == seed_data["name"])
+        )
+        if existing.scalar_one_or_none() is None:
+            metric = SuccessMetric(**seed_data)
+            session.add(metric)
+            count += 1
 
     await session.commit()
     return {"metrics_seeded": count}
