@@ -19,10 +19,10 @@ test.describe("Navigation", () => {
       page.getByText("Conformance Checking Dashboard")
     ).toBeVisible();
     await expect(
-      page.getByText("Upload Reference Model")
+      page.getByRole("heading", { name: "Upload Reference Model" })
     ).toBeVisible();
     await expect(
-      page.getByText("Run Conformance Check")
+      page.getByRole("heading", { name: "Run Conformance Check" })
     ).toBeVisible();
   });
 
@@ -33,6 +33,8 @@ test.describe("Navigation", () => {
 
   test("portal page loads", async ({ page }) => {
     await page.goto("/portal");
-    await expect(page.getByText("Portal")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "KMFlow Client Portal", exact: true })
+    ).toBeVisible();
   });
 });
