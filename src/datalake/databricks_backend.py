@@ -18,12 +18,9 @@ import logging
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from src.datalake.backend import StorageMetadata
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +30,20 @@ logger = logging.getLogger(__name__)
 
 try:
     from databricks.sdk import WorkspaceClient  # type: ignore[import-untyped]
-    from databricks.sdk.service.files import UploadRequest  # type: ignore[import-untyped]
+    from databricks.sdk.service.sql import StatementParameterListItem  # type: ignore[import-untyped]
 
     _HAS_DATABRICKS = True
 except ImportError:
     _HAS_DATABRICKS = False
+
+    # Provide a minimal stub so the name is always defined; the real class is
+    # only used when a live SDK client is available (_HAS_DATABRICKS=True).
+    class StatementParameterListItem:  # type: ignore[no-redef]
+        """Stub for databricks.sdk.service.sql.StatementParameterListItem."""
+
+        def __init__(self, name: str, value: str) -> None:
+            self.name = name
+            self.value = value
 
 
 # ---------------------------------------------------------------------------
@@ -94,6 +100,7 @@ class DatabricksBackend:
         self._metadata_table = f"`{catalog}`.`{schema}`.`evidence_metadata`"
 
         self._client: Any = None  # Initialized lazily on first use
+        self._warehouse_id: str | None = None  # Cached on first discovery
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -119,19 +126,18 @@ class DatabricksBackend:
                 "Install with: pip install 'kmflow[databricks]'"
             ) from None
 
-        if self._client is None:
-            kwargs: dict[str, Any] = {}
-            if self._host:
-                kwargs["host"] = self._host
-            if self._token:
-                kwargs["token"] = self._token
-            self._client = WorkspaceClient(**kwargs)
-            logger.info(
-                "DatabricksBackend connected to workspace; catalog=%s schema=%s volume=%s",
-                self._catalog,
-                self._schema,
-                self._volume,
-            )
+        kwargs: dict[str, Any] = {}
+        if self._host:
+            kwargs["host"] = self._host
+        if self._token:
+            kwargs["token"] = self._token
+        self._client = WorkspaceClient(**kwargs)
+        logger.info(
+            "DatabricksBackend connected to workspace; catalog=%s schema=%s volume=%s",
+            self._catalog,
+            self._schema,
+            self._volume,
+        )
         return self._client
 
     def _volume_path(self, engagement_id: str, unique_name: str) -> str:
@@ -215,12 +221,16 @@ class DatabricksBackend:
 
         In practice callers should pass a warehouse ID explicitly; this
         helper provides a best-effort default for simple deployments.
+        The result is cached after the first successful discovery.
         """
+        if self._warehouse_id is not None:
+            return self._warehouse_id
         try:
             warehouses = list(w.warehouses.list())
             for wh in warehouses:
                 if getattr(wh, "state", None) in ("RUNNING", "STOPPED"):
-                    return str(wh.id)
+                    self._warehouse_id = str(wh.id)
+                    return self._warehouse_id
         except Exception:
             pass
         return ""
@@ -282,19 +292,30 @@ class DatabricksBackend:
         # Append metadata row to the tracking Delta table
         metadata_json = json.dumps(metadata) if metadata else "{}"
         insert_sql = f"""
-        INSERT INTO {self._metadata_table}
-        (id, engagement_id, file_name, volume_path, content_hash,
-         size_bytes, stored_at, metadata_json)
-        VALUES
-        ('{record_id}', '{engagement_id}', '{safe_name}', '{volume_path}',
-         '{content_hash}', {len(content)}, '{now}', '{metadata_json}')
-        """
+INSERT INTO {self._metadata_table}
+(id, engagement_id, file_name, volume_path, content_hash,
+ size_bytes, stored_at, metadata_json)
+VALUES
+(:id, :engagement_id, :file_name, :volume_path,
+ :content_hash, :size_bytes, :stored_at, :metadata_json)
+"""
+        params = [
+            StatementParameterListItem(name="id", value=record_id),
+            StatementParameterListItem(name="engagement_id", value=engagement_id),
+            StatementParameterListItem(name="file_name", value=safe_name),
+            StatementParameterListItem(name="volume_path", value=volume_path),
+            StatementParameterListItem(name="content_hash", value=content_hash),
+            StatementParameterListItem(name="size_bytes", value=str(len(content))),
+            StatementParameterListItem(name="stored_at", value=now),
+            StatementParameterListItem(name="metadata_json", value=metadata_json),
+        ]
         try:
             wh_id = self._get_warehouse_id(w)
             if wh_id:
                 w.statement_execution.execute(
                     warehouse_id=wh_id,
                     statement=insert_sql.strip(),
+                    parameters=params,
                 )
         except Exception as exc:
             logger.warning("Failed to write metadata row: %s", exc)
@@ -444,17 +465,20 @@ class DatabricksBackend:
             raise
 
         # Remove metadata row (best-effort)
-        escaped_path = path.replace("'", "''")
         delete_sql = f"""
-        DELETE FROM {self._metadata_table}
-        WHERE volume_path = '{escaped_path}'
-        """
+DELETE FROM {self._metadata_table}
+WHERE volume_path = :volume_path
+"""
+        params = [
+            StatementParameterListItem(name="volume_path", value=path),
+        ]
         try:
             wh_id = self._get_warehouse_id(w)
             if wh_id:
                 w.statement_execution.execute(
                     warehouse_id=wh_id,
                     statement=delete_sql.strip(),
+                    parameters=params,
                 )
         except Exception as exc:
             logger.warning(

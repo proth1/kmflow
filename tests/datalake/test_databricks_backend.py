@@ -14,13 +14,11 @@ workspace. The tests verify:
 from __future__ import annotations
 
 import io
-import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from src.datalake.databricks_backend import DatabricksBackend
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -428,7 +426,7 @@ class TestFactoryIntegration:
         assert backend._volume == "testvol"
 
     def test_factory_local_still_works(self) -> None:
-        from src.datalake.backend import get_storage_backend, LocalFilesystemBackend
+        from src.datalake.backend import LocalFilesystemBackend, get_storage_backend
 
         backend = get_storage_backend("local")
         assert isinstance(backend, LocalFilesystemBackend)

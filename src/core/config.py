@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from pydantic import field_validator, model_validator
+from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -93,7 +93,7 @@ class Settings(BaseSettings):
 
     # ── Databricks (Phase F: Databricks Preparation) ─────────────
     databricks_host: str = ""
-    databricks_token: str = ""
+    databricks_token: SecretStr = SecretStr("")
     databricks_catalog: str = "kmflow"
     databricks_schema: str = "evidence"
     databricks_volume: str = "raw_evidence"

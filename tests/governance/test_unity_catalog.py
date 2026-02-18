@@ -22,27 +22,26 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.governance.unity_catalog import (
-    _uc_schema_name,
-    _safe_identifier,
-    _map_column_type,
     _build_column_defs,
+    _map_column_type,
+    _safe_identifier,
+    _uc_schema_name,
     generate_unity_catalog_ddl,
     register_tables,
 )
-
 
 # ---------------------------------------------------------------------------
 # Minimal DataCatalogEntry stub (avoids DB dependency in unit tests)
 # ---------------------------------------------------------------------------
 
 
-class _DataLayer(str, enum.Enum):
+class _DataLayer(enum.StrEnum):
     BRONZE = "bronze"
     SILVER = "silver"
     GOLD = "gold"
 
 
-class _DataClassification(str, enum.Enum):
+class _DataClassification(enum.StrEnum):
     PUBLIC = "public"
     INTERNAL = "internal"
     CONFIDENTIAL = "confidential"
@@ -369,9 +368,8 @@ class TestRegisterTables:
         client = MagicMock()
         entry = _FakeEntry("t", _DataLayer.BRONZE)
 
-        with patch("src.governance.unity_catalog._HAS_DATABRICKS", False):
-            with pytest.raises(ImportError, match="databricks-sdk is required"):
-                register_tables(client, [entry], "cat", "sch")
+        with patch("src.governance.unity_catalog._HAS_DATABRICKS", False), pytest.raises(ImportError, match="databricks-sdk is required"):
+            register_tables(client, [entry], "cat", "sch")
 
 
 # ---------------------------------------------------------------------------

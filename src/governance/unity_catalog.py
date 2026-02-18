@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 try:
-    from databricks.sdk import WorkspaceClient  # type: ignore[import-untyped]
+    import databricks.sdk  # type: ignore[import-untyped]  # noqa: F401
 
     _HAS_DATABRICKS = True
 except ImportError:
