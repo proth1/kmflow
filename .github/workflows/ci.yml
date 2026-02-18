@@ -117,7 +117,7 @@ jobs:
       - name: Check backend health endpoint
         run: |
           for i in $(seq 1 10); do
-            if curl -sf http://localhost:8000/health; then
+            if curl -sf http://localhost:8002/health; then
               echo ""
               echo "Backend health check passed!"
               exit 0
