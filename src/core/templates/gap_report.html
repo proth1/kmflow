@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gap Analysis Report - {{ engagement.name }}</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; color: #333; }
+    h1 { color: #1a1a2e; border-bottom: 2px solid #e94560; padding-bottom: 8px; }
+    .header-meta { color: #666; font-size: 0.9em; margin-bottom: 24px; }
+    .dashboard { display: flex; gap: 20px; margin: 24px 0; flex-wrap: wrap; }
+    .card {
+      background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px;
+      padding: 20px; min-width: 160px; flex: 1;
+    }
+    .card .label { font-size: 0.8em; color: #888; text-transform: uppercase; letter-spacing: 0.05em; }
+    .card .value { font-size: 2em; font-weight: bold; color: #1a1a2e; margin-top: 4px; }
+    .card.critical .value { color: #c0392b; }
+    .narrative { background: #fef9e7; border-left: 4px solid #f39c12; padding: 16px; border-radius: 4px; margin: 24px 0; }
+    table { border-collapse: collapse; width: 100%; margin-top: 16px; }
+    th, td { border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 0.9em; }
+    th { background: #1a1a2e; color: white; }
+    tr:nth-child(even) { background: #f5f5f5; }
+    .sev-critical { color: #c0392b; font-weight: bold; }
+    .sev-warning { color: #e67e22; font-weight: bold; }
+    .sev-good { color: #27ae60; }
+    .radar-container { margin: 24px 0; text-align: center; }
+    .footer { margin-top: 40px; font-size: 0.8em; color: #999; text-align: right; }
+  </style>
+</head>
+<body>
+  <h1>Gap Analysis Report</h1>
+  <div class="header-meta">
+    <strong>{{ engagement.name }}</strong> &bull;
+    Client: {{ engagement.client }} &bull;
+    Generated: {{ generated_at }}
+  </div>
+
+  <div class="dashboard">
+    <div class="card">
+      <div class="label">Total Gaps</div>
+      <div class="value">{{ data.total_gaps }}</div>
+    </div>
+    <div class="card critical">
+      <div class="label">Critical Gaps</div>
+      <div class="value">{{ data.critical_gaps }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Addressable</div>
+      <div class="value">{{ data.total_gaps - data.critical_gaps }}</div>
+    </div>
+  </div>
+
+  <div class="narrative">
+    <strong>Key Finding:</strong>
+    {{ data.total_gaps }} gaps identified across TOM dimensions, with
+    <strong>{{ data.critical_gaps }}</strong> critical gaps requiring immediate attention.
+    {% if data.total_gaps > 0 %}
+    Priority focus should be on the highest-severity items listed below.
+    {% else %}
+    No gaps detected at this time.
+    {% endif %}
+  </div>
+
+  {% if data.gaps %}
+  <!-- Maturity Radar Chart (inline SVG) -->
+  <div class="radar-container">
+    <h2>Maturity Gap Radar</h2>
+    {{ maturity_radar_svg | safe }}
+  </div>
+
+  <h2>Gap Details</h2>
+  <table>
+    <tr>
+      <th>Dimension</th>
+      <th>Type</th>
+      <th>Severity</th>
+      <th>Priority</th>
+      <th>Recommendation</th>
+    </tr>
+    {% for gap in data.gaps %}
+    <tr>
+      <td>{{ gap.dimension }}</td>
+      <td>{{ gap.gap_type }}</td>
+      <td class="{% if gap.severity > 0.7 %}sev-critical{% elif gap.severity > 0.4 %}sev-warning{% else %}sev-good{% endif %}">
+        {{ "%.2f" | format(gap.severity) }}
+      </td>
+      <td>{{ "%.3f" | format(gap.priority_score) }}</td>
+      <td>{{ gap.recommendation or "" }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p>No gaps to display.</p>
+  {% endif %}
+
+  <div class="footer">KMFlow Platform &bull; Report generated {{ generated_at }}</div>
+</body>
+</html>

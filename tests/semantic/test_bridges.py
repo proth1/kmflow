@@ -4,7 +4,7 @@ Validates ProcessEvidenceBridge, EvidencePolicyBridge, ProcessTOMBridge,
 and CommunicationDeviationBridge functionality.
 """
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -22,13 +22,13 @@ def mock_graph():
 
 
 # =============================================================================
-# ProcessEvidenceBridge tests
+# ProcessEvidenceBridge tests (word-overlap mode)
 # =============================================================================
 
 
 @pytest.fixture
 def process_evidence_bridge(mock_graph):
-    """ProcessEvidenceBridge instance."""
+    """ProcessEvidenceBridge instance (no embedding service)."""
     return ProcessEvidenceBridge(mock_graph)
 
 
@@ -59,17 +59,15 @@ async def test_process_evidence_creates_relationships(process_evidence_bridge, m
     )
     mock_graph.create_relationship = AsyncMock()
 
-    # Execute
     result = await process_evidence_bridge.run(engagement_id)
 
-    # Assertions
     assert result.relationships_created == 1
-    mock_graph.create_relationship.assert_called_once_with(
-        from_id="proc-1",
-        to_id="ev-1",
-        relationship_type="SUPPORTED_BY",
-        properties={"source": "process_evidence_bridge", "confidence": 0.7},
-    )
+    call_kwargs = mock_graph.create_relationship.call_args[1]
+    assert call_kwargs["from_id"] == "proc-1"
+    assert call_kwargs["to_id"] == "ev-1"
+    assert call_kwargs["relationship_type"] == "SUPPORTED_BY"
+    assert call_kwargs["properties"]["source"] == "process_evidence_bridge"
+    assert call_kwargs["properties"]["confidence"] == 0.7
 
 
 @pytest.mark.asyncio
@@ -77,7 +75,6 @@ async def test_process_evidence_no_overlap(process_evidence_bridge, mock_graph):
     """Test that no relationships are created when names don't overlap."""
     engagement_id = "eng-1"
 
-    # Process and evidence with no common words
     process_node = GraphNode(
         id="proc-1", label="Process", properties={"name": "Invoice Processing", "engagement_id": engagement_id}
     )
@@ -95,10 +92,8 @@ async def test_process_evidence_no_overlap(process_evidence_bridge, mock_graph):
     )
     mock_graph.create_relationship = AsyncMock()
 
-    # Execute
     result = await process_evidence_bridge.run(engagement_id)
 
-    # Assertions
     assert result.relationships_created == 0
     mock_graph.create_relationship.assert_not_called()
 
@@ -127,12 +122,85 @@ async def test_process_evidence_includes_activities(process_evidence_bridge, moc
     )
     mock_graph.create_relationship = AsyncMock()
 
-    # Execute
     result = await process_evidence_bridge.run(engagement_id)
 
-    # Assertions
     assert result.relationships_created == 1
     mock_graph.create_relationship.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_process_evidence_empty_nodes(process_evidence_bridge, mock_graph):
+    """No relationships created when nodes are empty."""
+    mock_graph.find_nodes = AsyncMock(side_effect=[[], [], []])
+    mock_graph.create_relationship = AsyncMock()
+
+    result = await process_evidence_bridge.run("eng-1")
+
+    assert result.relationships_created == 0
+    mock_graph.create_relationship.assert_not_called()
+
+
+# =============================================================================
+# ProcessEvidenceBridge tests (embedding mode)
+# =============================================================================
+
+
+def _make_embedding_service(similarity: float) -> MagicMock:
+    """Mock embedding service returning embeddings with given cosine similarity."""
+    svc = MagicMock()
+    # Normalized vectors: [1, 0] and [cos(θ), sin(θ)] have dot product cos(θ)
+    import math
+
+    v1 = [1.0, 0.0]
+    angle = math.acos(max(-1.0, min(1.0, similarity)))
+    v2 = [math.cos(angle), math.sin(angle)]
+    # embed_texts called twice: once for proc names (returns [v1]), once for ev names (returns [v2])
+    svc.embed_texts.side_effect = [[v1], [v2]]
+    return svc
+
+
+@pytest.mark.asyncio
+async def test_process_evidence_with_embedding_above_threshold(mock_graph):
+    """With embeddings above threshold, relationships are created."""
+    embedding_service = _make_embedding_service(0.8)
+    bridge = ProcessEvidenceBridge(mock_graph, embedding_service=embedding_service)
+
+    process_node = GraphNode(
+        id="proc-1", label="Process", properties={"name": "Invoice Review", "engagement_id": "eng-1"}
+    )
+    evidence_node = GraphNode(
+        id="ev-1", label="Evidence", properties={"name": "Finance Invoice Document", "engagement_id": "eng-1"}
+    )
+
+    mock_graph.find_nodes = AsyncMock(side_effect=[[process_node], [], [evidence_node]])
+    mock_graph.create_relationship = AsyncMock()
+
+    result = await bridge.run("eng-1")
+
+    assert result.relationships_created == 1
+    props = mock_graph.create_relationship.call_args[1]["properties"]
+    assert props["confidence"] == pytest.approx(0.8, abs=0.01)
+
+
+@pytest.mark.asyncio
+async def test_process_evidence_with_embedding_below_threshold(mock_graph):
+    """With embeddings below threshold, no relationships are created."""
+    embedding_service = _make_embedding_service(0.3)
+    bridge = ProcessEvidenceBridge(mock_graph, embedding_service=embedding_service)
+
+    process_node = GraphNode(
+        id="proc-1", label="Process", properties={"name": "Invoice Review", "engagement_id": "eng-1"}
+    )
+    evidence_node = GraphNode(
+        id="ev-1", label="Evidence", properties={"name": "Finance Invoice Document", "engagement_id": "eng-1"}
+    )
+
+    mock_graph.find_nodes = AsyncMock(side_effect=[[process_node], [], [evidence_node]])
+    mock_graph.create_relationship = AsyncMock()
+
+    result = await bridge.run("eng-1")
+
+    assert result.relationships_created == 0
 
 
 # =============================================================================
@@ -142,7 +210,7 @@ async def test_process_evidence_includes_activities(process_evidence_bridge, moc
 
 @pytest.fixture
 def evidence_policy_bridge(mock_graph):
-    """EvidencePolicyBridge instance."""
+    """EvidencePolicyBridge instance (no embedding service)."""
     return EvidencePolicyBridge(mock_graph)
 
 
@@ -169,17 +237,14 @@ async def test_evidence_policy_creates_governed_by(evidence_policy_bridge, mock_
     )
     mock_graph.create_relationship = AsyncMock()
 
-    # Execute
     result = await evidence_policy_bridge.run(engagement_id)
 
-    # Assertions
     assert result.relationships_created == 1
-    mock_graph.create_relationship.assert_called_once_with(
-        from_id="ev-1",
-        to_id="policy-1",
-        relationship_type="GOVERNED_BY",
-        properties={"source": "evidence_policy_bridge"},
-    )
+    call_kwargs = mock_graph.create_relationship.call_args[1]
+    assert call_kwargs["from_id"] == "ev-1"
+    assert call_kwargs["to_id"] == "policy-1"
+    assert call_kwargs["relationship_type"] == "GOVERNED_BY"
+    assert call_kwargs["properties"]["source"] == "evidence_policy_bridge"
 
 
 @pytest.mark.asyncio
@@ -203,12 +268,43 @@ async def test_evidence_policy_no_match(evidence_policy_bridge, mock_graph):
     )
     mock_graph.create_relationship = AsyncMock()
 
-    # Execute
     result = await evidence_policy_bridge.run(engagement_id)
 
-    # Assertions
     assert result.relationships_created == 0
     mock_graph.create_relationship.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_evidence_policy_empty_nodes(evidence_policy_bridge, mock_graph):
+    """No relationships created when evidence or policy nodes are empty."""
+    mock_graph.find_nodes = AsyncMock(side_effect=[[], []])
+    mock_graph.create_relationship = AsyncMock()
+
+    result = await evidence_policy_bridge.run("eng-1")
+
+    assert result.relationships_created == 0
+
+
+@pytest.mark.asyncio
+async def test_evidence_policy_with_embedding_above_threshold(mock_graph):
+    """With embeddings above threshold, GOVERNED_BY relationships are created."""
+    embedding_service = _make_embedding_service(0.75)
+    bridge = EvidencePolicyBridge(mock_graph, embedding_service=embedding_service)
+
+    ev_node = GraphNode(id="ev-1", label="Evidence", properties={"name": "Compliance Report", "engagement_id": "eng-1"})
+    policy_node = GraphNode(
+        id="p-1", label="Policy", properties={"name": "Compliance Framework", "engagement_id": "eng-1"}
+    )
+
+    mock_graph.find_nodes = AsyncMock(side_effect=[[ev_node], [policy_node]])
+    mock_graph.create_relationship = AsyncMock()
+
+    result = await bridge.run("eng-1")
+
+    assert result.relationships_created == 1
+    props = mock_graph.create_relationship.call_args[1]["properties"]
+    assert "similarity_score" in props
+    assert props["similarity_score"] == pytest.approx(0.75, abs=0.01)
 
 
 # =============================================================================
@@ -244,15 +340,11 @@ async def test_process_tom_classifies_dimensions(process_tom_bridge, mock_graph)
     )
     mock_graph.create_relationship = AsyncMock()
 
-    # Execute
     result = await process_tom_bridge.run(engagement_id)
 
-    # Assertions
-    # "workflow" and "process" keywords should map to PROCESS_ARCHITECTURE dimension
     assert result.relationships_created >= 1
     mock_graph.create_relationship.assert_called()
 
-    # Verify the dimension property
     call_args = mock_graph.create_relationship.call_args
     assert call_args[1]["properties"]["dimension"] == "process_architecture"
 
@@ -281,14 +373,10 @@ async def test_process_tom_risk_keywords(process_tom_bridge, mock_graph):
     )
     mock_graph.create_relationship = AsyncMock()
 
-    # Execute
     result = await process_tom_bridge.run(engagement_id)
 
-    # Assertions
-    # Should create relationships for risk_and_compliance and process_architecture
     assert result.relationships_created >= 1
 
-    # Check that risk_and_compliance dimension was used
     call_args_list = [call[1]["properties"]["dimension"] for call in mock_graph.create_relationship.call_args_list]
     assert "risk_and_compliance" in call_args_list
 
@@ -298,7 +386,6 @@ async def test_process_tom_no_match(process_tom_bridge, mock_graph):
     """Test that generic process names don't create relationships."""
     engagement_id = "eng-1"
 
-    # Generic name with no matching keywords
     process_node = GraphNode(
         id="proc-1", label="Process", properties={"name": "ABC XYZ", "engagement_id": engagement_id}
     )
@@ -316,10 +403,8 @@ async def test_process_tom_no_match(process_tom_bridge, mock_graph):
     )
     mock_graph.create_relationship = AsyncMock()
 
-    # Execute
     result = await process_tom_bridge.run(engagement_id)
 
-    # Assertions
     assert result.relationships_created == 0
     mock_graph.create_relationship.assert_not_called()
 
@@ -359,10 +444,8 @@ async def test_deviation_detected(communication_deviation_bridge, mock_graph):
     )
     mock_graph.create_relationship = AsyncMock()
 
-    # Execute
     result = await communication_deviation_bridge.run(engagement_id)
 
-    # Assertions
     assert result.relationships_created == 1
     mock_graph.create_relationship.assert_called_once_with(
         from_id="ev-1",
@@ -396,10 +479,8 @@ async def test_no_deviation_keywords(communication_deviation_bridge, mock_graph)
     )
     mock_graph.create_relationship = AsyncMock()
 
-    # Execute
     result = await communication_deviation_bridge.run(engagement_id)
 
-    # Assertions
     assert result.relationships_created == 0
     mock_graph.create_relationship.assert_not_called()
 
@@ -428,9 +509,7 @@ async def test_deviation_multiple_keywords(communication_deviation_bridge, mock_
     )
     mock_graph.create_relationship = AsyncMock()
 
-    # Execute
     result = await communication_deviation_bridge.run(engagement_id)
 
-    # Assertions
     assert result.relationships_created == 1
     mock_graph.create_relationship.assert_called_once()

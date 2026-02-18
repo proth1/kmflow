@@ -113,12 +113,36 @@ class TestCelonisConnector:
         connector = CelonisConnector(config)
 
         async def mock_paginate(*args, **kwargs):
-            yield [{"id": 1}, {"id": 2}]
+            yield [{"id": 1, "case_id": "case-1"}, {"id": 2, "case_id": "case-2"}]
 
         with patch("src.integrations.celonis.paginate_offset", side_effect=mock_paginate):
             result = await connector.sync_data(engagement_id="test-123", data_pool_id="pool-1")
         assert result["records_synced"] == 2
         assert result["errors"] == []
+
+    @pytest.mark.asyncio
+    async def test_sync_data_with_db_session_persists_items(self) -> None:
+        """When db_session is provided, EvidenceItems are created."""
+        config = ConnectionConfig(base_url="https://celonis.example.com", api_key="test-key")
+        connector = CelonisConnector(config)
+
+        mock_session = MagicMock()
+        mock_session.add = MagicMock()
+        mock_session.flush = AsyncMock()
+
+        async def mock_paginate(*args, **kwargs):
+            yield [{"case_id": "case-abc", "activity": "Submit", "timestamp": "2024-01"}]
+
+        with patch("src.integrations.celonis.paginate_offset", side_effect=mock_paginate):
+            result = await connector.sync_data(
+                engagement_id="test-123",
+                data_pool_id="pool-1",
+                db_session=mock_session,
+            )
+
+        assert result["records_synced"] == 1
+        mock_session.add.assert_called_once()
+        mock_session.flush.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_sync_data_not_configured(self) -> None:
@@ -185,6 +209,34 @@ class TestSorocoConnector:
             result = await connector.sync_data(engagement_id="test-123", project_id="proj-1")
         assert result["records_synced"] == 3
         assert result["errors"] == []
+
+    @pytest.mark.asyncio
+    async def test_sync_data_with_db_session_persists_items(self) -> None:
+        """When db_session is provided, EvidenceItems are created."""
+        config = ConnectionConfig(
+            base_url="https://soroco.example.com",
+            api_key="test-key",
+            extra={"tenant_id": "tenant-1"},
+        )
+        connector = SorocoConnector(config)
+
+        mock_session = MagicMock()
+        mock_session.add = MagicMock()
+        mock_session.flush = AsyncMock()
+
+        async def mock_paginate(*args, **kwargs):
+            yield [{"task_id": "task-xyz", "task_name": "Review Docs", "application": "Word"}]
+
+        with patch("src.integrations.soroco.paginate_offset", side_effect=mock_paginate):
+            result = await connector.sync_data(
+                engagement_id="test-123",
+                project_id="proj-1",
+                db_session=mock_session,
+            )
+
+        assert result["records_synced"] == 1
+        mock_session.add.assert_called_once()
+        mock_session.flush.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_sync_data_not_configured(self) -> None:

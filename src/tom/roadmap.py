@@ -17,6 +17,21 @@ from src.core.models import GapAnalysisResult, TOMGapType
 
 logger = logging.getLogger(__name__)
 
+# Optional best practice matcher — imported lazily to avoid circular deps
+_BPMatcher: type | None = None
+
+
+def _get_bp_matcher_class() -> type | None:
+    global _BPMatcher  # noqa: PLW0603
+    if _BPMatcher is None:
+        try:
+            from src.tom.best_practice_matcher import BestPracticeMatcher
+
+            _BPMatcher = BestPracticeMatcher
+        except ImportError:
+            pass
+    return _BPMatcher
+
 
 @dataclass
 class RoadmapPhase:
@@ -71,6 +86,7 @@ class RoadmapGenerator:
         session: AsyncSession,
         engagement_id: str,
         tom_id: str,
+        embedding_service: Any | None = None,
     ) -> TransformationRoadmap:
         """Generate a transformation roadmap from gap analysis results.
 
@@ -85,6 +101,16 @@ class RoadmapGenerator:
         # Fetch gap results
         gaps = await self._fetch_gaps(session, engagement_id, tom_id)
 
+        # Optionally fetch best practice matches
+        bp_matches: dict[str, list[dict[str, Any]]] = {}
+        bp_cls = _get_bp_matcher_class()
+        if bp_cls is not None:
+            try:
+                matcher = bp_cls(embedding_service=embedding_service)
+                bp_matches = await matcher.match_gaps_to_practices(session, engagement_id, tom_id)
+            except Exception as e:
+                logger.warning("Best practice matching failed: %s", e)
+
         roadmap = TransformationRoadmap(
             engagement_id=engagement_id,
             tom_id=tom_id,
@@ -98,27 +124,27 @@ class RoadmapGenerator:
                 phase_number=1,
                 name="Quick Wins",
                 duration_months=3,
-                initiatives=self._gaps_to_initiatives(phase_1_gaps),
+                initiatives=self._gaps_to_initiatives(phase_1_gaps, bp_matches),
             ),
             RoadmapPhase(
                 phase_number=2,
                 name="Foundation Building",
                 duration_months=6,
-                initiatives=self._gaps_to_initiatives(phase_2_gaps),
+                initiatives=self._gaps_to_initiatives(phase_2_gaps, bp_matches),
                 dependencies=["phase_1"],
             ),
             RoadmapPhase(
                 phase_number=3,
                 name="Transformation",
                 duration_months=9,
-                initiatives=self._gaps_to_initiatives(phase_3_gaps),
+                initiatives=self._gaps_to_initiatives(phase_3_gaps, bp_matches),
                 dependencies=["phase_2"],
             ),
             RoadmapPhase(
                 phase_number=4,
                 name="Optimization",
                 duration_months=6,
-                initiatives=self._gaps_to_initiatives(phase_4_gaps),
+                initiatives=self._gaps_to_initiatives(phase_4_gaps, bp_matches),
                 dependencies=["phase_3"],
             ),
         ]
@@ -153,20 +179,26 @@ class RoadmapGenerator:
 
         return phase_1, phase_2, phase_3, phase_4
 
-    def _gaps_to_initiatives(self, gaps: list[GapAnalysisResult]) -> list[dict[str, Any]]:
+    def _gaps_to_initiatives(
+        self,
+        gaps: list[GapAnalysisResult],
+        bp_matches: dict[str, list[dict[str, Any]]] | None = None,
+    ) -> list[dict[str, Any]]:
         """Convert gap results to initiative descriptions."""
         initiatives = []
         for gap in gaps:
-            initiatives.append(
-                {
-                    "gap_id": str(gap.id),
-                    "dimension": str(gap.dimension),
-                    "gap_type": str(gap.gap_type),
-                    "severity": gap.severity,
-                    "priority_score": gap.priority_score,
-                    "recommendation": gap.recommendation or "Assessment needed",
-                }
-            )
+            gap_id = str(gap.id)
+            initiative: dict[str, Any] = {
+                "gap_id": gap_id,
+                "dimension": str(gap.dimension),
+                "gap_type": str(gap.gap_type),
+                "severity": gap.severity,
+                "priority_score": gap.priority_score,
+                "recommendation": gap.recommendation or "Assessment needed",
+            }
+            if bp_matches and gap_id in bp_matches:
+                initiative["matched_best_practices"] = [bp["description"] for bp in bp_matches[gap_id]]
+            initiatives.append(initiative)
         return sorted(initiatives, key=lambda x: x["priority_score"], reverse=True)
 
     async def _fetch_gaps(

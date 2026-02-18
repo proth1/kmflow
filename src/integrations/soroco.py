@@ -7,6 +7,7 @@ application usage patterns, and task-level process discovery.
 from __future__ import annotations
 
 import logging
+import uuid
 from typing import Any
 
 import httpx
@@ -63,16 +64,19 @@ class SorocoConnector(BaseConnector):
         Args:
             engagement_id: The engagement to associate data with.
             **kwargs: Optional filters (team_id, project_id, date_range).
+                      Pass db_session to persist EvidenceItem records.
 
         Returns:
-            Sync result with records_synced count.
+            Sync result with records_synced count and persisted_items list.
         """
         if not self._base_url or not self._api_key:
             return {"records_synced": 0, "errors": ["Soroco not configured"]}
 
         project_id = kwargs.get("project_id", kwargs.get("team_id", ""))
+        db_session = kwargs.get("db_session") or kwargs.get("session")
         records_synced = 0
         errors: list[str] = []
+        persisted_items: list[dict[str, Any]] = []
 
         try:
             async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
@@ -88,6 +92,39 @@ class SorocoConnector(BaseConnector):
                 ):
                     records_synced += len(page)
 
+                    if db_session is not None:
+                        from src.core.models import EvidenceCategory, EvidenceItem
+
+                        for record in page:
+                            task_id = record.get("task_id", str(uuid.uuid4()))
+                            item = EvidenceItem(
+                                engagement_id=engagement_id,
+                                name=f"soroco_task_{task_id}",
+                                category=EvidenceCategory.KM4WORK,
+                                format="json",
+                                source_system="soroco",
+                                metadata_json={
+                                    "source": "soroco",
+                                    "tenant_id": self._tenant_id,
+                                    "project_id": project_id,
+                                    "task_id": task_id,
+                                    "record": record,
+                                },
+                                completeness_score=0.8,
+                                reliability_score=0.85,
+                                freshness_score=0.9,
+                                consistency_score=0.8,
+                            )
+                            db_session.add(item)
+                            persisted_items.append(
+                                {
+                                    "task_id": task_id,
+                                    "task_name": record.get("task_name", ""),
+                                    "application": record.get("application", ""),
+                                }
+                            )
+                        await db_session.flush()
+
         except httpx.HTTPStatusError as e:
             errors.append(f"Soroco API error: {e.response.status_code}")
             logger.error("Soroco sync failed: %s", e)
@@ -98,6 +135,7 @@ class SorocoConnector(BaseConnector):
         return {
             "records_synced": records_synced,
             "errors": errors,
+            "persisted_items": persisted_items,
             "metadata": {
                 "source": "soroco",
                 "tenant_id": self._tenant_id,

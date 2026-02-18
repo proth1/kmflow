@@ -9,9 +9,13 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 
+import numpy as np
+
 from src.semantic.graph import KnowledgeGraphService
 
 logger = logging.getLogger(__name__)
+
+_EMBEDDING_THRESHOLD = 0.6
 
 
 @dataclass
@@ -27,11 +31,18 @@ class ProcessEvidenceBridge:
     """Enhanced bridge linking process elements to evidence.
 
     Strengthens confidence scoring by analyzing the overlap between
-    process element descriptions and evidence content.
+    process element descriptions and evidence content. Uses embedding
+    cosine similarity when an EmbeddingService is provided; falls back
+    to word-overlap matching otherwise.
     """
 
-    def __init__(self, graph_service: KnowledgeGraphService) -> None:
+    def __init__(
+        self,
+        graph_service: KnowledgeGraphService,
+        embedding_service: object | None = None,
+    ) -> None:
         self._graph = graph_service
+        self._embedding_service = embedding_service
 
     async def run(self, engagement_id: str) -> BridgeResult:
         """Run the process-evidence bridge for an engagement.
@@ -53,17 +64,48 @@ class ProcessEvidenceBridge:
 
         all_process_nodes = process_nodes + activity_nodes
 
-        for proc in all_process_nodes:
-            proc_name = proc.properties.get("name", "").lower()
-            for ev in evidence_nodes:
-                ev_name = ev.properties.get("name", "").lower()
-                if self._is_related(proc_name, ev_name):
+        if not all_process_nodes or not evidence_nodes:
+            return result
+
+        # Build name lists for batch embedding
+        proc_names = [n.properties.get("name", "") for n in all_process_nodes]
+        ev_names = [n.properties.get("name", "") for n in evidence_nodes]
+
+        use_embeddings = self._embedding_service is not None
+        proc_embeddings: list[list[float]] | None = None
+        ev_embeddings: list[list[float]] | None = None
+
+        if use_embeddings:
+            try:
+                proc_embeddings = self._embedding_service.embed_texts(proc_names)  # type: ignore[union-attr]
+                ev_embeddings = self._embedding_service.embed_texts(ev_names)  # type: ignore[union-attr]
+            except Exception as e:
+                logger.warning("Embedding failed, falling back to word-overlap: %s", e)
+                use_embeddings = False
+
+        for p_idx, proc in enumerate(all_process_nodes):
+            proc_name = proc_names[p_idx].lower()
+            for e_idx, ev in enumerate(evidence_nodes):
+                ev_name = ev_names[e_idx].lower()
+
+                if use_embeddings and proc_embeddings and ev_embeddings:
+                    similarity = float(np.dot(proc_embeddings[p_idx], ev_embeddings[e_idx]))
+                    is_match = similarity >= _EMBEDDING_THRESHOLD
+                    confidence = similarity
+                else:
+                    is_match = self._is_related(proc_name, ev_name)
+                    confidence = 0.7
+
+                if is_match:
                     try:
                         await self._graph.create_relationship(
                             from_id=proc.id,
                             to_id=ev.id,
                             relationship_type="SUPPORTED_BY",
-                            properties={"source": "process_evidence_bridge", "confidence": 0.7},
+                            properties={
+                                "source": "process_evidence_bridge",
+                                "confidence": confidence,
+                            },
                         )
                         result.relationships_created += 1
                     except Exception as e:

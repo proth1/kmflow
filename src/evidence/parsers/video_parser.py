@@ -178,8 +178,21 @@ class VideoParser(BaseParser):
                 logger.info("Extracted audio too small or empty for %s", file_path)
                 return ""
 
-            # Return metadata about the extracted audio
-            # (actual transcription would require speech_recognition or whisper)
+            # Pass the WAV to AudioParser for transcription
+            from src.evidence.parsers.audio_parser import AudioParser
+
+            audio_parser = AudioParser()
+            stem = Path(file_path).stem
+            audio_result = await audio_parser.parse(wav_path, f"{stem}_audio.wav")
+
+            # Extract transcription text fragment
+            transcription_texts = [
+                f.content for f in audio_result.fragments if f.metadata.get("source") == "transcription"
+            ]
+            if transcription_texts:
+                return transcription_texts[0]
+
+            # Fall back to audio reference metadata if no transcription available
             size_kb = wav_file.stat().st_size / 1024
             duration_est = wav_file.stat().st_size / (16000 * 2)  # 16kHz, 16-bit mono
             return f"Audio extracted: {size_kb:.0f}KB WAV, ~{duration_est:.1f}s duration at 16kHz mono"
