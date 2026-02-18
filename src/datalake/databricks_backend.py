@@ -122,8 +122,7 @@ class DatabricksBackend:
 
         if not _HAS_DATABRICKS:
             raise ImportError(
-                "databricks-sdk is required for DatabricksBackend. "
-                "Install with: pip install 'kmflow[databricks]'"
+                "databricks-sdk is required for DatabricksBackend. Install with: pip install 'kmflow[databricks]'"
             ) from None
 
         kwargs: dict[str, Any] = {}
@@ -157,10 +156,7 @@ class DatabricksBackend:
         Allows alphanumerics, hyphens, and underscores only. Replaces
         other characters with underscores and strips leading dots.
         """
-        sanitized = "".join(
-            c if c.isalnum() or c in ("-", "_") else "_"
-            for c in component
-        )
+        sanitized = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in component)
         return sanitized.lstrip(".")
 
     def _validate_volume_path(self, path: str) -> str:
@@ -176,10 +172,7 @@ class DatabricksBackend:
             ValueError: If the path escapes the configured volume base.
         """
         if not path.startswith(self._volume_base):
-            raise ValueError(
-                f"Path is outside storage boundary: {path!r} "
-                f"(expected prefix: {self._volume_base!r})"
-            )
+            raise ValueError(f"Path is outside storage boundary: {path!r} (expected prefix: {self._volume_base!r})")
         return path
 
     def _ensure_metadata_table(self, w: Any) -> None:
@@ -430,9 +423,7 @@ VALUES
             error_str = str(exc).lower()
             if "not found" in error_str or "does not exist" in error_str or "404" in error_str:
                 return []
-            logger.warning(
-                "Error listing Volumes directory %s: %s", directory, exc
-            )
+            logger.warning("Error listing Volumes directory %s: %s", directory, exc)
             return []
 
         return sorted(paths)
@@ -481,9 +472,7 @@ WHERE volume_path = :volume_path
                     parameters=params,
                 )
         except Exception as exc:
-            logger.warning(
-                "Failed to remove metadata row for %s: %s", path, exc
-            )
+            logger.warning("Failed to remove metadata row for %s: %s", path, exc)
 
         return deleted
 

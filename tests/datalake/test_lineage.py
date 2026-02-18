@@ -40,9 +40,7 @@ def _make_session(existing_lineage=None) -> AsyncMock:
     # Mock the execute method for SELECT queries
     result = MagicMock()
     result.scalar_one_or_none.return_value = existing_lineage
-    result.scalars.return_value.all.return_value = (
-        [existing_lineage] if existing_lineage else []
-    )
+    result.scalars.return_value.all.return_value = [existing_lineage] if existing_lineage else []
     session.execute = AsyncMock(return_value=result)
     session.add = MagicMock()
     session.flush = AsyncMock()

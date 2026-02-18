@@ -19,10 +19,15 @@ from src.evidence.parsers.base import BaseParser, ParsedFragment, ParseResult
 logger = logging.getLogger(__name__)
 
 # Control effectiveness keywords
-_EFFECTIVENESS_KEYWORDS = frozenset({
-    "effective", "ineffective", "partially_effective",
-    "not_tested", "not_applicable",
-})
+_EFFECTIVENESS_KEYWORDS = frozenset(
+    {
+        "effective",
+        "ineffective",
+        "partially_effective",
+        "not_tested",
+        "not_applicable",
+    }
+)
 
 
 class ControlsParser(BaseParser):

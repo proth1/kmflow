@@ -69,10 +69,7 @@ def html_to_pdf(html: str) -> bytes:
         RuntimeError: If PDF conversion fails.
     """
     if not _WEASYPRINT_AVAILABLE:
-        raise ImportError(
-            "WeasyPrint is required for PDF generation. "
-            "Install with: pip install weasyprint"
-        )
+        raise ImportError("WeasyPrint is required for PDF generation. Install with: pip install weasyprint")
 
     # Inject print CSS into the HTML head
     if "<head>" in html:

@@ -22,19 +22,21 @@ SAMPLE_AUDIT_CSV = """timestamp,actor,action,resource,details
 2024-01-15T10:00:00Z,auditor,review,audit_log,Quarterly review
 """
 
-SAMPLE_MONITOR_JSON = json.dumps({
-    "monitor_id": "MON-001",
-    "check_time": "2024-01-15T12:00:00Z",
-    "summary": {
-        "total_checks": 50,
-        "passed": 47,
-        "failed": 3,
-    },
-    "results": [
-        {"check": "disk_space", "status": "pass"},
-        {"check": "memory_usage", "status": "fail", "value": "95%"},
-    ],
-})
+SAMPLE_MONITOR_JSON = json.dumps(
+    {
+        "monitor_id": "MON-001",
+        "check_time": "2024-01-15T12:00:00Z",
+        "summary": {
+            "total_checks": 50,
+            "passed": 47,
+            "failed": 3,
+        },
+        "results": [
+            {"check": "disk_space", "status": "pass"},
+            {"check": "memory_usage", "status": "fail", "value": "95%"},
+        ],
+    }
+)
 
 
 class TestControlsParser:

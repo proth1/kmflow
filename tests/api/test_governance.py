@@ -359,9 +359,7 @@ class TestGetCatalogEntry:
         mock_db_session.execute = AsyncMock(return_value=result)
 
         entry_id = uuid.uuid4()
-        response = await governance_client.get(
-            f"/api/v1/governance/catalog/{entry_id}"
-        )
+        response = await governance_client.get(f"/api/v1/governance/catalog/{entry_id}")
 
         assert response.status_code == 404
 
@@ -394,9 +392,7 @@ class TestGetCatalogEntry:
         result.scalar_one_or_none.return_value = entry
         mock_db_session.execute = AsyncMock(return_value=result)
 
-        response = await governance_client.get(
-            f"/api/v1/governance/catalog/{entry_id}"
-        )
+        response = await governance_client.get(f"/api/v1/governance/catalog/{entry_id}")
 
         assert response.status_code == 200
         data = response.json()
@@ -422,9 +418,7 @@ class TestDeleteCatalogEntry:
         mock_db_session.execute = AsyncMock(return_value=result)
 
         entry_id = uuid.uuid4()
-        response = await governance_client.delete(
-            f"/api/v1/governance/catalog/{entry_id}"
-        )
+        response = await governance_client.delete(f"/api/v1/governance/catalog/{entry_id}")
 
         assert response.status_code == 404
 
@@ -441,9 +435,7 @@ class TestDeleteCatalogEntry:
         result.scalar_one_or_none.return_value = entry
         mock_db_session.execute = AsyncMock(return_value=result)
 
-        response = await governance_client.delete(
-            f"/api/v1/governance/catalog/{entry.id}"
-        )
+        response = await governance_client.delete(f"/api/v1/governance/catalog/{entry.id}")
 
         assert response.status_code == 204
 
@@ -457,9 +449,7 @@ class TestListPolicies:
     """Tests for GET /api/v1/governance/policies."""
 
     @pytest.mark.asyncio
-    async def test_returns_200_with_policy_dict(
-        self, governance_client: AsyncClient
-    ) -> None:
+    async def test_returns_200_with_policy_dict(self, governance_client: AsyncClient) -> None:
         response = await governance_client.get("/api/v1/governance/policies")
 
         assert response.status_code == 200
@@ -468,18 +458,14 @@ class TestListPolicies:
         assert "policy_file" in data
 
     @pytest.mark.asyncio
-    async def test_policies_contain_retention(
-        self, governance_client: AsyncClient
-    ) -> None:
+    async def test_policies_contain_retention(self, governance_client: AsyncClient) -> None:
         response = await governance_client.get("/api/v1/governance/policies")
 
         data = response.json()
         assert "retention" in data["policies"]
 
     @pytest.mark.asyncio
-    async def test_policies_contain_naming_convention(
-        self, governance_client: AsyncClient
-    ) -> None:
+    async def test_policies_contain_naming_convention(self, governance_client: AsyncClient) -> None:
         response = await governance_client.get("/api/v1/governance/policies")
 
         data = response.json()
@@ -587,9 +573,7 @@ class TestCheckQualitySLA:
         result.scalar_one_or_none.return_value = None
         mock_db_session.execute = AsyncMock(return_value=result)
 
-        response = await governance_client.get(
-            f"/api/v1/governance/quality/{uuid.uuid4()}"
-        )
+        response = await governance_client.get(f"/api/v1/governance/quality/{uuid.uuid4()}")
 
         assert response.status_code == 404
 
@@ -615,13 +599,9 @@ class TestCheckQualitySLA:
         items_result = MagicMock()
         items_result.scalars.return_value.all.return_value = []
 
-        mock_db_session.execute = AsyncMock(
-            side_effect=[entry_result, items_result]
-        )
+        mock_db_session.execute = AsyncMock(side_effect=[entry_result, items_result])
 
-        response = await governance_client.get(
-            f"/api/v1/governance/quality/{entry.id}"
-        )
+        response = await governance_client.get(f"/api/v1/governance/quality/{entry.id}")
 
         assert response.status_code == 200
         data = response.json()
@@ -653,14 +633,10 @@ class TestExportGovernance:
         lineage_result = MagicMock()
         lineage_result.scalars.return_value.all.return_value = []
 
-        mock_db_session.execute = AsyncMock(
-            side_effect=[catalog_result, lineage_result]
-        )
+        mock_db_session.execute = AsyncMock(side_effect=[catalog_result, lineage_result])
 
         engagement_id = uuid.uuid4()
-        response = await governance_client.get(
-            f"/api/v1/governance/export/{engagement_id}"
-        )
+        response = await governance_client.get(f"/api/v1/governance/export/{engagement_id}")
 
         assert response.status_code == 200
         assert response.headers["content-type"] == "application/zip"
@@ -676,14 +652,10 @@ class TestExportGovernance:
         catalog_result.scalars.return_value.all.return_value = []
         lineage_result = MagicMock()
         lineage_result.scalars.return_value.all.return_value = []
-        mock_db_session.execute = AsyncMock(
-            side_effect=[catalog_result, lineage_result]
-        )
+        mock_db_session.execute = AsyncMock(side_effect=[catalog_result, lineage_result])
 
         engagement_id = uuid.uuid4()
-        response = await governance_client.get(
-            f"/api/v1/governance/export/{engagement_id}"
-        )
+        response = await governance_client.get(f"/api/v1/governance/export/{engagement_id}")
 
         assert "attachment" in response.headers.get("content-disposition", "")
         assert ".zip" in response.headers.get("content-disposition", "")
@@ -721,9 +693,7 @@ class TestTriggerMigration:
             new=AsyncMock(return_value=mock_result),
         ):
             engagement_id = uuid.uuid4()
-            response = await governance_client.post(
-                f"/api/v1/governance/migrate/{engagement_id}"
-            )
+            response = await governance_client.post(f"/api/v1/governance/migrate/{engagement_id}")
 
         assert response.status_code == 200
         data = response.json()
@@ -750,9 +720,7 @@ class TestTriggerMigration:
             new=AsyncMock(return_value=mock_result),
         ) as mock_migrate:
             engagement_id = uuid.uuid4()
-            response = await governance_client.post(
-                f"/api/v1/governance/migrate/{engagement_id}?dry_run=true"
-            )
+            response = await governance_client.post(f"/api/v1/governance/migrate/{engagement_id}?dry_run=true")
 
         assert response.status_code == 200
         data = response.json()
@@ -776,9 +744,7 @@ class TestTriggerMigration:
             new=AsyncMock(return_value=mock_result),
         ):
             engagement_id = uuid.uuid4()
-            response = await governance_client.post(
-                f"/api/v1/governance/migrate/{engagement_id}"
-            )
+            response = await governance_client.post(f"/api/v1/governance/migrate/{engagement_id}")
 
         data = response.json()
         required_fields = [
@@ -835,9 +801,7 @@ class TestCheckSLAAndCreateAlerts:
             new=AsyncMock(return_value=mock_alerts),
         ):
             engagement_id = uuid.uuid4()
-            response = await governance_client.post(
-                f"/api/v1/governance/alerts/{engagement_id}"
-            )
+            response = await governance_client.post(f"/api/v1/governance/alerts/{engagement_id}")
 
         assert response.status_code == 200
         data = response.json()
@@ -856,9 +820,7 @@ class TestCheckSLAAndCreateAlerts:
             new=AsyncMock(return_value=[]),
         ):
             engagement_id = uuid.uuid4()
-            response = await governance_client.post(
-                f"/api/v1/governance/alerts/{engagement_id}"
-            )
+            response = await governance_client.post(f"/api/v1/governance/alerts/{engagement_id}")
 
         assert response.status_code == 200
         assert response.json() == []
@@ -874,9 +836,7 @@ class TestCheckSLAAndCreateAlerts:
             new=AsyncMock(return_value=[]),
         ):
             engagement_id = uuid.uuid4()
-            await governance_client.post(
-                f"/api/v1/governance/alerts/{engagement_id}"
-            )
+            await governance_client.post(f"/api/v1/governance/alerts/{engagement_id}")
 
         mock_db_session.commit.assert_called()
 
@@ -908,14 +868,10 @@ class TestGetGovernanceHealth:
         evidence_result = MagicMock()
         evidence_result.scalars.return_value.all.return_value = []
 
-        mock_db_session.execute = AsyncMock(
-            side_effect=[list_result, evidence_result]
-        )
+        mock_db_session.execute = AsyncMock(side_effect=[list_result, evidence_result])
 
         engagement_id = uuid.uuid4()
-        response = await governance_client.get(
-            f"/api/v1/governance/health/{engagement_id}"
-        )
+        response = await governance_client.get(f"/api/v1/governance/health/{engagement_id}")
 
         assert response.status_code == 200
         data = response.json()
@@ -936,9 +892,7 @@ class TestGetGovernanceHealth:
         mock_db_session.execute = AsyncMock(return_value=list_result)
 
         engagement_id = uuid.uuid4()
-        response = await governance_client.get(
-            f"/api/v1/governance/health/{engagement_id}"
-        )
+        response = await governance_client.get(f"/api/v1/governance/health/{engagement_id}")
 
         assert response.status_code == 200
         data = response.json()
@@ -964,14 +918,10 @@ class TestGetGovernanceHealth:
         evidence_result = MagicMock()
         evidence_result.scalars.return_value.all.return_value = []
 
-        mock_db_session.execute = AsyncMock(
-            side_effect=[list_result, evidence_result]
-        )
+        mock_db_session.execute = AsyncMock(side_effect=[list_result, evidence_result])
 
         engagement_id = uuid.uuid4()
-        response = await governance_client.get(
-            f"/api/v1/governance/health/{engagement_id}"
-        )
+        response = await governance_client.get(f"/api/v1/governance/health/{engagement_id}")
 
         data = response.json()
         assert len(data["entries"]) == 1

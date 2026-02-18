@@ -68,11 +68,7 @@ async def export_governance_package(
     # ------------------------------------------------------------------ #
     # 1. Catalog entries
     # ------------------------------------------------------------------ #
-    result = await session.execute(
-        select(DataCatalogEntry).where(
-            DataCatalogEntry.engagement_id == engagement_id
-        )
-    )
+    result = await session.execute(select(DataCatalogEntry).where(DataCatalogEntry.engagement_id == engagement_id))
     entries: list[DataCatalogEntry] = list(result.scalars().all())
 
     catalog_data = [
@@ -110,9 +106,7 @@ async def export_governance_package(
         .join(
             EvidenceLineage.evidence_item,
         )
-        .where(
-            EvidenceLineage.evidence_item.has(engagement_id=engagement_id)
-        )
+        .where(EvidenceLineage.evidence_item.has(engagement_id=engagement_id))
     )
     lineage_records = list(lineage_result.scalars().all())
 
@@ -144,23 +138,25 @@ async def export_governance_package(
     quality_results = []
     for entry in entries:
         sla_result = await check_quality_sla(session, entry)
-        quality_results.append({
-            "entry_id": entry.id,
-            "dataset_name": entry.dataset_name,
-            "layer": entry.layer.value,
-            "passing": sla_result.passing,
-            "evidence_count": sla_result.evidence_count,
-            "checked_at": sla_result.checked_at,
-            "violations": [
-                {
-                    "metric": v.metric,
-                    "threshold": v.threshold,
-                    "actual": v.actual,
-                    "message": v.message,
-                }
-                for v in sla_result.violations
-            ],
-        })
+        quality_results.append(
+            {
+                "entry_id": entry.id,
+                "dataset_name": entry.dataset_name,
+                "layer": entry.layer.value,
+                "passing": sla_result.passing,
+                "evidence_count": sla_result.evidence_count,
+                "checked_at": sla_result.checked_at,
+                "violations": [
+                    {
+                        "metric": v.metric,
+                        "threshold": v.threshold,
+                        "actual": v.actual,
+                        "message": v.message,
+                    }
+                    for v in sla_result.violations
+                ],
+            }
+        )
 
     quality_report = {
         "engagement_id": engagement_id,

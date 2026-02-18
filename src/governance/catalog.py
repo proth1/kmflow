@@ -93,9 +93,7 @@ class DataCatalogService:
         Returns:
             The DataCatalogEntry, or None if not found.
         """
-        result = await self._session.execute(
-            select(DataCatalogEntry).where(DataCatalogEntry.id == entry_id)
-        )
+        result = await self._session.execute(select(DataCatalogEntry).where(DataCatalogEntry.id == entry_id))
         return result.scalar_one_or_none()
 
     async def list_entries(
@@ -226,9 +224,7 @@ class DataCatalogService:
         Returns:
             List of matching DataCatalogEntry records.
         """
-        query = select(DataCatalogEntry).where(
-            DataCatalogEntry.classification == classification
-        )
+        query = select(DataCatalogEntry).where(DataCatalogEntry.classification == classification)
 
         if engagement_id is not None:
             query = query.where(DataCatalogEntry.engagement_id == engagement_id)

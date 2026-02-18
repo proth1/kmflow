@@ -90,6 +90,7 @@ async def _run(args: argparse.Namespace) -> int:
 
     if args.storage_backend == "delta":
         from src.datalake.backend import DeltaLakeBackend
+
         storage = DeltaLakeBackend(base_path=args.base_path)
     else:
         storage = LocalFilesystemBackend(base_path=args.base_path)

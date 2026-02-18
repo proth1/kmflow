@@ -334,8 +334,6 @@ class TestFilterMethods:
         session = _make_session(scalars_result=[entry])
         svc = DataCatalogService(session)
 
-        result = await svc.get_entries_by_layer(
-            DataLayer.BRONZE, engagement_id=engagement_id
-        )
+        result = await svc.get_entries_by_layer(DataLayer.BRONZE, engagement_id=engagement_id)
 
         assert len(result) == 1

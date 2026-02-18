@@ -69,11 +69,13 @@ async def generate_recommendations_graph(
         )
         strong_patterns: list[dict[str, Any]] = []
         async for record in well_connected_result:
-            strong_patterns.append({
-                "name": record["name"],
-                "label": record["label"],
-                "relationship_count": record["rel_count"],
-            })
+            strong_patterns.append(
+                {
+                    "name": record["name"],
+                    "label": record["label"],
+                    "relationship_count": record["rel_count"],
+                }
+            )
 
     # Generate recommendations
     severity_order = {"high": 0, "medium": 1, "low": 2}
@@ -104,9 +106,7 @@ async def generate_recommendations_graph(
         # Add dimension-specific remediation guidance
         if gap_type == "dimension_coverage":
             dimension = gap.get("dimension", "")
-            recommendation["remediation_strategy"] = _get_dimension_remediation(
-                dimension, node_counts
-            )
+            recommendation["remediation_strategy"] = _get_dimension_remediation(dimension, node_counts)
 
         recommendations.append(recommendation)
 

@@ -69,27 +69,16 @@ def validate_schema() -> list[str]:
             endpoints = defn.get(endpoint_key, [])
             for ep_label in endpoints:
                 if ep_label not in node_labels:
-                    errors.append(
-                        f"Relationship '{rel_type}' {endpoint_key} references "
-                        f"unknown node type '{ep_label}'"
-                    )
+                    errors.append(f"Relationship '{rel_type}' {endpoint_key} references unknown node type '{ep_label}'")
 
     # Check expected counts (from PRD: 13 node types, 12 relationship types)
     if len(node_labels) != 13:
-        errors.append(
-            f"Expected 13 node types, found {len(node_labels)}: {sorted(node_labels)}"
-        )
+        errors.append(f"Expected 13 node types, found {len(node_labels)}: {sorted(node_labels)}")
     if len(rel_types) != 12:
-        errors.append(
-            f"Expected 12 relationship types, found {len(rel_types)}: {sorted(rel_types)}"
-        )
+        errors.append(f"Expected 12 relationship types, found {len(rel_types)}: {sorted(rel_types)}")
 
     # Check extractable types cover the 5 EntityType enum values
-    extractable = {
-        defn["entity_type"]
-        for defn in ontology["node_types"].values()
-        if defn.get("extractable")
-    }
+    extractable = {defn["entity_type"] for defn in ontology["node_types"].values() if defn.get("extractable")}
     expected_extractable = {"activity", "decision", "role", "system", "document"}
     if extractable != expected_extractable:
         missing = expected_extractable - extractable
@@ -150,9 +139,7 @@ async def validate_neo4j(uri: str, user: str = "neo4j", password: str = "passwor
 
 def main() -> None:
     """Run ontology validation from the command line."""
-    parser = argparse.ArgumentParser(
-        description="Validate KMFlow knowledge graph ontology schema"
-    )
+    parser = argparse.ArgumentParser(description="Validate KMFlow knowledge graph ontology schema")
     parser.add_argument(
         "--neo4j",
         type=str,
@@ -194,9 +181,7 @@ def main() -> None:
     if args.neo4j:
         print()
         print(f"Checking Neo4j at {args.neo4j}...")
-        warnings = asyncio.run(
-            validate_neo4j(args.neo4j, args.neo4j_user, args.neo4j_password)
-        )
+        warnings = asyncio.run(validate_neo4j(args.neo4j, args.neo4j_user, args.neo4j_password))
         if warnings:
             print(f"  {len(warnings)} warning(s):")
             for w in warnings:

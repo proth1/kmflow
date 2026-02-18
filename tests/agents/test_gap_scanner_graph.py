@@ -59,10 +59,10 @@ class TestScanEvidenceGapsGraph:
 
         call_count = [0]
         results_sequence = [
-            _MockResult([{"label": "Activity", "count": 5}]),               # nodes by label
-            _MockResult([{"rel_type": "CO_OCCURS_WITH", "count": 3}]),      # rels by type
+            _MockResult([{"label": "Activity", "count": 5}]),  # nodes by label
+            _MockResult([{"rel_type": "CO_OCCURS_WITH", "count": 3}]),  # rels by type
             _MockResult([{"id": "o1", "name": "Orphan Activity", "label": "Activity"}]),  # orphans
-            _MockResult([]),                                                 # unsupported
+            _MockResult([]),  # unsupported
         ]
 
         async def mock_run(query, **kwargs):
@@ -88,10 +88,10 @@ class TestScanEvidenceGapsGraph:
 
         call_count = [0]
         results_sequence = [
-            _MockResult([]),                                            # nodes by label
-            _MockResult([{"rel_type": "CO_OCCURS_WITH", "count": 5}]), # rels by type (only CO_OCCURS_WITH)
-            _MockResult([]),                                            # orphans
-            _MockResult([]),                                            # unsupported
+            _MockResult([]),  # nodes by label
+            _MockResult([{"rel_type": "CO_OCCURS_WITH", "count": 5}]),  # rels by type (only CO_OCCURS_WITH)
+            _MockResult([]),  # orphans
+            _MockResult([]),  # unsupported
         ]
 
         async def mock_run(query, **kwargs):

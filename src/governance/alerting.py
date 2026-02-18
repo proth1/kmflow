@@ -119,11 +119,7 @@ async def check_and_alert_sla_breaches(
         return []
 
     # Fetch all catalog entries for the engagement
-    rows = await session.execute(
-        select(DataCatalogEntry).where(
-            DataCatalogEntry.engagement_id == eng_uuid
-        )
-    )
+    rows = await session.execute(select(DataCatalogEntry).where(DataCatalogEntry.engagement_id == eng_uuid))
     entries: list[DataCatalogEntry] = list(rows.scalars().all())
 
     if not entries:
@@ -174,9 +170,7 @@ async def check_and_alert_sla_breaches(
                 monitoring_job_id=governance_job.id,
                 severity=AlertSeverity.MEDIUM,
                 status=AlertStatus.NEW,
-                title=(
-                    f"SLA breach: {entry.dataset_name} — {violation.metric}"
-                ),
+                title=(f"SLA breach: {entry.dataset_name} — {violation.metric}"),
                 description=violation.message,
                 deviation_ids=[],
                 dedup_key=dedup_key,

@@ -91,9 +91,7 @@ class TestLocalFilesystemBackend:
 
     @pytest.mark.asyncio
     async def test_write_with_metadata(self, backend: LocalFilesystemBackend) -> None:
-        result = await backend.write(
-            "eng-1", "meta.txt", b"data", metadata={"source": "test"}
-        )
+        result = await backend.write("eng-1", "meta.txt", b"data", metadata={"source": "test"})
         assert result.path != ""
 
     @pytest.mark.asyncio

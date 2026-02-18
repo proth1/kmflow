@@ -138,12 +138,14 @@ class ArisParser(BaseParser):
             target_name = objects.get(target_id, {}).get("name", target_id)
             flow_type = _ARIS_CXN_MAP.get(cxn_type, "unknown")
 
-            connections.append({
-                "source": source_name,
-                "target": target_name,
-                "type": flow_type,
-                "aris_type": cxn_type,
-            })
+            connections.append(
+                {
+                    "source": source_name,
+                    "target": target_name,
+                    "type": flow_type,
+                    "aris_type": cxn_type,
+                }
+            )
 
         # Add a summary fragment for connections
         if connections:

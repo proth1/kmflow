@@ -48,13 +48,17 @@ class TestGenerateRecommendationsGraph:
 
         call_count = [0]
         results_sequence = [
-            _MockResult([
-                {"label": "Activity", "count": 10},
-                {"label": "Role", "count": 5},
-            ]),  # node counts
-            _MockResult([
-                {"name": "Review Invoice", "label": "Activity", "rel_count": 5},
-            ]),  # well-connected nodes
+            _MockResult(
+                [
+                    {"label": "Activity", "count": 10},
+                    {"label": "Role", "count": 5},
+                ]
+            ),  # node counts
+            _MockResult(
+                [
+                    {"name": "Review Invoice", "label": "Activity", "rel_count": 5},
+                ]
+            ),  # well-connected nodes
         ]
 
         async def mock_run(query, **kwargs):
@@ -168,9 +172,7 @@ class TestGetDimensionRemediation:
 
     def test_process_architecture(self) -> None:
         """Should return process-specific remediation."""
-        strategy = _get_dimension_remediation(
-            "process_architecture", {"Process": 2, "Activity": 5}
-        )
+        strategy = _get_dimension_remediation("process_architecture", {"Process": 2, "Activity": 5})
         assert "process" in strategy.lower()
         assert "2" in strategy
 

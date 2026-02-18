@@ -61,10 +61,7 @@ def _uc_schema_name(base_schema: str, layer: str) -> str:
     """
     layer_str = str(layer).lower()
     if layer_str not in _LAYER_SCHEMA_SUFFIX:
-        raise ValueError(
-            f"Unknown data layer: {layer!r}. "
-            f"Must be one of: {list(_LAYER_SCHEMA_SUFFIX)}"
-        )
+        raise ValueError(f"Unknown data layer: {layer!r}. Must be one of: {list(_LAYER_SCHEMA_SUFFIX)}")
     return f"{base_schema}_{_LAYER_SCHEMA_SUFFIX[layer_str]}"
 
 
@@ -100,9 +97,7 @@ def _map_column_type(python_type: str) -> str:
     """
     mapped = _TYPE_MAP.get(python_type.lower())
     if mapped is None:
-        logger.warning(
-            "Unknown column type %r; defaulting to STRING in UC DDL", python_type
-        )
+        logger.warning("Unknown column type %r; defaulting to STRING in UC DDL", python_type)
         return "STRING"
     return mapped
 
@@ -261,8 +256,7 @@ def register_tables(
     """
     if not _HAS_DATABRICKS:
         raise ImportError(
-            "databricks-sdk is required for register_tables. "
-            "Install with: pip install 'kmflow[databricks]'"
+            "databricks-sdk is required for register_tables. Install with: pip install 'kmflow[databricks]'"
         ) from None
 
     # Resolve warehouse ID if not supplied

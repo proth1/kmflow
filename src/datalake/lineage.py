@@ -50,9 +50,7 @@ async def create_lineage_record(
     """
     # Check if lineage already exists for this evidence item
     existing = await session.execute(
-        select(EvidenceLineage).where(
-            EvidenceLineage.evidence_item_id == evidence_item.id
-        )
+        select(EvidenceLineage).where(EvidenceLineage.evidence_item_id == evidence_item.id)
     )
     existing_lineage = existing.scalar_one_or_none()
     if existing_lineage:
@@ -68,9 +66,7 @@ async def create_lineage_record(
                 "action": "uploaded",
                 "source": source_system,
                 "file_name": evidence_item.name,
-                "timestamp": evidence_item.created_at.isoformat()
-                if evidence_item.created_at
-                else None,
+                "timestamp": evidence_item.created_at.isoformat() if evidence_item.created_at else None,
             }
         ]
 
@@ -81,8 +77,7 @@ async def create_lineage_record(
         source_identifier=source_identifier,
         transformation_chain=chain,
         version=1,
-        version_hash=content_hash
-        or hashlib.sha256(str(evidence_item.id).encode()).hexdigest(),
+        version_hash=content_hash or hashlib.sha256(str(evidence_item.id).encode()).hexdigest(),
     )
     session.add(lineage)
     await session.flush()
@@ -124,18 +119,18 @@ async def append_transformation(
     Raises:
         ValueError: If the lineage record is not found.
     """
-    result = await session.execute(
-        select(EvidenceLineage).where(EvidenceLineage.id == lineage_id)
-    )
+    result = await session.execute(select(EvidenceLineage).where(EvidenceLineage.id == lineage_id))
     lineage = result.scalar_one_or_none()
     if not lineage:
         raise ValueError(f"Lineage record {lineage_id} not found")
 
     chain = lineage.transformation_chain or []
-    chain.append({
-        "step": step_name,
-        **(details or {}),
-    })
+    chain.append(
+        {
+            "step": step_name,
+            **(details or {}),
+        }
+    )
     lineage.transformation_chain = chain
 
     return lineage
@@ -170,7 +165,5 @@ async def get_lineage_by_id(
     lineage_id: uuid.UUID,
 ) -> EvidenceLineage | None:
     """Get a single lineage record by ID."""
-    result = await session.execute(
-        select(EvidenceLineage).where(EvidenceLineage.id == lineage_id)
-    )
+    result = await session.execute(select(EvidenceLineage).where(EvidenceLineage.id == lineage_id))
     return result.scalar_one_or_none()

@@ -75,15 +75,9 @@ def _make_storage_backend() -> AsyncMock:
 def _make_silver_writer() -> AsyncMock:
     """Build a mock SilverLayerWriter."""
     writer = AsyncMock()
-    writer.write_fragments = AsyncMock(
-        return_value={"rows_written": 1, "table_path": "/tmp/silver/frags"}
-    )
-    writer.write_entities = AsyncMock(
-        return_value={"rows_written": 0, "table_path": ""}
-    )
-    writer.write_quality_event = AsyncMock(
-        return_value={"rows_written": 1, "table_path": "/tmp/silver/quality"}
-    )
+    writer.write_fragments = AsyncMock(return_value={"rows_written": 1, "table_path": "/tmp/silver/frags"})
+    writer.write_entities = AsyncMock(return_value={"rows_written": 0, "table_path": ""})
+    writer.write_quality_event = AsyncMock(return_value={"rows_written": 1, "table_path": "/tmp/silver/quality"})
     return writer
 
 
@@ -118,22 +112,15 @@ def _make_session(
 
     # Lineage result
     lineage_result = MagicMock()
-    lineage_result.scalar_one_or_none.return_value = (
-        MagicMock(spec=EvidenceLineage) if lineage_exists else None
-    )
+    lineage_result.scalar_one_or_none.return_value = MagicMock(spec=EvidenceLineage) if lineage_exists else None
 
     # Catalog result (used by _has_catalog_entry and DataCatalogService.get_entry)
     catalog_result = MagicMock()
-    catalog_result.scalar_one_or_none.return_value = (
-        MagicMock(spec=DataCatalogEntry) if catalog_exists else None
-    )
+    catalog_result.scalar_one_or_none.return_value = MagicMock(spec=DataCatalogEntry) if catalog_exists else None
     catalog_result.scalars.return_value.all.return_value = []
 
     # Provide enough side_effects for any number of items
-    session.execute = AsyncMock(
-        side_effect=[items_result]
-        + [lineage_result, catalog_result] * max(len(items), 1) * 5
-    )
+    session.execute = AsyncMock(side_effect=[items_result] + [lineage_result, catalog_result] * max(len(items), 1) * 5)
     return session
 
 
@@ -430,12 +417,15 @@ class TestMigrateEngagement:
         backend = _make_storage_backend()
         writer = _make_silver_writer()
 
-        with patch(
-            "src.governance.migration.create_lineage_record",
-            new=AsyncMock(return_value=MagicMock()),
-        ) as mock_create, patch(
-            "src.governance.migration._read_local_file",
-            return_value=None,
+        with (
+            patch(
+                "src.governance.migration.create_lineage_record",
+                new=AsyncMock(return_value=MagicMock()),
+            ) as mock_create,
+            patch(
+                "src.governance.migration._read_local_file",
+                return_value=None,
+            ),
         ):
             result = await migrate_engagement(
                 session=session,
@@ -455,12 +445,15 @@ class TestMigrateEngagement:
         backend = _make_storage_backend()
         writer = _make_silver_writer()
 
-        with patch(
-            "src.governance.migration.create_lineage_record",
-            new=AsyncMock(),
-        ) as mock_create, patch(
-            "src.governance.migration._read_local_file",
-            return_value=None,
+        with (
+            patch(
+                "src.governance.migration.create_lineage_record",
+                new=AsyncMock(),
+            ) as mock_create,
+            patch(
+                "src.governance.migration._read_local_file",
+                return_value=None,
+            ),
         ):
             result = await migrate_engagement(
                 session=session,
@@ -480,16 +473,20 @@ class TestMigrateEngagement:
         backend = _make_storage_backend()
         writer = _make_silver_writer()
 
-        with patch(
-            "src.governance.migration.create_lineage_record",
-            new=AsyncMock(return_value=MagicMock()),
-        ), patch(
-            "src.governance.migration._read_local_file",
-            return_value=None,
-        ), patch(
-            "src.governance.migration.DataCatalogService.create_entry",
-            new=AsyncMock(return_value=MagicMock()),
-        ) as mock_cat:
+        with (
+            patch(
+                "src.governance.migration.create_lineage_record",
+                new=AsyncMock(return_value=MagicMock()),
+            ),
+            patch(
+                "src.governance.migration._read_local_file",
+                return_value=None,
+            ),
+            patch(
+                "src.governance.migration.DataCatalogService.create_entry",
+                new=AsyncMock(return_value=MagicMock()),
+            ) as mock_cat,
+        ):
             result = await migrate_engagement(
                 session=session,
                 engagement_id=engagement_id,

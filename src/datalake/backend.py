@@ -263,16 +263,18 @@ class DeltaLakeBackend:
             if not DeltaTable.is_deltatable(self._table_path):
                 from deltalake import write_deltalake
 
-                schema = pa.schema([
-                    ("id", pa.string()),
-                    ("engagement_id", pa.string()),
-                    ("file_name", pa.string()),
-                    ("file_path", pa.string()),
-                    ("content_hash", pa.string()),
-                    ("size_bytes", pa.int64()),
-                    ("stored_at", pa.string()),
-                    ("metadata_json", pa.string()),
-                ])
+                schema = pa.schema(
+                    [
+                        ("id", pa.string()),
+                        ("engagement_id", pa.string()),
+                        ("file_name", pa.string()),
+                        ("file_path", pa.string()),
+                        ("content_hash", pa.string()),
+                        ("size_bytes", pa.int64()),
+                        ("stored_at", pa.string()),
+                        ("metadata_json", pa.string()),
+                    ]
+                )
                 # Write empty table to initialize
                 empty_table = pa.table(
                     {col.name: pa.array([], type=col.type) for col in schema},
@@ -317,16 +319,18 @@ class DeltaLakeBackend:
             f.write(content)
 
         # Append metadata row to Delta table
-        row = pa.table({
-            "id": [record_id],
-            "engagement_id": [engagement_id],
-            "file_name": [file_name],
-            "file_path": [str(file_path)],
-            "content_hash": [content_hash],
-            "size_bytes": [len(content)],
-            "stored_at": [now],
-            "metadata_json": [json.dumps(metadata) if metadata else "{}"],
-        })
+        row = pa.table(
+            {
+                "id": [record_id],
+                "engagement_id": [engagement_id],
+                "file_name": [file_name],
+                "file_path": [str(file_path)],
+                "content_hash": [content_hash],
+                "size_bytes": [len(content)],
+                "stored_at": [now],
+                "metadata_json": [json.dumps(metadata) if metadata else "{}"],
+            }
+        )
         write_deltalake(self._table_path, row, mode="append")
 
         # Get current table version
@@ -446,7 +450,4 @@ def get_storage_backend(
 
         return DatabricksBackend(**kwargs)
     else:
-        raise ValueError(
-            f"Unknown storage backend: {backend_type}. "
-            f"Must be one of: local, delta, databricks"
-        )
+        raise ValueError(f"Unknown storage backend: {backend_type}. Must be one of: local, delta, databricks")

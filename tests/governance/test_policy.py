@@ -406,9 +406,7 @@ class TestDefaultPolicyFile:
 
     def test_default_bronze_retention_limit(self) -> None:
         engine = PolicyEngine()
-        bronze_limit = (
-            engine.policies["retention"]["max_days_by_layer"]["bronze"]
-        )
+        bronze_limit = engine.policies["retention"]["max_days_by_layer"]["bronze"]
         assert bronze_limit == 365
 
     def test_default_gold_retention_unlimited(self) -> None:

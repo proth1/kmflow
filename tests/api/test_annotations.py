@@ -15,7 +15,16 @@ class TestAnnotationModel:
     def test_annotation_has_required_columns(self) -> None:
         """Should have all required columns."""
         column_names = {c.key for c in Annotation.__table__.columns}
-        required = {"id", "engagement_id", "target_type", "target_id", "author_id", "content", "created_at", "updated_at"}
+        required = {
+            "id",
+            "engagement_id",
+            "target_type",
+            "target_id",
+            "author_id",
+            "content",
+            "created_at",
+            "updated_at",
+        }
         assert required.issubset(column_names)
 
 

@@ -10,24 +10,28 @@ import pytest
 from src.core.models import FragmentType
 from src.evidence.parsers.saas_parser import SaaSExportsParser
 
-SAMPLE_SALESFORCE_JSON = json.dumps([
-    {"Id": "001A000001", "Name": "Acme Corp", "Type": "Account", "Industry": "Technology"},
-    {"Id": "001A000002", "Name": "Globex Inc", "Type": "Account", "Industry": "Finance"},
-])
+SAMPLE_SALESFORCE_JSON = json.dumps(
+    [
+        {"Id": "001A000001", "Name": "Acme Corp", "Type": "Account", "Industry": "Technology"},
+        {"Id": "001A000002", "Name": "Globex Inc", "Type": "Account", "Industry": "Finance"},
+    ]
+)
 
 SAMPLE_SAP_CSV = """material_id,description,plant,MARA_type
 MAT001,Widget A,1000,FERT
 MAT002,Widget B,2000,ROH
 """
 
-SAMPLE_SERVICENOW_JSON = json.dumps({
-    "export_date": "2024-06-15T10:00:00Z",
-    "table": "incident",
-    "records": [
-        {"number": "INC001", "short_description": "Login issue", "priority": "2"},
-        {"number": "INC002", "short_description": "Email down", "priority": "1"},
-    ],
-})
+SAMPLE_SERVICENOW_JSON = json.dumps(
+    {
+        "export_date": "2024-06-15T10:00:00Z",
+        "table": "incident",
+        "records": [
+            {"number": "INC001", "short_description": "Login issue", "priority": "2"},
+            {"number": "INC002", "short_description": "Email down", "priority": "1"},
+        ],
+    }
+)
 
 
 class TestSaaSExportsParser:

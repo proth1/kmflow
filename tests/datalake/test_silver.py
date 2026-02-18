@@ -75,9 +75,7 @@ class TestSilverLayerWriter:
         assert result["rows_written"] == 1
 
     @pytest.mark.asyncio
-    async def test_json_fallback_creates_readable_files(
-        self, writer: SilverLayerWriter, tmp_path
-    ) -> None:
+    async def test_json_fallback_creates_readable_files(self, writer: SilverLayerWriter, tmp_path) -> None:
         """Verify JSON fallback files are valid JSON."""
         fragments = [
             {"id": "f1", "fragment_type": "text", "content": "hello"},
@@ -97,9 +95,7 @@ class TestSilverLayerWriter:
             assert data[0]["content"] == "hello"
 
     @pytest.mark.asyncio
-    async def test_quality_event_computes_overall_score(
-        self, writer: SilverLayerWriter
-    ) -> None:
+    async def test_quality_event_computes_overall_score(self, writer: SilverLayerWriter) -> None:
         scores = {
             "completeness": 0.80,
             "reliability": 0.80,

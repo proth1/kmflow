@@ -86,11 +86,13 @@ async def scan_evidence_gaps_graph(
         )
         orphaned_nodes: list[dict[str, str]] = []
         async for record in orphan_result:
-            orphaned_nodes.append({
-                "id": record["id"],
-                "name": record["name"] or "Unknown",
-                "label": record["label"],
-            })
+            orphaned_nodes.append(
+                {
+                    "id": record["id"],
+                    "name": record["name"] or "Unknown",
+                    "label": record["label"],
+                }
+            )
 
         # Check for Evidence nodes without SUPPORTED_BY
         unsupported_result = await session.run(
@@ -105,11 +107,13 @@ async def scan_evidence_gaps_graph(
         )
         unsupported: list[dict[str, str]] = []
         async for record in unsupported_result:
-            unsupported.append({
-                "id": record["id"],
-                "name": record["name"] or "Unknown",
-                "label": record["label"],
-            })
+            unsupported.append(
+                {
+                    "id": record["id"],
+                    "name": record["name"] or "Unknown",
+                    "label": record["label"],
+                }
+            )
 
     # Calculate dimension coverage scores
     dimension_scores: dict[str, float] = {}
@@ -129,48 +133,56 @@ async def scan_evidence_gaps_graph(
     for dimension, score in dimension_scores.items():
         if score < coverage_threshold:
             severity = "high" if score < 0.3 else "medium"
-            gaps.append({
-                "gap_type": "dimension_coverage",
-                "severity": severity,
-                "dimension": dimension,
-                "coverage_score": score,
-                "description": f"Dimension '{dimension}' has low graph coverage (score: {score:.2f})",
-                "recommendation": f"Add more evidence related to {dimension.replace('_', ' ')}",
-            })
+            gaps.append(
+                {
+                    "gap_type": "dimension_coverage",
+                    "severity": severity,
+                    "dimension": dimension,
+                    "coverage_score": score,
+                    "description": f"Dimension '{dimension}' has low graph coverage (score: {score:.2f})",
+                    "recommendation": f"Add more evidence related to {dimension.replace('_', ' ')}",
+                }
+            )
 
     # Orphaned node gaps
     for node in orphaned_nodes:
-        gaps.append({
-            "gap_type": "orphaned_node",
-            "severity": "medium",
-            "element_name": node["name"],
-            "element_id": node["id"],
-            "description": f"{node['label']} '{node['name']}' has no relationships",
-            "recommendation": f"Add evidence linking '{node['name']}' to other elements",
-        })
+        gaps.append(
+            {
+                "gap_type": "orphaned_node",
+                "severity": "medium",
+                "element_name": node["name"],
+                "element_id": node["id"],
+                "description": f"{node['label']} '{node['name']}' has no relationships",
+                "recommendation": f"Add evidence linking '{node['name']}' to other elements",
+            }
+        )
 
     # Unsupported process elements
     for node in unsupported:
-        gaps.append({
-            "gap_type": "unsupported_process",
-            "severity": "high",
-            "element_name": node["name"],
-            "element_id": node["id"],
-            "description": f"{node['label']} '{node['name']}' lacks evidence support",
-            "recommendation": f"Collect evidence supporting '{node['name']}'",
-        })
+        gaps.append(
+            {
+                "gap_type": "unsupported_process",
+                "severity": "high",
+                "element_name": node["name"],
+                "element_id": node["id"],
+                "description": f"{node['label']} '{node['name']}' lacks evidence support",
+                "recommendation": f"Collect evidence supporting '{node['name']}'",
+            }
+        )
 
     # Missing bridge relationship types
     expected_bridge_types = {"SUPPORTED_BY", "GOVERNED_BY", "IMPLEMENTS", "DEVIATES_FROM"}
     missing_bridges = expected_bridge_types - set(rels_by_type.keys())
     for bridge_type in missing_bridges:
-        gaps.append({
-            "gap_type": "missing_bridge_type",
-            "severity": "low",
-            "element_name": bridge_type,
-            "description": f"No {bridge_type} relationships exist in the graph",
-            "recommendation": f"Run semantic bridges to create {bridge_type} relationships",
-        })
+        gaps.append(
+            {
+                "gap_type": "missing_bridge_type",
+                "severity": "low",
+                "element_name": bridge_type,
+                "description": f"No {bridge_type} relationships exist in the graph",
+                "recommendation": f"Run semantic bridges to create {bridge_type} relationships",
+            }
+        )
 
     total_nodes = sum(nodes_by_label.values())
     total_rels = sum(rels_by_type.values())
@@ -186,9 +198,7 @@ async def scan_evidence_gaps_graph(
             "nodes_by_label": nodes_by_label,
             "relationships_by_type": rels_by_type,
             "gap_count": len(gaps),
-            "dimensions_below_threshold": sum(
-                1 for s in dimension_scores.values() if s < coverage_threshold
-            ),
+            "dimensions_below_threshold": sum(1 for s in dimension_scores.values() if s < coverage_threshold),
         },
     }
 

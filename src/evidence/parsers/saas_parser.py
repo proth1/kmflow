@@ -25,20 +25,48 @@ _EXTENSION_TO_SYSTEM: dict[str, str] = {
 }
 
 # Known SaaS entity patterns for metadata enrichment
-_SALESFORCE_OBJECTS = frozenset({
-    "Account", "Contact", "Opportunity", "Lead", "Case",
-    "Campaign", "Task", "Event", "User", "Profile",
-})
+_SALESFORCE_OBJECTS = frozenset(
+    {
+        "Account",
+        "Contact",
+        "Opportunity",
+        "Lead",
+        "Case",
+        "Campaign",
+        "Task",
+        "Event",
+        "User",
+        "Profile",
+    }
+)
 
-_SAP_OBJECTS = frozenset({
-    "BKPF", "BSEG", "MARA", "MARC", "VBAK", "VBAP",
-    "EKKO", "EKPO", "KNA1", "LFA1",
-})
+_SAP_OBJECTS = frozenset(
+    {
+        "BKPF",
+        "BSEG",
+        "MARA",
+        "MARC",
+        "VBAK",
+        "VBAP",
+        "EKKO",
+        "EKPO",
+        "KNA1",
+        "LFA1",
+    }
+)
 
-_SERVICENOW_OBJECTS = frozenset({
-    "incident", "change_request", "problem", "cmdb_ci",
-    "sys_user", "task", "kb_knowledge", "sc_request",
-})
+_SERVICENOW_OBJECTS = frozenset(
+    {
+        "incident",
+        "change_request",
+        "problem",
+        "cmdb_ci",
+        "sys_user",
+        "task",
+        "kb_knowledge",
+        "sc_request",
+    }
+)
 
 
 class SaaSExportsParser(BaseParser):

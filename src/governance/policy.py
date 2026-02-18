@@ -135,9 +135,7 @@ class PolicyEngine:
 
         return violations
 
-    def _check_classification_required(
-        self, entry: DataCatalogEntry
-    ) -> list[PolicyViolation]:
+    def _check_classification_required(self, entry: DataCatalogEntry) -> list[PolicyViolation]:
         """Check that classification is set for layers that require it."""
         violations: list[PolicyViolation] = []
         cfg: dict[str, Any] = self._raw.get("classification_required", {})
@@ -171,9 +169,7 @@ class PolicyEngine:
 
         return violations
 
-    def _check_quality_sla_required(
-        self, entry: DataCatalogEntry
-    ) -> list[PolicyViolation]:
+    def _check_quality_sla_required(self, entry: DataCatalogEntry) -> list[PolicyViolation]:
         """Check that quality_sla is set for layers that require it."""
         violations: list[PolicyViolation] = []
         cfg: dict[str, Any] = self._raw.get("quality_sla_required", {})
@@ -200,9 +196,7 @@ class PolicyEngine:
 
         return violations
 
-    def _check_naming_convention(
-        self, entry: DataCatalogEntry
-    ) -> list[PolicyViolation]:
+    def _check_naming_convention(self, entry: DataCatalogEntry) -> list[PolicyViolation]:
         """Check dataset_name against the configured regex pattern."""
         violations: list[PolicyViolation] = []
         cfg: dict[str, Any] = self._raw.get("naming_convention", {})

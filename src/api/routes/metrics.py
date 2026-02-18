@@ -217,9 +217,7 @@ async def list_readings(
 ) -> dict[str, Any]:
     """List metric readings for an engagement."""
     query = select(MetricReading).where(MetricReading.engagement_id == engagement_id)
-    count_query = (
-        select(func.count()).select_from(MetricReading).where(MetricReading.engagement_id == engagement_id)
-    )
+    count_query = select(func.count()).select_from(MetricReading).where(MetricReading.engagement_id == engagement_id)
 
     if metric_id is not None:
         query = query.where(MetricReading.metric_id == metric_id)
@@ -281,9 +279,7 @@ async def get_metric_summary(
         .where(MetricReading.engagement_id == engagement_id)
         .subquery()
     )
-    latest_query = select(latest_subq.c.metric_id, latest_subq.c.value).where(
-        latest_subq.c.rn == 1
-    )
+    latest_query = select(latest_subq.c.metric_id, latest_subq.c.value).where(latest_subq.c.rn == 1)
     latest_result = await session.execute(latest_query)
     latest_by_metric: dict[Any, float] = {row.metric_id: row.value for row in latest_result}
 
@@ -329,9 +325,7 @@ async def seed_metrics(
     seeds = get_metric_seeds()
     count = 0
     for seed_data in seeds:
-        existing = await session.execute(
-            select(SuccessMetric).where(SuccessMetric.name == seed_data["name"])
-        )
+        existing = await session.execute(select(SuccessMetric).where(SuccessMetric.name == seed_data["name"]))
         if existing.scalar_one_or_none() is None:
             metric = SuccessMetric(**seed_data)
             session.add(metric)

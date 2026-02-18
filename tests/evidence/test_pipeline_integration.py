@@ -34,9 +34,7 @@ class TestExtractFragmentEntities:
     @pytest.mark.asyncio
     async def test_extracts_entities_from_fragments(self) -> None:
         """Should extract entities and store as fragment metadata."""
-        frag = _make_fragment(
-            "The Procurement Manager uses SAP to Process Purchase Orders and Review Invoices"
-        )
+        frag = _make_fragment("The Procurement Manager uses SAP to Process Purchase Orders and Review Invoices")
         results = await extract_fragment_entities([frag], "eng-1")
 
         assert len(results) == 1
@@ -82,19 +80,19 @@ class TestBuildFragmentGraph:
         """Should create graph nodes from fragment entity metadata."""
         frag = _make_fragment("Review Invoice in SAP")
         # Pre-populate entity metadata
-        frag.metadata_json = json.dumps({
-            "entities": [
-                {"id": "e1", "type": "activity", "name": "Review Invoice", "confidence": 0.7},
-                {"id": "e2", "type": "system", "name": "SAP", "confidence": 0.9},
-            ],
-            "entity_count": 2,
-        })
+        frag.metadata_json = json.dumps(
+            {
+                "entities": [
+                    {"id": "e1", "type": "activity", "name": "Review Invoice", "confidence": 0.7},
+                    {"id": "e2", "type": "system", "name": "SAP", "confidence": 0.9},
+                ],
+                "entity_count": 2,
+            }
+        )
 
         mock_driver = AsyncMock()
         mock_graph_service = AsyncMock()
-        mock_graph_service.create_node = AsyncMock(
-            side_effect=lambda label, props: MagicMock(id=props["id"])
-        )
+        mock_graph_service.create_node = AsyncMock(side_effect=lambda label, props: MagicMock(id=props["id"]))
         mock_graph_service.create_relationship = AsyncMock()
 
         with patch("src.semantic.graph.KnowledgeGraphService", return_value=mock_graph_service):
@@ -189,9 +187,7 @@ class TestRunIntelligencePipeline:
     @pytest.mark.asyncio
     async def test_full_pipeline_runs_all_steps(self) -> None:
         """Should run extraction, graph, embeddings, and bridges."""
-        frag = _make_fragment(
-            "The Procurement Manager uses SAP to Process Purchase Orders"
-        )
+        frag = _make_fragment("The Procurement Manager uses SAP to Process Purchase Orders")
         session = AsyncMock()
 
         with (

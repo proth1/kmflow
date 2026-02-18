@@ -44,6 +44,7 @@ class SilverLayerWriter:
         """Check if deltalake is available."""
         try:
             import deltalake  # noqa: F401
+
             return True
         except ImportError:
             return False
@@ -73,20 +74,18 @@ class SilverLayerWriter:
 
         rows = []
         for frag in fragments:
-            rows.append({
-                "id": str(frag.get("id", uuid.uuid4())),
-                "engagement_id": engagement_id,
-                "evidence_item_id": evidence_item_id,
-                "fragment_type": str(frag.get("fragment_type", "text")),
-                "content": frag.get("content", ""),
-                "content_hash": hashlib.sha256(
-                    frag.get("content", "").encode()
-                ).hexdigest(),
-                "metadata_json": json.dumps(frag.get("metadata_json"))
-                if frag.get("metadata_json")
-                else "{}",
-                "written_at": now,
-            })
+            rows.append(
+                {
+                    "id": str(frag.get("id", uuid.uuid4())),
+                    "engagement_id": engagement_id,
+                    "evidence_item_id": evidence_item_id,
+                    "fragment_type": str(frag.get("fragment_type", "text")),
+                    "content": frag.get("content", ""),
+                    "content_hash": hashlib.sha256(frag.get("content", "").encode()).hexdigest(),
+                    "metadata_json": json.dumps(frag.get("metadata_json")) if frag.get("metadata_json") else "{}",
+                    "written_at": now,
+                }
+            )
 
         if self._has_delta:
             return self._write_delta_fragments(table_path, rows)
@@ -117,16 +116,18 @@ class SilverLayerWriter:
 
         rows = []
         for entity in entities:
-            rows.append({
-                "id": uuid.uuid4().hex,
-                "engagement_id": engagement_id,
-                "evidence_item_id": evidence_item_id,
-                "fragment_id": str(entity.get("fragment_id", "")),
-                "entity_type": str(entity.get("entity_type", "")),
-                "value": str(entity.get("value", "")),
-                "confidence": float(entity.get("confidence", 0.0)),
-                "written_at": now,
-            })
+            rows.append(
+                {
+                    "id": uuid.uuid4().hex,
+                    "engagement_id": engagement_id,
+                    "evidence_item_id": evidence_item_id,
+                    "fragment_id": str(entity.get("fragment_id", "")),
+                    "entity_type": str(entity.get("entity_type", "")),
+                    "value": str(entity.get("value", "")),
+                    "confidence": float(entity.get("confidence", 0.0)),
+                    "written_at": now,
+                }
+            )
 
         if self._has_delta:
             return self._write_delta_entities(table_path, rows)
@@ -167,23 +168,23 @@ class SilverLayerWriter:
             return self._write_delta_quality(table_path, [row])
         return self._write_json_fallback(table_path, [row], "quality")
 
-    def _write_delta_fragments(
-        self, table_path: str, rows: list[dict]
-    ) -> dict[str, Any]:
+    def _write_delta_fragments(self, table_path: str, rows: list[dict]) -> dict[str, Any]:
         """Write fragment rows to a Delta table."""
         import pyarrow as pa
         from deltalake import DeltaTable, write_deltalake
 
-        schema = pa.schema([
-            ("id", pa.string()),
-            ("engagement_id", pa.string()),
-            ("evidence_item_id", pa.string()),
-            ("fragment_type", pa.string()),
-            ("content", pa.string()),
-            ("content_hash", pa.string()),
-            ("metadata_json", pa.string()),
-            ("written_at", pa.string()),
-        ])
+        schema = pa.schema(
+            [
+                ("id", pa.string()),
+                ("engagement_id", pa.string()),
+                ("evidence_item_id", pa.string()),
+                ("fragment_type", pa.string()),
+                ("content", pa.string()),
+                ("content_hash", pa.string()),
+                ("metadata_json", pa.string()),
+                ("written_at", pa.string()),
+            ]
+        )
 
         table = pa.table(
             {col.name: [r[col.name] for r in rows] for col in schema},
@@ -197,27 +198,28 @@ class SilverLayerWriter:
 
         logger.info(
             "Wrote %d fragment rows to Silver Delta table %s",
-            len(rows), table_path,
+            len(rows),
+            table_path,
         )
         return {"rows_written": len(rows), "table_path": table_path}
 
-    def _write_delta_entities(
-        self, table_path: str, rows: list[dict]
-    ) -> dict[str, Any]:
+    def _write_delta_entities(self, table_path: str, rows: list[dict]) -> dict[str, Any]:
         """Write entity rows to a Delta table."""
         import pyarrow as pa
         from deltalake import DeltaTable, write_deltalake
 
-        schema = pa.schema([
-            ("id", pa.string()),
-            ("engagement_id", pa.string()),
-            ("evidence_item_id", pa.string()),
-            ("fragment_id", pa.string()),
-            ("entity_type", pa.string()),
-            ("value", pa.string()),
-            ("confidence", pa.float64()),
-            ("written_at", pa.string()),
-        ])
+        schema = pa.schema(
+            [
+                ("id", pa.string()),
+                ("engagement_id", pa.string()),
+                ("evidence_item_id", pa.string()),
+                ("fragment_id", pa.string()),
+                ("entity_type", pa.string()),
+                ("value", pa.string()),
+                ("confidence", pa.float64()),
+                ("written_at", pa.string()),
+            ]
+        )
 
         table = pa.table(
             {col.name: [r[col.name] for r in rows] for col in schema},
@@ -231,28 +233,29 @@ class SilverLayerWriter:
 
         logger.info(
             "Wrote %d entity rows to Silver Delta table %s",
-            len(rows), table_path,
+            len(rows),
+            table_path,
         )
         return {"rows_written": len(rows), "table_path": table_path}
 
-    def _write_delta_quality(
-        self, table_path: str, rows: list[dict]
-    ) -> dict[str, Any]:
+    def _write_delta_quality(self, table_path: str, rows: list[dict]) -> dict[str, Any]:
         """Write quality event rows to a Delta table."""
         import pyarrow as pa
         from deltalake import DeltaTable, write_deltalake
 
-        schema = pa.schema([
-            ("id", pa.string()),
-            ("engagement_id", pa.string()),
-            ("evidence_item_id", pa.string()),
-            ("completeness_score", pa.float64()),
-            ("reliability_score", pa.float64()),
-            ("freshness_score", pa.float64()),
-            ("consistency_score", pa.float64()),
-            ("overall_score", pa.float64()),
-            ("recorded_at", pa.string()),
-        ])
+        schema = pa.schema(
+            [
+                ("id", pa.string()),
+                ("engagement_id", pa.string()),
+                ("evidence_item_id", pa.string()),
+                ("completeness_score", pa.float64()),
+                ("reliability_score", pa.float64()),
+                ("freshness_score", pa.float64()),
+                ("consistency_score", pa.float64()),
+                ("overall_score", pa.float64()),
+                ("recorded_at", pa.string()),
+            ]
+        )
 
         table = pa.table(
             {col.name: [r[col.name] for r in rows] for col in schema},
@@ -266,13 +269,12 @@ class SilverLayerWriter:
 
         logger.info(
             "Wrote %d quality event rows to Silver Delta table %s",
-            len(rows), table_path,
+            len(rows),
+            table_path,
         )
         return {"rows_written": len(rows), "table_path": table_path}
 
-    def _write_json_fallback(
-        self, table_path: str, rows: list[dict], category: str
-    ) -> dict[str, Any]:
+    def _write_json_fallback(self, table_path: str, rows: list[dict], category: str) -> dict[str, Any]:
         """Fallback: write rows as JSON files when Delta Lake is not installed."""
         fallback_dir = Path(table_path)
         fallback_dir.mkdir(parents=True, exist_ok=True)
@@ -285,6 +287,8 @@ class SilverLayerWriter:
 
         logger.info(
             "Wrote %d %s rows to JSON fallback %s",
-            len(rows), category, file_path,
+            len(rows),
+            category,
+            file_path,
         )
         return {"rows_written": len(rows), "table_path": str(file_path)}

@@ -302,7 +302,9 @@ async def portal_upload(
             file_path=tmp_path,
             file_size=len(content),
             mime_type=file.content_type or "application/octet-stream",
-            category=EvidenceCategory(category) if category in [e.value for e in EvidenceCategory] else EvidenceCategory.DOCUMENTS,
+            category=EvidenceCategory(category)
+            if category in [e.value for e in EvidenceCategory]
+            else EvidenceCategory.DOCUMENTS,
             source="client_portal",
         )
         session.add(evidence)

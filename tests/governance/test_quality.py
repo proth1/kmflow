@@ -177,9 +177,7 @@ class TestMinCompleteness:
         result = await check_quality_sla(session, entry)
 
         assert result.passing is False
-        completeness_violations = [
-            v for v in result.violations if v.metric == "min_completeness"
-        ]
+        completeness_violations = [v for v in result.violations if v.metric == "min_completeness"]
         assert len(completeness_violations) == 1
         assert completeness_violations[0].threshold == 0.8
         assert completeness_violations[0].actual == pytest.approx(0.25)
@@ -200,9 +198,7 @@ class TestMaxFailingFraction:
             _make_evidence_item(quality_score=0.85),
             _make_evidence_item(quality_score=0.2),  # fails min_score
         ]
-        entry = _make_catalog_entry(
-            quality_sla={"min_score": 0.5, "max_failing_fraction": 0.5}
-        )
+        entry = _make_catalog_entry(quality_sla={"min_score": 0.5, "max_failing_fraction": 0.5})
         session = _make_session(items=items)
 
         result = await check_quality_sla(session, entry)
@@ -217,9 +213,7 @@ class TestMaxFailingFraction:
             _make_evidence_item(quality_score=0.1),
             _make_evidence_item(quality_score=0.9),
         ]
-        entry = _make_catalog_entry(
-            quality_sla={"min_score": 0.5, "max_failing_fraction": 0.1}
-        )
+        entry = _make_catalog_entry(quality_sla={"min_score": 0.5, "max_failing_fraction": 0.1})
         session = _make_session(items=items)
 
         result = await check_quality_sla(session, entry)

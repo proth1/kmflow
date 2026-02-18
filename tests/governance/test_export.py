@@ -78,9 +78,7 @@ def _make_session(
         sla_result.scalars.return_value.all.return_value = evidence_items or []
         sla_results.append(sla_result)
 
-    session.execute = AsyncMock(
-        side_effect=[catalog_result, lineage_result] + sla_results
-    )
+    session.execute = AsyncMock(side_effect=[catalog_result, lineage_result] + sla_results)
 
     return session
 

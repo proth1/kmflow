@@ -106,10 +106,7 @@ async def store_file(
                 "content_hash": result.content_hash,
                 **result.extra,
             }
-        raise TypeError(
-            f"storage_backend must implement StorageBackend protocol, "
-            f"got {type(storage_backend).__name__}"
-        )
+        raise TypeError(f"storage_backend must implement StorageBackend protocol, got {type(storage_backend).__name__}")
 
     # Legacy local filesystem fallback
     engagement_dir = Path(evidence_store) / str(engagement_id)
@@ -211,7 +208,11 @@ async def extract_fragment_entities(
             existing_meta = {}
             if fragment.metadata_json:
                 try:
-                    existing_meta = json.loads(fragment.metadata_json) if isinstance(fragment.metadata_json, str) else fragment.metadata_json
+                    existing_meta = (
+                        json.loads(fragment.metadata_json)
+                        if isinstance(fragment.metadata_json, str)
+                        else fragment.metadata_json
+                    )
                 except (json.JSONDecodeError, TypeError):
                     existing_meta = {}
 
@@ -221,11 +222,13 @@ async def extract_fragment_entities(
 
             all_entities.extend(result.entities)
 
-        all_results.append({
-            "fragment_id": str(fragment.id) if fragment.id else None,
-            "entity_count": len(result.entities),
-            "entities": result.entities,
-        })
+        all_results.append(
+            {
+                "fragment_id": str(fragment.id) if fragment.id else None,
+                "entity_count": len(result.entities),
+                "entities": result.entities,
+            }
+        )
 
     # Resolve entities across all fragments
     resolved = resolve_entities(all_entities) if all_entities else []
@@ -277,7 +280,11 @@ async def build_fragment_graph(
             continue
 
         try:
-            meta = json.loads(fragment.metadata_json) if isinstance(fragment.metadata_json, str) else fragment.metadata_json
+            meta = (
+                json.loads(fragment.metadata_json)
+                if isinstance(fragment.metadata_json, str)
+                else fragment.metadata_json
+            )
         except (json.JSONDecodeError, TypeError):
             continue
 
@@ -515,9 +522,7 @@ async def run_intelligence_pipeline(
 
     # Step 1: Entity extraction
     try:
-        extraction_results = await extract_fragment_entities(
-            fragments, str(engagement_id)
-        )
+        extraction_results = await extract_fragment_entities(fragments, str(engagement_id))
         results["entities_extracted"] = sum(r["entity_count"] for r in extraction_results)
         results["entity_details"] = [
             {"type": str(e.entity_type), "name": e.name, "confidence": e.confidence}
@@ -530,9 +535,7 @@ async def run_intelligence_pipeline(
 
     # Step 2: Knowledge graph building
     try:
-        graph_results = await build_fragment_graph(
-            fragments, str(engagement_id), neo4j_driver
-        )
+        graph_results = await build_fragment_graph(fragments, str(engagement_id), neo4j_driver)
         results["graph_nodes"] = graph_results["node_count"]
         results["graph_relationships"] = graph_results["relationship_count"]
         results["errors"].extend(graph_results.get("errors", []))
@@ -542,18 +545,14 @@ async def run_intelligence_pipeline(
 
     # Step 3: Embedding generation
     try:
-        results["embeddings_stored"] = await generate_fragment_embeddings(
-            session, fragments
-        )
+        results["embeddings_stored"] = await generate_fragment_embeddings(session, fragments)
     except Exception as e:
         logger.warning("Embedding generation failed: %s", e)
         results["errors"].append(f"Embedding generation: {e}")
 
     # Step 4: Semantic bridges
     try:
-        bridge_results = await run_semantic_bridges(
-            str(engagement_id), neo4j_driver
-        )
+        bridge_results = await run_semantic_bridges(str(engagement_id), neo4j_driver)
         results["bridge_relationships"] = bridge_results["relationships_created"]
         results["errors"].extend(bridge_results.get("errors", []))
     except Exception as e:
@@ -621,9 +620,7 @@ async def ingest_evidence(
     file_format = detect_format(file_name)
 
     # Step 5: Store file (via storage backend if provided)
-    file_path, storage_meta = await store_file(
-        file_content, file_name, engagement_id, evidence_store, storage_backend
-    )
+    file_path, storage_meta = await store_file(file_content, file_name, engagement_id, evidence_store, storage_backend)
 
     # Step 6: Create evidence item
     delta_path = storage_meta.get("delta_table") if storage_meta else None
@@ -693,16 +690,12 @@ async def ingest_evidence(
                 }
                 for f in fragments
             ]
-            await silver.write_fragments(
-                str(engagement_id), str(evidence_item.id), fragment_dicts
-            )
+            await silver.write_fragments(str(engagement_id), str(evidence_item.id), fragment_dicts)
 
             # Write entities if intelligence pipeline extracted any
             entities = intelligence_results.get("entity_details", [])
             if entities:
-                await silver.write_entities(
-                    str(engagement_id), str(evidence_item.id), entities
-                )
+                await silver.write_entities(str(engagement_id), str(evidence_item.id), entities)
 
             # Write quality event
             await silver.write_quality_event(

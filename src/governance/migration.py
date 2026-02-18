@@ -74,11 +74,7 @@ class MigrationResult:
 
 async def _has_lineage(session: AsyncSession, evidence_item: EvidenceItem) -> bool:
     """Return True if a lineage record already exists for *evidence_item*."""
-    result = await session.execute(
-        select(EvidenceLineage).where(
-            EvidenceLineage.evidence_item_id == evidence_item.id
-        )
-    )
+    result = await session.execute(select(EvidenceLineage).where(EvidenceLineage.evidence_item_id == evidence_item.id))
     return result.scalar_one_or_none() is not None
 
 
@@ -175,9 +171,7 @@ async def migrate_engagement(
         return result
 
     # Fetch all evidence items for the engagement
-    rows = await session.execute(
-        select(EvidenceItem).where(EvidenceItem.engagement_id == eng_uuid)
-    )
+    rows = await session.execute(select(EvidenceItem).where(EvidenceItem.engagement_id == eng_uuid))
     items: list[EvidenceItem] = list(rows.scalars().all())
 
     logger.info(
@@ -297,10 +291,7 @@ async def _migrate_item(
                 engagement_id=item.engagement_id,
                 owner="migration_job",
                 classification=DataClassification.INTERNAL,
-                description=(
-                    f"Migrated evidence item: {item.name} "
-                    f"(category={item.category})"
-                ),
+                description=(f"Migrated evidence item: {item.name} (category={item.category})"),
             )
         result.catalog_entries_created += 1
 
@@ -330,9 +321,7 @@ def _read_local_file(item: EvidenceItem, engagement_id: str) -> bytes | None:
         candidate = Path(item.file_path)
         resolved = candidate.resolve()
         if not str(resolved).startswith(str(base_resolved)):
-            logger.warning(
-                "Path traversal detected for item %s: %s", item.id, item.file_path
-            )
+            logger.warning("Path traversal detected for item %s: %s", item.id, item.file_path)
         elif candidate.exists():
             with contextlib.suppress(OSError):
                 return candidate.read_bytes()
@@ -342,9 +331,7 @@ def _read_local_file(item: EvidenceItem, engagement_id: str) -> bytes | None:
         candidate = evidence_dir / candidate_name
         resolved = candidate.resolve()
         if not str(resolved).startswith(str(base_resolved)):
-            logger.warning(
-                "Path traversal detected for item %s: %s", item.id, candidate
-            )
+            logger.warning("Path traversal detected for item %s: %s", item.id, candidate)
             continue
         if candidate.exists():
             with contextlib.suppress(OSError):

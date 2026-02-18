@@ -107,10 +107,7 @@ async def check_quality_sla(
         )
 
     # Collect quality scores (only items that have a score)
-    scored_items = [
-        item for item in items
-        if hasattr(item, "quality_score") and item.quality_score is not None
-    ]
+    scored_items = [item for item in items if hasattr(item, "quality_score") and item.quality_score is not None]
     scored_count = len(scored_items)
     scores = [float(item.quality_score) for item in scored_items]
 
@@ -141,10 +138,7 @@ async def check_quality_sla(
                     metric="min_score",
                     threshold=min_score,
                     actual=avg_score,
-                    message=(
-                        f"Average quality score {avg_score:.3f} is below "
-                        f"the minimum required {min_score:.3f}."
-                    ),
+                    message=(f"Average quality score {avg_score:.3f} is below the minimum required {min_score:.3f}."),
                 )
             )
 

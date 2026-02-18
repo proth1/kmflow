@@ -172,12 +172,14 @@ class TestBuildColumnDefs:
         assert len(cols) >= 1
 
     def test_typed_columns_mapped(self) -> None:
-        cols = _build_column_defs({
-            "id": "uuid",
-            "size_bytes": "int",
-            "content_hash": "str",
-            "stored_at": "datetime",
-        })
+        cols = _build_column_defs(
+            {
+                "id": "uuid",
+                "size_bytes": "int",
+                "content_hash": "str",
+                "stored_at": "datetime",
+            }
+        )
         joined = " ".join(cols)
         assert "STRING" in joined
         assert "BIGINT" in joined
@@ -368,7 +370,10 @@ class TestRegisterTables:
         client = MagicMock()
         entry = _FakeEntry("t", _DataLayer.BRONZE)
 
-        with patch("src.governance.unity_catalog._HAS_DATABRICKS", False), pytest.raises(ImportError, match="databricks-sdk is required"):
+        with (
+            patch("src.governance.unity_catalog._HAS_DATABRICKS", False),
+            pytest.raises(ImportError, match="databricks-sdk is required"),
+        ):
             register_tables(client, [entry], "cat", "sch")
 
 
