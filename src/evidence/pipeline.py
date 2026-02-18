@@ -106,6 +106,10 @@ async def store_file(
                 "content_hash": result.content_hash,
                 **result.extra,
             }
+        raise TypeError(
+            f"storage_backend must implement StorageBackend protocol, "
+            f"got {type(storage_backend).__name__}"
+        )
 
     # Legacy local filesystem fallback
     engagement_dir = Path(evidence_store) / str(engagement_id)

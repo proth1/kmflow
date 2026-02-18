@@ -49,14 +49,22 @@ class TestLocalFilesystemBackend:
 
     @pytest.mark.asyncio
     async def test_read_nonexistent_raises(self, backend: LocalFilesystemBackend) -> None:
+        # Path within storage boundary but file doesn't exist
+        fake_path = str(backend._base_path / "eng-1" / "missing.txt")
         with pytest.raises(FileNotFoundError):
-            await backend.read("/nonexistent/path.txt")
+            await backend.read(fake_path)
+
+    @pytest.mark.asyncio
+    async def test_read_path_traversal_raises(self, backend: LocalFilesystemBackend) -> None:
+        with pytest.raises(ValueError, match="outside storage boundary"):
+            await backend.read("/etc/passwd")
 
     @pytest.mark.asyncio
     async def test_exists(self, backend: LocalFilesystemBackend) -> None:
         result = await backend.write("eng-1", "check.txt", b"data")
         assert await backend.exists(result.path) is True
-        assert await backend.exists("/nope") is False
+        fake_path = str(backend._base_path / "eng-1" / "nope.txt")
+        assert await backend.exists(fake_path) is False
 
     @pytest.mark.asyncio
     async def test_list_files(self, backend: LocalFilesystemBackend) -> None:
@@ -93,6 +101,23 @@ class TestLocalFilesystemBackend:
     async def test_content_hash_is_sha256(self, backend: LocalFilesystemBackend) -> None:
         result = await backend.write("eng-1", "hash.txt", b"test")
         assert len(result.content_hash) == 64  # SHA-256 hex
+
+    @pytest.mark.asyncio
+    async def test_filename_sanitization(self, backend: LocalFilesystemBackend) -> None:
+        """Filenames with path components are stripped to prevent injection."""
+        result = await backend.write("eng-1", "../../etc/passwd", b"data")
+        assert "etc" not in result.path.split("/")[-1]
+        assert "passwd" in result.path
+
+    @pytest.mark.asyncio
+    async def test_delete_path_traversal_raises(self, backend: LocalFilesystemBackend) -> None:
+        with pytest.raises(ValueError, match="outside storage boundary"):
+            await backend.delete("/tmp/outside.txt")
+
+    @pytest.mark.asyncio
+    async def test_exists_path_traversal_raises(self, backend: LocalFilesystemBackend) -> None:
+        with pytest.raises(ValueError, match="outside storage boundary"):
+            await backend.exists("/tmp/outside.txt")
 
 
 # ---------------------------------------------------------------------------
@@ -131,3 +156,63 @@ class TestGetStorageBackend:
     def test_databricks_not_implemented(self) -> None:
         with pytest.raises(NotImplementedError, match="Phase F"):
             get_storage_backend("databricks")
+
+
+# ---------------------------------------------------------------------------
+# Pipeline integration
+# ---------------------------------------------------------------------------
+
+
+class TestPipelineIntegration:
+    """Test store_file() integration with storage backends."""
+
+    @pytest.mark.asyncio
+    async def test_store_file_returns_tuple(self, tmp_path) -> None:
+        """store_file() returns (path, metadata_dict) tuple."""
+        import uuid as uuid_mod
+
+        from src.evidence.pipeline import store_file
+
+        path, meta = await store_file(
+            file_content=b"test content",
+            file_name="doc.pdf",
+            engagement_id=uuid_mod.uuid4(),
+            evidence_store=str(tmp_path / "store"),
+        )
+        assert isinstance(path, str)
+        assert isinstance(meta, dict)
+        assert meta == {}  # Legacy path returns empty metadata
+
+    @pytest.mark.asyncio
+    async def test_store_file_with_backend(self, tmp_path) -> None:
+        """store_file() delegates to StorageBackend when provided."""
+        import uuid as uuid_mod
+
+        from src.evidence.pipeline import store_file
+
+        backend = LocalFilesystemBackend(base_path=str(tmp_path / "evidence"))
+        path, meta = await store_file(
+            file_content=b"backend content",
+            file_name="via_backend.txt",
+            engagement_id=uuid_mod.uuid4(),
+            storage_backend=backend,
+        )
+        assert isinstance(path, str)
+        assert "via_backend.txt" in path
+        assert meta.get("content_hash") is not None
+        assert meta.get("storage_version") == 1
+
+    @pytest.mark.asyncio
+    async def test_store_file_invalid_backend_raises(self) -> None:
+        """store_file() raises TypeError for non-StorageBackend objects."""
+        import uuid as uuid_mod
+
+        from src.evidence.pipeline import store_file
+
+        with pytest.raises(TypeError, match="StorageBackend protocol"):
+            await store_file(
+                file_content=b"data",
+                file_name="test.txt",
+                engagement_id=uuid_mod.uuid4(),
+                storage_backend="not_a_backend",
+            )

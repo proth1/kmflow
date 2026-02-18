@@ -12,8 +12,8 @@ setting in ``src.core.config.Settings``.
 
 from __future__ import annotations
 
+import hashlib
 import logging
-import os
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -143,7 +143,19 @@ class LocalFilesystemBackend:
     """
 
     def __init__(self, base_path: str = "evidence_store") -> None:
-        self._base_path = Path(base_path)
+        self._base_path = Path(base_path).resolve()
+
+    def _validate_path(self, path: str) -> Path:
+        """Ensure path is within base_path to prevent directory traversal."""
+        resolved = Path(path).resolve()
+        if not str(resolved).startswith(str(self._base_path)):
+            raise ValueError(f"Path is outside storage boundary: {path}")
+        return resolved
+
+    @staticmethod
+    def _sanitize_filename(file_name: str) -> str:
+        """Strip directory components from filename to prevent path injection."""
+        return Path(file_name).name
 
     async def write(
         self,
@@ -152,16 +164,15 @@ class LocalFilesystemBackend:
         content: bytes,
         metadata: dict[str, Any] | None = None,
     ) -> StorageMetadata:
+        safe_name = self._sanitize_filename(file_name)
         engagement_dir = self._base_path / engagement_id
         engagement_dir.mkdir(parents=True, exist_ok=True)
 
-        unique_name = f"{uuid.uuid4().hex[:8]}_{file_name}"
+        unique_name = f"{uuid.uuid4().hex[:8]}_{safe_name}"
         file_path = engagement_dir / unique_name
 
         with open(file_path, "wb") as f:
             f.write(content)
-
-        import hashlib
 
         content_hash = hashlib.sha256(content).hexdigest()
 
@@ -173,13 +184,14 @@ class LocalFilesystemBackend:
         )
 
     async def read(self, path: str) -> bytes:
-        file_path = Path(path)
+        file_path = self._validate_path(path)
         if not file_path.exists():
             raise FileNotFoundError(f"Evidence file not found: {path}")
         return file_path.read_bytes()
 
     async def exists(self, path: str) -> bool:
-        return Path(path).exists()
+        file_path = self._validate_path(path)
+        return file_path.exists()
 
     async def list_files(
         self,
@@ -198,7 +210,7 @@ class LocalFilesystemBackend:
         return sorted(files)
 
     async def delete(self, path: str) -> bool:
-        file_path = Path(path)
+        file_path = self._validate_path(path)
         if file_path.exists():
             file_path.unlink()
             return True
@@ -222,13 +234,29 @@ class DeltaLakeBackend:
     """
 
     def __init__(self, base_path: str = "datalake") -> None:
-        self._base_path = Path(base_path)
+        self._base_path = Path(base_path).resolve()
         self._table_path = str(self._base_path / "bronze" / "evidence_files")
         self._file_store = self._base_path / "bronze" / "files"
         self._file_store.mkdir(parents=True, exist_ok=True)
+        self._table_initialized = False
+
+    def _validate_path(self, path: str) -> Path:
+        """Ensure path is within file store to prevent directory traversal."""
+        resolved = Path(path).resolve()
+        if not str(resolved).startswith(str(self._file_store)):
+            raise ValueError(f"Path is outside storage boundary: {path}")
+        return resolved
+
+    @staticmethod
+    def _sanitize_filename(file_name: str) -> str:
+        """Strip directory components from filename to prevent path injection."""
+        return Path(file_name).name
 
     def _ensure_table(self) -> None:
-        """Create the Delta table if it doesn't exist."""
+        """Create the Delta table if it doesn't exist (cached after first check)."""
+        if self._table_initialized:
+            return
+
         try:
             import pyarrow as pa
             from deltalake import DeltaTable
@@ -253,6 +281,8 @@ class DeltaLakeBackend:
                 )
                 write_deltalake(self._table_path, empty_table, mode="error")
                 logger.info("Created Delta table at %s", self._table_path)
+
+            self._table_initialized = True
         except ImportError:
             raise ImportError(
                 "deltalake and pyarrow packages are required for DeltaLakeBackend. "
@@ -266,7 +296,6 @@ class DeltaLakeBackend:
         content: bytes,
         metadata: dict[str, Any] | None = None,
     ) -> StorageMetadata:
-        import hashlib
         import json
 
         import pyarrow as pa
@@ -274,14 +303,15 @@ class DeltaLakeBackend:
 
         self._ensure_table()
 
+        safe_name = self._sanitize_filename(file_name)
         content_hash = hashlib.sha256(content).hexdigest()
-        record_id = uuid.uuid4().hex[:16]
+        record_id = uuid.uuid4().hex
         now = datetime.now(UTC).isoformat()
 
         # Store the actual file on disk (Delta metadata table tracks it)
         engagement_dir = self._file_store / engagement_id
         engagement_dir.mkdir(parents=True, exist_ok=True)
-        unique_name = f"{record_id}_{file_name}"
+        unique_name = f"{record_id[:16]}_{safe_name}"
         file_path = engagement_dir / unique_name
 
         with open(file_path, "wb") as f:
@@ -315,13 +345,14 @@ class DeltaLakeBackend:
         )
 
     async def read(self, path: str) -> bytes:
-        file_path = Path(path)
+        file_path = self._validate_path(path)
         if not file_path.exists():
             raise FileNotFoundError(f"Evidence file not found: {path}")
         return file_path.read_bytes()
 
     async def exists(self, path: str) -> bool:
-        return Path(path).exists()
+        file_path = self._validate_path(path)
+        return file_path.exists()
 
     async def list_files(
         self,
@@ -333,13 +364,11 @@ class DeltaLakeBackend:
         from deltalake import DeltaTable
 
         dt = DeltaTable(self._table_path)
-        df = dt.to_pyarrow_table()
-
-        # Filter by engagement_id
-        import pyarrow.compute as pc
-
-        mask = pc.equal(df.column("engagement_id"), engagement_id)
-        filtered = df.filter(mask)
+        # Use predicate pushdown to avoid loading entire table
+        filtered = dt.to_pyarrow_table(
+            columns=["file_path"],
+            filter=[("engagement_id", "=", engagement_id)],
+        )
 
         paths = filtered.column("file_path").to_pylist()
 
@@ -349,11 +378,23 @@ class DeltaLakeBackend:
         return sorted(paths)
 
     async def delete(self, path: str) -> bool:
-        file_path = Path(path)
+        file_path = self._validate_path(path)
+        deleted_file = False
         if file_path.exists():
             file_path.unlink()
-            return True
-        return False
+            deleted_file = True
+
+        # Also remove the metadata row from the Delta table
+        try:
+            from deltalake import DeltaTable
+
+            self._ensure_table()
+            dt = DeltaTable(self._table_path)
+            dt.delete(f"file_path = '{path}'")
+        except Exception:
+            logger.warning("Failed to remove Delta table row for %s", path)
+
+        return deleted_file
 
     def get_table_history(self, limit: int = 10) -> list[dict[str, Any]]:
         """Return Delta table version history (time travel metadata)."""
