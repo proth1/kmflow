@@ -86,6 +86,11 @@ class Settings(BaseSettings):
     # ── Encryption Key Rotation (Phase 5) ──────────────────────
     encryption_key_previous: str = ""  # Previous key for rotation
 
+    # ── Storage Backend (Phase B: Data Layer Evolution) ──────────
+    storage_backend: str = "local"  # "local" | "delta" | "databricks"
+    evidence_store_path: str = "evidence_store"
+    datalake_path: str = "datalake"
+
     # ── Embeddings ───────────────────────────────────────────────
     embedding_model: str = "all-mpnet-base-v2"
     embedding_dimension: int = 768

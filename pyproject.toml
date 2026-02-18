@@ -68,6 +68,11 @@ pdf = [
     # PDF report generation
     "weasyprint>=62.0",
 ]
+datalake = [
+    # Delta Lake support (Phase B: Data Layer Evolution)
+    "deltalake>=0.22.0",
+    "pyarrow>=17.0.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]
