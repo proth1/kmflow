@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-
-import pytest
+from datetime import UTC, datetime
 
 from src.agents.gap_scanner import scan_evidence_gaps
 
@@ -64,7 +62,7 @@ class TestScanEvidenceGaps:
 
     def test_finds_stale_evidence_older_than_one_year(self):
         # Create date that's over a year old (2 years to be safe)
-        old_date = datetime.now(timezone.utc).replace(year=datetime.now(timezone.utc).year - 2)
+        old_date = datetime.now(UTC).replace(year=datetime.now(UTC).year - 2)
         evidence_items = [
             {"id": "e1", "name": "OldDoc", "category": "documents", "source_date": old_date},
         ]

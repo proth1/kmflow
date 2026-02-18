@@ -15,7 +15,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
-class ConnectionStatus(str, enum.Enum):
+class ConnectionStatus(enum.StrEnum):
     """Status of a connector connection."""
 
     CONFIGURED = "configured"
@@ -83,18 +83,15 @@ class BaseConnector(abc.ABC):
         """
         return []
 
-    async def sync_incremental(
-        self, engagement_id: str, since: str | None = None, **kwargs: Any
-    ) -> dict[str, Any]:
+    async def sync_incremental(self, engagement_id: str, since: str | None = None, **kwargs: Any) -> dict[str, Any]:
         """Incremental sync - only records modified since a timestamp.
 
         Default implementation falls back to full sync.
         """
         return await self.sync_data(engagement_id, **kwargs)
 
-    async def disconnect(self) -> None:
+    async def disconnect(self) -> None:  # noqa: B027
         """Clean up connection resources."""
-        pass
 
 
 class ConnectorRegistry:

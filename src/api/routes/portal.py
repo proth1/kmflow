@@ -89,33 +89,31 @@ async def portal_overview(
     user: User = Depends(require_permission("portal:read")),
 ) -> dict[str, Any]:
     """Get high-level overview for client portal."""
-    result = await session.execute(
-        select(Engagement).where(Engagement.id == engagement_id)
-    )
+    result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
     engagement = result.scalar_one_or_none()
     if not engagement:
         raise HTTPException(status_code=404, detail=f"Engagement {engagement_id} not found")
 
-    evidence_count = (await session.execute(
-        select(func.count(EvidenceItem.id)).where(EvidenceItem.engagement_id == engagement_id)
-    )).scalar() or 0
+    evidence_count = (
+        await session.execute(select(func.count(EvidenceItem.id)).where(EvidenceItem.engagement_id == engagement_id))
+    ).scalar() or 0
 
-    model_count = (await session.execute(
-        select(func.count(ProcessModel.id)).where(ProcessModel.engagement_id == engagement_id)
-    )).scalar() or 0
+    model_count = (
+        await session.execute(select(func.count(ProcessModel.id)).where(ProcessModel.engagement_id == engagement_id))
+    ).scalar() or 0
 
-    alert_count = (await session.execute(
-        select(func.count(MonitoringAlert.id)).where(
-            MonitoringAlert.engagement_id == engagement_id,
-            MonitoringAlert.status.in_([AlertStatus.NEW, AlertStatus.ACKNOWLEDGED]),
+    alert_count = (
+        await session.execute(
+            select(func.count(MonitoringAlert.id)).where(
+                MonitoringAlert.engagement_id == engagement_id,
+                MonitoringAlert.status.in_([AlertStatus.NEW, AlertStatus.ACKNOWLEDGED]),
+            )
         )
-    )).scalar() or 0
+    ).scalar() or 0
 
     # Calculate overall confidence from process models
     confidence_result = await session.execute(
-        select(func.avg(ProcessModel.confidence_score)).where(
-            ProcessModel.engagement_id == engagement_id
-        )
+        select(func.avg(ProcessModel.confidence_score)).where(ProcessModel.engagement_id == engagement_id)
     )
     overall_confidence = confidence_result.scalar() or 0.0
 
@@ -123,7 +121,7 @@ async def portal_overview(
         "engagement_id": str(engagement_id),
         "engagement_name": engagement.name,
         "client": engagement.client,
-        "status": engagement.status.value if hasattr(engagement.status, 'value') else str(engagement.status),
+        "status": engagement.status.value if hasattr(engagement.status, "value") else str(engagement.status),
         "evidence_count": evidence_count,
         "process_model_count": model_count,
         "open_alerts": alert_count,
@@ -152,8 +150,8 @@ async def portal_findings(
     items = [
         {
             "id": str(g.id),
-            "dimension": g.dimension.value if hasattr(g.dimension, 'value') else str(g.dimension),
-            "gap_type": g.gap_type.value if hasattr(g.gap_type, 'value') else str(g.gap_type),
+            "dimension": g.dimension.value if hasattr(g.dimension, "value") else str(g.dimension),
+            "gap_type": g.gap_type.value if hasattr(g.gap_type, "value") else str(g.gap_type),
             "severity": g.severity,
             "recommendation": g.recommendation,
         }
@@ -175,8 +173,13 @@ async def portal_evidence_status(
             EvidenceItem.category,
             func.count(EvidenceItem.id).label("count"),
             func.avg(
-                (EvidenceItem.completeness_score + EvidenceItem.reliability_score +
-                 EvidenceItem.freshness_score + EvidenceItem.consistency_score) / 4.0
+                (
+                    EvidenceItem.completeness_score
+                    + EvidenceItem.reliability_score
+                    + EvidenceItem.freshness_score
+                    + EvidenceItem.consistency_score
+                )
+                / 4.0
             ).label("avg_quality"),
         )
         .where(EvidenceItem.engagement_id == engagement_id)
@@ -186,14 +189,14 @@ async def portal_evidence_status(
 
     categories = [
         {
-            "category": row.category.value if hasattr(row.category, 'value') else str(row.category),
+            "category": row.category.value if hasattr(row.category, "value") else str(row.category),
             "count": row.count,
             "avg_quality": round(float(row.avg_quality or 0), 3),
         }
         for row in rows
     ]
 
-    total_items = sum(c["count"] for c in categories)
+    total_items = sum(c["count"] for c in categories)  # type: ignore[misc]
 
     return {"total_items": total_items, "categories": categories}
 

@@ -96,9 +96,7 @@ class RegulatoryOverlayEngine:
         regulations = await self._fetch_regulations(session, engagement_id)
 
         # Get all Process nodes in the engagement
-        process_nodes = await self._graph.find_nodes(
-            "Process", filters={"engagement_id": engagement_id}
-        )
+        process_nodes = await self._graph.find_nodes("Process", filters={"engagement_id": engagement_id})
 
         chains: list[GovernanceChain] = []
 
@@ -108,12 +106,15 @@ class RegulatoryOverlayEngine:
             try:
                 existing = await self._graph.get_node(policy_node_id)
                 if not existing:
-                    await self._graph.create_node("Policy", {
-                        "id": policy_node_id,
-                        "name": policy.name,
-                        "engagement_id": engagement_id,
-                        "policy_type": str(policy.policy_type),
-                    })
+                    await self._graph.create_node(
+                        "Policy",
+                        {
+                            "id": policy_node_id,
+                            "name": policy.name,
+                            "engagement_id": engagement_id,
+                            "policy_type": str(policy.policy_type),
+                        },
+                    )
             except Exception as e:
                 logger.warning("Failed to create Policy node: %s", e)
 
@@ -123,25 +124,28 @@ class RegulatoryOverlayEngine:
             try:
                 existing = await self._graph.get_node(control_node_id)
                 if not existing:
-                    await self._graph.create_node("Control", {
-                        "id": control_node_id,
-                        "name": control.name,
-                        "engagement_id": engagement_id,
-                        "effectiveness": str(control.effectiveness),
-                    })
+                    await self._graph.create_node(
+                        "Control",
+                        {
+                            "id": control_node_id,
+                            "name": control.name,
+                            "engagement_id": engagement_id,
+                            "effectiveness": str(control.effectiveness),
+                        },
+                    )
 
                 # Link control to its policies
-                for pid in (control.linked_policy_ids or []):
+                import contextlib
+
+                for pid in control.linked_policy_ids or []:
                     policy_node_id = f"policy-{pid}"
-                    try:
+                    with contextlib.suppress(Exception):
                         await self._graph.create_relationship(
                             from_id=policy_node_id,
                             to_id=control_node_id,
                             relationship_type="GOVERNED_BY",
                             properties={"source": "regulatory_overlay"},
                         )
-                    except Exception:
-                        pass
             except Exception as e:
                 logger.warning("Failed to create Control node: %s", e)
 
@@ -151,12 +155,15 @@ class RegulatoryOverlayEngine:
             try:
                 existing = await self._graph.get_node(reg_node_id)
                 if not existing:
-                    await self._graph.create_node("Regulation", {
-                        "id": reg_node_id,
-                        "name": regulation.name,
-                        "engagement_id": engagement_id,
-                        "framework": regulation.framework or "",
-                    })
+                    await self._graph.create_node(
+                        "Regulation",
+                        {
+                            "id": reg_node_id,
+                            "name": regulation.name,
+                            "engagement_id": engagement_id,
+                            "framework": regulation.framework or "",
+                        },
+                    )
             except Exception as e:
                 logger.warning("Failed to create Regulation node: %s", e)
 
@@ -193,9 +200,7 @@ class RegulatoryOverlayEngine:
         Returns:
             ComplianceState with assessment results.
         """
-        process_nodes = await self._graph.find_nodes(
-            "Process", filters={"engagement_id": engagement_id}
-        )
+        process_nodes = await self._graph.find_nodes("Process", filters={"engagement_id": engagement_id})
 
         state = ComplianceState(engagement_id=engagement_id)
         state.total_processes = len(process_nodes)
@@ -204,20 +209,24 @@ class RegulatoryOverlayEngine:
             rels = await self._graph.get_relationships(proc.id, direction="outgoing", relationship_type="GOVERNED_BY")
             if rels:
                 state.governed_count += 1
-                state.details.append({
-                    "process_id": proc.id,
-                    "process_name": proc.properties.get("name", ""),
-                    "governed": True,
-                    "policy_count": len(rels),
-                })
+                state.details.append(
+                    {
+                        "process_id": proc.id,
+                        "process_name": proc.properties.get("name", ""),
+                        "governed": True,
+                        "policy_count": len(rels),
+                    }
+                )
             else:
                 state.ungoverned_count += 1
-                state.details.append({
-                    "process_id": proc.id,
-                    "process_name": proc.properties.get("name", ""),
-                    "governed": False,
-                    "policy_count": 0,
-                })
+                state.details.append(
+                    {
+                        "process_id": proc.id,
+                        "process_name": proc.properties.get("name", ""),
+                        "governed": False,
+                        "policy_count": 0,
+                    }
+                )
 
         if state.total_processes > 0:
             state.policy_coverage = round(state.governed_count / state.total_processes * 100, 2)
@@ -246,18 +255,18 @@ class RegulatoryOverlayEngine:
         Returns:
             List of ungoverned process details.
         """
-        process_nodes = await self._graph.find_nodes(
-            "Process", filters={"engagement_id": engagement_id}
-        )
+        process_nodes = await self._graph.find_nodes("Process", filters={"engagement_id": engagement_id})
 
         ungoverned = []
         for proc in process_nodes:
             rels = await self._graph.get_relationships(proc.id, direction="outgoing", relationship_type="GOVERNED_BY")
             if not rels:
-                ungoverned.append({
-                    "process_id": proc.id,
-                    "process_name": proc.properties.get("name", ""),
-                })
+                ungoverned.append(
+                    {
+                        "process_id": proc.id,
+                        "process_name": proc.properties.get("name", ""),
+                    }
+                )
 
         return ungoverned
 

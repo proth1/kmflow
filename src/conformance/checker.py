@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Deviation:
     """A single deviation between observed and reference models."""
+
     element_name: str
     deviation_type: str  # "missing_activity", "extra_activity", "different_path", "sequence_mismatch"
     severity: str  # "high", "medium", "low"
@@ -29,6 +30,7 @@ class Deviation:
 @dataclass
 class ConformanceCheckResult:
     """Result of a conformance check."""
+
     fitness_score: float  # 0-1, how well observed fits reference
     precision_score: float  # 0-1, how precise observed is
     matching_elements: int
@@ -72,25 +74,29 @@ class ConformanceChecker:
         missing = ref_names - obs_names
         for name in missing:
             ref_elem = ref_tasks[name]
-            deviations.append(Deviation(
-                element_name=ref_elem.name,
-                deviation_type="missing_activity",
-                severity="high",
-                description=f"Activity '{ref_elem.name}' exists in reference model but not in observed process",
-                reference_element_id=ref_elem.id,
-            ))
+            deviations.append(
+                Deviation(
+                    element_name=ref_elem.name,
+                    deviation_type="missing_activity",
+                    severity="high",
+                    description=f"Activity '{ref_elem.name}' exists in reference model but not in observed process",
+                    reference_element_id=ref_elem.id,
+                )
+            )
 
         # Extra activities (in observed but not reference)
         extra = obs_names - ref_names
         for name in extra:
             obs_elem = obs_tasks[name]
-            deviations.append(Deviation(
-                element_name=obs_elem.name,
-                deviation_type="extra_activity",
-                severity="medium",
-                description=f"Activity '{obs_elem.name}' found in observed process but not in reference model",
-                observed_element_id=obs_elem.id,
-            ))
+            deviations.append(
+                Deviation(
+                    element_name=obs_elem.name,
+                    deviation_type="extra_activity",
+                    severity="medium",
+                    description=f"Activity '{obs_elem.name}' found in observed process but not in reference model",
+                    observed_element_id=obs_elem.id,
+                )
+            )
 
         # Check sequence differences for matching elements
         sequence_deviations = self._check_sequences(
@@ -137,8 +143,8 @@ class ConformanceChecker:
         ref_graph: BPMNGraph,
         obs_graph: BPMNGraph,
         matching_names: set[str],
-        ref_tasks: dict,
-        obs_tasks: dict,
+        ref_tasks: dict[str, Any],
+        obs_tasks: dict[str, Any],
     ) -> list[Deviation]:
         """Check if matching activities have the same sequence relationships."""
         deviations = []
@@ -151,28 +157,26 @@ class ConformanceChecker:
             ref_successors = set()
             for target_id in ref_graph.adjacency.get(ref_elem.id, []):
                 if target_id in ref_graph.elements:
-                    ref_successors.add(
-                        self._normalize_name(ref_graph.elements[target_id].name)
-                    )
+                    ref_successors.add(self._normalize_name(ref_graph.elements[target_id].name))
 
             # Get successors in observed
             obs_successors = set()
             for target_id in obs_graph.adjacency.get(obs_elem.id, []):
                 if target_id in obs_graph.elements:
-                    obs_successors.add(
-                        self._normalize_name(obs_graph.elements[target_id].name)
-                    )
+                    obs_successors.add(self._normalize_name(obs_graph.elements[target_id].name))
 
             # Check for sequence differences (only for matching successors)
             diff = (ref_successors & matching_names) ^ (obs_successors & matching_names)
             if diff:
-                deviations.append(Deviation(
-                    element_name=ref_elem.name,
-                    deviation_type="sequence_mismatch",
-                    severity="low",
-                    description=f"Activity '{ref_elem.name}' has different successor relationships",
-                    reference_element_id=ref_elem.id,
-                    observed_element_id=obs_elem.id,
-                ))
+                deviations.append(
+                    Deviation(
+                        element_name=ref_elem.name,
+                        deviation_type="sequence_mismatch",
+                        severity="low",
+                        description=f"Activity '{ref_elem.name}' has different successor relationships",
+                        reference_element_id=ref_elem.id,
+                        observed_element_id=obs_elem.id,
+                    )
+                )
 
         return deviations

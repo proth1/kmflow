@@ -1170,9 +1170,7 @@ class PatternAccessRule(Base):
     """Controls which engagements can consume patterns."""
 
     __tablename__ = "pattern_access_rules"
-    __table_args__ = (
-        UniqueConstraint("pattern_id", "engagement_id", name="uq_pattern_engagement"),
-    )
+    __table_args__ = (UniqueConstraint("pattern_id", "engagement_id", name="uq_pattern_engagement"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     pattern_id: Mapped[uuid.UUID] = mapped_column(

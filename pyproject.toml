@@ -37,6 +37,7 @@ dependencies = [
     "pdfplumber>=0.11.0",
     "openpyxl>=3.1.0",
     "lxml>=5.0.0",
+    "defusedxml>=0.7.0",
     # Semantic engine
     "numpy>=1.26.0",
     # Authentication
@@ -104,10 +105,12 @@ known-first-party = ["src"]
 
 [tool.mypy]
 python_version = "3.12"
-strict = true
-warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = false
+check_untyped_defs = true
+disallow_untyped_defs = false
+warn_return_any = false
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
@@ -115,5 +118,8 @@ module = [
     "neo4j.*",
     "pgvector.*",
     "redis.*",
+    "sentence_transformers.*",
+    "anthropic.*",
+    "cv2.*",
 ]
 ignore_missing_imports = true

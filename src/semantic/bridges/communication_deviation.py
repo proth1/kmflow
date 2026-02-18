@@ -14,11 +14,23 @@ from src.semantic.graph import KnowledgeGraphService
 logger = logging.getLogger(__name__)
 
 # Keywords indicating process workarounds or deviations
-_DEVIATION_KEYWORDS = frozenset({
-    "workaround", "exception", "bypass", "skip", "instead",
-    "actually", "really", "unofficial", "shortcut", "override",
-    "not following", "different from", "don't follow",
-})
+_DEVIATION_KEYWORDS = frozenset(
+    {
+        "workaround",
+        "exception",
+        "bypass",
+        "skip",
+        "instead",
+        "actually",
+        "really",
+        "unofficial",
+        "shortcut",
+        "override",
+        "not following",
+        "different from",
+        "don't follow",
+    }
+)
 
 
 class CommunicationDeviationBridge:

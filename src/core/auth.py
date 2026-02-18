@@ -10,6 +10,7 @@ Supports:
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -172,7 +173,7 @@ async def blacklist_token(request: Request, token: str, expires_in: int = 1800) 
 # ---------------------------------------------------------------------------
 
 
-async def _get_session_from_request(request: Request) -> AsyncSession:
+async def _get_session_from_request(request: Request) -> AsyncGenerator[AsyncSession, None]:
     """Get a database session from request app state."""
     session_factory = request.app.state.db_session_factory
     async with session_factory() as session:

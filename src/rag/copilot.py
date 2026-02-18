@@ -20,12 +20,13 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CopilotMessage:
     """A single message in a copilot conversation."""
+
     role: str  # "user" or "assistant"
     content: str
     citations: list[dict[str, Any]] = field(default_factory=list)
     timestamp: str = ""
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not self.timestamp:
             self.timestamp = datetime.now(UTC).isoformat()
 
@@ -33,6 +34,7 @@ class CopilotMessage:
 @dataclass
 class CopilotResponse:
     """Response from the copilot."""
+
     answer: str
     citations: list[dict[str, Any]]
     query_type: str
@@ -62,7 +64,7 @@ class CopilotOrchestrator:
         engagement_id: str,
         session: AsyncSession,
         query_type: str = "general",
-        history: list[dict] | None = None,
+        history: list[dict[str, Any]] | None = None,
     ) -> CopilotResponse:
         """Process a copilot query through the RAG pipeline."""
         # 1. Retrieve relevant context
@@ -124,7 +126,7 @@ class CopilotOrchestrator:
         self,
         system_prompt: str,
         user_prompt: str,
-        history: list[dict] | None = None,
+        history: list[dict[str, Any]] | None = None,
     ) -> str:
         """Generate a response using Claude API or fallback."""
         try:
@@ -144,9 +146,9 @@ class CopilotOrchestrator:
                 model=self.settings.copilot_model,
                 max_tokens=self.settings.copilot_max_response_tokens,
                 system=system_prompt,
-                messages=messages,
+                messages=messages,  # type: ignore[arg-type]
             )
-            return response.content[0].text
+            return response.content[0].text  # type: ignore[union-attr]
 
         except ImportError:
             logger.warning("anthropic package not installed, using stub response")

@@ -37,6 +37,7 @@ router = APIRouter(prefix="/api/v1/conformance", tags=["conformance"])
 
 class ReferenceModelCreate(BaseModel):
     """Schema for uploading a reference BPMN model."""
+
     name: str = Field(..., min_length=1, max_length=512)
     industry: str = Field(..., min_length=1, max_length=255)
     process_area: str = Field(..., min_length=1, max_length=255)
@@ -45,6 +46,7 @@ class ReferenceModelCreate(BaseModel):
 
 class ReferenceModelResponse(BaseModel):
     """Schema for reference model responses."""
+
     id: str
     name: str
     industry: str
@@ -54,12 +56,14 @@ class ReferenceModelResponse(BaseModel):
 
 class ReferenceModelList(BaseModel):
     """Schema for listing reference models."""
+
     items: list[ReferenceModelResponse]
     total: int
 
 
 class ConformanceCheckRequest(BaseModel):
     """Schema for triggering a conformance check."""
+
     engagement_id: UUID
     reference_model_id: UUID
     pov_model_id: UUID | None = None
@@ -68,6 +72,7 @@ class ConformanceCheckRequest(BaseModel):
 
 class DeviationResponse(BaseModel):
     """Schema for a single deviation."""
+
     element_name: str
     deviation_type: str
     severity: str
@@ -76,6 +81,7 @@ class DeviationResponse(BaseModel):
 
 class ConformanceCheckResponse(BaseModel):
     """Schema for conformance check results."""
+
     id: str
     fitness_score: float
     precision_score: float
@@ -90,6 +96,7 @@ class ConformanceCheckResponse(BaseModel):
 
 class ConformanceResultResponse(BaseModel):
     """Schema for stored conformance result."""
+
     id: str
     engagement_id: str
     reference_model_id: str
@@ -101,6 +108,7 @@ class ConformanceResultResponse(BaseModel):
 
 class ConformanceResultList(BaseModel):
     """Schema for listing conformance results."""
+
     items: list[ConformanceResultResponse]
     total: int
 
@@ -194,9 +202,7 @@ async def run_conformance_check(
     """Run a conformance check between observed and reference models."""
     # Get reference model
     ref_result = await session.execute(
-        select(ReferenceProcessModel).where(
-            ReferenceProcessModel.id == payload.reference_model_id
-        )
+        select(ReferenceProcessModel).where(ReferenceProcessModel.id == payload.reference_model_id)
     )
     ref_model = ref_result.scalar_one_or_none()
     if not ref_model:
@@ -208,9 +214,7 @@ async def run_conformance_check(
     # Get observed BPMN XML
     observed_xml = payload.observed_bpmn_xml
     if not observed_xml and payload.pov_model_id:
-        pov_result = await session.execute(
-            select(ProcessModel).where(ProcessModel.id == payload.pov_model_id)
-        )
+        pov_result = await session.execute(select(ProcessModel).where(ProcessModel.id == payload.pov_model_id))
         pov_model = pov_result.scalar_one_or_none()
         if not pov_model or not pov_model.bpmn_xml:
             raise HTTPException(
@@ -283,9 +287,7 @@ async def get_conformance_result(
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     """Get a stored conformance check result."""
-    result = await session.execute(
-        select(ConformanceResult).where(ConformanceResult.id == result_id)
-    )
+    result = await session.execute(select(ConformanceResult).where(ConformanceResult.id == result_id))
     cr = result.scalar_one_or_none()
     if not cr:
         raise HTTPException(

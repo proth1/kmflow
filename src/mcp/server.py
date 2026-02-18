@@ -160,15 +160,15 @@ async def _tool_get_engagement(session_factory: Any, args: dict[str, Any]) -> di
         if not eng:
             return {"error": "Engagement not found"}
 
-        count = (await session.execute(
-            select(func.count(EvidenceItem.id)).where(EvidenceItem.engagement_id == eid)
-        )).scalar() or 0
+        count = (
+            await session.execute(select(func.count(EvidenceItem.id)).where(EvidenceItem.engagement_id == eid))
+        ).scalar() or 0
 
         return {
             "id": str(eng.id),
             "name": eng.name,
             "client": eng.client,
-            "status": eng.status.value if hasattr(eng.status, 'value') else str(eng.status),
+            "status": eng.status.value if hasattr(eng.status, "value") else str(eng.status),
             "evidence_count": count,
         }
 
@@ -186,7 +186,11 @@ async def _tool_list_evidence(session_factory: Any, args: dict[str, Any]) -> dic
         query = select(EvidenceItem).where(EvidenceItem.engagement_id == eid).limit(limit)
         result = await session.execute(query)
         items = [
-            {"id": str(e.id), "name": e.name, "category": e.category.value if hasattr(e.category, 'value') else str(e.category)}
+            {
+                "id": str(e.id),
+                "name": e.name,
+                "category": e.category.value if hasattr(e.category, "value") else str(e.category),
+            }
             for e in result.scalars().all()
         ]
         return {"items": items, "total": len(items)}
@@ -202,7 +206,10 @@ async def _tool_get_process_model(session_factory: Any, args: dict[str, Any]) ->
     eid = UUID(args["engagement_id"])
     async with session_factory() as session:
         result = await session.execute(
-            select(ProcessModel).where(ProcessModel.engagement_id == eid).order_by(ProcessModel.created_at.desc()).limit(1)
+            select(ProcessModel)
+            .where(ProcessModel.engagement_id == eid)
+            .order_by(ProcessModel.created_at.desc())
+            .limit(1)
         )
         model = result.scalar_one_or_none()
         if not model:
@@ -224,14 +231,12 @@ async def _tool_get_gaps(session_factory: Any, args: dict[str, Any]) -> dict[str
 
     eid = UUID(args["engagement_id"])
     async with session_factory() as session:
-        result = await session.execute(
-            select(GapAnalysisResult).where(GapAnalysisResult.engagement_id == eid)
-        )
+        result = await session.execute(select(GapAnalysisResult).where(GapAnalysisResult.engagement_id == eid))
         gaps = [
             {
                 "id": str(g.id),
-                "dimension": g.dimension.value if hasattr(g.dimension, 'value') else str(g.dimension),
-                "gap_type": g.gap_type.value if hasattr(g.gap_type, 'value') else str(g.gap_type),
+                "dimension": g.dimension.value if hasattr(g.dimension, "value") else str(g.dimension),
+                "gap_type": g.gap_type.value if hasattr(g.gap_type, "value") else str(g.gap_type),
                 "severity": g.severity,
             }
             for g in result.scalars().all()
@@ -248,17 +253,21 @@ async def _tool_get_monitoring_status(session_factory: Any, args: dict[str, Any]
 
     eid = UUID(args["engagement_id"])
     async with session_factory() as session:
-        active = (await session.execute(
-            select(func.count(MonitoringJob.id)).where(
-                MonitoringJob.engagement_id == eid, MonitoringJob.status == MonitoringStatus.ACTIVE
+        active = (
+            await session.execute(
+                select(func.count(MonitoringJob.id)).where(
+                    MonitoringJob.engagement_id == eid, MonitoringJob.status == MonitoringStatus.ACTIVE
+                )
             )
-        )).scalar() or 0
-        open_alerts = (await session.execute(
-            select(func.count(MonitoringAlert.id)).where(
-                MonitoringAlert.engagement_id == eid,
-                MonitoringAlert.status.in_([AlertStatus.NEW, AlertStatus.ACKNOWLEDGED]),
+        ).scalar() or 0
+        open_alerts = (
+            await session.execute(
+                select(func.count(MonitoringAlert.id)).where(
+                    MonitoringAlert.engagement_id == eid,
+                    MonitoringAlert.status.in_([AlertStatus.NEW, AlertStatus.ACKNOWLEDGED]),
+                )
             )
-        )).scalar() or 0
+        ).scalar() or 0
         return {"active_jobs": active, "open_alerts": open_alerts}
 
 
@@ -278,7 +287,7 @@ async def _tool_get_deviations(session_factory: Any, args: dict[str, Any]) -> di
         devs = [
             {
                 "id": str(d.id),
-                "category": d.category.value if hasattr(d.category, 'value') else str(d.category),
+                "category": d.category.value if hasattr(d.category, "value") else str(d.category),
                 "magnitude": d.magnitude,
                 "description": d.description,
             }
@@ -296,7 +305,11 @@ async def _tool_search_patterns(session_factory: Any, args: dict[str, Any]) -> d
         query = select(PatternLibraryEntry).limit(10)
         result = await session.execute(query)
         patterns = [
-            {"id": str(p.id), "title": p.title, "category": p.category.value if hasattr(p.category, 'value') else str(p.category)}
+            {
+                "id": str(p.id),
+                "title": p.title,
+                "category": p.category.value if hasattr(p.category, "value") else str(p.category),
+            }
             for p in result.scalars().all()
         ]
         return {"patterns": patterns, "total": len(patterns)}

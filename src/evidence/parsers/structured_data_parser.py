@@ -90,7 +90,7 @@ class StructuredDataParser(BaseParser):
                     )
 
         wb.close()
-        return ParseResult(fragments=fragments, metadata=metadata)
+        return ParseResult(fragments=fragments, metadata=metadata)  # type: ignore[arg-type]
 
     async def _parse_csv(self, file_path: str) -> ParseResult:
         """Extract data from CSV files."""
@@ -134,7 +134,7 @@ class StructuredDataParser(BaseParser):
                 )
 
         metadata["row_count"] = row_count
-        return ParseResult(fragments=fragments, metadata=metadata)
+        return ParseResult(fragments=fragments, metadata=metadata)  # type: ignore[arg-type]
 
     async def _parse_json(self, file_path: str) -> ParseResult:
         """Extract data from JSON files."""
@@ -196,4 +196,4 @@ class StructuredDataParser(BaseParser):
                 )
             )
 
-        return ParseResult(fragments=fragments, metadata=metadata)
+        return ParseResult(fragments=fragments, metadata=metadata)  # type: ignore[arg-type]

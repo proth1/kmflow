@@ -132,10 +132,7 @@ def _calculate_metrics(
 def _calculate_risk(elements: list[dict[str, Any]], parameters: dict[str, Any]) -> float:
     """Calculate risk score (0.0 = low risk, 1.0 = high risk)."""
     total_controls = sum(1 for e in elements if e.get("type") == "control")
-    active_controls = sum(
-        1 for e in elements
-        if e.get("type") == "control" and e.get("control_active", True)
-    )
+    active_controls = sum(1 for e in elements if e.get("type") == "control" and e.get("control_active", True))
 
     if total_controls == 0:
         return 0.5

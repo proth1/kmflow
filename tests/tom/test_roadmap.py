@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.core.models import TOMDimension, TOMGapType
-from src.tom.roadmap import RoadmapGenerator, RoadmapPhase, TransformationRoadmap
+from src.tom.roadmap import RoadmapGenerator
 
 
 @pytest.fixture
@@ -49,16 +49,12 @@ async def test_generate_roadmap_categorization(roadmap_generator, mock_session):
         # Phase 1: Deviations
         create_mock_gap(TOMGapType.DEVIATION, TOMDimension.PROCESS_ARCHITECTURE, 0.25, 0.8),
         create_mock_gap(TOMGapType.DEVIATION, TOMDimension.GOVERNANCE_STRUCTURES, 0.2, 0.7),
-
         # Phase 2: Partial gaps with high priority (>0.5)
         create_mock_gap(TOMGapType.PARTIAL_GAP, TOMDimension.TECHNOLOGY_AND_DATA, 0.7, 0.8),
-
         # Phase 3: Full gaps
         create_mock_gap(TOMGapType.FULL_GAP, TOMDimension.RISK_AND_COMPLIANCE, 1.0, 0.9),
-
         # Phase 4: Partial gaps with low priority (<=0.5)
         create_mock_gap(TOMGapType.PARTIAL_GAP, TOMDimension.PERFORMANCE_MANAGEMENT, 0.3, 0.5),
-
         # NO_GAP should be ignored
         create_mock_gap(TOMGapType.NO_GAP, TOMDimension.PEOPLE_AND_ORGANIZATION, 0.0, 1.0),
     ]
@@ -218,7 +214,7 @@ async def test_initiatives_sorted_by_priority(roadmap_generator, mock_session):
     gaps = [
         create_mock_gap(TOMGapType.DEVIATION, TOMDimension.PROCESS_ARCHITECTURE, 0.2, 0.5),  # priority: 0.10
         create_mock_gap(TOMGapType.DEVIATION, TOMDimension.GOVERNANCE_STRUCTURES, 0.5, 0.9),  # priority: 0.45
-        create_mock_gap(TOMGapType.DEVIATION, TOMDimension.TECHNOLOGY_AND_DATA, 0.3, 0.8),   # priority: 0.24
+        create_mock_gap(TOMGapType.DEVIATION, TOMDimension.TECHNOLOGY_AND_DATA, 0.3, 0.8),  # priority: 0.24
     ]
 
     # Mock database query

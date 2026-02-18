@@ -53,12 +53,14 @@ def calculate_cascading_impact(
     impact_items: list[dict[str, Any]] = []
     for element, distance in sorted(affected.items(), key=lambda x: x[1]):
         severity = max(0.1, 1.0 - (distance * 0.2))
-        impact_items.append({
-            "element": element,
-            "distance": distance,
-            "severity": round(severity, 2),
-            "impact_type": "direct" if distance == 1 else "cascading",
-        })
+        impact_items.append(
+            {
+                "element": element,
+                "distance": distance,
+                "severity": round(severity, 2),
+                "impact_type": "direct" if distance == 1 else "cascading",
+            }
+        )
 
     return {
         "changed_elements": changed_elements,

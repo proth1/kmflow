@@ -19,7 +19,6 @@ from src.core.models import (
     Regulation,
 )
 
-
 # -- Fixtures ----------------------------------------------------------------
 
 

@@ -181,9 +181,7 @@ async def get_pattern(
     user: User = Depends(require_permission("patterns:read")),
 ) -> dict[str, Any]:
     """Get a pattern by ID."""
-    result = await session.execute(
-        select(PatternLibraryEntry).where(PatternLibraryEntry.id == pattern_id)
-    )
+    result = await session.execute(select(PatternLibraryEntry).where(PatternLibraryEntry.id == pattern_id))
     pattern = result.scalar_one_or_none()
     if not pattern:
         raise HTTPException(status_code=404, detail=f"Pattern {pattern_id} not found")
@@ -198,9 +196,7 @@ async def update_pattern(
     user: User = Depends(require_permission("patterns:create")),
 ) -> dict[str, Any]:
     """Update a pattern."""
-    result = await session.execute(
-        select(PatternLibraryEntry).where(PatternLibraryEntry.id == pattern_id)
-    )
+    result = await session.execute(select(PatternLibraryEntry).where(PatternLibraryEntry.id == pattern_id))
     pattern = result.scalar_one_or_none()
     if not pattern:
         raise HTTPException(status_code=404, detail=f"Pattern {pattern_id} not found")
@@ -226,9 +222,7 @@ async def delete_pattern(
     user: User = Depends(require_permission("patterns:create")),
 ) -> None:
     """Delete a pattern."""
-    result = await session.execute(
-        select(PatternLibraryEntry).where(PatternLibraryEntry.id == pattern_id)
-    )
+    result = await session.execute(select(PatternLibraryEntry).where(PatternLibraryEntry.id == pattern_id))
     pattern = result.scalar_one_or_none()
     if not pattern:
         raise HTTPException(status_code=404, detail=f"Pattern {pattern_id} not found")
@@ -263,9 +257,7 @@ async def apply_pattern(
     user: User = Depends(require_permission("patterns:apply")),
 ) -> dict[str, Any]:
     """Apply a pattern to an engagement (increments usage count)."""
-    result = await session.execute(
-        select(PatternLibraryEntry).where(PatternLibraryEntry.id == pattern_id)
-    )
+    result = await session.execute(select(PatternLibraryEntry).where(PatternLibraryEntry.id == pattern_id))
     pattern = result.scalar_one_or_none()
     if not pattern:
         raise HTTPException(status_code=404, detail=f"Pattern {pattern_id} not found")

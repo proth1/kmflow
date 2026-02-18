@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 SYSTEM_PROMPT = """You are a Process Intelligence copilot for KMFlow, an evidence-based consulting platform.
 You help consultants understand client processes, identify gaps, and make recommendations.
 
@@ -22,7 +24,6 @@ Question: {query}
 
 Analyze the evidence to identify process steps, actors, decisions, and handoffs.
 Cite specific evidence fragments that support your findings.""",
-
     "evidence_traceability": """Evidence context for engagement {engagement_id}:
 
 {context}
@@ -31,7 +32,6 @@ Question: {query}
 
 Trace the evidence chain and identify which sources support which findings.
 Note any gaps in the evidence trail.""",
-
     "gap_analysis": """Evidence and process model context for engagement {engagement_id}:
 
 {context}
@@ -40,7 +40,6 @@ Question: {query}
 
 Identify gaps between current state (as-is) and the target operating model.
 Classify gaps by severity and recommend remediation approaches.""",
-
     "regulatory": """Regulatory and compliance context for engagement {engagement_id}:
 
 {context}
@@ -49,7 +48,6 @@ Question: {query}
 
 Assess compliance posture based on the available evidence.
 Identify regulatory requirements that lack supporting evidence.""",
-
     "general": """Context from engagement {engagement_id}:
 
 {context}
@@ -66,7 +64,7 @@ def get_prompt_template(query_type: str = "general") -> str:
     return DOMAIN_TEMPLATES.get(query_type, DOMAIN_TEMPLATES["general"])
 
 
-def build_context_string(contexts: list[dict]) -> str:
+def build_context_string(contexts: list[dict[str, Any]]) -> str:
     """Build a formatted context string from retrieval results."""
     parts = []
     for i, ctx in enumerate(contexts, 1):

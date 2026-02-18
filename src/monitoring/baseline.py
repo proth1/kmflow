@@ -34,10 +34,7 @@ def create_baseline_snapshot(
         "connections": connections,
         "element_names": sorted([e.get("name", "") for e in elements]),
         "element_types": {e.get("name", ""): e.get("type", "") for e in elements},
-        "connection_pairs": [
-            (c.get("source", ""), c.get("target", ""))
-            for c in connections
-        ],
+        "connection_pairs": [(c.get("source", ""), c.get("target", "")) for c in connections],
     }
 
     return snapshot
@@ -82,18 +79,16 @@ def compare_baselines(
     modified = []
     for name in common:
         if baseline_types.get(name) != current_types.get(name):
-            modified.append({
-                "name": name,
-                "baseline_type": baseline_types.get(name),
-                "current_type": current_types.get(name),
-            })
+            modified.append(
+                {
+                    "name": name,
+                    "baseline_type": baseline_types.get(name),
+                    "current_type": current_types.get(name),
+                }
+            )
 
-    baseline_conns = set(
-        tuple(p) for p in baseline_snapshot.get("connection_pairs", [])
-    )
-    current_conns = set(
-        tuple(p) for p in current_snapshot.get("connection_pairs", [])
-    )
+    baseline_conns = set(tuple(p) for p in baseline_snapshot.get("connection_pairs", []))
+    current_conns = set(tuple(p) for p in current_snapshot.get("connection_pairs", []))
 
     return {
         "added_elements": sorted(added),

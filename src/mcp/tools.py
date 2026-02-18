@@ -102,7 +102,10 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "properties": {
                 "engagement_id": {"type": "string", "description": "UUID of the engagement"},
                 "scenario_name": {"type": "string", "description": "Name for the scenario"},
-                "simulation_type": {"type": "string", "description": "Type: what_if, capacity, process_change, control_removal"},
+                "simulation_type": {
+                    "type": "string",
+                    "description": "Type: what_if, capacity, process_change, control_removal",
+                },
                 "parameters": {"type": "object", "description": "Simulation parameters"},
             },
             "required": ["engagement_id", "scenario_name", "simulation_type"],

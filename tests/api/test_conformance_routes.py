@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
 
-SAMPLE_BPMN = '''<?xml version="1.0" encoding="UTF-8"?>
+SAMPLE_BPMN = """<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">
   <bpmn:process id="Process_1" isExecutable="true">
     <bpmn:startEvent id="Start" name="Start"/>
@@ -17,7 +17,7 @@ SAMPLE_BPMN = '''<?xml version="1.0" encoding="UTF-8"?>
     <bpmn:sequenceFlow id="Flow_1" sourceRef="Start" targetRef="Task_1"/>
     <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_1" targetRef="End"/>
   </bpmn:process>
-</bpmn:definitions>'''
+</bpmn:definitions>"""
 
 
 @pytest.mark.asyncio
@@ -65,7 +65,7 @@ class TestConformanceRoutes:
         m.name = "Model 1"
         m.industry = "finance"
         m.process_area = "lending"
-        m.created_at = datetime.now(timezone.utc)
+        m.created_at = datetime.now(UTC)
 
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = [m]
@@ -136,7 +136,7 @@ class TestConformanceRoutes:
         cr.fitness_score = 0.85
         cr.precision_score = 0.9
         cr.deviations = {"items": []}
-        cr.created_at = datetime.now(timezone.utc)
+        cr.created_at = datetime.now(UTC)
 
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = [cr]

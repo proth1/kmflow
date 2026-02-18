@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import tempfile
-from pathlib import Path
 
 import pytest
 
@@ -14,7 +13,6 @@ from src.evidence.parsers.factory import classify_by_extension, get_parser
 from src.evidence.parsers.image_parser import ImageParser
 from src.evidence.parsers.regulatory_parser import RegulatoryParser
 from src.evidence.parsers.video_parser import VideoParser
-
 
 # -- ImageParser Tests -------------------------------------------------------
 
@@ -163,9 +161,7 @@ Organizations are required to maintain comprehensive audit trails.
         assert result.metadata["clause_count"] >= 3
 
         # Check obligation detection
-        obligation_frags = [
-            f for f in result.fragments if f.metadata.get("has_obligation")
-        ]
+        obligation_frags = [f for f in result.fragments if f.metadata.get("has_obligation")]
         assert len(obligation_frags) >= 2  # "shall" and "must" and "required"
 
     @pytest.mark.asyncio

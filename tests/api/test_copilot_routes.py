@@ -10,9 +10,7 @@ import pytest
 @pytest.mark.asyncio
 class TestCopilotRoutes:
     async def test_chat_returns_answer(self, client, mock_db_session):
-        mock_db_session.execute.return_value = MagicMock(
-            fetchall=MagicMock(return_value=[])
-        )
+        mock_db_session.execute.return_value = MagicMock(fetchall=MagicMock(return_value=[]))
 
         response = await client.post(
             "/api/v1/copilot/chat",
@@ -34,9 +32,7 @@ class TestCopilotRoutes:
         assert data["query_type"] == "general"
 
     async def test_chat_with_process_discovery_query(self, client, mock_db_session):
-        mock_db_session.execute.return_value = MagicMock(
-            fetchall=MagicMock(return_value=[])
-        )
+        mock_db_session.execute.return_value = MagicMock(fetchall=MagicMock(return_value=[]))
 
         response = await client.post(
             "/api/v1/copilot/chat",
@@ -53,9 +49,7 @@ class TestCopilotRoutes:
         assert data["query_type"] == "process_discovery"
 
     async def test_chat_with_gap_analysis_query(self, client, mock_db_session):
-        mock_db_session.execute.return_value = MagicMock(
-            fetchall=MagicMock(return_value=[])
-        )
+        mock_db_session.execute.return_value = MagicMock(fetchall=MagicMock(return_value=[]))
 
         response = await client.post(
             "/api/v1/copilot/chat",

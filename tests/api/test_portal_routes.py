@@ -7,7 +7,6 @@ engagement overview, findings, evidence status, and process models.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -17,7 +16,6 @@ from src.core.models import (
     Engagement,
     EngagementStatus,
     EvidenceCategory,
-    EvidenceItem,
     GapAnalysisResult,
     ProcessModel,
     TOMDimension,
@@ -29,9 +27,7 @@ class TestPortalOverview:
     """Tests for portal overview route."""
 
     @pytest.mark.asyncio
-    async def test_portal_overview(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_portal_overview(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting portal overview for an engagement."""
         engagement_id = uuid.uuid4()
 
@@ -49,8 +45,8 @@ class TestPortalOverview:
         mock_db_session.execute.side_effect = [
             mock_engagement_result,  # Engagement query
             MagicMock(scalar=MagicMock(return_value=10)),  # evidence_count
-            MagicMock(scalar=MagicMock(return_value=2)),   # model_count
-            MagicMock(scalar=MagicMock(return_value=3)),   # alert_count
+            MagicMock(scalar=MagicMock(return_value=2)),  # model_count
+            MagicMock(scalar=MagicMock(return_value=3)),  # alert_count
             MagicMock(scalar=MagicMock(return_value=0.85)),  # overall_confidence
         ]
 
@@ -67,9 +63,7 @@ class TestPortalOverview:
         assert data["overall_confidence"] == 0.85
 
     @pytest.mark.asyncio
-    async def test_portal_overview_not_found(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_portal_overview_not_found(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting portal overview for a non-existent engagement."""
         engagement_id = uuid.uuid4()
 
@@ -85,9 +79,7 @@ class TestPortalFindings:
     """Tests for portal findings route."""
 
     @pytest.mark.asyncio
-    async def test_portal_findings(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_portal_findings(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting gap analysis findings for client review."""
         engagement_id = uuid.uuid4()
 
@@ -115,9 +107,7 @@ class TestPortalEvidenceStatus:
     """Tests for portal evidence status route."""
 
     @pytest.mark.asyncio
-    async def test_portal_evidence_status(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_portal_evidence_status(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting evidence status summary."""
         engagement_id = uuid.uuid4()
 
@@ -145,9 +135,7 @@ class TestPortalProcess:
     """Tests for portal process model route."""
 
     @pytest.mark.asyncio
-    async def test_portal_process(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_portal_process(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting process model data for interactive explorer."""
         engagement_id = uuid.uuid4()
         model_id = uuid.uuid4()
@@ -172,9 +160,7 @@ class TestPortalProcess:
         assert data["model"]["scope"] == "procurement"
 
     @pytest.mark.asyncio
-    async def test_portal_process_no_model(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_portal_process_no_model(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting process model when no model exists returns null."""
         engagement_id = uuid.uuid4()
 

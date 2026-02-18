@@ -119,14 +119,16 @@ def create_alert_from_deviations(
         if affected:
             title += f": {affected}"
 
-        alerts.append({
-            "engagement_id": engagement_id,
-            "monitoring_job_id": monitoring_job_id,
-            "severity": severity,
-            "title": title,
-            "description": dev.get("description", ""),
-            "deviation_ids": [dev.get("id", "")],
-            "dedup_key": dedup_key,
-        })
+        alerts.append(
+            {
+                "engagement_id": engagement_id,
+                "monitoring_job_id": monitoring_job_id,
+                "severity": severity,
+                "title": title,
+                "description": dev.get("description", ""),
+                "deviation_ids": [dev.get("id", "")],
+                "dedup_key": dedup_key,
+            }
+        )
 
     return alerts

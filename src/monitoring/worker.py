@@ -103,6 +103,7 @@ async def run_worker(
                 for msg_id, fields in messages:
                     try:
                         import json
+
                         task_data = json.loads(fields.get("payload", "{}"))
                         await process_task(task_data)
                         await redis_client.xack(MONITORING_STREAM, CONSUMER_GROUP, msg_id)

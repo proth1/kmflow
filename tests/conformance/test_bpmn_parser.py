@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import pytest
+from src.conformance.bpmn_parser import parse_bpmn_xml
 
-from src.conformance.bpmn_parser import BPMNGraph, parse_bpmn_xml
-
-SAMPLE_BPMN = '''<?xml version="1.0" encoding="UTF-8"?>
+SAMPLE_BPMN = """<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">
   <bpmn:process id="Process_1" isExecutable="true">
     <bpmn:startEvent id="Start" name="Start"/>
@@ -19,7 +17,7 @@ SAMPLE_BPMN = '''<?xml version="1.0" encoding="UTF-8"?>
     <bpmn:sequenceFlow id="Flow_3" sourceRef="Gateway_1" targetRef="Task_2" name="Yes"/>
     <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_2" targetRef="End"/>
   </bpmn:process>
-</bpmn:definitions>'''
+</bpmn:definitions>"""
 
 
 class TestParseBpmnXml:

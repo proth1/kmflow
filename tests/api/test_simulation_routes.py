@@ -7,7 +7,7 @@ running simulations, and retrieving results.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
@@ -21,9 +21,7 @@ class TestScenarioRoutes:
     """Tests for simulation scenario routes."""
 
     @pytest.mark.asyncio
-    async def test_create_scenario(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_create_scenario(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test creating a simulation scenario."""
         scenario_id = uuid.uuid4()
         engagement_id = uuid.uuid4()
@@ -31,7 +29,7 @@ class TestScenarioRoutes:
         def refresh_side_effect(obj: Any) -> None:
             if isinstance(obj, SimulationScenario):
                 obj.id = scenario_id
-                obj.created_at = datetime.now(timezone.utc)
+                obj.created_at = datetime.now(UTC)
 
         mock_db_session.refresh.side_effect = refresh_side_effect
 
@@ -51,9 +49,7 @@ class TestScenarioRoutes:
         assert data["simulation_type"] == "what_if"
 
     @pytest.mark.asyncio
-    async def test_list_scenarios(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_list_scenarios(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test listing simulation scenarios."""
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = []
@@ -66,9 +62,7 @@ class TestScenarioRoutes:
         assert "total" in data
 
     @pytest.mark.asyncio
-    async def test_get_scenario(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_get_scenario(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting a scenario by ID."""
         scenario_id = uuid.uuid4()
         engagement_id = uuid.uuid4()
@@ -81,7 +75,7 @@ class TestScenarioRoutes:
         mock_scenario.simulation_type = SimulationType.WHAT_IF
         mock_scenario.parameters = {"resources": 10}
         mock_scenario.description = "A test scenario"
-        mock_scenario.created_at = datetime.now(timezone.utc)
+        mock_scenario.created_at = datetime.now(UTC)
 
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_scenario
@@ -93,9 +87,7 @@ class TestScenarioRoutes:
         assert data["id"] == str(scenario_id)
 
     @pytest.mark.asyncio
-    async def test_get_scenario_not_found(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_get_scenario_not_found(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting a scenario that does not exist."""
         scenario_id = uuid.uuid4()
         mock_result = MagicMock()
@@ -110,9 +102,7 @@ class TestRunSimulation:
     """Tests for running simulation scenarios."""
 
     @pytest.mark.asyncio
-    async def test_run_scenario(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_run_scenario(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test running a simulation scenario creates a result."""
         scenario_id = uuid.uuid4()
         result_id = uuid.uuid4()
@@ -136,8 +126,8 @@ class TestRunSimulation:
             if isinstance(obj, SimulationResult):
                 if obj.id is None:
                     obj.id = result_id
-                obj.started_at = datetime.now(timezone.utc)
-                obj.completed_at = datetime.now(timezone.utc)
+                obj.started_at = datetime.now(UTC)
+                obj.completed_at = datetime.now(UTC)
 
         mock_db_session.refresh.side_effect = refresh_side_effect
 
@@ -148,9 +138,7 @@ class TestRunSimulation:
         assert "status" in data
 
     @pytest.mark.asyncio
-    async def test_run_scenario_not_found(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_run_scenario_not_found(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test running a scenario that does not exist."""
         scenario_id = uuid.uuid4()
         mock_result = MagicMock()
@@ -165,9 +153,7 @@ class TestResultRoutes:
     """Tests for simulation result routes."""
 
     @pytest.mark.asyncio
-    async def test_list_results(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_list_results(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test listing simulation results."""
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = []
@@ -180,9 +166,7 @@ class TestResultRoutes:
         assert "total" in data
 
     @pytest.mark.asyncio
-    async def test_get_result(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_get_result(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting a simulation result by ID."""
         result_id = uuid.uuid4()
         scenario_id = uuid.uuid4()
@@ -196,8 +180,8 @@ class TestResultRoutes:
         mock_sim_result.recommendations = []
         mock_sim_result.execution_time_ms = 1000
         mock_sim_result.error_message = None
-        mock_sim_result.started_at = datetime.now(timezone.utc)
-        mock_sim_result.completed_at = datetime.now(timezone.utc)
+        mock_sim_result.started_at = datetime.now(UTC)
+        mock_sim_result.completed_at = datetime.now(UTC)
 
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_sim_result
@@ -209,9 +193,7 @@ class TestResultRoutes:
         assert data["id"] == str(result_id)
 
     @pytest.mark.asyncio
-    async def test_get_result_not_found(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_get_result_not_found(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Test getting a result that does not exist."""
         result_id = uuid.uuid4()
         mock_result = MagicMock()

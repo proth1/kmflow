@@ -92,7 +92,7 @@ class TestAnonymizePatternData:
             "description": "Process for Acme Corp operations",
             "nested": {
                 "client": "Acme Corp",
-            }
+            },
         }
         result = anonymize_pattern_data(data, client_name="Acme Corp")
         assert result["name"] == "[CLIENT]"

@@ -13,7 +13,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.models import User
+from src.core.models import User, UserRole
 from src.core.permissions import require_role
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ async def get_session(request: Request):
 
 @router.post("/retention-cleanup")
 async def run_retention_cleanup(
-    user: User = Depends(require_role("platform_admin")),
+    user: User = Depends(require_role(UserRole.PLATFORM_ADMIN)),
     session: AsyncSession = Depends(get_session),
     dry_run: bool = Query(default=True),
     x_confirm_action: str | None = Header(default=None),
@@ -50,10 +50,7 @@ async def run_retention_cleanup(
         return {
             "dry_run": True,
             "would_clean_up": len(expired),
-            "engagements": [
-                {"id": str(eng.id), "name": eng.name}
-                for eng in expired
-            ],
+            "engagements": [{"id": str(eng.id), "name": eng.name} for eng in expired],
             "status": "preview",
         }
 
@@ -69,7 +66,7 @@ async def run_retention_cleanup(
 
 @router.post("/rotate-encryption-key")
 async def rotate_encryption_key(
-    user: User = Depends(require_role("platform_admin")),
+    user: User = Depends(require_role(UserRole.PLATFORM_ADMIN)),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     """Re-encrypt all integration credentials with the current key.
@@ -85,18 +82,17 @@ async def rotate_encryption_key(
     from src.core.models import IntegrationConnection
 
     result = await session.execute(
-        select(IntegrationConnection).where(
-            IntegrationConnection.encrypted_config.isnot(None)
-        )
+        select(IntegrationConnection).where(IntegrationConnection.encrypted_config.isnot(None))
     )
     connections = result.scalars().all()
 
     try:
         rotated = 0
         for conn in connections:
-            new_config = re_encrypt_value(conn.encrypted_config)
-            conn.encrypted_config = new_config
-            rotated += 1
+            if conn.encrypted_config:
+                new_config = re_encrypt_value(conn.encrypted_config)
+                conn.encrypted_config = new_config
+                rotated += 1
 
         await session.commit()
     except Exception as e:

@@ -22,14 +22,14 @@ def compute_similarity(
     if not embedding_a:
         return 0.0
 
-    dot = sum(a * b for a, b in zip(embedding_a, embedding_b))
+    dot = sum(a * b for a, b in zip(embedding_a, embedding_b, strict=True))
     mag_a = sum(a * a for a in embedding_a) ** 0.5
     mag_b = sum(b * b for b in embedding_b) ** 0.5
 
     if mag_a == 0 or mag_b == 0:
         return 0.0
 
-    return dot / (mag_a * mag_b)
+    return float(dot / (mag_a * mag_b))
 
 
 def rank_patterns(
@@ -87,14 +87,8 @@ def find_applicable_patterns(
     """
     results: list[dict[str, Any]] = []
     for pattern in patterns:
-        industry_match = (
-            not pattern.get("industry")
-            or pattern["industry"].lower() == industry.lower()
-        )
-        category_match = (
-            not categories
-            or pattern.get("category", "") in categories
-        )
+        industry_match = not pattern.get("industry") or pattern["industry"].lower() == industry.lower()
+        category_match = not categories or pattern.get("category", "") in categories
         if industry_match and category_match:
             results.append(pattern)
     return results

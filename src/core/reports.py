@@ -139,19 +139,21 @@ class ReportEngine:
 
         gap_data = []
         for gap in gaps:
-            gap_data.append({
-                "id": str(gap.id),
-                "dimension": str(gap.dimension),
-                "gap_type": str(gap.gap_type),
-                "severity": gap.severity,
-                "confidence": gap.confidence,
-                "priority_score": gap.priority_score,
-                "rationale": gap.rationale,
-                "recommendation": gap.recommendation,
-            })
+            gap_data.append(
+                {
+                    "id": str(gap.id),
+                    "dimension": str(gap.dimension),
+                    "gap_type": str(gap.gap_type),
+                    "severity": gap.severity,
+                    "confidence": gap.confidence,
+                    "priority_score": gap.priority_score,
+                    "rationale": gap.rationale,
+                    "recommendation": gap.recommendation,
+                }
+            )
 
         # Sort by priority
-        gap_data.sort(key=lambda x: x["priority_score"], reverse=True)
+        gap_data.sort(key=lambda x: float(x.get("priority_score", 0) or 0), reverse=True)  # type: ignore[arg-type]
 
         return ReportData(
             engagement={
@@ -164,7 +166,7 @@ class ReportEngine:
             data={
                 "gaps": gap_data,
                 "total_gaps": len(gap_data),
-                "critical_gaps": len([g for g in gap_data if g["severity"] > 0.7]),
+                "critical_gaps": len([g for g in gap_data if float(g.get("severity", 0) or 0) > 0.7]),  # type: ignore[arg-type]
             },
         )
 
@@ -203,7 +205,9 @@ class ReportEngine:
 
         # Calculate control effectiveness summary
         effectiveness_scores = [c.effectiveness_score for c in controls if c.effectiveness_score > 0]
-        avg_effectiveness = round(sum(effectiveness_scores) / len(effectiveness_scores), 2) if effectiveness_scores else 0
+        avg_effectiveness = (
+            round(sum(effectiveness_scores) / len(effectiveness_scores), 2) if effectiveness_scores else 0
+        )
 
         return ReportData(
             engagement={
@@ -260,12 +264,16 @@ class ReportEngine:
         data = report_data.data
         if report_data.report_type == "engagement_summary":
             html_parts.append(f"<div class='metric'>{data.get('evidence_count', 0)} Evidence Items</div>")
-            html_parts.append(f"<p>Coverage: {data.get('coverage_percentage', 0)}% "
-                            f"({data.get('covered_categories', 0)}/{data.get('total_categories', 0)} categories)</p>")
+            html_parts.append(
+                f"<p>Coverage: {data.get('coverage_percentage', 0)}% "
+                f"({data.get('covered_categories', 0)}/{data.get('total_categories', 0)} categories)</p>"
+            )
         elif report_data.report_type == "gap_analysis":
             html_parts.append(f"<div class='metric'>{data.get('total_gaps', 0)} Gaps Identified</div>")
             html_parts.append(f"<p class='critical'>{data.get('critical_gaps', 0)} Critical</p>")
-            html_parts.append("<table><tr><th>Dimension</th><th>Type</th><th>Severity</th><th>Priority</th><th>Recommendation</th></tr>")
+            html_parts.append(
+                "<table><tr><th>Dimension</th><th>Type</th><th>Severity</th><th>Priority</th><th>Recommendation</th></tr>"
+            )
             for gap in data.get("gaps", []):
                 sev_class = "critical" if gap["severity"] > 0.7 else "warning" if gap["severity"] > 0.4 else "good"
                 html_parts.append(
@@ -276,9 +284,11 @@ class ReportEngine:
                 )
             html_parts.append("</table>")
         elif report_data.report_type == "governance_overlay":
-            html_parts.append(f"<div class='metric'>{data.get('policy_count', 0)} Policies | "
-                            f"{data.get('control_count', 0)} Controls | "
-                            f"{data.get('regulation_count', 0)} Regulations</div>")
+            html_parts.append(
+                f"<div class='metric'>{data.get('policy_count', 0)} Policies | "
+                f"{data.get('control_count', 0)} Controls | "
+                f"{data.get('regulation_count', 0)} Regulations</div>"
+            )
             html_parts.append(f"<p>Avg Control Effectiveness: {data.get('avg_control_effectiveness', 0):.0%}</p>")
 
         html_parts.extend(["</body></html>"])

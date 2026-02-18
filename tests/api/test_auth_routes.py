@@ -23,6 +23,7 @@ def _restore_real_auth(test_app):
     yield
     # Re-add if needed (though test_app is session-scoped per test)
 
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

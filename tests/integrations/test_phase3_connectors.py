@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
+import httpx
 import pytest
 
 from src.integrations.base import ConnectionConfig
@@ -15,6 +18,15 @@ from src.integrations.sap import SAPConnector
 from src.integrations.servicenow import ServiceNowConnector
 
 
+def _mock_response(status_code: int = 200, json_data: dict | None = None) -> httpx.Response:
+    """Create a mock httpx Response."""
+    return httpx.Response(
+        status_code=status_code,
+        json=json_data or {},
+        request=httpx.Request("GET", "https://example.com"),
+    )
+
+
 class TestSalesforceConnector:
     """Test suite for SalesforceConnector."""
 
@@ -26,7 +38,9 @@ class TestSalesforceConnector:
             api_key="test_token",
         )
         connector = SalesforceConnector(config)
-        result = await connector.test_connection()
+        mock_response = _mock_response(200)
+        with patch("src.integrations.salesforce.retry_request", return_value=mock_response):
+            result = await connector.test_connection()
         assert result is True
 
     @pytest.mark.asyncio
@@ -45,10 +59,29 @@ class TestSalesforceConnector:
             api_key="test_token",
         )
         connector = SalesforceConnector(config)
-        result = await connector.sync_data("engagement-123", object_type="Case")
+
+        async def mock_paginate(*args, **kwargs):
+            yield [{"Id": "001", "Name": "Test"}]
+
+        with patch("src.integrations.salesforce.paginate_cursor", side_effect=mock_paginate):
+            result = await connector.sync_data("engagement-123", object_type="Case")
         assert "records_synced" in result
         assert isinstance(result["records_synced"], int)
+        assert result["records_synced"] == 1
         assert "metadata" in result
+
+    @pytest.mark.asyncio
+    async def test_sync_data_auth_failure(self) -> None:
+        """sync_data should handle auth failure."""
+        config = ConnectionConfig(
+            base_url="https://example.salesforce.com",
+            extra={"client_id": "id", "client_secret": "secret"},
+        )
+        connector = SalesforceConnector(config)
+        with patch("src.integrations.salesforce.retry_request", side_effect=httpx.ConnectError("fail")):
+            result = await connector.sync_data("engagement-123")
+        assert result["records_synced"] == 0
+        assert "authentication failed" in result["errors"][0]
 
     @pytest.mark.asyncio
     async def test_get_schema_returns_fields(self) -> None:
@@ -66,13 +99,18 @@ class TestSalesforceConnector:
 
     @pytest.mark.asyncio
     async def test_sync_incremental_returns_dict(self) -> None:
-        """sync_incremental should return dict."""
+        """sync_incremental should add WHERE clause."""
         config = ConnectionConfig(
             base_url="https://example.salesforce.com",
             api_key="test_token",
         )
         connector = SalesforceConnector(config)
-        result = await connector.sync_incremental("engagement-123", since="2024-01-01")
+
+        async def mock_paginate(*args, **kwargs):
+            yield [{"Id": "002"}]
+
+        with patch("src.integrations.salesforce.paginate_cursor", side_effect=mock_paginate):
+            result = await connector.sync_incremental("engagement-123", since="2024-01-01")
         assert "records_synced" in result
 
 
@@ -87,7 +125,9 @@ class TestSAPConnector:
             api_key="test_api_key",
         )
         connector = SAPConnector(config)
-        result = await connector.test_connection()
+        mock_response = _mock_response(200)
+        with patch("src.integrations.sap.retry_request", return_value=mock_response):
+            result = await connector.test_connection()
         assert result is True
 
     @pytest.mark.asyncio
@@ -106,10 +146,27 @@ class TestSAPConnector:
             api_key="test_api_key",
         )
         connector = SAPConnector(config)
-        result = await connector.sync_data("engagement-123", entity_set="ZProcessLogs")
+
+        async def mock_paginate(*args, **kwargs):
+            yield [{"BELNR": "001"}, {"BELNR": "002"}]
+
+        with patch("src.integrations.sap.paginate_cursor", side_effect=mock_paginate):
+            result = await connector.sync_data("engagement-123", entity_set="ZProcessLogs")
         assert "records_synced" in result
         assert "metadata" in result
         assert result["metadata"]["source"] == "sap"
+
+    @pytest.mark.asyncio
+    async def test_connection_http_error(self) -> None:
+        """test_connection should handle HTTP errors."""
+        config = ConnectionConfig(
+            base_url="https://example.sap.com",
+            api_key="test_api_key",
+        )
+        connector = SAPConnector(config)
+        with patch("src.integrations.sap.retry_request", side_effect=httpx.ConnectError("fail")):
+            result = await connector.test_connection()
+        assert result is False
 
     @pytest.mark.asyncio
     async def test_get_schema_returns_sap_fields(self) -> None:
@@ -137,7 +194,9 @@ class TestServiceNowConnector:
             api_key="test_api_key",
         )
         connector = ServiceNowConnector(config)
-        result = await connector.test_connection()
+        mock_response = _mock_response(200)
+        with patch("src.integrations.servicenow.retry_request", return_value=mock_response):
+            result = await connector.test_connection()
         assert result is True
 
     @pytest.mark.asyncio
@@ -156,41 +215,53 @@ class TestServiceNowConnector:
             api_key="test_api_key",
         )
         connector = ServiceNowConnector(config)
-        result = await connector.sync_data("engagement-123", table_name="incident")
+
+        async def mock_paginate(*args, **kwargs):
+            yield [{"sys_id": "abc", "number": "INC001"}]
+
+        with patch("src.integrations.servicenow.paginate_offset", side_effect=mock_paginate):
+            result = await connector.sync_data("engagement-123", table_name="incident")
         assert "records_synced" in result
         assert "metadata" in result
         assert result["metadata"]["source"] == "servicenow"
+
+    @pytest.mark.asyncio
+    async def test_connection_http_error(self) -> None:
+        """test_connection should handle HTTP errors."""
+        config = ConnectionConfig(
+            base_url="https://example.service-now.com",
+            api_key="test_api_key",
+        )
+        connector = ServiceNowConnector(config)
+        with patch("src.integrations.servicenow.retry_request", side_effect=httpx.ConnectError("fail")):
+            result = await connector.test_connection()
+        assert result is False
 
 
 class TestFieldMapping:
     """Test suite for field mapping functions."""
 
     def test_get_default_mapping_salesforce(self) -> None:
-        """get_default_mapping should return correct mappings for salesforce."""
         mapping = get_default_mapping("salesforce")
         assert mapping["Id"] == "external_id"
         assert mapping["Name"] == "name"
         assert mapping["Description"] == "description"
 
     def test_get_default_mapping_sap(self) -> None:
-        """get_default_mapping should return correct mappings for sap."""
         mapping = get_default_mapping("sap")
         assert mapping["MANDT"] == "client_id"
         assert mapping["BELNR"] == "document_number"
 
     def test_get_default_mapping_servicenow(self) -> None:
-        """get_default_mapping should return correct mappings for servicenow."""
         mapping = get_default_mapping("servicenow")
         assert mapping["sys_id"] == "external_id"
         assert mapping["short_description"] == "name"
 
     def test_get_default_mapping_unknown(self) -> None:
-        """get_default_mapping should return empty for unknown connector."""
         mapping = get_default_mapping("unknown_connector")
         assert mapping == {}
 
     def test_apply_field_mapping_transforms_record(self) -> None:
-        """apply_field_mapping should transform record correctly."""
         record = {"Id": "123", "Name": "Test Record", "Status": "Active"}
         mapping = {"Id": "external_id", "Name": "name"}
         result = apply_field_mapping(record, mapping)
@@ -198,23 +269,20 @@ class TestFieldMapping:
         assert result["name"] == "Test Record"
 
     def test_apply_field_mapping_includes_unmapped(self) -> None:
-        """apply_field_mapping should include unmapped fields."""
         record = {"Id": "123", "Name": "Test", "Status": "Active"}
         mapping = {"Id": "external_id"}
         result = apply_field_mapping(record, mapping)
         assert result["external_id"] == "123"
-        assert result["Status"] == "Active"  # Unmapped field preserved
-        assert result["Name"] == "Test"  # Unmapped field preserved
+        assert result["Status"] == "Active"
+        assert result["Name"] == "Test"
 
     def test_validate_mapping_valid(self) -> None:
-        """validate_mapping should return empty for valid mapping."""
         mapping = {"Id": "external_id", "Name": "name"}
         schema = ["Id", "Name", "Status"]
         errors = validate_mapping(mapping, schema)
         assert errors == []
 
     def test_validate_mapping_invalid_field(self) -> None:
-        """validate_mapping should return errors for fields not in schema."""
         mapping = {"Id": "external_id", "InvalidField": "target"}
         schema = ["Id", "Name", "Status"]
         errors = validate_mapping(mapping, schema)

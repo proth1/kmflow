@@ -54,9 +54,7 @@ async def collect_evidence(
 
     try:
         if incremental and hasattr(connector, "sync_incremental"):
-            result = await connector.sync_incremental(
-                engagement_id=engagement_id, since=since
-            )
+            result = await connector.sync_incremental(engagement_id=engagement_id, since=since)
         else:
             result = await connector.sync_data(engagement_id=engagement_id)
 

@@ -28,12 +28,28 @@ _CHAT_PATTERN = re.compile(
 )
 
 # Process-related keywords for filtering relevant discussions
-_PROCESS_KEYWORDS = frozenset({
-    "process", "workflow", "approval", "review", "sign-off",
-    "handoff", "escalation", "exception", "workaround",
-    "bottleneck", "delay", "sla", "compliance", "audit",
-    "policy", "procedure", "control", "risk",
-})
+_PROCESS_KEYWORDS = frozenset(
+    {
+        "process",
+        "workflow",
+        "approval",
+        "review",
+        "sign-off",
+        "handoff",
+        "escalation",
+        "exception",
+        "workaround",
+        "bottleneck",
+        "delay",
+        "sla",
+        "compliance",
+        "audit",
+        "policy",
+        "procedure",
+        "control",
+        "risk",
+    }
+)
 
 
 class CommunicationParser(BaseParser):
@@ -86,9 +102,7 @@ class CommunicationParser(BaseParser):
         result.metadata["message_count"] = len(fragments)
 
         # Count process-relevant messages
-        relevant = sum(
-            1 for f in fragments if f.metadata.get("process_relevant")
-        )
+        relevant = sum(1 for f in fragments if f.metadata.get("process_relevant"))
         result.metadata["process_relevant_count"] = relevant
 
         return result

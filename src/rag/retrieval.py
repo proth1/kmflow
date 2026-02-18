@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RetrievalResult:
     """A single retrieval result with source metadata."""
+
     content: str
     source_id: str
     source_type: str  # "fragment", "graph_node"
@@ -46,16 +47,12 @@ class HybridRetriever:
         results: list[RetrievalResult] = []
 
         # 1. Semantic search via pgvector
-        semantic_results = await self._semantic_search(
-            query, session, engagement_id, top_k=top_k
-        )
+        semantic_results = await self._semantic_search(query, session, engagement_id, top_k=top_k)
         results.extend(semantic_results)
 
         # 2. Graph expansion via Neo4j (if available)
         if self.neo4j_driver:
-            graph_results = await self._graph_expand(
-                query, engagement_id, top_k=min(5, top_k)
-            )
+            graph_results = await self._graph_expand(query, engagement_id, top_k=min(5, top_k))
             results.extend(graph_results)
 
         # 3. Deduplicate and rerank by score

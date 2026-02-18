@@ -11,7 +11,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 # =============================================================================
 # Engagement Summary Endpoint Tests
 # =============================================================================
@@ -38,8 +37,8 @@ async def test_get_engagement_summary_json(client):
         "total_categories": 12,
     }
 
-    with patch("src.api.routes.reports.ReportEngine") as MockEngine:
-        instance = MockEngine.return_value
+    with patch("src.api.routes.reports.ReportEngine") as mock_engine:
+        instance = mock_engine.return_value
         instance.generate_engagement_summary = AsyncMock(return_value=mock_report)
 
         resp = await client.get(f"/api/v1/reports/{engagement_id}/summary")
@@ -68,8 +67,8 @@ async def test_get_engagement_summary_html(client):
 
     html_content = "<html><body><h1>Engagement Summary</h1></body></html>"
 
-    with patch("src.api.routes.reports.ReportEngine") as MockEngine:
-        instance = MockEngine.return_value
+    with patch("src.api.routes.reports.ReportEngine") as mock_engine:
+        instance = mock_engine.return_value
         instance.generate_engagement_summary = AsyncMock(return_value=mock_report)
         instance.render_html = MagicMock(return_value=html_content)
 
@@ -114,8 +113,8 @@ async def test_get_gap_report_json(client):
         ],
     }
 
-    with patch("src.api.routes.reports.ReportEngine") as MockEngine:
-        instance = MockEngine.return_value
+    with patch("src.api.routes.reports.ReportEngine") as mock_engine:
+        instance = mock_engine.return_value
         instance.generate_gap_report = AsyncMock(return_value=mock_report)
 
         resp = await client.get(f"/api/v1/reports/{engagement_id}/gap-analysis")
@@ -139,8 +138,8 @@ async def test_get_gap_report_with_tom_id(client):
     mock_report.generated_at = "2024-01-01T00:00:00Z"
     mock_report.data = {"total_gaps": 2, "critical_gaps": 1, "gaps": []}
 
-    with patch("src.api.routes.reports.ReportEngine") as MockEngine:
-        instance = MockEngine.return_value
+    with patch("src.api.routes.reports.ReportEngine") as mock_engine:
+        instance = mock_engine.return_value
         instance.generate_gap_report = AsyncMock(return_value=mock_report)
 
         resp = await client.get(f"/api/v1/reports/{engagement_id}/gap-analysis?tom_id={tom_id}")
@@ -166,8 +165,8 @@ async def test_get_gap_report_html(client):
 
     html_content = "<html><body><h1>Gap Analysis</h1><table></table></body></html>"
 
-    with patch("src.api.routes.reports.ReportEngine") as MockEngine:
-        instance = MockEngine.return_value
+    with patch("src.api.routes.reports.ReportEngine") as mock_engine:
+        instance = mock_engine.return_value
         instance.generate_gap_report = AsyncMock(return_value=mock_report)
         instance.render_html = MagicMock(return_value=html_content)
 
@@ -209,8 +208,8 @@ async def test_get_governance_report_json(client):
         ],
     }
 
-    with patch("src.api.routes.reports.ReportEngine") as MockEngine:
-        instance = MockEngine.return_value
+    with patch("src.api.routes.reports.ReportEngine") as mock_engine:
+        instance = mock_engine.return_value
         instance.generate_governance_report = AsyncMock(return_value=mock_report)
 
         resp = await client.get(f"/api/v1/reports/{engagement_id}/governance")
@@ -242,14 +241,11 @@ async def test_get_governance_report_html(client):
     }
 
     html_content = (
-        "<html><body>"
-        "<h1>Governance Overlay</h1>"
-        "<div>3 Policies | 7 Controls | 2 Regulations</div>"
-        "</body></html>"
+        "<html><body><h1>Governance Overlay</h1><div>3 Policies | 7 Controls | 2 Regulations</div></body></html>"
     )
 
-    with patch("src.api.routes.reports.ReportEngine") as MockEngine:
-        instance = MockEngine.return_value
+    with patch("src.api.routes.reports.ReportEngine") as mock_engine:
+        instance = mock_engine.return_value
         instance.generate_governance_report = AsyncMock(return_value=mock_report)
         instance.render_html = MagicMock(return_value=html_content)
 

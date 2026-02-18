@@ -19,10 +19,7 @@ def parse_cron_field(field: str, min_val: int, max_val: int) -> set[int]:
         if "/" in part:
             base, step = part.split("/", 1)
             step_val = int(step)
-            if base == "*":
-                start = min_val
-            else:
-                start = int(base)
+            start = min_val if base == "*" else int(base)
             for v in range(start, max_val + 1, step_val):
                 values.add(v)
         elif "-" in part:

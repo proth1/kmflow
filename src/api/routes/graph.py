@@ -348,3 +348,55 @@ async def get_engagement_subgraph(
             for rel in subgraph["relationships"]
         ],
     }
+
+
+class CytoscapeNode(BaseModel):
+    """Cytoscape.js node data."""
+
+    data: dict[str, Any]
+
+
+class CytoscapeEdge(BaseModel):
+    """Cytoscape.js edge data."""
+
+    data: dict[str, Any]
+
+
+class CytoscapeExport(BaseModel):
+    """Cytoscape.js compatible graph export."""
+
+    nodes: list[CytoscapeNode]
+    edges: list[CytoscapeEdge]
+
+
+@router.get("/{engagement_id}/export/cytoscape", response_model=CytoscapeExport)
+async def export_cytoscape(
+    engagement_id: UUID,
+    graph_service: KnowledgeGraphService = Depends(get_graph_service),
+    user: User = Depends(require_permission("engagement:read")),
+) -> dict[str, Any]:
+    """Export engagement graph in Cytoscape.js compatible format."""
+    subgraph = await graph_service.get_engagement_subgraph(str(engagement_id))
+
+    nodes = []
+    for node in subgraph["nodes"]:
+        node_data = {
+            "id": node.id,
+            "label": node.properties.get("name", node.label),
+            "type": node.label,
+            **{k: v for k, v in node.properties.items() if isinstance(v, (str, int, float, bool))},
+        }
+        nodes.append({"data": node_data})
+
+    edges = []
+    for rel in subgraph["relationships"]:
+        edge_data = {
+            "id": rel.id,
+            "source": rel.from_id,
+            "target": rel.to_id,
+            "label": rel.relationship_type,
+            **{k: v for k, v in rel.properties.items() if isinstance(v, (str, int, float, bool))},
+        }
+        edges.append({"data": edge_data})
+
+    return {"nodes": nodes, "edges": edges}

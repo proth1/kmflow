@@ -113,12 +113,12 @@ def detect_contradictions(
             # Type conflict detected
             all_evidence_ids: list[str] = []
             values: list[dict[str, str]] = []
-            for etype, elems in types_seen.items():
+            for etype, elems in types_seen.items():  # type: ignore[assignment]
                 for e in elems:
                     all_evidence_ids.extend(e.triangulated.evidence_ids)
                     values.append(
                         {
-                            "value": etype,
+                            "value": str(etype),
                             "source_count": str(len(e.triangulated.evidence_ids)),
                         }
                     )
@@ -126,11 +126,11 @@ def detect_contradictions(
             # Resolve by picking the type with highest weighted evidence
             best_type = ""
             best_score = -1.0
-            for etype, elems in types_seen.items():
+            for etype, elems in types_seen.items():  # type: ignore[assignment]
                 type_score = sum(e.weighted_vote_score for e in elems)
                 if type_score > best_score:
                     best_score = type_score
-                    best_type = etype
+                    best_type = str(etype)
 
             contradictions.append(
                 DetectedContradiction(
@@ -152,9 +152,9 @@ def detect_contradictions(
         # Check quality score divergence across sources
         scores: list[tuple[str, float]] = []
         for ev_id in ev_ids:
-            item = evidence_map.get(ev_id)
-            if item:
-                scores.append((ev_id, item.quality_score))
+            ev_item = evidence_map.get(ev_id)
+            if ev_item:
+                scores.append((ev_id, ev_item.quality_score))
 
         if len(scores) >= 2:
             min_score = min(s[1] for s in scores)

@@ -3,7 +3,7 @@
 Configures the FastAPI app with:
 - CORS middleware
 - Lifespan events for database/cache connections
-- Route registration (14 Phase 1-2 routers + 6 Phase 3 routers + 2 Phase 4 routers)
+- Route registration (14 Phase 1-2 routers + 6 Phase 3 routers + 2 Phase 4 routers + 1 Phase 5 router)
 - MCP server mounted at /mcp
 - OpenAPI documentation at /docs
 """
@@ -101,9 +101,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         from src.monitoring.worker import run_worker
 
         for i in range(settings.monitoring_worker_count):
-            task = asyncio.create_task(
-                run_worker(redis_client, f"worker-{i}", shutdown_event)
-            )
+            task = asyncio.create_task(run_worker(redis_client, f"worker-{i}", shutdown_event))
             worker_tasks.append(task)
         logger.info("Started %d monitoring workers", settings.monitoring_worker_count)
 
@@ -119,7 +117,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await asyncio.gather(*worker_tasks, return_exceptions=True)
         logger.info("Monitoring workers stopped")
 
-    await redis_client.aclose()
+    await redis_client.close()
     await neo4j_driver.close()
     await engine.dispose()
     logger.info("All connections closed")
@@ -132,7 +130,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.app_name,
         description="AI-powered Process Intelligence platform for consulting engagements",
-        version="0.5.0",
+        version="0.6.0",
         docs_url="/docs",
         redoc_url="/redoc",
         lifespan=lifespan,

@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.core.models import ComplianceLevel, Control, ControlEffectiveness, Policy, PolicyType, Regulation
-from src.core.regulatory import ComplianceState, GovernanceChain, RegulatoryOverlayEngine
+from src.core.regulatory import ComplianceState, RegulatoryOverlayEngine
 from src.semantic.graph import GraphNode, GraphRelationship, KnowledgeGraphService
 
 
@@ -84,20 +84,14 @@ async def test_build_governance_chains(
 
     # Mock graph nodes
     process_node = GraphNode(
-        id="proc-1",
-        label="Process",
-        properties={"name": "Review Customer Data", "engagement_id": engagement_id}
+        id="proc-1", label="Process", properties={"name": "Review Customer Data", "engagement_id": engagement_id}
     )
     mock_graph.find_nodes = AsyncMock(return_value=[process_node])
     mock_graph.create_node = AsyncMock()
     mock_graph.create_relationship = AsyncMock()
 
     # Mock policy node for chain assembly
-    policy_node = GraphNode(
-        id=f"policy-{sample_policy.id}",
-        label="Policy",
-        properties={"name": sample_policy.name}
-    )
+    policy_node = GraphNode(id=f"policy-{sample_policy.id}", label="Policy", properties={"name": sample_policy.name})
 
     # Mock get_node to return None for policy/control/reg creation checks, then return policy_node for chain
     # Calls: policy check (None), control check (None), regulation check (None), policy retrieval (policy_node)
@@ -105,11 +99,7 @@ async def test_build_governance_chains(
 
     # Mock relationships for chain building
     policy_rel = GraphRelationship(
-        id="rel-1",
-        from_id="proc-1",
-        to_id=f"policy-{sample_policy.id}",
-        relationship_type="GOVERNED_BY",
-        properties={}
+        id="rel-1", from_id="proc-1", to_id=f"policy-{sample_policy.id}", relationship_type="GOVERNED_BY", properties={}
     )
     mock_graph.get_relationships = AsyncMock(return_value=[policy_rel])
 
@@ -124,18 +114,19 @@ async def test_build_governance_chains(
     assert chains[0].policies[0]["name"] == sample_policy.name
 
     # Verify Policy node was created
-    mock_graph.create_node.assert_any_call("Policy", {
-        "id": f"policy-{sample_policy.id}",
-        "name": sample_policy.name,
-        "engagement_id": engagement_id,
-        "policy_type": str(sample_policy.policy_type),
-    })
+    mock_graph.create_node.assert_any_call(
+        "Policy",
+        {
+            "id": f"policy-{sample_policy.id}",
+            "name": sample_policy.name,
+            "engagement_id": engagement_id,
+            "policy_type": str(sample_policy.policy_type),
+        },
+    )
 
 
 @pytest.mark.asyncio
-async def test_build_governance_chains_no_processes(
-    regulatory_engine, mock_graph, mock_session, sample_policy
-):
+async def test_build_governance_chains_no_processes(regulatory_engine, mock_graph, mock_session, sample_policy):
     """Test governance chain building with no processes in graph."""
     engagement_id = "eng-1"
 
@@ -164,9 +155,7 @@ async def test_build_governance_chains_no_processes(
 
 
 @pytest.mark.asyncio
-async def test_build_governance_chains_creates_policy_nodes(
-    regulatory_engine, mock_graph, mock_session, sample_policy
-):
+async def test_build_governance_chains_creates_policy_nodes(regulatory_engine, mock_graph, mock_session, sample_policy):
     """Test that governance chain building creates Policy nodes in graph."""
     engagement_id = "eng-1"
 
@@ -191,12 +180,15 @@ async def test_build_governance_chains_creates_policy_nodes(
     await regulatory_engine.build_governance_chains(mock_session, engagement_id)
 
     # Verify Policy node was created
-    mock_graph.create_node.assert_called_with("Policy", {
-        "id": f"policy-{sample_policy.id}",
-        "name": sample_policy.name,
-        "engagement_id": engagement_id,
-        "policy_type": str(sample_policy.policy_type),
-    })
+    mock_graph.create_node.assert_called_with(
+        "Policy",
+        {
+            "id": f"policy-{sample_policy.id}",
+            "name": sample_policy.name,
+            "engagement_id": engagement_id,
+            "policy_type": str(sample_policy.policy_type),
+        },
+    )
 
 
 @pytest.mark.asyncio
@@ -206,20 +198,20 @@ async def test_assess_compliance_fully_compliant(regulatory_engine, mock_graph, 
 
     # Create 10 process nodes, all with GOVERNED_BY relationships
     process_nodes = [
-        GraphNode(
-            id=f"proc-{i}",
-            label="Process",
-            properties={"name": f"Process {i}", "engagement_id": engagement_id}
-        )
+        GraphNode(id=f"proc-{i}", label="Process", properties={"name": f"Process {i}", "engagement_id": engagement_id})
         for i in range(10)
     ]
 
     mock_graph.find_nodes = AsyncMock(return_value=process_nodes)
 
     # All processes have governance relationships
-    mock_graph.get_relationships = AsyncMock(return_value=[
-        GraphRelationship(id="rel-1", from_id="proc-x", to_id="policy-1", relationship_type="GOVERNED_BY", properties={})
-    ])
+    mock_graph.get_relationships = AsyncMock(
+        return_value=[
+            GraphRelationship(
+                id="rel-1", from_id="proc-x", to_id="policy-1", relationship_type="GOVERNED_BY", properties={}
+            )
+        ]
+    )
 
     # Execute
     state = await regulatory_engine.assess_compliance(mock_session, engagement_id)
@@ -240,11 +232,7 @@ async def test_assess_compliance_partially_compliant(regulatory_engine, mock_gra
 
     # Create 10 process nodes
     process_nodes = [
-        GraphNode(
-            id=f"proc-{i}",
-            label="Process",
-            properties={"name": f"Process {i}", "engagement_id": engagement_id}
-        )
+        GraphNode(id=f"proc-{i}", label="Process", properties={"name": f"Process {i}", "engagement_id": engagement_id})
         for i in range(10)
     ]
 
@@ -256,7 +244,11 @@ async def test_assess_compliance_partially_compliant(regulatory_engine, mock_gra
     async def mock_get_rels(node_id, **kwargs):
         call_count[0] += 1
         if call_count[0] <= 7:
-            return [GraphRelationship(id="rel-1", from_id=node_id, to_id="policy-1", relationship_type="GOVERNED_BY", properties={})]
+            return [
+                GraphRelationship(
+                    id="rel-1", from_id=node_id, to_id="policy-1", relationship_type="GOVERNED_BY", properties={}
+                )
+            ]
         return []
 
     mock_graph.get_relationships = mock_get_rels
@@ -279,11 +271,7 @@ async def test_assess_compliance_non_compliant(regulatory_engine, mock_graph, mo
 
     # Create 10 process nodes
     process_nodes = [
-        GraphNode(
-            id=f"proc-{i}",
-            label="Process",
-            properties={"name": f"Process {i}", "engagement_id": engagement_id}
-        )
+        GraphNode(id=f"proc-{i}", label="Process", properties={"name": f"Process {i}", "engagement_id": engagement_id})
         for i in range(10)
     ]
 
@@ -295,7 +283,11 @@ async def test_assess_compliance_non_compliant(regulatory_engine, mock_graph, mo
     async def mock_get_rels(node_id, **kwargs):
         call_count[0] += 1
         if call_count[0] <= 4:
-            return [GraphRelationship(id="rel-1", from_id=node_id, to_id="policy-1", relationship_type="GOVERNED_BY", properties={})]
+            return [
+                GraphRelationship(
+                    id="rel-1", from_id=node_id, to_id="policy-1", relationship_type="GOVERNED_BY", properties={}
+                )
+            ]
         return []
 
     mock_graph.get_relationships = mock_get_rels
@@ -346,7 +338,11 @@ async def test_find_ungoverned_processes(regulatory_engine, mock_graph):
     # Only proc-1 has governance
     async def mock_get_rels(node_id, **kwargs):
         if node_id == "proc-1":
-            return [GraphRelationship(id="rel-1", from_id=node_id, to_id="policy-1", relationship_type="GOVERNED_BY", properties={})]
+            return [
+                GraphRelationship(
+                    id="rel-1", from_id=node_id, to_id="policy-1", relationship_type="GOVERNED_BY", properties={}
+                )
+            ]
         return []
 
     mock_graph.get_relationships = mock_get_rels
@@ -375,9 +371,13 @@ async def test_find_ungoverned_all_governed(regulatory_engine, mock_graph):
     mock_graph.find_nodes = AsyncMock(return_value=process_nodes)
 
     # All processes have governance
-    mock_graph.get_relationships = AsyncMock(return_value=[
-        GraphRelationship(id="rel-1", from_id="proc-x", to_id="policy-1", relationship_type="GOVERNED_BY", properties={})
-    ])
+    mock_graph.get_relationships = AsyncMock(
+        return_value=[
+            GraphRelationship(
+                id="rel-1", from_id="proc-x", to_id="policy-1", relationship_type="GOVERNED_BY", properties={}
+            )
+        ]
+    )
 
     # Execute
     ungoverned = await regulatory_engine.find_ungoverned_processes(engagement_id)

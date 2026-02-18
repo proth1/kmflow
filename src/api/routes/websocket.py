@@ -38,9 +38,7 @@ class ConnectionManager:
 
     def disconnect(self, websocket: WebSocket, engagement_id: str) -> None:
         if engagement_id in self._connections:
-            self._connections[engagement_id] = [
-                ws for ws in self._connections[engagement_id] if ws != websocket
-            ]
+            self._connections[engagement_id] = [ws for ws in self._connections[engagement_id] if ws != websocket]
             if not self._connections[engagement_id]:
                 del self._connections[engagement_id]
         logger.info("WebSocket disconnected for engagement %s", engagement_id)
@@ -89,9 +87,7 @@ async def _redis_subscriber(
 
     try:
         while not shutdown.is_set():
-            message = await pubsub.get_message(
-                ignore_subscribe_messages=True, timeout=1.0
-            )
+            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
             if message and message["type"] == "message":
                 try:
                     data = json.loads(message["data"])
@@ -234,9 +230,7 @@ async def alerts_websocket(
 
     try:
         while True:
-            message = await pubsub.get_message(
-                ignore_subscribe_messages=True, timeout=1.0
-            )
+            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
             if message and message["type"] == "message":
                 try:
                     data = json.loads(message["data"])

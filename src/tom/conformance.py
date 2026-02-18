@@ -104,28 +104,30 @@ class ConformanceCheckingEngine:
         # Find missing (in reference but not in POV)
         missing = ref_names - pov_names
         for name in missing:
-            result.deviations.append(Deviation(
-                element_name=name,
-                deviation_type="missing",
-                severity=0.7,
-                description=f"Reference element '{name}' not found in POV model",
-            ))
+            result.deviations.append(
+                Deviation(
+                    element_name=name,
+                    deviation_type="missing",
+                    severity=0.7,
+                    description=f"Reference element '{name}' not found in POV model",
+                )
+            )
 
         # Find extra (in POV but not in reference)
         extra = pov_names - ref_names
         for name in extra:
-            result.deviations.append(Deviation(
-                element_name=name,
-                deviation_type="extra",
-                severity=0.3,
-                description=f"POV element '{name}' not in reference model (potential discovery)",
-            ))
+            result.deviations.append(
+                Deviation(
+                    element_name=name,
+                    deviation_type="extra",
+                    severity=0.3,
+                    description=f"POV element '{name}' not in reference model (potential discovery)",
+                )
+            )
 
         # Calculate fitness score
         if result.total_reference_elements > 0:
-            result.fitness_score = round(
-                result.matching_elements / result.total_reference_elements, 4
-            )
+            result.fitness_score = round(result.matching_elements / result.total_reference_elements, 4)
 
         return result
 

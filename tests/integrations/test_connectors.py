@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 import uuid
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 from httpx import AsyncClient
 
-from src.integrations.base import BaseConnector, ConnectionConfig, ConnectionStatus, ConnectorRegistry
+from src.integrations.base import ConnectionConfig, ConnectionStatus, ConnectorRegistry
 from src.integrations.celonis import CelonisConnector
 from src.integrations.soroco import SorocoConnector
-
 
 # -- Base Connector Tests ----------------------------------------------------
 
@@ -50,6 +50,16 @@ class TestBaseConnector:
 # -- Celonis Connector Tests -------------------------------------------------
 
 
+def _mock_httpx_response(status_code: int = 200, json_data: dict | None = None) -> httpx.Response:
+    """Create a mock httpx Response."""
+    resp = httpx.Response(
+        status_code=status_code,
+        json=json_data or {},
+        request=httpx.Request("GET", "https://example.com"),
+    )
+    return resp
+
+
 class TestCelonisConnector:
     """Tests for Celonis EMS connector."""
 
@@ -62,7 +72,9 @@ class TestCelonisConnector:
     async def test_test_connection_success(self) -> None:
         config = ConnectionConfig(base_url="https://celonis.example.com", api_key="test-key")
         connector = CelonisConnector(config)
-        result = await connector.test_connection()
+        mock_response = _mock_httpx_response(200)
+        with patch("src.integrations.celonis.retry_request", return_value=mock_response):
+            result = await connector.test_connection()
         assert result is True
 
     @pytest.mark.asyncio
@@ -80,12 +92,32 @@ class TestCelonisConnector:
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_sync_data(self) -> None:
+    async def test_test_connection_http_error(self) -> None:
+        config = ConnectionConfig(base_url="https://celonis.example.com", api_key="test-key")
+        connector = CelonisConnector(config)
+        with patch("src.integrations.celonis.retry_request", side_effect=httpx.ConnectError("fail")):
+            result = await connector.test_connection()
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_sync_data_no_pool_id(self) -> None:
         config = ConnectionConfig(base_url="https://celonis.example.com", api_key="test-key")
         connector = CelonisConnector(config)
         result = await connector.sync_data(engagement_id="test-123")
-        assert "records_synced" in result
-        assert "errors" in result
+        assert result["records_synced"] == 0
+        assert "data_pool_id is required" in result["errors"][0]
+
+    @pytest.mark.asyncio
+    async def test_sync_data_success(self) -> None:
+        config = ConnectionConfig(base_url="https://celonis.example.com", api_key="test-key")
+        connector = CelonisConnector(config)
+
+        async def mock_paginate(*args, **kwargs):
+            yield [{"id": 1}, {"id": 2}]
+
+        with patch("src.integrations.celonis.paginate_offset", side_effect=mock_paginate):
+            result = await connector.sync_data(engagement_id="test-123", data_pool_id="pool-1")
+        assert result["records_synced"] == 2
         assert result["errors"] == []
 
     @pytest.mark.asyncio
@@ -95,6 +127,15 @@ class TestCelonisConnector:
         result = await connector.sync_data(engagement_id="test-123")
         assert result["records_synced"] == 0
         assert len(result["errors"]) > 0
+
+    @pytest.mark.asyncio
+    async def test_get_schema(self) -> None:
+        config = ConnectionConfig(base_url="https://celonis.example.com", api_key="test-key")
+        connector = CelonisConnector(config)
+        schema = await connector.get_schema()
+        assert isinstance(schema, list)
+        assert "case_id" in schema
+        assert "activity" in schema
 
 
 # -- Soroco Connector Tests --------------------------------------------------
@@ -116,7 +157,9 @@ class TestSorocoConnector:
             extra={"tenant_id": "tenant-1"},
         )
         connector = SorocoConnector(config)
-        result = await connector.test_connection()
+        mock_response = _mock_httpx_response(200)
+        with patch("src.integrations.soroco.retry_request", return_value=mock_response):
+            result = await connector.test_connection()
         assert result is True
 
     @pytest.mark.asyncio
@@ -127,16 +170,29 @@ class TestSorocoConnector:
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_sync_data(self) -> None:
+    async def test_sync_data_success(self) -> None:
         config = ConnectionConfig(
             base_url="https://soroco.example.com",
             api_key="test-key",
             extra={"tenant_id": "tenant-1"},
         )
         connector = SorocoConnector(config)
-        result = await connector.sync_data(engagement_id="test-123", team_id="team-a")
-        assert result["records_synced"] == 0
+
+        async def mock_paginate(*args, **kwargs):
+            yield [{"task_id": "t1"}, {"task_id": "t2"}, {"task_id": "t3"}]
+
+        with patch("src.integrations.soroco.paginate_offset", side_effect=mock_paginate):
+            result = await connector.sync_data(engagement_id="test-123", project_id="proj-1")
+        assert result["records_synced"] == 3
         assert result["errors"] == []
+
+    @pytest.mark.asyncio
+    async def test_sync_data_not_configured(self) -> None:
+        config = ConnectionConfig()
+        connector = SorocoConnector(config)
+        result = await connector.sync_data(engagement_id="test-123")
+        assert result["records_synced"] == 0
+        assert len(result["errors"]) > 0
 
 
 # -- Integration API Route Tests ---------------------------------------------
@@ -156,9 +212,7 @@ class TestIntegrationRoutes:
         assert "soroco" in types
 
     @pytest.mark.asyncio
-    async def test_create_connection(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_create_connection(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """POST /api/v1/integrations/connections creates a connection."""
         from typing import Any
 
@@ -204,9 +258,7 @@ class TestIntegrationRoutes:
         assert response.status_code == 400
 
     @pytest.mark.asyncio
-    async def test_list_connections(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_list_connections(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """GET /api/v1/integrations/connections lists connections."""
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = []
@@ -219,9 +271,7 @@ class TestIntegrationRoutes:
         assert "total" in data
 
     @pytest.mark.asyncio
-    async def test_test_connection_not_found(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_test_connection_not_found(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """POST /api/v1/integrations/connections/{id}/test returns 404."""
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = None
