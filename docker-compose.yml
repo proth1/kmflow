@@ -73,7 +73,7 @@ services:
       DB_PASSWORD: camunda_dev
       CAMUNDA_BPM_RUN_EXAMPLE: "false"
     ports:
-      - "8080:8080"
+      - "${CIB7_PORT:-8081}:8080"
     volumes:
       - ./docker/cib7/bpm-platform.xml:/camunda/configuration/default.xml
     depends_on:
@@ -98,8 +98,8 @@ services:
       MINIO_ROOT_USER: kmflow-dev
       MINIO_ROOT_PASSWORD: kmflow-dev-secret
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${MINIO_PORT:-9002}:9000"
+      - "${MINIO_CONSOLE_PORT:-9003}:9001"
     volumes:
       - minio_data:/data
     healthcheck:
@@ -135,8 +135,8 @@ services:
     image: axllent/mailpit:v1.22
     container_name: kmflow-mailpit
     ports:
-      - "1025:1025"
-      - "8025:8025"
+      - "${SMTP_PORT:-1026}:1025"
+      - "${MAILPIT_UI_PORT:-8026}:8025"
     restart: unless-stopped
     networks:
       - kmflow-network

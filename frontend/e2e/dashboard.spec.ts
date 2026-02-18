@@ -16,18 +16,31 @@ test.describe("Dashboard", () => {
 
   test("dashboard quick action cards link to sections", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText("Evidence Upload")).toBeVisible();
-    await expect(page.getByText("Knowledge Graph")).toBeVisible();
-    await expect(page.getByText("TOM Analysis")).toBeVisible();
-    await expect(page.getByText("Conformance")).toBeVisible();
-    await expect(page.getByText("Monitoring")).toBeVisible();
-    await expect(page.getByText("Copilot")).toBeVisible();
+    const content = page.locator("main").first();
+    await expect(
+      content.getByRole("heading", { name: "Evidence Upload" })
+    ).toBeVisible();
+    await expect(
+      content.getByRole("heading", { name: "Knowledge Graph" })
+    ).toBeVisible();
+    await expect(
+      content.getByRole("heading", { name: "TOM Analysis" })
+    ).toBeVisible();
+    await expect(
+      content.getByRole("heading", { name: "Conformance" })
+    ).toBeVisible();
+    await expect(
+      content.getByRole("heading", { name: "Monitoring" })
+    ).toBeVisible();
+    await expect(
+      content.getByRole("heading", { name: "Copilot" })
+    ).toBeVisible();
   });
 
   test("engagement dashboard page loads with engagement ID", async ({
     page,
   }) => {
     await page.goto("/dashboard/00000000-0000-0000-0000-000000000001");
-    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator("main").first()).toBeVisible();
   });
 });

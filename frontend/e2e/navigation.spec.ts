@@ -23,7 +23,9 @@ test.describe("Navigation", () => {
     await expect(sidebar.getByText("Copilot")).toBeVisible();
     await expect(sidebar.getByText("Portal")).toBeVisible();
     await expect(sidebar.getByText("Conformance")).toBeVisible();
-    await expect(sidebar.getByText("Processes")).toBeVisible();
+    await expect(
+      sidebar.getByRole("link", { name: "Processes" })
+    ).toBeVisible();
   });
 
   test("clicking sidebar link navigates to page", async ({ page }) => {
@@ -58,7 +60,9 @@ test.describe("Navigation", () => {
 
   test("monitoring page loads", async ({ page }) => {
     await page.goto("/monitoring");
-    await expect(page.getByText("Monitoring")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Monitoring Dashboard" })
+    ).toBeVisible();
   });
 
   test("portal page loads", async ({ page }) => {

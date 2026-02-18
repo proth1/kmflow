@@ -8,7 +8,7 @@ test.describe("Knowledge Graph Explorer", () => {
 
   test("graph page renders main content area", async ({ page }) => {
     await page.goto("/graph/test-engagement-id");
-    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator("main").first()).toBeVisible();
   });
 
   test("graph page has layout selector", async ({ page }) => {

@@ -12,19 +12,19 @@ test.describe("Portal Pages", () => {
     await page.goto("/portal/test-engagement-id/process");
     // The layout nav always renders; page shows either content or error state
     await expect(page.getByText("KMFlow Client Portal")).toBeVisible();
-    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator("main").first()).toBeVisible();
   });
 
   test("portal findings page loads", async ({ page }) => {
     await page.goto("/portal/test-engagement-id/findings");
     await expect(page.getByText("KMFlow Client Portal")).toBeVisible();
-    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator("main").first()).toBeVisible();
   });
 
   test("portal evidence page loads with heading", async ({ page }) => {
     await page.goto("/portal/test-engagement-id/evidence");
     await expect(page.getByText("KMFlow Client Portal")).toBeVisible();
-    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator("main").first()).toBeVisible();
   });
 
   test("portal overview page has navigation links", async ({ page }) => {
