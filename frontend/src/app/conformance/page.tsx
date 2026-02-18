@@ -171,10 +171,11 @@ export default function ConformanceDashboard() {
           <form onSubmit={handleUploadSubmit} className="space-y-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label htmlFor="upload-name" className="block text-sm font-medium text-gray-700">
                   Name
                 </label>
                 <input
+                  id="upload-name"
                   type="text"
                   value={uploadForm.name}
                   onChange={(e) =>
@@ -186,10 +187,11 @@ export default function ConformanceDashboard() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label htmlFor="upload-industry" className="block text-sm font-medium text-gray-700">
                   Industry
                 </label>
                 <input
+                  id="upload-industry"
                   type="text"
                   value={uploadForm.industry}
                   onChange={(e) =>
@@ -201,10 +203,11 @@ export default function ConformanceDashboard() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label htmlFor="upload-process-area" className="block text-sm font-medium text-gray-700">
                   Process Area
                 </label>
                 <input
+                  id="upload-process-area"
                   type="text"
                   value={uploadForm.process_area}
                   onChange={(e) =>
@@ -220,10 +223,11 @@ export default function ConformanceDashboard() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label htmlFor="upload-bpmn-xml" className="block text-sm font-medium text-gray-700">
                 BPMN XML
               </label>
               <textarea
+                id="upload-bpmn-xml"
                 value={uploadForm.bpmn_xml}
                 onChange={(e) =>
                   setUploadForm({ ...uploadForm, bpmn_xml: e.target.value })
@@ -302,10 +306,11 @@ export default function ConformanceDashboard() {
           <form onSubmit={handleCheckSubmit} className="space-y-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label htmlFor="check-engagement-id" className="block text-sm font-medium text-gray-700">
                   Engagement ID
                 </label>
                 <input
+                  id="check-engagement-id"
                   type="text"
                   value={checkForm.engagement_id}
                   onChange={(e) =>
@@ -321,10 +326,11 @@ export default function ConformanceDashboard() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label htmlFor="check-reference-model" className="block text-sm font-medium text-gray-700">
                   Reference Model
                 </label>
                 <select
+                  id="check-reference-model"
                   value={checkForm.reference_model_id}
                   onChange={(e) =>
                     setCheckForm({
@@ -346,10 +352,11 @@ export default function ConformanceDashboard() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label htmlFor="check-observed-bpmn" className="block text-sm font-medium text-gray-700">
                 Observed BPMN XML
               </label>
               <textarea
+                id="check-observed-bpmn"
                 value={checkForm.observed_bpmn_xml}
                 onChange={(e) =>
                   setCheckForm({
