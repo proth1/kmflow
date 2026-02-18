@@ -8,7 +8,6 @@ already-migrated items, handles failures gracefully, and respects dry_run.
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass, field
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -16,8 +15,6 @@ import pytest
 
 from src.core.models import (
     DataCatalogEntry,
-    DataClassification,
-    DataLayer,
     EvidenceCategory,
     EvidenceItem,
     EvidenceLineage,
@@ -31,7 +28,6 @@ from src.governance.migration import (
     _read_local_file,
     migrate_engagement,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -109,6 +105,12 @@ def _make_session(
     session.commit = AsyncMock()
     session.rollback = AsyncMock()
     session.delete = AsyncMock()
+
+    # Configure begin_nested() as an async context manager (savepoint support)
+    nested_cm = MagicMock()
+    nested_cm.__aenter__ = AsyncMock(return_value=None)
+    nested_cm.__aexit__ = AsyncMock(return_value=False)
+    session.begin_nested = MagicMock(return_value=nested_cm)
 
     # Items result
     items_result = MagicMock()
@@ -230,7 +232,11 @@ class TestReadLocalFile:
         assert result is None
 
     def test_reads_from_file_path_when_set(self, tmp_path: Any) -> None:
-        test_file = tmp_path / "test.pdf"
+        # Files must reside under evidence_store/ to pass the path-boundary check.
+        # Create the directory and place the file inside it.
+        evidence_store = tmp_path / "evidence_store"
+        evidence_store.mkdir()
+        test_file = evidence_store / "test.pdf"
         test_file.write_bytes(b"PDF content")
 
         item = MagicMock()
@@ -238,8 +244,49 @@ class TestReadLocalFile:
         item.name = "test.pdf"
         item.id = uuid.uuid4()
 
-        result = _read_local_file(item, "any-engagement")
+        # Patch Path.resolve so that the boundary resolves to tmp_path/evidence_store
+        import src.governance.migration as migration_mod
+        from pathlib import Path as _Path
+
+        original_resolve = _Path.resolve
+
+        def patched_resolve(self: _Path, **kwargs: Any) -> _Path:
+            # Remap the cwd-relative "evidence_store" anchor to our tmp dir
+            result = original_resolve(self, **kwargs)
+            cwd_store = original_resolve(_Path("evidence_store"))
+            if str(result).startswith(str(cwd_store)):
+                # already resolves into real evidence_store — leave alone
+                return result
+            # For the test file inside tmp evidence_store, return as-is
+            return result
+
+        # Use a simpler approach: monkeypatch the base_resolved computation
+        # by temporarily setting the cwd to tmp_path so Path("evidence_store")
+        # resolves to our temp evidence_store directory.
+        import os
+
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(tmp_path)
+            result = _read_local_file(item, "any-engagement")
+        finally:
+            os.chdir(original_cwd)
+
         assert result == b"PDF content"
+
+    def test_rejects_file_outside_evidence_store(self, tmp_path: Any) -> None:
+        # Files outside evidence_store/ should be blocked by path traversal check.
+        test_file = tmp_path / "secret.txt"
+        test_file.write_bytes(b"secret")
+
+        item = MagicMock()
+        item.file_path = str(test_file)
+        item.name = "secret.txt"
+        item.id = uuid.uuid4()
+
+        result = _read_local_file(item, "any-engagement")
+        # Path traversal detected: returns None rather than reading the file
+        assert result is None
 
 
 # ---------------------------------------------------------------------------
@@ -467,9 +514,15 @@ class TestMigrateEngagement:
         session.rollback = AsyncMock()
         session.delete = AsyncMock()
 
+        # Configure begin_nested() as an async context manager (savepoint)
+        nested_cm = MagicMock()
+        nested_cm.__aenter__ = AsyncMock(return_value=None)
+        nested_cm.__aexit__ = AsyncMock(return_value=False)
+        session.begin_nested = MagicMock(return_value=nested_cm)
+
         items_result = MagicMock()
         items_result.scalars.return_value.all.return_value = [good_item]
-        # Lineage check raises
+        # Lineage check raises (simulates a DB error inside the savepoint)
         session.execute = AsyncMock(
             side_effect=[
                 items_result,

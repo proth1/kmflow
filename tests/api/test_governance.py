@@ -8,7 +8,6 @@ test_app fixture which mocks auth and database access.
 from __future__ import annotations
 
 import io
-import json
 import uuid
 import zipfile
 from collections.abc import AsyncGenerator
@@ -23,7 +22,6 @@ from httpx import ASGITransport, AsyncClient
 from src.core.auth import get_current_user
 from src.core.config import Settings, get_settings
 from src.core.models import DataClassification, DataLayer, User, UserRole
-
 
 # ---------------------------------------------------------------------------
 # Fixtures — governance-specific test app

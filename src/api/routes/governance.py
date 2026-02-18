@@ -21,14 +21,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.models import DataCatalogEntry, DataClassification, DataLayer, User
 from src.core.permissions import require_permission
+from src.datalake.backend import get_storage_backend
+from src.datalake.silver import SilverLayerWriter
 from src.governance.alerting import check_and_alert_sla_breaches
 from src.governance.catalog import DataCatalogService
 from src.governance.export import export_governance_package
 from src.governance.migration import MigrationResult, migrate_engagement
 from src.governance.policy import PolicyEngine, PolicyViolation
 from src.governance.quality import SLAResult, check_quality_sla
-from src.datalake.backend import LocalFilesystemBackend
-from src.datalake.silver import SilverLayerWriter
 
 logger = logging.getLogger(__name__)
 
@@ -437,7 +437,7 @@ async def trigger_migration(
 
     Pass ``?dry_run=true`` to simulate without writing.
     """
-    storage_backend = LocalFilesystemBackend()
+    storage_backend = get_storage_backend("local")
     silver_writer = SilverLayerWriter()
 
     result = await migrate_engagement(

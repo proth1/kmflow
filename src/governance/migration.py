@@ -8,6 +8,7 @@ DataCatalogEntry records if absent.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import uuid
 from dataclasses import dataclass, field
@@ -191,26 +192,23 @@ async def migrate_engagement(
     for item in items:
         item_id_str = str(item.id)
         try:
-            await _migrate_item(
-                session=session,
-                item=item,
-                engagement_id=engagement_id,
-                storage_backend=storage_backend,
-                silver_writer=silver_writer,
-                catalog_svc=catalog_svc,
-                result=result,
-                dry_run=dry_run,
-            )
+            async with session.begin_nested():
+                await _migrate_item(
+                    session=session,
+                    item=item,
+                    engagement_id=engagement_id,
+                    storage_backend=storage_backend,
+                    silver_writer=silver_writer,
+                    catalog_svc=catalog_svc,
+                    result=result,
+                    dry_run=dry_run,
+                )
         except Exception as exc:
             error_msg = f"Failed to migrate evidence item {item_id_str}: {exc!r}"
             logger.warning(error_msg)
             result.errors.append(error_msg)
             result.items_failed += 1
-            # Roll back partial changes for this item; continue with next
-            try:
-                await session.rollback()
-            except Exception:
-                pass
+            # Savepoint was rolled back automatically by begin_nested(); continue
 
     if not dry_run:
         await session.commit()
@@ -318,25 +316,39 @@ def _read_local_file(item: EvidenceItem, engagement_id: str) -> bytes | None:
     Looks in ``evidence_store/{engagement_id}/`` for a file matching
     ``item.file_path`` or ``item.name``. Returns None if not found so
     the migration can continue (skipping the Bronze write for this item).
+
+    Path boundary validation is enforced: any resolved path that falls
+    outside the ``evidence_store/`` directory is rejected to prevent
+    directory-traversal attacks via a crafted ``file_path`` value.
     """
+    evidence_dir = Path("evidence_store") / engagement_id
+    # The boundary is evidence_store/ (parent of the per-engagement dir)
+    base_resolved = Path("evidence_store").resolve()
+
     # Try the stored file_path first
     if item.file_path:
         candidate = Path(item.file_path)
-        if candidate.exists():
-            try:
+        resolved = candidate.resolve()
+        if not str(resolved).startswith(str(base_resolved)):
+            logger.warning(
+                "Path traversal detected for item %s: %s", item.id, item.file_path
+            )
+        elif candidate.exists():
+            with contextlib.suppress(OSError):
                 return candidate.read_bytes()
-            except OSError:
-                pass
 
     # Fall back to evidence_store convention
-    evidence_dir = Path("evidence_store") / engagement_id
     for candidate_name in (item.name, Path(item.name).name):
         candidate = evidence_dir / candidate_name
+        resolved = candidate.resolve()
+        if not str(resolved).startswith(str(base_resolved)):
+            logger.warning(
+                "Path traversal detected for item %s: %s", item.id, candidate
+            )
+            continue
         if candidate.exists():
-            try:
+            with contextlib.suppress(OSError):
                 return candidate.read_bytes()
-            except OSError:
-                pass
 
     logger.debug(
         "Local file not found for evidence item %s (%s); skipping Bronze write",
