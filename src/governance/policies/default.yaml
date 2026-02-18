@@ -1,0 +1,58 @@
+# KMFlow Default Data Governance Policies
+#
+# These policies are evaluated against every DataCatalogEntry by
+# PolicyEngine.evaluate(). Adjust thresholds to match client SLAs.
+#
+# severity levels: error | warning | info
+
+# ---------------------------------------------------------------------------
+# Retention policy
+# Max retention days per medallion layer.
+# null = unlimited (no maximum enforced).
+# ---------------------------------------------------------------------------
+retention:
+  enabled: true
+  severity: warning
+  max_days_by_layer:
+    bronze: 365     # Raw evidence: 1 year
+    silver: 730     # Processed data: 2 years
+    gold: null      # Curated/gold data: no maximum
+
+# ---------------------------------------------------------------------------
+# Classification required
+# Silver and gold datasets must carry a non-public classification.
+# ---------------------------------------------------------------------------
+classification_required:
+  enabled: true
+  severity: error
+  layers:
+    - silver
+    - gold
+  # Acceptable values for the layers listed above.
+  # 'public' is not permitted for silver/gold layers.
+  allowed_values:
+    - internal
+    - confidential
+    - restricted
+
+# ---------------------------------------------------------------------------
+# Quality SLA required
+# Gold datasets must define explicit quality SLA thresholds.
+# ---------------------------------------------------------------------------
+quality_sla_required:
+  enabled: true
+  severity: error
+  layers:
+    - gold
+
+# ---------------------------------------------------------------------------
+# Naming convention
+# All dataset names must use lowercase letters, digits, and underscores only.
+# No spaces, hyphens, or mixed case.
+# ---------------------------------------------------------------------------
+naming_convention:
+  enabled: true
+  severity: warning
+  # Allows: my_dataset, evidence_v2, loan_origination_2024
+  # Rejects: MyDataset, my-dataset, "my dataset"
+  pattern: "^[a-z][a-z0-9_]*$"
