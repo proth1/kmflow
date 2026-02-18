@@ -153,9 +153,11 @@ class TestGetStorageBackend:
         with pytest.raises(ValueError, match="Unknown storage backend"):
             get_storage_backend("s3")
 
-    def test_databricks_not_implemented(self) -> None:
-        with pytest.raises(NotImplementedError, match="Phase F"):
-            get_storage_backend("databricks")
+    def test_databricks_backend_available(self) -> None:
+        from src.datalake.databricks_backend import DatabricksBackend
+
+        backend = get_storage_backend("databricks")
+        assert isinstance(backend, DatabricksBackend)
 
 
 # ---------------------------------------------------------------------------

@@ -2,12 +2,12 @@
 
 Provides a storage abstraction layer (StorageBackend protocol) with
 implementations for local filesystem, Delta Lake (via delta-rs), and
-a future Databricks backend. Enables medallion architecture (Bronze /
-Silver / Gold) without coupling the evidence pipeline to a specific
-storage technology.
+Databricks Volumes. Enables medallion architecture (Bronze / Silver / Gold)
+without coupling the evidence pipeline to a specific storage technology.
 
 Submodules:
-- ``backend``: StorageBackend protocol + implementations (Phase B)
+- ``backend``: StorageBackend protocol + local/Delta implementations (Phase B)
+- ``databricks_backend``: Databricks Volumes backend (Phase F)
 - ``silver``: Silver layer writers for fragments, entities, quality (Phase C)
 - ``lineage``: Evidence lineage tracking service (Phase C)
 """
@@ -18,6 +18,7 @@ from src.datalake.backend import (
     StorageBackend,
     get_storage_backend,
 )
+from src.datalake.databricks_backend import DatabricksBackend
 from src.datalake.lineage import (
     append_transformation,
     create_lineage_record,
@@ -26,6 +27,7 @@ from src.datalake.lineage import (
 from src.datalake.silver import SilverLayerWriter
 
 __all__ = [
+    "DatabricksBackend",
     "DeltaLakeBackend",
     "LocalFilesystemBackend",
     "SilverLayerWriter",
