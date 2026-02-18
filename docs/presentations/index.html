@@ -429,6 +429,208 @@
       background: rgba(255, 255, 255, 0.3);
     }
 
+    /* XES Info Modal */
+    .xes-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 20, 50, 0.85);
+      backdrop-filter: blur(6px);
+      z-index: 10000;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    .xes-modal.active {
+      display: flex;
+    }
+
+    .xes-modal-content {
+      background: var(--kpmg-white);
+      border-radius: 16px;
+      max-width: 900px;
+      width: 100%;
+      max-height: 85vh;
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+      animation: modalIn 0.3s ease-out;
+    }
+
+    .xes-modal-header {
+      background: linear-gradient(135deg, var(--kpmg-blue) 0%, var(--kpmg-medium-blue) 100%);
+      color: var(--kpmg-white);
+      padding: 1.5rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .xes-modal-header h3 {
+      flex: 1;
+      font-size: 1.4rem;
+      color: var(--kpmg-white);
+      margin: 0;
+    }
+
+    .xes-modal-header .xes-subtitle {
+      font-size: 0.85rem;
+      opacity: 0.8;
+      font-weight: 400;
+    }
+
+    .xes-modal-body {
+      overflow-y: auto;
+      max-height: calc(85vh - 80px);
+      padding: 2rem;
+    }
+
+    .xes-modal-body h4 {
+      color: var(--kpmg-blue);
+      font-family: var(--font-heading);
+      font-size: 1.1rem;
+      margin: 1.5rem 0 0.5rem 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .xes-modal-body h4:first-child {
+      margin-top: 0;
+    }
+
+    .xes-modal-body p {
+      font-size: 0.9rem;
+      line-height: 1.7;
+      color: var(--kpmg-dark-gray);
+      margin: 0.4rem 0;
+    }
+
+    .xes-modal-body ul {
+      font-size: 0.9rem;
+      line-height: 1.7;
+      color: var(--kpmg-dark-gray);
+      margin: 0.4rem 0 0.4rem 1.5rem;
+    }
+
+    .xes-structure {
+      background: var(--kpmg-light-gray);
+      border-left: 4px solid var(--kpmg-light-blue);
+      padding: 1rem 1.25rem;
+      border-radius: 0 8px 8px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 0.82rem;
+      line-height: 1.8;
+      margin: 0.75rem 0;
+      overflow-x: auto;
+    }
+
+    .xes-attr-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin: 0.75rem 0;
+    }
+
+    .xes-attr-table th {
+      background: var(--kpmg-blue);
+      color: var(--kpmg-white);
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    .xes-attr-table td {
+      padding: 0.4rem 0.75rem;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .xes-attr-table tr:nth-child(even) {
+      background: var(--kpmg-light-gray);
+    }
+
+    .xes-attr-table code {
+      background: rgba(0, 51, 141, 0.08);
+      padding: 0.1rem 0.35rem;
+      border-radius: 3px;
+      font-size: 0.82rem;
+      color: var(--kpmg-blue);
+    }
+
+    .xes-xml-snippet {
+      background: var(--kpmg-dark-navy);
+      color: #e0e0e0;
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.78rem;
+      line-height: 1.7;
+      margin: 0.75rem 0;
+      overflow-x: auto;
+    }
+
+    .xes-xml-snippet .xml-tag { color: #7ec8e3; }
+    .xes-xml-snippet .xml-attr { color: #c3e88d; }
+    .xes-xml-snippet .xml-val { color: #f0c674; }
+
+    .xes-tools-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin: 0.75rem 0;
+    }
+
+    .xes-tool-card {
+      background: var(--kpmg-light-gray);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+    }
+
+    .xes-tool-card strong {
+      color: var(--kpmg-blue);
+      font-size: 0.85rem;
+    }
+
+    .xes-tool-card p {
+      font-size: 0.82rem;
+      margin: 0.2rem 0 0 0;
+      color: var(--kpmg-medium-gray);
+    }
+
+    .xes-relevance {
+      background: linear-gradient(135deg, rgba(0, 51, 141, 0.05) 0%, rgba(0, 94, 184, 0.08) 100%);
+      border: 1px solid rgba(0, 51, 141, 0.15);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin: 0.75rem 0;
+    }
+
+    .xes-relevance p {
+      font-size: 0.85rem;
+    }
+
+    .xes-clickable-row {
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .xes-clickable-row:hover {
+      background: rgba(0, 145, 218, 0.08);
+    }
+
+    .xes-clickable-row td:first-child strong {
+      border-bottom: 1px dashed var(--kpmg-light-blue);
+    }
+
+    .xes-info-hint {
+      font-size: 0.7rem;
+      color: var(--kpmg-light-blue);
+      margin-left: 0.35rem;
+      vertical-align: super;
+    }
+
     .evidence-modal-body {
       overflow-y: auto;
       max-height: calc(85vh - 80px);
@@ -1885,8 +2087,8 @@ priority_score = (
               <td>Native connectors</td>
               <td>SaaS data with credential management, rate limiting</td>
             </tr>
-            <tr>
-              <td><strong>XES Format</strong></td>
+            <tr class="xes-clickable-row" id="xesRow" tabindex="0" role="button" aria-label="Click for XES format details">
+              <td><strong>XES Format</strong><span class="xes-info-hint">i</span></td>
               <td>Standard import</td>
               <td>Event log interoperability</td>
             </tr>
@@ -2839,6 +3041,98 @@ priority_score = (
     </div>
   </div>
 
+  <!-- XES Info Modal -->
+  <div class="xes-modal" id="xesModal" role="dialog" aria-modal="true" aria-labelledby="xesModalTitle">
+    <div class="xes-modal-content">
+      <div class="xes-modal-header">
+        <div>
+          <h3 id="xesModalTitle">XES &mdash; eXtensible Event Stream</h3>
+          <div class="xes-subtitle">IEEE Standard for Process Mining Event Logs</div>
+        </div>
+        <button class="evidence-modal-close" id="xesModalCloseBtn" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="xes-modal-body">
+        <h4>What is XES?</h4>
+        <p>XES is an XML-based standard for storing event logs of business processes, maintained by the IEEE Task Force on Process Mining. It provides a structured way to record <em>who did what, when, and in which process instance</em>.</p>
+
+        <h4>Log Structure</h4>
+        <div class="xes-structure">
+          <strong>Log</strong><br>
+          &nbsp;&nbsp;&#9492;&#9472; <strong>Trace</strong> (Case 1001 &mdash; one process instance)<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#9492;&#9472; Event: Submit Application<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#9492;&#9472; Event: Review<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#9492;&#9472; Event: Approve<br>
+          &nbsp;&nbsp;&#9492;&#9472; <strong>Trace</strong> (Case 1002)<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#9492;&#9472; Event: Submit Application<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#9492;&#9472; Event: Review<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#9492;&#9472; Event: Reject
+        </div>
+
+        <h4>Standard Event Attributes</h4>
+        <table class="xes-attr-table">
+          <thead>
+            <tr><th>Attribute</th><th>Meaning</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>concept:name</code></td><td>Activity name</td></tr>
+            <tr><td><code>time:timestamp</code></td><td>When the event occurred</td></tr>
+            <tr><td><code>org:resource</code></td><td>Who performed it</td></tr>
+            <tr><td><code>lifecycle:transition</code></td><td>start / complete</td></tr>
+            <tr><td><code>case:id</code></td><td>Process instance ID</td></tr>
+          </tbody>
+        </table>
+
+        <h4>Example XES Fragment</h4>
+        <div class="xes-xml-snippet"><span class="xml-tag">&lt;trace&gt;</span><br>&nbsp;&nbsp;<span class="xml-tag">&lt;string</span> <span class="xml-attr">key=</span><span class="xml-val">"concept:name"</span> <span class="xml-attr">value=</span><span class="xml-val">"Case_1001"</span><span class="xml-tag">/&gt;</span><br><br>&nbsp;&nbsp;<span class="xml-tag">&lt;event&gt;</span><br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="xml-tag">&lt;string</span> <span class="xml-attr">key=</span><span class="xml-val">"concept:name"</span> <span class="xml-attr">value=</span><span class="xml-val">"Submit Application"</span><span class="xml-tag">/&gt;</span><br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="xml-tag">&lt;date</span> <span class="xml-attr">key=</span><span class="xml-val">"time:timestamp"</span> <span class="xml-attr">value=</span><span class="xml-val">"2026-02-17T09:12:00.000+00:00"</span><span class="xml-tag">/&gt;</span><br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="xml-tag">&lt;string</span> <span class="xml-attr">key=</span><span class="xml-val">"org:resource"</span> <span class="xml-attr">value=</span><span class="xml-val">"Paul"</span><span class="xml-tag">/&gt;</span><br>&nbsp;&nbsp;<span class="xml-tag">&lt;/event&gt;</span><br><br>&nbsp;&nbsp;<span class="xml-tag">&lt;event&gt;</span><br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="xml-tag">&lt;string</span> <span class="xml-attr">key=</span><span class="xml-val">"concept:name"</span> <span class="xml-attr">value=</span><span class="xml-val">"Review"</span><span class="xml-tag">/&gt;</span><br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="xml-tag">&lt;date</span> <span class="xml-attr">key=</span><span class="xml-val">"time:timestamp"</span> <span class="xml-attr">value=</span><span class="xml-val">"2026-02-17T10:45:00.000+00:00"</span><span class="xml-tag">/&gt;</span><br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="xml-tag">&lt;string</span> <span class="xml-attr">key=</span><span class="xml-val">"org:resource"</span> <span class="xml-attr">value=</span><span class="xml-val">"System"</span><span class="xml-tag">/&gt;</span><br>&nbsp;&nbsp;<span class="xml-tag">&lt;/event&gt;</span><br><span class="xml-tag">&lt;/trace&gt;</span></div>
+
+        <h4>Process Mining Ecosystem</h4>
+        <div class="xes-tools-grid">
+          <div class="xes-tool-card">
+            <strong>Celonis</strong>
+            <p>Enterprise process mining &amp; execution management</p>
+          </div>
+          <div class="xes-tool-card">
+            <strong>Disco (Fluxicon)</strong>
+            <p>Visual process discovery &amp; analysis</p>
+          </div>
+          <div class="xes-tool-card">
+            <strong>ProM</strong>
+            <p>Open-source academic process mining framework</p>
+          </div>
+          <div class="xes-tool-card">
+            <strong>Apromore</strong>
+            <p>Open-source process analytics platform</p>
+          </div>
+        </div>
+
+        <h4>XES vs Application Logging</h4>
+        <table class="xes-attr-table">
+          <thead>
+            <tr><th>Dimension</th><th>Application Logs</th><th>XES Logs</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Structure</td><td>Text-based, unstructured</td><td>XML, case-aware</td></tr>
+            <tr><td>Scope</td><td>System-level events</td><td>Business process instances</td></tr>
+            <tr><td>Time ordering</td><td>Per-service only</td><td>Per-case, cross-service</td></tr>
+            <tr><td>Analysis</td><td>Log search &amp; alerting</td><td>Process discovery &amp; conformance</td></tr>
+          </tbody>
+        </table>
+
+        <h4>KMFlow Relevance</h4>
+        <div class="xes-relevance">
+          <p>XES logging bridges BPMN models, runtime execution, and process mining validation. Within KMFlow, XES enables:</p>
+          <ul>
+            <li>Reconstructing actual process flows from execution data</li>
+            <li>Conformance checking against BPMN reference models</li>
+            <li>Bottleneck detection and SLA measurement</li>
+            <li>Control evidence generation for compliance</li>
+            <li>OPA decision logs transformed into XES for governance traceability</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     // Slide indicator functionality
     const slidesContainer = document.getElementById('slidesContainer');
@@ -2883,9 +3177,11 @@ priority_score = (
 
       if (e.key === 'Escape') {
         closeEvidenceModal();
+        closeXesModal();
         return;
       }
       if (document.getElementById('evidenceModal').classList.contains('active')) return;
+      if (document.getElementById('xesModal').classList.contains('active')) return;
       if (e.key === 'ArrowDown' || e.key === 'PageDown') {
         e.preventDefault();
         slidesContainer.scrollBy({ top: windowHeight, behavior: 'smooth' });
@@ -3091,6 +3387,44 @@ priority_score = (
 
     // Focus trap within modal
     document.getElementById('evidenceModal').addEventListener('keydown', function(e) {
+      if (e.key !== 'Tab') return;
+      var focusable = this.querySelectorAll('button, [tabindex]:not([tabindex="-1"])');
+      if (focusable.length === 0) return;
+      var first = focusable[0], last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+
+    // XES Info Modal
+    var xesPreviousFocus = null;
+
+    function openXesModal() {
+      var modal = document.getElementById('xesModal');
+      xesPreviousFocus = document.activeElement;
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+      document.getElementById('xesModalCloseBtn').focus();
+    }
+
+    function closeXesModal() {
+      var modal = document.getElementById('xesModal');
+      if (!modal.classList.contains('active')) return;
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+      if (xesPreviousFocus) { xesPreviousFocus.focus(); xesPreviousFocus = null; }
+    }
+
+    document.getElementById('xesRow').addEventListener('click', openXesModal);
+    document.getElementById('xesRow').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openXesModal(); }
+    });
+    document.getElementById('xesModalCloseBtn').addEventListener('click', closeXesModal);
+    document.getElementById('xesModal').addEventListener('click', function(e) {
+      if (e.target === this) closeXesModal();
+    });
+
+    // XES modal focus trap
+    document.getElementById('xesModal').addEventListener('keydown', function(e) {
       if (e.key !== 'Tab') return;
       var focusable = this.querySelectorAll('button, [tabindex]:not([tabindex="-1"])');
       if (focusable.length === 0) return;
