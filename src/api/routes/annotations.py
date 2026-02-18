@@ -173,11 +173,18 @@ async def delete_annotation(
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
 ) -> None:
-    """Delete an annotation."""
+    """Delete an annotation. Only the author may delete their own annotation."""
     result = await session.execute(select(Annotation).where(Annotation.id == annotation_id))
     annotation = result.scalar_one_or_none()
     if not annotation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Annotation {annotation_id} not found")
+
+    user_id = str(user.id) if hasattr(user, "id") else None
+    if user_id is None or annotation.author_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot delete another user's annotation",
+        )
 
     await session.delete(annotation)
     await session.commit()

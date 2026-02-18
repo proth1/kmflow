@@ -227,8 +227,8 @@ async def copilot_chat_stream(
             ):
                 yield chunk
         except Exception as e:
-            logger.exception("Copilot streaming failed")
-            yield f"data: Error: {e}\n\n"
+            logger.exception("Copilot streaming failed: %s", e)
+            yield "data: Error: An error occurred. Please try again.\n\n"
             yield "data: [DONE]\n\n"
 
     return StreamingResponse(
