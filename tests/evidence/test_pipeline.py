@@ -50,7 +50,7 @@ class TestStoreFile:
             engagement_id = uuid.uuid4()
             file_content = b"test file content"
 
-            path = await store_file(
+            path, _meta = await store_file(
                 file_content=file_content,
                 file_name="test.pdf",
                 engagement_id=engagement_id,
@@ -82,13 +82,13 @@ class TestStoreFile:
         with tempfile.TemporaryDirectory() as tmpdir:
             engagement_id = uuid.uuid4()
 
-            path1 = await store_file(
+            path1, _ = await store_file(
                 file_content=b"content1",
                 file_name="same.pdf",
                 engagement_id=engagement_id,
                 evidence_store=tmpdir,
             )
-            path2 = await store_file(
+            path2, _ = await store_file(
                 file_content=b"content2",
                 file_name="same.pdf",
                 engagement_id=engagement_id,
