@@ -519,6 +519,11 @@ async def run_intelligence_pipeline(
             fragments, str(engagement_id)
         )
         results["entities_extracted"] = sum(r["entity_count"] for r in extraction_results)
+        results["entity_details"] = [
+            {"type": str(e.entity_type), "name": e.name, "confidence": e.confidence}
+            for r in extraction_results
+            for e in r.get("entities", [])
+        ]
     except Exception as e:
         logger.warning("Entity extraction failed: %s", e)
         results["errors"].append(f"Entity extraction: {e}")
@@ -638,6 +643,23 @@ async def ingest_evidence(
     session.add(evidence_item)
     await session.flush()
 
+    # Step 6b: Create lineage record
+    try:
+        from src.datalake.lineage import create_lineage_record
+
+        source = "direct_upload"
+        if metadata and isinstance(metadata, dict):
+            source = metadata.get("source_system", source)
+
+        await create_lineage_record(
+            session=session,
+            evidence_item=evidence_item,
+            source_system=source,
+            content_hash=content_hash,
+        )
+    except Exception as e:
+        logger.warning("Lineage record creation failed (non-fatal): %s", e)
+
     # Step 7: Parse and create fragments
     fragments = await process_evidence(session, evidence_item)
 
@@ -645,7 +667,7 @@ async def ingest_evidence(
     if fragments:
         await session.flush()  # Ensure fragment IDs are assigned
         try:
-            await run_intelligence_pipeline(
+            intelligence_results = await run_intelligence_pipeline(
                 session=session,
                 fragments=fragments,
                 engagement_id=str(engagement_id),
@@ -653,6 +675,48 @@ async def ingest_evidence(
             )
         except Exception as e:
             logger.warning("Intelligence pipeline failed (non-fatal): %s", e)
+            intelligence_results = {}
+
+        # Step 8b: Write Silver layer (fragments + entities)
+        try:
+            from src.datalake.silver import SilverLayerWriter
+
+            datalake_path = evidence_store.replace("evidence_store", "datalake")
+            silver = SilverLayerWriter(base_path=datalake_path)
+
+            fragment_dicts = [
+                {
+                    "id": str(f.id),
+                    "fragment_type": str(f.fragment_type),
+                    "content": f.content,
+                    "metadata_json": f.metadata_json,
+                }
+                for f in fragments
+            ]
+            await silver.write_fragments(
+                str(engagement_id), str(evidence_item.id), fragment_dicts
+            )
+
+            # Write entities if intelligence pipeline extracted any
+            entities = intelligence_results.get("entity_details", [])
+            if entities:
+                await silver.write_entities(
+                    str(engagement_id), str(evidence_item.id), entities
+                )
+
+            # Write quality event
+            await silver.write_quality_event(
+                str(engagement_id),
+                str(evidence_item.id),
+                {
+                    "completeness": evidence_item.completeness_score,
+                    "reliability": evidence_item.reliability_score,
+                    "freshness": evidence_item.freshness_score,
+                    "consistency": evidence_item.consistency_score,
+                },
+            )
+        except Exception as e:
+            logger.warning("Silver layer write failed (non-fatal): %s", e)
 
     # Step 9: Audit log
     audit = AuditLog(
