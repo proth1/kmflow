@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
@@ -65,7 +65,7 @@ class TestConformanceRoutes:
         m.name = "Model 1"
         m.industry = "finance"
         m.process_area = "lending"
-        m.created_at = datetime.now(timezone.utc)
+        m.created_at = datetime.now(UTC)
 
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = [m]
@@ -136,7 +136,7 @@ class TestConformanceRoutes:
         cr.fitness_score = 0.85
         cr.precision_score = 0.9
         cr.deviations = {"items": []}
-        cr.created_at = datetime.now(timezone.utc)
+        cr.created_at = datetime.now(UTC)
 
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = [cr]

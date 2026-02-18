@@ -9,10 +9,9 @@ import httpx
 import pytest
 from httpx import AsyncClient
 
-from src.integrations.base import BaseConnector, ConnectionConfig, ConnectionStatus, ConnectorRegistry
+from src.integrations.base import ConnectionConfig, ConnectionStatus, ConnectorRegistry
 from src.integrations.celonis import CelonisConnector
 from src.integrations.soroco import SorocoConnector
-
 
 # -- Base Connector Tests ----------------------------------------------------
 

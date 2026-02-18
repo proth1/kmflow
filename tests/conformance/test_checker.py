@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
-from src.conformance.bpmn_parser import parse_bpmn_xml
 from src.conformance.checker import ConformanceChecker
 from src.conformance.metrics import calculate_metrics
 

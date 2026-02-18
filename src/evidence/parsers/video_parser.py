@@ -193,7 +193,6 @@ class VideoParser(BaseParser):
             return ""
         finally:
             # Clean up temp file
-            try:
+            import contextlib
+            with contextlib.suppress(OSError):
                 Path(wav_path).unlink(missing_ok=True)
-            except OSError:
-                pass

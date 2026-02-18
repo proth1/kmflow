@@ -7,7 +7,7 @@ deviations, alerts, and stats.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
@@ -15,15 +15,10 @@ import pytest
 from httpx import AsyncClient
 
 from src.core.models import (
-    AlertSeverity,
-    AlertStatus,
-    DeviationCategory,
-    MonitoringAlert,
     MonitoringJob,
     MonitoringSourceType,
     MonitoringStatus,
     ProcessBaseline,
-    ProcessDeviation,
 )
 
 
@@ -332,7 +327,7 @@ class TestBaselineRoutes:
         def refresh_side_effect(obj: Any) -> None:
             if isinstance(obj, ProcessBaseline):
                 obj.id = baseline_id
-                obj.created_at = datetime.now(timezone.utc)
+                obj.created_at = datetime.now(UTC)
 
         mock_db_session.refresh.side_effect = refresh_side_effect
 
@@ -379,7 +374,7 @@ class TestBaselineRoutes:
         mock_baseline.element_count = 0
         mock_baseline.process_hash = None
         mock_baseline.is_active = True
-        mock_baseline.created_at = datetime.now(timezone.utc)
+        mock_baseline.created_at = datetime.now(UTC)
 
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_baseline

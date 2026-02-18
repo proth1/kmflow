@@ -193,7 +193,6 @@ class TOMAlignmentEngine:
             Maturity score (1.0-5.0).
         """
         node_count = stats.node_count
-        rel_count = stats.relationship_count
 
         # Base score from evidence density
         if node_count == 0:

@@ -22,7 +22,7 @@ def compute_similarity(
     if not embedding_a:
         return 0.0
 
-    dot = sum(a * b for a, b in zip(embedding_a, embedding_b))
+    dot = sum(a * b for a, b in zip(embedding_a, embedding_b, strict=True))
     mag_a = sum(a * a for a in embedding_a) ** 0.5
     mag_b = sum(b * b for b in embedding_b) ** 0.5
 

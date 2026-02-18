@@ -10,7 +10,7 @@ import pytest
 
 from src.semantic.bridges.communication_deviation import CommunicationDeviationBridge
 from src.semantic.bridges.evidence_policy import EvidencePolicyBridge
-from src.semantic.bridges.process_evidence import BridgeResult, ProcessEvidenceBridge
+from src.semantic.bridges.process_evidence import ProcessEvidenceBridge
 from src.semantic.bridges.process_tom import ProcessTOMBridge
 from src.semantic.graph import GraphNode, KnowledgeGraphService
 

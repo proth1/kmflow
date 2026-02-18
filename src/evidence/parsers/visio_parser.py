@@ -153,7 +153,6 @@ class VisioParser(BaseParser):
     def _classify_shape(shape: etree._Element) -> str:
         """Classify a Visio shape as activity, gateway, event, connector, or other."""
         name = (shape.get("Name") or "").lower()
-        master = (shape.get("Master") or "").lower()
         shape_type = shape.get("Type", "")
 
         # Connectors have a specific type or naming convention

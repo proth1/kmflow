@@ -442,10 +442,10 @@ async def get_maturity_scores(
     engine = TOMAlignmentEngine(graph_service)
 
     stats = await graph_service.get_stats(str(engagement_id))
-    from src.core.models import TOMDimension as TD
+    from src.core.models import TOMDimension as TomDimension
 
     scores = {}
-    for dim in TD:
+    for dim in TomDimension:
         scores[dim] = engine._assess_dimension_maturity(dim, stats)
 
     return {"engagement_id": str(engagement_id), "maturity_scores": scores}

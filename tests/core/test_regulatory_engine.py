@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.core.models import ComplianceLevel, Control, ControlEffectiveness, Policy, PolicyType, Regulation
-from src.core.regulatory import ComplianceState, GovernanceChain, RegulatoryOverlayEngine
+from src.core.regulatory import ComplianceState, RegulatoryOverlayEngine
 from src.semantic.graph import GraphNode, GraphRelationship, KnowledgeGraphService
 
 

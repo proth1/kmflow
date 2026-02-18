@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.core.models import ProcessElement, ProcessElementType
-from src.tom.conformance import ConformanceCheckingEngine, ConformanceResult, Deviation
+from src.tom.conformance import ConformanceCheckingEngine, Deviation
 
 
 @pytest.fixture

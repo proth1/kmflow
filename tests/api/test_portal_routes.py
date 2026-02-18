@@ -7,7 +7,6 @@ engagement overview, findings, evidence status, and process models.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -17,7 +16,6 @@ from src.core.models import (
     Engagement,
     EngagementStatus,
     EvidenceCategory,
-    EvidenceItem,
     GapAnalysisResult,
     ProcessModel,
     TOMDimension,

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import tempfile
-from pathlib import Path
 
 import pytest
 
@@ -14,7 +13,6 @@ from src.evidence.parsers.factory import classify_by_extension, get_parser
 from src.evidence.parsers.image_parser import ImageParser
 from src.evidence.parsers.regulatory_parser import RegulatoryParser
 from src.evidence.parsers.video_parser import VideoParser
-
 
 # -- ImageParser Tests -------------------------------------------------------
 

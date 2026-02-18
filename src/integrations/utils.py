@@ -136,9 +136,8 @@ async def paginate_offset(
 
         offset += len(results)
 
-        if total_key and total_key in data:
-            if offset >= data[total_key]:
-                break
+        if total_key and total_key in data and offset >= data[total_key]:
+            break
 
         if len(results) < page_size:
             break

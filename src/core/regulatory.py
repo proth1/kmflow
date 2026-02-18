@@ -131,17 +131,16 @@ class RegulatoryOverlayEngine:
                     })
 
                 # Link control to its policies
+                import contextlib
                 for pid in (control.linked_policy_ids or []):
                     policy_node_id = f"policy-{pid}"
-                    try:
+                    with contextlib.suppress(Exception):
                         await self._graph.create_relationship(
                             from_id=policy_node_id,
                             to_id=control_node_id,
                             relationship_type="GOVERNED_BY",
                             properties={"source": "regulatory_overlay"},
                         )
-                    except Exception:
-                        pass
             except Exception as e:
                 logger.warning("Failed to create Control node: %s", e)
 

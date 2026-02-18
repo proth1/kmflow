@@ -11,9 +11,7 @@ Tests cover:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
-import pytest
+from datetime import UTC, datetime
 
 from src.core.models import AlertSeverity, DeviationCategory, MonitoringSourceType
 from src.monitoring.alerting import (
@@ -39,7 +37,6 @@ from src.monitoring.scheduler import (
     parse_cron_field,
     should_run_now,
 )
-
 
 # ===== config.py Tests =====
 
@@ -364,47 +361,47 @@ class TestShouldRunNow:
     """Tests for should_run_now()."""
 
     def test_matching_all_wildcards(self):
-        now = datetime(2025, 6, 15, 10, 30, 0, tzinfo=timezone.utc)  # Sunday
+        now = datetime(2025, 6, 15, 10, 30, 0, tzinfo=UTC)  # Sunday
         assert should_run_now("* * * * *", now)
 
     def test_matching_specific_time(self):
-        now = datetime(2025, 1, 15, 9, 0, 0, tzinfo=timezone.utc)  # Wednesday (weekday=2)
+        now = datetime(2025, 1, 15, 9, 0, 0, tzinfo=UTC)  # Wednesday (weekday=2)
         assert should_run_now("0 9 15 1 2", now)
 
     def test_not_matching_minute(self):
-        now = datetime(2025, 1, 15, 9, 5, 0, tzinfo=timezone.utc)
+        now = datetime(2025, 1, 15, 9, 5, 0, tzinfo=UTC)
         assert not should_run_now("0 9 15 1 *", now)
 
     def test_not_matching_hour(self):
-        now = datetime(2025, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
+        now = datetime(2025, 1, 15, 10, 0, 0, tzinfo=UTC)
         assert not should_run_now("0 9 15 1 *", now)
 
     def test_not_matching_day_of_month(self):
-        now = datetime(2025, 1, 16, 9, 0, 0, tzinfo=timezone.utc)
+        now = datetime(2025, 1, 16, 9, 0, 0, tzinfo=UTC)
         assert not should_run_now("0 9 15 1 *", now)
 
     def test_not_matching_month(self):
-        now = datetime(2025, 2, 15, 9, 0, 0, tzinfo=timezone.utc)
+        now = datetime(2025, 2, 15, 9, 0, 0, tzinfo=UTC)
         assert not should_run_now("0 9 15 1 *", now)
 
     def test_not_matching_day_of_week(self):
-        now = datetime(2025, 1, 15, 9, 0, 0, tzinfo=timezone.utc)  # Wednesday (weekday=2)
+        now = datetime(2025, 1, 15, 9, 0, 0, tzinfo=UTC)  # Wednesday (weekday=2)
         assert not should_run_now("0 9 15 1 1", now)  # Requires Tuesday (weekday=1)
 
     def test_every_15_minutes(self):
-        now = datetime(2025, 1, 15, 10, 15, 0, tzinfo=timezone.utc)
+        now = datetime(2025, 1, 15, 10, 15, 0, tzinfo=UTC)
         assert should_run_now("0/15 * * * *", now)
-        now = datetime(2025, 1, 15, 10, 16, 0, tzinfo=timezone.utc)
+        now = datetime(2025, 1, 15, 10, 16, 0, tzinfo=UTC)
         assert not should_run_now("0/15 * * * *", now)
 
     def test_weekday_range(self):
-        now = datetime(2025, 1, 15, 9, 0, 0, tzinfo=timezone.utc)  # Wednesday (weekday=2)
+        now = datetime(2025, 1, 15, 9, 0, 0, tzinfo=UTC)  # Wednesday (weekday=2)
         assert should_run_now("0 9 * * 1-5", now)
-        now = datetime(2025, 1, 18, 9, 0, 0, tzinfo=timezone.utc)  # Saturday (weekday=5)
+        now = datetime(2025, 1, 18, 9, 0, 0, tzinfo=UTC)  # Saturday (weekday=5)
         assert not should_run_now("0 9 * * 0-4", now)  # Mon-Fri only (0-4)
 
     def test_invalid_cron_not_5_fields(self):
-        now = datetime(2025, 1, 15, 9, 0, 0, tzinfo=timezone.utc)
+        now = datetime(2025, 1, 15, 9, 0, 0, tzinfo=UTC)
         assert not should_run_now("0 0 * *", now)
 
     def test_default_now_parameter(self):
@@ -417,7 +414,7 @@ class TestCalculateNextRun:
     """Tests for calculate_next_run()."""
 
     def test_finds_next_matching_minute(self):
-        from_time = datetime(2025, 1, 15, 10, 5, 30, tzinfo=timezone.utc)
+        from_time = datetime(2025, 1, 15, 10, 5, 30, tzinfo=UTC)
         next_run = calculate_next_run("0/15 * * * *", from_time)
         assert next_run is not None
         assert next_run.minute == 15
@@ -425,14 +422,14 @@ class TestCalculateNextRun:
         assert next_run.second == 0
 
     def test_next_hour_transition(self):
-        from_time = datetime(2025, 1, 15, 10, 55, 0, tzinfo=timezone.utc)
+        from_time = datetime(2025, 1, 15, 10, 55, 0, tzinfo=UTC)
         next_run = calculate_next_run("0 * * * *", from_time)
         assert next_run is not None
         assert next_run.minute == 0
         assert next_run.hour == 11
 
     def test_specific_daily_time(self):
-        from_time = datetime(2025, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
+        from_time = datetime(2025, 1, 15, 10, 0, 0, tzinfo=UTC)
         next_run = calculate_next_run("0 9 * * *", from_time)
         assert next_run is not None
         assert next_run.minute == 0
@@ -440,7 +437,7 @@ class TestCalculateNextRun:
         assert next_run.day == 16  # Next day
 
     def test_no_match_in_24_hours_returns_none(self):
-        from_time = datetime(2025, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
+        from_time = datetime(2025, 1, 15, 10, 0, 0, tzinfo=UTC)
         # Impossible schedule: Feb 30
         next_run = calculate_next_run("0 0 30 2 *", from_time)
         assert next_run is None

@@ -45,9 +45,11 @@ class TestEncryption:
         assert ct1 != ct2
 
     def test_decrypt_invalid_ciphertext_raises(self) -> None:
+        from cryptography.fernet import InvalidToken
+
         from src.core.encryption import decrypt_value
 
-        with pytest.raises(Exception):
+        with pytest.raises(InvalidToken):
             decrypt_value("not-valid-ciphertext")
 
     def test_encrypt_empty_string(self) -> None:

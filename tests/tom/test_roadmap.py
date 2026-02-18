@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.core.models import TOMDimension, TOMGapType
-from src.tom.roadmap import RoadmapGenerator, RoadmapPhase, TransformationRoadmap
+from src.tom.roadmap import RoadmapGenerator
 
 
 @pytest.fixture

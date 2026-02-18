@@ -7,14 +7,13 @@ SQLAlchemy session mocking using side_effect for multiple execute calls.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.core.models import EvidenceCategory
 from src.core.reports import ReportData, ReportEngine
-
 
 # =============================================================================
 # Engagement Summary Tests

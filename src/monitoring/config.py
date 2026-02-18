@@ -50,8 +50,7 @@ def validate_monitoring_config(
     elif source_type == MonitoringSourceType.SYSTEM_API:
         if not config.get("endpoint_url"):
             errors.append("system_api source requires 'endpoint_url' in config")
-    elif source_type == MonitoringSourceType.FILE_WATCH:
-        if not config.get("watch_path"):
-            errors.append("file_watch source requires 'watch_path' in config")
+    elif source_type == MonitoringSourceType.FILE_WATCH and not config.get("watch_path"):
+        errors.append("file_watch source requires 'watch_path' in config")
 
     return errors

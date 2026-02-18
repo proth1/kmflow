@@ -11,7 +11,7 @@ import pytest
 
 from src.core.models import ProcessMaturity, TOMDimension, TOMGapType
 from src.semantic.graph import GraphStats, KnowledgeGraphService
-from src.tom.alignment import DIMENSION_WEIGHTS, MATURITY_SCORES, AlignmentResult, TOMAlignmentEngine
+from src.tom.alignment import DIMENSION_WEIGHTS, AlignmentResult, TOMAlignmentEngine
 
 
 @pytest.fixture

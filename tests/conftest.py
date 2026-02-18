@@ -141,11 +141,27 @@ async def test_app(
         SecurityHeadersMiddleware,
     )
     from src.api.routes import (
-        auth, dashboard, engagements, evidence, graph, health,
-        integrations, pov, regulatory, reports, shelf_requests, tom, users,
+        auth,
+        conformance,
+        copilot,
+        dashboard,
+        engagements,
+        evidence,
+        graph,
+        health,
+        integrations,
+        monitoring,
+        patterns,
+        portal,
+        pov,
+        regulatory,
+        reports,
+        shelf_requests,
+        simulations,
+        tom,
+        users,
+        websocket,
     )
-    from src.api.routes import monitoring, patterns, portal, simulations, websocket
-    from src.api.routes import conformance, copilot
     from src.mcp.server import router as mcp_router
 
     @asynccontextmanager

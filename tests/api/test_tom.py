@@ -9,8 +9,6 @@ import pytest
 from httpx import AsyncClient
 
 from src.core.models import (
-    Benchmark,
-    BestPractice,
     Engagement,
     EngagementStatus,
     GapAnalysisResult,
@@ -19,7 +17,6 @@ from src.core.models import (
     TOMDimension,
     TOMGapType,
 )
-
 
 # -- Fixtures ----------------------------------------------------------------
 

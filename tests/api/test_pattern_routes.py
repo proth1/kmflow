@@ -7,7 +7,7 @@ and access control.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
@@ -33,7 +33,7 @@ class TestPatternRoutes:
                 obj.id = pattern_id
                 obj.usage_count = 0
                 obj.effectiveness_score = 0.0
-                obj.created_at = datetime.now(timezone.utc)
+                obj.created_at = datetime.now(UTC)
 
         mock_db_session.refresh.side_effect = refresh_side_effect
 
@@ -88,7 +88,7 @@ class TestPatternRoutes:
         mock_pattern.tags = ["test"]
         mock_pattern.usage_count = 0
         mock_pattern.effectiveness_score = 0.0
-        mock_pattern.created_at = datetime.now(timezone.utc)
+        mock_pattern.created_at = datetime.now(UTC)
 
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_pattern
@@ -131,7 +131,7 @@ class TestPatternRoutes:
         mock_pattern.tags = ["test"]
         mock_pattern.usage_count = 0
         mock_pattern.effectiveness_score = 0.0
-        mock_pattern.created_at = datetime.now(timezone.utc)
+        mock_pattern.created_at = datetime.now(UTC)
 
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_pattern
@@ -225,7 +225,7 @@ class TestPatternApply:
         mock_pattern.tags = ["test"]
         mock_pattern.usage_count = 5
         mock_pattern.effectiveness_score = 0.8
-        mock_pattern.created_at = datetime.now(timezone.utc)
+        mock_pattern.created_at = datetime.now(UTC)
 
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_pattern
@@ -255,7 +255,7 @@ class TestAccessRules:
         def refresh_side_effect(obj: Any) -> None:
             if isinstance(obj, PatternAccessRule):
                 obj.id = rule_id
-                obj.granted_at = datetime.now(timezone.utc)
+                obj.granted_at = datetime.now(UTC)
 
         mock_db_session.refresh.side_effect = refresh_side_effect
 

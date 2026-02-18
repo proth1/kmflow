@@ -7,7 +7,7 @@ running simulations, and retrieving results.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
@@ -31,7 +31,7 @@ class TestScenarioRoutes:
         def refresh_side_effect(obj: Any) -> None:
             if isinstance(obj, SimulationScenario):
                 obj.id = scenario_id
-                obj.created_at = datetime.now(timezone.utc)
+                obj.created_at = datetime.now(UTC)
 
         mock_db_session.refresh.side_effect = refresh_side_effect
 
@@ -81,7 +81,7 @@ class TestScenarioRoutes:
         mock_scenario.simulation_type = SimulationType.WHAT_IF
         mock_scenario.parameters = {"resources": 10}
         mock_scenario.description = "A test scenario"
-        mock_scenario.created_at = datetime.now(timezone.utc)
+        mock_scenario.created_at = datetime.now(UTC)
 
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_scenario
@@ -136,8 +136,8 @@ class TestRunSimulation:
             if isinstance(obj, SimulationResult):
                 if obj.id is None:
                     obj.id = result_id
-                obj.started_at = datetime.now(timezone.utc)
-                obj.completed_at = datetime.now(timezone.utc)
+                obj.started_at = datetime.now(UTC)
+                obj.completed_at = datetime.now(UTC)
 
         mock_db_session.refresh.side_effect = refresh_side_effect
 
@@ -196,8 +196,8 @@ class TestResultRoutes:
         mock_sim_result.recommendations = []
         mock_sim_result.execution_time_ms = 1000
         mock_sim_result.error_message = None
-        mock_sim_result.started_at = datetime.now(timezone.utc)
-        mock_sim_result.completed_at = datetime.now(timezone.utc)
+        mock_sim_result.started_at = datetime.now(UTC)
+        mock_sim_result.completed_at = datetime.now(UTC)
 
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_sim_result
