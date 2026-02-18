@@ -3,7 +3,8 @@
 Configures the FastAPI app with:
 - CORS middleware
 - Lifespan events for database/cache connections
-- Route registration (14 Phase 1-2 routers + 6 Phase 3 routers + 2 Phase 4 routers + 1 Phase 5 router)
+- Route registration (14 Phase 1-2 routers + 6 Phase 3 routers + 2 Phase 4 routers
+  + 1 Phase 5 router + Phase C lineage router + Phase D governance router)
 - MCP server mounted at /mcp
 - OpenAPI documentation at /docs
 """
@@ -33,6 +34,7 @@ from src.api.routes import (
     dashboard,
     engagements,
     evidence,
+    governance,
     graph,
     health,
     integrations,
@@ -190,6 +192,9 @@ def create_app() -> FastAPI:
 
     # -- Phase C: Data Layer Evolution ---
     app.include_router(lineage.router)
+
+    # -- Phase D: Data Governance Framework ---
+    app.include_router(governance.router)
 
     # -- Phase 5 Routes ---
     app.include_router(admin.router)
