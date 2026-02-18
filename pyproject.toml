@@ -76,6 +76,9 @@ datalake = [
 ai = [
     "anthropic>=0.40.0",
 ]
+databricks = [
+    "databricks-sdk>=0.20.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]

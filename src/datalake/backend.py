@@ -421,12 +421,16 @@ class DeltaLakeBackend:
 def get_storage_backend(
     backend_type: str = "local",
     base_path: str | None = None,
+    **kwargs: Any,
 ) -> StorageBackend:
     """Create a storage backend instance based on configuration.
 
     Args:
         backend_type: One of ``"local"``, ``"delta"``, or ``"databricks"``.
-        base_path: Override the default base path.
+        base_path: Override the default base path (ignored for Databricks).
+        **kwargs: Backend-specific keyword arguments forwarded to the
+            implementation constructor. For ``DatabricksBackend``: accepts
+            ``catalog``, ``schema``, ``volume``, ``host``, and ``token``.
 
     Returns:
         A StorageBackend implementation.
@@ -439,10 +443,9 @@ def get_storage_backend(
     elif backend_type == "delta":
         return DeltaLakeBackend(base_path=base_path or "datalake")
     elif backend_type == "databricks":
-        raise NotImplementedError(
-            "Databricks backend is planned for Phase F. "
-            "Use 'delta' for local Delta Lake or 'local' for filesystem."
-        )
+        from src.datalake.databricks_backend import DatabricksBackend
+
+        return DatabricksBackend(**kwargs)
     else:
         raise ValueError(
             f"Unknown storage backend: {backend_type}. "
