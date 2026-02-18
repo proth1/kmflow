@@ -1047,7 +1047,7 @@
       <a href="#slide-1">Home</a>
       <a href="#slide-3">Challenge</a>
       <a href="#slide-7">Engagement</a>
-      <a href="#slide-12">Case Study</a>
+      <a href="#slide-13">Case Study</a>
       <a href="#slide-22">Application</a>
       <a href="#slide-32">Architecture</a>
       <a href="#slide-39">Workflows</a>
@@ -1105,7 +1105,7 @@
         <div class="card">
           <div class="card-icon">2</div>
           <h3>Engagement Model</h3>
-          <p>How engagements work: Collect, Discover, Benchmark, Recommend. Evidence categories, quality scoring, LCD algorithm, AI Copilot</p>
+          <p>How engagements work: Collect, Discover, Benchmark, Recommend. Evidence categories, quality scoring, Process Intelligence Engine, AI Copilot</p>
         </div>
         <div class="card">
           <div class="card-icon">3</div>
@@ -1356,7 +1356,7 @@
         <div style="background: rgba(255,255,255,0.15); border-radius: 12px; padding: 1.5rem; text-align: center; border-left: 4px solid rgba(255,255,255,0.6);">
           <div style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">2</div>
           <h3 style="margin-bottom: 0.5rem;">Discover</h3>
-          <p style="font-size: 0.85rem; opacity: 0.9;">Build semantic knowledge graph. Run LCD algorithm. Generate confidence-scored process models.</p>
+          <p style="font-size: 0.85rem; opacity: 0.9;">Build semantic knowledge graph. Run Process Intelligence Engine. Generate confidence-scored process models.</p>
           <div style="font-size: 0.75rem; margin-top: 0.5rem; opacity: 0.7;">Weeks 2-5</div>
         </div>
         <div style="background: rgba(255,255,255,0.15); border-radius: 12px; padding: 1.5rem; text-align: center; border-left: 4px solid rgba(255,255,255,0.6);">
@@ -1618,7 +1618,7 @@
       <div class="section-header">
         <span class="badge badge-blue">Phase 2: Discover</span>
         <h2>Process Discovery Engine</h2>
-        <p>LCD Algorithm &mdash; Eight-Step Process Synthesis</p>
+        <p>Process Intelligence Engine &mdash; Eight-Step Process Synthesis</p>
       </div>
       <div class="phase-card"><div class="phase-number">1</div><div class="phase-name">Evidence Aggregation</div><div class="phase-desc">Collect all evidence related to a scoped business area</div></div>
       <div class="phase-card"><div class="phase-number">2</div><div class="phase-name">Entity Extraction</div><div class="phase-desc">Identify process elements (activities, decisions, roles, systems) from each evidence source</div></div>
@@ -1667,81 +1667,6 @@
         <span>Confidential</span>
         <span>KMFlow Platform</span>
         <span>Slide 11</span>
-      </div>
-    </section>
-
-    <!-- Slide 12: BPMN Notation Guide -->
-    <section id="slide-12" class="slide slide-light">
-      <div class="section-header">
-        <span class="badge badge-blue">Reading Guide</span>
-        <h2>How to Read Process Diagrams</h2>
-        <p style="font-size: 1rem; color: var(--kmflow-medium-gray);">The following slides use BPMN (Business Process Model and Notation), the industry standard for process visualization.</p>
-      </div>
-      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; margin-top: 1rem;">
-        <div style="display: flex; align-items: center; gap: 1.5rem; background: var(--kmflow-light-gray); border-radius: 12px; padding: 1.5rem;">
-          <svg width="50" height="50" viewBox="0 0 50 50" aria-hidden="true">
-            <circle cx="25" cy="25" r="18" fill="none" stroke="#22242a" stroke-width="2.5"/>
-          </svg>
-          <div>
-            <div style="font-weight: 700; font-size: 1.1rem; color: var(--kmflow-dark-gray);">Start / End Event</div>
-            <div style="font-size: 0.85rem; color: var(--kmflow-medium-gray);">Circles mark where a process begins (thin border) or ends (thick border).</div>
-          </div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 1.5rem; background: var(--kmflow-light-gray); border-radius: 12px; padding: 1.5rem;">
-          <svg width="70" height="50" viewBox="0 0 70 50" aria-hidden="true">
-            <rect x="5" y="5" width="60" height="40" rx="8" fill="none" stroke="#22242a" stroke-width="2.5"/>
-          </svg>
-          <div>
-            <div style="font-weight: 700; font-size: 1.1rem; color: var(--kmflow-dark-gray);">Task / Activity</div>
-            <div style="font-size: 0.85rem; color: var(--kmflow-medium-gray);">Rounded rectangles represent work steps performed by a person or system.</div>
-          </div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 1.5rem; background: var(--kmflow-light-gray); border-radius: 12px; padding: 1.5rem;">
-          <svg width="50" height="50" viewBox="0 0 50 50" aria-hidden="true">
-            <polygon points="25,3 47,25 25,47 3,25" fill="none" stroke="#22242a" stroke-width="2.5"/>
-            <line x1="25" y1="12" x2="25" y2="38" stroke="#22242a" stroke-width="2"/>
-            <line x1="12" y1="25" x2="38" y2="25" stroke="#22242a" stroke-width="2"/>
-          </svg>
-          <div>
-            <div style="font-weight: 700; font-size: 1.1rem; color: var(--kmflow-dark-gray);">Gateway (Decision)</div>
-            <div style="font-size: 0.85rem; color: var(--kmflow-medium-gray);">Diamonds represent branching points where the flow splits based on conditions (Yes/No).</div>
-          </div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 1.5rem; background: var(--kmflow-light-gray); border-radius: 12px; padding: 1.5rem;">
-          <svg width="70" height="50" viewBox="0 0 70 50" aria-hidden="true">
-            <line x1="5" y1="25" x2="55" y2="25" stroke="#22242a" stroke-width="2.5"/>
-            <polygon points="55,18 65,25 55,32" fill="#22242a"/>
-          </svg>
-          <div>
-            <div style="font-weight: 700; font-size: 1.1rem; color: var(--kmflow-dark-gray);">Sequence Flow</div>
-            <div style="font-size: 0.85rem; color: var(--kmflow-medium-gray);">Arrows show the order in which tasks execute. Labels on arrows indicate the condition taken.</div>
-          </div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 1.5rem; background: var(--kmflow-light-gray); border-radius: 12px; padding: 1.5rem;">
-          <svg width="70" height="50" viewBox="0 0 70 50" aria-hidden="true">
-            <rect x="5" y="5" width="60" height="40" rx="8" fill="none" stroke="#22242a" stroke-width="2.5"/>
-            <rect x="12" y="12" width="46" height="26" rx="4" fill="none" stroke="#22242a" stroke-width="1" stroke-dasharray="4,2"/>
-          </svg>
-          <div>
-            <div style="font-weight: 700; font-size: 1.1rem; color: var(--kmflow-dark-gray);">Subprocess</div>
-            <div style="font-size: 0.85rem; color: var(--kmflow-medium-gray);">A task with a [+] marker that contains an embedded sub-flow with its own steps.</div>
-          </div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 1.5rem; background: var(--kmflow-light-gray); border-radius: 12px; padding: 1.5rem;">
-          <svg width="70" height="50" viewBox="0 0 70 50" aria-hidden="true">
-            <rect x="5" y="5" width="60" height="40" fill="none" stroke="#22242a" stroke-width="2.5"/>
-            <line x1="5" y1="25" x2="65" y2="25" stroke="#22242a" stroke-width="1.5" stroke-dasharray="4,3"/>
-          </svg>
-          <div>
-            <div style="font-weight: 700; font-size: 1.1rem; color: var(--kmflow-dark-gray);">Swimlanes</div>
-            <div style="font-size: 0.85rem; color: var(--kmflow-medium-gray);">Horizontal bands that show which role or system is responsible for each task.</div>
-          </div>
-        </div>
-      </div>
-      <div class="slide-footer">
-        <span>Confidential</span>
-        <span>KMFlow Platform</span>
-        <span>Slide 12</span>
       </div>
     </section>
 
@@ -2259,7 +2184,7 @@ confidence = (
         </div>
         <div class="card" style="background: rgba(255,255,255,0.1);">
           <h3>Process Analyst</h3>
-          <p>Run LCD algorithm, review models, annotate findings, generate reports, use AI copilot</p>
+          <p>Run Process Intelligence Engine, review models, annotate findings, generate reports, use AI copilot</p>
         </div>
         <div class="card" style="background: rgba(255,255,255,0.1);">
           <h3>Evidence Reviewer</h3>
@@ -2596,14 +2521,14 @@ confidence = (
         </div>
         <div style="text-align: center; margin: 0.5rem 0;">↓</div>
         <div style="background: var(--kmflow-blue); color: white; padding: 1rem; margin-bottom: 0.5rem; border-radius: 6px;">
-          <strong>API GATEWAY (FastAPI - Port 8000)</strong><br>
-          Evidence API | POV API | TOM API | Graph API | Engagement API
+          <strong>API GATEWAY (FastAPI - Port 8000) &mdash; 169 Endpoints</strong><br>
+          Evidence API | POV API | TOM API | Graph API | Engagement API | Lineage API | Governance API | Copilot API
         </div>
         <div style="text-align: center; margin: 0.5rem 0;">↓</div>
         <div style="background: var(--kmflow-medium-blue); color: white; padding: 1rem; margin-bottom: 0.5rem; border-radius: 6px;">
           <strong>PROCESSING SERVICE LAYER</strong><br>
-          Evidence Ingestion | Semantic Bridge Engine | LCD Algorithm<br>
-          TOM Alignment | Gap Analysis | Retrieval-Augmented Generation (RAG) Copilot
+          Evidence Ingestion | Semantic Bridge Engine | Process Intelligence Engine<br>
+          TOM Alignment | Gap Analysis | Retrieval-Augmented Generation (RAG) Copilot | Governance &amp; Lineage
         </div>
         <div style="text-align: center; margin: 0.5rem 0;">↓</div>
         <div style="background: var(--kmflow-dark-navy); color: white; padding: 1rem; border-radius: 6px;">
@@ -2997,7 +2922,7 @@ confidence = (
       </div>
       <div class="phase-summary">
         <span class="phase-chip">1. Trigger POV</span>
-        <span class="phase-chip">2. LCD Algorithm</span>
+        <span class="phase-chip">2. Process Intelligence</span>
         <span class="phase-chip">3. Analyst Review</span>
         <span class="phase-chip">4. SME Validation</span>
       </div>
@@ -3161,7 +3086,7 @@ confidence = (
         </div>
         <div class="card">
           <h3>Process Discovery</h3>
-          <p>8-step LCD algorithm, confidence scoring, BPMN model generation, contradiction detection, gap identification</p>
+          <p>8-step Process Intelligence Engine, confidence scoring, BPMN model generation, contradiction detection, gap identification</p>
         </div>
         <div class="card">
           <h3>Knowledge Graph</h3>
