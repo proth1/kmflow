@@ -131,3 +131,59 @@ async def get_governance_report(
     engine = ReportEngine()
     report = await engine.generate_governance_report(session, str(engagement_id))
     return _render_format(engine, report, format, f"governance-{engagement_id}.pdf")
+
+
+@router.get("/{engagement_id}/executive-summary")
+async def get_executive_summary(
+    engagement_id: UUID,
+    tom_id: UUID | None = None,
+    format: str = "html",
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+) -> Any:
+    """Generate a combined executive summary combining all 3 report types.
+
+    Renders engagement summary, gap analysis, and governance overlay
+    into a single HTML document.
+
+    Args:
+        engagement_id: The engagement to report on.
+        tom_id: Optional specific TOM to filter gap analysis by.
+        format: Response format ('json' or 'html').
+    """
+    engine = ReportEngine()
+
+    summary = await engine.generate_engagement_summary(session, str(engagement_id))
+    gaps = await engine.generate_gap_report(session, str(engagement_id), str(tom_id) if tom_id else None)
+    governance = await engine.generate_governance_report(session, str(engagement_id))
+
+    if format == "html":
+        parts = [
+            engine.render_html(summary),
+            engine.render_html(gaps),
+            engine.render_html(governance),
+        ]
+        combined = "\n<!-- SECTION BREAK -->\n".join(parts)
+        return HTMLResponse(content=combined)
+
+    return {
+        "engagement_id": str(engagement_id),
+        "report_type": "executive_summary",
+        "sections": {
+            "engagement_summary": {
+                "engagement": summary.engagement,
+                "generated_at": summary.generated_at,
+                "data": summary.data,
+            },
+            "gap_analysis": {
+                "engagement": gaps.engagement,
+                "generated_at": gaps.generated_at,
+                "data": gaps.data,
+            },
+            "governance_overlay": {
+                "engagement": governance.engagement,
+                "generated_at": governance.generated_at,
+                "data": governance.data,
+            },
+        },
+    }

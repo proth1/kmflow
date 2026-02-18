@@ -298,7 +298,10 @@ async def sync_connection(
     )
     connector = connector_cls(config)
     try:
-        sync_result = await connector.sync_data(engagement_id=str(conn.engagement_id))
+        sync_result = await connector.sync_data(
+            engagement_id=str(conn.engagement_id),
+            db_session=session,
+        )
         conn.last_sync_at = datetime.now(UTC)
         conn.last_sync_records = sync_result.get("records_synced", 0)
         conn.status = "connected"

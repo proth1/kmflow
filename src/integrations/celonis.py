@@ -7,6 +7,7 @@ process models, and conformance data via the Celonis API.
 from __future__ import annotations
 
 import logging
+import uuid
 from typing import Any
 
 import httpx
@@ -62,9 +63,10 @@ class CelonisConnector(BaseConnector):
         Args:
             engagement_id: The engagement to associate data with.
             **kwargs: Optional filters (data_pool_id, process_id, date_range).
+                      Pass db_session to persist EvidenceItem records.
 
         Returns:
-            Sync result with records_synced count.
+            Sync result with records_synced count and persisted_items list.
         """
         if not self._base_url or not self._api_key:
             return {"records_synced": 0, "errors": ["Celonis not configured"]}
@@ -73,8 +75,10 @@ class CelonisConnector(BaseConnector):
         if not data_pool_id:
             return {"records_synced": 0, "errors": ["data_pool_id is required"]}
 
+        db_session = kwargs.get("db_session") or kwargs.get("session")
         records_synced = 0
         errors: list[str] = []
+        persisted_items: list[dict[str, Any]] = []
 
         try:
             async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
@@ -92,6 +96,38 @@ class CelonisConnector(BaseConnector):
                 ):
                     records_synced += len(page)
 
+                    if db_session is not None:
+                        from src.core.models import EvidenceCategory, EvidenceItem
+
+                        for record in page:
+                            case_id = record.get("case_id", str(uuid.uuid4()))
+                            item = EvidenceItem(
+                                engagement_id=engagement_id,
+                                name=f"celonis_event_{case_id}",
+                                category=EvidenceCategory.STRUCTURED_DATA,
+                                format="json",
+                                source_system="celonis",
+                                metadata_json={
+                                    "source": "celonis",
+                                    "data_pool_id": data_pool_id,
+                                    "case_id": case_id,
+                                    "record": record,
+                                },
+                                completeness_score=0.8,
+                                reliability_score=0.9,
+                                freshness_score=0.9,
+                                consistency_score=0.8,
+                            )
+                            db_session.add(item)
+                            persisted_items.append(
+                                {
+                                    "case_id": case_id,
+                                    "activity": record.get("activity", ""),
+                                    "timestamp": record.get("timestamp", ""),
+                                }
+                            )
+                        await db_session.flush()
+
         except httpx.HTTPStatusError as e:
             errors.append(f"Celonis API error: {e.response.status_code}")
             logger.error("Celonis sync failed: %s", e)
@@ -102,6 +138,7 @@ class CelonisConnector(BaseConnector):
         return {
             "records_synced": records_synced,
             "errors": errors,
+            "persisted_items": persisted_items,
             "metadata": {
                 "source": "celonis",
                 "data_pool_id": data_pool_id,

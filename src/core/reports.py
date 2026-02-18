@@ -7,8 +7,10 @@ gap analysis, and governance overlay reporting.
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import func, select
@@ -25,6 +27,8 @@ from src.core.models import (
 )
 
 logger = logging.getLogger(__name__)
+
+_TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 
 @dataclass
@@ -44,8 +48,103 @@ class ReportData:
     data: dict[str, Any] = field(default_factory=dict)
 
 
+def _build_maturity_radar_svg(gaps: list[dict[str, Any]]) -> str:
+    """Generate an inline SVG maturity radar chart from gap data.
+
+    Plots average severity per dimension as a filled polygon on a
+    hexagonal radar (one axis per TOM dimension).
+
+    Args:
+        gaps: List of gap dicts with 'dimension' and 'severity'.
+
+    Returns:
+        SVG markup string.
+    """
+    dimensions = [
+        "process_architecture",
+        "people_and_organization",
+        "technology_and_data",
+        "governance_structures",
+        "performance_management",
+        "risk_and_compliance",
+    ]
+    labels = [
+        "Process",
+        "People & Org",
+        "Technology",
+        "Governance",
+        "Performance",
+        "Risk",
+    ]
+    n = len(dimensions)
+
+    # Aggregate avg severity per dimension (0-1 scale, invert: 1=no gap)
+    dim_severity: dict[str, list[float]] = {d: [] for d in dimensions}
+    for g in gaps:
+        dim = g.get("dimension", "")
+        if dim in dim_severity:
+            dim_severity[dim].append(float(g.get("severity", 0)))
+
+    # radius for each dimension: 1 - avg_severity (higher radius = better)
+    radii = []
+    for d in dimensions:
+        sevs = dim_severity[d]
+        avg_sev = sum(sevs) / len(sevs) if sevs else 0.0
+        radii.append(max(0.1, 1.0 - avg_sev))
+
+    cx, cy, max_r = 200, 200, 150
+    angles = [2 * math.pi * i / n - math.pi / 2 for i in range(n)]
+
+    def polar(r: float, angle: float) -> tuple[float, float]:
+        return cx + r * max_r * math.cos(angle), cy + r * max_r * math.sin(angle)
+
+    # Build grid circles
+    grid_circles = ""
+    for level in [0.25, 0.5, 0.75, 1.0]:
+        pts = " ".join(f"{polar(level, a)[0]:.1f},{polar(level, a)[1]:.1f}" for a in angles)
+        grid_circles += f'<polygon points="{pts}" fill="none" stroke="#ddd" stroke-width="1"/>\n'
+
+    # Build axes
+    axes = ""
+    for angle in angles:
+        x, y = polar(1.0, angle)
+        axes += f'<line x1="{cx}" y1="{cy}" x2="{x:.1f}" y2="{y:.1f}" stroke="#ccc" stroke-width="1"/>\n'
+
+    # Build data polygon
+    data_pts = " ".join(f"{polar(r, a)[0]:.1f},{polar(r, a)[1]:.1f}" for r, a in zip(radii, angles, strict=True))
+    data_polygon = f'<polygon points="{data_pts}" fill="rgba(41,128,185,0.3)" stroke="#2980b9" stroke-width="2"/>\n'
+
+    # Labels
+    label_markup = ""
+    for label, angle in zip(labels, angles, strict=True):
+        lx, ly = polar(1.2, angle)
+        label_markup += (
+            f'<text x="{lx:.1f}" y="{ly:.1f}" text-anchor="middle" '
+            f'dominant-baseline="middle" font-size="11" fill="#555">{label}</text>\n'
+        )
+
+    svg = (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">\n'
+        f"{grid_circles}{axes}{data_polygon}{label_markup}"
+        "</svg>"
+    )
+    return svg
+
+
 class ReportEngine:
     """Engine for generating executive reports."""
+
+    def _get_jinja_env(self) -> Any:
+        """Return a Jinja2 Environment pointing at the templates directory."""
+        try:
+            from jinja2 import Environment, FileSystemLoader
+
+            return Environment(
+                loader=FileSystemLoader(str(_TEMPLATES_DIR)),
+                autoescape=True,
+            )
+        except ImportError:
+            return None
 
     async def generate_engagement_summary(
         self,
@@ -228,10 +327,10 @@ class ReportEngine:
         )
 
     def render_html(self, report_data: ReportData) -> str:
-        """Render report data to HTML.
+        """Render report data to HTML using Jinja2 templates.
 
-        Uses simple HTML template rendering. In production, this would
-        use Jinja2 templates from report_templates/.
+        Falls back to inline HTML if Jinja2 is not available or template
+        file is missing.
 
         Args:
             report_data: The report data to render.
@@ -239,6 +338,35 @@ class ReportEngine:
         Returns:
             HTML string.
         """
+        env = self._get_jinja_env()
+
+        template_map = {
+            "engagement_summary": "executive_summary.html",
+            "gap_analysis": "gap_report.html",
+            "governance_overlay": "governance_report.html",
+        }
+
+        template_name = template_map.get(report_data.report_type)
+        if env is not None and template_name:
+            try:
+                template = env.get_template(template_name)
+                context: dict[str, Any] = {
+                    "engagement": report_data.engagement,
+                    "report_type": report_data.report_type,
+                    "generated_at": report_data.generated_at,
+                    "data": report_data.data,
+                }
+                if report_data.report_type == "gap_analysis":
+                    context["maturity_radar_svg"] = _build_maturity_radar_svg(report_data.data.get("gaps", []))
+                return template.render(**context)
+            except Exception as e:
+                logger.warning("Jinja2 template rendering failed, falling back: %s", e)
+
+        # Fallback to inline HTML
+        return self._render_html_fallback(report_data)
+
+    def _render_html_fallback(self, report_data: ReportData) -> str:
+        """Inline HTML fallback when Jinja2 is unavailable."""
         title = report_data.report_type.replace("_", " ").title()
         engagement = report_data.engagement
 
