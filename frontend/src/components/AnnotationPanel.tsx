@@ -113,69 +113,27 @@ export default function AnnotationPanel({
   };
 
   return (
-    <div
-      style={{
-        backgroundColor: "#ffffff",
-        border: "1px solid #e5e7eb",
-        borderRadius: "12px",
-        padding: "20px",
-      }}
-    >
-      <h3
-        style={{
-          fontSize: "15px",
-          fontWeight: 600,
-          margin: "0 0 16px 0",
-          color: "#111827",
-        }}
-      >
+    <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl p-5">
+      <h3 className="text-[15px] font-semibold mb-4 text-[hsl(var(--foreground))]">
         SME Annotations
       </h3>
 
       {/* Annotation list */}
       {loading ? (
-        <div style={{ color: "#9ca3af", fontSize: "13px", padding: "12px 0" }}>
+        <div className="text-[hsl(var(--muted-foreground))] text-sm py-3">
           Loading annotations...
         </div>
       ) : annotations.length > 0 ? (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-            marginBottom: "16px",
-          }}
-        >
+        <div className="flex flex-col gap-2.5 mb-4">
           {annotations.map((ann) => (
             <div
               key={ann.id}
-              style={{
-                padding: "12px",
-                backgroundColor: "#f9fafb",
-                borderRadius: "8px",
-                border: "1px solid #f3f4f6",
-              }}
+              className="p-3 bg-gray-50 rounded-lg border border-gray-100"
             >
-              <div
-                style={{
-                  fontSize: "14px",
-                  color: "#374151",
-                  lineHeight: 1.5,
-                  whiteSpace: "pre-wrap",
-                }}
-              >
+              <div className="text-sm text-[hsl(var(--foreground))] leading-relaxed whitespace-pre-wrap">
                 {ann.content}
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginTop: "8px",
-                  fontSize: "12px",
-                  color: "#9ca3af",
-                }}
-              >
+              <div className="flex justify-between items-center mt-2 text-xs text-[hsl(var(--muted-foreground))]">
                 <span>
                   {ann.author_id} &bull;{" "}
                   {new Date(ann.created_at).toLocaleDateString()}
@@ -183,14 +141,7 @@ export default function AnnotationPanel({
                 <button
                   onClick={() => handleDelete(ann.id)}
                   aria-label={`Delete annotation by ${ann.author_id}`}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#dc2626",
-                    cursor: "pointer",
-                    fontSize: "12px",
-                    padding: "2px 6px",
-                  }}
+                  className="text-red-600 hover:text-red-700 cursor-pointer bg-transparent border-none text-xs px-1.5 py-0.5"
                 >
                   Delete
                 </button>
@@ -199,21 +150,17 @@ export default function AnnotationPanel({
           ))}
         </div>
       ) : (
-        <div
-          style={{
-            color: "#9ca3af",
-            fontSize: "13px",
-            padding: "12px 0",
-            marginBottom: "16px",
-          }}
-        >
+        <div className="text-[hsl(var(--muted-foreground))] text-sm py-3 mb-4">
           No annotations yet.
         </div>
       )}
 
       {/* New annotation form */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-        <label htmlFor="annotation-input" style={{ fontSize: "13px", fontWeight: 500, color: "#374151" }}>
+      <div className="flex flex-col gap-2">
+        <label
+          htmlFor="annotation-input"
+          className="text-sm font-medium text-[hsl(var(--foreground))]"
+        >
           Add annotation
         </label>
         <textarea
@@ -222,36 +169,16 @@ export default function AnnotationPanel({
           onChange={(e) => setNewContent(e.target.value)}
           placeholder="Add an annotation..."
           rows={3}
-          style={{
-            width: "100%",
-            padding: "10px 12px",
-            border: "1px solid #d1d5db",
-            borderRadius: "8px",
-            fontSize: "14px",
-            resize: "vertical",
-            fontFamily: "inherit",
-            boxSizing: "border-box",
-          }}
+          className="w-full px-3 py-2.5 border border-[hsl(var(--input))] rounded-lg text-sm resize-y font-inherit box-border bg-[hsl(var(--background))] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] focus:ring-offset-2"
         />
         {error && (
-          <div style={{ fontSize: "13px", color: "#dc2626" }}>{error}</div>
+          <div className="text-sm text-red-600">{error}</div>
         )}
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <div className="flex justify-end">
           <button
             onClick={handleSubmit}
             disabled={submitting || !newContent.trim()}
-            style={{
-              padding: "8px 16px",
-              backgroundColor:
-                submitting || !newContent.trim() ? "#d1d5db" : "#3b82f6",
-              color: "#ffffff",
-              border: "none",
-              borderRadius: "6px",
-              fontSize: "14px",
-              fontWeight: 500,
-              cursor:
-                submitting || !newContent.trim() ? "not-allowed" : "pointer",
-            }}
+            className="px-4 py-2 bg-blue-500 text-white border-none rounded-md text-sm font-medium cursor-pointer hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
             {submitting ? "Saving..." : "Add Annotation"}
           </button>

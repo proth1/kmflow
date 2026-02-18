@@ -23,15 +23,7 @@ import {
 const BPMNViewer = dynamic(() => import("@/components/BPMNViewer"), {
   ssr: false,
   loading: () => (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "400px",
-        color: "#6b7280",
-      }}
-    >
+    <div className="flex items-center justify-center h-[400px] text-[hsl(var(--muted-foreground))]">
       Loading BPMN viewer...
     </div>
   ),
@@ -51,9 +43,7 @@ export default function VisualizePage() {
   const [showEvidence, setShowEvidence] = useState(false);
 
   // Sidebar
-  const [selectedElement, setSelectedElement] = useState<ElementDetail | null>(
-    null,
-  );
+  const [selectedElement, setSelectedElement] = useState<ElementDetail | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -101,84 +91,38 @@ export default function VisualizePage() {
 
   if (loading) {
     return (
-      <main
-        style={{
-          maxWidth: "1400px",
-          margin: "0 auto",
-          padding: "32px 24px",
-        }}
-      >
-        <div style={{ textAlign: "center", color: "#6b7280", padding: "48px" }}>
+      <div className="max-w-7xl mx-auto p-8">
+        <div className="text-center text-[hsl(var(--muted-foreground))] py-12">
           Loading process model...
         </div>
-      </main>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <main
-        style={{
-          maxWidth: "1400px",
-          margin: "0 auto",
-          padding: "32px 24px",
-        }}
-      >
-        <div
-          style={{
-            textAlign: "center",
-            color: "#dc2626",
-            padding: "48px",
-            backgroundColor: "#fef2f2",
-            borderRadius: "12px",
-            border: "1px solid #fecaca",
-          }}
-        >
-          <h2 style={{ margin: "0 0 8px 0" }}>Error</h2>
+      <div className="max-w-7xl mx-auto p-8">
+        <div className="text-center text-red-600 py-12 bg-red-50 rounded-xl border border-red-200">
+          <h2 className="text-xl font-semibold mb-2">Error</h2>
           <p>{error}</p>
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main
-      style={{
-        maxWidth: "1400px",
-        margin: "0 auto",
-        padding: "32px 24px",
-      }}
-    >
+    <div className="max-w-7xl mx-auto p-8">
       {/* Header */}
-      <div style={{ marginBottom: "24px" }}>
-        <h1 style={{ fontSize: "28px", fontWeight: 700, margin: "0 0 8px 0" }}>
-          Process Visualization
-        </h1>
-        <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2">Process Visualization</h1>
+        <p className="text-[hsl(var(--muted-foreground))] text-sm">
           Model ID: {modelId}
         </p>
       </div>
 
       {/* Overlay Controls */}
-      <div
-        style={{
-          display: "flex",
-          gap: "24px",
-          alignItems: "center",
-          marginBottom: "16px",
-          flexWrap: "wrap",
-        }}
-      >
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            fontSize: "14px",
-            color: "#374151",
-            cursor: "pointer",
-          }}
-        >
+      <div className="flex gap-6 items-center mb-4 flex-wrap">
+        <label className="flex items-center gap-2 text-sm text-[hsl(var(--foreground))] cursor-pointer">
           <input
             type="checkbox"
             checked={showConfidence}
@@ -186,16 +130,7 @@ export default function VisualizePage() {
           />
           Confidence Heatmap
         </label>
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            fontSize: "14px",
-            color: "#374151",
-            cursor: "pointer",
-          }}
-        >
+        <label className="flex items-center gap-2 text-sm text-[hsl(var(--foreground))] cursor-pointer">
           <input
             type="checkbox"
             checked={showEvidence}
@@ -207,22 +142,13 @@ export default function VisualizePage() {
 
       {/* Legend */}
       {showConfidence && (
-        <div style={{ marginBottom: "16px" }}>
+        <div className="mb-4">
           <Legend orientation="horizontal" />
         </div>
       )}
 
       {/* BPMN Viewer */}
-      <div
-        style={{
-          backgroundColor: "#ffffff",
-          border: "1px solid #e5e7eb",
-          borderRadius: "12px",
-          overflow: "hidden",
-          height: "600px",
-          position: "relative",
-        }}
-      >
+      <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl overflow-hidden h-[600px] relative">
         {bpmnData && (
           <BPMNViewer
             bpmnXml={bpmnData.bpmn_xml}
@@ -240,6 +166,6 @@ export default function VisualizePage() {
         element={selectedElement}
         onClose={() => setSelectedElement(null)}
       />
-    </main>
+    </div>
   );
 }

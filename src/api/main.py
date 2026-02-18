@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -29,6 +30,7 @@ from src.api.routes import (
     admin,
     annotations,
     auth,
+    camunda,
     conformance,
     copilot,
     dashboard,
@@ -56,6 +58,7 @@ from src.core.config import get_settings
 from src.core.database import create_engine
 from src.core.neo4j import create_neo4j_driver, setup_neo4j_constraints, verify_neo4j_connectivity
 from src.core.redis import create_redis_client, verify_redis_connectivity
+from src.integrations.camunda import CamundaClient
 from src.mcp.server import router as mcp_router
 
 logger = logging.getLogger(__name__)
@@ -96,6 +99,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("Redis connection verified")
     else:
         logger.warning("Redis is not reachable; starting in degraded mode")
+
+    # -- CIB7 (Camunda) ---
+    cib7_url = os.environ.get("CIB7_URL", "http://localhost:8080/engine-rest")
+    camunda_client = CamundaClient(cib7_url)
+    app.state.camunda_client = camunda_client
+    if await camunda_client.verify_connectivity():
+        logger.info("CIB7 Camunda engine connection verified")
+    else:
+        logger.warning("CIB7 is not reachable; starting in degraded mode")
 
     # -- Monitoring Workers ---
     shutdown_event = asyncio.Event()
@@ -181,6 +193,7 @@ def create_app() -> FastAPI:
     app.include_router(simulations.router)
     app.include_router(portal.router)
     app.include_router(mcp_router)
+    app.include_router(camunda.router)
 
     # -- Phase 4 Routes ---
     app.include_router(copilot.router)

@@ -10,24 +10,9 @@ interface EvidenceBadgeProps {
 }
 
 export default function EvidenceBadge({ count }: EvidenceBadgeProps) {
-  const bg = count > 0 ? "#3b82f6" : "#9ca3af";
-
   return (
     <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minWidth: "22px",
-        height: "22px",
-        padding: "0 6px",
-        borderRadius: "9999px",
-        fontSize: "11px",
-        fontWeight: 700,
-        backgroundColor: bg,
-        color: "#ffffff",
-        lineHeight: 1,
-      }}
+      className={`inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full text-[11px] font-bold text-white leading-none ${count > 0 ? "bg-blue-500" : "bg-gray-400"}`}
       data-testid="evidence-badge"
       title={`${count} evidence item${count !== 1 ? "s" : ""}`}
     >

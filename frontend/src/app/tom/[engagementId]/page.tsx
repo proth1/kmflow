@@ -8,11 +8,21 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import KPICard from "@/components/KPICard";
 import TOMDimensionCard from "@/components/TOMDimensionCard";
 import RegulatoryOverlay from "@/components/RegulatoryOverlay";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  fetchMaturityScores,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import {
   fetchTOMGaps,
   type TOMAlignmentData,
   type TOMGapList,
@@ -48,37 +58,22 @@ export default function TOMDashboardPage() {
 
   if (loading) {
     return (
-      <main
-        style={{ maxWidth: "1200px", margin: "0 auto", padding: "32px 24px" }}
-      >
-        <div
-          style={{ textAlign: "center", color: "#6b7280", padding: "48px" }}
-        >
+      <div className="max-w-6xl mx-auto p-8">
+        <div className="text-center text-[hsl(var(--muted-foreground))] py-12">
           Loading TOM dashboard...
         </div>
-      </main>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <main
-        style={{ maxWidth: "1200px", margin: "0 auto", padding: "32px 24px" }}
-      >
-        <div
-          style={{
-            textAlign: "center",
-            color: "#dc2626",
-            padding: "48px",
-            backgroundColor: "#fef2f2",
-            borderRadius: "12px",
-            border: "1px solid #fecaca",
-          }}
-        >
-          <h2 style={{ margin: "0 0 8px 0" }}>Error</h2>
+      <div className="max-w-6xl mx-auto p-8">
+        <div className="text-center text-red-600 py-12 bg-red-50 rounded-xl border border-red-200">
+          <h2 className="text-xl font-semibold mb-2">Error</h2>
           <p>{error}</p>
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -89,78 +84,32 @@ export default function TOMDashboardPage() {
     gaps?.items.filter((g) => g.priority_score > 0.5).length ?? 0;
 
   return (
-    <main
-      style={{ maxWidth: "1200px", margin: "0 auto", padding: "32px 24px" }}
-    >
+    <div className="max-w-6xl mx-auto p-8">
       {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "32px",
-        }}
-      >
+      <div className="flex justify-between items-center mb-8">
         <div>
-          <h1
-            style={{
-              fontSize: "28px",
-              fontWeight: 700,
-              margin: "0 0 4px 0",
-            }}
-          >
-            TOM Alignment Dashboard
-          </h1>
-          <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>
+          <h1 className="text-3xl font-bold mb-1">TOM Alignment Dashboard</h1>
+          <p className="text-[hsl(var(--muted-foreground))] text-sm">
             Target Operating Model gap analysis and maturity assessment
           </p>
         </div>
-        <div style={{ display: "flex", gap: "8px" }}>
-          <button
+        <div className="flex gap-2">
+          <Button
+            variant={showOverlay ? "default" : "outline"}
+            size="sm"
             onClick={() => setShowOverlay(!showOverlay)}
-            style={{
-              padding: "8px 16px",
-              backgroundColor: showOverlay ? "#7e22ce" : "#ffffff",
-              color: showOverlay ? "#ffffff" : "#374151",
-              border: "1px solid #d1d5db",
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontSize: "13px",
-              fontWeight: 500,
-            }}
+            className={showOverlay ? "bg-purple-700 hover:bg-purple-800" : ""}
           >
             {showOverlay ? "Hide" : "Show"} Regulatory Overlay
-          </button>
-          <a
-            href={`/roadmap/${engagementId}`}
-            style={{
-              padding: "8px 16px",
-              backgroundColor: "#3b82f6",
-              color: "#ffffff",
-              border: "none",
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontSize: "13px",
-              fontWeight: 500,
-              textDecoration: "none",
-              display: "inline-flex",
-              alignItems: "center",
-            }}
-          >
-            View Roadmap
-          </a>
+          </Button>
+          <Button asChild size="sm">
+            <Link href={`/roadmap/${engagementId}`}>View Roadmap</Link>
+          </Button>
         </div>
       </div>
 
       {/* KPI Cards */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          gap: "16px",
-          marginBottom: "32px",
-        }}
-      >
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4 mb-8">
         <KPICard
           label="Total Gaps"
           value={totalGaps}
@@ -197,24 +146,11 @@ export default function TOMDashboardPage() {
 
       {/* Dimension Cards */}
       {alignment && (
-        <div style={{ marginBottom: "32px" }}>
-          <h2
-            style={{
-              fontSize: "16px",
-              fontWeight: 600,
-              margin: "0 0 16px 0",
-              color: "#111827",
-            }}
-          >
+        <div className="mb-8">
+          <h2 className="text-base font-semibold mb-4 text-[hsl(var(--foreground))]">
             Dimension Maturity
           </h2>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "16px",
-            }}
-          >
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
             {alignment.gaps.map((gap) => (
               <TOMDimensionCard
                 key={gap.dimension}
@@ -231,134 +167,70 @@ export default function TOMDashboardPage() {
 
       {/* Gaps Table */}
       {gaps && gaps.items.length > 0 && (
-        <div
-          style={{
-            backgroundColor: "#ffffff",
-            border: "1px solid #e5e7eb",
-            borderRadius: "12px",
-            padding: "24px",
-            marginBottom: "32px",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "16px",
-              fontWeight: 600,
-              margin: "0 0 16px 0",
-              color: "#111827",
-            }}
-          >
-            Gap Analysis Results
-          </h2>
-          <div style={{ overflowX: "auto" }}>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                fontSize: "13px",
-              }}
-            >
-              <thead>
-                <tr
-                  style={{
-                    borderBottom: "2px solid #e5e7eb",
-                    textAlign: "left",
-                  }}
-                >
-                  <th style={{ padding: "8px 12px" }}>Dimension</th>
-                  <th style={{ padding: "8px 12px" }}>Gap Type</th>
-                  <th style={{ padding: "8px 12px" }}>Severity</th>
-                  <th style={{ padding: "8px 12px" }}>Priority</th>
-                  <th style={{ padding: "8px 12px" }}>Recommendation</th>
-                </tr>
-              </thead>
-              <tbody>
+        <Card className="mb-8">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base">Gap Analysis Results</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Dimension</TableHead>
+                  <TableHead>Gap Type</TableHead>
+                  <TableHead>Severity</TableHead>
+                  <TableHead>Priority</TableHead>
+                  <TableHead>Recommendation</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {gaps.items
                   .sort((a, b) => b.priority_score - a.priority_score)
                   .map((gap) => (
-                    <tr
-                      key={gap.id}
-                      style={{ borderBottom: "1px solid #f3f4f6" }}
-                    >
-                      <td
-                        style={{
-                          padding: "10px 12px",
-                          color: "#374151",
-                          textTransform: "capitalize",
-                        }}
-                      >
+                    <TableRow key={gap.id}>
+                      <TableCell className="capitalize">
                         {gap.dimension.replace(/_/g, " ")}
-                      </td>
-                      <td style={{ padding: "10px 12px" }}>
+                      </TableCell>
+                      <TableCell>
                         <span
-                          style={{
-                            padding: "2px 8px",
-                            borderRadius: "9999px",
-                            fontSize: "11px",
-                            fontWeight: 600,
-                            backgroundColor:
-                              gap.gap_type === "full_gap"
-                                ? "#fef2f2"
-                                : gap.gap_type === "partial_gap"
-                                  ? "#fff7ed"
-                                  : "#fefce8",
-                            color:
-                              gap.gap_type === "full_gap"
-                                ? "#dc2626"
-                                : gap.gap_type === "partial_gap"
-                                  ? "#c2410c"
-                                  : "#a16207",
-                          }}
+                          className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                            gap.gap_type === "full_gap"
+                              ? "bg-red-50 text-red-600"
+                              : gap.gap_type === "partial_gap"
+                                ? "bg-orange-50 text-orange-700"
+                                : "bg-yellow-50 text-yellow-700"
+                          }`}
                         >
                           {gap.gap_type.replace(/_/g, " ")}
                         </span>
-                      </td>
-                      <td style={{ padding: "10px 12px", color: "#4b5563" }}>
+                      </TableCell>
+                      <TableCell className="text-[hsl(var(--muted-foreground))]">
                         {(gap.severity * 100).toFixed(0)}%
-                      </td>
-                      <td style={{ padding: "10px 12px", color: "#4b5563" }}>
+                      </TableCell>
+                      <TableCell className="text-[hsl(var(--muted-foreground))]">
                         {gap.priority_score.toFixed(3)}
-                      </td>
-                      <td
-                        style={{
-                          padding: "10px 12px",
-                          color: "#6b7280",
-                          maxWidth: "300px",
-                        }}
-                      >
+                      </TableCell>
+                      <TableCell className="text-[hsl(var(--muted-foreground))] max-w-[300px]">
                         {gap.recommendation ?? "-"}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
 
       {/* Regulatory Overlay Toggle */}
       {showOverlay && (
-        <div
-          style={{
-            backgroundColor: "#ffffff",
-            border: "1px solid #e5e7eb",
-            borderRadius: "12px",
-            padding: "24px",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "16px",
-              fontWeight: 600,
-              margin: "0 0 16px 0",
-              color: "#111827",
-            }}
-          >
-            Regulatory Governance Overlay
-          </h2>
-          <RegulatoryOverlay engagementId={engagementId} />
-        </div>
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base">Regulatory Governance Overlay</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RegulatoryOverlay engagementId={engagementId} />
+          </CardContent>
+        </Card>
       )}
-    </main>
+    </div>
   );
 }

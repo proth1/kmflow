@@ -50,7 +50,7 @@ export default function HealthStatus() {
 
   if (loading) {
     return (
-      <div className="health-status" data-testid="health-loading">
+      <div className="text-[hsl(var(--muted-foreground))] text-sm" data-testid="health-loading">
         Checking backend health...
       </div>
     );
@@ -58,8 +58,8 @@ export default function HealthStatus() {
 
   if (error) {
     return (
-      <div className="health-status health-error" data-testid="health-error">
-        <span className="status-indicator status-down" />
+      <div className="flex items-center gap-2 text-sm text-red-600" data-testid="health-error">
+        <span className="w-3 h-3 rounded-full bg-red-500 shrink-0" />
         Backend unreachable: {error}
       </div>
     );
@@ -69,71 +69,34 @@ export default function HealthStatus() {
     return null;
   }
 
-  const statusColor =
+  const statusDotClass =
     health.status === "healthy"
-      ? "#22c55e"
+      ? "bg-green-500"
       : health.status === "degraded"
-        ? "#f59e0b"
-        : "#ef4444";
+        ? "bg-amber-500"
+        : "bg-red-500";
 
   return (
-    <div className="health-status" data-testid="health-status">
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          marginBottom: "16px",
-        }}
-      >
-        <span
-          style={{
-            width: "12px",
-            height: "12px",
-            borderRadius: "50%",
-            backgroundColor: statusColor,
-            display: "inline-block",
-          }}
-        />
-        <strong>
+    <div data-testid="health-status">
+      <div className="flex items-center gap-2 mb-4">
+        <span className={`w-3 h-3 rounded-full ${statusDotClass}`} />
+        <strong className="text-sm">
           System: {health.status} (v{health.version})
         </strong>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: "12px",
-        }}
-      >
+      <div className="grid grid-cols-3 gap-3">
         {Object.entries(health.services).map(([service, status]) => (
           <div
             key={service}
-            style={{
-              padding: "12px",
-              borderRadius: "8px",
-              border: "1px solid #e5e7eb",
-              textAlign: "center",
-            }}
+            className="p-3 rounded-lg border border-[hsl(var(--border))] text-center"
           >
             <span
-              style={{
-                width: "8px",
-                height: "8px",
-                borderRadius: "50%",
-                backgroundColor: status === "up" ? "#22c55e" : "#ef4444",
-                display: "inline-block",
-                marginRight: "6px",
-              }}
+              className={`w-2 h-2 rounded-full inline-block mr-1.5 ${status === "up" ? "bg-green-500" : "bg-red-500"}`}
             />
-            <span style={{ textTransform: "capitalize" }}>{service}</span>
+            <span className="capitalize text-sm">{service}</span>
             <div
-              style={{
-                fontSize: "12px",
-                color: status === "up" ? "#16a34a" : "#dc2626",
-                marginTop: "4px",
-              }}
+              className={`text-xs mt-1 ${status === "up" ? "text-green-600" : "text-red-600"}`}
             >
               {status}
             </div>

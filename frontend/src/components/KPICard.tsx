@@ -5,6 +5,8 @@
  * color-coding based on threshold states (good/warning/critical).
  */
 
+import { cn } from "@/lib/utils";
+
 export type KPIStatus = "good" | "warning" | "critical" | "neutral";
 
 interface KPICardProps {
@@ -14,11 +16,11 @@ interface KPICardProps {
   subtitle?: string;
 }
 
-const STATUS_COLORS: Record<KPIStatus, string> = {
-  good: "#22c55e",
-  warning: "#eab308",
-  critical: "#ef4444",
-  neutral: "#6b7280",
+const STATUS_DOT_CLASSES: Record<KPIStatus, string> = {
+  good: "bg-green-500",
+  warning: "bg-yellow-500",
+  critical: "bg-red-500",
+  neutral: "bg-gray-400",
 };
 
 export default function KPICard({
@@ -29,59 +31,25 @@ export default function KPICard({
 }: KPICardProps) {
   return (
     <div
-      style={{
-        backgroundColor: "#ffffff",
-        border: "1px solid #e5e7eb",
-        borderRadius: "12px",
-        padding: "20px",
-        display: "flex",
-        flexDirection: "column",
-        gap: "8px",
-        minWidth: "160px",
-      }}
+      className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl p-5 flex flex-col gap-2 min-w-40"
       data-testid="kpi-card"
     >
-      <div
-        style={{
-          fontSize: "13px",
-          color: "#6b7280",
-          fontWeight: 500,
-          textTransform: "uppercase",
-          letterSpacing: "0.05em",
-        }}
-      >
+      <div className="text-xs font-medium uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
         {label}
       </div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-        }}
-      >
+      <div className="flex items-center gap-2">
         <span
-          style={{
-            width: "10px",
-            height: "10px",
-            borderRadius: "50%",
-            backgroundColor: STATUS_COLORS[status],
-            display: "inline-block",
-            flexShrink: 0,
-          }}
+          className={cn(
+            "w-2.5 h-2.5 rounded-full shrink-0",
+            STATUS_DOT_CLASSES[status]
+          )}
         />
-        <span
-          style={{
-            fontSize: "28px",
-            fontWeight: 700,
-            color: "#111827",
-            lineHeight: 1,
-          }}
-        >
+        <span className="text-3xl font-bold text-[hsl(var(--foreground))] leading-none">
           {value}
         </span>
       </div>
       {subtitle && (
-        <div style={{ fontSize: "12px", color: "#9ca3af" }}>{subtitle}</div>
+        <div className="text-xs text-[hsl(var(--muted-foreground))]">{subtitle}</div>
       )}
     </div>
   );

@@ -29,139 +29,64 @@ export default function Sidebar({ element, onClose }: SidebarProps) {
 
   return (
     <div
-      style={{
-        position: "fixed",
-        top: 0,
-        right: 0,
-        width: "360px",
-        height: "100vh",
-        backgroundColor: "#ffffff",
-        borderLeft: "1px solid #e5e7eb",
-        boxShadow: "-4px 0 12px rgba(0,0,0,0.08)",
-        zIndex: 1000,
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-      }}
+      className="fixed top-0 right-0 w-[360px] h-screen bg-[hsl(var(--background))] border-l border-[hsl(var(--border))] shadow-[-4px_0_12px_rgba(0,0,0,0.08)] z-[1000] flex flex-col overflow-hidden"
       data-testid="element-sidebar"
     >
       {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "16px 20px",
-          borderBottom: "1px solid #e5e7eb",
-        }}
-      >
-        <h3
-          style={{
-            margin: 0,
-            fontSize: "16px",
-            fontWeight: 600,
-            color: "#111827",
-          }}
-        >
+      <div className="flex justify-between items-center px-5 py-4 border-b border-[hsl(var(--border))]">
+        <h3 className="text-base font-semibold text-[hsl(var(--foreground))]">
           Element Details
         </h3>
         <button
           onClick={onClose}
-          style={{
-            border: "none",
-            background: "none",
-            cursor: "pointer",
-            fontSize: "20px",
-            color: "#6b7280",
-            padding: "4px",
-            lineHeight: 1,
-          }}
+          className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] text-xl leading-none p-1 cursor-pointer border-none bg-transparent"
           aria-label="Close sidebar"
         >
-          \u00d7
+          &times;
         </button>
       </div>
 
       {/* Content */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "20px",
-        }}
-      >
+      <div className="flex-1 overflow-y-auto p-5">
         {/* Name */}
-        <div style={{ marginBottom: "20px" }}>
-          <div
-            style={{ fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}
-          >
-            Name
-          </div>
-          <div style={{ fontSize: "16px", fontWeight: 600, color: "#111827" }}>
+        <div className="mb-5">
+          <div className="text-xs text-[hsl(var(--muted-foreground))] mb-1">Name</div>
+          <div className="text-base font-semibold text-[hsl(var(--foreground))]">
             {element.name}
           </div>
         </div>
 
         {/* Type */}
-        <div style={{ marginBottom: "20px" }}>
-          <div
-            style={{ fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}
-          >
-            Type
-          </div>
-          <div
-            style={{
-              fontSize: "14px",
-              color: "#374151",
-              textTransform: "capitalize",
-            }}
-          >
+        <div className="mb-5">
+          <div className="text-xs text-[hsl(var(--muted-foreground))] mb-1">Type</div>
+          <div className="text-sm capitalize text-[hsl(var(--foreground))]">
             {element.elementType}
           </div>
         </div>
 
         {/* Confidence */}
-        <div style={{ marginBottom: "20px" }}>
-          <div
-            style={{ fontSize: "12px", color: "#6b7280", marginBottom: "8px" }}
-          >
+        <div className="mb-5">
+          <div className="text-xs text-[hsl(var(--muted-foreground))] mb-2">
             Confidence Score
           </div>
           <ConfidenceBadge score={element.confidenceScore} />
         </div>
 
         {/* Evidence */}
-        <div style={{ marginBottom: "20px" }}>
-          <div
-            style={{
-              fontSize: "12px",
-              color: "#6b7280",
-              marginBottom: "8px",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-            }}
-          >
+        <div className="mb-5">
+          <div className="flex items-center gap-2 text-xs text-[hsl(var(--muted-foreground))] mb-2">
             Evidence <EvidenceBadge count={element.evidenceCount} />
           </div>
           {element.evidenceIds && element.evidenceIds.length > 0 ? (
-            <ul
-              style={{
-                margin: 0,
-                padding: "0 0 0 16px",
-                fontSize: "13px",
-                color: "#4b5563",
-                lineHeight: 1.8,
-              }}
-            >
+            <ul className="m-0 pl-4 text-sm text-[hsl(var(--muted-foreground))] leading-relaxed">
               {element.evidenceIds.map((id) => (
-                <li key={id} style={{ wordBreak: "break-all" }}>
+                <li key={id} className="break-all">
                   {id}
                 </li>
               ))}
             </ul>
           ) : (
-            <div style={{ fontSize: "13px", color: "#9ca3af" }}>
+            <div className="text-sm text-[hsl(var(--muted-foreground))]">
               No evidence items linked.
             </div>
           )}
@@ -169,26 +94,11 @@ export default function Sidebar({ element, onClose }: SidebarProps) {
 
         {/* Contradictions */}
         {element.contradictions && element.contradictions.length > 0 && (
-          <div style={{ marginBottom: "20px" }}>
-            <div
-              style={{
-                fontSize: "12px",
-                color: "#dc2626",
-                marginBottom: "8px",
-                fontWeight: 600,
-              }}
-            >
+          <div className="mb-5">
+            <div className="text-xs font-semibold text-red-600 mb-2">
               Contradictions ({element.contradictions.length})
             </div>
-            <ul
-              style={{
-                margin: 0,
-                padding: "0 0 0 16px",
-                fontSize: "13px",
-                color: "#dc2626",
-                lineHeight: 1.8,
-              }}
-            >
+            <ul className="m-0 pl-4 text-sm text-red-600 leading-relaxed">
               {element.contradictions.map((c, i) => (
                 <li key={i}>{c}</li>
               ))}

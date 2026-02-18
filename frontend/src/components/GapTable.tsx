@@ -7,6 +7,14 @@
 "use client";
 
 import { useState } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export interface GapEntry {
   id: string;
@@ -20,10 +28,10 @@ interface GapTableProps {
   gaps: GapEntry[];
 }
 
-const SEVERITY_COLORS: Record<string, { bg: string; text: string }> = {
-  high: { bg: "#fef2f2", text: "#dc2626" },
-  medium: { bg: "#fff7ed", text: "#ea580c" },
-  low: { bg: "#fefce8", text: "#ca8a04" },
+const SEVERITY_CLASSES: Record<string, string> = {
+  high: "bg-red-50 text-red-600",
+  medium: "bg-orange-50 text-orange-600",
+  low: "bg-yellow-50 text-yellow-600",
 };
 
 type SortField = "severity" | "gap_type";
@@ -38,7 +46,7 @@ export default function GapTable({ gaps }: GapTableProps) {
   if (gaps.length === 0) {
     return (
       <div
-        style={{ padding: "16px", color: "#9ca3af", textAlign: "center" }}
+        className="p-4 text-[hsl(var(--muted-foreground))] text-center text-sm"
         data-testid="gap-table-empty"
       >
         No evidence gaps found.
@@ -66,79 +74,53 @@ export default function GapTable({ gaps }: GapTableProps) {
   }
 
   return (
-    <div style={{ overflowX: "auto" }} data-testid="gap-table">
-      <table
-        style={{
-          width: "100%",
-          borderCollapse: "collapse",
-          fontSize: "14px",
-        }}
-      >
-        <thead>
-          <tr
-            style={{
-              borderBottom: "2px solid #e5e7eb",
-              textAlign: "left",
-            }}
-          >
-            <th
-              style={{ padding: "8px 12px", cursor: "pointer" }}
+    <div data-testid="gap-table">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead
+              className="cursor-pointer hover:text-[hsl(var(--foreground))]"
               onClick={() => toggleSort("severity")}
             >
               Severity {sortField === "severity" ? (sortDir === "asc" ? "\u2191" : "\u2193") : ""}
-            </th>
-            <th
-              style={{ padding: "8px 12px", cursor: "pointer" }}
+            </TableHead>
+            <TableHead
+              className="cursor-pointer hover:text-[hsl(var(--foreground))]"
               onClick={() => toggleSort("gap_type")}
             >
               Type {sortField === "gap_type" ? (sortDir === "asc" ? "\u2191" : "\u2193") : ""}
-            </th>
-            <th style={{ padding: "8px 12px" }}>Description</th>
-            <th style={{ padding: "8px 12px" }}>Recommendation</th>
-          </tr>
-        </thead>
-        <tbody>
+            </TableHead>
+            <TableHead>Description</TableHead>
+            <TableHead>Recommendation</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {sorted.map((gap) => {
             const severityKey = gap.severity.toLowerCase();
-            const colors = SEVERITY_COLORS[severityKey] ?? {
-              bg: "#f3f4f6",
-              text: "#6b7280",
-            };
+            const badgeClass = SEVERITY_CLASSES[severityKey] ?? "bg-gray-100 text-gray-500";
             return (
-              <tr
-                key={gap.id}
-                style={{ borderBottom: "1px solid #f3f4f6" }}
-              >
-                <td style={{ padding: "10px 12px" }}>
+              <TableRow key={gap.id}>
+                <TableCell>
                   <span
-                    style={{
-                      display: "inline-block",
-                      padding: "2px 10px",
-                      borderRadius: "9999px",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      backgroundColor: colors.bg,
-                      color: colors.text,
-                      textTransform: "uppercase",
-                    }}
+                    className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase ${badgeClass}`}
                   >
                     {gap.severity}
                   </span>
-                </td>
-                <td style={{ padding: "10px 12px", color: "#374151" }}>
+                </TableCell>
+                <TableCell className="text-[hsl(var(--foreground))]">
                   {gap.gap_type.replace(/_/g, " ")}
-                </td>
-                <td style={{ padding: "10px 12px", color: "#4b5563" }}>
+                </TableCell>
+                <TableCell className="text-[hsl(var(--muted-foreground))]">
                   {gap.description}
-                </td>
-                <td style={{ padding: "10px 12px", color: "#6b7280" }}>
+                </TableCell>
+                <TableCell className="text-[hsl(var(--muted-foreground))]">
                   {gap.recommendation ?? "-"}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             );
           })}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

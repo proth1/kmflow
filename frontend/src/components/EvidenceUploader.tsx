@@ -164,23 +164,19 @@ export default function EvidenceUploader({ engagementId, onUploadComplete }: Evi
         tabIndex={0}
         role="button"
         aria-label="Upload evidence files"
-        style={{
-          border: `2px dashed ${dragActive ? "#3b82f6" : "#d1d5db"}`,
-          borderRadius: "12px",
-          padding: "48px 24px",
-          textAlign: "center",
-          cursor: "pointer",
-          backgroundColor: dragActive ? "#eff6ff" : "#f9fafb",
-          transition: "all 0.2s ease",
-        }}
+        className={`border-2 border-dashed rounded-xl p-12 px-6 text-center cursor-pointer transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] ${
+          dragActive
+            ? "border-blue-400 bg-blue-50"
+            : "border-[hsl(var(--border))] bg-gray-50 hover:border-blue-300 hover:bg-blue-50/50"
+        }`}
       >
-        <div style={{ fontSize: "36px", marginBottom: "8px" }}>
+        <div className="text-4xl mb-2">
           {dragActive ? "\u{1F4E5}" : "\u{1F4C1}"}
         </div>
-        <p style={{ margin: "0 0 4px 0", fontSize: "15px", fontWeight: 500, color: "#374151" }}>
+        <p className="m-0 mb-1 text-[15px] font-medium text-[hsl(var(--foreground))]">
           {dragActive ? "Drop files here" : "Drag & drop files or click to browse"}
         </p>
-        <p style={{ margin: 0, fontSize: "13px", color: "#9ca3af" }}>
+        <p className="m-0 text-sm text-[hsl(var(--muted-foreground))]">
           PDF, DOCX, XLSX, CSV, PNG, JPG — Max 50MB
         </p>
         <input
@@ -189,102 +185,59 @@ export default function EvidenceUploader({ engagementId, onUploadComplete }: Evi
           multiple
           accept={ALLOWED_EXTENSIONS.join(",")}
           onChange={(e) => e.target.files && addFiles(e.target.files)}
-          style={{ display: "none" }}
+          className="hidden"
         />
       </div>
 
       {/* Validation error */}
       {validationError && (
-        <div
-          style={{
-            marginTop: "12px",
-            padding: "10px 14px",
-            backgroundColor: "#fef2f2",
-            border: "1px solid #fecaca",
-            borderRadius: "8px",
-            fontSize: "13px",
-            color: "#dc2626",
-          }}
-        >
+        <div className="mt-3 p-2.5 px-3.5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
           {validationError}
         </div>
       )}
 
       {/* Upload list */}
       {uploads.length > 0 && (
-        <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+        <div className="mt-4 flex flex-col gap-2">
           {uploads.map((upload, idx) => (
             <div
               key={`${upload.file.name}-${idx}`}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                padding: "12px 14px",
-                backgroundColor: "#ffffff",
-                border: "1px solid #e5e7eb",
-                borderRadius: "8px",
-              }}
+              className="flex items-center gap-3 p-3 px-3.5 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg"
             >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: 500,
-                    color: "#111827",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-[hsl(var(--foreground))] truncate">
                   {upload.file.name}
                 </div>
-                <div style={{ fontSize: "12px", color: "#9ca3af" }}>
+                <div className="text-xs text-[hsl(var(--muted-foreground))]">
                   {formatFileSize(upload.file.size)}
                   {upload.result && ` — ${upload.result.fragments_extracted} fragments`}
                   {upload.error && ` — ${upload.error}`}
                 </div>
                 {/* Progress bar */}
                 {upload.status === "uploading" && (
-                  <div
-                    style={{
-                      marginTop: "6px",
-                      height: "4px",
-                      backgroundColor: "#f3f4f6",
-                      borderRadius: "2px",
-                      overflow: "hidden",
-                    }}
-                  >
+                  <div className="mt-1.5 h-1 bg-gray-100 rounded-full overflow-hidden">
                     <div
                       role="progressbar"
                       aria-valuenow={upload.progress}
                       aria-valuemin={0}
                       aria-valuemax={100}
                       aria-label={`Uploading ${upload.file.name}`}
-                      style={{
-                        height: "100%",
-                        width: `${upload.progress}%`,
-                        backgroundColor: "#3b82f6",
-                        borderRadius: "2px",
-                        transition: "width 0.3s ease",
-                      }}
+                      className="h-full bg-blue-500 rounded-full transition-[width] duration-300"
+                      style={{ width: `${upload.progress}%` }}
                     />
                   </div>
                 )}
               </div>
               <div
-                style={{
-                  fontSize: "13px",
-                  fontWeight: 500,
-                  color:
-                    upload.status === "success"
-                      ? "#16a34a"
-                      : upload.status === "error"
-                        ? "#dc2626"
-                        : upload.status === "uploading"
-                          ? "#3b82f6"
-                          : "#9ca3af",
-                }}
+                className={`text-sm font-medium ${
+                  upload.status === "success"
+                    ? "text-green-600"
+                    : upload.status === "error"
+                      ? "text-red-600"
+                      : upload.status === "uploading"
+                        ? "text-blue-600"
+                        : "text-[hsl(var(--muted-foreground))]"
+                }`}
               >
                 {upload.status === "success"
                   ? "Done"

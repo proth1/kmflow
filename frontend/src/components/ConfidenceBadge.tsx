@@ -17,16 +17,15 @@ interface ConfidenceBadgeProps {
 
 interface ConfidenceLevel {
   label: string;
-  bg: string;
-  text: string;
+  className: string;
 }
 
 function getConfidenceLevel(score: number): ConfidenceLevel {
-  if (score >= 0.9) return { label: "Very High", bg: "#15803d", text: "#ffffff" };
-  if (score >= 0.75) return { label: "High", bg: "#22c55e", text: "#ffffff" };
-  if (score >= 0.5) return { label: "Medium", bg: "#eab308", text: "#1f2937" };
-  if (score >= 0.25) return { label: "Low", bg: "#f97316", text: "#ffffff" };
-  return { label: "Very Low", bg: "#ef4444", text: "#ffffff" };
+  if (score >= 0.9) return { label: "Very High", className: "bg-green-700 text-white" };
+  if (score >= 0.75) return { label: "High", className: "bg-green-500 text-white" };
+  if (score >= 0.5) return { label: "Medium", className: "bg-yellow-400 text-gray-800" };
+  if (score >= 0.25) return { label: "Low", className: "bg-orange-400 text-white" };
+  return { label: "Very Low", className: "bg-red-500 text-white" };
 }
 
 export default function ConfidenceBadge({
@@ -38,18 +37,7 @@ export default function ConfidenceBadge({
 
   return (
     <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "4px",
-        padding: "2px 10px",
-        borderRadius: "9999px",
-        fontSize: "12px",
-        fontWeight: 600,
-        backgroundColor: level.bg,
-        color: level.text,
-        lineHeight: "20px",
-      }}
+      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold leading-5 ${level.className}`}
       data-testid="confidence-badge"
       title={`Confidence: ${pct}% (${level.label})`}
     >

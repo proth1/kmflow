@@ -8,8 +8,12 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import RoadmapTimeline from "@/components/RoadmapTimeline";
 import KPICard from "@/components/KPICard";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { fetchRoadmap, type TransformationRoadmap } from "@/lib/api";
 
 export default function RoadmapPage() {
@@ -44,108 +48,51 @@ export default function RoadmapPage() {
   }, [engagementId, tomId]);
 
   return (
-    <main
-      style={{ maxWidth: "1200px", margin: "0 auto", padding: "32px 24px" }}
-    >
+    <div className="max-w-6xl mx-auto p-8">
       {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "32px",
-        }}
-      >
+      <div className="flex justify-between items-center mb-8">
         <div>
-          <h1
-            style={{
-              fontSize: "28px",
-              fontWeight: 700,
-              margin: "0 0 4px 0",
-            }}
-          >
-            Transformation Roadmap
-          </h1>
-          <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>
+          <h1 className="text-3xl font-bold mb-1">Transformation Roadmap</h1>
+          <p className="text-[hsl(var(--muted-foreground))] text-sm">
             Phased improvement plan based on TOM gap analysis
           </p>
         </div>
-        <a
-          href={`/tom/${engagementId}`}
-          style={{
-            padding: "8px 16px",
-            backgroundColor: "#ffffff",
-            color: "#374151",
-            border: "1px solid #d1d5db",
-            borderRadius: "8px",
-            cursor: "pointer",
-            fontSize: "13px",
-            fontWeight: 500,
-            textDecoration: "none",
-          }}
-        >
-          Back to TOM Dashboard
-        </a>
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/tom/${engagementId}`}>Back to TOM Dashboard</Link>
+        </Button>
       </div>
 
       {/* TOM ID input (for selecting which TOM to view roadmap for) */}
       {!roadmap && !loading && (
-        <div
-          style={{
-            backgroundColor: "#ffffff",
-            border: "1px solid #e5e7eb",
-            borderRadius: "12px",
-            padding: "32px",
-            textAlign: "center",
-            marginBottom: "32px",
-          }}
-        >
-          <h2 style={{ fontSize: "18px", fontWeight: 600, margin: "0 0 16px 0" }}>
-            Select Target Operating Model
-          </h2>
-          <p style={{ color: "#6b7280", marginBottom: "16px" }}>
-            Enter a TOM ID to view the transformation roadmap
-          </p>
-          <div
-            style={{ display: "flex", gap: "8px", justifyContent: "center" }}
-          >
-            <input
-              type="text"
-              placeholder="TOM ID (UUID)"
-              value={tomId}
-              onChange={(e) => setTomId(e.target.value)}
-              style={{
-                padding: "8px 16px",
-                border: "1px solid #d1d5db",
-                borderRadius: "8px",
-                fontSize: "14px",
-                width: "320px",
-              }}
-            />
-          </div>
-        </div>
+        <Card className="mb-8">
+          <CardContent className="pt-8 pb-8 text-center">
+            <h2 className="text-lg font-semibold mb-4">
+              Select Target Operating Model
+            </h2>
+            <p className="text-[hsl(var(--muted-foreground))] text-sm mb-4">
+              Enter a TOM ID to view the transformation roadmap
+            </p>
+            <div className="flex gap-2 justify-center">
+              <Input
+                type="text"
+                placeholder="TOM ID (UUID)"
+                value={tomId}
+                onChange={(e) => setTomId(e.target.value)}
+                className="w-80"
+              />
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {loading && (
-        <div
-          style={{ textAlign: "center", color: "#6b7280", padding: "48px" }}
-        >
+        <div className="text-center text-[hsl(var(--muted-foreground))] py-12">
           Loading roadmap...
         </div>
       )}
 
       {error && (
-        <div
-          style={{
-            textAlign: "center",
-            color: "#dc2626",
-            padding: "24px",
-            backgroundColor: "#fef2f2",
-            borderRadius: "12px",
-            border: "1px solid #fecaca",
-            marginBottom: "24px",
-          }}
-        >
+        <div className="text-center text-red-600 py-6 bg-red-50 rounded-xl border border-red-200 mb-6">
           {error}
         </div>
       )}
@@ -153,14 +100,7 @@ export default function RoadmapPage() {
       {roadmap && (
         <>
           {/* KPI Summary */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-              gap: "16px",
-              marginBottom: "32px",
-            }}
-          >
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4 mb-8">
             <KPICard
               label="Total Initiatives"
               value={roadmap.total_initiatives}
@@ -187,9 +127,7 @@ export default function RoadmapPage() {
             />
             <KPICard
               label="Critical Items"
-              value={
-                roadmap.phases[2]?.initiatives.length ?? 0
-              }
+              value={roadmap.phases[2]?.initiatives.length ?? 0}
               status={
                 (roadmap.phases[2]?.initiatives.length ?? 0) > 0
                   ? "critical"
@@ -200,32 +138,20 @@ export default function RoadmapPage() {
           </div>
 
           {/* Roadmap Timeline */}
-          <div
-            style={{
-              backgroundColor: "#ffffff",
-              border: "1px solid #e5e7eb",
-              borderRadius: "12px",
-              padding: "24px",
-            }}
-          >
-            <h2
-              style={{
-                fontSize: "16px",
-                fontWeight: 600,
-                margin: "0 0 20px 0",
-                color: "#111827",
-              }}
-            >
-              Implementation Timeline
-            </h2>
-            <RoadmapTimeline
-              phases={roadmap.phases}
-              totalInitiatives={roadmap.total_initiatives}
-              estimatedMonths={roadmap.estimated_duration_months}
-            />
-          </div>
+          <Card>
+            <CardHeader className="pb-5">
+              <CardTitle className="text-base">Implementation Timeline</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RoadmapTimeline
+                phases={roadmap.phases}
+                totalInitiatives={roadmap.total_initiatives}
+                estimatedMonths={roadmap.estimated_duration_months}
+              />
+            </CardContent>
+          </Card>
         </>
       )}
-    </main>
+    </div>
   );
 }

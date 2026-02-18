@@ -11,6 +11,7 @@ import { useParams } from "next/navigation";
 import KPICard, { type KPIStatus } from "@/components/KPICard";
 import GapTable, { type GapEntry } from "@/components/GapTable";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   fetchDashboard,
   fetchEvidenceCoverage,
@@ -22,13 +23,13 @@ import {
   type UserRole,
 } from "@/lib/api";
 
-// Confidence level colors for the donut chart
+// Confidence level colors for the bar chart
 const CONFIDENCE_LEVEL_COLORS: Record<string, string> = {
-  VERY_HIGH: "#15803d",
-  HIGH: "#22c55e",
-  MEDIUM: "#eab308",
-  LOW: "#f97316",
-  VERY_LOW: "#ef4444",
+  VERY_HIGH: "bg-green-700",
+  HIGH: "bg-green-500",
+  MEDIUM: "bg-yellow-400",
+  LOW: "bg-orange-400",
+  VERY_LOW: "bg-red-500",
 };
 
 function getKPIStatus(value: number, good: number, warn: number): KPIStatus {
@@ -83,50 +84,26 @@ export default function DashboardPage() {
   }, [engagementId]);
 
   // Persona visibility rules
-  const showAdminSection = userRole === "platform_admin";
-  const showMonitoringConfig = userRole !== "process_analyst" && userRole !== "client_viewer";
   const showFullDashboard = userRole !== "client_viewer";
-  const showValidationQueue = userRole === "evidence_reviewer" || userRole === "platform_admin";
 
   if (loading) {
     return (
-      <main
-        style={{
-          maxWidth: "1200px",
-          margin: "0 auto",
-          padding: "32px 24px",
-        }}
-      >
-        <div style={{ textAlign: "center", color: "#6b7280", padding: "48px" }}>
+      <div className="max-w-6xl mx-auto p-8">
+        <div className="text-center text-[hsl(var(--muted-foreground))] py-12">
           Loading dashboard...
         </div>
-      </main>
+      </div>
     );
   }
 
   if (error || !dashboard) {
     return (
-      <main
-        style={{
-          maxWidth: "1200px",
-          margin: "0 auto",
-          padding: "32px 24px",
-        }}
-      >
-        <div
-          style={{
-            textAlign: "center",
-            color: "#dc2626",
-            padding: "48px",
-            backgroundColor: "#fef2f2",
-            borderRadius: "12px",
-            border: "1px solid #fecaca",
-          }}
-        >
-          <h2 style={{ margin: "0 0 8px 0" }}>Error</h2>
+      <div className="max-w-6xl mx-auto p-8">
+        <div className="text-center text-red-600 py-12 bg-red-50 rounded-xl border border-red-200">
+          <h2 className="text-xl font-semibold mb-2">Error</h2>
           <p>{error ?? "Dashboard data unavailable"}</p>
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -166,32 +143,17 @@ export default function DashboardPage() {
   }
 
   return (
-    <main
-      style={{
-        maxWidth: "1200px",
-        margin: "0 auto",
-        padding: "32px 24px",
-      }}
-    >
+    <div className="max-w-6xl mx-auto p-8">
       {/* Header */}
-      <div style={{ marginBottom: "32px" }}>
-        <h1 style={{ fontSize: "28px", fontWeight: 700, margin: "0 0 4px 0" }}>
-          {dashboard.engagement_name}
-        </h1>
-        <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-1">{dashboard.engagement_name}</h1>
+        <p className="text-[hsl(var(--muted-foreground))] text-sm">
           Engagement Dashboard
         </p>
       </div>
 
       {/* KPI Cards Row */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          gap: "16px",
-          marginBottom: "32px",
-        }}
-      >
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4 mb-8">
         <KPICard
           label="Evidence Coverage"
           value={`${Math.round(dashboard.evidence_coverage_pct)}%`}
@@ -201,11 +163,7 @@ export default function DashboardPage() {
         <KPICard
           label="Confidence"
           value={`${Math.round(dashboard.overall_confidence * 100)}%`}
-          status={getKPIStatus(
-            dashboard.overall_confidence * 100,
-            75,
-            50,
-          )}
+          status={getKPIStatus(dashboard.overall_confidence * 100, 75, 50)}
           subtitle="overall model confidence"
         />
         <KPICard
@@ -236,339 +194,181 @@ export default function DashboardPage() {
 
       {/* Two-column layout for charts */}
       <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: showFullDashboard ? "1fr 1fr" : "1fr",
-          gap: "24px",
-          marginBottom: "32px",
-        }}
+        className={`grid gap-6 mb-8 ${showFullDashboard ? "grid-cols-2" : "grid-cols-1"}`}
       >
         {/* Evidence Coverage Chart */}
-        <div
-          style={{
-            backgroundColor: "#ffffff",
-            border: "1px solid #e5e7eb",
-            borderRadius: "12px",
-            padding: "24px",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "16px",
-              fontWeight: 600,
-              margin: "0 0 16px 0",
-              color: "#111827",
-            }}
-          >
-            Evidence Coverage by Category
-          </h2>
-          {coverage && coverage.categories.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              {coverage.categories.map((cat) => (
-                <div key={cat.category}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      fontSize: "13px",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        color: cat.below_threshold ? "#dc2626" : "#374151",
-                        fontWeight: cat.below_threshold ? 600 : 400,
-                      }}
-                    >
-                      {cat.category.replace(/_/g, " ")}
-                    </span>
-                    <span style={{ color: "#6b7280" }}>
-                      {cat.received_count}/{cat.requested_count} (
-                      {Math.round(cat.coverage_pct)}%)
-                    </span>
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base">Evidence Coverage by Category</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {coverage && coverage.categories.length > 0 ? (
+              <div className="flex flex-col gap-2.5">
+                {coverage.categories.map((cat) => (
+                  <div key={cat.category}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span
+                        className={cat.below_threshold ? "text-red-600 font-semibold" : "text-[hsl(var(--foreground))]"}
+                      >
+                        {cat.category.replace(/_/g, " ")}
+                      </span>
+                      <span className="text-[hsl(var(--muted-foreground))]">
+                        {cat.received_count}/{cat.requested_count} (
+                        {Math.round(cat.coverage_pct)}%)
+                      </span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-[width] duration-300 ${
+                          cat.below_threshold
+                            ? "bg-red-500"
+                            : cat.coverage_pct >= 75
+                              ? "bg-green-500"
+                              : "bg-yellow-400"
+                        }`}
+                        style={{ width: `${Math.min(cat.coverage_pct, 100)}%` }}
+                      />
+                    </div>
                   </div>
-                  <div
-                    style={{
-                      height: "8px",
-                      backgroundColor: "#f3f4f6",
-                      borderRadius: "4px",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div
-                      style={{
-                        height: "100%",
-                        width: `${Math.min(cat.coverage_pct, 100)}%`,
-                        backgroundColor: cat.below_threshold
-                          ? "#ef4444"
-                          : cat.coverage_pct >= 75
-                            ? "#22c55e"
-                            : "#eab308",
-                        borderRadius: "4px",
-                        transition: "width 0.3s ease",
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ color: "#9ca3af", textAlign: "center", padding: "24px" }}>
-              No evidence coverage data available.
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-[hsl(var(--muted-foreground))] text-center py-6 text-sm">
+                No evidence coverage data available.
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Confidence Distribution - hidden for client_viewer */}
-        {showFullDashboard && <div
-          style={{
-            backgroundColor: "#ffffff",
-            border: "1px solid #e5e7eb",
-            borderRadius: "12px",
-            padding: "24px",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "16px",
-              fontWeight: 600,
-              margin: "0 0 16px 0",
-              color: "#111827",
-            }}
-          >
-            Confidence Distribution
-          </h2>
-          {confidence && confidence.distribution.length > 0 ? (
-            <div>
-              {/* Simple bar chart representation */}
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "8px",
-                  marginBottom: "16px",
-                }}
-              >
-                {confidence.distribution.map((bucket) => {
-                  const totalElements = confidence.distribution.reduce(
-                    (sum, b) => sum + b.count,
-                    0,
-                  );
-                  const pct =
-                    totalElements > 0
-                      ? Math.round((bucket.count / totalElements) * 100)
-                      : 0;
-                  return (
-                    <div key={bucket.level}>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          fontSize: "13px",
-                          marginBottom: "4px",
-                        }}
-                      >
-                        <span style={{ color: "#374151" }}>
-                          {bucket.level.replace(/_/g, " ")}
-                        </span>
-                        <span style={{ color: "#6b7280" }}>
-                          {bucket.count} ({pct}%)
-                        </span>
-                      </div>
-                      <div
-                        style={{
-                          height: "8px",
-                          backgroundColor: "#f3f4f6",
-                          borderRadius: "4px",
-                          overflow: "hidden",
-                        }}
-                      >
-                        <div
-                          style={{
-                            height: "100%",
-                            width: `${pct}%`,
-                            backgroundColor:
-                              CONFIDENCE_LEVEL_COLORS[bucket.level] ?? "#6b7280",
-                            borderRadius: "4px",
-                            transition: "width 0.3s ease",
-                          }}
-                        />
+        {showFullDashboard && (
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base">Confidence Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {confidence && confidence.distribution.length > 0 ? (
+                <div>
+                  {/* Simple bar chart representation */}
+                  <div className="flex flex-col gap-2 mb-4">
+                    {confidence.distribution.map((bucket) => {
+                      const totalElements = confidence.distribution.reduce(
+                        (sum, b) => sum + b.count,
+                        0,
+                      );
+                      const pct =
+                        totalElements > 0
+                          ? Math.round((bucket.count / totalElements) * 100)
+                          : 0;
+                      return (
+                        <div key={bucket.level}>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="text-[hsl(var(--foreground))]">
+                              {bucket.level.replace(/_/g, " ")}
+                            </span>
+                            <span className="text-[hsl(var(--muted-foreground))]">
+                              {bucket.count} ({pct}%)
+                            </span>
+                          </div>
+                          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-[width] duration-300 ${CONFIDENCE_LEVEL_COLORS[bucket.level] ?? "bg-gray-400"}`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Weakest elements */}
+                  {confidence.weakest_elements.length > 0 && (
+                    <div>
+                      <h3 className="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide mt-4 mb-2">
+                        Weakest Elements
+                      </h3>
+                      <div className="flex flex-col gap-1.5">
+                        {confidence.weakest_elements.map((elem) => (
+                          <div
+                            key={elem.id}
+                            className="flex justify-between items-center text-sm px-2 py-1.5 bg-gray-50 rounded-md"
+                          >
+                            <span className="text-[hsl(var(--foreground))]">{elem.name}</span>
+                            <ConfidenceBadge
+                              score={elem.confidence_score}
+                              showLabel={false}
+                            />
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-
-              {/* Weakest elements */}
-              {confidence.weakest_elements.length > 0 && (
-                <div>
-                  <h3
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: 600,
-                      color: "#6b7280",
-                      margin: "16px 0 8px 0",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                    }}
-                  >
-                    Weakest Elements
-                  </h3>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "6px",
-                    }}
-                  >
-                    {confidence.weakest_elements.map((elem) => (
-                      <div
-                        key={elem.id}
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          fontSize: "13px",
-                          padding: "6px 8px",
-                          backgroundColor: "#f9fafb",
-                          borderRadius: "6px",
-                        }}
-                      >
-                        <span style={{ color: "#374151" }}>{elem.name}</span>
-                        <ConfidenceBadge
-                          score={elem.confidence_score}
-                          showLabel={false}
-                        />
-                      </div>
-                    ))}
-                  </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-[hsl(var(--muted-foreground))] text-center py-6 text-sm">
+                  No confidence data available. Generate a POV first.
                 </div>
               )}
-            </div>
-          ) : (
-            <div style={{ color: "#9ca3af", textAlign: "center", padding: "24px" }}>
-              No confidence data available. Generate a POV first.
-            </div>
-          )}
-        </div>}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Gaps Summary */}
-      <div
-        style={{
-          backgroundColor: "#ffffff",
-          border: "1px solid #e5e7eb",
-          borderRadius: "12px",
-          padding: "24px",
-          marginBottom: "32px",
-        }}
-      >
-        <h2
-          style={{
-            fontSize: "16px",
-            fontWeight: 600,
-            margin: "0 0 16px 0",
-            color: "#111827",
-          }}
-        >
-          Gaps Summary
-        </h2>
-        <GapTable gaps={gapEntries} />
-      </div>
+      <Card className="mb-8">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base">Gaps Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <GapTable gaps={gapEntries} />
+        </CardContent>
+      </Card>
 
       {/* Recent Activity - hidden for client_viewer */}
-      {showFullDashboard && <div
-        style={{
-          backgroundColor: "#ffffff",
-          border: "1px solid #e5e7eb",
-          borderRadius: "12px",
-          padding: "24px",
-        }}
-      >
-        <h2
-          style={{
-            fontSize: "16px",
-            fontWeight: 600,
-            margin: "0 0 16px 0",
-            color: "#111827",
-          }}
-        >
-          Recent Activity
-        </h2>
-        {dashboard.recent_activity.length > 0 ? (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "0",
-            }}
-          >
-            {dashboard.recent_activity.map((entry, idx) => (
-              <div
-                key={entry.id}
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: "12px",
-                  padding: "12px 0",
-                  borderBottom:
-                    idx < dashboard.recent_activity.length - 1
-                      ? "1px solid #f3f4f6"
-                      : "none",
-                }}
-              >
-                {/* Timeline dot */}
-                <div
-                  style={{
-                    width: "8px",
-                    height: "8px",
-                    borderRadius: "50%",
-                    backgroundColor: "#3b82f6",
-                    marginTop: "6px",
-                    flexShrink: 0,
-                  }}
-                />
-                <div style={{ flex: 1 }}>
+      {showFullDashboard && (
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base">Recent Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {dashboard.recent_activity.length > 0 ? (
+              <div className="flex flex-col">
+                {dashboard.recent_activity.map((entry, idx) => (
                   <div
-                    style={{
-                      fontSize: "14px",
-                      color: "#111827",
-                      fontWeight: 500,
-                    }}
+                    key={entry.id}
+                    className={`flex items-start gap-3 py-3 ${
+                      idx < dashboard.recent_activity.length - 1
+                        ? "border-b border-gray-100"
+                        : ""
+                    }`}
                   >
-                    {entry.action.replace(/_/g, " ")}
-                  </div>
-                  {entry.details && (
-                    <div
-                      style={{
-                        fontSize: "13px",
-                        color: "#6b7280",
-                        marginTop: "2px",
-                      }}
-                    >
-                      {entry.details}
+                    {/* Timeline dot */}
+                    <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0" />
+                    <div className="flex-1">
+                      <div className="text-sm text-[hsl(var(--foreground))] font-medium">
+                        {entry.action.replace(/_/g, " ")}
+                      </div>
+                      {entry.details && (
+                        <div className="text-sm text-[hsl(var(--muted-foreground))] mt-0.5">
+                          {entry.details}
+                        </div>
+                      )}
+                      <div className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
+                        by {entry.actor}
+                        {entry.created_at && ` \u2022 ${entry.created_at}`}
+                      </div>
                     </div>
-                  )}
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color: "#9ca3af",
-                      marginTop: "4px",
-                    }}
-                  >
-                    by {entry.actor}
-                    {entry.created_at && ` \u2022 ${entry.created_at}`}
                   </div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div style={{ color: "#9ca3af", textAlign: "center", padding: "24px" }}>
-            No recent activity.
-          </div>
-        )}
-      </div>}
-    </main>
+            ) : (
+              <div className="text-[hsl(var(--muted-foreground))] text-center py-6 text-sm">
+                No recent activity.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }

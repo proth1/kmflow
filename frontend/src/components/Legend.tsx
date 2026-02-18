@@ -7,16 +7,16 @@
 
 interface LegendItem {
   label: string;
-  color: string;
+  colorClass: string;
   range: string;
 }
 
 const LEGEND_ITEMS: LegendItem[] = [
-  { label: "Very High", color: "#15803d", range: "\u2265 90%" },
-  { label: "High", color: "#22c55e", range: "75-89%" },
-  { label: "Medium", color: "#eab308", range: "50-74%" },
-  { label: "Low", color: "#f97316", range: "25-49%" },
-  { label: "Very Low", color: "#ef4444", range: "< 25%" },
+  { label: "Very High", colorClass: "bg-green-700", range: "\u2265 90%" },
+  { label: "High", colorClass: "bg-green-500", range: "75-89%" },
+  { label: "Medium", colorClass: "bg-yellow-400", range: "50-74%" },
+  { label: "Low", colorClass: "bg-orange-400", range: "25-49%" },
+  { label: "Very Low", colorClass: "bg-red-500", range: "< 25%" },
 ];
 
 interface LegendProps {
@@ -28,48 +28,21 @@ export default function Legend({ orientation = "horizontal" }: LegendProps) {
 
   return (
     <div
-      style={{
-        display: "flex",
-        flexDirection: isHorizontal ? "row" : "column",
-        gap: isHorizontal ? "16px" : "8px",
-        padding: "12px 16px",
-        backgroundColor: "#f9fafb",
-        borderRadius: "8px",
-        border: "1px solid #e5e7eb",
-        flexWrap: "wrap",
-      }}
+      className={`flex ${isHorizontal ? "flex-row gap-4 flex-wrap" : "flex-col gap-2"} p-3 px-4 bg-gray-50 rounded-lg border border-[hsl(var(--border))]`}
       data-testid="confidence-legend"
     >
       <span
-        style={{
-          fontSize: "12px",
-          fontWeight: 600,
-          color: "#374151",
-          marginRight: isHorizontal ? "4px" : 0,
-        }}
+        className={`text-xs font-semibold text-[hsl(var(--foreground))] ${isHorizontal ? "mr-1" : ""}`}
       >
         Confidence:
       </span>
       {LEGEND_ITEMS.map((item) => (
         <div
           key={item.label}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            fontSize: "12px",
-            color: "#4b5563",
-          }}
+          className="flex items-center gap-1.5 text-xs text-[hsl(var(--muted-foreground))]"
         >
           <span
-            style={{
-              width: "14px",
-              height: "14px",
-              borderRadius: "3px",
-              backgroundColor: item.color,
-              display: "inline-block",
-              flexShrink: 0,
-            }}
+            className={`w-3.5 h-3.5 rounded-sm inline-block shrink-0 ${item.colorClass}`}
           />
           <span>
             {item.label} ({item.range})

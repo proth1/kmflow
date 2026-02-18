@@ -5,6 +5,8 @@
  * a visual progress bar and gap indicator.
  */
 
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+
 export interface TOMDimensionProps {
   dimension: string;
   currentMaturity: number;
@@ -22,13 +24,26 @@ const DIMENSION_LABELS: Record<string, string> = {
   risk_and_compliance: "Risk & Compliance",
 };
 
-const GAP_COLORS: Record<string, { bg: string; text: string; border: string }> =
-  {
-    no_gap: { bg: "#f0fdf4", text: "#15803d", border: "#bbf7d0" },
-    deviation: { bg: "#fefce8", text: "#a16207", border: "#fef08a" },
-    partial_gap: { bg: "#fff7ed", text: "#c2410c", border: "#fed7aa" },
-    full_gap: { bg: "#fef2f2", text: "#dc2626", border: "#fecaca" },
-  };
+const GAP_BADGE_CLASSES: Record<string, string> = {
+  no_gap: "bg-green-50 text-green-700",
+  deviation: "bg-yellow-50 text-yellow-700",
+  partial_gap: "bg-orange-50 text-orange-700",
+  full_gap: "bg-red-50 text-red-600",
+};
+
+const GAP_BAR_COLOR_CLASSES: Record<string, string> = {
+  no_gap: "bg-green-700",
+  deviation: "bg-yellow-600",
+  partial_gap: "bg-orange-700",
+  full_gap: "bg-red-600",
+};
+
+const GAP_BORDER_CLASSES: Record<string, string> = {
+  no_gap: "border-green-200",
+  deviation: "border-yellow-200",
+  partial_gap: "border-orange-200",
+  full_gap: "border-red-200",
+};
 
 export default function TOMDimensionCard({
   dimension,
@@ -38,115 +53,58 @@ export default function TOMDimensionCard({
   severity,
 }: TOMDimensionProps) {
   const label = DIMENSION_LABELS[dimension] ?? dimension.replace(/_/g, " ");
-  const colors = GAP_COLORS[gapType] ?? GAP_COLORS.deviation;
+  const badgeClass = GAP_BADGE_CLASSES[gapType] ?? GAP_BADGE_CLASSES.deviation;
+  const barColorClass = GAP_BAR_COLOR_CLASSES[gapType] ?? GAP_BAR_COLOR_CLASSES.deviation;
+  const borderClass = GAP_BORDER_CLASSES[gapType] ?? GAP_BORDER_CLASSES.deviation;
   const currentPct = Math.min((currentMaturity / 5) * 100, 100);
   const targetPct = Math.min((targetMaturity / 5) * 100, 100);
 
   return (
-    <div
-      style={{
-        backgroundColor: "#ffffff",
-        border: `1px solid ${colors.border}`,
-        borderRadius: "12px",
-        padding: "20px",
-        display: "flex",
-        flexDirection: "column",
-        gap: "12px",
-      }}
+    <Card
+      className={`border ${borderClass}`}
       data-testid="tom-dimension-card"
     >
-      {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <span
-          style={{
-            fontSize: "14px",
-            fontWeight: 600,
-            color: "#111827",
-          }}
-        >
-          {label}
-        </span>
-        <span
-          style={{
-            display: "inline-block",
-            padding: "2px 10px",
-            borderRadius: "9999px",
-            fontSize: "11px",
-            fontWeight: 600,
-            backgroundColor: colors.bg,
-            color: colors.text,
-            textTransform: "uppercase",
-          }}
-        >
-          {gapType.replace(/_/g, " ")}
-        </span>
-      </div>
+      <CardHeader className="pb-0 pt-5 px-5">
+        <div className="flex justify-between items-center">
+          <span className="text-sm font-semibold text-[hsl(var(--foreground))]">
+            {label}
+          </span>
+          <span
+            className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase ${badgeClass}`}
+          >
+            {gapType.replace(/_/g, " ")}
+          </span>
+        </div>
+      </CardHeader>
 
-      {/* Maturity Bar */}
-      <div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            fontSize: "12px",
-            color: "#6b7280",
-            marginBottom: "6px",
-          }}
-        >
-          <span>Current: {currentMaturity.toFixed(1)}</span>
-          <span>Target: {targetMaturity.toFixed(1)}</span>
+      <CardContent className="px-5 pb-5 pt-3 flex flex-col gap-3">
+        {/* Maturity Bar */}
+        <div>
+          <div className="flex justify-between text-xs text-[hsl(var(--muted-foreground))] mb-1.5">
+            <span>Current: {currentMaturity.toFixed(1)}</span>
+            <span>Target: {targetMaturity.toFixed(1)}</span>
+          </div>
+          <div className="relative h-3 bg-gray-100 rounded-md overflow-visible">
+            {/* Current maturity bar */}
+            <div
+              className={`absolute top-0 left-0 h-full rounded-md opacity-70 transition-[width] duration-300 ${barColorClass}`}
+              style={{ width: `${currentPct}%` }}
+            />
+            {/* Target marker */}
+            <div
+              className="absolute top-[-2px] w-[3px] h-4 bg-gray-900 rounded-sm -translate-x-px"
+              style={{ left: `${targetPct}%` }}
+            />
+          </div>
         </div>
-        <div
-          style={{
-            position: "relative",
-            height: "12px",
-            backgroundColor: "#f3f4f6",
-            borderRadius: "6px",
-            overflow: "visible",
-          }}
-        >
-          {/* Current maturity bar */}
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              height: "100%",
-              width: `${currentPct}%`,
-              backgroundColor: colors.text,
-              borderRadius: "6px",
-              opacity: 0.7,
-              transition: "width 0.3s ease",
-            }}
-          />
-          {/* Target marker */}
-          <div
-            style={{
-              position: "absolute",
-              top: "-2px",
-              left: `${targetPct}%`,
-              width: "3px",
-              height: "16px",
-              backgroundColor: "#111827",
-              borderRadius: "2px",
-              transform: "translateX(-1px)",
-            }}
-          />
-        </div>
-      </div>
 
-      {/* Severity */}
-      {severity > 0 && (
-        <div style={{ fontSize: "12px", color: "#6b7280" }}>
-          Severity: {(severity * 100).toFixed(0)}%
-        </div>
-      )}
-    </div>
+        {/* Severity */}
+        {severity > 0 && (
+          <div className="text-xs text-[hsl(var(--muted-foreground))]">
+            Severity: {(severity * 100).toFixed(0)}%
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

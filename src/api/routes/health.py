@@ -62,6 +62,17 @@ async def health_check(request: Request) -> dict[str, Any]:
         logger.warning("Redis health check failed")
         services["redis"] = "down"
 
+    # Check Camunda (CIB7)
+    try:
+        camunda_client = getattr(request.app.state, "camunda_client", None)
+        if camunda_client and await camunda_client.verify_connectivity():
+            services["camunda"] = "up"
+        else:
+            services["camunda"] = "down"
+    except Exception:
+        logger.warning("Camunda health check failed")
+        services["camunda"] = "down"
+
     # Determine overall status
     down_count = sum(1 for s in services.values() if s == "down")
     if down_count == 0:

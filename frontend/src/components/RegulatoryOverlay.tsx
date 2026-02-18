@@ -14,19 +14,17 @@ interface RegulatoryOverlayProps {
   engagementId: string;
 }
 
-const COMPLIANCE_COLORS: Record<string, { bg: string; text: string }> = {
-  fully_compliant: { bg: "#f0fdf4", text: "#15803d" },
-  partially_compliant: { bg: "#fefce8", text: "#a16207" },
-  non_compliant: { bg: "#fef2f2", text: "#dc2626" },
-  not_assessed: { bg: "#f3f4f6", text: "#6b7280" },
+const COMPLIANCE_CLASSES: Record<string, { bg: string; text: string; border: string }> = {
+  fully_compliant: { bg: "bg-green-50", text: "text-green-700", border: "border-green-200" },
+  partially_compliant: { bg: "bg-yellow-50", text: "text-yellow-700", border: "border-yellow-200" },
+  non_compliant: { bg: "bg-red-50", text: "text-red-600", border: "border-red-200" },
+  not_assessed: { bg: "bg-gray-100", text: "text-gray-500", border: "border-gray-200" },
 };
 
 export default function RegulatoryOverlay({
   engagementId,
 }: RegulatoryOverlayProps) {
-  const [compliance, setCompliance] = useState<ComplianceStateData | null>(
-    null,
-  );
+  const [compliance, setCompliance] = useState<ComplianceStateData | null>(null);
   const [ungoverned, setUngoverned] = useState<UngovernedProcess[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +56,7 @@ export default function RegulatoryOverlay({
   if (loading) {
     return (
       <div
-        style={{ padding: "24px", color: "#6b7280", textAlign: "center" }}
+        className="p-6 text-[hsl(var(--muted-foreground))] text-center text-sm"
         data-testid="regulatory-overlay-loading"
       >
         Loading regulatory overlay...
@@ -69,13 +67,7 @@ export default function RegulatoryOverlay({
   if (error) {
     return (
       <div
-        style={{
-          padding: "24px",
-          color: "#dc2626",
-          backgroundColor: "#fef2f2",
-          borderRadius: "12px",
-          textAlign: "center",
-        }}
+        className="p-6 text-red-600 bg-red-50 rounded-xl text-center text-sm"
         data-testid="regulatory-overlay-error"
       >
         {error}
@@ -84,105 +76,42 @@ export default function RegulatoryOverlay({
   }
 
   const level = compliance?.level ?? "not_assessed";
-  const colors = COMPLIANCE_COLORS[level] ?? COMPLIANCE_COLORS.not_assessed;
+  const colors = COMPLIANCE_CLASSES[level] ?? COMPLIANCE_CLASSES.not_assessed;
   const coverage = compliance?.policy_coverage ?? 0;
+
+  const coverageBarClass =
+    coverage >= 90 ? "bg-green-500" : coverage >= 50 ? "bg-yellow-400" : "bg-red-500";
+  const coverageTextClass =
+    coverage >= 90 ? "text-green-700" : coverage >= 50 ? "text-yellow-700" : "text-red-600";
 
   return (
     <div data-testid="regulatory-overlay">
       {/* Compliance Status */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "16px",
-          marginBottom: "24px",
-        }}
-      >
+      <div className="grid grid-cols-2 gap-4 mb-6">
         {/* Level Badge */}
         <div
-          style={{
-            backgroundColor: colors.bg,
-            border: `1px solid ${colors.text}20`,
-            borderRadius: "12px",
-            padding: "20px",
-            textAlign: "center",
-          }}
+          className={`rounded-xl p-5 text-center border ${colors.bg} ${colors.border}`}
         >
-          <div
-            style={{
-              fontSize: "12px",
-              color: "#6b7280",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-              marginBottom: "8px",
-            }}
-          >
+          <div className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))] mb-2">
             Compliance Level
           </div>
-          <div
-            style={{
-              fontSize: "18px",
-              fontWeight: 700,
-              color: colors.text,
-              textTransform: "uppercase",
-            }}
-          >
+          <div className={`text-lg font-bold uppercase ${colors.text}`}>
             {level.replace(/_/g, " ")}
           </div>
         </div>
 
         {/* Coverage Gauge */}
-        <div
-          style={{
-            backgroundColor: "#ffffff",
-            border: "1px solid #e5e7eb",
-            borderRadius: "12px",
-            padding: "20px",
-            textAlign: "center",
-          }}
-        >
-          <div
-            style={{
-              fontSize: "12px",
-              color: "#6b7280",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-              marginBottom: "8px",
-            }}
-          >
+        <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl p-5 text-center">
+          <div className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))] mb-2">
             Policy Coverage
           </div>
-          <div
-            style={{
-              fontSize: "28px",
-              fontWeight: 700,
-              color: coverage >= 90 ? "#15803d" : coverage >= 50 ? "#a16207" : "#dc2626",
-            }}
-          >
+          <div className={`text-3xl font-bold ${coverageTextClass}`}>
             {coverage.toFixed(1)}%
           </div>
-          <div
-            style={{
-              height: "8px",
-              backgroundColor: "#f3f4f6",
-              borderRadius: "4px",
-              marginTop: "8px",
-              overflow: "hidden",
-            }}
-          >
+          <div className="h-2 bg-gray-100 rounded-full mt-2 overflow-hidden">
             <div
-              style={{
-                height: "100%",
-                width: `${Math.min(coverage, 100)}%`,
-                backgroundColor:
-                  coverage >= 90
-                    ? "#22c55e"
-                    : coverage >= 50
-                      ? "#eab308"
-                      : "#ef4444",
-                borderRadius: "4px",
-                transition: "width 0.3s ease",
-              }}
+              className={`h-full rounded-full transition-[width] duration-300 ${coverageBarClass}`}
+              style={{ width: `${Math.min(coverage, 100)}%` }}
             />
           </div>
         </div>
@@ -190,54 +119,26 @@ export default function RegulatoryOverlay({
 
       {/* Process Counts */}
       {compliance && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr",
-            gap: "12px",
-            marginBottom: "24px",
-          }}
-        >
-          <div
-            style={{
-              textAlign: "center",
-              padding: "12px",
-              backgroundColor: "#f9fafb",
-              borderRadius: "8px",
-            }}
-          >
-            <div style={{ fontSize: "24px", fontWeight: 700, color: "#111827" }}>
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="text-center p-3 bg-gray-50 rounded-lg">
+            <div className="text-2xl font-bold text-[hsl(var(--foreground))]">
               {compliance.total_processes}
             </div>
-            <div style={{ fontSize: "12px", color: "#6b7280" }}>
+            <div className="text-xs text-[hsl(var(--muted-foreground))]">
               Total Processes
             </div>
           </div>
-          <div
-            style={{
-              textAlign: "center",
-              padding: "12px",
-              backgroundColor: "#f0fdf4",
-              borderRadius: "8px",
-            }}
-          >
-            <div style={{ fontSize: "24px", fontWeight: 700, color: "#15803d" }}>
+          <div className="text-center p-3 bg-green-50 rounded-lg">
+            <div className="text-2xl font-bold text-green-700">
               {compliance.governed_count}
             </div>
-            <div style={{ fontSize: "12px", color: "#6b7280" }}>Governed</div>
+            <div className="text-xs text-[hsl(var(--muted-foreground))]">Governed</div>
           </div>
-          <div
-            style={{
-              textAlign: "center",
-              padding: "12px",
-              backgroundColor: "#fef2f2",
-              borderRadius: "8px",
-            }}
-          >
-            <div style={{ fontSize: "24px", fontWeight: 700, color: "#dc2626" }}>
+          <div className="text-center p-3 bg-red-50 rounded-lg">
+            <div className="text-2xl font-bold text-red-600">
               {compliance.ungoverned_count}
             </div>
-            <div style={{ fontSize: "12px", color: "#6b7280" }}>Ungoverned</div>
+            <div className="text-xs text-[hsl(var(--muted-foreground))]">Ungoverned</div>
           </div>
         </div>
       )}
@@ -245,46 +146,17 @@ export default function RegulatoryOverlay({
       {/* Ungoverned Processes List */}
       {ungoverned.length > 0 && (
         <div>
-          <h3
-            style={{
-              fontSize: "14px",
-              fontWeight: 600,
-              color: "#dc2626",
-              margin: "0 0 12px 0",
-            }}
-          >
+          <h3 className="text-sm font-semibold text-red-600 mb-3">
             Ungoverned Processes ({ungoverned.length})
           </h3>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "6px",
-            }}
-          >
+          <div className="flex flex-col gap-1.5">
             {ungoverned.map((proc) => (
               <div
                 key={proc.process_id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "8px 12px",
-                  backgroundColor: "#fef2f2",
-                  borderRadius: "8px",
-                  fontSize: "13px",
-                }}
+                className="flex items-center gap-2 p-2 px-3 bg-red-50 rounded-lg text-sm"
               >
-                <span
-                  style={{
-                    width: "6px",
-                    height: "6px",
-                    borderRadius: "50%",
-                    backgroundColor: "#dc2626",
-                    flexShrink: 0,
-                  }}
-                />
-                <span style={{ color: "#374151" }}>
+                <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" />
+                <span className="text-[hsl(var(--foreground))]">
                   {proc.process_name || proc.process_id}
                 </span>
               </div>
