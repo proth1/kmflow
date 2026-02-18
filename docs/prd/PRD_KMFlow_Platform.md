@@ -144,9 +144,9 @@ Knowledge graph construction using Neo4j with typed nodes and relationships.
 - Hybrid retrieval: direct ID lookup + top-k semantic search (RAG)
 - Relationship types: `SUPPORTED_BY`, `GOVERNED_BY`, `DEVIATES_FROM`, `IMPLEMENTS`, `CONTRADICTS`, `MITIGATES`, `REQUIRES`
 
-### 6.3 Process Point of View Generator (LCD Algorithm)
+### 6.3 Process Point of View Generator (Consensus Algorithm)
 
-The intellectual core of the platform. Synthesizes a "least common denominator" process view from diverse evidence.
+The intellectual core of the platform. Synthesizes a consensus first-pass process view from diverse evidence.
 
 **Algorithm Steps**:
 
@@ -265,6 +265,104 @@ Process --governed_by--> Policy --enforced_by--> Control --satisfies--> Regulati
 - Real-time dashboards and alerting
 - Agentic capabilities: AI agents that proactively identify evidence gaps
 
+### 6.9 Operating Model Scenario Engine (Phases 3-4)
+
+Extends KMFlow from descriptive process intelligence into structured scenario analysis for operating model design. Enables consultants to define, compare, and evaluate alternative operating model configurations with evidence-grounded scoring and uncertainty-aware decision support.
+
+**Design Principles**:
+- Consultant-in-the-loop: the system assists scenario definition and comparison, it does not autonomously generate operating models
+- Honest uncertainty: every score explicitly communicates what the system does and does not know
+- Evidence-first: all recommendations trace to evidence quality and coverage, consistent with the platform's core philosophy
+- Incremental value: each sub-capability delivers standalone value without requiring all others
+
+**Sub-capability 1: Scenario Comparison Workbench (Phase 3)**
+
+Allows consultants to define 2-5 alternative operating model scenarios and compare them side-by-side with simulation results and evidence overlays.
+
+Each scenario is expressed as a set of modifications to the as-is process model:
+- Task additions, removals, or modifications
+- Role reassignments and swim lane changes
+- Gateway restructuring (decision boundary shifts)
+- Control additions or removals
+
+For each scenario, the platform:
+- Runs simulation (cycle time, capacity, staffing impact) using the existing simulation engine
+- Computes per-element evidence confidence using the existing scoring model
+- Overlays evidence coverage classification (Bright / Dim / Dark) on the modified process model
+- Produces a comparison dashboard showing all scenarios side-by-side
+
+Scenario definition is assisted by transformation templates:
+- "Consolidate adjacent tasks in same swim lane"
+- "Automate gateway where all inputs are system-provided"
+- "Shift decision boundary: human review → system-assisted → autonomous"
+- "Remove control and assess compliance impact"
+
+Templates suggest modifications; the consultant decides which to apply. No scenario enters the comparison pipeline without human definition or approval.
+
+**Evidence Coverage Classification**:
+- **Bright**: Process element supported by 3+ evidence sources with ≥0.75 confidence
+- **Dim**: Process element supported by 1-2 evidence sources or confidence between 0.40-0.74
+- **Dark**: Process element with no supporting evidence or confidence <0.40
+
+**Sub-capability 2: Epistemic Action Planner (Phase 3)**
+
+For each scenario under comparison, identifies the evidence gaps that most affect the reliability of the analysis and recommends specific evidence acquisition actions.
+
+Operates per-scenario by:
+1. Identifying process elements where the scenario introduces changes in areas with Dim or Dark evidence coverage
+2. Ranking evidence gaps by estimated information gain: how much would the scenario's overall confidence score improve if this evidence were obtained?
+3. Mapping evidence gaps to actionable shelf data requests (integrates with existing shelf data request workflow)
+4. Projecting confidence uplift: "Obtaining evidence item X would raise this scenario's confidence from 0.58 to an estimated 0.72"
+
+Outputs:
+- Ranked list of evidence acquisition actions per scenario
+- Estimated confidence improvement per action
+- Aggregated view across all scenarios: which evidence items would improve the analysis regardless of which scenario is chosen
+- Direct integration with shelf data request creation
+
+Builds on the existing gap scanner (`src/agents/gap_scanner.py`) and evidence recommender (`src/agents/recommender.py`), extending them to operate in a scenario-comparative context.
+
+**Sub-capability 3: Assisted Alternative Suggestion (Phase 4)**
+
+Uses LLM analysis to suggest operating model modifications for consultant review. Positioned explicitly as AI-assisted brainstorming, not autonomous generation.
+
+For a given as-is process model with evidence overlay, the LLM:
+- Identifies potential inefficiencies, redundancies, and automation opportunities
+- Suggests specific modifications as natural language descriptions with rationale
+- Flags governance considerations: which controls or regulatory constraints are affected
+- Notes where evidence is insufficient to assess the viability of a suggestion
+
+**Critical constraints**:
+- All suggestions are presented as "considerations for review," not recommendations
+- No suggestion enters a scenario definition without explicit consultant approval
+- The system surfaces what it does NOT know alongside each suggestion (evidence gaps, unstated assumptions, constraints it cannot verify)
+- Segregation of duties and regulatory compliance are flagged as risk areas when role changes are suggested, but the system does not claim to enforce constraints it cannot fully model
+- Full audit trail: every suggestion records the LLM prompt, response, evidence context, and consultant disposition (accepted / modified / rejected)
+
+**Gating criteria**: Sub-capability 3 proceeds only after Sub-capabilities 1 and 2 are validated with real engagement data.
+
+**Financial Impact Estimation (Phase 4 prerequisite)**
+
+Requires a financial data model not present in the current platform:
+- Cost per role (hourly/annual rates per swim lane actor)
+- Technology cost assumptions (per-transaction, licensing, implementation)
+- Volume forecasts (transaction volumes, seasonal patterns)
+- Implementation cost estimates (change management, training, technology)
+
+Financial estimates are presented as ranges with explicit assumptions, never as point estimates. Every financial output includes:
+- The assumptions it depends on
+- The confidence level of those assumptions
+- Sensitivity analysis: which assumptions most affect the result
+
+**What This Is Not**:
+
+This capability does not claim to:
+- Automatically generate valid operating models (it assists consultants in defining them)
+- Replace consulting judgment with algorithmic recommendations
+- Produce precise financial predictions (it produces ranges with stated assumptions)
+- Enforce all regulatory constraints (it flags known constraints and warns about gaps in its knowledge)
+- Implement active inference or any specific mathematical framework from computational neuroscience
+
 ---
 
 ## 7. Data Model
@@ -287,6 +385,11 @@ Process --governed_by--> Policy --enforced_by--> Control --satisfies--> Regulati
 | `GapAnalysisResult` | Gap finding | id, engagement_id, type, severity, confidence, rationale, recommendation |
 | `BestPractice` | Industry best practice | id, domain, industry, description, source |
 | `Benchmark` | Industry benchmark data | id, metric, industry, percentiles |
+| `Scenario` | Alternative operating model scenario (Phase 3) | id, engagement_id, name, description, status, modifications, simulation_results, evidence_confidence_score |
+| `ScenarioModification` | Individual change within a scenario (Phase 3) | id, scenario_id, modification_type, target_element_id, parameters, template_source |
+| `EpistemicAction` | Recommended evidence acquisition action (Phase 3) | id, scenario_id, target_element_id, evidence_gap_description, estimated_confidence_uplift, shelf_request_id |
+| `FinancialAssumption` | Cost and volume assumptions for financial estimation (Phase 4) | id, engagement_id, assumption_type, value, unit, confidence, source_evidence_id |
+| `AlternativeSuggestion` | LLM-generated modification suggestion (Phase 4) | id, scenario_id, suggestion_text, rationale, governance_flags, evidence_gaps, disposition |
 
 ### 7.2 Knowledge Graph Schema (Neo4j)
 
@@ -351,6 +454,17 @@ Process --governed_by--> Policy --enforced_by--> Control --satisfies--> Regulati
 - `POST /api/v1/engagements` - Create engagement
 - `GET /api/v1/engagements/{id}/dashboard` - Persona-specific dashboard data
 - `GET /api/v1/engagements/{id}/report` - Generate deliverable report
+
+### 8.7 Scenario Engine APIs (Phase 3-4)
+- `POST /api/v1/scenarios` - Create a new scenario for an engagement
+- `GET /api/v1/scenarios?engagement_id=X` - List scenarios for engagement
+- `GET /api/v1/scenarios/{id}` - Get scenario detail with simulation results and evidence overlay
+- `POST /api/v1/scenarios/{id}/simulate` - Run simulation for a scenario
+- `GET /api/v1/scenarios/{id}/compare?ids=X,Y,Z` - Side-by-side comparison of multiple scenarios
+- `GET /api/v1/scenarios/{id}/evidence-coverage` - Bright/Dim/Dark classification per element
+- `GET /api/v1/scenarios/{id}/epistemic-plan` - Ranked evidence acquisition actions with confidence uplift
+- `POST /api/v1/scenarios/{id}/suggestions` - (Phase 4) Request LLM-assisted modification suggestions
+- `PATCH /api/v1/scenarios/{id}/suggestions/{suggestion_id}` - (Phase 4) Accept/reject/modify a suggestion
 
 ---
 
@@ -420,6 +534,18 @@ Process --governed_by--> Policy --enforced_by--> Control --satisfies--> Regulati
 4. Alerts generated for significant process deviations
 5. Dashboard updated with live process intelligence
 
+### Flow 5: Operating Model Scenario Analysis (Phases 3-4)
+1. After POV generation and TOM gap analysis, Engagement Lead opens Scenario Workbench
+2. System displays as-is process model with Bright/Dim/Dark evidence overlay
+3. Consultant defines alternative scenarios using transformation templates or manual edits
+4. For each scenario, system runs simulation and computes evidence confidence
+5. Side-by-side comparison dashboard shows all scenarios with simulation results and evidence coverage
+6. Epistemic Action Planner identifies evidence gaps that most affect the analysis
+7. Consultant reviews ranked evidence acquisition actions and creates shelf data requests
+8. (Phase 4) LLM suggests additional modifications for consultant review; consultant accepts, modifies, or rejects each
+9. (Phase 4) Financial impact estimation added with stated assumptions and ranges
+10. Engagement Lead selects preferred scenario(s) for client presentation with full evidence traceability
+
 ---
 
 ## 12. Success Metrics
@@ -433,6 +559,10 @@ Process --governed_by--> Policy --enforced_by--> Control --satisfies--> Regulati
 | Evidence coverage per engagement | >80% of requested items received | Shelf data request fulfillment rate |
 | Gap detection recall | >85% of gaps identified by experts | Compared to manual gap analysis |
 | Client satisfaction | >4.5/5.0 | Post-engagement survey |
+| Scenario comparison adoption | >70% of engagements use Scenario Workbench | Usage tracking per engagement |
+| Evidence acquisition follow-through | >50% of epistemic planner recommendations result in shelf data requests | Shelf request creation linked to epistemic actions |
+| Confidence uplift accuracy | >0.7 correlation between projected and actual confidence improvement after evidence obtained | Compare projected vs actual per epistemic action |
+| Scenario evaluation speed | >50% faster than manual workshop-based scenario evaluation | Before/after engagement comparison |
 
 ---
 
@@ -444,7 +574,7 @@ Process --governed_by--> Policy --enforced_by--> Control --satisfies--> Regulati
 - Shelf data request workflow (compose, track, intake)
 - Evidence quality scoring and validation
 - Basic semantic relationship engine (Neo4j graph construction)
-- Process POV generation with LCD algorithm and evidence linking
+- Process POV generation with consensus algorithm and evidence linking
 - Confidence scoring engine
 - Simple HTML process flow visualization
 - Evidence provenance tracking
@@ -473,6 +603,20 @@ Process --governed_by--> Policy --enforced_by--> Control --satisfies--> Regulati
 - SaaS connectors (Salesforce, SAP, ServiceNow)
 - Client portal with interactive exploration
 - API/MCP server for consulting platform integration
+- Evidence coverage classification (Bright / Dim / Dark per process element)
+- Scenario Comparison Workbench (define, simulate, and compare 2-5 operating model alternatives)
+- Epistemic Action Planner (per-scenario evidence gap ranking with confidence uplift projection)
+
+### Phase 4 - Reimagination
+- Financial data model (cost per role, volume forecasts, technology cost assumptions)
+- Financial impact estimation with ranges, assumptions, and sensitivity analysis
+- Assisted Alternative Suggestion (LLM-suggested operating model modifications for consultant review)
+- BPMN diff visualization (structural comparison between as-is and scenario models)
+- Scenario ranking with composite scoring (evidence confidence, simulation results, financial impact)
+- Engagement-level scenario history and audit trail
+- Reimagination dashboard integration into Engagement Lead portal
+
+**Phase 4 gating criteria**: Phase 3 Scenario Comparison Workbench and Epistemic Action Planner validated with real engagement data before proceeding.
 
 ---
 
@@ -491,13 +635,14 @@ Process --governed_by--> Policy --enforced_by--> Control --satisfies--> Regulati
 |                     API GATEWAY (FastAPI)                           |
 |                        (Port 8000)                                 |
 |  Evidence API | POV API | TOM API | Graph API | Engagement API    |
+|  Scenario API (Phase 3)                                            |
 +-------------------------------------------------------------------+
                               |
 +-------------------------------------------------------------------+
 |                   PROCESSING SERVICE LAYER                         |
 |                                                                    |
-|  Evidence Ingestion    |  Semantic Bridge     |  LCD Algorithm     |
-|  Engine                |  Engine              |  Engine            |
+|  Evidence Ingestion    |  Semantic Bridge     |  Consensus         |
+|  Engine                |  Engine              |  Algorithm         |
 |  (format parsers,      |  (relationship       |  (triangulation,   |
 |   quality scoring,     |   detection,         |   consensus,       |
 |   validation)          |   entity resolution) |   model assembly)  |
@@ -506,6 +651,11 @@ Process --governed_by--> Policy --enforced_by--> Control --satisfies--> Regulati
 |  Engine                |  Engine              |  (hybrid search,   |
 |  (gap scoring,         |  (graph traversal,   |   query answering, |
 |   recommendations)     |   LLM rationale)     |   evidence Q&A)    |
+|                        |                      |                    |
+|  Scenario Engine       |  Epistemic Planner   |  Simulation        |
+|  (scenario definition, |  (evidence gap       |  Engine            |
+|   comparison,          |   ranking, shelf     |  (what-if,         |
+|   evidence overlay)    |   data integration)  |   capacity, cost)  |
 +-------------------------------------------------------------------+
                               |
 +-------------------------------------------------------------------+
