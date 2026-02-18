@@ -15,9 +15,13 @@ from src.evidence.parsers.bpmn_parser import BpmnParser
 from src.evidence.parsers.communication_parser import CommunicationParser
 from src.evidence.parsers.document_parser import DocumentParser
 from src.evidence.parsers.image_parser import ImageParser
+from src.evidence.parsers.job_aids_parser import JobAidsParser
+from src.evidence.parsers.km4work_parser import KM4WorkParser
 from src.evidence.parsers.regulatory_parser import RegulatoryParser
 from src.evidence.parsers.structured_data_parser import StructuredDataParser
 from src.evidence.parsers.video_parser import VideoParser
+from src.evidence.parsers.visio_parser import VisioParser
+from src.evidence.parsers.xes_parser import XesParser
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +35,10 @@ _PARSERS: list[BaseParser] = [
     VideoParser(),
     RegulatoryParser(),
     CommunicationParser(),
+    VisioParser(),
+    XesParser(),
+    KM4WorkParser(),
+    JobAidsParser(),
 ]
 
 # Extension to EvidenceCategory mapping for auto-classification
@@ -78,6 +86,16 @@ EXTENSION_TO_CATEGORY: dict[str, str] = {
     ".mbox": "domain_communications",
     ".chat": "domain_communications",
     ".msg": "domain_communications",
+    # Visio / Process diagrams
+    ".vsdx": "bpm_process_models",
+    # XES event logs
+    ".xes": "structured_data",
+    # KM4Work
+    ".km4w": "km4work",
+    ".km4work": "km4work",
+    # Job Aids
+    ".jobaid": "job_aids_edge_cases",
+    ".edgecase": "job_aids_edge_cases",
 }
 
 # MIME type to file extension mapping

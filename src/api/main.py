@@ -3,7 +3,7 @@
 Configures the FastAPI app with:
 - CORS middleware
 - Lifespan events for database/cache connections
-- Route registration (14 Phase 1-2 routers + 6 Phase 3 routers + 2 Phase 4 routers)
+- Route registration (14 Phase 1-2 routers + 6 Phase 3 routers + 2 Phase 4 routers + 1 Phase 5 router)
 - MCP server mounted at /mcp
 - OpenAPI documentation at /docs
 """
@@ -132,7 +132,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.app_name,
         description="AI-powered Process Intelligence platform for consulting engagements",
-        version="0.5.0",
+        version="0.6.0",
         docs_url="/docs",
         redoc_url="/redoc",
         lifespan=lifespan,
