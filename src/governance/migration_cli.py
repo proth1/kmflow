@@ -86,12 +86,13 @@ def _print_summary(result: MigrationResult) -> None:
 async def _run(args: argparse.Namespace) -> int:
     """Create dependencies and execute the migration."""
     # Import here to avoid circular imports at module level
-    from src.core.database import async_session_factory  # type: ignore[import-not-found]
+    from src.core.database import async_session_factory  # type: ignore[attr-defined]
 
+    storage: LocalFilesystemBackend
     if args.storage_backend == "delta":
         from src.datalake.backend import DeltaLakeBackend
 
-        storage = DeltaLakeBackend(base_path=args.base_path)
+        storage = DeltaLakeBackend(base_path=args.base_path)  # type: ignore[assignment]
     else:
         storage = LocalFilesystemBackend(base_path=args.base_path)
 

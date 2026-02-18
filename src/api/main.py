@@ -28,7 +28,6 @@ from src.api.middleware.security import (
 )
 from src.api.routes import (
     admin,
-    annotations,
     auth,
     camunda,
     conformance,
@@ -53,6 +52,9 @@ from src.api.routes import (
     tom,
     users,
     websocket,
+)
+from src.api.routes import (
+    annotations as annotations_routes,
 )
 from src.core.config import get_settings
 from src.core.database import create_engine
@@ -201,7 +203,7 @@ def create_app() -> FastAPI:
 
     # -- Phase 8 Routes ---
     app.include_router(metrics.router)
-    app.include_router(annotations.router)
+    app.include_router(annotations_routes.router)
 
     # -- Phase C: Data Layer Evolution ---
     app.include_router(lineage.router)

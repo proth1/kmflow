@@ -454,7 +454,9 @@ async def run_semantic_bridges(
 
     graph_service = KnowledgeGraphService(neo4j_driver)
 
-    bridges = [
+    bridges: list[
+        tuple[str, ProcessEvidenceBridge | EvidencePolicyBridge | ProcessTOMBridge | CommunicationDeviationBridge]
+    ] = [
         ("ProcessEvidence", ProcessEvidenceBridge(graph_service)),
         ("EvidencePolicy", EvidencePolicyBridge(graph_service)),
         ("ProcessTOM", ProcessTOMBridge(graph_service)),
