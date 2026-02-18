@@ -26,6 +26,7 @@ from src.api.middleware.security import (
 )
 from src.api.routes import (
     admin,
+    annotations,
     auth,
     conformance,
     copilot,
@@ -35,6 +36,7 @@ from src.api.routes import (
     graph,
     health,
     integrations,
+    metrics,
     monitoring,
     patterns,
     portal,
@@ -130,7 +132,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.app_name,
         description="AI-powered Process Intelligence platform for consulting engagements",
-        version="0.6.0",
+        version="0.8.0",
         docs_url="/docs",
         redoc_url="/redoc",
         lifespan=lifespan,
@@ -180,6 +182,10 @@ def create_app() -> FastAPI:
     # -- Phase 4 Routes ---
     app.include_router(copilot.router)
     app.include_router(conformance.router)
+
+    # -- Phase 8 Routes ---
+    app.include_router(metrics.router)
+    app.include_router(annotations.router)
 
     # -- Phase 5 Routes ---
     app.include_router(admin.router)

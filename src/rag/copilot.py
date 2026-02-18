@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
@@ -156,6 +157,85 @@ class CopilotOrchestrator:
         except Exception as e:
             logger.error("Claude API call failed: %s", e)
             return self._stub_response(user_prompt)
+
+    async def chat_streaming(
+        self,
+        query: str,
+        engagement_id: str,
+        session: AsyncSession,
+        query_type: str = "general",
+        history: list[dict[str, Any]] | None = None,
+    ) -> AsyncGenerator[str, None]:
+        """Process a copilot query and stream the response token by token.
+
+        Yields SSE-formatted text chunks for streaming to the client.
+
+        Args:
+            query: The user's question.
+            engagement_id: Engagement scope.
+            session: Database session for retrieval.
+            query_type: Type of query for prompt selection.
+            history: Previous conversation messages.
+
+        Yields:
+            SSE-formatted strings: "data: {text}\n\n" for each chunk,
+            "data: [DONE]\n\n" when complete.
+        """
+        # 1. Retrieve relevant context
+        retrieval_results = await self.retriever.retrieve(
+            query=query,
+            session=session,
+            engagement_id=engagement_id,
+            top_k=10,
+        )
+
+        # 2. Build context and prompt
+        contexts = [
+            {
+                "content": r.content,
+                "source_id": r.source_id,
+                "source_type": r.source_type,
+                "similarity_score": r.similarity_score,
+            }
+            for r in retrieval_results
+        ]
+        context_string = build_context_string(contexts)
+        template = get_prompt_template(query_type)
+        user_prompt = template.format(
+            engagement_id=engagement_id,
+            context=context_string,
+            query=query,
+        )
+
+        # 3. Stream response
+        try:
+            import anthropic
+
+            client = anthropic.AsyncAnthropic()
+            messages: list[dict[str, str]] = []
+
+            if history:
+                for msg in history[-5:]:
+                    messages.append({"role": msg["role"], "content": msg["content"]})
+            messages.append({"role": "user", "content": user_prompt})
+
+            async with client.messages.stream(
+                model=self.settings.copilot_model,
+                max_tokens=self.settings.copilot_max_response_tokens,
+                system=SYSTEM_PROMPT,
+                messages=messages,  # type: ignore[arg-type]
+            ) as stream:
+                async for text_chunk in stream.text_stream:
+                    yield f"data: {text_chunk}\n\n"
+
+        except ImportError:
+            logger.warning("anthropic package not installed, yielding stub response")
+            yield f"data: {self._stub_response(user_prompt)}\n\n"
+        except Exception as e:
+            logger.error("Claude streaming failed: %s", e)
+            yield f"data: {self._stub_response(user_prompt)}\n\n"
+
+        yield "data: [DONE]\n\n"
 
     def _stub_response(self, prompt: str) -> str:
         """Fallback stub response when Claude API is unavailable."""

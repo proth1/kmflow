@@ -1,0 +1,289 @@
+# KMFlow Knowledge Graph Ontology
+# ================================
+# Formal schema for the Neo4j knowledge graph. All node types, relationship
+# types, and constraints are defined here. Code loads this at startup via
+# the ontology loader — no hardcoded constants elsewhere.
+#
+# Version history:
+#   1.0.0 - Initial formalization from code constants (Phase A)
+
+version: "1.0.0"
+description: >
+  KMFlow process intelligence knowledge graph ontology. Captures activities,
+  decisions, roles, systems, evidence, documents, processes, policies,
+  controls, regulations, TOM definitions, and gaps identified during
+  consulting engagements.
+
+# ---------------------------------------------------------------------------
+# Node Types
+# ---------------------------------------------------------------------------
+node_types:
+  Activity:
+    description: A business process step or task performed by a role.
+    extractable: true
+    entity_type: activity
+    required_properties:
+      - name
+      - engagement_id
+    optional_properties:
+      - confidence
+      - aliases
+      - entity_type
+
+  Decision:
+    description: A conditional branch point in a business process.
+    extractable: true
+    entity_type: decision
+    required_properties:
+      - name
+      - engagement_id
+    optional_properties:
+      - confidence
+      - aliases
+      - entity_type
+
+  Role:
+    description: An organizational role or team that performs activities.
+    extractable: true
+    entity_type: role
+    required_properties:
+      - name
+      - engagement_id
+    optional_properties:
+      - confidence
+      - aliases
+      - entity_type
+
+  System:
+    description: An IT system, application, or platform used in processes.
+    extractable: true
+    entity_type: system
+    required_properties:
+      - name
+      - engagement_id
+    optional_properties:
+      - confidence
+      - aliases
+      - entity_type
+
+  Evidence:
+    description: A piece of evidence ingested from a client source.
+    extractable: false
+    required_properties:
+      - name
+      - engagement_id
+      - evidence_item_id
+
+  Document:
+    description: A named document referenced in evidence text.
+    extractable: true
+    entity_type: document
+    required_properties:
+      - name
+      - engagement_id
+    optional_properties:
+      - confidence
+      - aliases
+      - entity_type
+
+  Process:
+    description: A named end-to-end business process.
+    extractable: false
+    required_properties:
+      - name
+      - engagement_id
+
+  Subprocess:
+    description: A sub-process within a larger process.
+    extractable: false
+    required_properties:
+      - name
+      - engagement_id
+
+  Policy:
+    description: An organizational or regulatory policy governing a process.
+    extractable: false
+    required_properties:
+      - name
+      - engagement_id
+
+  Control:
+    description: A control mechanism that enforces policy compliance.
+    extractable: false
+    required_properties:
+      - name
+      - engagement_id
+
+  Regulation:
+    description: An external regulatory framework or requirement.
+    extractable: false
+    required_properties:
+      - name
+      - engagement_id
+
+  TOM:
+    description: A Target Operating Model dimension or component.
+    extractable: false
+    required_properties:
+      - name
+      - engagement_id
+
+  Gap:
+    description: An identified gap between current state and target state.
+    extractable: false
+    required_properties:
+      - name
+      - engagement_id
+
+# ---------------------------------------------------------------------------
+# Relationship Types
+# ---------------------------------------------------------------------------
+relationship_types:
+  SUPPORTED_BY:
+    description: Entity is supported by evidence. Primary evidence-linking edge.
+    valid_from:
+      - Activity
+      - Decision
+      - Role
+      - System
+      - Document
+      - Process
+      - Subprocess
+    valid_to:
+      - Evidence
+
+  GOVERNED_BY:
+    description: Process or activity is governed by a policy or regulation.
+    valid_from:
+      - Process
+      - Activity
+      - Subprocess
+    valid_to:
+      - Policy
+      - Regulation
+
+  DEVIATES_FROM:
+    description: Observed process deviates from documented/expected process.
+    valid_from:
+      - Activity
+      - Process
+    valid_to:
+      - Process
+      - Policy
+      - TOM
+
+  IMPLEMENTS:
+    description: Activity or control implements a policy or regulation.
+    valid_from:
+      - Activity
+      - Control
+      - Process
+    valid_to:
+      - Policy
+      - Regulation
+      - TOM
+
+  CONTRADICTS:
+    description: Two pieces of evidence or elements contradict each other.
+    valid_from:
+      - Evidence
+      - Activity
+      - Document
+    valid_to:
+      - Evidence
+      - Activity
+      - Document
+
+  MITIGATES:
+    description: A control mitigates a gap or risk.
+    valid_from:
+      - Control
+      - Activity
+    valid_to:
+      - Gap
+      - Decision
+
+  REQUIRES:
+    description: A decision or activity requires another activity or input.
+    valid_from:
+      - Decision
+      - Activity
+      - Process
+    valid_to:
+      - Activity
+      - Document
+      - System
+
+  FOLLOWED_BY:
+    description: Temporal sequence between activities in a process flow.
+    valid_from:
+      - Activity
+    valid_to:
+      - Activity
+      - Decision
+
+  OWNED_BY:
+    description: An activity or process is owned/performed by a role.
+    valid_from:
+      - Activity
+      - Process
+      - Subprocess
+    valid_to:
+      - Role
+
+  USES:
+    description: An activity or process uses a system or document.
+    valid_from:
+      - Activity
+      - Process
+      - Role
+    valid_to:
+      - System
+      - Document
+
+  CO_OCCURS_WITH:
+    description: >
+      Two entities co-occur in the same evidence fragment. Inferred during
+      graph construction, not manually assigned.
+    valid_from:
+      - Activity
+      - Decision
+      - Role
+      - System
+      - Document
+    valid_to:
+      - Activity
+      - Decision
+      - Role
+      - System
+      - Document
+
+  SIMILAR_TO:
+    description: >
+      Two entities are semantically similar based on embedding distance.
+      Inferred during semantic analysis.
+    valid_from:
+      - Activity
+      - Process
+      - Document
+    valid_to:
+      - Activity
+      - Process
+      - Document
+
+# ---------------------------------------------------------------------------
+# Evidence Categories (mirrors EvidenceCategory enum for reference)
+# ---------------------------------------------------------------------------
+evidence_categories:
+  - documents
+  - images
+  - audio
+  - video
+  - structured_data
+  - saas_exports
+  - km4work
+  - bpm_process_models
+  - regulatory_policy
+  - controls_evidence
+  - domain_communications
+  - job_aids_edge_cases

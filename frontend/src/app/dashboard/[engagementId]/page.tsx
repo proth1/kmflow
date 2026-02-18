@@ -15,9 +15,11 @@ import {
   fetchDashboard,
   fetchEvidenceCoverage,
   fetchConfidenceDistribution,
+  fetchCurrentUser,
   type DashboardData,
   type EvidenceCoverageData,
   type ConfidenceDistributionData,
+  type UserRole,
 } from "@/lib/api";
 
 // Confidence level colors for the donut chart
@@ -45,16 +47,18 @@ export default function DashboardPage() {
     useState<ConfidenceDistributionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<UserRole>("platform_admin");
 
   useEffect(() => {
     async function loadData() {
       setLoading(true);
       setError(null);
       try {
-        const [dashData, covData, confData] = await Promise.allSettled([
+        const [dashData, covData, confData, userData] = await Promise.allSettled([
           fetchDashboard(engagementId),
           fetchEvidenceCoverage(engagementId),
           fetchConfidenceDistribution(engagementId),
+          fetchCurrentUser(),
         ]);
 
         if (dashData.status === "fulfilled") {
@@ -66,6 +70,7 @@ export default function DashboardPage() {
 
         if (covData.status === "fulfilled") setCoverage(covData.value);
         if (confData.status === "fulfilled") setConfidence(confData.value);
+        if (userData.status === "fulfilled") setUserRole(userData.value.role);
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "Failed to load dashboard",
@@ -76,6 +81,12 @@ export default function DashboardPage() {
     }
     loadData();
   }, [engagementId]);
+
+  // Persona visibility rules
+  const showAdminSection = userRole === "platform_admin";
+  const showMonitoringConfig = userRole !== "process_analyst" && userRole !== "client_viewer";
+  const showFullDashboard = userRole !== "client_viewer";
+  const showValidationQueue = userRole === "evidence_reviewer" || userRole === "platform_admin";
 
   if (loading) {
     return (
@@ -227,7 +238,7 @@ export default function DashboardPage() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
+          gridTemplateColumns: showFullDashboard ? "1fr 1fr" : "1fr",
           gap: "24px",
           marginBottom: "32px",
         }}
@@ -308,8 +319,8 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Confidence Distribution */}
-        <div
+        {/* Confidence Distribution - hidden for client_viewer */}
+        {showFullDashboard && <div
           style={{
             backgroundColor: "#ffffff",
             border: "1px solid #e5e7eb",
@@ -439,7 +450,7 @@ export default function DashboardPage() {
               No confidence data available. Generate a POV first.
             </div>
           )}
-        </div>
+        </div>}
       </div>
 
       {/* Gaps Summary */}
@@ -465,8 +476,8 @@ export default function DashboardPage() {
         <GapTable gaps={gapEntries} />
       </div>
 
-      {/* Recent Activity */}
-      <div
+      {/* Recent Activity - hidden for client_viewer */}
+      {showFullDashboard && <div
         style={{
           backgroundColor: "#ffffff",
           border: "1px solid #e5e7eb",
@@ -557,7 +568,7 @@ export default function DashboardPage() {
             No recent activity.
           </div>
         )}
-      </div>
+      </div>}
     </main>
   );
 }

@@ -400,3 +400,54 @@ async def export_cytoscape(
         edges.append({"data": edge_data})
 
     return {"nodes": nodes, "edges": edges}
+
+
+# -- Semantic Bridges ---------------------------------------------------------
+
+
+class BridgeRunResponse(BaseModel):
+    """Response from running semantic bridges."""
+
+    engagement_id: str
+    relationships_created: int
+    errors: list[str] = Field(default_factory=list)
+
+
+@router.post("/{engagement_id}/bridges/run", response_model=BridgeRunResponse)
+async def run_bridges(
+    engagement_id: UUID,
+    request: Request,
+    user: User = Depends(require_permission("engagement:read")),
+) -> dict[str, Any]:
+    """Run all semantic bridges for an engagement.
+
+    Executes ProcessEvidence, EvidencePolicy, ProcessTOM, and
+    CommunicationDeviation bridges to create semantic relationships
+    in the knowledge graph. Requires graph nodes to exist first
+    (via /build or evidence ingestion pipeline).
+    """
+    from src.evidence.pipeline import run_semantic_bridges
+
+    neo4j_driver = getattr(request.app.state, "neo4j_driver", None)
+    if not neo4j_driver:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Neo4j is not available",
+        )
+
+    try:
+        result = await run_semantic_bridges(
+            engagement_id=str(engagement_id),
+            neo4j_driver=neo4j_driver,
+        )
+        return {
+            "engagement_id": str(engagement_id),
+            "relationships_created": result["relationships_created"],
+            "errors": result.get("errors", []),
+        }
+    except Exception as e:
+        logger.exception("Bridge execution failed for engagement %s", engagement_id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Bridge execution failed: {e}",
+        ) from e

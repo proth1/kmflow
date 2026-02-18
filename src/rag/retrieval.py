@@ -127,6 +127,7 @@ class HybridRetriever:
                     """
                     MATCH (n)-[r]-(m)
                     WHERE n.engagement_id = $engagement_id
+                      AND m.engagement_id = $engagement_id
                     RETURN n.name as name, n.description as description,
                            labels(n)[0] as label, elementId(n) as node_id
                     LIMIT $top_k

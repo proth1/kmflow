@@ -138,6 +138,7 @@ async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
 
 @router.post("/upload", response_model=UploadResponse, status_code=status.HTTP_201_CREATED)
 async def upload_evidence(
+    request: Request,
     file: UploadFile = File(...),
     engagement_id: UUID = Form(...),
     category: EvidenceCategory | None = Form(None),
@@ -177,7 +178,8 @@ async def upload_evidence(
 
     file_name = file.filename or "unknown"
 
-    # Run the ingestion pipeline
+    # Run the ingestion pipeline (with intelligence activation)
+    neo4j_driver = getattr(request.app.state, "neo4j_driver", None)
     evidence_item, fragments, duplicate_of_id = await ingest_evidence(
         session=session,
         engagement_id=engagement_id,
@@ -186,6 +188,7 @@ async def upload_evidence(
         category=category,
         metadata=metadata_dict,
         mime_type=file.content_type,
+        neo4j_driver=neo4j_driver,
     )
 
     # Score quality

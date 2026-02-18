@@ -11,7 +11,7 @@ from collections.abc import AsyncGenerator
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -228,3 +228,99 @@ async def portal_process(
             "bpmn_xml": model.bpmn_xml,
         },
     }
+
+
+# -- Client Upload Route ------------------------------------------------------
+
+# Allowed file types and max size for client portal uploads
+_ALLOWED_EXTENSIONS = {".pdf", ".docx", ".xlsx", ".csv", ".png", ".jpg", ".jpeg"}
+_MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50MB
+
+
+@router.post("/{engagement_id}/upload")
+async def portal_upload(
+    engagement_id: UUID,
+    file: UploadFile = File(...),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("portal:read")),
+) -> dict[str, Any]:
+    """Upload evidence via client portal.
+
+    Restricted to allowed file types and max 50MB. Wraps the evidence
+    upload pipeline with client-safe error messages.
+
+    Args:
+        engagement_id: The engagement to upload evidence for.
+        file: The uploaded file.
+    """
+    # Verify engagement exists
+    result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
+    engagement = result.scalar_one_or_none()
+    if not engagement:
+        raise HTTPException(status_code=404, detail=f"Engagement {engagement_id} not found")
+
+    # Validate file extension
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Filename is required")
+
+    from pathlib import Path
+
+    ext = Path(file.filename).suffix.lower()
+    if ext not in _ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File type '{ext}' not allowed. Accepted: {', '.join(sorted(_ALLOWED_EXTENSIONS))}",
+        )
+
+    # Read and validate file size
+    content = await file.read()
+    if len(content) > _MAX_UPLOAD_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File too large. Maximum size: {_MAX_UPLOAD_SIZE // (1024 * 1024)}MB",
+        )
+
+    # Store via evidence pipeline
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    try:
+        from src.evidence.parsers.factory import classify_by_extension, parse_file
+
+        category = classify_by_extension(file.filename) or "documents"
+        parse_result = await parse_file(tmp_path, file.filename)
+
+        # Create evidence item
+        from src.core.models import EvidenceCategory
+
+        evidence = EvidenceItem(
+            engagement_id=engagement_id,
+            file_name=file.filename,
+            file_path=tmp_path,
+            file_size=len(content),
+            mime_type=file.content_type or "application/octet-stream",
+            category=EvidenceCategory(category) if category in [e.value for e in EvidenceCategory] else EvidenceCategory.DOCUMENTS,
+            source="client_portal",
+        )
+        session.add(evidence)
+        await session.commit()
+        await session.refresh(evidence)
+
+        return {
+            "id": str(evidence.id),
+            "file_name": file.filename,
+            "file_size": len(content),
+            "category": category,
+            "fragments_extracted": len(parse_result.fragments),
+            "status": "uploaded",
+        }
+    except Exception as e:
+        logger.exception("Portal upload failed for %s", file.filename)
+        raise HTTPException(status_code=500, detail="Upload processing failed") from e
+    finally:
+        import os
+
+        os.unlink(tmp_path)

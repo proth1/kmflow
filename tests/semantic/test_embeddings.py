@@ -13,70 +13,8 @@ import pytest
 from src.semantic.embeddings import (
     EMBEDDING_DIMENSION,
     EmbeddingService,
-    _hash_based_embedding,
     cosine_similarity,
 )
-
-# ---------------------------------------------------------------------------
-# Hash-based embedding generation
-# ---------------------------------------------------------------------------
-
-
-class TestHashBasedEmbedding:
-    """Test the hash-based embedding function."""
-
-    def test_returns_correct_dimension(self) -> None:
-        """Should return a vector of the specified dimension."""
-        embedding = _hash_based_embedding("test text", dimension=768)
-        assert len(embedding) == 768
-
-    def test_custom_dimension(self) -> None:
-        """Should respect a custom dimension parameter."""
-        embedding = _hash_based_embedding("test text", dimension=128)
-        assert len(embedding) == 128
-
-    def test_deterministic(self) -> None:
-        """Same input should produce the same embedding."""
-        e1 = _hash_based_embedding("hello world")
-        e2 = _hash_based_embedding("hello world")
-        assert e1 == e2
-
-    def test_different_texts_different_embeddings(self) -> None:
-        """Different inputs should produce different embeddings."""
-        e1 = _hash_based_embedding("create purchase order")
-        e2 = _hash_based_embedding("approve invoice payment")
-        assert e1 != e2
-
-    def test_l2_normalized(self) -> None:
-        """Output should be approximately L2-normalized."""
-        embedding = _hash_based_embedding("test normalization")
-        norm = sum(v * v for v in embedding) ** 0.5
-        # Should be close to 1.0 (within floating point tolerance)
-        assert abs(norm - 1.0) < 1e-6
-
-    def test_empty_text_returns_zeros(self) -> None:
-        """Empty text should return a zero vector."""
-        embedding = _hash_based_embedding("")
-        assert all(v == 0.0 for v in embedding)
-        assert len(embedding) == EMBEDDING_DIMENSION
-
-    def test_whitespace_text_returns_zeros(self) -> None:
-        """Whitespace-only text should return a zero vector."""
-        embedding = _hash_based_embedding("   \t\n  ")
-        assert all(v == 0.0 for v in embedding)
-
-    def test_case_insensitive_similar(self) -> None:
-        """Case variations should produce the same embedding (lowercase normalization)."""
-        e1 = _hash_based_embedding("Create Order")
-        e2 = _hash_based_embedding("create order")
-        assert e1 == e2
-
-    def test_values_bounded(self) -> None:
-        """All values should be bounded between -1 and 1."""
-        embedding = _hash_based_embedding("a fairly long text with many words to generate features")
-        for v in embedding:
-            assert -2.0 <= v <= 2.0  # Allow some slack due to normalization
-
 
 # ---------------------------------------------------------------------------
 # Cosine similarity
@@ -120,9 +58,10 @@ class TestCosineSimilarity:
 
     def test_similar_text_embeddings(self) -> None:
         """Embeddings of similar text should have higher similarity than dissimilar."""
-        e1 = _hash_based_embedding("create purchase order")
-        e2 = _hash_based_embedding("create purchase requisition")
-        e3 = _hash_based_embedding("the weather is nice today")
+        service = EmbeddingService()
+        e1 = service.generate_embedding("create purchase order")
+        e2 = service.generate_embedding("create purchase requisition")
+        e3 = service.generate_embedding("the weather is nice today")
 
         sim_similar = cosine_similarity(e1, e2)
         sim_dissimilar = cosine_similarity(e1, e3)

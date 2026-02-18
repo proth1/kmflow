@@ -11,8 +11,8 @@ from collections.abc import AsyncGenerator
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.models import User
@@ -37,6 +37,46 @@ async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
 # -- Routes -------------------------------------------------------------------
 
 
+def _render_format(engine: ReportEngine, report: Any, fmt: str, filename: str) -> Any:
+    """Render report in the requested format.
+
+    Args:
+        engine: ReportEngine instance.
+        report: ReportData to render.
+        fmt: Output format (json, html, pdf).
+        filename: Suggested filename for PDF downloads.
+
+    Returns:
+        Appropriate FastAPI response.
+    """
+    if fmt == "html":
+        html = engine.render_html(report)
+        return HTMLResponse(content=html)
+
+    if fmt == "pdf":
+        from src.core.pdf_generator import html_to_pdf, is_pdf_available
+
+        if not is_pdf_available():
+            raise HTTPException(
+                status_code=501,
+                detail="PDF generation requires WeasyPrint. Install with: pip install weasyprint",
+            )
+        html = engine.render_html(report)
+        pdf_bytes = html_to_pdf(html)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    return {
+        "engagement": report.engagement,
+        "report_type": report.report_type,
+        "generated_at": report.generated_at,
+        "data": report.data,
+    }
+
+
 @router.get("/{engagement_id}/summary")
 async def get_engagement_summary(
     engagement_id: UUID,
@@ -48,21 +88,11 @@ async def get_engagement_summary(
 
     Args:
         engagement_id: The engagement to report on.
-        format: Response format ('json' or 'html').
+        format: Response format ('json', 'html', or 'pdf').
     """
     engine = ReportEngine()
     report = await engine.generate_engagement_summary(session, str(engagement_id))
-
-    if format == "html":
-        html = engine.render_html(report)
-        return HTMLResponse(content=html)
-
-    return {
-        "engagement": report.engagement,
-        "report_type": report.report_type,
-        "generated_at": report.generated_at,
-        "data": report.data,
-    }
+    return _render_format(engine, report, format, f"summary-{engagement_id}.pdf")
 
 
 @router.get("/{engagement_id}/gap-analysis")
@@ -78,21 +108,11 @@ async def get_gap_report(
     Args:
         engagement_id: The engagement to report on.
         tom_id: Optional specific TOM to filter by.
-        format: Response format ('json' or 'html').
+        format: Response format ('json', 'html', or 'pdf').
     """
     engine = ReportEngine()
     report = await engine.generate_gap_report(session, str(engagement_id), str(tom_id) if tom_id else None)
-
-    if format == "html":
-        html = engine.render_html(report)
-        return HTMLResponse(content=html)
-
-    return {
-        "engagement": report.engagement,
-        "report_type": report.report_type,
-        "generated_at": report.generated_at,
-        "data": report.data,
-    }
+    return _render_format(engine, report, format, f"gap-analysis-{engagement_id}.pdf")
 
 
 @router.get("/{engagement_id}/governance")
@@ -106,18 +126,8 @@ async def get_governance_report(
 
     Args:
         engagement_id: The engagement to report on.
-        format: Response format ('json' or 'html').
+        format: Response format ('json', 'html', or 'pdf').
     """
     engine = ReportEngine()
     report = await engine.generate_governance_report(session, str(engagement_id))
-
-    if format == "html":
-        html = engine.render_html(report)
-        return HTMLResponse(content=html)
-
-    return {
-        "engagement": report.engagement,
-        "report_type": report.report_type,
-        "generated_at": report.generated_at,
-        "data": report.data,
-    }
+    return _render_format(engine, report, format, f"governance-{engagement_id}.pdf")

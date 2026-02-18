@@ -1,81 +1,29 @@
-"""Embedding service for semantic similarity search.
+"""Semantic embedding service for similarity search and storage.
 
-MVP implementation uses TF-IDF vectorization as a lightweight fallback
-that requires no GPU or external model downloads. Embeddings are stored
-in the pgvector column on EvidenceFragment.
-
-The service provides:
-- Embedding generation for text fragments
-- Top-k similarity search
-- Hybrid retrieval combining graph traversal with vector similarity
+Delegates embedding generation to the unified RAG embedding service
+(src/rag/embeddings.py) while providing pgvector storage and search
+functionality for evidence fragments.
 """
 
 from __future__ import annotations
 
-import hashlib
 import logging
-import struct
 from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.rag.embeddings import EMBEDDING_DIMENSION
+from src.rag.embeddings import EmbeddingService as _RagEmbeddingService
+
 logger = logging.getLogger(__name__)
-
-# Target embedding dimension (matches EvidenceFragment.embedding Vector(768))
-EMBEDDING_DIMENSION = 768
-
-
-def _hash_based_embedding(text_input: str, dimension: int = EMBEDDING_DIMENSION) -> list[float]:
-    """Generate a deterministic embedding using content hashing.
-
-    This is a simple MVP fallback that creates a pseudo-embedding by
-    hashing overlapping n-grams of the input text. Not suitable for
-    real semantic similarity but provides a consistent vector
-    representation for testing and development.
-
-    Args:
-        text_input: Text to generate an embedding for.
-        dimension: Target embedding dimension.
-
-    Returns:
-        List of floats representing the embedding vector.
-    """
-    if not text_input or not text_input.strip():
-        return [0.0] * dimension
-
-    # Normalize text
-    normalized = text_input.lower().strip()
-
-    # Generate hash-based features from overlapping character n-grams
-    embedding = [0.0] * dimension
-    ngram_sizes = [3, 4, 5]
-
-    for ngram_size in ngram_sizes:
-        for i in range(len(normalized) - ngram_size + 1):
-            ngram = normalized[i : i + ngram_size]
-            # Hash the n-gram to get a deterministic index and value
-            h = hashlib.md5(ngram.encode(), usedforsecurity=False).digest()
-            # Use first 4 bytes for index, next 4 for value
-            idx = struct.unpack("<I", h[:4])[0] % dimension
-            val = struct.unpack("<f", h[4:8])[0]
-            # Clamp the value to a reasonable range
-            val = max(-1.0, min(1.0, val / 1e10))
-            embedding[idx] += val
-
-    # L2 normalize
-    norm = sum(v * v for v in embedding) ** 0.5
-    if norm > 0:
-        embedding = [v / norm for v in embedding]
-
-    return embedding
 
 
 class EmbeddingService:
     """Service for generating and searching text embeddings.
 
-    Uses hash-based embeddings as the MVP fallback. Can be extended
-    to use TF-IDF, sentence-transformers, or OpenAI embeddings.
+    Delegates embedding generation to the unified RAG embedding service.
+    Provides pgvector storage and similarity search for evidence fragments.
     """
 
     def __init__(self, dimension: int = EMBEDDING_DIMENSION) -> None:
@@ -85,8 +33,7 @@ class EmbeddingService:
             dimension: Target embedding vector dimension.
         """
         self._dimension = dimension
-        self._tfidf_fitted = False
-        self._tfidf_vectorizer: Any = None
+        self._rag_service = _RagEmbeddingService(dimension=dimension)
 
     @property
     def dimension(self) -> int:
@@ -96,16 +43,20 @@ class EmbeddingService:
     def generate_embedding(self, text_input: str) -> list[float]:
         """Generate an embedding vector for a text string.
 
+        Delegates to the unified RAG embedding service.
+
         Args:
             text_input: The text to embed.
 
         Returns:
             List of floats with length equal to self.dimension.
         """
-        return _hash_based_embedding(text_input, self._dimension)
+        return self._rag_service.embed_text(text_input)
 
     def generate_embeddings_batch(self, texts: list[str]) -> list[list[float]]:
         """Generate embeddings for a batch of texts.
+
+        Delegates to the unified RAG embedding service.
 
         Args:
             texts: List of text strings to embed.
@@ -113,7 +64,7 @@ class EmbeddingService:
         Returns:
             List of embedding vectors.
         """
-        return [self.generate_embedding(t) for t in texts]
+        return self._rag_service.generate_embeddings(texts)
 
     async def store_embedding(
         self,

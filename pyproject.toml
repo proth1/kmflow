@@ -29,6 +29,7 @@ dependencies = [
     "pydantic>=2.10.0",
     "pydantic-settings>=2.7.0",
     # Utilities
+    "pyyaml>=6.0",
     "python-dotenv>=1.0.1",
     "httpx>=0.28.0",
     "python-multipart>=0.0.18",
@@ -62,6 +63,10 @@ dev = [
 ml = [
     # Semantic similarity (optional, for enhanced embeddings)
     "scikit-learn>=1.5.0",
+]
+pdf = [
+    # PDF report generation
+    "weasyprint>=62.0",
 ]
 
 [tool.setuptools.packages.find]

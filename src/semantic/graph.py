@@ -14,44 +14,17 @@ from typing import Any
 
 from neo4j import AsyncDriver
 
+from src.semantic.ontology.loader import (
+    get_valid_node_labels as _get_valid_node_labels,
+    get_valid_relationship_types as _get_valid_relationship_types,
+)
+
 logger = logging.getLogger(__name__)
 
-# Valid node labels in the KMFlow knowledge graph
-VALID_NODE_LABELS = frozenset(
-    {
-        "Activity",
-        "Decision",
-        "Role",
-        "System",
-        "Evidence",
-        "Document",
-        "Process",
-        "Subprocess",
-        "Policy",
-        "Control",
-        "Regulation",
-        "TOM",
-        "Gap",
-    }
-)
-
-# Valid relationship types from PRD
-VALID_RELATIONSHIP_TYPES = frozenset(
-    {
-        "SUPPORTED_BY",
-        "GOVERNED_BY",
-        "DEVIATES_FROM",
-        "IMPLEMENTS",
-        "CONTRADICTS",
-        "MITIGATES",
-        "REQUIRES",
-        "FOLLOWED_BY",
-        "OWNED_BY",
-        "USES",
-        "CO_OCCURS_WITH",
-        "SIMILAR_TO",
-    }
-)
+# Valid node labels and relationship types loaded from the YAML ontology.
+# Exported as module-level constants for backward compatibility.
+VALID_NODE_LABELS: frozenset[str] = _get_valid_node_labels()
+VALID_RELATIONSHIP_TYPES: frozenset[str] = _get_valid_relationship_types()
 
 
 @dataclass
