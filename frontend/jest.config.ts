@@ -7,14 +7,24 @@ const config: Config = {
     "^.+\\.(ts|tsx)$": [
       "ts-jest",
       {
-        tsconfig: "tsconfig.json",
+        tsconfig: {
+          jsx: "react-jsx",
+          module: "esnext",
+          moduleResolution: "bundler",
+          esModuleInterop: true,
+          paths: { "@/*": ["./src/*"] },
+        },
       },
     ],
   },
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
   },
-  testPathIgnorePatterns: ["<rootDir>/node_modules/", "<rootDir>/.next/"],
+  testPathIgnorePatterns: [
+    "<rootDir>/node_modules/",
+    "<rootDir>/.next/",
+    "<rootDir>/e2e/",
+  ],
   collectCoverageFrom: [
     "src/**/*.{ts,tsx}",
     "!src/**/*.d.ts",

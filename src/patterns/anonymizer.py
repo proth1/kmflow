@@ -52,7 +52,7 @@ def anonymize_pattern_data(
     if engagement_name:
         result = _replace_in_dict(result, engagement_name, "[ENGAGEMENT]")
 
-    return result
+    return dict(result)
 
 
 def _deep_copy_and_anonymize(obj: Any) -> Any:

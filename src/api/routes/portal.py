@@ -196,7 +196,7 @@ async def portal_evidence_status(
         for row in rows
     ]
 
-    total_items = sum(c["count"] for c in categories)
+    total_items = sum(c["count"] for c in categories)  # type: ignore[misc]
 
     return {"total_items": total_items, "categories": categories}
 

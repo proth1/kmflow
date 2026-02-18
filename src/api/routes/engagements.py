@@ -327,7 +327,7 @@ async def get_engagement_dashboard(
     category_result = await session.execute(category_query)
     evidence_by_category: dict[str, int] = {}
     for row in category_result:
-        evidence_by_category[str(row.category)] = row.count
+        evidence_by_category[str(row.category)] = row.count  # type: ignore[assignment]
 
     # Coverage: proportion of the 12 evidence categories that have at least one item
     total_categories = len(EvidenceCategory)

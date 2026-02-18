@@ -143,8 +143,8 @@ class ConformanceChecker:
         ref_graph: BPMNGraph,
         obs_graph: BPMNGraph,
         matching_names: set[str],
-        ref_tasks: dict,
-        obs_tasks: dict,
+        ref_tasks: dict[str, Any],
+        obs_tasks: dict[str, Any],
     ) -> list[Deviation]:
         """Check if matching activities have the same sequence relationships."""
         deviations = []

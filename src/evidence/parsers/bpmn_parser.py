@@ -209,7 +209,7 @@ class BpmnParser(BaseParser):
         metadata["event_count"] = event_count
         metadata["flow_count"] = flow_count
 
-        return ParseResult(fragments=fragments, metadata=metadata)
+        return ParseResult(fragments=fragments, metadata=metadata)  # type: ignore[arg-type]
 
     def _detect_namespace(self, root: etree._Element) -> dict[str, str]:
         """Detect the BPMN namespace from the root element.

@@ -88,9 +88,9 @@ async def get_session(request: Request):
 @router.post("/chat", response_model=ChatResponse)
 async def copilot_chat(
     payload: ChatRequest,
+    request: Request,
     user: User = Depends(copilot_rate_limit),
     session: AsyncSession = Depends(get_session),
-    request: Request = None,
 ) -> dict[str, Any]:
     """Chat with the evidence copilot.
 
@@ -99,7 +99,7 @@ async def copilot_chat(
     """
     from src.rag.copilot import CopilotOrchestrator
 
-    neo4j_driver = getattr(request.app.state, "neo4j_driver", None) if request else None
+    neo4j_driver = getattr(request.app.state, "neo4j_driver", None)
     orchestrator = CopilotOrchestrator(neo4j_driver=neo4j_driver)
 
     try:

@@ -153,7 +153,7 @@ class ReportEngine:
             )
 
         # Sort by priority
-        gap_data.sort(key=lambda x: x["priority_score"], reverse=True)
+        gap_data.sort(key=lambda x: float(x.get("priority_score", 0) or 0), reverse=True)  # type: ignore[arg-type]
 
         return ReportData(
             engagement={
@@ -166,7 +166,7 @@ class ReportEngine:
             data={
                 "gaps": gap_data,
                 "total_gaps": len(gap_data),
-                "critical_gaps": len([g for g in gap_data if g["severity"] > 0.7]),
+                "critical_gaps": len([g for g in gap_data if float(g.get("severity", 0) or 0) > 0.7]),  # type: ignore[arg-type]
             },
         )
 

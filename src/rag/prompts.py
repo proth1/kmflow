@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 SYSTEM_PROMPT = """You are a Process Intelligence copilot for KMFlow, an evidence-based consulting platform.
 You help consultants understand client processes, identify gaps, and make recommendations.
 
@@ -62,7 +64,7 @@ def get_prompt_template(query_type: str = "general") -> str:
     return DOMAIN_TEMPLATES.get(query_type, DOMAIN_TEMPLATES["general"])
 
 
-def build_context_string(contexts: list[dict]) -> str:
+def build_context_string(contexts: list[dict[str, Any]]) -> str:
     """Build a formatted context string from retrieval results."""
     parts = []
     for i, ctx in enumerate(contexts, 1):

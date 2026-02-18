@@ -481,7 +481,7 @@ async def prioritize_gaps(
             }
         )
 
-    prioritized.sort(key=lambda x: x["priority_score"], reverse=True)
+    prioritized.sort(key=lambda x: float(x.get("priority_score", 0) or 0), reverse=True)  # type: ignore[arg-type]
     return {"engagement_id": str(engagement_id), "gaps": prioritized, "total": len(prioritized)}
 
 

@@ -7,7 +7,7 @@ and evidence items based on semantic similarity and co-occurrence.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from src.semantic.graph import KnowledgeGraphService
 
@@ -20,11 +20,7 @@ class BridgeResult:
 
     relationships_created: int = 0
     relationships_updated: int = 0
-    errors: list[str] = None
-
-    def __post_init__(self) -> None:
-        if self.errors is None:
-            self.errors = []
+    errors: list[str] = field(default_factory=list)
 
 
 class ProcessEvidenceBridge:

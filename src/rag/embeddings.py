@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 import numpy as np
 
@@ -17,7 +18,7 @@ class EmbeddingService:
         self.dimension = dimension
         self._model = None
 
-    def _get_model(self):
+    def _get_model(self) -> Any:
         if self._model is None:
             try:
                 from sentence_transformers import SentenceTransformer
@@ -33,11 +34,11 @@ class EmbeddingService:
         if model is None:
             return np.random.randn(self.dimension).tolist()
         embedding = model.encode(text, normalize_embeddings=True)
-        return embedding.tolist()
+        return list(embedding.tolist())
 
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
         model = self._get_model()
         if model is None:
-            return [np.random.randn(self.dimension).tolist() for _ in texts]
+            return [list(np.random.randn(self.dimension).tolist()) for _ in texts]
         embeddings = model.encode(texts, normalize_embeddings=True)
-        return embeddings.tolist()
+        return [list(e) for e in embeddings.tolist()]

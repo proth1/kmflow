@@ -34,7 +34,7 @@ async def find_expired_engagements(session: AsyncSession) -> list[Engagement]:
     now = datetime.now(UTC)
     expired = []
     for eng in engagements:
-        cutoff = eng.created_at.replace(tzinfo=UTC) + timedelta(days=eng.retention_days)
+        cutoff = eng.created_at.replace(tzinfo=UTC) + timedelta(days=eng.retention_days or 0)
         if now > cutoff:
             expired.append(eng)
 

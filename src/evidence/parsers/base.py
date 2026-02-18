@@ -23,7 +23,7 @@ class ParsedFragment:
 
     fragment_type: FragmentType
     content: str
-    metadata: dict[str, str | int | float | bool | None] = field(default_factory=dict)
+    metadata: dict[str, str | int | float | bool | list[str] | None] = field(default_factory=dict)
 
 
 @dataclass
@@ -37,7 +37,7 @@ class ParseResult:
     """
 
     fragments: list[ParsedFragment] = field(default_factory=list)
-    metadata: dict[str, str | int | float | bool | None] = field(default_factory=dict)
+    metadata: dict[str, str | int | float | bool | list[str] | None] = field(default_factory=dict)
     error: str | None = None
 
 

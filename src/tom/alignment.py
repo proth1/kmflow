@@ -265,7 +265,7 @@ class TOMAlignmentEngine:
             TOMDimension.PERFORMANCE_MANAGEMENT: "Define KPIs and SLAs; implement monitoring dashboards",
             TOMDimension.RISK_AND_COMPLIANCE: "Conduct risk assessment; implement control framework",
         }
-        base = recommendations.get(dimension, "Conduct detailed assessment")
+        base = recommendations.get(TOMDimension(dimension), "Conduct detailed assessment")
         if gap_type == TOMGapType.FULL_GAP:
             return f"CRITICAL: {base}"
         elif gap_type == TOMGapType.PARTIAL_GAP:

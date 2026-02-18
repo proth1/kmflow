@@ -79,7 +79,7 @@ class DocumentParser(BaseParser):
                                 )
                             )
 
-        return ParseResult(fragments=fragments, metadata=metadata)
+        return ParseResult(fragments=fragments, metadata=metadata)  # type: ignore[arg-type]
 
     async def _parse_docx(self, file_path: str) -> ParseResult:
         """Extract text from Word documents using python-docx."""
@@ -136,7 +136,7 @@ class DocumentParser(BaseParser):
                     )
                 )
 
-        return ParseResult(fragments=fragments, metadata=metadata)
+        return ParseResult(fragments=fragments, metadata=metadata)  # type: ignore[arg-type]
 
     async def _parse_pptx(self, file_path: str) -> ParseResult:
         """Extract text from PowerPoint presentations."""
@@ -163,7 +163,7 @@ class DocumentParser(BaseParser):
                     )
                 )
 
-        return ParseResult(fragments=fragments, metadata=metadata)
+        return ParseResult(fragments=fragments, metadata=metadata)  # type: ignore[arg-type]
 
     async def _parse_text(self, file_path: str) -> ParseResult:
         """Extract content from plain text files."""

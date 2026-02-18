@@ -117,7 +117,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await asyncio.gather(*worker_tasks, return_exceptions=True)
         logger.info("Monitoring workers stopped")
 
-    await redis_client.aclose()
+    await redis_client.close()
     await neo4j_driver.close()
     await engine.dispose()
     logger.info("All connections closed")
