@@ -21,10 +21,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.models import DataCatalogEntry, DataClassification, DataLayer, User
 from src.core.permissions import require_permission
+from src.governance.alerting import check_and_alert_sla_breaches
 from src.governance.catalog import DataCatalogService
 from src.governance.export import export_governance_package
+from src.governance.migration import MigrationResult, migrate_engagement
 from src.governance.policy import PolicyEngine, PolicyViolation
 from src.governance.quality import SLAResult, check_quality_sla
+from src.datalake.backend import LocalFilesystemBackend
+from src.datalake.silver import SilverLayerWriter
 
 logger = logging.getLogger(__name__)
 
@@ -391,4 +395,164 @@ async def check_entry_quality_sla(
             }
             for v in result.violations
         ],
+    }
+
+
+# ---------------------------------------------------------------------------
+# Migration schemas and routes
+# ---------------------------------------------------------------------------
+
+
+class MigrationResultResponse(BaseModel):
+    """Response schema for a migration run."""
+
+    engagement_id: str
+    items_processed: int
+    items_skipped: int
+    items_failed: int
+    bronze_written: int
+    silver_written: int
+    catalog_entries_created: int
+    lineage_records_created: int
+    errors: list[str]
+    dry_run: bool
+
+
+@router.post(
+    "/migrate/{engagement_id}",
+    response_model=MigrationResultResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def trigger_migration(
+    engagement_id: uuid.UUID,
+    dry_run: bool = False,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("governance:write")),
+) -> MigrationResult:
+    """Trigger bulk migration of evidence data to Delta Lake layers.
+
+    Migrates all EvidenceItem records for the engagement into the Bronze
+    and Silver Delta tables retroactively. Creates EvidenceLineage and
+    DataCatalogEntry records if absent.
+
+    Pass ``?dry_run=true`` to simulate without writing.
+    """
+    storage_backend = LocalFilesystemBackend()
+    silver_writer = SilverLayerWriter()
+
+    result = await migrate_engagement(
+        session=session,
+        engagement_id=str(engagement_id),
+        storage_backend=storage_backend,
+        silver_writer=silver_writer,
+        dry_run=dry_run,
+    )
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Alerting routes
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/alerts/{engagement_id}",
+    status_code=status.HTTP_200_OK,
+)
+async def check_sla_and_create_alerts(
+    engagement_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("governance:write")),
+) -> list[dict[str, Any]]:
+    """Check quality SLAs for all catalog entries and create alerts for breaches.
+
+    For each DataCatalogEntry in the engagement, evaluates the quality SLA
+    and creates a MonitoringAlert for every violation found. Uses dedup keys
+    to avoid creating duplicate alerts when an open alert already exists.
+
+    Returns the list of newly created alert records.
+    """
+    alerts = await check_and_alert_sla_breaches(
+        session=session,
+        engagement_id=str(engagement_id),
+    )
+    await session.commit()
+    return alerts
+
+
+# ---------------------------------------------------------------------------
+# Governance health dashboard route
+# ---------------------------------------------------------------------------
+
+
+class CatalogEntrySLAStatus(BaseModel):
+    """SLA status for a single catalog entry."""
+
+    entry_id: uuid.UUID
+    name: str
+    classification: str
+    sla_passing: bool
+    violation_count: int
+
+
+class GovernanceHealthResponse(BaseModel):
+    """Aggregate governance health summary for an engagement."""
+
+    engagement_id: uuid.UUID
+    total_entries: int
+    passing_count: int
+    failing_count: int
+    compliance_percentage: float
+    entries: list[CatalogEntrySLAStatus]
+
+
+@router.get(
+    "/health/{engagement_id}",
+    response_model=GovernanceHealthResponse,
+)
+async def get_governance_health(
+    engagement_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("governance:read")),
+) -> dict[str, Any]:
+    """Return SLA compliance summary for all catalog entries in an engagement.
+
+    Evaluates the quality SLA for every DataCatalogEntry associated with
+    the engagement and returns aggregate pass/fail counts along with
+    per-entry detail.
+    """
+    svc = DataCatalogService(session)
+    entries = await svc.list_entries(engagement_id=engagement_id)
+
+    entry_statuses: list[dict[str, Any]] = []
+    passing_count = 0
+
+    for entry in entries:
+        sla_result: SLAResult = await check_quality_sla(session, entry)
+        if sla_result.passing:
+            passing_count += 1
+
+        entry_statuses.append(
+            {
+                "entry_id": entry.id,
+                "name": entry.dataset_name,
+                "classification": entry.classification.value
+                if hasattr(entry.classification, "value")
+                else str(entry.classification),
+                "sla_passing": sla_result.passing,
+                "violation_count": len(sla_result.violations),
+            }
+        )
+
+    total = len(entries)
+    failing_count = total - passing_count
+    compliance_pct = (passing_count / total * 100.0) if total > 0 else 100.0
+
+    return {
+        "engagement_id": engagement_id,
+        "total_entries": total,
+        "passing_count": passing_count,
+        "failing_count": failing_count,
+        "compliance_percentage": round(compliance_pct, 2),
+        "entries": entry_statuses,
     }
