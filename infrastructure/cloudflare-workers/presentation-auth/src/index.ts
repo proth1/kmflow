@@ -90,18 +90,12 @@ export default {
       return renderUnauthorizedPage(email);
     }
 
-    // Redirect root to the main presentation
-    if (url.pathname === '/' || url.pathname === '') {
-      return new Response(null, {
-        status: 302,
-        headers: {
-          'Location': new URL('/kmflow-platform-presentation.html', env.WORKER_DOMAIN || url.origin).toString(),
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-        },
-      });
-    }
+    // IMPORTANT: Do NOT add redirects to specific .html filenames here.
+    // Pages serves index.html at / automatically. A hardcoded redirect
+    // to /kmflow-platform-presentation.html caused a production incident
+    // (2026-02-17) where users were silently served stale content for hours.
 
-    // Proxy to Pages
+    // Proxy to Pages (serves index.html at / automatically)
     return proxyToPages(request, env, url);
   },
 };
