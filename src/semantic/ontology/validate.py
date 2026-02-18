@@ -17,7 +17,6 @@ from __future__ import annotations
 import argparse
 import asyncio
 import sys
-from typing import Any
 
 from src.semantic.ontology.loader import (
     get_ontology,

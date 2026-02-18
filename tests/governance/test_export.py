@@ -12,13 +12,12 @@ import json
 import uuid
 import zipfile
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.core.models import DataCatalogEntry, DataClassification, DataLayer
 from src.governance.export import export_governance_package
-
 
 # ---------------------------------------------------------------------------
 # Helpers

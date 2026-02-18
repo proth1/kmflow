@@ -245,7 +245,6 @@ class TestReadLocalFile:
         item.id = uuid.uuid4()
 
         # Patch Path.resolve so that the boundary resolves to tmp_path/evidence_store
-        import src.governance.migration as migration_mod
         from pathlib import Path as _Path
 
         original_resolve = _Path.resolve

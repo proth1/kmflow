@@ -15,7 +15,6 @@ import pytest
 from src.core.models import DataCatalogEntry, DataClassification, DataLayer
 from src.governance.quality import SLAResult, SLAViolation, check_quality_sla
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

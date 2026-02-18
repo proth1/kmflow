@@ -10,13 +10,13 @@ from __future__ import annotations
 import logging
 import re
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-from src.core.models import DataCatalogEntry, DataLayer
+from src.core.models import DataCatalogEntry
 
 logger = logging.getLogger(__name__)
 

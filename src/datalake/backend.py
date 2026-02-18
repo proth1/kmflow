@@ -204,9 +204,8 @@ class LocalFilesystemBackend:
 
         files = []
         for entry in engagement_dir.iterdir():
-            if entry.is_file():
-                if prefix is None or entry.name.startswith(prefix):
-                    files.append(str(entry))
+            if entry.is_file() and (prefix is None or entry.name.startswith(prefix)):
+                files.append(str(entry))
         return sorted(files)
 
     async def delete(self, path: str) -> bool:

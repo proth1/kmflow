@@ -10,12 +10,10 @@ import uuid
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
 import yaml
 
 from src.core.models import DataCatalogEntry, DataClassification, DataLayer
 from src.governance.policy import PolicyEngine, PolicyViolation
-
 
 # ---------------------------------------------------------------------------
 # Helpers

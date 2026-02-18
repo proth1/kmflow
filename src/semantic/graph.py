@@ -16,6 +16,8 @@ from neo4j import AsyncDriver
 
 from src.semantic.ontology.loader import (
     get_valid_node_labels as _get_valid_node_labels,
+)
+from src.semantic.ontology.loader import (
     get_valid_relationship_types as _get_valid_relationship_types,
 )
 

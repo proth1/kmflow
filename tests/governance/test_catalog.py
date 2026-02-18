@@ -13,7 +13,6 @@ import pytest
 from src.core.models import DataCatalogEntry, DataClassification, DataLayer
 from src.governance.catalog import DataCatalogService
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
