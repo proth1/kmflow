@@ -91,6 +91,13 @@ class Settings(BaseSettings):
     evidence_store_path: str = "evidence_store"
     datalake_path: str = "datalake"
 
+    # ── Databricks (Phase F: Databricks Preparation) ─────────────
+    databricks_host: str = ""
+    databricks_token: str = ""
+    databricks_catalog: str = "kmflow"
+    databricks_schema: str = "evidence"
+    databricks_volume: str = "raw_evidence"
+
     # ── Embeddings ───────────────────────────────────────────────
     embedding_model: str = "all-mpnet-base-v2"
     embedding_dimension: int = 768
