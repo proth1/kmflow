@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request, UploadFile, File
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ async def list_deployments(request: Request) -> list[dict[str, Any]]:
         return await client.list_deployments()
     except Exception as e:
         logger.error("Failed to list deployments: %s", e)
-        raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine")
+        raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine") from e
 
 
 @router.post("/deploy")
@@ -60,7 +60,7 @@ async def deploy_process(
         )
     except Exception as e:
         logger.error("Failed to deploy process: %s", e)
-        raise HTTPException(status_code=502, detail="Failed to deploy process to Camunda engine")
+        raise HTTPException(status_code=502, detail="Failed to deploy process to Camunda engine") from e
 
 
 @router.get("/process-definitions")
@@ -71,7 +71,7 @@ async def list_process_definitions(request: Request) -> list[dict[str, Any]]:
         return await client.list_process_definitions()
     except Exception as e:
         logger.error("Failed to list process definitions: %s", e)
-        raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine")
+        raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine") from e
 
 
 @router.post("/process/{key}/start")
@@ -86,7 +86,7 @@ async def start_process(
         return await client.start_process(key, variables=body.variables)
     except Exception as e:
         logger.error("Failed to start process %s: %s", key, e)
-        raise HTTPException(status_code=502, detail=f"Failed to start process '{key}'")
+        raise HTTPException(status_code=502, detail=f"Failed to start process '{key}'") from e
 
 
 @router.get("/process-instances")
@@ -100,7 +100,7 @@ async def get_process_instances(
         return await client.get_process_instances(active=active)
     except Exception as e:
         logger.error("Failed to get process instances: %s", e)
-        raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine")
+        raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine") from e
 
 
 @router.get("/tasks")
@@ -114,4 +114,4 @@ async def get_tasks(
         return await client.get_tasks(assignee=assignee)
     except Exception as e:
         logger.error("Failed to get tasks: %s", e)
-        raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine")
+        raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine") from e

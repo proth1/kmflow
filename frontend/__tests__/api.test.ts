@@ -29,7 +29,7 @@ describe("API Client", () => {
       const result = await fetchHealth();
       expect(result).toEqual(mockHealth);
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8000/health",
+        "http://localhost:8002/health",
         { cache: "no-store" }
       );
     });
@@ -56,7 +56,7 @@ describe("API Client", () => {
       const result = await apiGet("/api/v1/engagements");
       expect(result).toEqual(mockData);
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8000/api/v1/engagements",
+        "http://localhost:8002/api/v1/engagements",
         expect.objectContaining({
           headers: { "Content-Type": "application/json" },
         })
@@ -89,7 +89,7 @@ describe("API Client", () => {
 
       expect(result).toEqual(mockResponse);
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8000/api/v1/engagements",
+        "http://localhost:8002/api/v1/engagements",
         expect.objectContaining({
           method: "POST",
           body: JSON.stringify({ name: "Test" }),

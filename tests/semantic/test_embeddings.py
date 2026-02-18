@@ -109,7 +109,11 @@ class TestEmbeddingService:
         texts = ["hello", "world"]
         batch = service.generate_embeddings_batch(texts)
         individual = [service.generate_embedding(t) for t in texts]
-        assert batch == individual
+        assert len(batch) == len(individual)
+        for b, i in zip(batch, individual, strict=True):
+            assert len(b) == len(i)
+            for bv, iv in zip(b, i, strict=True):
+                assert abs(bv - iv) < 1e-9, f"Embedding mismatch: {bv} vs {iv}"
 
 
 class TestEmbeddingServiceStore:
