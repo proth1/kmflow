@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import AsyncGenerator
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -53,8 +54,8 @@ class AnnotationResponse(BaseModel):
     target_id: str
     author_id: str
     content: str
-    created_at: Any
-    updated_at: Any
+    created_at: datetime
+    updated_at: datetime
 
 
 class AnnotationList(BaseModel):

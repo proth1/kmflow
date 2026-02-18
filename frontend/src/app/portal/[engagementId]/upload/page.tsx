@@ -40,9 +40,8 @@ export default function PortalUploadPage() {
 
       <EvidenceUploader
         engagementId={engagementId}
-        onUploadComplete={(result) => {
+        onUploadComplete={() => {
           // Could trigger a toast notification or refresh evidence list
-          console.log("Upload complete:", result);
         }}
       />
     </main>

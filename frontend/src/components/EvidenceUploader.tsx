@@ -160,6 +160,10 @@ export default function EvidenceUploader({ engagementId, onUploadComplete }: Evi
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onClick={() => fileInputRef.current?.click()}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInputRef.current?.click(); } }}
+        tabIndex={0}
+        role="button"
+        aria-label="Upload evidence files"
         style={{
           border: `2px dashed ${dragActive ? "#3b82f6" : "#d1d5db"}`,
           borderRadius: "12px",
@@ -252,6 +256,11 @@ export default function EvidenceUploader({ engagementId, onUploadComplete }: Evi
                     }}
                   >
                     <div
+                      role="progressbar"
+                      aria-valuenow={upload.progress}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={`Uploading ${upload.file.name}`}
                       style={{
                         height: "100%",
                         width: `${upload.progress}%`,
