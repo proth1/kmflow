@@ -142,6 +142,21 @@ async def get_lineage_record(
         evidence_id: The evidence item (for URL consistency).
         lineage_id: The lineage record ID.
     """
+    from sqlalchemy import select
+
+    # Verify evidence item belongs to engagement
+    result = await session.execute(
+        select(EvidenceItem).where(
+            EvidenceItem.id == evidence_id,
+            EvidenceItem.engagement_id == engagement_id,
+        )
+    )
+    if not result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Evidence item {evidence_id} not found in engagement {engagement_id}",
+        )
+
     lineage = await get_lineage_by_id(session, lineage_id)
     if not lineage or lineage.evidence_item_id != evidence_id:
         raise HTTPException(

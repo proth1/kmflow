@@ -54,9 +54,10 @@ async def create_lineage_record(
             EvidenceLineage.evidence_item_id == evidence_item.id
         )
     )
-    if existing.scalar_one_or_none():
+    existing_lineage = existing.scalar_one_or_none()
+    if existing_lineage:
         logger.debug("Lineage already exists for evidence item %s", evidence_item.id)
-        return existing.scalar_one_or_none()
+        return existing_lineage
 
     # Build initial transformation chain
     chain = transformation_steps or []

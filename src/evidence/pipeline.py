@@ -519,6 +519,11 @@ async def run_intelligence_pipeline(
             fragments, str(engagement_id)
         )
         results["entities_extracted"] = sum(r["entity_count"] for r in extraction_results)
+        results["entity_details"] = [
+            {"type": str(e.entity_type), "name": e.name, "confidence": e.confidence}
+            for r in extraction_results
+            for e in r.get("entities", [])
+        ]
     except Exception as e:
         logger.warning("Entity extraction failed: %s", e)
         results["errors"].append(f"Entity extraction: {e}")

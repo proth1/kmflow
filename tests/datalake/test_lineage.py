@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -58,7 +58,7 @@ class TestCreateLineageRecord:
         session = _make_session(existing_lineage=None)
         item = _make_evidence_item()
 
-        lineage = await create_lineage_record(
+        result = await create_lineage_record(
             session=session,
             evidence_item=item,
             source_system="direct_upload",
@@ -71,6 +71,7 @@ class TestCreateLineageRecord:
 
         # Should have linked lineage to evidence item
         assert item.source_system == "direct_upload"
+        assert result is not None
 
     @pytest.mark.asyncio
     async def test_creates_with_custom_source(self) -> None:
