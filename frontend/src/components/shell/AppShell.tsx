@@ -30,6 +30,7 @@ import {
   FlaskConical,
   TrendingUp,
   Settings,
+  GitBranch,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,7 @@ const navSections: NavSection[] = [
     items: [
       { label: "Evidence Upload", href: "/evidence", icon: Upload },
       { label: "Knowledge Graph", href: "/graph/demo-1", icon: Network },
+      { label: "Data Lineage", href: "/lineage", icon: GitBranch },
     ],
   },
   {

@@ -1232,6 +1232,52 @@ export async function createAnnotation(
   return apiPost<AnnotationData>("/api/v1/annotations", body);
 }
 
+// -- Lineage types ------------------------------------------------------------
+
+export interface LineageRecord {
+  id: string;
+  evidence_item_id: string;
+  source_system: string;
+  source_url: string | null;
+  source_identifier: string | null;
+  transformation_chain: Record<string, unknown>[] | null;
+  version: number;
+  version_hash: string | null;
+  parent_version_id: string | null;
+  refresh_schedule: string | null;
+  last_refreshed_at: string | null;
+  created_at: string;
+}
+
+export interface LineageChainData {
+  evidence_item_id: string;
+  evidence_name: string;
+  source_system: string | null;
+  total_versions: number;
+  lineage: LineageRecord[];
+}
+
+// -- Lineage API functions ----------------------------------------------------
+
+export async function fetchLineageChain(
+  engagementId: string,
+  evidenceId: string,
+): Promise<LineageChainData> {
+  return apiGet<LineageChainData>(
+    `/api/v1/engagements/${engagementId}/evidence/${evidenceId}/lineage`,
+  );
+}
+
+export async function fetchLineageRecord(
+  engagementId: string,
+  evidenceId: string,
+  lineageId: string,
+): Promise<LineageRecord> {
+  return apiGet<LineageRecord>(
+    `/api/v1/engagements/${engagementId}/evidence/${evidenceId}/lineage/${lineageId}`,
+  );
+}
+
 // -- Generic API helpers for PUT/PATCH/DELETE ---------------------------------
 
 export async function apiPut<T>(path: string, body: unknown): Promise<T> {

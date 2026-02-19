@@ -26,16 +26,31 @@ test.describe("Navigation", () => {
     await expect(
       sidebar.getByRole("link", { name: "Processes" })
     ).toBeVisible();
-    // Phase 6 nav entries
-    await expect(sidebar.getByText("Governance")).toBeVisible();
-    await expect(sidebar.getByText("Reports")).toBeVisible();
-    await expect(sidebar.getByText("Analytics")).toBeVisible();
-    await expect(sidebar.getByText("Connectors")).toBeVisible();
-    await expect(sidebar.getByText("Shelf Requests")).toBeVisible();
-    await expect(sidebar.getByText("Patterns")).toBeVisible();
-    await expect(sidebar.getByText("Simulations")).toBeVisible();
+    // Phase 6 nav entries — use getByRole("link") to avoid matching section headers
+    await expect(
+      sidebar.getByRole("link", { name: "Governance" })
+    ).toBeVisible();
+    await expect(sidebar.getByRole("link", { name: "Reports" })).toBeVisible();
+    await expect(
+      sidebar.getByRole("link", { name: "Analytics" })
+    ).toBeVisible();
+    await expect(
+      sidebar.getByRole("link", { name: "Connectors" })
+    ).toBeVisible();
+    await expect(
+      sidebar.getByRole("link", { name: "Shelf Requests" })
+    ).toBeVisible();
+    await expect(
+      sidebar.getByRole("link", { name: "Patterns" })
+    ).toBeVisible();
+    await expect(
+      sidebar.getByRole("link", { name: "Simulations" })
+    ).toBeVisible();
     await expect(
       sidebar.getByRole("link", { name: "Admin" })
+    ).toBeVisible();
+    await expect(
+      sidebar.getByRole("link", { name: "Data Lineage" })
     ).toBeVisible();
   });
 
