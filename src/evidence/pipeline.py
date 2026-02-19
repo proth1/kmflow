@@ -16,6 +16,8 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+import aiofiles
+from fastapi import HTTPException
 from neo4j import AsyncDriver
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,6 +36,82 @@ logger = logging.getLogger(__name__)
 
 # Default storage directory (relative to project root)
 DEFAULT_EVIDENCE_STORE = "evidence_store"
+
+# Maximum upload file size: 100 MB
+MAX_UPLOAD_SIZE = 100 * 1024 * 1024
+
+# Allowed MIME types for evidence uploads
+ALLOWED_MIME_TYPES = frozenset(
+    {
+        # Documents
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "application/vnd.ms-excel",
+        "application/vnd.ms-powerpoint",
+        # Text
+        "text/plain",
+        "text/csv",
+        "text/html",
+        "text/xml",
+        "application/xml",
+        "application/json",
+        "application/yaml",
+        "text/yaml",
+        # Images
+        "image/png",
+        "image/jpeg",
+        "image/gif",
+        "image/svg+xml",
+        "image/tiff",
+        "image/bmp",
+        # Audio/Video
+        "audio/mpeg",
+        "audio/wav",
+        "video/mp4",
+        # Archives
+        "application/zip",
+        "application/gzip",
+        # BPMN
+        "application/octet-stream",  # .bpmn files often get this
+    }
+)
+
+
+def validate_file_type(file_content: bytes, file_name: str, mime_type: str | None = None) -> str:
+    """Validate uploaded file type using content-based detection.
+
+    Args:
+        file_content: Raw file bytes (first few KB is enough for detection).
+        file_name: Original filename for extension-based fallback.
+        mime_type: Client-provided MIME type (untrusted, used as hint only).
+
+    Returns:
+        The detected MIME type.
+
+    Raises:
+        HTTPException 415: If the file type is not in the allowlist.
+    """
+    detected_type = mime_type or "application/octet-stream"
+
+    try:
+        import magic
+
+        detected_type = magic.from_buffer(file_content[:8192], mime=True)
+    except ImportError:
+        logger.debug("python-magic not available, using client-provided MIME type")
+    except Exception:
+        logger.debug("Magic detection failed, using client-provided MIME type")
+
+    if detected_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=415,
+            detail=f"File type '{detected_type}' is not allowed. Upload a supported document, image, or data file.",
+        )
+
+    return detected_type
 
 
 def compute_content_hash(file_content: bytes) -> str:
@@ -112,11 +190,18 @@ async def store_file(
     engagement_dir = Path(evidence_store) / str(engagement_id)
     engagement_dir.mkdir(parents=True, exist_ok=True)
 
-    unique_name = f"{uuid.uuid4().hex[:8]}_{file_name}"
+    # Sanitize filename to prevent path traversal
+    safe_name = Path(file_name).name  # strips directory components
+    unique_name = f"{uuid.uuid4().hex[:8]}_{safe_name}"
     file_path = engagement_dir / unique_name
 
-    with open(file_path, "wb") as f:
-        f.write(file_content)
+    # Verify resolved path is under engagement_dir
+    resolved = file_path.resolve()
+    if not str(resolved).startswith(str(engagement_dir.resolve())):
+        raise ValueError(f"Invalid file name: path traversal detected in '{file_name}'")
+
+    async with aiofiles.open(file_path, "wb") as f:
+        await f.write(file_content)
 
     return str(file_path), {}
 
@@ -607,6 +692,18 @@ async def ingest_evidence(
         Tuple of (evidence_item, fragments, duplicate_of_id).
         duplicate_of_id is set if the file is a duplicate.
     """
+    # Step 0: Validate file size
+    if len(file_content) > MAX_UPLOAD_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File size {len(file_content)} exceeds maximum allowed size of {MAX_UPLOAD_SIZE} bytes",
+        )
+
+    # Step 0b: Validate file type (content-based detection)
+    detected_mime = validate_file_type(file_content, file_name, mime_type)
+    if mime_type is None:
+        mime_type = detected_mime
+
     # Step 1: Compute content hash
     content_hash = compute_content_hash(file_content)
 

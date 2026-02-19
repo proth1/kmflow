@@ -119,7 +119,10 @@ class KnowledgeGraphService:
         query: str,
         parameters: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
-        """Execute a write Cypher query within a transaction.
+        """Execute a write Cypher query within a proper write transaction.
+
+        Uses session.execute_write() to ensure writes are routed to the
+        leader in a cluster and retried on transient failures.
 
         Args:
             query: Cypher query string.
@@ -128,10 +131,13 @@ class KnowledgeGraphService:
         Returns:
             List of result records as dicts.
         """
+
+        async def _tx_func(tx):
+            result = await tx.run(query, parameters or {})
+            return await result.data()
+
         async with self._driver.session() as session:
-            result = await session.run(query, parameters or {})
-            records = await result.data()
-            return records
+            return await session.execute_write(_tx_func)
 
     # -----------------------------------------------------------------
     # Node operations

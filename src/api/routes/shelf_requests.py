@@ -8,16 +8,16 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import AsyncGenerator
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.api.deps import get_session
 from src.core.models import (
     AuditAction,
     AuditLog,
@@ -132,16 +132,6 @@ class IntakeResponse(BaseModel):
     matched_item_name: str | None = None
     evidence_id: UUID
     auto_matched: bool = False
-
-
-# -- Dependency ---------------------------------------------------------------
-
-
-async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
-    """Get database session from app state."""
-    session_factory = request.app.state.db_session_factory
-    async with session_factory() as session:
-        yield session
 
 
 # -- Helpers ------------------------------------------------------------------

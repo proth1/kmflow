@@ -32,6 +32,19 @@ def _make_mock_driver() -> MagicMock:
     mock_result.data = AsyncMock(return_value=[])
 
     mock_session.run = AsyncMock(return_value=mock_result)
+
+    # Support execute_write() which passes a transaction function
+    mock_tx = AsyncMock()
+    mock_tx_result = AsyncMock()
+    mock_tx_result.data = AsyncMock(return_value=[])
+    mock_tx.run = AsyncMock(return_value=mock_tx_result)
+
+    async def _execute_write(tx_func):
+        return await tx_func(mock_tx)
+
+    mock_session.execute_write = AsyncMock(side_effect=_execute_write)
+    mock_session._mock_tx = mock_tx  # expose for test assertions
+
     mock_session.__aenter__ = AsyncMock(return_value=mock_session)
     mock_session.__aexit__ = AsyncMock(return_value=None)
 
@@ -123,14 +136,16 @@ class TestCreateNode:
     async def test_create_node_executes_cypher(
         self, mock_driver: MagicMock, graph_service: KnowledgeGraphService
     ) -> None:
-        """Should execute a CREATE Cypher query."""
+        """Should execute a CREATE Cypher query via write transaction."""
         await graph_service.create_node(
             "Evidence",
             {"name": "Test Doc", "engagement_id": "eng-1"},
         )
         mock_session = mock_driver.session.return_value
-        mock_session.run.assert_called_once()
-        call_args = mock_session.run.call_args
+        mock_session.execute_write.assert_called_once()
+        mock_tx = mock_session._mock_tx
+        mock_tx.run.assert_called_once()
+        call_args = mock_tx.run.call_args
         assert "CREATE" in call_args[0][0]
         assert "Evidence" in call_args[0][0]
 
@@ -236,10 +251,12 @@ class TestCreateRelationship:
     async def test_create_relationship_executes_cypher(
         self, mock_driver: MagicMock, graph_service: KnowledgeGraphService
     ) -> None:
-        """Should execute a CREATE Cypher query with relationship type."""
+        """Should execute a CREATE Cypher query with relationship type via write transaction."""
         await graph_service.create_relationship(from_id="n1", to_id="n2", relationship_type="FOLLOWED_BY")
         mock_session = mock_driver.session.return_value
-        query = mock_session.run.call_args[0][0]
+        mock_session.execute_write.assert_called_once()
+        mock_tx = mock_session._mock_tx
+        query = mock_tx.run.call_args[0][0]
         assert "FOLLOWED_BY" in query
         assert "CREATE" in query
 

@@ -53,12 +53,37 @@ jobs:
         run: pip install -e ".[dev]"
 
       - name: Run tests with coverage
-        run: pytest tests/ -v --cov=src --cov-report=xml --cov-report=term-missing
+        run: pytest tests/ -v --cov=src --cov-report=xml --cov-report=term-missing --cov-fail-under=80
 
-      - name: Check coverage threshold
-        run: |
-          coverage=$(python -c "import xml.etree.ElementTree as ET; tree=ET.parse('coverage.xml'); print(tree.getroot().attrib['line-rate'])")
-          echo "Coverage: $coverage"
+  # ── Security Scanning ────────────────────────────────────────
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]" pip-audit
+
+      - name: Python dependency audit
+        run: pip freeze | grep -v '^\-e' | grep -iv '^kmflow' > /tmp/audit-reqs.txt && pip-audit --strict --desc -r /tmp/audit-reqs.txt
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Frontend dependency audit
+        working-directory: frontend
+        run: npm ci || npm install && npm audit --audit-level=high || true
 
   # ── Frontend Tests ───────────────────────────────────────────
   frontend-test:

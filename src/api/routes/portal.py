@@ -7,15 +7,15 @@ with read-only access to process models, findings, and evidence status.
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncGenerator
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.deps import get_session
 from src.core.models import (
     AlertStatus,
     Engagement,
@@ -68,15 +68,6 @@ class PortalEvidenceStatus(BaseModel):
 class PortalEvidenceSummary(BaseModel):
     total_items: int
     categories: list[PortalEvidenceStatus]
-
-
-# -- Dependency ---------------------------------------------------------------
-
-
-async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
-    session_factory = request.app.state.db_session_factory
-    async with session_factory() as session:
-        yield session
 
 
 # -- Routes -------------------------------------------------------------------

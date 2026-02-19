@@ -8,14 +8,14 @@ from __future__ import annotations
 
 import logging
 import uuid
-from collections.abc import AsyncGenerator
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.deps import get_session
 from src.core.models import (
     AuditLog,
     Engagement,
@@ -114,16 +114,6 @@ class ConfidenceDistributionResponse(BaseModel):
     overall_confidence: float
     distribution: list[ConfidenceBucket]
     weakest_elements: list[WeakElement]
-
-
-# -- Dependency ---------------------------------------------------------------
-
-
-async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
-    """Get database session from app state."""
-    session_factory = request.app.state.db_session_factory
-    async with session_factory() as session:
-        yield session
 
 
 # -- Helpers ------------------------------------------------------------------

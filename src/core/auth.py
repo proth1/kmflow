@@ -16,9 +16,10 @@ from typing import Any
 from uuid import UUID
 
 import bcrypt
+import jwt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+from jwt import PyJWTError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -119,19 +120,25 @@ def decode_token(token: str, settings: Settings | None = None) -> dict[str, Any]
     if settings is None:
         settings = get_settings()
 
-    try:
-        payload = jwt.decode(
-            token,
-            settings.jwt_secret_key,
-            algorithms=[settings.jwt_algorithm],
-        )
-        return payload
-    except JWTError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
-        ) from exc
+    # Try each verification key (supports key rotation)
+    last_exc: PyJWTError | None = None
+    for key in settings.jwt_verification_keys:
+        try:
+            payload = jwt.decode(
+                token,
+                key,
+                algorithms=[settings.jwt_algorithm],
+            )
+            return payload
+        except PyJWTError as exc:
+            last_exc = exc
+            continue
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or expired token",
+        headers={"WWW-Authenticate": "Bearer"},
+    ) from last_exc
 
 
 # ---------------------------------------------------------------------------
@@ -142,15 +149,15 @@ def decode_token(token: str, settings: Settings | None = None) -> dict[str, Any]
 async def is_token_blacklisted(request: Request, token: str) -> bool:
     """Check if a token has been blacklisted in Redis.
 
-    Returns False if Redis is unavailable (fail-open for MVP).
+    Returns True if Redis is unavailable (fail-closed for security).
     """
     try:
         redis = request.app.state.redis_client
         result = await redis.get(f"token:blacklist:{token}")
         return result is not None
     except Exception:
-        logger.warning("Redis unavailable for token blacklist check")
-        return False
+        logger.warning("Redis unavailable for token blacklist check — failing closed")
+        return True
 
 
 async def blacklist_token(request: Request, token: str, expires_in: int = 1800) -> None:

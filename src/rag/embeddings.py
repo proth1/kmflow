@@ -7,6 +7,7 @@ Both RAG retrieval and semantic search delegate to this service.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 
@@ -43,19 +44,35 @@ class EmbeddingService:
         return self._model
 
     def embed_text(self, text: str) -> list[float]:
-        """Generate embedding for a single text string."""
+        """Generate embedding for a single text string (sync)."""
         model = self._get_model()
         if model is None:
             return np.random.randn(self.dimension).tolist()
         embedding = model.encode(text, normalize_embeddings=True)
         return list(embedding.tolist())
 
+    async def embed_text_async(self, text: str) -> list[float]:
+        """Generate embedding for a single text string without blocking the event loop."""
+        model = self._get_model()
+        if model is None:
+            return np.random.randn(self.dimension).tolist()
+        embedding = await asyncio.to_thread(model.encode, text, normalize_embeddings=True)
+        return list(embedding.tolist())
+
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
-        """Generate embeddings for multiple texts (batch)."""
+        """Generate embeddings for multiple texts (batch, sync)."""
         model = self._get_model()
         if model is None:
             return [list(np.random.randn(self.dimension).tolist()) for _ in texts]
         embeddings = model.encode(texts, normalize_embeddings=True)
+        return [list(e) for e in embeddings.tolist()]
+
+    async def embed_texts_async(self, texts: list[str]) -> list[list[float]]:
+        """Generate embeddings for multiple texts without blocking the event loop."""
+        model = self._get_model()
+        if model is None:
+            return [list(np.random.randn(self.dimension).tolist()) for _ in texts]
+        embeddings = await asyncio.to_thread(model.encode, texts, normalize_embeddings=True)
         return [list(e) for e in embeddings.tolist()]
 
     def generate_embeddings(self, texts: list[str], batch_size: int = 32) -> list[list[float]]:

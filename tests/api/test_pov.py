@@ -367,9 +367,21 @@ class TestGetJobStatus:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_job_found_after_generation(self, client, mock_db_session):
+    async def test_job_found_after_generation(self, client, mock_db_session, mock_redis_client):
         """Returns job status after generation is triggered."""
         eng_id = str(uuid.uuid4())
+
+        # Make mock Redis actually persist values between setex/get
+        redis_store: dict[str, str] = {}
+
+        async def _setex(key, ttl, value):
+            redis_store[key] = value
+
+        async def _get(key):
+            return redis_store.get(key)
+
+        mock_redis_client.setex = AsyncMock(side_effect=_setex)
+        mock_redis_client.get = AsyncMock(side_effect=_get)
 
         with patch("src.api.routes.pov.generate_pov") as mock_gen:
             model = MagicMock()

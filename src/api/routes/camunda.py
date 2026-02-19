@@ -9,8 +9,11 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from fastapi import APIRouter, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel
+
+from src.core.models import User
+from src.core.permissions import require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +36,10 @@ def _get_camunda_client(request: Request):
 
 
 @router.get("/deployments")
-async def list_deployments(request: Request) -> list[dict[str, Any]]:
+async def list_deployments(
+    request: Request,
+    user: User = Depends(require_permission("engagement:read")),
+) -> list[dict[str, Any]]:
     """List all BPMN process deployments."""
     client = _get_camunda_client(request)
     try:
@@ -48,6 +54,7 @@ async def deploy_process(
     request: Request,
     file: UploadFile = File(...),
     deployment_name: str = "kmflow-deployment",
+    user: User = Depends(require_permission("engagement:update")),
 ) -> dict[str, Any]:
     """Deploy a BPMN process model to the engine."""
     client = _get_camunda_client(request)
@@ -64,7 +71,10 @@ async def deploy_process(
 
 
 @router.get("/process-definitions")
-async def list_process_definitions(request: Request) -> list[dict[str, Any]]:
+async def list_process_definitions(
+    request: Request,
+    user: User = Depends(require_permission("engagement:read")),
+) -> list[dict[str, Any]]:
     """List all deployed process definitions (latest versions)."""
     client = _get_camunda_client(request)
     try:
@@ -79,6 +89,7 @@ async def start_process(
     key: str,
     body: StartProcessRequest,
     request: Request,
+    user: User = Depends(require_permission("engagement:update")),
 ) -> dict[str, Any]:
     """Start a new process instance by process definition key."""
     client = _get_camunda_client(request)
@@ -93,6 +104,7 @@ async def start_process(
 async def get_process_instances(
     request: Request,
     active: bool = True,
+    user: User = Depends(require_permission("engagement:read")),
 ) -> list[dict[str, Any]]:
     """Get process instances."""
     client = _get_camunda_client(request)
@@ -107,6 +119,7 @@ async def get_process_instances(
 async def get_tasks(
     request: Request,
     assignee: str | None = None,
+    user: User = Depends(require_permission("engagement:read")),
 ) -> list[dict[str, Any]]:
     """Get user tasks."""
     client = _get_camunda_client(request)

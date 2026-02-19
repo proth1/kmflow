@@ -5,6 +5,8 @@
  * Validates JWT tokens before serving content from Cloudflare Pages.
  */
 
+import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
+
 interface Env {
   DESCOPE_PROJECT_ID: string;
   PAGES_URL: string;
@@ -284,32 +286,22 @@ function redirectToLogin(originalUrl: URL): Response {
   return Response.redirect(loginUrl.toString(), 302);
 }
 
+// JWKS endpoint for Descope JWT signature verification
+const DESCOPE_JWKS_URL = 'https://api.descope.com/P39ERvEl6A8ec0DKtrKBvzM4Ue5V/.well-known/jwks.json';
+const JWKS = createRemoteJWKSet(new URL(DESCOPE_JWKS_URL));
+
 async function validateDescopeJWT(
   token: string
 ): Promise<{ valid: boolean; reason?: string; payload?: Record<string, unknown> }> {
   try {
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      return { valid: false, reason: 'Invalid token format' };
-    }
+    const { payload } = await jwtVerify(token, JWKS, {
+      issuer: (iss) => typeof iss === 'string' && iss.includes('descope'),
+    });
 
-    const payloadB64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const payloadJson = atob(payloadB64);
-    const payload = JSON.parse(payloadJson) as Record<string, unknown>;
-
-    const exp = payload.exp as number | undefined;
-    if (exp && exp < Date.now() / 1000) {
-      return { valid: false, reason: 'Token expired' };
-    }
-
-    const iss = payload.iss as string | undefined;
-    if (!iss || !iss.includes('descope')) {
-      return { valid: false, reason: 'Invalid issuer' };
-    }
-
-    return { valid: true, payload };
-  } catch {
-    return { valid: false, reason: 'Parse error' };
+    return { valid: true, payload: payload as unknown as Record<string, unknown> };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return { valid: false, reason: message };
   }
 }
 

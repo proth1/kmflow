@@ -14,37 +14,40 @@ authors = [
 
 dependencies = [
     # Web framework
-    "fastapi>=0.115.0",
-    "uvicorn[standard]>=0.32.0",
+    "fastapi>=0.115.0,<1.0",
+    "uvicorn[standard]>=0.32.0,<1.0",
     # Database - PostgreSQL
-    "sqlalchemy[asyncio]>=2.0.36",
-    "asyncpg>=0.30.0",
-    "alembic>=1.14.0",
-    "pgvector>=0.3.6",
+    "sqlalchemy[asyncio]>=2.0.36,<3.0",
+    "asyncpg>=0.30.0,<1.0",
+    "alembic>=1.14.0,<2.0",
+    "pgvector>=0.3.6,<1.0",
     # Database - Neo4j
-    "neo4j>=5.27.0",
+    "neo4j>=5.27.0,<6.0",
     # Cache / Queue
-    "redis[hiredis]>=5.2.0",
+    "redis[hiredis]>=5.2.0,<6.0",
     # Configuration
-    "pydantic>=2.10.0",
-    "pydantic-settings>=2.7.0",
+    "pydantic>=2.10.0,<3.0",
+    "pydantic-settings>=2.7.0,<3.0",
     # Utilities
-    "pyyaml>=6.0",
-    "python-dotenv>=1.0.1",
-    "httpx>=0.28.0",
-    "python-multipart>=0.0.18",
+    "pyyaml>=6.0,<7.0",
+    "python-dotenv>=1.0.1,<2.0",
+    "httpx>=0.28.0,<1.0",
+    "python-multipart>=0.0.18,<1.0",
+    "aiofiles>=24.1.0,<25.0",
+    "slowapi>=0.1.9,<1.0",
+    "python-magic>=0.4.27,<1.0",
     # Evidence parsing
-    "python-docx>=1.1.0",
-    "pdfplumber>=0.11.0",
-    "openpyxl>=3.1.0",
-    "lxml>=5.0.0",
-    "defusedxml>=0.7.0",
+    "python-docx>=1.1.0,<2.0",
+    "pdfplumber>=0.11.0,<1.0",
+    "openpyxl>=3.1.0,<4.0",
+    "lxml>=5.0.0,<6.0",
+    "defusedxml>=0.7.0,<1.0",
     # Semantic engine
-    "numpy>=1.26.0",
+    "numpy>=1.26.0,<3.0",
     # Authentication
-    "python-jose[cryptography]>=3.3.0",
-    "bcrypt>=4.0.0",
-    "email-validator>=2.0.0",
+    "PyJWT[crypto]>=2.9.0,<3.0",
+    "bcrypt>=4.0.0,<5.0",
+    "email-validator>=2.0.0,<3.0",
 ]
 
 [project.optional-dependencies]
@@ -138,5 +141,6 @@ module = [
     "sentence_transformers.*",
     "anthropic.*",
     "cv2.*",
+    "aiofiles.*",
 ]
 ignore_missing_imports = true

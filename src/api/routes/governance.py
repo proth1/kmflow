@@ -11,14 +11,14 @@ from __future__ import annotations
 
 import logging
 import uuid
-from collections.abc import AsyncGenerator
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.deps import get_session
 from src.core.models import DataCatalogEntry, DataClassification, DataLayer, User
 from src.core.permissions import require_permission
 from src.datalake.backend import get_storage_backend
@@ -136,18 +136,6 @@ class SLACheckResponse(BaseModel):
     evidence_count: int
     checked_at: datetime
     violations: list[SLAViolationResponse]
-
-
-# ---------------------------------------------------------------------------
-# Dependency: async database session
-# ---------------------------------------------------------------------------
-
-
-async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
-    """Yield a database session from app state."""
-    session_factory = request.app.state.db_session_factory
-    async with session_factory() as session:
-        yield session
 
 
 # ---------------------------------------------------------------------------

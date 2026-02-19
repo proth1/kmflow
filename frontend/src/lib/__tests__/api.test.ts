@@ -31,8 +31,8 @@ describe("apiGet", () => {
 
     const callArgs = mockFetch.mock.calls[0];
     expect(callArgs[1]).toBeDefined();
-    // Should NOT have Content-Type header
-    expect(callArgs[1].headers).toBeUndefined();
+    // Should NOT have Content-Type header (auth headers may be present)
+    expect(callArgs[1].headers?.["Content-Type"]).toBeUndefined();
   });
 
   it("passes AbortSignal when provided", async () => {
@@ -121,8 +121,8 @@ describe("apiDelete", () => {
 
     const callArgs = mockFetch.mock.calls[0];
     expect(callArgs[1].method).toBe("DELETE");
-    // Should NOT have Content-Type header for DELETE
-    expect(callArgs[1].headers).toBeUndefined();
+    // Should NOT have Content-Type header for DELETE (auth headers may be present)
+    expect(callArgs[1].headers?.["Content-Type"]).toBeUndefined();
   });
 
   it("passes AbortSignal when provided", async () => {

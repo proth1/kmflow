@@ -6,9 +6,9 @@ process models created by the LCD algorithm.
 
 from __future__ import annotations
 
+import json
 import logging
 import uuid
-from collections.abc import AsyncGenerator
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.deps import get_session
 from src.core.models import (
     Contradiction,
     EvidenceGap,
@@ -30,8 +31,29 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/pov", tags=["pov"])
 
-# In-memory job tracking (MVP; would use Redis/Celery in production)
-_jobs: dict[str, dict[str, Any]] = {}
+# Job TTL in Redis: 24 hours
+_JOB_TTL = 86400
+
+
+async def _set_job(request: Request, job_id: str, data: dict[str, Any]) -> None:
+    """Store a job record in Redis."""
+    try:
+        redis = request.app.state.redis_client
+        await redis.setex(f"pov:job:{job_id}", _JOB_TTL, json.dumps(data))
+    except Exception:
+        logger.warning("Redis unavailable for job store, job %s status may be lost", job_id)
+
+
+async def _get_job(request: Request, job_id: str) -> dict[str, Any] | None:
+    """Retrieve a job record from Redis."""
+    try:
+        redis = request.app.state.redis_client
+        raw = await redis.get(f"pov:job:{job_id}")
+        if raw:
+            return json.loads(raw)
+    except Exception:
+        logger.warning("Redis unavailable for job store lookup")
+    return None
 
 
 # -- Request/Response Schemas ------------------------------------------------
@@ -151,16 +173,6 @@ class JobStatusResponse(BaseModel):
     error: str | None = None
 
 
-# -- Dependency ---------------------------------------------------------------
-
-
-async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
-    """Get database session from app state."""
-    session_factory = request.app.state.db_session_factory
-    async with session_factory() as session:
-        yield session
-
-
 # -- Helpers ------------------------------------------------------------------
 
 
@@ -232,6 +244,7 @@ def _gap_to_response(g: EvidenceGap) -> dict[str, Any]:
 @router.post("/generate", response_model=POVGenerateResponse, status_code=status.HTTP_202_ACCEPTED)
 async def trigger_pov_generation(
     payload: POVGenerateRequest,
+    request: Request,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("pov:generate")),
 ) -> dict[str, Any]:
@@ -244,8 +257,9 @@ async def trigger_pov_generation(
     job_id = uuid.uuid4().hex
 
     # Track job as in-progress
-    _jobs[job_id] = {"status": "running", "result": None, "error": None}
+    await _set_job(request, job_id, {"status": "running", "result": None, "error": None})
 
+    job_status = "failed"
     try:
         result = await generate_pov(
             session=session,
@@ -256,8 +270,9 @@ async def trigger_pov_generation(
 
         await session.commit()
 
+        job_data: dict[str, Any]
         if result.success and result.process_model:
-            _jobs[job_id] = {
+            job_data = {
                 "status": "completed",
                 "result": {
                     "model_id": str(result.process_model.id),
@@ -265,8 +280,9 @@ async def trigger_pov_generation(
                 },
                 "error": None,
             }
+            job_status = "completed"
         else:
-            _jobs[job_id] = {
+            job_data = {
                 "status": "failed",
                 "result": {
                     "model_id": str(result.process_model.id) if result.process_model else None,
@@ -274,34 +290,33 @@ async def trigger_pov_generation(
                 "error": result.error,
             }
 
+        await _set_job(request, job_id, job_data)
+
     except Exception as e:
         logger.exception("POV generation failed")
-        _jobs[job_id] = {
-            "status": "failed",
-            "result": None,
-            "error": str(e),
-        }
+        await _set_job(request, job_id, {"status": "failed", "result": None, "error": str(e)})
 
     return {
         "job_id": job_id,
-        "status": _jobs[job_id]["status"],
-        "message": f"POV generation {'completed' if _jobs[job_id]['status'] == 'completed' else 'failed'}",
+        "status": job_status,
+        "message": f"POV generation {'completed' if job_status == 'completed' else 'failed'}",
     }
 
 
 @router.get("/job/{job_id}", response_model=JobStatusResponse)
 async def get_job_status(
     job_id: str,
+    request: Request,
     user: User = Depends(require_permission("pov:read")),
 ) -> dict[str, Any]:
     """Get the status of a POV generation job."""
-    if job_id not in _jobs:
+    job = await _get_job(request, job_id)
+    if job is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Job {job_id} not found",
         )
 
-    job = _jobs[job_id]
     return {
         "job_id": job_id,
         "status": job["status"],

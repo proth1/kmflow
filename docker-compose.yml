@@ -1,8 +1,12 @@
 services:
   # ── PostgreSQL with pgvector ──────────────────────────────────
   postgres:
-    image: pgvector/pgvector:pg15
+    image: pgvector/pgvector:0.8.0-pg15
     container_name: kmflow-postgres
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres_dev
@@ -22,8 +26,12 @@ services:
 
   # ── Neo4j with APOC plugin ───────────────────────────────────
   neo4j:
-    image: neo4j:5-community
+    image: neo4j:5.25-community
     container_name: kmflow-neo4j
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     environment:
       NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-neo4j_dev_password}
       NEO4J_PLUGINS: '["apoc"]'
@@ -47,8 +55,12 @@ services:
 
   # ── Redis ─────────────────────────────────────────────────────
   redis:
-    image: redis:7-alpine
+    image: redis:7.4-alpine
     container_name: kmflow-redis
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     ports:
       - "${REDIS_PORT:-6380}:6379"
     volumes:
@@ -123,7 +135,6 @@ services:
       /bin/sh -c "
       mc alias set local http://minio:9000 kmflow-dev kmflow-dev-secret;
       mc mb --ignore-existing local/kmflow-evidence;
-      mc anonymous set download local/kmflow-evidence;
       echo 'MinIO bucket initialization complete';
       "
     restart: "no"
