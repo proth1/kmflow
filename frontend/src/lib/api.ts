@@ -10,6 +10,19 @@ const API_BASE_URL =
     ? process.env.API_URL || "http://localhost:8000"
     : process.env.NEXT_PUBLIC_API_URL || "http://localhost:8002";
 
+/** Exported base URL for cases requiring direct URL construction (e.g. PDF downloads). */
+export { API_BASE_URL };
+
+/**
+ * Get authorization headers if a token is available.
+ * Reads from sessionStorage to support OAuth2/OIDC bearer token flow.
+ */
+function getAuthHeaders(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const token = sessionStorage.getItem("kmflow_access_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export interface ServiceHealth {
   postgres: "up" | "down";
   neo4j: "up" | "down";
@@ -153,6 +166,7 @@ export async function apiGet<T>(path: string): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
       "Content-Type": "application/json",
+      ...getAuthHeaders(),
     },
   });
 
@@ -172,6 +186,7 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...getAuthHeaders(),
     },
     body: JSON.stringify(body),
   });
@@ -1283,7 +1298,7 @@ export async function fetchLineageRecord(
 export async function apiPut<T>(path: string, body: unknown): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
     body: JSON.stringify(body),
   });
   if (!response.ok) {
@@ -1296,7 +1311,7 @@ export async function apiPut<T>(path: string, body: unknown): Promise<T> {
 export async function apiDelete(path: string): Promise<void> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "DELETE",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
   });
   if (!response.ok) {
     const error: ApiError = await response.json();

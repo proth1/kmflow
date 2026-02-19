@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { apiPost } from "@/lib/api";
+import RequireRole from "@/components/auth/RequireRole";
 import {
   Card,
   CardContent,
@@ -72,6 +73,7 @@ export default function AdminPage() {
   }
 
   return (
+    <RequireRole role="platform_admin">
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -204,5 +206,6 @@ export default function AdminPage() {
         </Card>
       </div>
     </div>
+    </RequireRole>
   );
 }
