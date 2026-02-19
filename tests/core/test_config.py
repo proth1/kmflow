@@ -92,3 +92,61 @@ class TestSettings:
             settings = Settings(_env_file=None)  # type: ignore[call-arg]
         assert settings.app_name == "TestApp"
         assert settings.postgres_port == 9999
+
+
+class TestJwtVerificationKeys:
+    """Test suite for jwt_verification_keys property."""
+
+    def test_multi_key_parsing(self) -> None:
+        """Comma-separated JWT_SECRET_KEYS should return multiple keys."""
+        settings = Settings(
+            jwt_secret_keys="key1,key2,key3",
+            _env_file=None,  # type: ignore[call-arg]
+        )
+        assert settings.jwt_verification_keys == ["key1", "key2", "key3"]
+
+    def test_multi_key_strips_whitespace(self) -> None:
+        """Keys with whitespace should be trimmed."""
+        settings = Settings(
+            jwt_secret_keys=" key1 , key2 , key3 ",
+            _env_file=None,  # type: ignore[call-arg]
+        )
+        assert settings.jwt_verification_keys == ["key1", "key2", "key3"]
+
+    def test_single_key_fallback(self) -> None:
+        """When jwt_secret_keys is empty, falls back to jwt_secret_key."""
+        settings = Settings(
+            jwt_secret_key="my-single-key",
+            jwt_secret_keys="",
+            _env_file=None,  # type: ignore[call-arg]
+        )
+        assert settings.jwt_verification_keys == ["my-single-key"]
+
+    def test_empty_string_returns_fallback(self) -> None:
+        """Empty jwt_secret_keys returns single jwt_secret_key."""
+        settings = Settings(
+            jwt_secret_key="fallback-key",
+            jwt_secret_keys="",
+            _env_file=None,  # type: ignore[call-arg]
+        )
+        assert settings.jwt_verification_keys == ["fallback-key"]
+
+    def test_only_whitespace_keys_filtered(self) -> None:
+        """Comma-separated empty/whitespace values should be filtered out."""
+        settings = Settings(
+            jwt_secret_key="fallback",
+            jwt_secret_keys=", , ",
+            _env_file=None,  # type: ignore[call-arg]
+        )
+        # All entries are whitespace-only, so after stripping+filtering -> empty -> fallback
+        assert settings.jwt_verification_keys == ["fallback"]
+
+    def test_first_key_is_signing_key(self) -> None:
+        """First key in the list is the primary signing key."""
+        settings = Settings(
+            jwt_secret_keys="signing-key,old-key-1,old-key-2",
+            _env_file=None,  # type: ignore[call-arg]
+        )
+        keys = settings.jwt_verification_keys
+        assert keys[0] == "signing-key"
+        assert len(keys) == 3
