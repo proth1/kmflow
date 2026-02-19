@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from src.api.main import create_app
+from src.api.version import API_VERSION
 
 
 class TestAppCreation:
@@ -19,7 +20,7 @@ class TestAppCreation:
         """App should have correct metadata."""
         app = create_app()
         assert app.title == "KMFlow"
-        assert app.version == "0.8.0"
+        assert app.version == API_VERSION
 
     def test_app_has_docs(self) -> None:
         """App should have OpenAPI docs enabled."""
