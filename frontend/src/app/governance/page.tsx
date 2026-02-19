@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   fetchCatalogEntries,
   fetchGovernanceHealth,
@@ -9,6 +9,9 @@ import {
   type GovernanceHealthData,
   type PolicyData,
 } from "@/lib/api";
+import { isValidEngagementId } from "@/lib/validation";
+import { PageLayout } from "@/components/layout/PageLayout";
+import { useEngagementData } from "@/hooks/useEngagementData";
 import {
   Card,
   CardContent,
@@ -26,104 +29,61 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Shield, RefreshCw, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
+import { Shield, CheckCircle2, XCircle } from "lucide-react";
+
+interface GovernanceData {
+  catalog: CatalogEntryData[];
+  health: GovernanceHealthData;
+}
 
 export default function GovernancePage() {
   const [engagementId, setEngagementId] = useState("");
-  const [catalog, setCatalog] = useState<CatalogEntryData[]>([]);
-  const [health, setHealth] = useState<GovernanceHealthData | null>(null);
   const [policies, setPolicies] = useState<PolicyData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  const fetchGovernanceData = useCallback(
+    async (id: string, signal: AbortSignal) => {
+      const [catalogResult, healthResult] = await Promise.all([
+        fetchCatalogEntries(id),
+        fetchGovernanceHealth(id),
+      ]);
+      return { catalog: catalogResult, health: healthResult } as GovernanceData;
+    },
+    [],
+  );
+
+  const { data, loading, error } = useEngagementData<GovernanceData>(
+    engagementId,
+    fetchGovernanceData,
+  );
+
+  const catalog = data?.catalog ?? [];
+  const health = data?.health ?? null;
 
   useEffect(() => {
     fetchPolicies()
       .then(setPolicies)
-      .catch(() => {});
+      .catch((err) => {
+        console.error("Failed to load policies:", err);
+      });
   }, []);
 
-  useEffect(() => {
-    if (!engagementId || engagementId.length < 8) return;
-
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const [catalogResult, healthResult] = await Promise.all([
-          fetchCatalogEntries(engagementId),
-          fetchGovernanceHealth(engagementId),
-        ]);
-        if (!cancelled) {
-          setCatalog(catalogResult);
-          setHealth(healthResult);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(
-            err instanceof Error ? err.message : "Failed to load governance data",
-          );
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [engagementId]);
+  const idError =
+    engagementId.length > 0 && !isValidEngagementId(engagementId)
+      ? "Invalid engagement ID format"
+      : null;
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Data Governance</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Catalog management, policy compliance, and SLA monitoring
-          </p>
-        </div>
-        <Shield className="h-8 w-8 text-muted-foreground" />
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Engagement</CardTitle>
-          <CardDescription>
-            Enter an engagement ID to view governance status
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Input
-            type="text"
-            value={engagementId}
-            onChange={(e) => setEngagementId(e.target.value)}
-            placeholder="Enter engagement UUID"
-            className="max-w-md"
-          />
-        </CardContent>
-      </Card>
-
-      {error && (
-        <Card className="border-destructive/50 bg-destructive/5">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {loading && (
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <RefreshCw className="h-4 w-4 animate-spin" />
-          Loading governance data...
-        </div>
-      )}
-
+    <PageLayout
+      title="Data Governance"
+      description="Catalog management, policy compliance, and SLA monitoring"
+      icon={<Shield className="h-8 w-8 text-muted-foreground" />}
+      engagementId={engagementId}
+      onEngagementIdChange={setEngagementId}
+      engagementIdError={idError}
+      error={error}
+      loading={loading}
+      loadingText="Loading governance data..."
+    >
       {health && (
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <Card>
@@ -216,13 +176,13 @@ export default function GovernancePage() {
                         </TableCell>
                         <TableCell>
                           {entry.owner || (
-                            <span className="text-muted-foreground">—</span>
+                            <span className="text-muted-foreground">&mdash;</span>
                           )}
                         </TableCell>
                         <TableCell>
                           {entry.retention_days
                             ? `${entry.retention_days}d`
-                            : "—"}
+                            : "\u2014"}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -321,6 +281,6 @@ export default function GovernancePage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </PageLayout>
   );
 }

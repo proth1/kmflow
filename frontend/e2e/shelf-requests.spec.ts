@@ -11,7 +11,7 @@ test.describe("Shelf Requests Page", () => {
   test("shelf requests page has engagement ID input", async ({ page }) => {
     await page.goto("/shelf-requests");
     await expect(
-      page.getByPlaceholder("Enter engagement UUID")
+      page.getByPlaceholder(/550e8400/)
     ).toBeVisible();
   });
 

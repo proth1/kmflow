@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   fetchMetricDefinitions,
   fetchMetricSummary,
   type SuccessMetricData,
   type MetricSummaryData,
 } from "@/lib/api";
+import { isValidEngagementId } from "@/lib/validation";
+import { PageLayout } from "@/components/layout/PageLayout";
+import { useEngagementData } from "@/hooks/useEngagementData";
 import {
   Card,
   CardContent,
@@ -24,12 +27,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   TrendingUp,
-  RefreshCw,
-  AlertCircle,
   CheckCircle2,
   XCircle,
   Target,
@@ -38,92 +37,42 @@ import {
 export default function AnalyticsPage() {
   const [engagementId, setEngagementId] = useState("");
   const [metrics, setMetrics] = useState<SuccessMetricData[]>([]);
-  const [summary, setSummary] = useState<MetricSummaryData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  // Load metric definitions on mount
+  const fetchSummary = useCallback(
+    (id: string) => fetchMetricSummary(id),
+    [],
+  );
+
+  const { data: summary, loading, error } = useEngagementData<MetricSummaryData>(
+    engagementId,
+    fetchSummary,
+  );
+
   useEffect(() => {
     fetchMetricDefinitions()
       .then((result) => setMetrics(result.items))
-      .catch(() => {});
+      .catch((err) => {
+        console.error("Failed to load metric definitions:", err);
+      });
   }, []);
 
-  // Load summary when engagement changes
-  useEffect(() => {
-    if (!engagementId || engagementId.length < 8) return;
-
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const result = await fetchMetricSummary(engagementId);
-        if (!cancelled) setSummary(result);
-      } catch (err) {
-        if (!cancelled) {
-          setError(
-            err instanceof Error ? err.message : "Failed to load metric data",
-          );
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [engagementId]);
+  const idError =
+    engagementId.length > 0 && !isValidEngagementId(engagementId)
+      ? "Invalid engagement ID format"
+      : null;
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Analytics & Metrics</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Track success metrics and platform KPIs across engagements
-          </p>
-        </div>
-        <TrendingUp className="h-8 w-8 text-muted-foreground" />
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Engagement</CardTitle>
-          <CardDescription>
-            Enter an engagement ID to view metric performance
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Input
-            type="text"
-            value={engagementId}
-            onChange={(e) => setEngagementId(e.target.value)}
-            placeholder="Enter engagement UUID"
-            className="max-w-md"
-          />
-        </CardContent>
-      </Card>
-
-      {error && (
-        <Card className="border-destructive/50 bg-destructive/5">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {loading && (
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <RefreshCw className="h-4 w-4 animate-spin" />
-          Loading metrics...
-        </div>
-      )}
-
+    <PageLayout
+      title="Engagement Analytics"
+      description="Track success metrics and platform KPIs across engagements"
+      icon={<TrendingUp className="h-8 w-8 text-muted-foreground" />}
+      engagementId={engagementId}
+      onEngagementIdChange={setEngagementId}
+      engagementIdError={idError}
+      error={error}
+      loading={loading}
+      loadingText="Loading metrics..."
+    >
       {summary && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card>
@@ -203,12 +152,12 @@ export default function AnalyticsPage() {
                         <TableCell>
                           {m.latest_value !== null
                             ? `${m.latest_value} ${m.unit}`
-                            : "—"}
+                            : "\u2014"}
                         </TableCell>
                         <TableCell>
                           {m.avg_value !== null
                             ? `${m.avg_value} ${m.unit}`
-                            : "—"}
+                            : "\u2014"}
                         </TableCell>
                         <TableCell>
                           {m.target_value} {m.unit}
@@ -274,7 +223,7 @@ export default function AnalyticsPage() {
                         <TableCell>{m.unit}</TableCell>
                         <TableCell>{m.target_value}</TableCell>
                         <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
-                          {m.description || "—"}
+                          {m.description || "\u2014"}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -285,6 +234,6 @@ export default function AnalyticsPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </PageLayout>
   );
 }

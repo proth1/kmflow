@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
 import {
   fetchShelfRequests,
   type ShelfRequestData,
+  type ShelfRequestList,
 } from "@/lib/api";
+import { isValidEngagementId } from "@/lib/validation";
+import { PageLayout } from "@/components/layout/PageLayout";
+import { useEngagementData } from "@/hooks/useEngagementData";
 import {
   Card,
   CardContent,
@@ -21,9 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ClipboardList, RefreshCw, AlertCircle } from "lucide-react";
+import { ClipboardList } from "lucide-react";
 
 function statusBadge(status: string) {
   switch (status) {
@@ -42,86 +44,36 @@ function statusBadge(status: string) {
 
 export default function ShelfRequestsPage() {
   const [engagementId, setEngagementId] = useState("");
-  const [requests, setRequests] = useState<ShelfRequestData[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!engagementId || engagementId.length < 8) return;
+  const fetchData = useCallback(
+    (id: string) => fetchShelfRequests(id),
+    [],
+  );
 
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const result = await fetchShelfRequests(engagementId);
-        if (!cancelled) setRequests(result.items);
-      } catch (err) {
-        if (!cancelled) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Failed to load shelf requests",
-          );
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [engagementId]);
+  const { data, loading, error } = useEngagementData<ShelfRequestList>(
+    engagementId,
+    fetchData,
+  );
+
+  const requests = data?.items ?? [];
+
+  const idError =
+    engagementId.length > 0 && !isValidEngagementId(engagementId)
+      ? "Invalid engagement ID format"
+      : null;
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Shelf Data Requests</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Track evidence requests sent to clients and monitor fulfillment
-          </p>
-        </div>
-        <ClipboardList className="h-8 w-8 text-muted-foreground" />
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Engagement</CardTitle>
-          <CardDescription>
-            Enter an engagement ID to view its shelf requests
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Input
-            type="text"
-            value={engagementId}
-            onChange={(e) => setEngagementId(e.target.value)}
-            placeholder="Enter engagement UUID"
-            className="max-w-md"
-          />
-        </CardContent>
-      </Card>
-
-      {error && (
-        <Card className="border-destructive/50 bg-destructive/5">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {loading && (
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <RefreshCw className="h-4 w-4 animate-spin" />
-          Loading shelf requests...
-        </div>
-      )}
-
+    <PageLayout
+      title="Shelf Data Requests"
+      description="Track evidence requests sent to clients and monitor fulfillment"
+      icon={<ClipboardList className="h-8 w-8 text-muted-foreground" />}
+      engagementId={engagementId}
+      onEngagementIdChange={setEngagementId}
+      engagementIdError={idError}
+      error={error}
+      loading={loading}
+      loadingText="Loading shelf requests..."
+    >
       {requests.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card>
@@ -199,7 +151,14 @@ export default function ShelfRequestsPage() {
                     <TableCell>{req.items.length}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="w-16 h-2 bg-muted rounded-full overflow-hidden"
+                          role="progressbar"
+                          aria-valuenow={Math.round(req.fulfillment_percentage)}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label={`${req.title} fulfillment: ${req.fulfillment_percentage.toFixed(0)}%`}
+                        >
                           <div
                             className="h-full bg-primary rounded-full"
                             style={{
@@ -215,7 +174,7 @@ export default function ShelfRequestsPage() {
                     <TableCell className="text-sm text-muted-foreground">
                       {req.due_date
                         ? new Date(req.due_date).toLocaleDateString()
-                        : "—"}
+                        : "\u2014"}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -286,6 +245,6 @@ export default function ShelfRequestsPage() {
             </Card>
           ),
       )}
-    </div>
+    </PageLayout>
   );
 }

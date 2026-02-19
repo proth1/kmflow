@@ -3,6 +3,10 @@
  *
  * Wraps fetch with the base URL from environment variables
  * and provides typed response handling.
+ *
+ * TODO: Split into domain modules when this file exceeds 1500 lines.
+ * Suggested modules: api/evidence.ts, api/governance.ts, api/monitoring.ts,
+ * api/reports.ts, api/admin.ts
  */
 
 const API_BASE_URL =
@@ -149,15 +153,13 @@ export async function fetchHealth(): Promise<HealthResponse> {
 /**
  * Generic GET request to the KMFlow API.
  */
-export async function apiGet<T>(path: string): Promise<T> {
+export async function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-    },
+    signal,
   });
 
   if (!response.ok) {
-    const error: ApiError = await response.json();
+    const error: ApiError = await response.json().catch(() => ({ detail: `Request failed: ${response.status}`, status_code: response.status }));
     throw new Error(error.detail || `Request failed: ${response.status}`);
   }
 
@@ -167,17 +169,19 @@ export async function apiGet<T>(path: string): Promise<T> {
 /**
  * Generic POST request to the KMFlow API.
  */
-export async function apiPost<T>(path: string, body: unknown): Promise<T> {
+export async function apiPost<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+  // TODO: Add CSRF token when auth is implemented
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
+    signal,
   });
 
   if (!response.ok) {
-    const error: ApiError = await response.json();
+    const error: ApiError = await response.json().catch(() => ({ detail: `Request failed: ${response.status}`, status_code: response.status }));
     throw new Error(error.detail || `Request failed: ${response.status}`);
   }
 
@@ -1087,7 +1091,7 @@ export async function fetchShelfRequests(
   engagementId?: string,
 ): Promise<ShelfRequestList> {
   const params = engagementId ? `?engagement_id=${engagementId}` : "";
-  return apiGet<ShelfRequestList>(`/api/v1/shelf-requests/${params}`);
+  return apiGet<ShelfRequestList>(`/api/v1/shelf-requests${params}`);
 }
 
 export async function fetchShelfRequest(
@@ -1280,26 +1284,28 @@ export async function fetchLineageRecord(
 
 // -- Generic API helpers for PUT/PATCH/DELETE ---------------------------------
 
-export async function apiPut<T>(path: string, body: unknown): Promise<T> {
+export async function apiPut<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+  // TODO: Add CSRF token when auth is implemented
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    signal,
   });
   if (!response.ok) {
-    const error: ApiError = await response.json();
+    const error: ApiError = await response.json().catch(() => ({ detail: `Request failed: ${response.status}`, status_code: response.status }));
     throw new Error(error.detail || `Request failed: ${response.status}`);
   }
   return response.json() as Promise<T>;
 }
 
-export async function apiDelete(path: string): Promise<void> {
+export async function apiDelete(path: string, signal?: AbortSignal): Promise<void> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "DELETE",
-    headers: { "Content-Type": "application/json" },
+    signal,
   });
   if (!response.ok) {
-    const error: ApiError = await response.json();
+    const error: ApiError = await response.json().catch(() => ({ detail: `Request failed: ${response.status}`, status_code: response.status }));
     throw new Error(error.detail || `Request failed: ${response.status}`);
   }
 }

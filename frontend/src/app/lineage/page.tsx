@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { fetchLineageChain, LineageChainData } from "@/lib/api";
+import { isValidEngagementId } from "@/lib/validation";
+import { PageLayout } from "@/components/layout/PageLayout";
 import { GitBranch, ArrowRight } from "lucide-react";
 
 export default function LineagePage() {
@@ -15,8 +17,14 @@ export default function LineagePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const idError =
+    engagementId.length > 0 && !isValidEngagementId(engagementId)
+      ? "Invalid engagement ID format"
+      : null;
+
   async function handleLookup() {
     if (!engagementId.trim() || !evidenceId.trim()) return;
+    if (!isValidEngagementId(engagementId.trim())) return;
     setLoading(true);
     setError(null);
     try {
@@ -31,44 +39,51 @@ export default function LineagePage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Data Lineage</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Trace the provenance and transformation history of evidence items
-        </p>
-      </div>
-
+    <PageLayout
+      title="Data Lineage"
+      description="Trace the provenance and transformation history of evidence items"
+      error={error}
+      loading={loading}
+      loadingText="Loading lineage..."
+    >
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Lineage Lookup</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-3">
-            <Input
-              placeholder="Engagement ID"
-              value={engagementId}
-              onChange={(e) => setEngagementId(e.target.value)}
-            />
-            <Input
-              placeholder="Evidence Item ID"
-              value={evidenceId}
-              onChange={(e) => setEvidenceId(e.target.value)}
-            />
-            <Button onClick={handleLookup} disabled={loading || !engagementId.trim() || !evidenceId.trim()}>
+            <div className="flex-1">
+              <Input
+                placeholder="e.g., 550e8400-e29b-41d4-a716-446655440000"
+                value={engagementId}
+                onChange={(e) => setEngagementId(e.target.value)}
+                aria-label="Engagement ID"
+                aria-describedby="lineage-eng-hint"
+              />
+              <p id="lineage-eng-hint" className="text-xs text-muted-foreground mt-1">
+                Engagement UUID
+              </p>
+              {idError && (
+                <p className="text-xs text-destructive mt-1">{idError}</p>
+              )}
+            </div>
+            <div className="flex-1">
+              <Input
+                placeholder="Evidence Item ID"
+                value={evidenceId}
+                onChange={(e) => setEvidenceId(e.target.value)}
+                aria-label="Evidence Item ID"
+              />
+            </div>
+            <Button
+              onClick={handleLookup}
+              disabled={loading || !engagementId.trim() || !evidenceId.trim() || !!idError}
+            >
               {loading ? "Loading..." : "Trace Lineage"}
             </Button>
           </div>
         </CardContent>
       </Card>
-
-      {error && (
-        <Card className="border-red-200">
-          <CardContent className="pt-6">
-            <p className="text-sm text-red-600">{error}</p>
-          </CardContent>
-        </Card>
-      )}
 
       {lineage && (
         <>
@@ -164,6 +179,6 @@ export default function LineagePage() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </PageLayout>
   );
 }

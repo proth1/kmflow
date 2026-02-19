@@ -4,14 +4,14 @@ test.describe("Analytics Page", () => {
   test("analytics page loads with heading", async ({ page }) => {
     await page.goto("/analytics");
     await expect(
-      page.getByRole("heading", { name: "Analytics & Metrics" })
+      page.getByRole("heading", { name: "Engagement Analytics" })
     ).toBeVisible();
   });
 
   test("analytics page has engagement ID input", async ({ page }) => {
     await page.goto("/analytics");
     await expect(
-      page.getByPlaceholder("Enter engagement UUID")
+      page.getByPlaceholder(/550e8400/)
     ).toBeVisible();
   });
 
