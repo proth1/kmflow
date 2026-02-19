@@ -831,6 +831,66 @@
       color: var(--kmflow-medium-gray);
     }
 
+    /* Decision phase cards and comparison tables (Slides 22-24) */
+    .phase-card-decision {
+      border-left-color: var(--kmflow-light-blue);
+    }
+
+    .slide-dark .phase-card {
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .slide-dark .phase-card .phase-number {
+      color: var(--kmflow-light-blue);
+    }
+
+    .slide-dark .phase-card .phase-name {
+      color: var(--kmflow-white);
+    }
+
+    .slide-dark .phase-card .phase-desc {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .phase-grid-4col {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .comparison-table th,
+    .comparison-table td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid rgba(0, 51, 141, 0.1);
+    }
+
+    .comparison-table th {
+      background: var(--kmflow-blue);
+      color: white;
+      font-weight: 600;
+    }
+
+    .comparison-table th:first-child {
+      background: var(--kmflow-dark-gray);
+    }
+
+    .comparison-table td:first-child {
+      font-weight: 600;
+      color: var(--kmflow-dark-gray);
+    }
+
+    .cell-green { background: rgba(34, 197, 94, 0.12); color: #166534; }
+    .cell-yellow { background: rgba(234, 179, 8, 0.12); color: #854d0e; }
+    .cell-red { background: rgba(239, 68, 68, 0.12); color: #991b1b; }
+
     .two-col {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1031,6 +1091,19 @@
         grid-template-columns: repeat(2, 1fr);
       }
 
+      .phase-grid-4col {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .comparison-table {
+        font-size: 0.75rem;
+      }
+
+      .comparison-table th,
+      .comparison-table td {
+        padding: 0.5rem;
+      }
+
       h1 {
         font-size: 2.5rem;
       }
@@ -1047,11 +1120,11 @@
       <a href="#slide-1">Home</a>
       <a href="#slide-3">Challenge</a>
       <a href="#slide-7">Engagement</a>
-      <a href="#slide-13">Case Study</a>
-      <a href="#slide-22">Application</a>
-      <a href="#slide-32">Architecture</a>
-      <a href="#slide-39">Workflows</a>
-      <a href="#slide-45">Roadmap</a>
+      <a href="#slide-14">Case Study</a>
+      <a href="#slide-25">Application</a>
+      <a href="#slide-35">Architecture</a>
+      <a href="#slide-43">Workflows</a>
+      <a href="#slide-49">Roadmap</a>
     </div>
     <div class="nav-version">v2.0.0 &mdash; Phase 1 Delivered</div>
   </nav>
@@ -1094,7 +1167,7 @@
       <div class="section-header">
         <span class="badge badge-blue">Navigation</span>
         <h2>Presentation Roadmap</h2>
-        <p>50 slides across 8 sections</p>
+        <p>54 slides across 8 sections</p>
       </div>
       <div class="cards-grid">
         <div class="card">
@@ -1110,7 +1183,7 @@
         <div class="card">
           <div class="card-icon">3</div>
           <h3>Case Study</h3>
-          <p>Meridian National Bank: client-stated vs. evidence-derived processes, key discoveries, conformance scoring, simulation</p>
+          <p>Meridian National Bank: client-stated vs. evidence-derived processes, key discoveries, conformance scoring, operating model simulation &amp; decision framework</p>
         </div>
         <div class="card">
           <div class="card-icon">4</div>
@@ -1459,8 +1532,8 @@
       </div>
     </section>
 
-    <!-- Slide 8b: Evidence Parser Architecture -->
-    <section id="slide-8b" class="slide slide-light">
+    <!-- Slide 9: Evidence Parser Architecture -->
+    <section id="slide-9" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Phase 1: Collect</span>
         <h2>Evidence Parser Architecture</h2>
@@ -1509,12 +1582,12 @@
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 8b</span>
+        <span>Slide 9</span>
       </div>
     </section>
 
-    <!-- Slide 9: Evidence Quality & Lifecycle -->
-    <section id="slide-9" class="slide slide-light">
+    <!-- Slide 10: Evidence Quality & Lifecycle -->
+    <section id="slide-10" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Evidence Management</span>
         <h2>Evidence Quality &amp; Lifecycle</h2>
@@ -1553,12 +1626,12 @@
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 9</span>
+        <span>Slide 10</span>
       </div>
     </section>
 
-    <!-- Slide 9b: Evidence Lineage & Provenance -->
-    <section id="slide-9b" class="slide slide-light">
+    <!-- Slide 11: Evidence Lineage & Provenance -->
+    <section id="slide-11" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Evidence Management</span>
         <h2>Evidence Lineage &amp; Provenance</h2>
@@ -1609,12 +1682,12 @@
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 9b</span>
+        <span>Slide 11</span>
       </div>
     </section>
 
-    <!-- Slide 10: Process Discovery Engine -->
-    <section id="slide-10" class="slide slide-light">
+    <!-- Slide 12: Process Discovery Engine -->
+    <section id="slide-12" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Phase 2: Discover</span>
         <h2>Process Discovery Engine</h2>
@@ -1631,12 +1704,12 @@
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 10</span>
+        <span>Slide 12</span>
       </div>
     </section>
 
-    <!-- Slide 11: AI Copilot -->
-    <section id="slide-11" class="slide slide-dark">
+    <!-- Slide 13: AI Copilot -->
+    <section id="slide-13" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-light">AI Copilot</span>
         <h2>Ask Questions, Get Cited Answers</h2>
@@ -1666,12 +1739,12 @@
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 11</span>
+        <span>Slide 13</span>
       </div>
     </section>
 
-    <!-- Slide 13: Synthetic Evidence Portfolio -->
-    <section id="slide-13" class="slide slide-light">
+    <!-- Slide 14: Synthetic Evidence Portfolio -->
+    <section id="slide-14" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Case Study</span>
         <h2>Case Study: Meridian National Bank</h2>
@@ -1773,12 +1846,12 @@
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 13</span>
+        <span>Slide 14</span>
       </div>
     </section>
 
-    <!-- Slide 14: What the Client Told Us -->
-    <section id="slide-14" class="slide slide-light">
+    <!-- Slide 15: What the Client Told Us -->
+    <section id="slide-15" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Case Study: Phase 1</span>
         <h2>What the Client Told Us</h2>
@@ -1809,12 +1882,12 @@
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 14</span>
+        <span>Slide 15</span>
       </div>
     </section>
 
-    <!-- Slide 15: What the Evidence Revealed -->
-    <section id="slide-15" class="slide slide-gray">
+    <!-- Slide 16: What the Evidence Revealed -->
+    <section id="slide-16" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Case Study: Phase 2</span>
         <h2>What the Evidence Revealed</h2>
@@ -1861,12 +1934,12 @@
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 15</span>
+        <span>Slide 16</span>
       </div>
     </section>
 
-    <!-- Slide 16: Key Discoveries -->
-    <section id="slide-16" class="slide slide-light">
+    <!-- Slide 17: Key Discoveries -->
+    <section id="slide-17" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Case Study: Findings</span>
         <h2>Key Discoveries</h2>
@@ -1930,12 +2003,12 @@
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 16</span>
+        <span>Slide 17</span>
       </div>
     </section>
 
-    <!-- Slide 17: Confidence Scoring Model -->
-    <section id="slide-17" class="slide slide-gray">
+    <!-- Slide 18: Confidence Scoring Model -->
+    <section id="slide-18" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Confidence Scoring</span>
         <h2>Evidence-Based Confidence Model</h2>
@@ -1992,12 +2065,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 17</span>
+        <span>Slide 18</span>
       </div>
     </section>
 
-    <!-- Slide 18: Best Practice vs. Gaps -->
-    <section id="slide-18" class="slide slide-dark">
+    <!-- Slide 19: Best Practice vs. Gaps -->
+    <section id="slide-19" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-light">Case Study: Phase 3</span>
         <h2>Best Practice vs. The Gaps</h2>
@@ -2034,12 +2107,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 18</span>
+        <span>Slide 19</span>
       </div>
     </section>
 
-    <!-- Slide 19: Conformance Score -->
-    <section id="slide-19" class="slide slide-light">
+    <!-- Slide 20: Conformance Score -->
+    <section id="slide-20" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Phase 3: Benchmark</span>
         <h2>Conformance Score</h2>
@@ -2077,12 +2150,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 19</span>
+        <span>Slide 20</span>
       </div>
     </section>
 
-    <!-- Slide 20: Regulatory Context + TOM Alignment -->
-    <section id="slide-20" class="slide slide-gray">
+    <!-- Slide 21: Regulatory Context + TOM Alignment -->
+    <section id="slide-21" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Governance &amp; TOM</span>
         <h2>Regulatory Context &amp; TOM Alignment</h2>
@@ -2121,53 +2194,185 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 20</span>
+        <span>Slide 21</span>
       </div>
     </section>
 
-    <!-- Slide 21: Simulation What-If -->
-    <section id="slide-21" class="slide slide-light">
+    <!-- Slide 22: From Discovery to Decision -->
+    <section id="slide-22" class="slide slide-dark">
+      <div class="section-header">
+        <span class="badge badge-light">Phase 4: Recommend</span>
+        <h2>From Discovery to Decision</h2>
+        <p>Evidence-Driven Operating Model Simulation &amp; Scoring</p>
+      </div>
+      <div class="phase-grid-4col">
+        <div class="phase-card">
+          <div class="phase-number">1</div>
+          <div class="phase-name">Evidence-Derived Baseline</div>
+          <div class="phase-desc">Probabilistic current-state model with Bright / Dim / Dark certainty zones</div>
+        </div>
+        <div class="phase-card">
+          <div class="phase-number">2</div>
+          <div class="phase-name">First Principles Decomposition</div>
+          <div class="phase-desc">Isolate decisions, inputs, constraints, and latent assumptions</div>
+        </div>
+        <div class="phase-card">
+          <div class="phase-number">3</div>
+          <div class="phase-name">Generate N Options</div>
+          <div class="phase-desc">3&ndash;7 alternative operating model configurations per process area</div>
+        </div>
+        <div class="phase-card">
+          <div class="phase-number">4</div>
+          <div class="phase-name">Simulate Impact</div>
+          <div class="phase-desc">Cycle time, capacity, staffing, compliance, and cost as distributions</div>
+        </div>
+        <div class="phase-card phase-card-decision">
+          <div class="phase-number">5</div>
+          <div class="phase-name">Score: Outcome Stability</div>
+          <div class="phase-desc">Penalize optimistic-but-brittle designs via variance + fragility metrics</div>
+        </div>
+        <div class="phase-card phase-card-decision">
+          <div class="phase-number">6</div>
+          <div class="phase-name">Score: Evidentiary Confidence</div>
+          <div class="phase-desc">Weight by coverage, agreement, quality, and recency of evidence</div>
+        </div>
+        <div class="phase-card phase-card-decision">
+          <div class="phase-number">7</div>
+          <div class="phase-name">Decision Portfolio</div>
+          <div class="phase-desc">Compare options across 5 dimensions with explicit trade-offs</div>
+        </div>
+        <div class="phase-card phase-card-decision">
+          <div class="phase-number">8</div>
+          <div class="phase-name">Informed Judgment</div>
+          <div class="phase-desc">Leadership selects based on risk tolerance + strategic ambition</div>
+        </div>
+      </div>
+      <div style="background: rgba(255,255,255,0.06); padding: 1.25rem 1.5rem; border-radius: 12px; margin-top: 1.5rem; border-left: 4px solid var(--kmflow-light-blue);">
+        <p style="margin: 0; font-size: 0.9rem; color: rgba(255,255,255,0.85); line-height: 1.6;">Unlike traditional tools that deliver a single recommendation, KMFlow generates and evaluates multiple futures &mdash; scored by both expected outcome <strong>AND</strong> the quality of evidence behind each projection.</p>
+      </div>
+      <p style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 1rem; font-style: italic; text-align: center;">Steps 1&ndash;4 operational in current platform. Steps 5&ndash;8 represent the full decision-support framework in active development.</p>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 22</span>
+      </div>
+    </section>
+
+    <!-- Slide 23: Option Comparison -->
+    <section id="slide-23" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Case Study: Recommend</span>
+        <h2>Option Comparison: Meridian Loan Origination</h2>
+      </div>
+      <div class="table-container">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Dimension</th>
+              <th>Option A: Automate Doc Collection</th>
+              <th>Option B: AI-Assisted Underwriting</th>
+              <th>Option C: Full Digital Origination</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Expected Value</td>
+              <td>-18 days, +40% capacity, -$2.1M</td>
+              <td>-12 days, +25% capacity, -$3.4M</td>
+              <td>-30 days, +65% capacity, -$5.8M</td>
+            </tr>
+            <tr>
+              <td>Outcome Stability</td>
+              <td class="cell-green">0.82 (High)</td>
+              <td class="cell-yellow">0.64 (Moderate)</td>
+              <td class="cell-red">0.41 (Low)</td>
+            </tr>
+            <tr>
+              <td>Evidentiary Confidence</td>
+              <td class="cell-green">0.91 (Bright)</td>
+              <td class="cell-yellow">0.73 (Dim)</td>
+              <td class="cell-red">0.48 (Dark)</td>
+            </tr>
+            <tr>
+              <td>Risk Sensitivity</td>
+              <td class="cell-green">Low</td>
+              <td class="cell-yellow">Medium &mdash; model validation</td>
+              <td class="cell-red">High &mdash; regulatory approval</td>
+            </tr>
+            <tr>
+              <td>Evidence to Improve</td>
+              <td class="cell-green">2 items</td>
+              <td class="cell-yellow">7 items</td>
+              <td class="cell-red">14 items</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="background: var(--kmflow-light-gray); padding: 1.25rem 1.5rem; border-radius: 12px; margin-top: 1.5rem; border-left: 4px solid var(--kmflow-blue);">
+        <p style="margin: 0; font-size: 0.9rem; color: var(--kmflow-dark-gray); line-height: 1.6;"><strong>Option A</strong> is evidence-strong and stable. <strong>Option C</strong> promises the highest return but rests on significant assumptions. Leadership chooses based on risk appetite, not consulting opinion.</p>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 23</span>
+      </div>
+    </section>
+
+    <!-- Slide 24: Why This Changes the Conversation -->
+    <section id="slide-24" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Phase 4: Recommend</span>
-        <h2>Simulation: What-If Analysis</h2>
-        <p>What if we automate document collection? What is the cascading impact?</p>
+        <h2>Why This Changes the Conversation</h2>
       </div>
-      <div class="cards-grid">
-        <div class="card">
-          <h3>What-If Simulation</h3>
-          <p>Remove or modify a process step and see the cascading impact on cycle time, capacity, compliance, and cost.</p>
+      <div class="two-col">
+        <div>
+          <h3 style="color: var(--kmflow-medium-gray);">Traditional Approach</h3>
+          <ul class="feature-list">
+            <li>Single recommendation from senior consultant</li>
+            <li>Point estimates: &ldquo;this will save $2.1M&rdquo;</li>
+            <li>Confidence implied, never quantified</li>
+            <li>Assumptions buried in appendix</li>
+            <li>Client buys a recommendation</li>
+          </ul>
         </div>
-        <div class="card">
-          <h3>Capacity Modeling</h3>
-          <p>Model staffing changes, volume increases, or seasonal variations to predict bottlenecks before they occur.</p>
-        </div>
-        <div class="card">
-          <h3>Process Change Impact</h3>
-          <p>Simulate adding automation, removing manual steps, or restructuring swim lanes. Quantify improvement before implementation.</p>
-        </div>
-        <div class="card">
-          <h3>Control Removal Analysis</h3>
-          <p>What happens if a control is removed? Model the risk increase and compliance impact before making changes.</p>
+        <div>
+          <h3 style="color: var(--kmflow-blue);">KMFlow Approach</h3>
+          <ul class="feature-list">
+            <li>3&ndash;7 ranked alternatives with BPMN diffs</li>
+            <li>Distribution ranges: &ldquo;$1.8M&ndash;$2.4M (p50&ndash;p90)&rdquo;</li>
+            <li>Confidence scored: Bright / Dim / Dark</li>
+            <li>Assumptions priced: &ldquo;removing this assumption costs $X&rdquo;</li>
+            <li>Client buys a decision framework</li>
+          </ul>
         </div>
       </div>
-      <div style="background: var(--kmflow-light-gray); padding: 1.5rem; border-radius: 12px; margin-top: 1.5rem;">
-        <h3>Example: Automate Document Collection</h3>
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1rem;">
-          <div style="text-align: center;"><div style="font-size: 1.3rem; font-weight: 700; color: var(--kmflow-blue);">-18 days</div><div style="font-size: 0.8rem;">Cycle Time</div></div>
-          <div style="text-align: center;"><div style="font-size: 1.3rem; font-weight: 700; color: var(--kmflow-blue);">+40%</div><div style="font-size: 0.8rem;">Capacity</div></div>
-          <div style="text-align: center;"><div style="font-size: 1.3rem; font-weight: 700; color: var(--kmflow-blue);">+15%</div><div style="font-size: 0.8rem;">Compliance</div></div>
-          <div style="text-align: center;"><div style="font-size: 1.3rem; font-weight: 700; color: var(--kmflow-blue);">-$2.1M</div><div style="font-size: 0.8rem;">Annual Cost</div></div>
+      <div class="stats-grid" style="margin-top: 2rem;">
+        <div class="stat-card">
+          <div class="stat-value">3&ndash;7</div>
+          <div class="stat-label">Options Generated Per Process Area</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">2</div>
+          <div class="stat-label">Scoring Dimensions (Stability + Confidence)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">5</div>
+          <div class="stat-label">Risk Factors Quantified Per Option</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">100%</div>
+          <div class="stat-label">Assumption Traceability</div>
         </div>
       </div>
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 21</span>
+        <span>Slide 24</span>
       </div>
     </section>
 
-    <!-- Slide 22: Personas and Access Model -->
-    <section id="slide-22" class="slide slide-dark">
+    <!-- Slide 25: Personas and Access Model -->
+    <section id="slide-25" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-light">The Application</span>
         <h2>Personas and Access Model</h2>
@@ -2198,12 +2403,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 22</span>
+        <span>Slide 25</span>
       </div>
     </section>
 
-    <!-- Slide 23: Engagement Dashboard -->
-    <section id="slide-23" class="slide slide-light">
+    <!-- Slide 26: Engagement Dashboard -->
+    <section id="slide-26" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Application: Home</span>
         <h2>Engagement Dashboard</h2>
@@ -2237,12 +2442,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 23</span>
+        <span>Slide 26</span>
       </div>
     </section>
 
-    <!-- Slide 24: Process Visualization + Confidence Heatmap -->
-    <section id="slide-24" class="slide slide-gray">
+    <!-- Slide 27: Process Visualization + Confidence Heatmap -->
+    <section id="slide-27" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Application: BPMN Viewer</span>
         <h2>Process Visualization + Confidence Heatmap</h2>
@@ -2271,12 +2476,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 24</span>
+        <span>Slide 27</span>
       </div>
     </section>
 
-    <!-- Slide 25: Knowledge Graph Explorer -->
-    <section id="slide-25" class="slide slide-light">
+    <!-- Slide 28: Knowledge Graph Explorer -->
+    <section id="slide-28" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Application: Graph</span>
         <h2>Knowledge Graph Explorer</h2>
@@ -2305,12 +2510,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 25</span>
+        <span>Slide 28</span>
       </div>
     </section>
 
-    <!-- Slide 26: TOM Dashboard + Transformation Roadmap -->
-    <section id="slide-26" class="slide slide-gray">
+    <!-- Slide 29: TOM Dashboard + Transformation Roadmap -->
+    <section id="slide-29" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Application: TOM</span>
         <h2>TOM Dashboard + Transformation Roadmap</h2>
@@ -2338,12 +2543,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 26</span>
+        <span>Slide 29</span>
       </div>
     </section>
 
-    <!-- Slide 27: AI Copilot Interface -->
-    <section id="slide-27" class="slide slide-light">
+    <!-- Slide 30: AI Copilot Interface -->
+    <section id="slide-30" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Application: AI</span>
         <h2>AI Copilot Interface</h2>
@@ -2373,12 +2578,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 27</span>
+        <span>Slide 30</span>
       </div>
     </section>
 
-    <!-- Slide 28: Client Portal -->
-    <section id="slide-28" class="slide slide-dark">
+    <!-- Slide 31: Client Portal -->
+    <section id="slide-31" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-light">Application: Client</span>
         <h2>Client Portal</h2>
@@ -2405,12 +2610,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 28</span>
+        <span>Slide 31</span>
       </div>
     </section>
 
-    <!-- Slide 29: Monitoring + Real-time Alerts -->
-    <section id="slide-29" class="slide slide-light">
+    <!-- Slide 32: Monitoring + Real-time Alerts -->
+    <section id="slide-32" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Application: Monitoring</span>
         <h2>Monitoring + Real-time Alerts</h2>
@@ -2438,12 +2643,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 29</span>
+        <span>Slide 32</span>
       </div>
     </section>
 
-    <!-- Slide 30: Pattern Library -->
-    <section id="slide-30" class="slide slide-gray">
+    <!-- Slide 33: Pattern Library -->
+    <section id="slide-33" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Application: Patterns</span>
         <h2>Pattern Library + Cross-Engagement Intelligence</h2>
@@ -2471,12 +2676,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 30</span>
+        <span>Slide 33</span>
       </div>
     </section>
 
-    <!-- Slide 31: Annotations & Collaboration -->
-    <section id="slide-31" class="slide slide-light">
+    <!-- Slide 34: Annotations & Collaboration -->
+    <section id="slide-34" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Application: Collaboration</span>
         <h2>Annotations + Collaboration</h2>
@@ -2504,12 +2709,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 31</span>
+        <span>Slide 34</span>
       </div>
     </section>
 
-    <!-- Slide 32: System Architecture -->
-    <section id="slide-32" class="slide slide-gray">
+    <!-- Slide 35: System Architecture -->
+    <section id="slide-35" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Architecture</span>
         <h2>System Architecture</h2>
@@ -2539,12 +2744,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 32</span>
+        <span>Slide 35</span>
       </div>
     </section>
 
-    <!-- Slide 33: Tech Stack -->
-    <section id="slide-33" class="slide slide-light">
+    <!-- Slide 36: Tech Stack -->
+    <section id="slide-36" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Technology</span>
         <h2>Tech Stack</h2>
@@ -2615,12 +2820,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 33</span>
+        <span>Slide 36</span>
       </div>
     </section>
 
-    <!-- Slide 34: Knowledge Graph Schema -->
-    <section id="slide-34" class="slide slide-dark">
+    <!-- Slide 37: Knowledge Graph Schema -->
+    <section id="slide-37" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-light">Data Model</span>
         <h2>Knowledge Graph Visualization</h2>
@@ -2642,12 +2847,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 34</span>
+        <span>Slide 37</span>
       </div>
     </section>
 
-    <!-- Slide 35: Case Study - Loan Origination -->
-    <section id="slide-35" class="slide slide-dark">
+    <!-- Slide 38: Case Study - Loan Origination -->
+    <section id="slide-38" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-light">Case Study</span>
         <h2>Loan Origination — Process Intelligence in Action</h2>
@@ -2678,12 +2883,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 35</span>
+        <span>Slide 38</span>
       </div>
     </section>
 
-    <!-- Slide 36: Data Model -->
-    <section id="slide-36" class="slide slide-gray">
+    <!-- Slide 39: Data Model -->
+    <section id="slide-39" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Data Model</span>
         <h2>Core Entities (PostgreSQL)</h2>
@@ -2739,12 +2944,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 36</span>
+        <span>Slide 39</span>
       </div>
     </section>
 
-    <!-- Slide 36b: Data Governance Framework -->
-    <section id="slide-36b" class="slide slide-gray">
+    <!-- Slide 40: Data Governance Framework -->
+    <section id="slide-40" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Enterprise Readiness</span>
         <h2>Data Governance Framework</h2>
@@ -2780,12 +2985,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 36b</span>
+        <span>Slide 40</span>
       </div>
     </section>
 
-    <!-- Slide 37: API Surface + MCP Server -->
-    <section id="slide-37" class="slide slide-light">
+    <!-- Slide 41: API Surface + MCP Server -->
+    <section id="slide-41" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">API &amp; Integration</span>
         <h2>API Surface + MCP Server</h2>
@@ -2823,12 +3028,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 37</span>
+        <span>Slide 41</span>
       </div>
     </section>
 
-    <!-- Slide 38: Integration Framework -->
-    <section id="slide-38" class="slide slide-dark">
+    <!-- Slide 42: Integration Framework -->
+    <section id="slide-42" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-light">Capability 6</span>
         <h2>Integration Framework</h2>
@@ -2884,12 +3089,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 38</span>
+        <span>Slide 42</span>
       </div>
     </section>
 
-    <!-- Slide 39: Flow 1 - Engagement Setup -->
-    <section id="slide-39" class="slide slide-gray">
+    <!-- Slide 43: Flow 1 - Engagement Setup -->
+    <section id="slide-43" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">User Flow 1</span>
         <h2>Engagement Setup & Evidence Collection</h2>
@@ -2910,12 +3115,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 39</span>
+        <span>Slide 43</span>
       </div>
     </section>
 
-    <!-- Slide 40: Flow 2 - POV Generation -->
-    <section id="slide-40" class="slide slide-light">
+    <!-- Slide 44: Flow 2 - POV Generation -->
+    <section id="slide-44" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">User Flow 2</span>
         <h2>Process Point of View Generation</h2>
@@ -2934,12 +3139,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 40</span>
+        <span>Slide 44</span>
       </div>
     </section>
 
-    <!-- Slide 41: Flow 3 - TOM Alignment -->
-    <section id="slide-41" class="slide slide-gray">
+    <!-- Slide 45: Flow 3 - TOM Alignment -->
+    <section id="slide-45" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">User Flow 3</span>
         <h2>TOM Alignment & Gap Analysis</h2>
@@ -2961,12 +3166,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 41</span>
+        <span>Slide 45</span>
       </div>
     </section>
 
-    <!-- Slide 42: Evidence Parser Template -->
-    <section id="slide-42" class="slide slide-light">
+    <!-- Slide 46: Evidence Parser Template -->
+    <section id="slide-46" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Workflow</span>
         <h2>Evidence Parser Template</h2>
@@ -2981,12 +3186,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 42</span>
+        <span>Slide 46</span>
       </div>
     </section>
 
-    <!-- Slide 43: Security & Data Isolation -->
-    <section id="slide-43" class="slide slide-light">
+    <!-- Slide 47: Security & Data Isolation -->
+    <section id="slide-47" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Security & Compliance</span>
         <h2>Security & Data Isolation</h2>
@@ -3020,12 +3225,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 43</span>
+        <span>Slide 47</span>
       </div>
     </section>
 
-    <!-- Slide 44: Compliance -->
-    <section id="slide-44" class="slide slide-dark">
+    <!-- Slide 48: Compliance -->
+    <section id="slide-48" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-light">Compliance</span>
         <h2>Compliance Posture</h2>
@@ -3069,12 +3274,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 44</span>
+        <span>Slide 48</span>
       </div>
     </section>
 
-    <!-- Slide 45: Foundation MVP — Delivered -->
-    <section id="slide-45" class="slide slide-light">
+    <!-- Slide 49: Foundation MVP — Delivered -->
+    <section id="slide-49" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Roadmap</span>
         <h2>Foundation (MVP) &mdash; Delivered</h2>
@@ -3102,7 +3307,7 @@ confidence = (
         </div>
         <div class="card">
           <h3>Conformance &amp; Simulation</h3>
-          <p>Fitness/precision/F1 scoring, what-if analysis, capacity modeling, control removal impact</p>
+          <p>Fitness/precision/F1 scoring, what-if analysis, capacity modeling, control removal impact. Foundation for Operating Model Simulation.</p>
         </div>
         <div class="card">
           <h3>Platform Features</h3>
@@ -3132,12 +3337,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 45</span>
+        <span>Slide 49</span>
       </div>
     </section>
 
-    <!-- Slide 46: Phase 2 Intelligence + Data Platform -->
-    <section id="slide-46" class="slide slide-gray">
+    <!-- Slide 50: Phase 2 Intelligence + Data Platform -->
+    <section id="slide-50" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Roadmap: Phase 2</span>
         <h2>Intelligence + Data Platform</h2>
@@ -3181,12 +3386,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 46</span>
+        <span>Slide 50</span>
       </div>
     </section>
 
-    <!-- Slide 47: Phase 3 - Scale & Autonomy -->
-    <section id="slide-47" class="slide slide-dark">
+    <!-- Slide 51: Phase 3 - Scale & Autonomy -->
+    <section id="slide-51" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-light">Phase 3</span>
         <h2>Scale & Autonomy</h2>
@@ -3200,7 +3405,7 @@ confidence = (
             <li>Real-time process deviation detection</li>
             <li>Agentic capabilities (proactive evidence gap identification)</li>
             <li>Cross-engagement pattern library (with strict isolation)</li>
-            <li>Process simulation and what-if analysis</li>
+            <li>Evidence-Driven Operating Model Simulation: multi-option generation, outcome stability scoring, evidentiary confidence scoring, decision portfolio framework</li>
           </ul>
         </div>
         <div>
@@ -3217,12 +3422,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 47</span>
+        <span>Slide 51</span>
       </div>
     </section>
 
-    <!-- Slide 48: Success Metrics -->
-    <section id="slide-48" class="slide slide-light">
+    <!-- Slide 52: Success Metrics -->
+    <section id="slide-52" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Success Metrics</span>
         <h2>Measuring Success</h2>
@@ -3279,12 +3484,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 48</span>
+        <span>Slide 52</span>
       </div>
     </section>
 
-    <!-- Slide 49: Next Steps -->
-    <section id="slide-49" class="slide slide-gradient">
+    <!-- Slide 53: Next Steps -->
+    <section id="slide-53" class="slide slide-gradient">
       <div class="section-header">
         <span class="badge badge-light">Next Steps</span>
         <h2>Launch Plan</h2>
@@ -3318,12 +3523,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 49</span>
+        <span>Slide 53</span>
       </div>
     </section>
 
-    <!-- Slide 50: Final Hero -->
-    <section id="slide-50" class="slide slide-hero">
+    <!-- Slide 54: Final Hero -->
+    <section id="slide-54" class="slide slide-hero">
       <span class="tagline">Let insights reveal new opportunity</span>
       <h1>KMFlow Platform</h1>
       <p class="subtitle">Transforming Process Intelligence Through Evidence-First Analysis</p>
@@ -3334,7 +3539,7 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 50</span>
+        <span>Slide 54</span>
       </div>
     </section>
   </main>
