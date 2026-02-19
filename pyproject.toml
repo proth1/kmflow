@@ -141,5 +141,6 @@ module = [
     "sentence_transformers.*",
     "anthropic.*",
     "cv2.*",
+    "aiofiles.*",
 ]
 ignore_missing_imports = true

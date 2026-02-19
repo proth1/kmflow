@@ -69,10 +69,10 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -e ".[dev]" pip-audit
+        run: pip install ".[dev]" pip-audit
 
       - name: Python dependency audit
-        run: pip-audit --strict --desc --skip-editable
+        run: pip-audit --strict --desc
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
