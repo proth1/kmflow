@@ -59,6 +59,10 @@ class TestCosineSimilarity:
     def test_similar_text_embeddings(self) -> None:
         """Embeddings of similar text should have higher similarity than dissimilar."""
         service = EmbeddingService()
+        # Skip when sentence-transformers is not installed (random fallback is non-deterministic)
+        if service._rag_service._get_model() is None:
+            pytest.skip("sentence-transformers not installed; random embeddings are non-deterministic")
+
         e1 = service.generate_embedding("create purchase order")
         e2 = service.generate_embedding("create purchase requisition")
         e3 = service.generate_embedding("the weather is nice today")
