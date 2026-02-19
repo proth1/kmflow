@@ -7,11 +7,10 @@ running conformance checks, and retrieving results.
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncGenerator
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,6 +24,7 @@ from src.core.models import (
     ReferenceProcessModel,
     User,
 )
+from src.api.deps import get_session
 from src.core.permissions import require_permission
 
 logger = logging.getLogger(__name__)
@@ -111,15 +111,6 @@ class ConformanceResultList(BaseModel):
 
     items: list[ConformanceResultResponse]
     total: int
-
-
-# -- Dependency ---------------------------------------------------------------
-
-
-async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
-    session_factory = request.app.state.db_session_factory
-    async with session_factory() as session:
-        yield session
 
 
 # -- Routes -------------------------------------------------------------------

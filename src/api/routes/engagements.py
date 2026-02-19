@@ -8,15 +8,15 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import AsyncGenerator
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.deps import get_session
 from src.core.models import (
     AuditAction,
     AuditLog,
@@ -99,20 +99,6 @@ class DashboardResponse(BaseModel):
     evidence_count: int
     evidence_by_category: dict[str, int]
     coverage_percentage: float
-
-
-# -- Dependency ---------------------------------------------------------------
-
-
-async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
-    """Get database session from app state via FastAPI dependency injection.
-
-    Yields a session from the async session factory stored in app.state.
-    The session is scoped to the request lifecycle.
-    """
-    session_factory = request.app.state.db_session_factory
-    async with session_factory() as session:
-        yield session
 
 
 # -- Helpers ------------------------------------------------------------------
@@ -285,12 +271,13 @@ async def archive_engagement(
     """Soft-delete an engagement by setting its status to ARCHIVED."""
     engagement = await _get_engagement_or_404(session, engagement_id)
 
+    previous_status = engagement.status
     engagement.status = EngagementStatus.ARCHIVED
     await _log_audit(
         session,
         engagement.id,
         AuditAction.ENGAGEMENT_ARCHIVED,
-        details=json.dumps({"previous_status": str(engagement.status)}),
+        details=json.dumps({"previous_status": str(previous_status)}),
     )
     await session.commit()
     await session.refresh(engagement)

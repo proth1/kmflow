@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import AsyncGenerator
 from typing import Any
 from uuid import UUID
 
@@ -29,6 +28,7 @@ from src.core.models import (
     TOMGapType,
     User,
 )
+from src.api.deps import get_session
 from src.core.permissions import require_permission
 
 logger = logging.getLogger(__name__)
@@ -165,16 +165,6 @@ class BenchmarkResponse(BaseModel):
     p90: float
     source: str | None
     created_at: Any
-
-
-# -- Dependency ---------------------------------------------------------------
-
-
-async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
-    """Get database session from app state."""
-    session_factory = request.app.state.db_session_factory
-    async with session_factory() as session:
-        yield session
 
 
 # -- Helpers ------------------------------------------------------------------

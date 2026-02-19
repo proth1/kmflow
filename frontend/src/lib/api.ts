@@ -14,6 +14,26 @@ const API_BASE_URL =
     ? process.env.API_URL || "http://localhost:8000"
     : process.env.NEXT_PUBLIC_API_URL || "http://localhost:8002";
 
+/**
+ * Get the current auth token from localStorage (browser only).
+ */
+function getAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("kmflow_token");
+}
+
+/**
+ * Build common headers including Authorization if a token is available.
+ */
+function authHeaders(extra?: Record<string, string>): Record<string, string> {
+  const headers: Record<string, string> = { ...extra };
+  const token = getAuthToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 export interface ServiceHealth {
   postgres: "up" | "down";
   neo4j: "up" | "down";
@@ -140,6 +160,7 @@ export interface GapData {
  */
 export async function fetchHealth(): Promise<HealthResponse> {
   const response = await fetch(`${API_BASE_URL}/health`, {
+    headers: authHeaders(),
     cache: "no-store",
   });
 
@@ -155,6 +176,7 @@ export async function fetchHealth(): Promise<HealthResponse> {
  */
 export async function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
+    headers: authHeaders(),
     signal,
   });
 
@@ -170,12 +192,9 @@ export async function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> 
  * Generic POST request to the KMFlow API.
  */
 export async function apiPost<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
-  // TODO: Add CSRF token when auth is implemented
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
     signal,
   });
@@ -831,7 +850,7 @@ export async function uploadPortalEvidence(
   formData.append("file", file);
   const res = await fetch(
     `${API_BASE_URL}/api/v1/portal/${engagementId}/upload`,
-    { method: "POST", body: formData },
+    { method: "POST", headers: authHeaders(), body: formData },
   );
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: "Upload failed" }));
@@ -1285,10 +1304,9 @@ export async function fetchLineageRecord(
 // -- Generic API helpers for PUT/PATCH/DELETE ---------------------------------
 
 export async function apiPut<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
-  // TODO: Add CSRF token when auth is implemented
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
     signal,
   });
@@ -1302,6 +1320,7 @@ export async function apiPut<T>(path: string, body: unknown, signal?: AbortSigna
 export async function apiDelete(path: string, signal?: AbortSignal): Promise<void> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "DELETE",
+    headers: authHeaders(),
     signal,
   });
   if (!response.ok) {

@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.deps import get_session
 from src.core.models import CopilotMessage, User
 from src.core.permissions import require_permission
 from src.core.rate_limiter import copilot_rate_limit
@@ -72,15 +73,6 @@ class ChatHistoryResponse(BaseModel):
     engagement_id: str
     messages: list[ChatHistoryEntry]
     total: int
-
-
-# -- Dependency ---------------------------------------------------------------
-
-
-async def get_session(request: Request):
-    session_factory = request.app.state.db_session_factory
-    async with session_factory() as session:
-        yield session
 
 
 # -- Routes -------------------------------------------------------------------

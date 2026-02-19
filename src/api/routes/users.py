@@ -13,15 +13,15 @@ Provides:
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncGenerator
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.deps import get_session
 from src.core.auth import get_current_user, hash_password
 from src.core.models import Engagement, EngagementMember, User, UserRole
 from src.core.permissions import has_permission, has_role_level
@@ -88,18 +88,6 @@ class MemberResponse(BaseModel):
     engagement_id: UUID
     user_id: UUID
     role_in_engagement: str
-
-
-# ---------------------------------------------------------------------------
-# Dependency
-# ---------------------------------------------------------------------------
-
-
-async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
-    """Get database session from app state."""
-    session_factory = request.app.state.db_session_factory
-    async with session_factory() as session:
-        yield session
 
 
 # ---------------------------------------------------------------------------

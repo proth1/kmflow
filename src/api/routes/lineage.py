@@ -8,14 +8,14 @@ answer: "Where did this come from? How was it processed?"
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncGenerator
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.deps import get_session
 from src.core.models import EvidenceItem, User
 from src.core.permissions import require_permission
 from src.datalake.lineage import get_lineage_by_id, get_lineage_chain
@@ -68,16 +68,6 @@ class LineageChainResponse(BaseModel):
     source_system: str | None
     total_versions: int
     lineage: list[LineageResponse]
-
-
-# -- Dependency ---------------------------------------------------------------
-
-
-async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
-    """Get database session from app state."""
-    session_factory = request.app.state.db_session_factory
-    async with session_factory() as session:
-        yield session
 
 
 # -- Routes -------------------------------------------------------------------

@@ -30,7 +30,7 @@ describe("API Client", () => {
       expect(result).toEqual(mockHealth);
       expect(mockFetch).toHaveBeenCalledWith(
         "http://localhost:8002/health",
-        { cache: "no-store" }
+        expect.objectContaining({ cache: "no-store" })
       );
     });
 
@@ -58,7 +58,7 @@ describe("API Client", () => {
       // GET requests should NOT include Content-Type header (CQ-3 fix)
       expect(mockFetch).toHaveBeenCalledWith(
         "http://localhost:8002/api/v1/engagements",
-        { signal: undefined }
+        expect.objectContaining({ signal: undefined })
       );
     });
 

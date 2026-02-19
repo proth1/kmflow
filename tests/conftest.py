@@ -141,15 +141,20 @@ async def test_app(
         SecurityHeadersMiddleware,
     )
     from src.api.routes import (
+        admin,
         auth,
+        camunda,
         conformance,
         copilot,
         dashboard,
         engagements,
         evidence,
+        governance,
         graph,
         health,
         integrations,
+        lineage,
+        metrics,
         monitoring,
         patterns,
         portal,
@@ -161,6 +166,9 @@ async def test_app(
         tom,
         users,
         websocket,
+    )
+    from src.api.routes import (
+        annotations as annotations_routes,
     )
     from src.mcp.server import router as mcp_router
 
@@ -206,10 +214,20 @@ async def test_app(
     app.include_router(simulations.router)
     app.include_router(portal.router)
     app.include_router(mcp_router)
+    app.include_router(camunda.router)
 
     # Phase 4 routes
     app.include_router(copilot.router)
     app.include_router(conformance.router)
+
+    # Phase 8 routes
+    app.include_router(metrics.router)
+    app.include_router(annotations_routes.router)
+
+    # Data layer routes
+    app.include_router(lineage.router)
+    app.include_router(governance.router)
+    app.include_router(admin.router)
 
     # Override get_settings so auth uses the same JWT secret as tests
     test_settings_instance = Settings(

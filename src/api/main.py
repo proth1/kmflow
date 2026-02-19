@@ -17,8 +17,9 @@ import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from src.api.middleware.audit import AuditLoggingMiddleware
 from src.api.middleware.security import (
@@ -26,6 +27,8 @@ from src.api.middleware.security import (
     RequestIDMiddleware,
     SecurityHeadersMiddleware,
 )
+
+API_VERSION = "0.8.0"
 from src.api.routes import (
     admin,
     auth,
@@ -149,7 +152,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.app_name,
         description="AI-powered Process Intelligence platform for consulting engagements",
-        version="0.8.0",
+        version=API_VERSION,
         docs_url="/docs",
         redoc_url="/redoc",
         lifespan=lifespan,
@@ -213,6 +216,25 @@ def create_app() -> FastAPI:
 
     # -- Phase 5 Routes ---
     app.include_router(admin.router)
+
+    # -- Error Handlers ---
+    @app.exception_handler(ValueError)
+    async def value_error_handler(request: Request, exc: ValueError) -> JSONResponse:
+        request_id = getattr(request.state, "request_id", "unknown")
+        logger.warning("Validation error [%s]: %s", request_id, exc)
+        return JSONResponse(
+            status_code=422,
+            content={"detail": str(exc), "request_id": request_id},
+        )
+
+    @app.exception_handler(Exception)
+    async def generic_error_handler(request: Request, exc: Exception) -> JSONResponse:
+        request_id = getattr(request.state, "request_id", "unknown")
+        logger.exception("Unhandled error [%s]: %s", request_id, exc)
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error", "request_id": request_id},
+        )
 
     return app
 

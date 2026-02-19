@@ -7,16 +7,16 @@ with DB persistence, field mapping, and incremental sync support.
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.deps import get_session
 from src.core.models import IntegrationConnection, User
 from src.core.permissions import require_permission
 from src.integrations.base import ConnectionConfig, ConnectorRegistry
@@ -93,16 +93,6 @@ class FieldMappingResponse(BaseModel):
     default_mapping: dict[str, str]
     current_mapping: dict[str, str] | None = None
     available_fields: list[str]
-
-
-# -- Dependency ---------------------------------------------------------------
-
-
-async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
-    """Get database session from app state."""
-    session_factory = request.app.state.db_session_factory
-    async with session_factory() as session:
-        yield session
 
 
 def _conn_to_response(conn: IntegrationConnection) -> dict[str, Any]:

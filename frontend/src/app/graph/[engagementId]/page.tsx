@@ -1,9 +1,14 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
-import GraphExplorer from "@/components/GraphExplorer";
+
+const GraphExplorer = dynamic(() => import("@/components/GraphExplorer"), {
+  ssr: false,
+  loading: () => <p className="text-sm text-gray-500">Loading graph component...</p>,
+});
 
 interface CytoscapeData {
   nodes: Array<{ data: Record<string, unknown> }>;

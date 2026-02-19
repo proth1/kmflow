@@ -8,15 +8,15 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import AsyncGenerator
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.deps import get_session
 from src.core.models import PatternAccessRule, PatternCategory, PatternLibraryEntry, User
 from src.core.permissions import require_permission
 
@@ -96,15 +96,6 @@ class PatternSearchRequest(BaseModel):
 
 class PatternApplyRequest(BaseModel):
     engagement_id: UUID
-
-
-# -- Dependency ---------------------------------------------------------------
-
-
-async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
-    session_factory = request.app.state.db_session_factory
-    async with session_factory() as session:
-        yield session
 
 
 def _pattern_to_response(p: PatternLibraryEntry) -> dict[str, Any]:

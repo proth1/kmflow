@@ -6,6 +6,7 @@ All settings are validated at startup and available as typed attributes.
 
 from __future__ import annotations
 
+import functools
 import json
 from typing import Any
 
@@ -58,6 +59,7 @@ class Settings(BaseSettings):
 
     # ── Security / Auth ───────────────────────────────────────────
     jwt_secret_key: str = "dev-secret-key-change-in-production"
+    jwt_secret_keys: str = ""  # Comma-separated list for key rotation
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
     jwt_refresh_token_expire_minutes: int = 10080  # 7 days
@@ -122,6 +124,20 @@ class Settings(BaseSettings):
     # ── Pattern Library (Phase 3) ────────────────────────────────
     pattern_anonymization_enabled: bool = True
 
+    @property
+    def jwt_verification_keys(self) -> list[str]:
+        """Return list of keys to try for JWT verification (supports rotation).
+
+        If jwt_secret_keys is set (comma-separated), returns all keys.
+        Otherwise returns just the single jwt_secret_key.
+        The first key is always the signing key.
+        """
+        if self.jwt_secret_keys:
+            keys = [k.strip() for k in self.jwt_secret_keys.split(",") if k.strip()]
+            if keys:
+                return keys
+        return [self.jwt_secret_key]
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_cors_origins(cls, v: Any) -> list[str]:
@@ -150,6 +166,7 @@ class Settings(BaseSettings):
         return self
 
 
+@functools.lru_cache
 def get_settings() -> Settings:
-    """Create and return application settings instance."""
+    """Return cached application settings instance."""
     return Settings()

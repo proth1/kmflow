@@ -10,7 +10,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi import HTTPException
-from jose import jwt
+import jwt
 
 from src.core.auth import (
     create_access_token,
