@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
 import {
   fetchMonitoringStats,
   fetchDeviations,
@@ -9,136 +9,148 @@ import {
   type DeviationData,
   type AlertData,
 } from "@/lib/api";
+import { isValidEngagementId } from "@/lib/validation";
+import { PageLayout } from "@/components/layout/PageLayout";
+import { useEngagementData } from "@/hooks/useEngagementData";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Activity } from "lucide-react";
 
-function StatCard({ title, value, highlight }: { title: string; value: string | number; highlight?: boolean }) {
-  return (
-    <div className="rounded-lg bg-white p-4 shadow">
-      <p className="text-sm font-medium text-gray-500">{title}</p>
-      <p className={`mt-1 text-2xl font-bold ${highlight ? "text-red-600" : "text-gray-900"}`}>
-        {value}
-      </p>
-    </div>
-  );
+interface MonitoringData {
+  stats: MonitoringStats;
+  deviations: DeviationData[];
+  alerts: AlertData[];
 }
 
 export default function MonitoringDashboard() {
   const [engagementId, setEngagementId] = useState("");
-  const [stats, setStats] = useState<MonitoringStats | null>(null);
-  const [deviations, setDeviations] = useState<DeviationData[]>([]);
-  const [alerts, setAlerts] = useState<AlertData[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!engagementId || engagementId.length < 8) return;
+  const fetchMonitoringData = useCallback(
+    async (id: string) => {
+      const [statsResult, devResult, alertResult] = await Promise.all([
+        fetchMonitoringStats(id),
+        fetchDeviations(id),
+        fetchAlerts(id),
+      ]);
+      return {
+        stats: statsResult,
+        deviations: devResult.items.slice(0, 10),
+        alerts: alertResult.items.slice(0, 10),
+      } as MonitoringData;
+    },
+    [],
+  );
 
-    let cancelled = false;
-    async function load() {
-      try {
-        setLoading(true);
-        setError(null);
-        const [statsResult, devResult, alertResult] = await Promise.all([
-          fetchMonitoringStats(engagementId),
-          fetchDeviations(engagementId),
-          fetchAlerts(engagementId),
-        ]);
-        if (!cancelled) {
-          setStats(statsResult);
-          setDeviations(devResult.items.slice(0, 10));
-          setAlerts(alertResult.items.slice(0, 10));
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load monitoring data");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    load();
-    return () => { cancelled = true; };
-  }, [engagementId]);
+  const { data, loading, error } = useEngagementData<MonitoringData>(
+    engagementId,
+    fetchMonitoringData,
+  );
+
+  const stats = data?.stats ?? null;
+  const deviations = data?.deviations ?? [];
+  const alerts = data?.alerts ?? [];
+
+  const idError =
+    engagementId.length > 0 && !isValidEngagementId(engagementId)
+      ? "Invalid engagement ID format"
+      : null;
 
   return (
-    <main className="min-h-screen bg-gray-50 p-8">
-      <div className="mx-auto max-w-7xl">
-        <h1 className="mb-6 text-2xl font-bold text-gray-900">
-          Monitoring Dashboard
-        </h1>
-
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700">
-            Engagement ID
-          </label>
-          <input
-            type="text"
-            value={engagementId}
-            onChange={(e) => setEngagementId(e.target.value)}
-            placeholder="Enter engagement UUID"
-            className="mt-1 block w-full max-w-md rounded-md border border-gray-300 p-2 text-sm"
-          />
+    <PageLayout
+      title="Monitoring Dashboard"
+      description="Real-time monitoring of process deviations and alerts"
+      icon={<Activity className="h-8 w-8 text-muted-foreground" />}
+      engagementId={engagementId}
+      onEngagementIdChange={setEngagementId}
+      engagementIdError={idError}
+      error={error}
+      loading={loading}
+      loadingText="Loading monitoring data..."
+    >
+      {stats && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Active Jobs</CardDescription>
+              <CardTitle className="text-3xl">{stats.active_jobs}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Total Deviations</CardDescription>
+              <CardTitle className="text-3xl">{stats.total_deviations}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Open Alerts</CardDescription>
+              <CardTitle className="text-3xl">{stats.open_alerts}</CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Critical Alerts</CardDescription>
+              <CardTitle className={`text-3xl ${stats.critical_alerts > 0 ? "text-red-600" : ""}`}>
+                {stats.critical_alerts}
+              </CardTitle>
+            </CardHeader>
+          </Card>
         </div>
+      )}
 
-        {error && (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
-            <p className="text-sm text-red-600">{error}</p>
-          </div>
-        )}
-
-        {loading && (
-          <p className="mb-6 text-sm text-gray-500">Loading monitoring data...</p>
-        )}
-
-        {stats && (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <StatCard title="Active Jobs" value={stats.active_jobs} />
-            <StatCard title="Total Deviations" value={stats.total_deviations} />
-            <StatCard title="Open Alerts" value={stats.open_alerts} />
-            <StatCard title="Critical Alerts" value={stats.critical_alerts} highlight={stats.critical_alerts > 0} />
-          </div>
-        )}
-
-        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <section className="rounded-lg bg-white p-6 shadow">
-            <h2 className="mb-4 text-lg font-semibold">Recent Deviations</h2>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Recent Deviations</CardTitle>
+          </CardHeader>
+          <CardContent>
             {deviations.length === 0 ? (
-              <p className="text-sm text-gray-500">
-                {engagementId ? "No deviations detected" : "Connect to an engagement to view deviations"}
+              <p className="text-sm text-muted-foreground py-4 text-center">
+                {engagementId ? "No deviations detected" : "Enter an engagement ID to view deviations"}
               </p>
             ) : (
               <ul className="space-y-3">
                 {deviations.map((d) => (
-                  <li key={d.id} className="border-b border-gray-100 pb-2">
+                  <li key={d.id} className="border-b pb-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-800">
+                      <span className="text-sm font-medium">
                         {d.category}
                       </span>
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-muted-foreground">
                         {new Date(d.detected_at).toLocaleDateString()}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500">{d.description}</p>
+                    <p className="text-xs text-muted-foreground">{d.description}</p>
                     {d.affected_element && (
-                      <p className="text-xs text-gray-400">Element: {d.affected_element}</p>
+                      <p className="text-xs text-muted-foreground">Element: {d.affected_element}</p>
                     )}
                   </li>
                 ))}
               </ul>
             )}
-          </section>
+          </CardContent>
+        </Card>
 
-          <section className="rounded-lg bg-white p-6 shadow">
-            <h2 className="mb-4 text-lg font-semibold">Alert Feed</h2>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Alert Feed</CardTitle>
+          </CardHeader>
+          <CardContent>
             {alerts.length === 0 ? (
-              <p className="text-sm text-gray-500">
-                {engagementId ? "No alerts" : "Connect to an engagement to view alerts"}
+              <p className="text-sm text-muted-foreground py-4 text-center">
+                {engagementId ? "No alerts" : "Enter an engagement ID to view alerts"}
               </p>
             ) : (
               <ul className="space-y-3">
                 {alerts.map((a) => (
-                  <li key={a.id} className="border-b border-gray-100 pb-2">
+                  <li key={a.id} className="border-b pb-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-800">{a.title}</span>
+                      <span className="text-sm font-medium">{a.title}</span>
                       <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                         a.severity === "critical" ? "bg-red-100 text-red-700" :
                         a.severity === "high" ? "bg-orange-100 text-orange-700" :
@@ -148,17 +160,17 @@ export default function MonitoringDashboard() {
                         {a.severity}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500">{a.description}</p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-muted-foreground">{a.description}</p>
+                    <p className="text-xs text-muted-foreground">
                       Status: {a.status} | {new Date(a.created_at).toLocaleDateString()}
                     </p>
                   </li>
                 ))}
               </ul>
             )}
-          </section>
-        </div>
+          </CardContent>
+        </Card>
       </div>
-    </main>
+    </PageLayout>
   );
 }

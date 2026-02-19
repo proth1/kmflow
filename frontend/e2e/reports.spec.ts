@@ -11,7 +11,7 @@ test.describe("Reports Page", () => {
   test("reports page has engagement ID input", async ({ page }) => {
     await page.goto("/reports");
     await expect(
-      page.getByPlaceholder("Enter engagement UUID")
+      page.getByPlaceholder(/550e8400/)
     ).toBeVisible();
   });
 
@@ -25,9 +25,6 @@ test.describe("Reports Page", () => {
     ).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Governance Overlay" })
-    ).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Executive Summary" })
     ).toBeVisible();
   });
 

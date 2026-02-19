@@ -7,6 +7,7 @@ import {
   fetchGovernanceReport,
   type ReportResponse,
 } from "@/lib/api";
+import { isValidEngagementId } from "@/lib/validation";
 import {
   Card,
   CardContent,
@@ -24,7 +25,7 @@ const API_BASE =
     ? process.env.API_URL || "http://localhost:8000"
     : process.env.NEXT_PUBLIC_API_URL || "http://localhost:8002";
 
-type ReportType = "summary" | "gap-analysis" | "governance" | "executive-summary";
+type ReportType = "summary" | "gap-analysis" | "governance";
 
 const reportOptions: { type: ReportType; label: string; description: string }[] = [
   {
@@ -42,11 +43,6 @@ const reportOptions: { type: ReportType; label: string; description: string }[] 
     label: "Governance Overlay",
     description: "Regulatory compliance and policy coverage",
   },
-  {
-    type: "executive-summary",
-    label: "Executive Summary",
-    description: "Combined report with all three sections",
-  },
 ];
 
 export default function ReportsPage() {
@@ -56,8 +52,16 @@ export default function ReportsPage() {
   const [activeType, setActiveType] = useState<ReportType | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const idError =
+    engagementId.length > 0 && !isValidEngagementId(engagementId)
+      ? "Invalid engagement ID format"
+      : null;
+
+  const canGenerate =
+    engagementId.length >= 8 && !idError && loading === null;
+
   async function generateReport(type: ReportType) {
-    if (!engagementId || engagementId.length < 8) return;
+    if (!canGenerate) return;
 
     setLoading(type);
     setError(null);
@@ -75,9 +79,6 @@ export default function ReportsPage() {
         case "governance":
           result = await fetchGovernanceReport(engagementId);
           break;
-        case "executive-summary":
-          result = await fetchEngagementReport(engagementId);
-          break;
         default:
           return;
       }
@@ -93,9 +94,9 @@ export default function ReportsPage() {
   }
 
   function downloadPdf(type: ReportType) {
-    if (!engagementId) return;
+    if (!engagementId || !isValidEngagementId(engagementId)) return;
     window.open(
-      `${API_BASE}/api/v1/reports/${engagementId}/${type}?format=pdf`,
+      `${API_BASE}/api/v1/reports/${encodeURIComponent(engagementId)}/${encodeURIComponent(type)}?format=pdf`,
       "_blank",
     );
   }
@@ -124,9 +125,16 @@ export default function ReportsPage() {
             type="text"
             value={engagementId}
             onChange={(e) => setEngagementId(e.target.value)}
-            placeholder="Enter engagement UUID"
+            placeholder="e.g., 550e8400-e29b-41d4-a716-446655440000"
             className="max-w-md"
+            aria-describedby="report-eng-hint"
           />
+          <p id="report-eng-hint" className="text-xs text-muted-foreground mt-1">
+            UUID format required (e.g., 550e8400-e29b-41d4-a716-446655440000)
+          </p>
+          {idError && (
+            <p className="text-xs text-destructive mt-1">{idError}</p>
+          )}
         </CardContent>
       </Card>
 
@@ -141,7 +149,7 @@ export default function ReportsPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {reportOptions.map((opt) => (
           <Card key={opt.type}>
             <CardHeader>
@@ -152,14 +160,10 @@ export default function ReportsPage() {
               <Button
                 size="sm"
                 onClick={() => generateReport(opt.type)}
-                disabled={
-                  !engagementId ||
-                  engagementId.length < 8 ||
-                  loading !== null
-                }
+                disabled={!canGenerate}
               >
                 {loading === opt.type ? (
-                  <RefreshCw className="h-3 w-3 mr-1.5 animate-spin" />
+                  <RefreshCw className="h-3 w-3 mr-1.5 animate-spin" aria-label="Loading" />
                 ) : (
                   <FileText className="h-3 w-3 mr-1.5" />
                 )}
@@ -169,7 +173,7 @@ export default function ReportsPage() {
                 size="sm"
                 variant="outline"
                 onClick={() => downloadPdf(opt.type)}
-                disabled={!engagementId || engagementId.length < 8}
+                disabled={!canGenerate}
               >
                 <Download className="h-3 w-3 mr-1.5" />
                 PDF

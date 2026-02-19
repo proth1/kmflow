@@ -258,7 +258,7 @@ export default function IntegrationsPage() {
                             disabled={actionLoading === conn.id}
                           >
                             {actionLoading === conn.id ? (
-                              <RefreshCw className="h-3 w-3 animate-spin" />
+                              <RefreshCw className="h-3 w-3 animate-spin" aria-label="Loading" />
                             ) : (
                               <CheckCircle2 className="h-3 w-3 mr-1" />
                             )}

@@ -55,11 +55,10 @@ describe("API Client", () => {
 
       const result = await apiGet("/api/v1/engagements");
       expect(result).toEqual(mockData);
+      // GET requests should NOT include Content-Type header (CQ-3 fix)
       expect(mockFetch).toHaveBeenCalledWith(
         "http://localhost:8002/api/v1/engagements",
-        expect.objectContaining({
-          headers: { "Content-Type": "application/json" },
-        })
+        { signal: undefined }
       );
     });
 

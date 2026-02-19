@@ -11,7 +11,7 @@ test.describe("Monitoring Page", () => {
   test("monitoring page has engagement ID input", async ({ page }) => {
     await page.goto("/monitoring");
     await expect(
-      page.getByPlaceholder("Enter engagement UUID")
+      page.getByPlaceholder(/550e8400/)
     ).toBeVisible();
   });
 

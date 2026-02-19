@@ -34,6 +34,7 @@ export default function AdminPage() {
     useState<RotationResult | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showRotationConfirm, setShowRotationConfirm] = useState(false);
 
   async function runRetentionPreview() {
     setLoading("retention");
@@ -54,6 +55,7 @@ export default function AdminPage() {
   }
 
   async function runKeyRotation() {
+    setShowRotationConfirm(false);
     setLoading("rotation");
     setError(null);
     try {
@@ -91,7 +93,7 @@ export default function AdminPage() {
               <p className="font-medium text-yellow-800">Admin Access Required</p>
               <p className="text-sm text-yellow-700 mt-1">
                 Operations on this page require the <code className="bg-yellow-100 px-1 py-0.5 rounded text-xs">platform_admin</code> role.
-                All actions are audit-logged.
+                All actions are logged when the backend audit service is configured.
               </p>
             </div>
           </div>
@@ -129,7 +131,7 @@ export default function AdminPage() {
               variant="outline"
             >
               {loading === "retention" ? (
-                <RefreshCw className="h-3 w-3 mr-1.5 animate-spin" />
+                <RefreshCw className="h-3 w-3 mr-1.5 animate-spin" aria-label="Loading" />
               ) : (
                 <Trash2 className="h-3 w-3 mr-1.5" />
               )}
@@ -177,18 +179,48 @@ export default function AdminPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button
-              onClick={runKeyRotation}
-              disabled={loading === "rotation"}
-              variant="outline"
-            >
-              {loading === "rotation" ? (
-                <RefreshCw className="h-3 w-3 mr-1.5 animate-spin" />
-              ) : (
-                <Key className="h-3 w-3 mr-1.5" />
-              )}
-              Rotate Keys
-            </Button>
+            {!showRotationConfirm ? (
+              <Button
+                onClick={() => setShowRotationConfirm(true)}
+                disabled={loading === "rotation"}
+                variant="outline"
+              >
+                {loading === "rotation" ? (
+                  <RefreshCw className="h-3 w-3 mr-1.5 animate-spin" aria-label="Loading" />
+                ) : (
+                  <Key className="h-3 w-3 mr-1.5" />
+                )}
+                Rotate Keys
+              </Button>
+            ) : (
+              <div className="border border-destructive/50 bg-destructive/5 rounded-lg p-4 space-y-3">
+                <p className="text-sm font-medium text-destructive">
+                  Are you sure you want to rotate the encryption key?
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  This action cannot be undone and will require re-encryption
+                  of existing data. Ensure ENCRYPTION_KEY_PREVIOUS is set to
+                  the current key before proceeding.
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={runKeyRotation}
+                  >
+                    <Key className="h-3 w-3 mr-1.5" />
+                    Rotate Key
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowRotationConfirm(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {rotationResult && (
               <div className="bg-muted rounded-lg p-4 space-y-2">
