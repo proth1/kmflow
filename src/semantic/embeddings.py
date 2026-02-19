@@ -66,6 +66,32 @@ class EmbeddingService:
         """
         return self._rag_service.generate_embeddings(texts)
 
+    async def generate_embedding_async(self, text_input: str) -> list[float]:
+        """Generate an embedding vector for a text string (async).
+
+        Delegates to the unified RAG embedding service.
+
+        Args:
+            text_input: The text to embed.
+
+        Returns:
+            List of floats with length equal to self.dimension.
+        """
+        return await self._rag_service.embed_text_async(text_input)
+
+    async def generate_embeddings_batch_async(self, texts: list[str]) -> list[list[float]]:
+        """Generate embeddings for a batch of texts (async).
+
+        Delegates to the unified RAG embedding service.
+
+        Args:
+            texts: List of text strings to embed.
+
+        Returns:
+            List of embedding vectors.
+        """
+        return await self._rag_service.generate_embeddings_async(texts)
+
     async def store_embedding(
         self,
         session: AsyncSession,
@@ -168,7 +194,7 @@ class EmbeddingService:
         Returns:
             List of similarity search results.
         """
-        query_embedding = self.generate_embedding(query_text)
+        query_embedding = await self.generate_embedding_async(query_text)
         return await self.search_similar(
             session,
             query_embedding,

@@ -496,7 +496,7 @@ async def generate_fragment_embeddings(
         return 0
 
     # Generate embeddings in batches
-    embeddings = rag_service.generate_embeddings(texts, batch_size=32)
+    embeddings = await rag_service.generate_embeddings_async(texts, batch_size=32)
 
     # Store embeddings
     stored = 0

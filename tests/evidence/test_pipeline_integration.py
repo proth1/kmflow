@@ -123,7 +123,7 @@ class TestGenerateFragmentEmbeddings:
             patch("src.semantic.embeddings.EmbeddingService") as mock_semantic,
         ):
             mock_rag_instance = MagicMock()
-            mock_rag_instance.generate_embeddings.return_value = [[0.1] * 768]
+            mock_rag_instance.generate_embeddings_async = AsyncMock(return_value=[[0.1] * 768])
             mock_rag.return_value = mock_rag_instance
 
             mock_sem_instance = MagicMock()

@@ -95,3 +95,24 @@ class EmbeddingService:
             all_embeddings.extend(batch_embeddings)
 
         return all_embeddings
+
+    async def generate_embeddings_async(self, texts: list[str], batch_size: int = 32) -> list[list[float]]:
+        """Generate embeddings for a list of texts with batching (async).
+
+        Args:
+            texts: List of text strings to embed.
+            batch_size: Number of texts to process per batch.
+
+        Returns:
+            List of embedding vectors, one per input text.
+        """
+        if not texts:
+            return []
+
+        all_embeddings: list[list[float]] = []
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i : i + batch_size]
+            batch_embeddings = await self.embed_texts_async(batch)
+            all_embeddings.extend(batch_embeddings)
+
+        return all_embeddings

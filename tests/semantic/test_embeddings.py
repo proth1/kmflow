@@ -113,6 +113,27 @@ class TestEmbeddingService:
             assert len(emb) == EMBEDDING_DIMENSION
 
 
+class TestEmbeddingServiceAsync:
+    """Test the async methods on the semantic EmbeddingService."""
+
+    @pytest.mark.asyncio
+    async def test_generate_embedding_async_delegates(self) -> None:
+        """Async single embedding should delegate to RAG async method."""
+        service = EmbeddingService()
+        embedding = await service.generate_embedding_async("test text")
+        assert len(embedding) == EMBEDDING_DIMENSION
+        assert all(isinstance(v, float) for v in embedding)
+
+    @pytest.mark.asyncio
+    async def test_generate_embeddings_batch_async_delegates(self) -> None:
+        """Async batch embedding should delegate to RAG async method."""
+        service = EmbeddingService()
+        embeddings = await service.generate_embeddings_batch_async(["hello", "world"])
+        assert len(embeddings) == 2
+        for emb in embeddings:
+            assert len(emb) == EMBEDDING_DIMENSION
+
+
 class TestEmbeddingServiceStore:
     """Test embedding storage operations."""
 
