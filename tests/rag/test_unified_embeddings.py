@@ -65,6 +65,13 @@ class TestEmbeddingService:
             assert len(emb) == EMBEDDING_DIMENSION
 
     @pytest.mark.asyncio
+    async def test_generate_embeddings_async_empty(self) -> None:
+        """Async empty input should return empty list."""
+        service = EmbeddingService()
+        embeddings = await service.generate_embeddings_async([])
+        assert embeddings == []
+
+    @pytest.mark.asyncio
     async def test_generate_embeddings_async_batching(self) -> None:
         """generate_embeddings_async should handle batching correctly."""
         service = EmbeddingService()

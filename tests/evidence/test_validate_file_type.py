@@ -112,3 +112,9 @@ class TestValidateFileType:
         with patch.dict("sys.modules", {"magic": None}):
             result = validate_file_type(b"content", "file.pdf", mime_type="application/pdf")
         assert result == "application/pdf"
+
+    def test_magic_unavailable_none_mime_falls_back_to_octet_stream(self) -> None:
+        """When python-magic is unavailable and mime_type is None, falls back to octet-stream."""
+        with patch.dict("sys.modules", {"magic": None}):
+            result = validate_file_type(b"binary data", "file.bin", mime_type=None)
+        assert result == "application/octet-stream"

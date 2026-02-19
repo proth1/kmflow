@@ -113,7 +113,7 @@ class TestJwtVerificationKeys:
         )
         assert settings.jwt_verification_keys == ["key1", "key2", "key3"]
 
-    def test_single_key_fallback(self) -> None:
+    def test_empty_keys_falls_back_to_single_key(self) -> None:
         """When jwt_secret_keys is empty, falls back to jwt_secret_key."""
         settings = Settings(
             jwt_secret_key="my-single-key",
@@ -122,14 +122,12 @@ class TestJwtVerificationKeys:
         )
         assert settings.jwt_verification_keys == ["my-single-key"]
 
-    def test_empty_string_returns_fallback(self) -> None:
-        """Empty jwt_secret_keys returns single jwt_secret_key."""
+    def test_unset_keys_falls_back_to_default(self) -> None:
+        """When jwt_secret_keys is not provided at all, uses jwt_secret_key default."""
         settings = Settings(
-            jwt_secret_key="fallback-key",
-            jwt_secret_keys="",
             _env_file=None,  # type: ignore[call-arg]
         )
-        assert settings.jwt_verification_keys == ["fallback-key"]
+        assert settings.jwt_verification_keys == [settings.jwt_secret_key]
 
     def test_only_whitespace_keys_filtered(self) -> None:
         """Comma-separated empty/whitespace values should be filtered out."""

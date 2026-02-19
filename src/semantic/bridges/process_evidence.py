@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from typing import Protocol, runtime_checkable
 
 import numpy as np
 
@@ -16,6 +17,13 @@ from src.semantic.graph import KnowledgeGraphService
 logger = logging.getLogger(__name__)
 
 _EMBEDDING_THRESHOLD = 0.6
+
+
+@runtime_checkable
+class EmbeddingServiceProtocol(Protocol):
+    """Minimal interface for embedding services used by semantic bridges."""
+
+    async def embed_texts_async(self, texts: list[str]) -> list[list[float]]: ...
 
 
 @dataclass
@@ -39,7 +47,7 @@ class ProcessEvidenceBridge:
     def __init__(
         self,
         graph_service: KnowledgeGraphService,
-        embedding_service: object | None = None,
+        embedding_service: EmbeddingServiceProtocol | None = None,
     ) -> None:
         self._graph = graph_service
         self._embedding_service = embedding_service
@@ -71,14 +79,14 @@ class ProcessEvidenceBridge:
         proc_names = [n.properties.get("name", "") for n in all_process_nodes]
         ev_names = [n.properties.get("name", "") for n in evidence_nodes]
 
-        use_embeddings = self._embedding_service is not None
         proc_embeddings: list[list[float]] | None = None
         ev_embeddings: list[list[float]] | None = None
+        use_embeddings = self._embedding_service is not None
 
-        if use_embeddings:
+        if self._embedding_service is not None:
             try:
-                proc_embeddings = await self._embedding_service.embed_texts_async(proc_names)  # type: ignore[union-attr]
-                ev_embeddings = await self._embedding_service.embed_texts_async(ev_names)  # type: ignore[union-attr]
+                proc_embeddings = await self._embedding_service.embed_texts_async(proc_names)
+                ev_embeddings = await self._embedding_service.embed_texts_async(ev_names)
             except Exception as e:
                 logger.warning("Embedding failed, falling back to word-overlap: %s", e)
                 use_embeddings = False

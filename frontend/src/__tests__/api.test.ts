@@ -11,7 +11,7 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 // We need to test authHeaders behavior via the exported functions
-import { fetchHealth } from "@/lib/api";
+import { fetchHealth, apiPost } from "@/lib/api";
 
 describe("authHeaders via fetchHealth", () => {
   beforeEach(() => {
@@ -74,8 +74,6 @@ describe("authHeaders via fetchHealth", () => {
       json: async () => ({ id: "1" }),
     });
 
-    // apiPost includes Content-Type alongside auth headers
-    const { apiPost } = await import("@/lib/api");
     await apiPost("/api/v1/test", { data: true });
 
     const [, options] = mockFetch.mock.calls[0];
