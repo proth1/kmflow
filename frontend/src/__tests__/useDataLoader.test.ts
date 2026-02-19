@@ -3,7 +3,7 @@ import { useDataLoader } from "@/hooks/useDataLoader";
 
 describe("useDataLoader", () => {
   it("starts in loading state", () => {
-    const fetchFn = jest.fn(() => new Promise<string>(() => {})); // never resolves
+    const fetchFn = jest.fn((_signal: AbortSignal) => new Promise<string>(() => {})); // never resolves
     const { result } = renderHook(() => useDataLoader(fetchFn));
 
     expect(result.current.loading).toBe(true);
@@ -12,7 +12,7 @@ describe("useDataLoader", () => {
   });
 
   it("resolves data and stops loading", async () => {
-    const fetchFn = jest.fn(async () => "hello");
+    const fetchFn = jest.fn(async (_signal: AbortSignal) => "hello");
     const { result } = renderHook(() => useDataLoader(fetchFn));
 
     await waitFor(() => {
@@ -24,7 +24,7 @@ describe("useDataLoader", () => {
   });
 
   it("sets error on fetch failure (refetch, not initial silent load)", async () => {
-    const fetchFn = jest.fn(async () => {
+    const fetchFn = jest.fn(async (_signal: AbortSignal) => {
       throw new Error("Network error");
     });
     const { result } = renderHook(() =>
@@ -47,7 +47,7 @@ describe("useDataLoader", () => {
   });
 
   it("uses custom error message for non-Error throws on refetch", async () => {
-    const fetchFn = jest.fn(async () => {
+    const fetchFn = jest.fn(async (_signal: AbortSignal) => {
       throw "string error"; // eslint-disable-line no-throw-literal
     });
     const { result } = renderHook(() =>
@@ -94,7 +94,7 @@ describe("useDataLoader", () => {
 
   it("refetch triggers a new load", async () => {
     let callCount = 0;
-    const fetchFn = jest.fn(async () => {
+    const fetchFn = jest.fn(async (_signal: AbortSignal) => {
       callCount++;
       return `result-${callCount}`;
     });
