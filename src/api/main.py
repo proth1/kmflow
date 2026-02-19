@@ -57,14 +57,13 @@ from src.api.routes import (
 from src.api.routes import (
     annotations as annotations_routes,
 )
+from src.api.version import API_VERSION
 from src.core.config import get_settings
 from src.core.database import create_engine
 from src.core.neo4j import create_neo4j_driver, setup_neo4j_constraints, verify_neo4j_connectivity
 from src.core.redis import create_redis_client, verify_redis_connectivity
 from src.integrations.camunda import CamundaClient
 from src.mcp.server import router as mcp_router
-
-API_VERSION = "0.8.0"
 
 logger = logging.getLogger(__name__)
 

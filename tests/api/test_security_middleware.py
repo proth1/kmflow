@@ -82,6 +82,14 @@ class TestSecurityHeadersMiddleware:
         response = await client.get("/api/v1/health")
         assert response.headers.get("cache-control") == "no-store"
 
+    @pytest.mark.asyncio
+    async def test_api_version_matches_canonical_constant(self, client: AsyncClient) -> None:
+        """X-API-Version header should match the canonical API_VERSION constant."""
+        from src.api.version import API_VERSION
+
+        response = await client.get("/api/v1/health")
+        assert response.headers.get("x-api-version") == API_VERSION
+
 
 # ---------------------------------------------------------------------------
 # Rate Limiting

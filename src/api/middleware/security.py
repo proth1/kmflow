@@ -18,6 +18,8 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.types import ASGIApp
 
+from src.api.version import API_VERSION
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,7 +59,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Cache-Control"] = "no-store"
-        response.headers["X-API-Version"] = "0.8.0"
+        response.headers["X-API-Version"] = API_VERSION
         return response
 
 
