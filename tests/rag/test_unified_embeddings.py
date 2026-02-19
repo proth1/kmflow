@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from src.rag.embeddings import EMBEDDING_DIMENSION, EmbeddingService
 
 
@@ -43,6 +45,34 @@ class TestEmbeddingService:
         """Service should store custom dimension setting."""
         service = EmbeddingService(dimension=128)
         assert service.dimension == 128
+
+    @pytest.mark.asyncio
+    async def test_embed_text_async_returns_correct_dimension(self) -> None:
+        """Async embedding should have the expected dimensionality."""
+        service = EmbeddingService()
+        embedding = await service.embed_text_async("hello world")
+        assert len(embedding) == EMBEDDING_DIMENSION
+        assert all(isinstance(v, float) for v in embedding)
+
+    @pytest.mark.asyncio
+    async def test_embed_texts_async_batch(self) -> None:
+        """Async batch embedding should return one vector per text."""
+        service = EmbeddingService()
+        texts = ["hello", "world", "test"]
+        embeddings = await service.embed_texts_async(texts)
+        assert len(embeddings) == 3
+        for emb in embeddings:
+            assert len(emb) == EMBEDDING_DIMENSION
+
+    @pytest.mark.asyncio
+    async def test_generate_embeddings_async_batching(self) -> None:
+        """generate_embeddings_async should handle batching correctly."""
+        service = EmbeddingService()
+        texts = [f"text {i}" for i in range(10)]
+        embeddings = await service.generate_embeddings_async(texts, batch_size=3)
+        assert len(embeddings) == 10
+        for emb in embeddings:
+            assert len(emb) == EMBEDDING_DIMENSION
 
 
 class TestSemanticEmbeddingDelegation:

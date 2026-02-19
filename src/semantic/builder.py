@@ -419,7 +419,7 @@ class KnowledgeGraphBuilder:
         errors: list[str] = []
         for fragment_id, content, _ in fragments:
             try:
-                embedding = self._embeddings.generate_embedding(content)
+                embedding = await self._embeddings.generate_embedding_async(content)
                 await self._embeddings.store_embedding(session, fragment_id, embedding)
                 count += 1
             except Exception as e:

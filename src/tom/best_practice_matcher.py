@@ -94,8 +94,8 @@ class BestPracticeMatcher:
         if self._embedding_service is None:
             return [self._bp_to_dict(bp, score=1.0) for bp in practices]
         try:
-            query_emb = self._embedding_service.embed_text(query_text)
-            bp_embs = self._embedding_service.embed_texts(descriptions)
+            query_emb = await self._embedding_service.embed_text_async(query_text)
+            bp_embs = await self._embedding_service.embed_texts_async(descriptions)
         except Exception as e:
             logger.warning("Embedding failed during BP ranking, using default scores: %s", e)
             return [self._bp_to_dict(bp, score=1.0) for bp in practices]

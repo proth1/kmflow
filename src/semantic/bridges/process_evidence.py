@@ -77,8 +77,8 @@ class ProcessEvidenceBridge:
 
         if use_embeddings:
             try:
-                proc_embeddings = self._embedding_service.embed_texts(proc_names)  # type: ignore[union-attr]
-                ev_embeddings = self._embedding_service.embed_texts(ev_names)  # type: ignore[union-attr]
+                proc_embeddings = await self._embedding_service.embed_texts_async(proc_names)  # type: ignore[union-attr]
+                ev_embeddings = await self._embedding_service.embed_texts_async(ev_names)  # type: ignore[union-attr]
             except Exception as e:
                 logger.warning("Embedding failed, falling back to word-overlap: %s", e)
                 use_embeddings = False

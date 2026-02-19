@@ -61,8 +61,8 @@ class EvidencePolicyBridge:
 
         if use_embeddings:
             try:
-                ev_embeddings = self._embedding_service.embed_texts(ev_names)  # type: ignore[union-attr]
-                policy_embeddings = self._embedding_service.embed_texts(policy_names)  # type: ignore[union-attr]
+                ev_embeddings = await self._embedding_service.embed_texts_async(ev_names)  # type: ignore[union-attr]
+                policy_embeddings = await self._embedding_service.embed_texts_async(policy_names)  # type: ignore[union-attr]
             except Exception as e:
                 logger.warning("Embedding failed, falling back to word-overlap: %s", e)
                 use_embeddings = False

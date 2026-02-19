@@ -44,7 +44,7 @@ def mock_graph_service() -> AsyncMock:
 def mock_embedding_service() -> MagicMock:
     """Create a mock EmbeddingService."""
     service = MagicMock(spec=EmbeddingService)
-    service.generate_embedding = MagicMock(return_value=[0.1] * 768)
+    service.generate_embedding_async = AsyncMock(return_value=[0.1] * 768)
     service.store_embedding = AsyncMock()
     return service
 
@@ -283,7 +283,7 @@ class TestEmbeddingGeneration:
 
         await builder.build_knowledge_graph(session, "eng-1")
 
-        assert mock_embedding_service.generate_embedding.call_count == 2
+        assert mock_embedding_service.generate_embedding_async.call_count == 2
         assert mock_embedding_service.store_embedding.call_count == 2
 
     @pytest.mark.asyncio
@@ -293,7 +293,7 @@ class TestEmbeddingGeneration:
         mock_embedding_service: MagicMock,
     ) -> None:
         """Embedding failures should be recorded as errors, not crash the build."""
-        mock_embedding_service.generate_embedding.side_effect = RuntimeError("GPU error")
+        mock_embedding_service.generate_embedding_async.side_effect = RuntimeError("GPU error")
 
         fragments = [
             (str(uuid.uuid4()), "Content A", str(uuid.uuid4())),

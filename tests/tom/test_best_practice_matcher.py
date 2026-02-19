@@ -202,8 +202,8 @@ def _make_embedding_service(similarities: list[float]) -> MagicMock:
         angle = math.acos(max(-1.0, min(1.0, sim)))
         bp_vecs.append([math.cos(angle), math.sin(angle)])
 
-    svc.embed_text.return_value = query_vec
-    svc.embed_texts.return_value = bp_vecs
+    svc.embed_text_async = AsyncMock(return_value=query_vec)
+    svc.embed_texts_async = AsyncMock(return_value=bp_vecs)
     return svc
 
 

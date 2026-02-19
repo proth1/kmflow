@@ -74,7 +74,7 @@ class HybridRetriever:
         top_k: int = 10,
     ) -> list[RetrievalResult]:
         """Search evidence fragments using pgvector cosine similarity."""
-        query_embedding = self.embedding_service.embed_text(query)
+        query_embedding = await self.embedding_service.embed_text_async(query)
 
         sql = text("""
             SELECT

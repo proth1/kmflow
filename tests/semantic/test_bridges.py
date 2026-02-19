@@ -154,8 +154,8 @@ def _make_embedding_service(similarity: float) -> MagicMock:
     v1 = [1.0, 0.0]
     angle = math.acos(max(-1.0, min(1.0, similarity)))
     v2 = [math.cos(angle), math.sin(angle)]
-    # embed_texts called twice: once for proc names (returns [v1]), once for ev names (returns [v2])
-    svc.embed_texts.side_effect = [[v1], [v2]]
+    # embed_texts_async called twice: once for proc names (returns [v1]), once for ev names (returns [v2])
+    svc.embed_texts_async = AsyncMock(side_effect=[[v1], [v2]])
     return svc
 
 
