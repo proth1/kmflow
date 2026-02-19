@@ -26,6 +26,17 @@ test.describe("Navigation", () => {
     await expect(
       sidebar.getByRole("link", { name: "Processes" })
     ).toBeVisible();
+    // Phase 6 nav entries
+    await expect(sidebar.getByText("Governance")).toBeVisible();
+    await expect(sidebar.getByText("Reports")).toBeVisible();
+    await expect(sidebar.getByText("Analytics")).toBeVisible();
+    await expect(sidebar.getByText("Connectors")).toBeVisible();
+    await expect(sidebar.getByText("Shelf Requests")).toBeVisible();
+    await expect(sidebar.getByText("Patterns")).toBeVisible();
+    await expect(sidebar.getByText("Simulations")).toBeVisible();
+    await expect(
+      sidebar.getByRole("link", { name: "Admin" })
+    ).toBeVisible();
   });
 
   test("clicking sidebar link navigates to page", async ({ page }) => {

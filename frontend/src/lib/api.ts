@@ -910,3 +910,350 @@ export async function startProcess(
     variables: variables || null,
   });
 }
+
+// -- Governance types ---------------------------------------------------------
+
+export interface CatalogEntryData {
+  id: string;
+  dataset_name: string;
+  dataset_type: string;
+  layer: string;
+  engagement_id: string | null;
+  schema_definition: Record<string, unknown> | null;
+  owner: string | null;
+  classification: string;
+  quality_sla: Record<string, unknown> | null;
+  retention_days: number | null;
+  description: string | null;
+  row_count: number | null;
+  size_bytes: number | null;
+  delta_table_path: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PolicyData {
+  policy_file: string;
+  policies: Record<string, unknown>;
+}
+
+export interface PolicyEvaluationResult {
+  entry_id: string;
+  compliant: boolean;
+  violation_count: number;
+  violations: {
+    policy_name: string;
+    severity: string;
+    message: string;
+    entry_id: string;
+  }[];
+}
+
+export interface GovernanceHealthData {
+  engagement_id: string;
+  total_entries: number;
+  passing_count: number;
+  failing_count: number;
+  compliance_percentage: number;
+  entries: {
+    entry_id: string;
+    name: string;
+    classification: string;
+    sla_passing: boolean;
+    violation_count: number;
+  }[];
+}
+
+// -- Governance API functions -------------------------------------------------
+
+export async function fetchCatalogEntries(
+  engagementId?: string,
+): Promise<CatalogEntryData[]> {
+  const params = engagementId ? `?engagement_id=${engagementId}` : "";
+  return apiGet<CatalogEntryData[]>(`/api/v1/governance/catalog${params}`);
+}
+
+export async function fetchPolicies(): Promise<PolicyData> {
+  return apiGet<PolicyData>("/api/v1/governance/policies");
+}
+
+export async function evaluatePolicy(
+  entryId: string,
+): Promise<PolicyEvaluationResult> {
+  return apiPost<PolicyEvaluationResult>("/api/v1/governance/policies/evaluate", {
+    entry_id: entryId,
+  });
+}
+
+export async function fetchGovernanceHealth(
+  engagementId: string,
+): Promise<GovernanceHealthData> {
+  return apiGet<GovernanceHealthData>(
+    `/api/v1/governance/health/${engagementId}`,
+  );
+}
+
+// -- Integration types --------------------------------------------------------
+
+export interface ConnectorType {
+  type: string;
+  description: string;
+}
+
+export interface IntegrationConnectionData {
+  id: string;
+  engagement_id: string;
+  connector_type: string;
+  name: string;
+  status: string;
+  config: Record<string, unknown>;
+  field_mappings: Record<string, string> | null;
+  last_sync: string | null;
+  last_sync_records: number;
+  error_message: string | null;
+}
+
+export interface IntegrationConnectionList {
+  items: IntegrationConnectionData[];
+  total: number;
+}
+
+// -- Integration API functions ------------------------------------------------
+
+export async function fetchConnectorTypes(): Promise<ConnectorType[]> {
+  return apiGet<ConnectorType[]>("/api/v1/integrations/connectors");
+}
+
+export async function fetchConnections(
+  engagementId?: string,
+): Promise<IntegrationConnectionList> {
+  const params = engagementId ? `?engagement_id=${engagementId}` : "";
+  return apiGet<IntegrationConnectionList>(
+    `/api/v1/integrations/connections${params}`,
+  );
+}
+
+export async function testConnection(
+  connectionId: string,
+): Promise<{ connection_id: string; success: boolean; message: string }> {
+  return apiPost<{ connection_id: string; success: boolean; message: string }>(
+    `/api/v1/integrations/connections/${connectionId}/test`,
+    {},
+  );
+}
+
+export async function syncConnection(
+  connectionId: string,
+): Promise<{ connection_id: string; records_synced: number; errors: string[] }> {
+  return apiPost<{
+    connection_id: string;
+    records_synced: number;
+    errors: string[];
+  }>(`/api/v1/integrations/connections/${connectionId}/sync`, {});
+}
+
+// -- Shelf Request types ------------------------------------------------------
+
+export interface ShelfRequestItemData {
+  id: string;
+  request_id: string;
+  category: string;
+  item_name: string;
+  description: string | null;
+  priority: string;
+  status: string;
+  matched_evidence_id: string | null;
+}
+
+export interface ShelfRequestData {
+  id: string;
+  engagement_id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  due_date: string | null;
+  items: ShelfRequestItemData[];
+  fulfillment_percentage: number;
+}
+
+export interface ShelfRequestList {
+  items: ShelfRequestData[];
+  total: number;
+}
+
+// -- Shelf Request API functions ----------------------------------------------
+
+export async function fetchShelfRequests(
+  engagementId?: string,
+): Promise<ShelfRequestList> {
+  const params = engagementId ? `?engagement_id=${engagementId}` : "";
+  return apiGet<ShelfRequestList>(`/api/v1/shelf-requests/${params}`);
+}
+
+export async function fetchShelfRequest(
+  requestId: string,
+): Promise<ShelfRequestData> {
+  return apiGet<ShelfRequestData>(`/api/v1/shelf-requests/${requestId}`);
+}
+
+export async function fetchShelfRequestStatus(
+  requestId: string,
+): Promise<{
+  id: string;
+  title: string;
+  status: string;
+  total_items: number;
+  received_items: number;
+  pending_items: number;
+  overdue_items: number;
+  fulfillment_percentage: number;
+}> {
+  return apiGet(`/api/v1/shelf-requests/${requestId}/status`);
+}
+
+// -- Metrics types ------------------------------------------------------------
+
+export interface SuccessMetricData {
+  id: string;
+  name: string;
+  unit: string;
+  target_value: number;
+  category: string;
+  description: string | null;
+  created_at: string;
+}
+
+export interface SuccessMetricList {
+  items: SuccessMetricData[];
+  total: number;
+}
+
+export interface MetricReadingData {
+  id: string;
+  metric_id: string;
+  engagement_id: string;
+  value: number;
+  recorded_at: string;
+  notes: string | null;
+}
+
+export interface MetricReadingList {
+  items: MetricReadingData[];
+  total: number;
+}
+
+export interface MetricSummaryEntry {
+  metric_id: string;
+  metric_name: string;
+  unit: string;
+  target_value: number;
+  category: string;
+  reading_count: number;
+  latest_value: number | null;
+  avg_value: number | null;
+  min_value: number | null;
+  max_value: number | null;
+  on_target: boolean;
+}
+
+export interface MetricSummaryData {
+  engagement_id: string;
+  metrics: MetricSummaryEntry[];
+  total: number;
+  on_target_count: number;
+}
+
+// -- Metrics API functions ----------------------------------------------------
+
+export async function fetchMetricDefinitions(
+  category?: string,
+): Promise<SuccessMetricList> {
+  const params = category ? `?category=${category}` : "";
+  return apiGet<SuccessMetricList>(`/api/v1/metrics/definitions${params}`);
+}
+
+export async function fetchMetricReadings(
+  engagementId: string,
+  metricId?: string,
+): Promise<MetricReadingList> {
+  const params = metricId ? `&metric_id=${metricId}` : "";
+  return apiGet<MetricReadingList>(
+    `/api/v1/metrics/readings?engagement_id=${engagementId}${params}`,
+  );
+}
+
+export async function fetchMetricSummary(
+  engagementId: string,
+): Promise<MetricSummaryData> {
+  return apiGet<MetricSummaryData>(
+    `/api/v1/metrics/summary/${engagementId}`,
+  );
+}
+
+// -- Annotation types ---------------------------------------------------------
+
+export interface AnnotationData {
+  id: string;
+  engagement_id: string;
+  target_type: string;
+  target_id: string;
+  author_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AnnotationList {
+  items: AnnotationData[];
+  total: number;
+}
+
+// -- Annotation API functions -------------------------------------------------
+
+export async function fetchAnnotations(
+  engagementId: string,
+  targetType?: string,
+  targetId?: string,
+): Promise<AnnotationList> {
+  let params = `?engagement_id=${engagementId}`;
+  if (targetType) params += `&target_type=${targetType}`;
+  if (targetId) params += `&target_id=${targetId}`;
+  return apiGet<AnnotationList>(`/api/v1/annotations${params}`);
+}
+
+export async function createAnnotation(
+  body: {
+    engagement_id: string;
+    target_type: string;
+    target_id: string;
+    content: string;
+  },
+): Promise<AnnotationData> {
+  return apiPost<AnnotationData>("/api/v1/annotations", body);
+}
+
+// -- Generic API helpers for PUT/PATCH/DELETE ---------------------------------
+
+export async function apiPut<T>(path: string, body: unknown): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const error: ApiError = await response.json();
+    throw new Error(error.detail || `Request failed: ${response.status}`);
+  }
+  return response.json() as Promise<T>;
+}
+
+export async function apiDelete(path: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!response.ok) {
+    const error: ApiError = await response.json();
+    throw new Error(error.detail || `Request failed: ${response.status}`);
+  }
+}

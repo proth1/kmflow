@@ -22,6 +22,14 @@ import {
   Menu,
   Sun,
   Moon,
+  Shield,
+  FileText,
+  Plug,
+  Search,
+  ClipboardList,
+  FlaskConical,
+  TrendingUp,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -65,6 +73,24 @@ const navSections: NavSection[] = [
     items: [
       { label: "Monitoring", href: "/monitoring", icon: Activity },
       { label: "Roadmap", href: "/roadmap/demo-1", icon: Map },
+      { label: "Processes", href: "/processes", icon: Workflow },
+      { label: "Simulations", href: "/simulations", icon: FlaskConical },
+    ],
+  },
+  {
+    title: "Governance",
+    items: [
+      { label: "Governance", href: "/governance", icon: Shield },
+      { label: "Reports", href: "/reports", icon: FileText },
+      { label: "Analytics", href: "/analytics", icon: TrendingUp },
+    ],
+  },
+  {
+    title: "Integrations",
+    items: [
+      { label: "Connectors", href: "/integrations", icon: Plug },
+      { label: "Shelf Requests", href: "/shelf-requests", icon: ClipboardList },
+      { label: "Patterns", href: "/patterns", icon: Search },
     ],
   },
   {
@@ -80,9 +106,9 @@ const navSections: NavSection[] = [
     ],
   },
   {
-    title: "Processes",
+    title: "Admin",
     items: [
-      { label: "Processes", href: "/processes", icon: Workflow },
+      { label: "Admin", href: "/admin", icon: Settings },
     ],
   },
 ];
