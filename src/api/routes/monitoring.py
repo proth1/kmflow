@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.deps import get_session
 from src.core.models import (
     AlertSeverity,
     AlertStatus,
@@ -28,7 +29,6 @@ from src.core.models import (
     ProcessDeviation,
     User,
 )
-from src.api.deps import get_session
 from src.core.permissions import require_permission
 from src.monitoring.baseline import compute_process_hash, create_baseline_snapshot
 from src.monitoring.config import validate_cron_expression, validate_monitoring_config

@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 import aiofiles
-
+from fastapi import HTTPException
 from neo4j import AsyncDriver
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,8 +32,6 @@ from src.core.models import (
 from src.evidence.parsers.base import ParseResult
 from src.evidence.parsers.factory import classify_by_extension, detect_format, parse_file
 
-from fastapi import HTTPException
-
 logger = logging.getLogger(__name__)
 
 # Default storage directory (relative to project root)
@@ -43,41 +41,43 @@ DEFAULT_EVIDENCE_STORE = "evidence_store"
 MAX_UPLOAD_SIZE = 100 * 1024 * 1024
 
 # Allowed MIME types for evidence uploads
-ALLOWED_MIME_TYPES = frozenset({
-    # Documents
-    "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    "application/vnd.ms-excel",
-    "application/vnd.ms-powerpoint",
-    # Text
-    "text/plain",
-    "text/csv",
-    "text/html",
-    "text/xml",
-    "application/xml",
-    "application/json",
-    "application/yaml",
-    "text/yaml",
-    # Images
-    "image/png",
-    "image/jpeg",
-    "image/gif",
-    "image/svg+xml",
-    "image/tiff",
-    "image/bmp",
-    # Audio/Video
-    "audio/mpeg",
-    "audio/wav",
-    "video/mp4",
-    # Archives
-    "application/zip",
-    "application/gzip",
-    # BPMN
-    "application/octet-stream",  # .bpmn files often get this
-})
+ALLOWED_MIME_TYPES = frozenset(
+    {
+        # Documents
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "application/vnd.ms-excel",
+        "application/vnd.ms-powerpoint",
+        # Text
+        "text/plain",
+        "text/csv",
+        "text/html",
+        "text/xml",
+        "application/xml",
+        "application/json",
+        "application/yaml",
+        "text/yaml",
+        # Images
+        "image/png",
+        "image/jpeg",
+        "image/gif",
+        "image/svg+xml",
+        "image/tiff",
+        "image/bmp",
+        # Audio/Video
+        "audio/mpeg",
+        "audio/wav",
+        "video/mp4",
+        # Archives
+        "application/zip",
+        "application/gzip",
+        # BPMN
+        "application/octet-stream",  # .bpmn files often get this
+    }
+)
 
 
 def validate_file_type(file_content: bytes, file_name: str, mime_type: str | None = None) -> str:
@@ -98,6 +98,7 @@ def validate_file_type(file_content: bytes, file_name: str, mime_type: str | Non
 
     try:
         import magic
+
         detected_type = magic.from_buffer(file_content[:8192], mime=True)
     except ImportError:
         logger.debug("python-magic not available, using client-provided MIME type")

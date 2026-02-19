@@ -17,6 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.api.deps import get_session
 from src.core.models import (
     AuditAction,
     AuditLog,
@@ -29,7 +30,6 @@ from src.core.models import (
     ShelfRequestStatus,
     User,
 )
-from src.api.deps import get_session
 from src.core.permissions import require_permission
 
 logger = logging.getLogger(__name__)

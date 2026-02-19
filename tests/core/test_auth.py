@@ -8,9 +8,9 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+import jwt
 import pytest
 from fastapi import HTTPException
-import jwt
 
 from src.core.auth import (
     create_access_token,

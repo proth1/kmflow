@@ -15,13 +15,13 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.deps import get_session
 from src.core.models import (
     MetricCategory,
     MetricReading,
     SuccessMetric,
     User,
 )
-from src.api.deps import get_session
 from src.core.permissions import require_permission
 
 logger = logging.getLogger(__name__)

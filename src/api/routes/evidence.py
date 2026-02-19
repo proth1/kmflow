@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.deps import get_session
 from src.core.models import (
     AuditAction,
     AuditLog,
@@ -26,7 +27,6 @@ from src.core.models import (
     User,
     ValidationStatus,
 )
-from src.api.deps import get_session
 from src.core.permissions import require_permission
 from src.evidence.pipeline import ingest_evidence
 from src.evidence.quality import score_evidence

@@ -10,11 +10,12 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.deps import get_session
 from src.core.models import (
     AlertStatus,
     Engagement,
@@ -24,7 +25,6 @@ from src.core.models import (
     ProcessModel,
     User,
 )
-from src.api.deps import get_session
 from src.core.permissions import require_permission
 
 logger = logging.getLogger(__name__)

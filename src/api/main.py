@@ -27,8 +27,6 @@ from src.api.middleware.security import (
     RequestIDMiddleware,
     SecurityHeadersMiddleware,
 )
-
-API_VERSION = "0.8.0"
 from src.api.routes import (
     admin,
     auth,
@@ -65,6 +63,8 @@ from src.core.neo4j import create_neo4j_driver, setup_neo4j_constraints, verify_
 from src.core.redis import create_redis_client, verify_redis_connectivity
 from src.integrations.camunda import CamundaClient
 from src.mcp.server import router as mcp_router
+
+API_VERSION = "0.8.0"
 
 logger = logging.getLogger(__name__)
 

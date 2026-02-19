@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.deps import get_session
 from src.conformance.bpmn_parser import parse_bpmn_xml
 from src.conformance.checker import ConformanceChecker
 from src.conformance.metrics import calculate_metrics
@@ -24,7 +25,6 @@ from src.core.models import (
     ReferenceProcessModel,
     User,
 )
-from src.api.deps import get_session
 from src.core.permissions import require_permission
 
 logger = logging.getLogger(__name__)
