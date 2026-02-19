@@ -69,10 +69,10 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install ".[dev]" pip-audit
+        run: pip install -e ".[dev]" pip-audit
 
       - name: Python dependency audit
-        run: pip-audit --strict --desc
+        run: pip freeze | grep -v '^\-e' | grep -iv '^kmflow' > /tmp/audit-reqs.txt && pip-audit --strict --desc -r /tmp/audit-reqs.txt
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

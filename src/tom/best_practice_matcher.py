@@ -91,6 +91,8 @@ class BestPracticeMatcher:
     ) -> list[dict[str, Any]]:
         """Rank best practices by embedding similarity to gap recommendation."""
         descriptions = [bp.description for bp in practices]
+        if self._embedding_service is None:
+            return [self._bp_to_dict(bp, score=1.0) for bp in practices]
         try:
             query_emb = self._embedding_service.embed_text(query_text)
             bp_embs = self._embedding_service.embed_texts(descriptions)

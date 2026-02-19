@@ -270,6 +270,7 @@ async def trigger_pov_generation(
 
         await session.commit()
 
+        job_data: dict[str, Any]
         if result.success and result.process_model:
             job_data = {
                 "status": "completed",
