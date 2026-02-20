@@ -13,19 +13,39 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.api.deps import get_session
+from src.api.schemas.simulations import (
+    EpistemicPlanResponse,
+    FinancialAssumptionCreate,
+    FinancialAssumptionListResponse,
+    FinancialAssumptionResponse,
+    FinancialImpactResponse,
+    ModificationCreate,
+    ModificationList,
+    ModificationResponse,
+    ScenarioComparisonResponse,
+    ScenarioCoverageResponse,
+    ScenarioCreate,
+    ScenarioList,
+    ScenarioRankResponse,
+    ScenarioResponse,
+    SimulationResultList,
+    SimulationResultResponse,
+    SuggestionCreate,
+    SuggestionDispositionUpdate,
+    SuggestionListResponse,
+    SuggestionResponse,
+)
+from src.core.audit import log_audit
 from src.core.models import (
     AlternativeSuggestion,
     AuditAction,
     EpistemicAction,
     FinancialAssumption,
-    FinancialAssumptionType,
-    ModificationType,
     ScenarioModification,
     SimulationResult,
     SimulationScenario,
@@ -34,8 +54,15 @@ from src.core.models import (
     SuggestionDisposition,
     User,
 )
-from src.core.audit import log_audit
 from src.core.permissions import require_permission
+from src.simulation.service import (
+    assumption_to_response,
+    get_scenario_or_404,
+    modification_to_response,
+    result_to_response,
+    scenario_to_response,
+    suggestion_to_response,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -82,173 +109,6 @@ def _check_llm_rate_limit(user_id: str) -> None:
     _llm_request_log[user_id] = user_log
 
 
-# -- Schemas ------------------------------------------------------------------
-
-
-class ScenarioCreate(BaseModel):
-    engagement_id: UUID
-    process_model_id: UUID | None = None
-    name: str = Field(..., min_length=1, max_length=512)
-    simulation_type: SimulationType
-    parameters: dict[str, Any] | None = None
-    description: str | None = None
-
-
-class ScenarioResponse(BaseModel):
-    id: str
-    engagement_id: str
-    process_model_id: str | None = None
-    name: str
-    simulation_type: str
-    parameters: dict[str, Any] | None = None
-    description: str | None = None
-    status: str | None = None
-    evidence_confidence_score: float | None = None
-    created_at: str
-
-
-class ScenarioList(BaseModel):
-    items: list[ScenarioResponse]
-    total: int
-
-
-class SimulationResultResponse(BaseModel):
-    id: str
-    scenario_id: str
-    status: str
-    metrics: dict[str, Any] | None = None
-    impact_analysis: dict[str, Any] | None = None
-    recommendations: list[str] | None = None
-    execution_time_ms: int
-    error_message: str | None = None
-    started_at: str | None = None
-    completed_at: str | None = None
-
-
-class SimulationResultList(BaseModel):
-    items: list[SimulationResultResponse]
-    total: int
-
-
-class ModificationCreate(BaseModel):
-    modification_type: ModificationType
-    element_id: str = Field(..., min_length=1, max_length=512)
-    element_name: str = Field(..., min_length=1, max_length=512)
-    change_data: dict[str, Any] | None = None
-    template_key: str | None = None
-
-
-class ModificationResponse(BaseModel):
-    id: str
-    scenario_id: str
-    modification_type: str
-    element_id: str
-    element_name: str
-    change_data: dict[str, Any] | None = None
-    template_key: str | None = None
-    applied_at: str
-
-
-class ModificationList(BaseModel):
-    items: list[ModificationResponse]
-    total: int
-
-
-class ElementCoverageResponse(BaseModel):
-    element_id: str
-    element_name: str
-    classification: str
-    evidence_count: int
-    confidence: float
-    is_added: bool = False
-    is_removed: bool = False
-    is_modified: bool = False
-
-
-class ScenarioCoverageResponse(BaseModel):
-    scenario_id: str
-    elements: list[ElementCoverageResponse]
-    bright_count: int
-    dim_count: int
-    dark_count: int
-    aggregate_confidence: float
-
-
-class ScenarioComparisonEntry(BaseModel):
-    scenario_id: str
-    scenario_name: str
-    deltas: dict[str, Any] | None = None
-    assessment: str | None = None
-    coverage_summary: dict[str, int] | None = None
-
-
-class ScenarioComparisonResponse(BaseModel):
-    baseline_id: str
-    baseline_name: str
-    comparisons: list[ScenarioComparisonEntry]
-
-
-# -- Helpers ------------------------------------------------------------------
-
-
-def _scenario_to_response(s: SimulationScenario) -> dict[str, Any]:
-    return {
-        "id": str(s.id),
-        "engagement_id": str(s.engagement_id),
-        "process_model_id": str(s.process_model_id) if s.process_model_id else None,
-        "name": s.name,
-        "simulation_type": s.simulation_type.value
-        if isinstance(s.simulation_type, SimulationType)
-        else s.simulation_type,
-        "parameters": s.parameters,
-        "description": s.description,
-        "status": s.status,
-        "evidence_confidence_score": s.evidence_confidence_score,
-        "created_at": s.created_at.isoformat() if s.created_at else "",
-    }
-
-
-def _result_to_response(r: SimulationResult) -> dict[str, Any]:
-    return {
-        "id": str(r.id),
-        "scenario_id": str(r.scenario_id),
-        "status": r.status.value if isinstance(r.status, SimulationStatus) else r.status,
-        "metrics": r.metrics,
-        "impact_analysis": r.impact_analysis,
-        "recommendations": r.recommendations,
-        "execution_time_ms": r.execution_time_ms,
-        "error_message": r.error_message,
-        "started_at": r.started_at.isoformat() if r.started_at else None,
-        "completed_at": r.completed_at.isoformat() if r.completed_at else None,
-    }
-
-
-def _modification_to_response(m: ScenarioModification) -> dict[str, Any]:
-    return {
-        "id": str(m.id),
-        "scenario_id": str(m.scenario_id),
-        "modification_type": m.modification_type.value
-        if isinstance(m.modification_type, ModificationType)
-        else m.modification_type,
-        "element_id": m.element_id,
-        "element_name": m.element_name,
-        "change_data": m.change_data,
-        "template_key": m.template_key,
-        "applied_at": m.applied_at.isoformat() if m.applied_at else "",
-    }
-
-
-async def _get_scenario_or_404(
-    session: AsyncSession,
-    scenario_id: UUID,
-) -> SimulationScenario:
-    result = await session.execute(select(SimulationScenario).where(SimulationScenario.id == scenario_id))
-    scenario = result.scalar_one_or_none()
-    if not scenario:
-        raise HTTPException(status_code=404, detail=f"Scenario {scenario_id} not found")
-    return scenario
-
-
 # -- Scenario Routes ----------------------------------------------------------
 
 
@@ -273,7 +133,7 @@ async def create_scenario(
     )
     await session.commit()
     await session.refresh(scenario)
-    return _scenario_to_response(scenario)
+    return scenario_to_response(scenario)
 
 
 @router.get("/scenarios", response_model=ScenarioList)
@@ -296,7 +156,7 @@ async def list_scenarios(
         count_query = count_query.where(SimulationScenario.simulation_type == simulation_type)
     query = query.offset(offset).limit(limit)
     result = await session.execute(query)
-    items = [_scenario_to_response(s) for s in result.scalars().all()]
+    items = [scenario_to_response(s) for s in result.scalars().all()]
     count_result = await session.execute(count_query)
     total = count_result.scalar() or 0
     return {"items": items, "total": total}
@@ -309,8 +169,8 @@ async def get_scenario(
     user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """Get a scenario by ID."""
-    scenario = await _get_scenario_or_404(session, scenario_id)
-    return _scenario_to_response(scenario)
+    scenario = await get_scenario_or_404(session, scenario_id)
+    return scenario_to_response(scenario)
 
 
 # -- Run Simulation -----------------------------------------------------------
@@ -323,7 +183,7 @@ async def run_scenario(
     user: User = Depends(require_permission("simulation:run")),
 ) -> dict[str, Any]:
     """Run a simulation scenario."""
-    scenario = await _get_scenario_or_404(session, scenario_id)
+    scenario = await get_scenario_or_404(session, scenario_id)
 
     from src.simulation.engine import run_simulation
 
@@ -375,7 +235,7 @@ async def run_scenario(
     )
     await session.commit()
     await session.refresh(sim_result)
-    return _result_to_response(sim_result)
+    return result_to_response(sim_result)
 
 
 # -- Modification Routes ------------------------------------------------------
@@ -393,7 +253,7 @@ async def add_modification(
     user: User = Depends(require_permission("simulation:create")),
 ) -> dict[str, Any]:
     """Add a modification to a scenario."""
-    scenario = await _get_scenario_or_404(session, scenario_id)
+    scenario = await get_scenario_or_404(session, scenario_id)
 
     if payload.template_key and payload.template_key not in VALID_TEMPLATE_KEYS:
         raise HTTPException(
@@ -419,7 +279,7 @@ async def add_modification(
     )
     await session.commit()
     await session.refresh(mod)
-    return _modification_to_response(mod)
+    return modification_to_response(mod)
 
 
 @router.get("/scenarios/{scenario_id}/modifications", response_model=ModificationList)
@@ -431,12 +291,12 @@ async def list_modifications(
     user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """List modifications for a scenario."""
-    await _get_scenario_or_404(session, scenario_id)
+    await get_scenario_or_404(session, scenario_id)
     query = select(ScenarioModification).where(ScenarioModification.scenario_id == scenario_id)
     count_query = select(func.count(ScenarioModification.id)).where(ScenarioModification.scenario_id == scenario_id)
     query = query.offset(offset).limit(limit)
     result = await session.execute(query)
-    items = [_modification_to_response(m) for m in result.scalars().all()]
+    items = [modification_to_response(m) for m in result.scalars().all()]
     count_result = await session.execute(count_query)
     total = count_result.scalar() or 0
     return {"items": items, "total": total}
@@ -453,7 +313,7 @@ async def delete_modification(
     user: User = Depends(require_permission("simulation:create")),
 ) -> None:
     """Delete a modification from a scenario."""
-    scenario = await _get_scenario_or_404(session, scenario_id)
+    scenario = await get_scenario_or_404(session, scenario_id)
     result = await session.execute(
         select(ScenarioModification).where(
             ScenarioModification.id == modification_id,
@@ -551,7 +411,7 @@ async def compare_scenarios(
     import asyncio
 
     # Fetch baseline
-    baseline = await _get_scenario_or_404(session, scenario_id)
+    baseline = await get_scenario_or_404(session, scenario_id)
 
     # Parse comparison IDs
     try:
@@ -696,7 +556,7 @@ async def list_results(
         count_query = count_query.where(SimulationResult.scenario_id == scenario_id)
     query = query.offset(offset).limit(limit)
     result = await session.execute(query)
-    items = [_result_to_response(r) for r in result.scalars().all()]
+    items = [result_to_response(r) for r in result.scalars().all()]
     count_result = await session.execute(count_query)
     total = count_result.scalar() or 0
     return {"items": items, "total": total}
@@ -713,36 +573,10 @@ async def get_result(
     sim_result = result.scalar_one_or_none()
     if not sim_result:
         raise HTTPException(status_code=404, detail=f"Result {result_id} not found")
-    return _result_to_response(sim_result)
+    return result_to_response(sim_result)
 
 
-# =============================================================================
-# Phase 3.2: Epistemic Action Planner
-# =============================================================================
-
-
-class EpistemicActionResponse(BaseModel):
-    target_element_id: str
-    target_element_name: str
-    evidence_gap_description: str
-    current_confidence: float
-    estimated_confidence_uplift: float
-    projected_confidence: float
-    information_gain_score: float
-    recommended_evidence_category: str
-    priority: str
-
-
-class EpistemicPlanAggregates(BaseModel):
-    total: int
-    high_priority_count: int
-    estimated_aggregate_uplift: float
-
-
-class EpistemicPlanResponse(BaseModel):
-    scenario_id: str
-    actions: list[EpistemicActionResponse]
-    aggregated_view: EpistemicPlanAggregates
+# -- Epistemic Plan -----------------------------------------------------------
 
 
 @router.post("/scenarios/{scenario_id}/epistemic-plan", response_model=EpistemicPlanResponse)
@@ -755,7 +589,7 @@ async def generate_epistemic_plan(
     user: User = Depends(require_permission("simulation:create")),
 ) -> dict[str, Any]:
     """Generate epistemic action plan ranking evidence gaps by information gain."""
-    scenario = await _get_scenario_or_404(session, scenario_id)
+    scenario = await get_scenario_or_404(session, scenario_id)
 
     from src.semantic.graph import KnowledgeGraphService
     from src.simulation.epistemic import EpistemicPlannerService
@@ -848,55 +682,7 @@ async def generate_epistemic_plan(
     }
 
 
-# =============================================================================
-# Phase 4.1: Financial Assumptions
-# =============================================================================
-
-
-class FinancialAssumptionCreate(BaseModel):
-    engagement_id: UUID
-    assumption_type: FinancialAssumptionType
-    name: str = Field(..., min_length=1, max_length=256)
-    value: float
-    unit: str = Field(..., min_length=1, max_length=50)
-    confidence: float = Field(..., ge=0.0, le=1.0)
-    source_evidence_id: UUID | None = None
-    notes: str | None = None
-
-
-class FinancialAssumptionResponse(BaseModel):
-    id: str
-    engagement_id: str
-    assumption_type: str
-    name: str
-    value: float
-    unit: str
-    confidence: float
-    source_evidence_id: str | None = None
-    notes: str | None = None
-    created_at: str
-
-
-class FinancialAssumptionListResponse(BaseModel):
-    items: list[FinancialAssumptionResponse]
-    total: int
-
-
-def _assumption_to_response(a: FinancialAssumption) -> dict[str, Any]:
-    return {
-        "id": str(a.id),
-        "engagement_id": str(a.engagement_id),
-        "assumption_type": a.assumption_type.value
-        if isinstance(a.assumption_type, FinancialAssumptionType)
-        else a.assumption_type,
-        "name": a.name,
-        "value": a.value,
-        "unit": a.unit,
-        "confidence": a.confidence,
-        "source_evidence_id": str(a.source_evidence_id) if a.source_evidence_id else None,
-        "notes": a.notes,
-        "created_at": a.created_at.isoformat() if a.created_at else "",
-    }
+# -- Financial Assumptions ----------------------------------------------------
 
 
 @router.post(
@@ -911,7 +697,7 @@ async def create_financial_assumption(
     user: User = Depends(require_permission("simulation:create")),
 ) -> dict[str, Any]:
     """Create a financial assumption for a scenario's engagement."""
-    scenario = await _get_scenario_or_404(session, scenario_id)
+    scenario = await get_scenario_or_404(session, scenario_id)
 
     # Prevent cross-engagement assignment
     if payload.engagement_id != scenario.engagement_id:
@@ -940,7 +726,7 @@ async def create_financial_assumption(
     )
     await session.commit()
     await session.refresh(assumption)
-    return _assumption_to_response(assumption)
+    return assumption_to_response(assumption)
 
 
 @router.get(
@@ -955,14 +741,14 @@ async def list_financial_assumptions(
     user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """List financial assumptions for a scenario's engagement."""
-    scenario = await _get_scenario_or_404(session, scenario_id)
+    scenario = await get_scenario_or_404(session, scenario_id)
     query = select(FinancialAssumption).where(FinancialAssumption.engagement_id == scenario.engagement_id)
     count_query = select(func.count(FinancialAssumption.id)).where(
         FinancialAssumption.engagement_id == scenario.engagement_id
     )
     query = query.offset(offset).limit(limit)
     result = await session.execute(query)
-    items = [_assumption_to_response(a) for a in result.scalars().all()]
+    items = [assumption_to_response(a) for a in result.scalars().all()]
     count_result = await session.execute(count_query)
     total = count_result.scalar() or 0
     return {"items": items, "total": total}
@@ -979,7 +765,7 @@ async def delete_financial_assumption(
     user: User = Depends(require_permission("simulation:create")),
 ) -> None:
     """Delete a financial assumption."""
-    await _get_scenario_or_404(session, scenario_id)
+    await get_scenario_or_404(session, scenario_id)
     result = await session.execute(select(FinancialAssumption).where(FinancialAssumption.id == assumption_id))
     assumption = result.scalar_one_or_none()
     if not assumption:
@@ -988,49 +774,7 @@ async def delete_financial_assumption(
     await session.commit()
 
 
-# =============================================================================
-# Phase 4.1: Alternative Suggestions
-# =============================================================================
-
-
-class SuggestionCreate(BaseModel):
-    context_notes: str | None = None
-
-
-class SuggestionResponse(BaseModel):
-    id: str
-    scenario_id: str
-    suggestion_text: str
-    rationale: str
-    governance_flags: dict[str, Any] | None = None
-    evidence_gaps: dict[str, Any] | None = None
-    disposition: str
-    disposition_notes: str | None = None
-    created_at: str
-
-
-class SuggestionListResponse(BaseModel):
-    items: list[SuggestionResponse]
-    total: int
-
-
-class SuggestionDispositionUpdate(BaseModel):
-    disposition: SuggestionDisposition
-    disposition_notes: str | None = None
-
-
-def _suggestion_to_response(s: AlternativeSuggestion) -> dict[str, Any]:
-    return {
-        "id": str(s.id),
-        "scenario_id": str(s.scenario_id),
-        "suggestion_text": s.suggestion_text,
-        "rationale": s.rationale,
-        "governance_flags": s.governance_flags,
-        "evidence_gaps": s.evidence_gaps,
-        "disposition": s.disposition.value if isinstance(s.disposition, SuggestionDisposition) else s.disposition,
-        "disposition_notes": s.disposition_notes,
-        "created_at": s.created_at.isoformat() if s.created_at else "",
-    }
+# -- Alternative Suggestions --------------------------------------------------
 
 
 @router.post(
@@ -1094,7 +838,7 @@ async def request_suggestions(
         await session.refresh(s)
 
     return {
-        "items": [_suggestion_to_response(s) for s in items],
+        "items": [suggestion_to_response(s) for s in items],
         "total": len(items),
     }
 
@@ -1108,12 +852,12 @@ async def list_suggestions(
     user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """List alternative suggestions for a scenario."""
-    await _get_scenario_or_404(session, scenario_id)
+    await get_scenario_or_404(session, scenario_id)
     query = select(AlternativeSuggestion).where(AlternativeSuggestion.scenario_id == scenario_id)
     count_query = select(func.count(AlternativeSuggestion.id)).where(AlternativeSuggestion.scenario_id == scenario_id)
     query = query.offset(offset).limit(limit)
     result = await session.execute(query)
-    items = [_suggestion_to_response(s) for s in result.scalars().all()]
+    items = [suggestion_to_response(s) for s in result.scalars().all()]
     count_result = await session.execute(count_query)
     total = count_result.scalar() or 0
     return {"items": items, "total": total}
@@ -1131,7 +875,7 @@ async def update_suggestion_disposition(
     user: User = Depends(require_permission("simulation:create")),
 ) -> dict[str, Any]:
     """Accept, modify, or reject a suggestion."""
-    scenario = await _get_scenario_or_404(session, scenario_id)
+    scenario = await get_scenario_or_404(session, scenario_id)
     result = await session.execute(
         select(AlternativeSuggestion).where(
             AlternativeSuggestion.id == suggestion_id,
@@ -1161,32 +905,10 @@ async def update_suggestion_disposition(
     )
     await session.commit()
     await session.refresh(suggestion)
-    return _suggestion_to_response(suggestion)
+    return suggestion_to_response(suggestion)
 
 
-# =============================================================================
-# Phase 4.2: Financial Impact Estimation
-# =============================================================================
-
-
-class CostRange(BaseModel):
-    optimistic: float
-    expected: float
-    pessimistic: float
-
-
-class SensitivityEntry(BaseModel):
-    assumption_name: str
-    base_value: float
-    impact_range: CostRange
-
-
-class FinancialImpactResponse(BaseModel):
-    scenario_id: str
-    cost_range: CostRange
-    sensitivity_analysis: list[SensitivityEntry]
-    assumption_count: int
-    delta_vs_baseline: float | None = None
+# -- Financial Impact ---------------------------------------------------------
 
 
 @router.get("/scenarios/{scenario_id}/financial-impact", response_model=FinancialImpactResponse)
@@ -1197,7 +919,7 @@ async def get_financial_impact(
     user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """Compute financial impact estimation for a scenario."""
-    scenario = await _get_scenario_or_404(session, scenario_id)
+    scenario = await get_scenario_or_404(session, scenario_id)
 
     from src.simulation.financial import compute_financial_impact
 
@@ -1209,7 +931,7 @@ async def get_financial_impact(
     # Compute baseline expected cost if a baseline scenario is provided
     baseline_expected: float | None = None
     if baseline_scenario_id:
-        baseline = await _get_scenario_or_404(session, baseline_scenario_id)
+        baseline = await get_scenario_or_404(session, baseline_scenario_id)
         bl_result = await session.execute(
             select(FinancialAssumption).where(FinancialAssumption.engagement_id == baseline.engagement_id)
         )
@@ -1227,25 +949,7 @@ async def get_financial_impact(
     }
 
 
-# =============================================================================
-# Phase 4.2: Scenario Ranking
-# =============================================================================
-
-
-class ScenarioRankEntry(BaseModel):
-    scenario_id: str
-    scenario_name: str
-    composite_score: float
-    evidence_score: float
-    simulation_score: float
-    financial_score: float
-    governance_score: float
-
-
-class ScenarioRankResponse(BaseModel):
-    engagement_id: str
-    rankings: list[ScenarioRankEntry]
-    weights: dict[str, float]
+# -- Scenario Ranking ---------------------------------------------------------
 
 
 @router.get("/scenarios/rank", response_model=ScenarioRankResponse)
