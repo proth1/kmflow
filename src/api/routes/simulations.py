@@ -1039,6 +1039,7 @@ async def request_suggestions(
     for s_data in suggestions:
         suggestion = AlternativeSuggestion(
             scenario_id=scenario_id,
+            engagement_id=scenario.engagement_id,
             suggestion_text=s_data["suggestion_text"],
             rationale=s_data["rationale"],
             governance_flags=s_data.get("governance_flags"),
@@ -1152,6 +1153,7 @@ class FinancialImpactResponse(BaseModel):
 @router.get("/scenarios/{scenario_id}/financial-impact", response_model=FinancialImpactResponse)
 async def get_financial_impact(
     scenario_id: UUID,
+    baseline_scenario_id: UUID | None = Query(default=None, description="Baseline scenario for delta comparison"),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
@@ -1167,7 +1169,19 @@ async def get_financial_impact(
     )
     assumptions = list(result.scalars().all())
 
-    impact = compute_financial_impact(assumptions)
+    # Compute baseline expected cost if a baseline scenario is provided
+    baseline_expected: float | None = None
+    if baseline_scenario_id:
+        baseline = await _get_scenario_or_404(session, baseline_scenario_id)
+        bl_result = await session.execute(
+            select(FinancialAssumption).where(
+                FinancialAssumption.engagement_id == baseline.engagement_id
+            )
+        )
+        bl_assumptions = list(bl_result.scalars().all())
+        baseline_expected = sum(a.value for a in bl_assumptions) if bl_assumptions else 0.0
+
+    impact = compute_financial_impact(assumptions, baseline_expected=baseline_expected)
 
     return {
         "scenario_id": str(scenario_id),

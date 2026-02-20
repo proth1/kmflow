@@ -43,13 +43,35 @@ def _simulation_score(result: Any | None) -> float:
     return 0.0
 
 
-def _financial_score(assumptions: list[Any]) -> float:
-    """Compute financial dimension score from assumption confidence."""
-    if not assumptions:
-        return 0.0
+def _financial_score(assumptions: list[Any], result: Any | None = None) -> float:
+    """Compute financial dimension score.
 
-    confidences = [a.confidence for a in assumptions]
-    return sum(confidences) / len(confidences)
+    Combines engagement-level assumption confidence with scenario-specific
+    cost metrics from simulation results (if available), so that scenarios
+    with better financial outcomes rank higher.
+
+    The score blends:
+    - Assumption confidence average (how well-supported the cost model is)
+    - Simulation cost efficiency (lower cost_ratio → higher score), if present
+    """
+    assumption_score = 0.0
+    if assumptions:
+        confidences = [a.confidence for a in assumptions]
+        assumption_score = sum(confidences) / len(confidences)
+
+    # If the scenario has simulation results with cost metrics, blend them in
+    if result and result.metrics:
+        cost_ratio = result.metrics.get("cost_ratio")
+        cost_efficiency = result.metrics.get("cost_efficiency")
+        if isinstance(cost_ratio, (int, float)):
+            # cost_ratio < 1.0 is good (under budget), > 1.0 is bad
+            sim_financial = min(1.0, max(0.0, 1.0 - (cost_ratio - 1.0)))
+            return (assumption_score + sim_financial) / 2.0 if assumptions else sim_financial
+        if isinstance(cost_efficiency, (int, float)):
+            sim_financial = min(1.0, max(0.0, float(cost_efficiency)))
+            return (assumption_score + sim_financial) / 2.0 if assumptions else sim_financial
+
+    return assumption_score
 
 
 def _governance_score(scenario: Any, result: Any | None) -> float:
@@ -98,19 +120,18 @@ def rank_scenarios(
     w_fin = weights.get("financial", 0.25)
     w_gov = weights.get("governance", 0.20)
 
-    fin_score = _financial_score(assumptions)
-
     rankings: list[dict[str, Any]] = []
     for scenario in scenarios:
         result = results_map.get(scenario.id)
         ev = _evidence_score(scenario)
         sim = _simulation_score(result)
+        fin = _financial_score(assumptions, result)
         gov = _governance_score(scenario, result)
 
         composite = (
             w_ev * ev
             + w_sim * sim
-            + w_fin * fin_score
+            + w_fin * fin
             + w_gov * gov
         )
 
@@ -120,7 +141,7 @@ def rank_scenarios(
             "composite_score": round(composite, 4),
             "evidence_score": round(ev, 4),
             "simulation_score": round(sim, 4),
-            "financial_score": round(fin_score, 4),
+            "financial_score": round(fin, 4),
             "governance_score": round(gov, 4),
         })
 

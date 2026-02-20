@@ -21,11 +21,14 @@ SENSITIVITY_PERTURBATION = 0.20  # +/- 20%
 
 def compute_financial_impact(
     assumptions: list[Any],
+    baseline_expected: float | None = None,
 ) -> dict[str, Any]:
     """Compute financial impact from assumptions.
 
     Args:
         assumptions: List of FinancialAssumption ORM objects.
+        baseline_expected: If provided, computes delta_vs_baseline as
+            (this scenario's expected cost - baseline).
 
     Returns:
         Dict with cost_range, sensitivity_analysis, and delta_vs_baseline.
@@ -72,8 +75,12 @@ def compute_financial_impact(
         reverse=True,
     )
 
+    delta: float | None = None
+    if baseline_expected is not None:
+        delta = round(expected_total - baseline_expected, 2)
+
     return {
         "cost_range": cost_range,
         "sensitivity_analysis": sensitivity,
-        "delta_vs_baseline": None,  # Set when comparing two scenarios
+        "delta_vs_baseline": delta,
     }

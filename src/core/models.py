@@ -1459,11 +1459,17 @@ class AlternativeSuggestion(Base):
     """An LLM-generated alternative scenario suggestion."""
 
     __tablename__ = "alternative_suggestions"
-    __table_args__ = (Index("ix_alternative_suggestions_scenario_id", "scenario_id"),)
+    __table_args__ = (
+        Index("ix_alternative_suggestions_scenario_id", "scenario_id"),
+        Index("ix_alternative_suggestions_engagement_id", "engagement_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     scenario_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("simulation_scenarios.id", ondelete="CASCADE"), nullable=False
+    )
+    engagement_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=True
     )
     suggestion_text: Mapped[str] = mapped_column(Text, nullable=False)
     rationale: Mapped[str] = mapped_column(Text, nullable=False)

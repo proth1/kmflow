@@ -13,6 +13,8 @@ import re
 from typing import Any
 from uuid import UUID
 
+import httpx
+
 logger = logging.getLogger(__name__)
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
@@ -110,13 +112,16 @@ Surface unknowns and areas where evidence is insufficient for confident recommen
         return prompt
 
     async def _call_llm(self, prompt: str) -> str:
-        """Call Claude API for suggestions."""
+        """Call Claude API for suggestions.
+
+        Uses a 15-second timeout to avoid holding the async worker too long.
+        Raises httpx.TimeoutException on timeout (caught by generate_suggestions
+        which returns a fallback).
+        """
         if not ANTHROPIC_API_KEY:
             raise ValueError("ANTHROPIC_API_KEY not configured")
 
-        import httpx
-
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=15.0) as client:
             response = await client.post(
                 "https://api.anthropic.com/v1/messages",
                 headers={

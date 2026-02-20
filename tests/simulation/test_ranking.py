@@ -85,6 +85,31 @@ class TestFinancialScore:
         assumptions = [_make_assumption(0.8), _make_assumption(0.6)]
         assert abs(_financial_score(assumptions) - 0.7) < 0.001
 
+    def test_with_cost_ratio_under_budget(self) -> None:
+        """cost_ratio < 1.0 means under budget → high score."""
+        r = _make_result({"cost_ratio": 0.8})
+        score = _financial_score([], r)
+        assert score > 0.5
+
+    def test_with_cost_ratio_over_budget(self) -> None:
+        """cost_ratio > 1.0 means over budget → lower score."""
+        r = _make_result({"cost_ratio": 2.0})
+        score = _financial_score([], r)
+        assert score < 0.5
+
+    def test_cost_ratio_blended_with_assumptions(self) -> None:
+        """When both assumptions and cost_ratio present, score is blended."""
+        r = _make_result({"cost_ratio": 0.8})
+        score_with = _financial_score([_make_assumption(0.9)], r)
+        score_without = _financial_score([_make_assumption(0.9)])
+        # Blended score should differ from assumption-only
+        assert score_with != score_without
+
+    def test_cost_efficiency_used_as_fallback(self) -> None:
+        r = _make_result({"cost_efficiency": 0.75})
+        score = _financial_score([], r)
+        assert abs(score - 0.75) < 0.001
+
 
 class TestGovernanceScore:
     def test_no_result(self) -> None:

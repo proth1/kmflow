@@ -78,10 +78,20 @@ class TestComputeFinancialImpact:
         assert entry["impact_range"]["optimistic"] == round(10_000 - delta, 2)
         assert entry["impact_range"]["pessimistic"] == round(10_000 + delta, 2)
 
-    def test_delta_vs_baseline_is_none(self) -> None:
+    def test_delta_vs_baseline_none_without_param(self) -> None:
         a = _make_assumption("Cost", 10_000, 0.8)
         result = compute_financial_impact([a])
         assert result["delta_vs_baseline"] is None
+
+    def test_delta_vs_baseline_positive(self) -> None:
+        a = _make_assumption("Cost", 10_000, 0.8)
+        result = compute_financial_impact([a], baseline_expected=8_000)
+        assert result["delta_vs_baseline"] == 2_000.0
+
+    def test_delta_vs_baseline_negative(self) -> None:
+        a = _make_assumption("Cost", 5_000, 0.8)
+        result = compute_financial_impact([a], baseline_expected=8_000)
+        assert result["delta_vs_baseline"] == -3_000.0
 
     def test_high_confidence_tighter_range(self) -> None:
         high = compute_financial_impact([_make_assumption("A", 100_000, 1.0)])

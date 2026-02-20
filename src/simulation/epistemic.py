@@ -16,10 +16,18 @@ from src.pov.constants import DEFAULT_EVIDENCE_WEIGHT, EVIDENCE_TYPE_WEIGHTS
 
 logger = logging.getLogger(__name__)
 
-# Uplift calculation constants
+# Uplift calculation constants.
+# MAX_PROJECTED_CONFIDENCE: Cap at 0.95 because confidence=1.0 implies absolute
+#   certainty, which is unreachable from evidence alone.
+# BASE_UPLIFT_PER_SOURCE: Each new evidence source contributes up to +0.12
+#   confidence, derived from empirical observation that one high-quality
+#   document typically moves a dark element to dim (~0.12 uplift).
+# UPLIFT_DECAY: Diminishing returns — the 2nd source adds 60% of the 1st,
+#   the 3rd adds 36%, etc. Models the law of diminishing marginal returns
+#   in evidence collection.
 MAX_PROJECTED_CONFIDENCE = 0.95
 BASE_UPLIFT_PER_SOURCE = 0.12
-UPLIFT_DECAY = 0.6  # Diminishing returns factor
+UPLIFT_DECAY = 0.6
 
 
 @dataclass
