@@ -757,6 +757,130 @@ export async function fetchSimulationResults(
   );
 }
 
+// -- Phase 3.1: Scenario Comparison Workbench types ---------------------------
+
+export type CoverageClassification = "bright" | "dim" | "dark";
+
+export interface ElementCoverageData {
+  element_id: string;
+  element_name: string;
+  classification: CoverageClassification;
+  evidence_count: number;
+  confidence: number;
+  is_added: boolean;
+  is_removed: boolean;
+  is_modified: boolean;
+}
+
+export interface ScenarioCoverageData {
+  scenario_id: string;
+  elements: ElementCoverageData[];
+  bright_count: number;
+  dim_count: number;
+  dark_count: number;
+  aggregate_confidence: number;
+}
+
+export interface ScenarioComparisonEntry {
+  scenario_id: string;
+  scenario_name: string;
+  deltas: Record<string, {
+    baseline: number;
+    simulated: number;
+    delta: number;
+    pct_change: number;
+  }> | null;
+  assessment: string | null;
+  coverage_summary: {
+    bright: number;
+    dim: number;
+    dark: number;
+  } | null;
+}
+
+export interface ScenarioComparisonData {
+  baseline_id: string;
+  baseline_name: string;
+  comparisons: ScenarioComparisonEntry[];
+}
+
+export type ModificationType =
+  | "task_add"
+  | "task_remove"
+  | "task_modify"
+  | "role_reassign"
+  | "gateway_restructure"
+  | "control_add"
+  | "control_remove";
+
+export interface ModificationData {
+  id: string;
+  scenario_id: string;
+  modification_type: ModificationType;
+  element_id: string;
+  element_name: string;
+  change_data: Record<string, unknown> | null;
+  template_key: string | null;
+  applied_at: string;
+}
+
+export interface ModificationList {
+  items: ModificationData[];
+  total: number;
+}
+
+// -- Phase 3.1: Scenario Comparison API functions -----------------------------
+
+export async function fetchScenarioComparison(
+  baselineId: string,
+  compareIds: string[],
+): Promise<ScenarioComparisonData> {
+  return apiGet<ScenarioComparisonData>(
+    `/api/v1/simulations/scenarios/${baselineId}/compare?ids=${compareIds.join(",")}`,
+  );
+}
+
+export async function fetchScenarioCoverage(
+  scenarioId: string,
+): Promise<ScenarioCoverageData> {
+  return apiGet<ScenarioCoverageData>(
+    `/api/v1/simulations/scenarios/${scenarioId}/evidence-coverage`,
+  );
+}
+
+export async function fetchModifications(
+  scenarioId: string,
+): Promise<ModificationList> {
+  return apiGet<ModificationList>(
+    `/api/v1/simulations/scenarios/${scenarioId}/modifications`,
+  );
+}
+
+export async function addModification(
+  scenarioId: string,
+  body: {
+    modification_type: ModificationType;
+    element_id: string;
+    element_name: string;
+    change_data?: Record<string, unknown>;
+    template_key?: string;
+  },
+): Promise<ModificationData> {
+  return apiPost<ModificationData>(
+    `/api/v1/simulations/scenarios/${scenarioId}/modifications`,
+    body,
+  );
+}
+
+export async function deleteModification(
+  scenarioId: string,
+  modificationId: string,
+): Promise<void> {
+  return apiDelete(
+    `/api/v1/simulations/scenarios/${scenarioId}/modifications/${modificationId}`,
+  );
+}
+
 // -- Phase 3: Portal API functions --------------------------------------------
 
 export async function fetchPortalOverview(

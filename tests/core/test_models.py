@@ -216,7 +216,7 @@ class TestAuditLog:
     def test_audit_actions(self) -> None:
         """All expected audit actions should be defined."""
         actions = list(AuditAction)
-        assert len(actions) == 31
+        assert len(actions) == 33
         assert AuditAction.ENGAGEMENT_CREATED in actions
         assert AuditAction.ENGAGEMENT_UPDATED in actions
         assert AuditAction.ENGAGEMENT_ARCHIVED in actions
@@ -501,5 +501,6 @@ class TestPhase3Enums:
         actions = list(AuditAction)
         # Phase 1+2: 18 actions
         # Phase 3: 13 new actions
-        # Total: 31 actions
-        assert len(actions) == 31
+        # Phase 3.1: 2 new actions (scenario_modified, scenario_compared)
+        # Total: 33 actions
+        assert len(actions) == 33

@@ -1,6 +1,7 @@
 """Simulation routes for process what-if analysis.
 
-Provides API for creating, running, and analyzing process simulations.
+Provides API for creating, running, and analyzing process simulations,
+including scenario modifications, evidence coverage, and comparison.
 """
 
 from __future__ import annotations
@@ -10,18 +11,33 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.api.deps import get_session
-from src.core.models import SimulationResult, SimulationScenario, SimulationStatus, SimulationType, User
+from src.core.models import (
+    AuditAction,
+    AuditLog,
+    ModificationType,
+    ScenarioModification,
+    SimulationResult,
+    SimulationScenario,
+    SimulationStatus,
+    SimulationType,
+    User,
+)
 from src.core.permissions import require_permission
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/simulations", tags=["simulations"])
+
+VALID_TEMPLATE_KEYS = frozenset(
+    {"consolidate_adjacent", "automate_gateway", "shift_decision_boundary", "remove_control"}
+)
 
 
 # -- Schemas ------------------------------------------------------------------
@@ -44,6 +60,8 @@ class ScenarioResponse(BaseModel):
     simulation_type: str
     parameters: dict[str, Any] | None = None
     description: str | None = None
+    status: str | None = None
+    evidence_confidence_score: float | None = None
     created_at: str
 
 
@@ -70,6 +88,67 @@ class SimulationResultList(BaseModel):
     total: int
 
 
+class ModificationCreate(BaseModel):
+    modification_type: ModificationType
+    element_id: str = Field(..., min_length=1, max_length=512)
+    element_name: str = Field(..., min_length=1, max_length=512)
+    change_data: dict[str, Any] | None = None
+    template_key: str | None = None
+
+
+class ModificationResponse(BaseModel):
+    id: str
+    scenario_id: str
+    modification_type: str
+    element_id: str
+    element_name: str
+    change_data: dict[str, Any] | None = None
+    template_key: str | None = None
+    applied_at: str
+
+
+class ModificationList(BaseModel):
+    items: list[ModificationResponse]
+    total: int
+
+
+class ElementCoverageResponse(BaseModel):
+    element_id: str
+    element_name: str
+    classification: str
+    evidence_count: int
+    confidence: float
+    is_added: bool = False
+    is_removed: bool = False
+    is_modified: bool = False
+
+
+class ScenarioCoverageResponse(BaseModel):
+    scenario_id: str
+    elements: list[ElementCoverageResponse]
+    bright_count: int
+    dim_count: int
+    dark_count: int
+    aggregate_confidence: float
+
+
+class ScenarioComparisonEntry(BaseModel):
+    scenario_id: str
+    scenario_name: str
+    deltas: dict[str, Any] | None = None
+    assessment: str | None = None
+    coverage_summary: dict[str, int] | None = None
+
+
+class ScenarioComparisonResponse(BaseModel):
+    baseline_id: str
+    baseline_name: str
+    comparisons: list[ScenarioComparisonEntry]
+
+
+# -- Helpers ------------------------------------------------------------------
+
+
 def _scenario_to_response(s: SimulationScenario) -> dict[str, Any]:
     return {
         "id": str(s.id),
@@ -81,6 +160,8 @@ def _scenario_to_response(s: SimulationScenario) -> dict[str, Any]:
         else s.simulation_type,
         "parameters": s.parameters,
         "description": s.description,
+        "status": s.status,
+        "evidence_confidence_score": s.evidence_confidence_score,
         "created_at": s.created_at.isoformat() if s.created_at else "",
     }
 
@@ -98,6 +179,44 @@ def _result_to_response(r: SimulationResult) -> dict[str, Any]:
         "started_at": r.started_at.isoformat() if r.started_at else None,
         "completed_at": r.completed_at.isoformat() if r.completed_at else None,
     }
+
+
+def _modification_to_response(m: ScenarioModification) -> dict[str, Any]:
+    return {
+        "id": str(m.id),
+        "scenario_id": str(m.scenario_id),
+        "modification_type": m.modification_type.value
+        if isinstance(m.modification_type, ModificationType)
+        else m.modification_type,
+        "element_id": m.element_id,
+        "element_name": m.element_name,
+        "change_data": m.change_data,
+        "template_key": m.template_key,
+        "applied_at": m.applied_at.isoformat() if m.applied_at else "",
+    }
+
+
+async def _log_audit(
+    session: AsyncSession,
+    engagement_id: UUID,
+    action: AuditAction,
+    details: str | None = None,
+) -> None:
+    audit = AuditLog(engagement_id=engagement_id, action=action, actor="system", details=details)
+    session.add(audit)
+
+
+async def _get_scenario_or_404(
+    session: AsyncSession,
+    scenario_id: UUID,
+) -> SimulationScenario:
+    result = await session.execute(
+        select(SimulationScenario).where(SimulationScenario.id == scenario_id)
+    )
+    scenario = result.scalar_one_or_none()
+    if not scenario:
+        raise HTTPException(status_code=404, detail=f"Scenario {scenario_id} not found")
+    return scenario
 
 
 # -- Scenario Routes ----------------------------------------------------------
@@ -119,6 +238,7 @@ async def create_scenario(
         description=payload.description,
     )
     session.add(scenario)
+    await _log_audit(session, payload.engagement_id, AuditAction.SIMULATION_CREATED, f"Scenario: {payload.name}")
     await session.commit()
     await session.refresh(scenario)
     return _scenario_to_response(scenario)
@@ -149,10 +269,7 @@ async def get_scenario(
     user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """Get a scenario by ID."""
-    result = await session.execute(select(SimulationScenario).where(SimulationScenario.id == scenario_id))
-    scenario = result.scalar_one_or_none()
-    if not scenario:
-        raise HTTPException(status_code=404, detail=f"Scenario {scenario_id} not found")
+    scenario = await _get_scenario_or_404(session, scenario_id)
     return _scenario_to_response(scenario)
 
 
@@ -166,10 +283,7 @@ async def run_scenario(
     user: User = Depends(require_permission("simulation:run")),
 ) -> dict[str, Any]:
     """Run a simulation scenario."""
-    result = await session.execute(select(SimulationScenario).where(SimulationScenario.id == scenario_id))
-    scenario = result.scalar_one_or_none()
-    if not scenario:
-        raise HTTPException(status_code=404, detail=f"Scenario {scenario_id} not found")
+    scenario = await _get_scenario_or_404(session, scenario_id)
 
     from src.simulation.engine import run_simulation
 
@@ -212,9 +326,283 @@ async def run_scenario(
         sim_result.error_message = str(e)
         sim_result.completed_at = datetime.now(UTC)
 
+    await _log_audit(session, scenario.engagement_id, AuditAction.SIMULATION_EXECUTED, f"Scenario: {scenario.name}")
     await session.commit()
     await session.refresh(sim_result)
     return _result_to_response(sim_result)
+
+
+# -- Modification Routes ------------------------------------------------------
+
+
+@router.post(
+    "/scenarios/{scenario_id}/modifications",
+    response_model=ModificationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_modification(
+    scenario_id: UUID,
+    payload: ModificationCreate,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:create")),
+) -> dict[str, Any]:
+    """Add a modification to a scenario."""
+    scenario = await _get_scenario_or_404(session, scenario_id)
+
+    if payload.template_key and payload.template_key not in VALID_TEMPLATE_KEYS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid template_key '{payload.template_key}'. Must be one of: {sorted(VALID_TEMPLATE_KEYS)}",
+        )
+
+    mod = ScenarioModification(
+        scenario_id=scenario_id,
+        modification_type=payload.modification_type,
+        element_id=payload.element_id,
+        element_name=payload.element_name,
+        change_data=payload.change_data,
+        template_key=payload.template_key,
+    )
+    session.add(mod)
+    await _log_audit(
+        session,
+        scenario.engagement_id,
+        AuditAction.SCENARIO_MODIFIED,
+        f"Added {payload.modification_type} on {payload.element_name}",
+    )
+    await session.commit()
+    await session.refresh(mod)
+    return _modification_to_response(mod)
+
+
+@router.get("/scenarios/{scenario_id}/modifications", response_model=ModificationList)
+async def list_modifications(
+    scenario_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:read")),
+) -> dict[str, Any]:
+    """List modifications for a scenario."""
+    await _get_scenario_or_404(session, scenario_id)
+    result = await session.execute(
+        select(ScenarioModification).where(ScenarioModification.scenario_id == scenario_id)
+    )
+    items = [_modification_to_response(m) for m in result.scalars().all()]
+    return {"items": items, "total": len(items)}
+
+
+@router.delete(
+    "/scenarios/{scenario_id}/modifications/{modification_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_modification(
+    scenario_id: UUID,
+    modification_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:create")),
+) -> None:
+    """Delete a modification from a scenario."""
+    scenario = await _get_scenario_or_404(session, scenario_id)
+    result = await session.execute(
+        select(ScenarioModification).where(
+            ScenarioModification.id == modification_id,
+            ScenarioModification.scenario_id == scenario_id,
+        )
+    )
+    mod = result.scalar_one_or_none()
+    if not mod:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Modification {modification_id} not found for scenario {scenario_id}",
+        )
+    await session.delete(mod)
+    await _log_audit(
+        session,
+        scenario.engagement_id,
+        AuditAction.SCENARIO_MODIFIED,
+        f"Removed modification {modification_id}",
+    )
+    await session.commit()
+
+
+# -- Evidence Coverage Route --------------------------------------------------
+
+
+@router.get("/scenarios/{scenario_id}/evidence-coverage", response_model=ScenarioCoverageResponse)
+async def get_evidence_coverage(
+    scenario_id: UUID,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:read")),
+) -> dict[str, Any]:
+    """Get Bright/Dim/Dark evidence coverage for a scenario."""
+    result = await session.execute(
+        select(SimulationScenario)
+        .where(SimulationScenario.id == scenario_id)
+        .options(selectinload(SimulationScenario.modifications))
+    )
+    scenario = result.scalar_one_or_none()
+    if not scenario:
+        raise HTTPException(status_code=404, detail=f"Scenario {scenario_id} not found")
+
+    from src.semantic.graph import KnowledgeGraphService
+    from src.simulation.coverage import EvidenceCoverageService
+
+    driver = request.app.state.neo4j_driver
+    graph_service = KnowledgeGraphService(driver)
+    coverage_service = EvidenceCoverageService(graph_service)
+
+    coverage = await coverage_service.compute_coverage(
+        scenario_id=scenario_id,
+        engagement_id=scenario.engagement_id,
+        modifications=scenario.modifications,
+    )
+
+    # Opportunistically update the scenario's confidence score
+    scenario.evidence_confidence_score = coverage.aggregate_confidence
+    await session.commit()
+
+    return {
+        "scenario_id": coverage.scenario_id,
+        "elements": [
+            {
+                "element_id": e.element_id,
+                "element_name": e.element_name,
+                "classification": e.classification,
+                "evidence_count": e.evidence_count,
+                "confidence": e.confidence,
+                "is_added": e.is_added,
+                "is_removed": e.is_removed,
+                "is_modified": e.is_modified,
+            }
+            for e in coverage.elements
+        ],
+        "bright_count": coverage.bright_count,
+        "dim_count": coverage.dim_count,
+        "dark_count": coverage.dark_count,
+        "aggregate_confidence": coverage.aggregate_confidence,
+    }
+
+
+# -- Compare Route ------------------------------------------------------------
+
+
+@router.get("/scenarios/{scenario_id}/compare", response_model=ScenarioComparisonResponse)
+async def compare_scenarios(
+    scenario_id: UUID,
+    request: Request,
+    ids: str = Query(..., description="Comma-separated scenario UUIDs to compare against"),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:read")),
+) -> dict[str, Any]:
+    """Compare baseline scenario with alternatives side-by-side."""
+    # Fetch baseline
+    baseline = await _get_scenario_or_404(session, scenario_id)
+
+    # Parse comparison IDs
+    try:
+        compare_ids = [UUID(uid.strip()) for uid in ids.split(",") if uid.strip()]
+    except ValueError as err:
+        raise HTTPException(status_code=422, detail="ids must be comma-separated valid UUIDs") from err
+
+    if not compare_ids:
+        raise HTTPException(status_code=422, detail="At least one comparison scenario ID is required")
+
+    # Fetch baseline's latest completed result
+    baseline_result_row = await session.execute(
+        select(SimulationResult)
+        .where(
+            SimulationResult.scenario_id == scenario_id,
+            SimulationResult.status == SimulationStatus.COMPLETED,
+        )
+        .order_by(SimulationResult.completed_at.desc())
+        .limit(1)
+    )
+    baseline_result = baseline_result_row.scalar_one_or_none()
+    baseline_metrics = baseline_result.metrics if baseline_result else {}
+
+    from src.semantic.graph import KnowledgeGraphService
+    from src.simulation.coverage import EvidenceCoverageService
+    from src.simulation.impact import compare_simulation_results
+
+    driver = request.app.state.neo4j_driver
+    graph_service = KnowledgeGraphService(driver)
+    coverage_service = EvidenceCoverageService(graph_service)
+
+    comparisons: list[dict[str, Any]] = []
+
+    for cid in compare_ids:
+        # Fetch comparison scenario
+        cmp_result_row = await session.execute(
+            select(SimulationScenario).where(SimulationScenario.id == cid)
+        )
+        cmp_scenario = cmp_result_row.scalar_one_or_none()
+        if not cmp_scenario:
+            comparisons.append({
+                "scenario_id": str(cid),
+                "scenario_name": "Not Found",
+                "deltas": None,
+                "assessment": None,
+                "coverage_summary": None,
+            })
+            continue
+
+        # Fetch latest completed result for comparison scenario
+        sim_result_row = await session.execute(
+            select(SimulationResult)
+            .where(
+                SimulationResult.scenario_id == cid,
+                SimulationResult.status == SimulationStatus.COMPLETED,
+            )
+            .order_by(SimulationResult.completed_at.desc())
+            .limit(1)
+        )
+        sim_result = sim_result_row.scalar_one_or_none()
+        sim_metrics = sim_result.metrics if sim_result else {}
+
+        # Compare metrics
+        deltas = None
+        assessment = None
+        if baseline_metrics and sim_metrics:
+            comparison = compare_simulation_results(baseline_metrics, sim_metrics)
+            deltas = comparison.get("deltas")
+            assessment = comparison.get("assessment")
+
+        # Get coverage summary
+        cmp_mods_row = await session.execute(
+            select(ScenarioModification).where(ScenarioModification.scenario_id == cid)
+        )
+        cmp_mods = list(cmp_mods_row.scalars().all())
+        coverage = await coverage_service.compute_coverage(
+            scenario_id=cid,
+            engagement_id=cmp_scenario.engagement_id,
+            modifications=cmp_mods,
+        )
+
+        comparisons.append({
+            "scenario_id": str(cid),
+            "scenario_name": cmp_scenario.name,
+            "deltas": deltas,
+            "assessment": assessment,
+            "coverage_summary": {
+                "bright": coverage.bright_count,
+                "dim": coverage.dim_count,
+                "dark": coverage.dark_count,
+            },
+        })
+
+    await _log_audit(
+        session,
+        baseline.engagement_id,
+        AuditAction.SCENARIO_COMPARED,
+        f"Compared {baseline.name} with {len(compare_ids)} scenario(s)",
+    )
+    await session.commit()
+
+    return {
+        "baseline_id": str(scenario_id),
+        "baseline_name": baseline.name,
+        "comparisons": comparisons,
+    }
 
 
 # -- Result Routes ------------------------------------------------------------

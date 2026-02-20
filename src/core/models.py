@@ -126,6 +126,8 @@ class AuditAction(enum.StrEnum):
     PATTERN_APPLIED = "pattern_applied"
     SIMULATION_CREATED = "simulation_created"
     SIMULATION_EXECUTED = "simulation_executed"
+    SCENARIO_MODIFIED = "scenario_modified"
+    SCENARIO_COMPARED = "scenario_compared"
 
 
 # -- Phase 2: Regulatory / Policy / Control enums ----------------------------
@@ -1024,6 +1026,18 @@ class SimulationType(enum.StrEnum):
     CONTROL_REMOVAL = "control_removal"
 
 
+class ModificationType(enum.StrEnum):
+    """Types of scenario modifications for the Scenario Comparison Workbench."""
+
+    TASK_ADD = "task_add"
+    TASK_REMOVE = "task_remove"
+    TASK_MODIFY = "task_modify"
+    ROLE_REASSIGN = "role_reassign"
+    GATEWAY_RESTRUCTURE = "gateway_restructure"
+    CONTROL_ADD = "control_add"
+    CONTROL_REMOVE = "control_remove"
+
+
 class PatternCategory(enum.StrEnum):
     """Categories for cross-engagement patterns."""
 
@@ -1289,9 +1303,14 @@ class SimulationScenario(Base):
     simulation_type: Mapped[SimulationType] = mapped_column(Enum(SimulationType), nullable=False)
     parameters: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str | None] = mapped_column(String(50), nullable=True, server_default="draft")
+    evidence_confidence_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     engagement: Mapped[Engagement] = relationship("Engagement")
+    modifications: Mapped[list[ScenarioModification]] = relationship(
+        "ScenarioModification", back_populates="scenario", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return f"<SimulationScenario(id={self.id}, name='{self.name}', type={self.simulation_type})>"
@@ -1323,6 +1342,29 @@ class SimulationResult(Base):
 
     def __repr__(self) -> str:
         return f"<SimulationResult(id={self.id}, status={self.status})>"
+
+
+class ScenarioModification(Base):
+    """A modification applied to a simulation scenario."""
+
+    __tablename__ = "scenario_modifications"
+    __table_args__ = (Index("ix_scenario_modifications_scenario_id", "scenario_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    scenario_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("simulation_scenarios.id", ondelete="CASCADE"), nullable=False
+    )
+    modification_type: Mapped[ModificationType] = mapped_column(Enum(ModificationType), nullable=False)
+    element_id: Mapped[str] = mapped_column(String(512), nullable=False)
+    element_name: Mapped[str] = mapped_column(String(512), nullable=False)
+    change_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    template_key: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    applied_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    scenario: Mapped[SimulationScenario] = relationship("SimulationScenario", back_populates="modifications")
+
+    def __repr__(self) -> str:
+        return f"<ScenarioModification(id={self.id}, type={self.modification_type}, element='{self.element_name}')>"
 
 
 # =============================================================================
