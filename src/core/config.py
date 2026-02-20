@@ -84,6 +84,8 @@ class Settings(BaseSettings):
 
     # ── Data Retention (Phase 5) ──────────────────────────────
     retention_cleanup_enabled: bool = False
+    evidence_retention_days: int = 365
+    audit_retention_days: int = 730
 
     # ── Encryption Key Rotation (Phase 5) ──────────────────────
     encryption_key_previous: str = ""  # Previous key for rotation

@@ -84,6 +84,15 @@ def get_prompt_template(query_type: str = "general") -> str:
     return DOMAIN_TEMPLATES.get(query_type, DOMAIN_TEMPLATES["general"])
 
 
+def strip_system_prompt_leakage(response: str) -> str:
+    """Remove any leaked system prompt fragments from LLM response."""
+    prompt_fragments = [line.strip() for line in SYSTEM_PROMPT.split("\n") if len(line.strip()) > 30]
+    for fragment in prompt_fragments:
+        if fragment in response:
+            response = response.replace(fragment, "[REDACTED]")
+    return response
+
+
 def build_context_string(contexts: list[dict[str, Any]]) -> str:
     """Build a formatted context string from retrieval results."""
     parts = []

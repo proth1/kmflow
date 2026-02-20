@@ -136,6 +136,8 @@ Surface unknowns and areas where evidence is insufficient for confident recommen
             logger.error("LLM call failed: %s", e)
             raise
 
+    _MAX_SUGGESTION_LEN = 2000
+
     def _parse_response(self, llm_response: str, prompt: str) -> list[dict[str, Any]]:
         """Parse LLM response into structured suggestions."""
         # Try to extract JSON from response
@@ -147,10 +149,16 @@ Surface unknowns and areas where evidence is insufficient for confident recommen
                 parsed = json.loads(llm_response[start:end])
                 results = []
                 for item in parsed:
+                    suggestion_text = _sanitize_text(
+                        item.get("suggestion_text", ""), self._MAX_SUGGESTION_LEN
+                    )
+                    rationale = _sanitize_text(
+                        item.get("rationale", ""), self._MAX_SUGGESTION_LEN
+                    )
                     results.append(
                         {
-                            "suggestion_text": item.get("suggestion_text", ""),
-                            "rationale": item.get("rationale", ""),
+                            "suggestion_text": suggestion_text,
+                            "rationale": rationale,
                             "governance_flags": item.get("governance_flags"),
                             "evidence_gaps": item.get("evidence_gaps"),
                             "llm_prompt": prompt,
@@ -164,7 +172,7 @@ Surface unknowns and areas where evidence is insufficient for confident recommen
         # Fallback: treat entire response as single suggestion
         return [
             {
-                "suggestion_text": llm_response[:500],
+                "suggestion_text": _sanitize_text(llm_response, 500),
                 "rationale": "Auto-parsed from unstructured LLM response",
                 "governance_flags": {"parse_warning": "Response was not structured JSON"},
                 "evidence_gaps": None,

@@ -48,8 +48,8 @@ export default function AnnotationPanel({
         `/api/v1/annotations/?${params.toString()}`,
       );
       setAnnotations(data.items || []);
-    } catch {
-      // Silently handle fetch errors
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load annotations");
     } finally {
       setLoading(false);
     }

@@ -14,7 +14,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -153,8 +153,8 @@ class CatalogEntryList(BaseModel):
 @router.get("/catalog", response_model=CatalogEntryList)
 async def list_catalog_entries(
     engagement_id: uuid.UUID | None = None,
-    limit: int = 100,
-    offset: int = 0,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("governance:read")),
 ) -> dict[str, Any]:

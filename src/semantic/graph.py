@@ -223,12 +223,15 @@ class KnowledgeGraphService:
         self,
         label: str,
         filters: dict[str, Any] | None = None,
+        limit: int = 500,
     ) -> list[GraphNode]:
         """Query nodes by label with optional property filters.
 
         Args:
             label: Node label to filter by.
             filters: Optional property filters (exact match).
+            limit: Maximum number of nodes to return (default 500). Guards
+                against unbounded scans on large graphs.
 
         Returns:
             List of matching GraphNodes.
@@ -240,7 +243,7 @@ class KnowledgeGraphService:
             _validate_property_keys(filters)
 
         where_clauses = []
-        params: dict[str, Any] = {}
+        params: dict[str, Any] = {"limit": limit}
 
         if filters:
             for i, (key, value) in enumerate(filters.items()):
@@ -251,7 +254,7 @@ class KnowledgeGraphService:
         where_str = " AND ".join(where_clauses)
         where_clause = f"WHERE {where_str}" if where_str else ""
 
-        query = f"MATCH (n:{label}) {where_clause} RETURN n"
+        query = f"MATCH (n:{label}) {where_clause} RETURN n LIMIT $limit"
         records = await self._run_query(query, params)
 
         return [
@@ -349,6 +352,59 @@ class KnowledgeGraphService:
             properties=props,
         )
 
+    async def batch_create_relationships(
+        self,
+        relationship_type: str,
+        rels: list[dict[str, Any]],
+    ) -> int:
+        """Create multiple relationships of the same type in a single transaction.
+
+        Uses UNWIND to avoid N+1 round-trips for bulk relationship creation.
+        Silently skips pairs where either node does not exist.
+
+        Args:
+            relationship_type: Edge type (must be in VALID_RELATIONSHIP_TYPES).
+            rels: List of dicts, each with 'from_id', 'to_id', and optional
+                'properties' (a dict of relationship properties).
+
+        Returns:
+            Number of relationships created.
+
+        Raises:
+            ValueError: If relationship_type is invalid.
+        """
+        if relationship_type not in VALID_RELATIONSHIP_TYPES:
+            raise ValueError(
+                f"Invalid relationship type: {relationship_type}. "
+                f"Must be one of {VALID_RELATIONSHIP_TYPES}"
+            )
+
+        if not rels:
+            return 0
+
+        # Normalise: ensure each entry has a 'properties' dict and a rel 'id'
+        normalised = []
+        for rel in rels:
+            props = dict(rel.get("properties") or {})
+            props["id"] = uuid.uuid4().hex[:16]
+            normalised.append(
+                {
+                    "from_id": rel["from_id"],
+                    "to_id": rel["to_id"],
+                    "props": props,
+                }
+            )
+
+        query = f"""
+        UNWIND $rels AS rel
+        MATCH (a {{id: rel.from_id}}), (b {{id: rel.to_id}})
+        CREATE (a)-[r:{relationship_type}]->(b)
+        SET r = rel.props
+        RETURN count(r) AS created
+        """
+        records = await self._run_write_query(query, {"rels": normalised})
+        return records[0]["created"] if records else 0
+
     async def get_relationships(
         self,
         node_id: str,
@@ -406,6 +462,7 @@ class KnowledgeGraphService:
         start_id: str,
         depth: int = 2,
         relationship_types: list[str] | None = None,
+        limit: int = 200,
     ) -> list[GraphNode]:
         """Traverse the graph from a starting node.
 
@@ -413,6 +470,8 @@ class KnowledgeGraphService:
             start_id: Node ID to start traversal from.
             depth: Maximum traversal depth (default 2).
             relationship_types: Optional list of relationship types to follow.
+            limit: Maximum number of nodes to return (default 200). Guards
+                against unbounded results from highly-connected subgraphs.
 
         Returns:
             List of discovered GraphNodes (excluding start node).
@@ -427,8 +486,9 @@ class KnowledgeGraphService:
         query = f"""
         MATCH (start {{id: $start_id}})-[r{rel_filter}*1..{depth}]-(connected)
         RETURN DISTINCT connected, labels(connected) AS labels
+        LIMIT $limit
         """
-        records = await self._run_query(query, {"start_id": start_id})
+        records = await self._run_query(query, {"start_id": start_id, "limit": limit})
 
         return [
             GraphNode(

@@ -482,7 +482,7 @@ class TestAuditLogs:
 
     @pytest.mark.asyncio
     async def test_get_audit_logs(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
-        """Should return audit log entries for an engagement."""
+        """Should return paginated audit log entries for an engagement."""
         eng = _make_engagement()
         log1 = AuditLog(
             id=uuid.uuid4(),
@@ -493,9 +493,11 @@ class TestAuditLogs:
         )
 
         # 1st call: verify engagement exists
-        # 2nd call: fetch audit logs
+        # 2nd call: count query
+        # 3rd call: fetch audit logs
         mock_db_session.execute.side_effect = [
             _mock_scalar_result(eng),
+            _mock_count_result(1),
             _mock_scalars_result([log1]),
         ]
 
@@ -503,23 +505,27 @@ class TestAuditLogs:
         assert response.status_code == 200
 
         data = response.json()
-        assert len(data) == 1
-        assert data[0]["action"] == "engagement_created"
-        assert data[0]["actor"] == "system"
+        assert data["total"] == 1
+        assert len(data["items"]) == 1
+        assert data["items"][0]["action"] == "engagement_created"
+        assert data["items"][0]["actor"] == "system"
 
     @pytest.mark.asyncio
     async def test_audit_logs_empty(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
-        """Should return empty list when no audit logs exist."""
+        """Should return empty paginated result when no audit logs exist."""
         eng = _make_engagement()
 
         mock_db_session.execute.side_effect = [
             _mock_scalar_result(eng),
+            _mock_count_result(0),
             _mock_scalars_result([]),
         ]
 
         response = await client.get(f"/api/v1/engagements/{eng.id}/audit-logs")
         assert response.status_code == 200
-        assert response.json() == []
+        data = response.json()
+        assert data["total"] == 0
+        assert data["items"] == []
 
     @pytest.mark.asyncio
     async def test_audit_logs_not_found(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:

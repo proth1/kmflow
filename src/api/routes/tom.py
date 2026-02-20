@@ -17,9 +17,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
+from src.core.audit import log_audit
 from src.core.models import (
     AuditAction,
-    AuditLog,
     Benchmark,
     BestPractice,
     Engagement,
@@ -167,25 +167,6 @@ class BenchmarkResponse(BaseModel):
     created_at: Any
 
 
-# -- Helpers ------------------------------------------------------------------
-
-
-async def _log_audit(
-    session: AsyncSession,
-    engagement_id: UUID,
-    action: AuditAction,
-    details: str | None = None,
-) -> None:
-    audit = AuditLog(engagement_id=engagement_id, action=action, actor="system", details=details)
-    session.add(audit)
-
-
-async def _verify_engagement(session: AsyncSession, engagement_id: UUID) -> None:
-    result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
-    if not result.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {engagement_id} not found")
-
-
 # -- TOM Routes ---------------------------------------------------------------
 
 
@@ -196,7 +177,9 @@ async def create_tom(
     user: User = Depends(require_permission("engagement:update")),
 ) -> TargetOperatingModel:
     """Create a new target operating model."""
-    await _verify_engagement(session, payload.engagement_id)
+    eng_result = await session.execute(select(Engagement).where(Engagement.id == payload.engagement_id))
+    if not eng_result.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found")
     tom = TargetOperatingModel(
         engagement_id=payload.engagement_id,
         name=payload.name,
@@ -205,7 +188,7 @@ async def create_tom(
     )
     session.add(tom)
     await session.flush()
-    await _log_audit(session, payload.engagement_id, AuditAction.TOM_CREATED, json.dumps({"name": payload.name}))
+    await log_audit(session, payload.engagement_id, AuditAction.TOM_CREATED, json.dumps({"name": payload.name}))
     await session.commit()
     await session.refresh(tom)
     return tom
@@ -280,7 +263,9 @@ async def create_gap(
     user: User = Depends(require_permission("engagement:update")),
 ) -> GapAnalysisResult:
     """Create a gap analysis result."""
-    await _verify_engagement(session, payload.engagement_id)
+    eng_result = await session.execute(select(Engagement).where(Engagement.id == payload.engagement_id))
+    if not eng_result.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found")
     gap = GapAnalysisResult(
         engagement_id=payload.engagement_id,
         tom_id=payload.tom_id,
@@ -293,7 +278,7 @@ async def create_gap(
     )
     session.add(gap)
     await session.flush()
-    await _log_audit(
+    await log_audit(
         session,
         payload.engagement_id,
         AuditAction.GAP_ANALYSIS_RUN,

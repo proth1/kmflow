@@ -11,7 +11,7 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -92,6 +92,13 @@ class AuditLogResponse(BaseModel):
     created_at: Any
 
 
+class AuditLogList(BaseModel):
+    """Schema for listing audit log entries."""
+
+    items: list[AuditLogResponse]
+    total: int
+
+
 class DashboardResponse(BaseModel):
     """Schema for engagement dashboard summary."""
 
@@ -168,8 +175,8 @@ async def create_engagement(
 
 @router.get("/", response_model=EngagementList)
 async def list_engagements(
-    limit: int = 20,
-    offset: int = 0,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     status_filter: EngagementStatus | None = None,
     client: str | None = None,
     business_area: str | None = None,
@@ -333,18 +340,29 @@ async def get_engagement_dashboard(
     }
 
 
-@router.get("/{engagement_id}/audit-logs", response_model=list[AuditLogResponse])
+@router.get("/{engagement_id}/audit-logs", response_model=AuditLogList)
 async def get_audit_logs(
     engagement_id: UUID,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     user: User = Depends(require_permission("engagement:read")),
     _engagement_user: User = Depends(require_engagement_access),
     session: AsyncSession = Depends(get_session),
-) -> list[AuditLog]:
+) -> dict[str, Any]:
     """Get audit log entries for an engagement."""
     # Verify engagement exists
     await _get_engagement_or_404(session, engagement_id)
 
-    result = await session.execute(
-        select(AuditLog).where(AuditLog.engagement_id == engagement_id).order_by(AuditLog.created_at.desc())
+    count_result = await session.execute(
+        select(func.count()).select_from(AuditLog).where(AuditLog.engagement_id == engagement_id)
     )
-    return list(result.scalars().all())
+    total = count_result.scalar() or 0
+
+    result = await session.execute(
+        select(AuditLog)
+        .where(AuditLog.engagement_id == engagement_id)
+        .order_by(AuditLog.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    return {"items": list(result.scalars().all()), "total": total}

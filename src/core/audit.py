@@ -13,7 +13,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.models import AuditAction, AuditLog
+from src.core.models import AuditAction, AuditLog, HttpAuditEvent
 
 logger = logging.getLogger(__name__)
 
@@ -25,19 +25,13 @@ async def log_audit_event_async(
     status_code: int,
     engagement_id: str | None = None,
     duration_ms: float = 0.0,
+    session: AsyncSession | None = None,
 ) -> None:
     """Persist an HTTP audit event for compliance.
 
-    The AuditLog database table requires a non-nullable engagement FK,
-    so events not tied to a specific engagement are written to a
-    structured machine-parseable log record instead of the database.
-    Events that carry an engagement_id are also written to the log so
-    that all HTTP audit events appear in the same log stream, enabling
-    ingestion by SIEM tooling without requiring the caller to hold a
-    database session.
-
-    TODO: When a dedicated http_audit_events table (no FK constraint) is
-    added, route all events to the database here.
+    Always writes a structured log record for SIEM ingestion.
+    When a database session is provided, also persists the event to the
+    http_audit_events table (no engagement FK constraint).
 
     Args:
         method: HTTP method (POST, PUT, PATCH, DELETE, etc.).
@@ -46,6 +40,7 @@ async def log_audit_event_async(
         status_code: HTTP response status code.
         engagement_id: Engagement UUID string extracted from the path, or None.
         duration_ms: Request processing time in milliseconds.
+        session: Optional database session for persistence.
     """
     logger.info(
         "AUDIT_DB method=%s path=%s user=%s status=%d duration_ms=%.2f engagement=%s",
@@ -56,6 +51,18 @@ async def log_audit_event_async(
         duration_ms,
         engagement_id or "none",
     )
+
+    if session is not None:
+        event = HttpAuditEvent(
+            method=method,
+            path=path,
+            user_id=user_id,
+            status_code=status_code,
+            engagement_id=engagement_id,
+            duration_ms=duration_ms,
+        )
+        session.add(event)
+        await session.commit()
 
 
 async def log_security_event(
@@ -173,3 +180,16 @@ async def log_data_access(
         resource=resource,
         ip_address=ip_address,
     )
+
+
+async def log_audit(
+    session: AsyncSession,
+    engagement_id: UUID,
+    action: AuditAction,
+    details: str | None = None,
+    *,
+    actor: str = "system",
+) -> None:
+    """Create an audit log entry for a business action."""
+    audit = AuditLog(engagement_id=engagement_id, action=action, actor=actor, details=details)
+    session.add(audit)

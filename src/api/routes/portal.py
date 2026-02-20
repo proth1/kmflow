@@ -10,7 +10,7 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -126,13 +126,18 @@ async def portal_overview(
 @router.get("/{engagement_id}/findings", response_model=PortalFindingsList)
 async def portal_findings(
     engagement_id: UUID,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("portal:read")),
     _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Get gap analysis findings for client review."""
+    count_result = await session.execute(
+        select(func.count(GapAnalysisResult.id)).where(GapAnalysisResult.engagement_id == engagement_id)
+    )
+    total = count_result.scalar() or 0
+
     result = await session.execute(
         select(GapAnalysisResult)
         .where(GapAnalysisResult.engagement_id == engagement_id)
@@ -153,7 +158,7 @@ async def portal_findings(
         for g in gaps
     ]
 
-    return {"items": items, "total": len(items)}
+    return {"items": items, "total": total}
 
 
 @router.get("/{engagement_id}/evidence-status", response_model=PortalEvidenceSummary)

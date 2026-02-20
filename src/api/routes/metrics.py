@@ -10,7 +10,7 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -144,8 +144,8 @@ async def create_metric(
 @router.get("/definitions", response_model=SuccessMetricList)
 async def list_metrics(
     category: MetricCategory | None = None,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
@@ -219,8 +219,8 @@ async def record_reading(
 async def list_readings(
     engagement_id: UUID,
     metric_id: UUID | None = None,
-    limit: int = 100,
-    offset: int = 0,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:

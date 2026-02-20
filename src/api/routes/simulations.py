@@ -22,7 +22,6 @@ from src.api.deps import get_session
 from src.core.models import (
     AlternativeSuggestion,
     AuditAction,
-    AuditLog,
     EpistemicAction,
     FinancialAssumption,
     FinancialAssumptionType,
@@ -35,6 +34,7 @@ from src.core.models import (
     SuggestionDisposition,
     User,
 )
+from src.core.audit import log_audit
 from src.core.permissions import require_permission
 
 logger = logging.getLogger(__name__)
@@ -238,18 +238,6 @@ def _modification_to_response(m: ScenarioModification) -> dict[str, Any]:
     }
 
 
-async def _log_audit(
-    session: AsyncSession,
-    engagement_id: UUID,
-    action: AuditAction,
-    details: str | None = None,
-    *,
-    actor: str = "system",
-) -> None:
-    audit = AuditLog(engagement_id=engagement_id, action=action, actor=actor, details=details)
-    session.add(audit)
-
-
 async def _get_scenario_or_404(
     session: AsyncSession,
     scenario_id: UUID,
@@ -280,7 +268,7 @@ async def create_scenario(
         description=payload.description,
     )
     session.add(scenario)
-    await _log_audit(
+    await log_audit(
         session, payload.engagement_id, AuditAction.SIMULATION_CREATED, f"Scenario: {payload.name}", actor=str(user.id)
     )
     await session.commit()
@@ -292,8 +280,8 @@ async def create_scenario(
 async def list_scenarios(
     engagement_id: UUID | None = None,
     simulation_type: SimulationType | None = None,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
@@ -378,7 +366,7 @@ async def run_scenario(
         sim_result.error_message = str(e)
         sim_result.completed_at = datetime.now(UTC)
 
-    await _log_audit(
+    await log_audit(
         session,
         scenario.engagement_id,
         AuditAction.SIMULATION_EXECUTED,
@@ -422,7 +410,7 @@ async def add_modification(
         template_key=payload.template_key,
     )
     session.add(mod)
-    await _log_audit(
+    await log_audit(
         session,
         scenario.engagement_id,
         AuditAction.SCENARIO_MODIFIED,
@@ -437,8 +425,8 @@ async def add_modification(
 @router.get("/scenarios/{scenario_id}/modifications", response_model=ModificationList)
 async def list_modifications(
     scenario_id: UUID,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
@@ -479,7 +467,7 @@ async def delete_modification(
             detail=f"Modification {modification_id} not found for scenario {scenario_id}",
         )
     await session.delete(mod)
-    await _log_audit(
+    await log_audit(
         session,
         scenario.engagement_id,
         AuditAction.SCENARIO_MODIFIED,
@@ -673,7 +661,7 @@ async def compare_scenarios(
 
     comparisons = await asyncio.gather(*[_build_entry(cid) for cid in compare_ids])
 
-    await _log_audit(
+    await log_audit(
         session,
         baseline.engagement_id,
         AuditAction.SCENARIO_COMPARED,
@@ -695,8 +683,8 @@ async def compare_scenarios(
 @router.get("/results", response_model=SimulationResultList)
 async def list_results(
     scenario_id: UUID | None = None,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
@@ -827,7 +815,7 @@ async def generate_epistemic_plan(
                 )
                 session.add(item)
 
-    await _log_audit(
+    await log_audit(
         session,
         scenario.engagement_id,
         AuditAction.EPISTEMIC_PLAN_GENERATED,
@@ -943,7 +931,7 @@ async def create_financial_assumption(
         notes=payload.notes,
     )
     session.add(assumption)
-    await _log_audit(
+    await log_audit(
         session,
         scenario.engagement_id,
         AuditAction.FINANCIAL_ASSUMPTION_CREATED,
@@ -961,8 +949,8 @@ async def create_financial_assumption(
 )
 async def list_financial_assumptions(
     scenario_id: UUID,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
@@ -1094,7 +1082,7 @@ async def request_suggestions(
         session.add(suggestion)
         items.append(suggestion)
 
-    await _log_audit(
+    await log_audit(
         session,
         scenario.engagement_id,
         AuditAction.SUGGESTION_CREATED,
@@ -1114,8 +1102,8 @@ async def request_suggestions(
 @router.get("/scenarios/{scenario_id}/suggestions", response_model=SuggestionListResponse)
 async def list_suggestions(
     scenario_id: UUID,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
@@ -1164,7 +1152,7 @@ async def update_suggestion_disposition(
     else:
         # MODIFIED is a form of acceptance with changes
         action = AuditAction.SUGGESTION_ACCEPTED
-    await _log_audit(
+    await log_audit(
         session,
         scenario.engagement_id,
         action,

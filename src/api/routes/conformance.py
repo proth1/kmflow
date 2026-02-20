@@ -10,7 +10,7 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -168,8 +168,8 @@ async def create_reference_model(
 @router.get("/reference-models", response_model=ReferenceModelList)
 async def list_reference_models(
     industry: str | None = None,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     user: User = Depends(require_permission("conformance:check")),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
@@ -327,8 +327,8 @@ async def get_conformance_result(
 @router.get("/results", response_model=ConformanceResultList)
 async def list_conformance_results(
     engagement_id: UUID | None = None,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     user: User = Depends(require_permission("conformance:check")),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:

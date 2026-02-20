@@ -246,6 +246,11 @@ class KnowledgeGraphBuilder:
     ) -> int:
         """Create SUPPORTED_BY relationships from entities to evidence items.
 
+        Batches Evidence node upserts and SUPPORTED_BY edge creation to avoid
+        N+1 round-trips. Evidence nodes for distinct evidence IDs are collected
+        first; those that don't yet exist are batch-created; then all edges are
+        written in a single UNWIND query.
+
         Args:
             entity_to_node: Mapping from entity ID to node ID.
             entity_evidence_map: Mapping from entity ID to evidence item IDs.
@@ -254,42 +259,47 @@ class KnowledgeGraphBuilder:
         Returns:
             Number of relationships created.
         """
-        count = 0
+        # Collect every (node_id, ev_node_id) pair we need to link
+        pairs: list[tuple[str, str]] = []
+        evidence_props: dict[str, dict] = {}
+
         for entity_id, evidence_ids in entity_evidence_map.items():
             node_id = entity_to_node.get(entity_id)
             if not node_id:
                 continue
-
             for evidence_id in evidence_ids:
-                # Create an Evidence node for the evidence item if needed
                 ev_node_id = f"ev-{evidence_id}"
-                try:
-                    existing = await self._graph.get_node(ev_node_id)
-                    if not existing:
-                        await self._graph.create_node(
-                            "Evidence",
-                            {
-                                "id": ev_node_id,
-                                "name": f"Evidence {evidence_id}",
-                                "engagement_id": engagement_id,
-                                "evidence_item_id": evidence_id,
-                            },
-                        )
+                pairs.append((node_id, ev_node_id))
+                if ev_node_id not in evidence_props:
+                    evidence_props[ev_node_id] = {
+                        "id": ev_node_id,
+                        "name": f"Evidence {evidence_id}",
+                        "engagement_id": engagement_id,
+                        "evidence_item_id": evidence_id,
+                    }
 
-                    await self._graph.create_relationship(
-                        from_id=node_id,
-                        to_id=ev_node_id,
-                        relationship_type="SUPPORTED_BY",
-                        properties={"source": "extraction"},
-                    )
-                    count += 1
-                except Exception as e:
-                    logger.warning(
-                        "Failed to create SUPPORTED_BY link %s -> %s: %s",
-                        node_id,
-                        evidence_id,
-                        e,
-                    )
+        if not pairs:
+            return 0
+
+        # Batch-upsert Evidence nodes (MERGE avoids duplicates without pre-check)
+        if evidence_props:
+            try:
+                await self._graph.batch_create_nodes(
+                    "Evidence", list(evidence_props.values())
+                )
+            except Exception as e:
+                logger.warning("Failed to batch-create Evidence nodes: %s", e)
+
+        # Batch-create all SUPPORTED_BY edges in one UNWIND round-trip
+        rels = [
+            {"from_id": node_id, "to_id": ev_node_id, "properties": {"source": "extraction"}}
+            for node_id, ev_node_id in pairs
+        ]
+        try:
+            count = await self._graph.batch_create_relationships("SUPPORTED_BY", rels)
+        except Exception as e:
+            logger.warning("Failed to batch-create SUPPORTED_BY relationships: %s", e)
+            count = 0
 
         return count
 
@@ -320,9 +330,9 @@ class KnowledgeGraphBuilder:
                     evidence_to_entities[ev_id] = set()
                 evidence_to_entities[ev_id].add(entity_id)
 
-        # Create CO_OCCURS_WITH for entity pairs from same evidence
+        # Build deduplicated list of CO_OCCURS_WITH edges across all evidence
         created_pairs: set[tuple[str, str]] = set()
-        count = 0
+        rels: list[dict] = []
 
         for ev_id, entity_ids in evidence_to_entities.items():
             entity_list = sorted(entity_ids)
@@ -338,21 +348,22 @@ class KnowledgeGraphBuilder:
                     if not node_a or not node_b:
                         continue
 
-                    try:
-                        await self._graph.create_relationship(
-                            from_id=node_a,
-                            to_id=node_b,
-                            relationship_type="CO_OCCURS_WITH",
-                            properties={"evidence_id": ev_id},
-                        )
-                        count += 1
-                    except Exception as e:
-                        logger.warning(
-                            "Failed to create CO_OCCURS_WITH %s -> %s: %s",
-                            node_a,
-                            node_b,
-                            e,
-                        )
+                    rels.append(
+                        {
+                            "from_id": node_a,
+                            "to_id": node_b,
+                            "properties": {"evidence_id": ev_id},
+                        }
+                    )
+
+        if not rels:
+            return 0
+
+        try:
+            count = await self._graph.batch_create_relationships("CO_OCCURS_WITH", rels)
+        except Exception as e:
+            logger.warning("Failed to batch-create CO_OCCURS_WITH relationships: %s", e)
+            count = 0
 
         return count
 
@@ -390,56 +401,40 @@ class KnowledgeGraphBuilder:
         systems = by_type.get(EntityType.SYSTEM, [])
         decisions = by_type.get(EntityType.DECISION, [])
 
-        # Activity -> Role = OWNED_BY
-        for activity in activities:
-            for role in roles:
-                act_node = entity_to_node.get(activity.id)
-                role_node = entity_to_node.get(role.id)
-                if act_node and role_node:
-                    try:
-                        await self._graph.create_relationship(
-                            from_id=act_node,
-                            to_id=role_node,
-                            relationship_type="OWNED_BY",
-                            properties={"inferred": True},
-                        )
-                        count += 1
-                    except Exception as e:
-                        logger.debug("Relationship creation skipped for %s -> %s: %s", act_node, role_node, e)
+        inferred_props = {"inferred": True}
 
-        # Activity -> System = USES
-        for activity in activities:
-            for system in systems:
-                act_node = entity_to_node.get(activity.id)
-                sys_node = entity_to_node.get(system.id)
-                if act_node and sys_node:
-                    try:
-                        await self._graph.create_relationship(
-                            from_id=act_node,
-                            to_id=sys_node,
-                            relationship_type="USES",
-                            properties={"inferred": True},
-                        )
-                        count += 1
-                    except Exception as e:
-                        logger.debug("Relationship creation skipped for %s -> %s: %s", act_node, sys_node, e)
+        # Collect all inferred edges grouped by relationship type, then batch-create
+        owned_by_rels = [
+            {"from_id": entity_to_node[act.id], "to_id": entity_to_node[role.id], "properties": inferred_props}
+            for act in activities
+            for role in roles
+            if entity_to_node.get(act.id) and entity_to_node.get(role.id)
+        ]
+        uses_rels = [
+            {"from_id": entity_to_node[act.id], "to_id": entity_to_node[sys.id], "properties": inferred_props}
+            for act in activities
+            for sys in systems
+            if entity_to_node.get(act.id) and entity_to_node.get(sys.id)
+        ]
+        requires_rels = [
+            {"from_id": entity_to_node[dec.id], "to_id": entity_to_node[act.id], "properties": inferred_props}
+            for dec in decisions
+            for act in activities
+            if entity_to_node.get(dec.id) and entity_to_node.get(act.id)
+        ]
 
-        # Decision -> Activity = REQUIRES
-        for decision in decisions:
-            for activity in activities:
-                dec_node = entity_to_node.get(decision.id)
-                act_node = entity_to_node.get(activity.id)
-                if dec_node and act_node:
-                    try:
-                        await self._graph.create_relationship(
-                            from_id=dec_node,
-                            to_id=act_node,
-                            relationship_type="REQUIRES",
-                            properties={"inferred": True},
-                        )
-                        count += 1
-                    except Exception as e:
-                        logger.debug("Relationship creation skipped for %s -> %s: %s", dec_node, act_node, e)
+        for rel_type, rels in (
+            ("OWNED_BY", owned_by_rels),
+            ("USES", uses_rels),
+            ("REQUIRES", requires_rels),
+        ):
+            if not rels:
+                continue
+            try:
+                created = await self._graph.batch_create_relationships(rel_type, rels)
+                count += created
+            except Exception as e:
+                logger.debug("Batch relationship creation skipped for %s: %s", rel_type, e)
 
         return count
 

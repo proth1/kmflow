@@ -12,6 +12,8 @@ import time
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
+from src.core.audit import log_audit_event_async
+
 logger = logging.getLogger(__name__)
 
 MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
@@ -21,7 +23,8 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
     """Log all mutating HTTP requests for audit trail.
 
     Captures method, path, user identity (from JWT), response status,
-    and request duration. Logs to structured application logger.
+    and request duration. Persists to the http_audit_events table when
+    a database session factory is available on app.state.
     Non-mutating requests (GET, HEAD, OPTIONS) are skipped.
     """
 
@@ -57,19 +60,31 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
             engagement_id or "none",
         )
 
-        # Also persist to database for compliance
+        # Persist to database for compliance using the app-level session factory
         try:
-            from src.core.audit import log_audit_event_async
-            await log_audit_event_async(
-                method=request.method,
-                path=request.url.path,
-                user_id=user_id,
-                status_code=response.status_code,
-                engagement_id=engagement_id,
-                duration_ms=duration_ms,
-            )
-        except Exception:
-            pass  # Don't fail requests if audit persistence fails
+            session_factory = getattr(request.app.state, "db_session_factory", None)
+            if session_factory is not None:
+                async with session_factory() as session:
+                    await log_audit_event_async(
+                        method=request.method,
+                        path=request.url.path,
+                        user_id=user_id,
+                        status_code=response.status_code,
+                        engagement_id=engagement_id,
+                        duration_ms=duration_ms,
+                        session=session,
+                    )
+            else:
+                await log_audit_event_async(
+                    method=request.method,
+                    path=request.url.path,
+                    user_id=user_id,
+                    status_code=response.status_code,
+                    engagement_id=engagement_id,
+                    duration_ms=duration_ms,
+                )
+        except Exception as e:
+            logger.warning("Audit persistence failed (request not blocked): %s", e)
 
         response.headers["X-Audit-Logged"] = "true"
         return response
