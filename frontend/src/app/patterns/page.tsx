@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   fetchPatterns,
   type PatternData,
@@ -23,8 +23,9 @@ export default function PatternsPage() {
   const [error, setError] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const isInitialLoad = useRef(true);
 
-  const loadPatterns = useCallback(async () => {
+  const loadPatterns = useCallback(async (silent = false) => {
     setLoading(true);
     setError(null);
     try {
@@ -33,16 +34,20 @@ export default function PatternsPage() {
       );
       setPatterns(result.items);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load patterns",
-      );
+      if (!silent) {
+        setError(
+          err instanceof Error ? err.message : "Failed to load patterns",
+        );
+      }
     } finally {
       setLoading(false);
     }
   }, [categoryFilter]);
 
   useEffect(() => {
-    loadPatterns();
+    const silent = isInitialLoad.current;
+    isInitialLoad.current = false;
+    loadPatterns(silent);
   }, [loadPatterns]);
 
   const filteredPatterns = searchQuery
@@ -76,7 +81,7 @@ export default function PatternsPage() {
             Discover reusable process patterns across engagements
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={loadPatterns}>
+        <Button variant="outline" size="sm" onClick={() => loadPatterns(false)}>
           <RefreshCw className="h-3 w-3 mr-1.5" />
           Refresh
         </Button>

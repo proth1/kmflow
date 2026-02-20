@@ -90,13 +90,9 @@ class TestModificationsCRUD:
     """Tests for POST/GET/DELETE /scenarios/{id}/modifications."""
 
     @pytest.mark.asyncio
-    async def test_create_modification_201(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_create_modification_201(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         scenario = _make_scenario()
-        mock_db_session.execute = AsyncMock(
-            side_effect=[_mock_scalar_result(scenario)]
-        )
+        mock_db_session.execute = AsyncMock(side_effect=[_mock_scalar_result(scenario)])
 
         response = await client.post(
             f"/api/v1/simulations/scenarios/{scenario.id}/modifications",
@@ -118,9 +114,7 @@ class TestModificationsCRUD:
         self, client: AsyncClient, mock_db_session: AsyncMock
     ) -> None:
         scenario = _make_scenario()
-        mock_db_session.execute = AsyncMock(
-            side_effect=[_mock_scalar_result(scenario)]
-        )
+        mock_db_session.execute = AsyncMock(side_effect=[_mock_scalar_result(scenario)])
 
         response = await client.post(
             f"/api/v1/simulations/scenarios/{scenario.id}/modifications",
@@ -134,13 +128,9 @@ class TestModificationsCRUD:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_create_modification_valid_template(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_create_modification_valid_template(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         scenario = _make_scenario()
-        mock_db_session.execute = AsyncMock(
-            side_effect=[_mock_scalar_result(scenario)]
-        )
+        mock_db_session.execute = AsyncMock(side_effect=[_mock_scalar_result(scenario)])
 
         response = await client.post(
             f"/api/v1/simulations/scenarios/{scenario.id}/modifications",
@@ -155,9 +145,7 @@ class TestModificationsCRUD:
         assert response.json()["template_key"] == "consolidate_adjacent"
 
     @pytest.mark.asyncio
-    async def test_list_modifications(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_list_modifications(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         scenario = _make_scenario()
         mod = _make_modification(scenario_id=scenario.id)
         mock_db_session.execute = AsyncMock(
@@ -167,18 +155,14 @@ class TestModificationsCRUD:
             ]
         )
 
-        response = await client.get(
-            f"/api/v1/simulations/scenarios/{scenario.id}/modifications"
-        )
+        response = await client.get(f"/api/v1/simulations/scenarios/{scenario.id}/modifications")
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 1
         assert data["items"][0]["element_name"] == "Review Application"
 
     @pytest.mark.asyncio
-    async def test_delete_modification_204(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_delete_modification_204(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         scenario = _make_scenario()
         mod = _make_modification(scenario_id=scenario.id)
         mock_db_session.execute = AsyncMock(
@@ -188,9 +172,7 @@ class TestModificationsCRUD:
             ]
         )
 
-        response = await client.delete(
-            f"/api/v1/simulations/scenarios/{scenario.id}/modifications/{mod.id}"
-        )
+        response = await client.delete(f"/api/v1/simulations/scenarios/{scenario.id}/modifications/{mod.id}")
         assert response.status_code == 204
         mock_db_session.delete.assert_awaited_once()
 
@@ -207,18 +189,14 @@ class TestModificationsCRUD:
         )
 
         fake_mod_id = uuid.uuid4()
-        response = await client.delete(
-            f"/api/v1/simulations/scenarios/{scenario.id}/modifications/{fake_mod_id}"
-        )
+        response = await client.delete(f"/api/v1/simulations/scenarios/{scenario.id}/modifications/{fake_mod_id}")
         assert response.status_code == 404
 
     @pytest.mark.asyncio
     async def test_create_modification_scenario_not_found_404(
         self, client: AsyncClient, mock_db_session: AsyncMock
     ) -> None:
-        mock_db_session.execute = AsyncMock(
-            side_effect=[_mock_scalar_result(None)]
-        )
+        mock_db_session.execute = AsyncMock(side_effect=[_mock_scalar_result(None)])
         response = await client.post(
             f"/api/v1/simulations/scenarios/{uuid.uuid4()}/modifications",
             json={
@@ -255,17 +233,16 @@ class TestEvidenceCoverageEndpoint:
     ) -> None:
         scenario = _make_scenario()
 
-        mock_db_session.execute = AsyncMock(
-            side_effect=[_mock_scalar_result(scenario)]
+        mock_db_session.execute = AsyncMock(side_effect=[_mock_scalar_result(scenario)])
+
+        self._setup_neo4j_mock(
+            mock_neo4j_driver,
+            [
+                {"id": "e1", "name": "Task A", "evidence_count": 4, "avg_confidence": 0.85},
+            ],
         )
 
-        self._setup_neo4j_mock(mock_neo4j_driver, [
-            {"id": "e1", "name": "Task A", "evidence_count": 4, "avg_confidence": 0.85},
-        ])
-
-        response = await client.get(
-            f"/api/v1/simulations/scenarios/{scenario.id}/evidence-coverage"
-        )
+        response = await client.get(f"/api/v1/simulations/scenarios/{scenario.id}/evidence-coverage")
         assert response.status_code == 200
         data = response.json()
         assert "elements" in data
@@ -273,16 +250,10 @@ class TestEvidenceCoverageEndpoint:
         assert "aggregate_confidence" in data
 
     @pytest.mark.asyncio
-    async def test_coverage_404_for_missing_scenario(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
-        mock_db_session.execute = AsyncMock(
-            side_effect=[_mock_scalar_result(None)]
-        )
+    async def test_coverage_404_for_missing_scenario(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
+        mock_db_session.execute = AsyncMock(side_effect=[_mock_scalar_result(None)])
 
-        response = await client.get(
-            f"/api/v1/simulations/scenarios/{uuid.uuid4()}/evidence-coverage"
-        )
+        response = await client.get(f"/api/v1/simulations/scenarios/{uuid.uuid4()}/evidence-coverage")
         assert response.status_code == 404
 
 
@@ -305,16 +276,10 @@ class TestCompareScenarios:
         mock_driver.session.return_value = neo4j_session_mock
 
     @pytest.mark.asyncio
-    async def test_compare_404_baseline_not_found(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
-        mock_db_session.execute = AsyncMock(
-            side_effect=[_mock_scalar_result(None)]
-        )
+    async def test_compare_404_baseline_not_found(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
+        mock_db_session.execute = AsyncMock(side_effect=[_mock_scalar_result(None)])
 
-        response = await client.get(
-            f"/api/v1/simulations/scenarios/{uuid.uuid4()}/compare?ids={uuid.uuid4()}"
-        )
+        response = await client.get(f"/api/v1/simulations/scenarios/{uuid.uuid4()}/compare?ids={uuid.uuid4()}")
         assert response.status_code == 404
 
     @pytest.mark.asyncio
@@ -337,16 +302,14 @@ class TestCompareScenarios:
 
         mock_db_session.execute = AsyncMock(
             side_effect=[
-                _mock_scalar_result(baseline),          # fetch baseline
-                _mock_scalar_result(baseline_result),    # baseline result
-                _mock_scalars_result([alt_scenario]),     # batch-fetch comparison scenarios
-                _mock_scalars_result([alt_result]),       # batch-fetch latest results
+                _mock_scalar_result(baseline),  # fetch baseline
+                _mock_scalar_result(baseline_result),  # baseline result
+                _mock_scalars_result([alt_scenario]),  # batch-fetch comparison scenarios
+                _mock_scalars_result([alt_result]),  # batch-fetch latest results
             ]
         )
 
-        response = await client.get(
-            f"/api/v1/simulations/scenarios/{baseline.id}/compare?ids={alt_id}"
-        )
+        response = await client.get(f"/api/v1/simulations/scenarios/{baseline.id}/compare?ids={alt_id}")
         assert response.status_code == 200
         data = response.json()
         assert data["baseline_name"] == "Baseline"
@@ -366,30 +329,22 @@ class TestCompareScenarios:
 
         mock_db_session.execute = AsyncMock(
             side_effect=[
-                _mock_scalar_result(baseline),         # fetch baseline
-                _mock_scalar_result(None),              # no baseline result
-                _mock_scalars_result([alt_scenario]),    # batch-fetch comparison scenarios
-                _mock_scalars_result([]),                # batch-fetch latest results (none)
+                _mock_scalar_result(baseline),  # fetch baseline
+                _mock_scalar_result(None),  # no baseline result
+                _mock_scalars_result([alt_scenario]),  # batch-fetch comparison scenarios
+                _mock_scalars_result([]),  # batch-fetch latest results (none)
             ]
         )
 
-        response = await client.get(
-            f"/api/v1/simulations/scenarios/{baseline.id}/compare?ids={alt_id}"
-        )
+        response = await client.get(f"/api/v1/simulations/scenarios/{baseline.id}/compare?ids={alt_id}")
         assert response.status_code == 200
         data = response.json()
         assert data["comparisons"][0]["deltas"] is None
 
     @pytest.mark.asyncio
-    async def test_compare_invalid_ids_422(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_compare_invalid_ids_422(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         baseline = _make_scenario()
-        mock_db_session.execute = AsyncMock(
-            side_effect=[_mock_scalar_result(baseline)]
-        )
+        mock_db_session.execute = AsyncMock(side_effect=[_mock_scalar_result(baseline)])
 
-        response = await client.get(
-            f"/api/v1/simulations/scenarios/{baseline.id}/compare?ids=not-a-uuid"
-        )
+        response = await client.get(f"/api/v1/simulations/scenarios/{baseline.id}/compare?ids=not-a-uuid")
         assert response.status_code == 422

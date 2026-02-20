@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from typing import Any
+from xml.etree.ElementTree import Element as _Element
 
 import defusedxml.ElementTree as ET  # noqa: N817
 
@@ -108,7 +109,7 @@ def parse_bpmn_xml(bpmn_xml: str) -> BPMNGraph:
     return graph
 
 
-def _parse_process(process: ET.Element, graph: BPMNGraph) -> None:
+def _parse_process(process: _Element, graph: BPMNGraph) -> None:
     """Parse a single BPMN process element."""
     element_types = [
         "task",
@@ -152,7 +153,7 @@ def _parse_process(process: ET.Element, graph: BPMNGraph) -> None:
             _add_flow(flow, graph)
 
 
-def _add_element(elem: ET.Element, elem_type: str, graph: BPMNGraph) -> None:
+def _add_element(elem: _Element, elem_type: str, graph: BPMNGraph) -> None:
     """Add a BPMN element to the graph."""
     elem_id = elem.get("id", "")
     if not elem_id:
@@ -165,7 +166,7 @@ def _add_element(elem: ET.Element, elem_type: str, graph: BPMNGraph) -> None:
     )
 
 
-def _add_flow(flow: ET.Element, graph: BPMNGraph) -> None:
+def _add_flow(flow: _Element, graph: BPMNGraph) -> None:
     """Add a sequence flow to the graph."""
     flow_id = flow.get("id", "")
     source = flow.get("sourceRef", "")

@@ -1441,6 +1441,20 @@ export async function apiPut<T>(path: string, body: unknown, signal?: AbortSigna
   return response.json() as Promise<T>;
 }
 
+export async function apiPatch<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "PATCH",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(body),
+    signal,
+  });
+  if (!response.ok) {
+    const error: ApiError = await response.json().catch(() => ({ detail: `Request failed: ${response.status}`, status_code: response.status }));
+    throw new Error(error.detail || `Request failed: ${response.status}`);
+  }
+  return response.json() as Promise<T>;
+}
+
 export async function apiDelete(path: string, signal?: AbortSignal): Promise<void> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "DELETE",
@@ -1451,4 +1465,230 @@ export async function apiDelete(path: string, signal?: AbortSignal): Promise<voi
     const error: ApiError = await response.json().catch(() => ({ detail: `Request failed: ${response.status}`, status_code: response.status }));
     throw new Error(error.detail || `Request failed: ${response.status}`);
   }
+}
+
+// -- Phase 3.2: Epistemic Action Planner types --------------------------------
+
+export interface EpistemicActionData {
+  target_element_id: string;
+  target_element_name: string;
+  evidence_gap_description: string;
+  current_confidence: number;
+  estimated_confidence_uplift: number;
+  projected_confidence: number;
+  information_gain_score: number;
+  recommended_evidence_category: string;
+  priority: string;
+}
+
+export interface EpistemicPlanAggregates {
+  total: number;
+  high_priority_count: number;
+  estimated_aggregate_uplift: number;
+}
+
+export interface EpistemicPlanData {
+  scenario_id: string;
+  actions: EpistemicActionData[];
+  aggregated_view: EpistemicPlanAggregates;
+}
+
+// -- Phase 4: Financial Assumption types --------------------------------------
+
+export type FinancialAssumptionType =
+  | "cost_per_role"
+  | "technology_cost"
+  | "volume_forecast"
+  | "implementation_cost";
+
+export interface FinancialAssumptionData {
+  id: string;
+  engagement_id: string;
+  assumption_type: string;
+  name: string;
+  value: number;
+  unit: string;
+  confidence: number;
+  source_evidence_id: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface FinancialAssumptionList {
+  items: FinancialAssumptionData[];
+  total: number;
+}
+
+// -- Phase 4: Alternative Suggestion types ------------------------------------
+
+export type SuggestionDispositionType =
+  | "pending"
+  | "accepted"
+  | "modified"
+  | "rejected";
+
+export interface AlternativeSuggestionData {
+  id: string;
+  scenario_id: string;
+  suggestion_text: string;
+  rationale: string;
+  governance_flags: Record<string, unknown> | null;
+  evidence_gaps: Record<string, unknown> | null;
+  disposition: SuggestionDispositionType;
+  disposition_notes: string | null;
+  created_at: string;
+}
+
+export interface AlternativeSuggestionList {
+  items: AlternativeSuggestionData[];
+  total: number;
+}
+
+// -- Phase 4: Financial Impact types ------------------------------------------
+
+export interface CostRangeData {
+  optimistic: number;
+  expected: number;
+  pessimistic: number;
+}
+
+export interface SensitivityEntryData {
+  assumption_name: string;
+  base_value: number;
+  impact_range: CostRangeData;
+}
+
+export interface FinancialImpactData {
+  scenario_id: string;
+  cost_range: CostRangeData;
+  sensitivity_analysis: SensitivityEntryData[];
+  assumption_count: number;
+  delta_vs_baseline: number | null;
+}
+
+// -- Phase 4: Scenario Ranking types ------------------------------------------
+
+export interface ScenarioRankEntry {
+  scenario_id: string;
+  scenario_name: string;
+  composite_score: number;
+  evidence_score: number;
+  simulation_score: number;
+  financial_score: number;
+  governance_score: number;
+}
+
+export interface ScenarioRankingData {
+  engagement_id: string;
+  rankings: ScenarioRankEntry[];
+  weights: Record<string, number>;
+}
+
+// -- Phase 3.2: Epistemic Action Planner API ----------------------------------
+
+export async function fetchEpistemicPlan(
+  scenarioId: string,
+  limit = 10,
+  createShelfRequest = false,
+): Promise<EpistemicPlanData> {
+  return apiPost<EpistemicPlanData>(
+    `/api/v1/simulations/scenarios/${scenarioId}/epistemic-plan?limit=${limit}&create_shelf_request=${createShelfRequest}`,
+    {},
+  );
+}
+
+// -- Phase 4: Financial Assumptions API ---------------------------------------
+
+export async function createFinancialAssumption(
+  scenarioId: string,
+  body: {
+    engagement_id: string;
+    assumption_type: FinancialAssumptionType;
+    name: string;
+    value: number;
+    unit: string;
+    confidence: number;
+    source_evidence_id?: string;
+    notes?: string;
+  },
+): Promise<FinancialAssumptionData> {
+  return apiPost<FinancialAssumptionData>(
+    `/api/v1/simulations/scenarios/${scenarioId}/financial-assumptions`,
+    body,
+  );
+}
+
+export async function fetchFinancialAssumptions(
+  scenarioId: string,
+): Promise<FinancialAssumptionList> {
+  return apiGet<FinancialAssumptionList>(
+    `/api/v1/simulations/scenarios/${scenarioId}/financial-assumptions`,
+  );
+}
+
+export async function deleteFinancialAssumption(
+  scenarioId: string,
+  assumptionId: string,
+): Promise<void> {
+  return apiDelete(
+    `/api/v1/simulations/scenarios/${scenarioId}/financial-assumptions/${assumptionId}`,
+  );
+}
+
+// -- Phase 4: Alternative Suggestions API -------------------------------------
+
+export async function requestSuggestions(
+  scenarioId: string,
+  contextNotes?: string,
+): Promise<AlternativeSuggestionList> {
+  return apiPost<AlternativeSuggestionList>(
+    `/api/v1/simulations/scenarios/${scenarioId}/suggestions`,
+    { context_notes: contextNotes || null },
+  );
+}
+
+export async function fetchSuggestions(
+  scenarioId: string,
+): Promise<AlternativeSuggestionList> {
+  return apiGet<AlternativeSuggestionList>(
+    `/api/v1/simulations/scenarios/${scenarioId}/suggestions`,
+  );
+}
+
+export async function updateSuggestionDisposition(
+  scenarioId: string,
+  suggestionId: string,
+  disposition: SuggestionDispositionType,
+  dispositionNotes?: string,
+): Promise<AlternativeSuggestionData> {
+  return apiPatch<AlternativeSuggestionData>(
+    `/api/v1/simulations/scenarios/${scenarioId}/suggestions/${suggestionId}`,
+    { disposition, disposition_notes: dispositionNotes || null },
+  );
+}
+
+// -- Phase 4: Financial Impact API --------------------------------------------
+
+export async function fetchFinancialImpact(
+  scenarioId: string,
+): Promise<FinancialImpactData> {
+  return apiGet<FinancialImpactData>(
+    `/api/v1/simulations/scenarios/${scenarioId}/financial-impact`,
+  );
+}
+
+// -- Phase 4: Scenario Ranking API --------------------------------------------
+
+export async function fetchScenarioRanking(
+  engagementId: string,
+  weights?: { evidence?: number; simulation?: number; financial?: number; governance?: number },
+): Promise<ScenarioRankingData> {
+  const params = new URLSearchParams({ engagement_id: engagementId });
+  if (weights?.evidence !== undefined) params.set("w_evidence", String(weights.evidence));
+  if (weights?.simulation !== undefined) params.set("w_simulation", String(weights.simulation));
+  if (weights?.financial !== undefined) params.set("w_financial", String(weights.financial));
+  if (weights?.governance !== undefined) params.set("w_governance", String(weights.governance));
+  return apiGet<ScenarioRankingData>(
+    `/api/v1/simulations/scenarios/rank?${params.toString()}`,
+  );
 }
