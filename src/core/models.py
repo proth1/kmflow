@@ -672,9 +672,18 @@ class User(Base):
         nullable=False,
     )
 
+    # GDPR erasure fields (Issue #165)
+    # Set when a user submits an erasure request; background job anonymizes
+    # the account after erasure_scheduled_at passes the grace period.
+    erasure_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+    erasure_scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+
     # Relationships
     engagement_memberships: Mapped[list[EngagementMember]] = relationship(
         "EngagementMember", back_populates="user", cascade="all, delete-orphan"
+    )
+    consents: Mapped[list[UserConsent]] = relationship(
+        "UserConsent", back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
@@ -707,6 +716,43 @@ class EngagementMember(Base):
 
     def __repr__(self) -> str:
         return f"<EngagementMember(engagement_id={self.engagement_id}, user_id={self.user_id})>"
+
+
+# =============================================================================
+# GDPR: User consent tracking (Issue #165)
+# =============================================================================
+
+
+class UserConsent(Base):
+    """Tracks a user's consent grant or revocation for a specific consent type.
+
+    Each row represents one consent event. The current state is the most
+    recent row for a given (user_id, consent_type) pair (highest granted_at).
+    Consent changes are immutable records for audit purposes — never updated
+    in place, only new rows inserted.
+    """
+
+    __tablename__ = "user_consents"
+    __table_args__ = (Index("ix_user_consents_user_id", "user_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    # One of: "analytics", "data_processing", "marketing_communications"
+    consent_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    granted: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+    # IP address recorded for audit trail; nullable for cases where it is
+    # not available (e.g. programmatic updates or legacy imports).
+    ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True, default=None)
+
+    # Relationships
+    user: Mapped[User] = relationship("User", back_populates="consents")
+
+    def __repr__(self) -> str:
+        return f"<UserConsent(user_id={self.user_id}, type='{self.consent_type}', granted={self.granted})>"
 
 
 # =============================================================================

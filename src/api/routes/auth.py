@@ -1,10 +1,11 @@
 """Authentication API routes.
 
 Provides:
-- POST /api/v1/auth/token  (dev mode: email+password login)
-- POST /api/v1/auth/refresh (refresh access token)
-- GET  /api/v1/auth/me     (current user info)
-- POST /api/v1/auth/logout  (blacklist token)
+- POST /api/v1/auth/token    (dev mode: email+password login — returns raw tokens)
+- POST /api/v1/auth/login    (cookie-based login for browser clients — Issue #156)
+- POST /api/v1/auth/refresh  (refresh access token — supports both body and cookie)
+- GET  /api/v1/auth/me       (current user info)
+- POST /api/v1/auth/logout   (blacklist token + clear cookies)
 """
 
 from __future__ import annotations
@@ -21,13 +22,20 @@ from slowapi.util import get_remote_address
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from fastapi.responses import JSONResponse
+
 from src.api.deps import get_session
 from src.core.auth import (
+    ACCESS_COOKIE_NAME,
+    REFRESH_COOKIE_NAME,
     blacklist_token,
+    clear_auth_cookies,
     create_access_token,
     create_refresh_token,
     decode_token,
     get_current_user,
+    is_token_blacklisted,
+    set_auth_cookies,
     verify_password,
 )
 from src.core.config import Settings, get_settings
@@ -76,6 +84,29 @@ class UserResponse(BaseModel):
     name: str
     role: UserRole
     is_active: bool
+
+
+class LoginResponse(BaseModel):
+    """Response for cookie-based login (Issue #156).
+
+    Deliberately omits the raw token — tokens are set as HttpOnly cookies
+    instead so they are not accessible to JavaScript.
+    """
+
+    message: str
+    user_id: str
+
+
+class RefreshCookieResponse(BaseModel):
+    """Response for cookie-based token refresh (Issue #156)."""
+
+    message: str
+
+
+class LogoutResponse(BaseModel):
+    """Response for logout."""
+
+    message: str
 
 
 # ---------------------------------------------------------------------------
@@ -187,6 +218,126 @@ async def refresh_token(
     }
 
 
+@router.post("/login", response_model=LoginResponse)
+@limiter.limit("5/minute")
+async def login(
+    request: Request,
+    payload: TokenRequest,
+    session: AsyncSession = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> JSONResponse:
+    """Cookie-based login for browser clients (Issue #156).
+
+    Validates email + password, creates access and refresh tokens, and sets
+    them as HttpOnly cookies on the response.  The raw token values are
+    **never** included in the response body so they are not accessible to
+    JavaScript.
+
+    The access cookie uses SameSite=Lax, which provides baseline CSRF
+    protection for state-changing requests from third-party contexts.
+    """
+    result = await session.execute(select(User).where(User.email == payload.email))
+    user = result.scalar_one_or_none()
+
+    if user is None or user.hashed_password is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+
+    if not verify_password(payload.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is disabled",
+        )
+
+    claims = {
+        "sub": str(user.id),
+        "email": user.email,
+        "name": user.name,
+        "role": user.role.value,
+    }
+    access_token = create_access_token(claims, settings)
+    refresh_token_value = create_refresh_token(claims, settings)
+
+    response = JSONResponse(
+        content={"message": "Login successful", "user_id": str(user.id)},
+        status_code=status.HTTP_200_OK,
+    )
+    set_auth_cookies(response, access_token, refresh_token_value, settings)
+    return response
+
+
+@router.post("/refresh/cookie", response_model=RefreshCookieResponse)
+@limiter.limit("10/minute")
+async def refresh_token_cookie(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> JSONResponse:
+    """Refresh the access token using the ``kmflow_refresh`` HttpOnly cookie.
+
+    This endpoint is the cookie-equivalent of ``POST /refresh`` and is
+    intended for browser clients.  The refresh cookie is path-restricted to
+    ``/api/v1/auth/refresh`` (and this ``/api/v1/auth/refresh/cookie`` path
+    sits under that prefix), so the browser will send it only here.
+
+    On success a new access cookie is set; the refresh cookie is unchanged.
+    """
+    refresh_token_value = request.cookies.get(REFRESH_COOKIE_NAME)
+    if not refresh_token_value:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh cookie missing",
+        )
+
+    decoded = decode_token(refresh_token_value, settings)
+
+    if decoded.get("type") != "refresh":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token type: expected refresh token",
+        )
+
+    user_id_str = decoded.get("sub")
+    if not user_id_str:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token missing subject claim",
+        )
+
+    result = await session.execute(select(User).where(User.id == UUID(user_id_str)))
+    user = result.scalar_one_or_none()
+
+    if user is None or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or disabled",
+        )
+
+    claims = {
+        "sub": str(user.id),
+        "email": user.email,
+        "name": user.name,
+        "role": user.role.value,
+    }
+    new_access_token = create_access_token(claims, settings)
+    new_refresh_token = create_refresh_token(claims, settings)
+
+    response = JSONResponse(
+        content={"message": "Token refreshed"},
+        status_code=status.HTTP_200_OK,
+    )
+    set_auth_cookies(response, new_access_token, new_refresh_token, settings)
+    return response
+
+
 @router.get("/me", response_model=UserResponse)
 async def get_me(
     current_user: User = Depends(get_current_user),
@@ -195,15 +346,36 @@ async def get_me(
     return current_user
 
 
-@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/logout", status_code=status.HTTP_200_OK, response_model=LogoutResponse)
 async def logout(
     request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-) -> None:
-    """Invalidate the current access token by adding it to the blacklist."""
-    if credentials is None:
+    settings: Settings = Depends(get_settings),
+) -> JSONResponse:
+    """Invalidate the current access token and clear auth cookies.
+
+    Supports both bearer-header clients (API/MCP) and cookie-based browser
+    sessions.  The token extracted from either source is blacklisted in Redis.
+    Both HttpOnly cookies are cleared regardless of auth source.
+    """
+    token: str | None = None
+
+    if credentials is not None:
+        token = credentials.credentials
+    else:
+        token = request.cookies.get(ACCESS_COOKIE_NAME)
+
+    if token is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
         )
-    await blacklist_token(request, credentials.credentials)
+
+    await blacklist_token(request, token)
+
+    response = JSONResponse(
+        content={"message": "Logged out"},
+        status_code=status.HTTP_200_OK,
+    )
+    clear_auth_cookies(response, settings)
+    return response

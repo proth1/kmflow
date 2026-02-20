@@ -11,34 +11,19 @@ const API_BASE_URL =
     : process.env.NEXT_PUBLIC_API_URL || "http://localhost:8002";
 
 /**
- * DEPRECATED: Reading JWT from localStorage is a transitional fallback.
- * The preferred auth mechanism is an HttpOnly cookie set by the server on
- * login. The cookie is transmitted automatically via `credentials: 'include'`
- * on every fetch. Do NOT write new tokens to localStorage; the backend should
- * set the cookie instead. This function will be removed once all clients have
- * migrated off the localStorage path (tracked in C2-01).
- */
-function getAuthToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("kmflow_token");
-}
-
-/**
- * Build common headers. If a legacy localStorage token is present it is
- * forwarded as an Authorization header for backward compatibility. New auth
- * flows rely on the HttpOnly cookie sent automatically via
- * `credentials: 'include'` — no Authorization header is required.
+ * Build common headers for API requests.
+ *
+ * Auth is handled exclusively via the HttpOnly ``kmflow_access`` cookie set
+ * by the backend on login (Issue #156).  The cookie is transmitted
+ * automatically by the browser on every fetch that includes
+ * ``credentials: "include"``.  No Authorization header injection is needed
+ * for browser sessions.
+ *
+ * API/MCP clients that use Bearer tokens can pass them via the ``extra``
+ * parameter if they need to inject an Authorization header.
  */
 function authHeaders(extra?: Record<string, string>): Record<string, string> {
-  const headers: Record<string, string> = { ...extra };
-  // Transitional fallback: honour a token already in storage but never write
-  // a new one here. Remove this block once the HttpOnly cookie migration is
-  // complete on all backend auth routes (C2-01).
-  const token = getAuthToken();
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-  return headers;
+  return { ...extra };
 }
 
 export interface ServiceHealth {

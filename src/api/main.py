@@ -39,6 +39,7 @@ from src.api.routes import (
     dashboard,
     engagements,
     evidence,
+    gdpr,
     governance,
     graph,
     health,
@@ -227,6 +228,9 @@ def create_app() -> FastAPI:
 
     # -- Phase 5 Routes ---
     app.include_router(admin.router)
+
+    # -- GDPR Routes (Issue #165) ---
+    app.include_router(gdpr.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)

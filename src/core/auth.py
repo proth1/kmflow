@@ -5,6 +5,7 @@ Supports:
 - Local dev token creation/validation
 - Token expiry checking
 - FastAPI dependency for extracting the current user
+- HttpOnly cookie helpers for browser-based sessions (Issue #156)
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ from uuid import UUID
 
 import bcrypt
 import jwt
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import PyJWTError
 from sqlalchemy import select
@@ -176,6 +177,104 @@ async def blacklist_token(request: Request, token: str, expires_in: int = 1800) 
 
 
 # ---------------------------------------------------------------------------
+# HttpOnly cookie helpers (Issue #156)
+# ---------------------------------------------------------------------------
+
+#: Name of the HttpOnly access-token cookie.
+ACCESS_COOKIE_NAME = "kmflow_access"
+
+#: Name of the HttpOnly refresh-token cookie.  Scoped to the refresh path so
+#: the browser never sends it to any other endpoint.
+REFRESH_COOKIE_NAME = "kmflow_refresh"
+
+#: Path restriction for the refresh cookie.
+REFRESH_COOKIE_PATH = "/api/v1/auth/refresh"
+
+
+def set_auth_cookies(
+    response: Response,
+    access_token: str,
+    refresh_token: str,
+    settings: Settings | None = None,
+) -> None:
+    """Attach HttpOnly auth cookies to *response*.
+
+    Two cookies are set:
+    - ``kmflow_access``  — short-lived access token; SameSite=Lax so it is
+      sent on top-level navigations (baseline CSRF protection).
+    - ``kmflow_refresh`` — longer-lived refresh token; SameSite=Strict and
+      path-restricted to ``/api/v1/auth/refresh`` so it cannot be used by
+      any other endpoint.
+
+    Args:
+        response: The FastAPI ``Response`` object to attach cookies to.
+        access_token: Encoded JWT access token string.
+        refresh_token: Encoded JWT refresh token string.
+        settings: Application settings (defaults to ``get_settings()``).
+    """
+    if settings is None:
+        settings = get_settings()
+
+    domain = settings.cookie_domain or None  # None lets the browser default to the request host
+    secure = settings.cookie_secure
+
+    response.set_cookie(
+        key=ACCESS_COOKIE_NAME,
+        value=access_token,
+        httponly=True,
+        secure=secure,
+        samesite="lax",
+        path="/",
+        domain=domain,
+        max_age=settings.jwt_access_token_expire_minutes * 60,
+    )
+    response.set_cookie(
+        key=REFRESH_COOKIE_NAME,
+        value=refresh_token,
+        httponly=True,
+        secure=secure,
+        samesite="strict",
+        path=REFRESH_COOKIE_PATH,
+        domain=domain,
+        max_age=settings.jwt_refresh_token_expire_minutes * 60,
+    )
+
+
+def clear_auth_cookies(response: Response, settings: Settings | None = None) -> None:
+    """Delete both auth cookies from the browser.
+
+    Sets both cookies to empty values with ``max_age=0`` so browsers
+    remove them immediately.
+
+    Args:
+        response: The FastAPI ``Response`` object to clear cookies on.
+        settings: Application settings (defaults to ``get_settings()``).
+    """
+    if settings is None:
+        settings = get_settings()
+
+    domain = settings.cookie_domain or None
+    secure = settings.cookie_secure
+
+    response.delete_cookie(
+        key=ACCESS_COOKIE_NAME,
+        path="/",
+        domain=domain,
+        httponly=True,
+        secure=secure,
+        samesite="lax",
+    )
+    response.delete_cookie(
+        key=REFRESH_COOKIE_NAME,
+        path=REFRESH_COOKIE_PATH,
+        domain=domain,
+        httponly=True,
+        secure=secure,
+        samesite="strict",
+    )
+
+
+# ---------------------------------------------------------------------------
 # FastAPI dependencies
 # ---------------------------------------------------------------------------
 
@@ -194,21 +293,31 @@ async def get_current_user(
 ) -> User:
     """FastAPI dependency that extracts and validates the current user.
 
-    Reads the Authorization header, decodes the JWT, checks the blacklist,
-    and fetches the user from the database.
+    Auth source priority (Issue #156):
+    1. ``Authorization: Bearer <token>`` header — preferred for API/MCP clients.
+    2. ``kmflow_access`` HttpOnly cookie — preferred for browser sessions.
+
+    If neither is present a 401 is raised.
 
     Raises:
         HTTPException 401: If token is missing, invalid, or blacklisted.
         HTTPException 401: If user is not found or inactive.
     """
-    if credentials is None:
+    token: str | None = None
+
+    if credentials is not None:
+        # 1. Bearer header takes precedence (API / MCP clients)
+        token = credentials.credentials
+    else:
+        # 2. Fall back to HttpOnly cookie (browser sessions)
+        token = request.cookies.get(ACCESS_COOKIE_NAME)
+
+    if token is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
-    token = credentials.credentials
     payload = decode_token(token, settings)
 
     # Reject non-access tokens (e.g. refresh tokens)

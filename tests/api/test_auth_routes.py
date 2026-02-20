@@ -229,7 +229,12 @@ class TestLogout:
 
     @pytest.mark.asyncio
     async def test_logout_success(self, client: AsyncClient, mock_redis_client: AsyncMock) -> None:
-        """Should return 204 and blacklist the token."""
+        """Should return 200 with a confirmation message and blacklist the token.
+
+        The logout endpoint was updated (Issue #156) to return 200 + JSON body
+        instead of 204, so that it can also clear HttpOnly auth cookies via
+        Set-Cookie response headers.
+        """
         settings = _test_settings()
         token = create_access_token({"sub": str(uuid.uuid4())}, settings)
 
@@ -237,7 +242,8 @@ class TestLogout:
             "/api/v1/auth/logout",
             headers={"Authorization": f"Bearer {token}"},
         )
-        assert response.status_code == 204
+        assert response.status_code == 200
+        assert response.json()["message"] == "Logged out"
 
         # Verify Redis was called to blacklist
         mock_redis_client.setex.assert_awaited_once()

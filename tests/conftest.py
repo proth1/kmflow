@@ -156,6 +156,7 @@ async def test_app(
         dashboard,
         engagements,
         evidence,
+        gdpr,
         governance,
         graph,
         health,
@@ -235,6 +236,7 @@ async def test_app(
     app.include_router(lineage.router)
     app.include_router(governance.router)
     app.include_router(admin.router)
+    app.include_router(gdpr.router)
 
     # Override get_settings so auth uses the same JWT secret as tests
     test_settings_instance = Settings(
