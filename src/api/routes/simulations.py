@@ -238,9 +238,7 @@ async def _get_scenario_or_404(
     session: AsyncSession,
     scenario_id: UUID,
 ) -> SimulationScenario:
-    result = await session.execute(
-        select(SimulationScenario).where(SimulationScenario.id == scenario_id)
-    )
+    result = await session.execute(select(SimulationScenario).where(SimulationScenario.id == scenario_id))
     scenario = result.scalar_one_or_none()
     if not scenario:
         raise HTTPException(status_code=404, detail=f"Scenario {scenario_id} not found")
@@ -266,7 +264,9 @@ async def create_scenario(
         description=payload.description,
     )
     session.add(scenario)
-    await _log_audit(session, payload.engagement_id, AuditAction.SIMULATION_CREATED, f"Scenario: {payload.name}", actor=str(user.id))
+    await _log_audit(
+        session, payload.engagement_id, AuditAction.SIMULATION_CREATED, f"Scenario: {payload.name}", actor=str(user.id)
+    )
     await session.commit()
     await session.refresh(scenario)
     return _scenario_to_response(scenario)
@@ -354,7 +354,13 @@ async def run_scenario(
         sim_result.error_message = str(e)
         sim_result.completed_at = datetime.now(UTC)
 
-    await _log_audit(session, scenario.engagement_id, AuditAction.SIMULATION_EXECUTED, f"Scenario: {scenario.name}", actor=str(user.id))
+    await _log_audit(
+        session,
+        scenario.engagement_id,
+        AuditAction.SIMULATION_EXECUTED,
+        f"Scenario: {scenario.name}",
+        actor=str(user.id),
+    )
     await session.commit()
     await session.refresh(sim_result)
     return _result_to_response(sim_result)
@@ -412,9 +418,7 @@ async def list_modifications(
 ) -> dict[str, Any]:
     """List modifications for a scenario."""
     await _get_scenario_or_404(session, scenario_id)
-    result = await session.execute(
-        select(ScenarioModification).where(ScenarioModification.scenario_id == scenario_id)
-    )
+    result = await session.execute(select(ScenarioModification).where(ScenarioModification.scenario_id == scenario_id))
     items = [_modification_to_response(m) for m in result.scalars().all()]
     return {"items": items, "total": len(items)}
 
@@ -744,9 +748,7 @@ async def generate_epistemic_plan(
     # Delete previous actions for this scenario before persisting new ones
     from sqlalchemy import delete as sql_delete
 
-    await session.execute(
-        sql_delete(EpistemicAction).where(EpistemicAction.scenario_id == scenario_id)
-    )
+    await session.execute(sql_delete(EpistemicAction).where(EpistemicAction.scenario_id == scenario_id))
 
     # Persist epistemic actions
     for action in plan.actions[:limit]:
@@ -788,7 +790,8 @@ async def generate_epistemic_plan(
                 session.add(item)
 
     await _log_audit(
-        session, scenario.engagement_id,
+        session,
+        scenario.engagement_id,
         AuditAction.EPISTEMIC_PLAN_GENERATED,
         f"Generated {plan.total_actions} actions for {scenario.name}",
         actor=str(user.id),
@@ -903,7 +906,8 @@ async def create_financial_assumption(
     )
     session.add(assumption)
     await _log_audit(
-        session, scenario.engagement_id,
+        session,
+        scenario.engagement_id,
         AuditAction.FINANCIAL_ASSUMPTION_CREATED,
         f"Assumption: {payload.name}",
         actor=str(user.id),
@@ -925,9 +929,7 @@ async def list_financial_assumptions(
     """List financial assumptions for a scenario's engagement."""
     scenario = await _get_scenario_or_404(session, scenario_id)
     result = await session.execute(
-        select(FinancialAssumption).where(
-            FinancialAssumption.engagement_id == scenario.engagement_id
-        )
+        select(FinancialAssumption).where(FinancialAssumption.engagement_id == scenario.engagement_id)
     )
     items = [_assumption_to_response(a) for a in result.scalars().all()]
     return {"items": items, "total": len(items)}
@@ -945,9 +947,7 @@ async def delete_financial_assumption(
 ) -> None:
     """Delete a financial assumption."""
     await _get_scenario_or_404(session, scenario_id)
-    result = await session.execute(
-        select(FinancialAssumption).where(FinancialAssumption.id == assumption_id)
-    )
+    result = await session.execute(select(FinancialAssumption).where(FinancialAssumption.id == assumption_id))
     assumption = result.scalar_one_or_none()
     if not assumption:
         raise HTTPException(status_code=404, detail=f"Assumption {assumption_id} not found")
@@ -994,9 +994,7 @@ def _suggestion_to_response(s: AlternativeSuggestion) -> dict[str, Any]:
         "rationale": s.rationale,
         "governance_flags": s.governance_flags,
         "evidence_gaps": s.evidence_gaps,
-        "disposition": s.disposition.value
-        if isinstance(s.disposition, SuggestionDisposition)
-        else s.disposition,
+        "disposition": s.disposition.value if isinstance(s.disposition, SuggestionDisposition) else s.disposition,
         "disposition_notes": s.disposition_notes,
         "created_at": s.created_at.isoformat() if s.created_at else "",
     }
@@ -1052,7 +1050,8 @@ async def request_suggestions(
         items.append(suggestion)
 
     await _log_audit(
-        session, scenario.engagement_id,
+        session,
+        scenario.engagement_id,
         AuditAction.SUGGESTION_CREATED,
         f"Generated {len(items)} suggestions for {scenario.name}",
         actor=str(user.id),
@@ -1116,7 +1115,9 @@ async def update_suggestion_disposition(
         # MODIFIED is a form of acceptance with changes
         action = AuditAction.SUGGESTION_ACCEPTED
     await _log_audit(
-        session, scenario.engagement_id, action,
+        session,
+        scenario.engagement_id,
+        action,
         f"Suggestion {suggestion_id} -> {payload.disposition.value}",
         actor=str(user.id),
     )
@@ -1163,9 +1164,7 @@ async def get_financial_impact(
     from src.simulation.financial import compute_financial_impact
 
     result = await session.execute(
-        select(FinancialAssumption).where(
-            FinancialAssumption.engagement_id == scenario.engagement_id
-        )
+        select(FinancialAssumption).where(FinancialAssumption.engagement_id == scenario.engagement_id)
     )
     assumptions = list(result.scalars().all())
 
@@ -1174,9 +1173,7 @@ async def get_financial_impact(
     if baseline_scenario_id:
         baseline = await _get_scenario_or_404(session, baseline_scenario_id)
         bl_result = await session.execute(
-            select(FinancialAssumption).where(
-                FinancialAssumption.engagement_id == baseline.engagement_id
-            )
+            select(FinancialAssumption).where(FinancialAssumption.engagement_id == baseline.engagement_id)
         )
         bl_assumptions = list(bl_result.scalars().all())
         baseline_expected = sum(a.value for a in bl_assumptions) if bl_assumptions else 0.0
@@ -1236,11 +1233,7 @@ async def rank_scenarios(
         )
 
     # Fetch all scenarios for this engagement
-    result = await session.execute(
-        select(SimulationScenario).where(
-            SimulationScenario.engagement_id == engagement_id
-        )
-    )
+    result = await session.execute(select(SimulationScenario).where(SimulationScenario.engagement_id == engagement_id))
     scenarios = list(result.scalars().all())
 
     weights = {
@@ -1259,9 +1252,7 @@ async def rank_scenarios(
 
     # Fetch assumptions for financial scoring
     fa_result = await session.execute(
-        select(FinancialAssumption).where(
-            FinancialAssumption.engagement_id == engagement_id
-        )
+        select(FinancialAssumption).where(FinancialAssumption.engagement_id == engagement_id)
     )
     assumptions = list(fa_result.scalars().all())
 

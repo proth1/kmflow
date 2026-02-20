@@ -37,7 +37,9 @@ class TestRankScenariosIntegration:
         scenario.name = "Test"
         scenario.evidence_confidence_score = 0.7
         result = rank_scenarios(
-            [scenario], {}, [],
+            [scenario],
+            {},
+            [],
             {"evidence": 0.3, "simulation": 0.25, "financial": 0.25, "governance": 0.2},
         )
         assert isinstance(result, list)
@@ -45,7 +47,9 @@ class TestRankScenariosIntegration:
 
     def test_ranking_empty(self) -> None:
         result = rank_scenarios(
-            [], {}, [],
+            [],
+            {},
+            [],
             {"evidence": 0.3, "simulation": 0.25, "financial": 0.25, "governance": 0.2},
         )
         assert result == []

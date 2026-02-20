@@ -33,10 +33,7 @@ def _simulation_score(result: Any | None) -> float:
     if "efficiency_score" in metrics:
         return min(1.0, max(0.0, float(metrics["efficiency_score"])))
 
-    numeric_values = [
-        float(v) for v in metrics.values()
-        if isinstance(v, (int, float)) and 0 <= v <= 1
-    ]
+    numeric_values = [float(v) for v in metrics.values() if isinstance(v, (int, float)) and 0 <= v <= 1]
     if numeric_values:
         return sum(numeric_values) / len(numeric_values)
 
@@ -128,22 +125,19 @@ def rank_scenarios(
         fin = _financial_score(assumptions, result)
         gov = _governance_score(scenario, result)
 
-        composite = (
-            w_ev * ev
-            + w_sim * sim
-            + w_fin * fin
-            + w_gov * gov
-        )
+        composite = w_ev * ev + w_sim * sim + w_fin * fin + w_gov * gov
 
-        rankings.append({
-            "scenario_id": str(scenario.id),
-            "scenario_name": scenario.name,
-            "composite_score": round(composite, 4),
-            "evidence_score": round(ev, 4),
-            "simulation_score": round(sim, 4),
-            "financial_score": round(fin, 4),
-            "governance_score": round(gov, 4),
-        })
+        rankings.append(
+            {
+                "scenario_id": str(scenario.id),
+                "scenario_name": scenario.name,
+                "composite_score": round(composite, 4),
+                "evidence_score": round(ev, 4),
+                "simulation_score": round(sim, 4),
+                "financial_score": round(fin, 4),
+                "governance_score": round(gov, 4),
+            }
+        )
 
     rankings.sort(key=lambda r: r["composite_score"], reverse=True)
     return rankings

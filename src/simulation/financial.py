@@ -59,15 +59,17 @@ def compute_financial_impact(
     sensitivity: list[dict[str, Any]] = []
     for a in assumptions:
         delta = a.value * SENSITIVITY_PERTURBATION
-        sensitivity.append({
-            "assumption_name": a.name,
-            "base_value": a.value,
-            "impact_range": {
-                "optimistic": round(expected_total - delta, 2),
-                "expected": round(expected_total, 2),
-                "pessimistic": round(expected_total + delta, 2),
-            },
-        })
+        sensitivity.append(
+            {
+                "assumption_name": a.name,
+                "base_value": a.value,
+                "impact_range": {
+                    "optimistic": round(expected_total - delta, 2),
+                    "expected": round(expected_total, 2),
+                    "pessimistic": round(expected_total + delta, 2),
+                },
+            }
+        )
 
     # Sort by impact magnitude (largest delta first)
     sensitivity.sort(

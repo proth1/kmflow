@@ -101,12 +101,8 @@ class TestEpistemicPlannerService:
             aggregate_confidence=0.9,
         )
 
-        with patch(
-            "src.simulation.coverage.EvidenceCoverageService"
-        ) as mock_coverage_cls:
-            mock_coverage_cls.return_value.compute_coverage = AsyncMock(
-                return_value=coverage
-            )
+        with patch("src.simulation.coverage.EvidenceCoverageService") as mock_coverage_cls:
+            mock_coverage_cls.return_value.compute_coverage = AsyncMock(return_value=coverage)
             result = await service.generate_epistemic_plan(
                 scenario_id=uuid.uuid4(),
                 engagement_id=uuid.uuid4(),
@@ -138,12 +134,8 @@ class TestEpistemicPlannerService:
             aggregate_confidence=0.45,
         )
 
-        with patch(
-            "src.simulation.coverage.EvidenceCoverageService"
-        ) as mock_coverage_cls:
-            mock_coverage_cls.return_value.compute_coverage = AsyncMock(
-                return_value=coverage
-            )
+        with patch("src.simulation.coverage.EvidenceCoverageService") as mock_coverage_cls:
+            mock_coverage_cls.return_value.compute_coverage = AsyncMock(return_value=coverage)
             result = await service.generate_epistemic_plan(
                 scenario_id=uuid.uuid4(),
                 engagement_id=uuid.uuid4(),
@@ -174,12 +166,8 @@ class TestEpistemicPlannerService:
             aggregate_confidence=0.3,
         )
 
-        with patch(
-            "src.simulation.coverage.EvidenceCoverageService"
-        ) as mock_coverage_cls:
-            mock_coverage_cls.return_value.compute_coverage = AsyncMock(
-                return_value=coverage
-            )
+        with patch("src.simulation.coverage.EvidenceCoverageService") as mock_coverage_cls:
+            mock_coverage_cls.return_value.compute_coverage = AsyncMock(return_value=coverage)
             result = await service.generate_epistemic_plan(
                 scenario_id=uuid.uuid4(),
                 engagement_id=uuid.uuid4(),
@@ -201,7 +189,11 @@ class TestEpistemicPlannerService:
             scenario_id="test",
             elements=[
                 ElementCoverage(
-                    "e1", "Removed", "dark", 0, 0.0,
+                    "e1",
+                    "Removed",
+                    "dark",
+                    0,
+                    0.0,
                     is_removed=True,
                 ),
                 ElementCoverage("e2", "Active Dark", "dark", 0, 0.0),
@@ -212,12 +204,8 @@ class TestEpistemicPlannerService:
             aggregate_confidence=0.0,
         )
 
-        with patch(
-            "src.simulation.coverage.EvidenceCoverageService"
-        ) as mock_coverage_cls:
-            mock_coverage_cls.return_value.compute_coverage = AsyncMock(
-                return_value=coverage
-            )
+        with patch("src.simulation.coverage.EvidenceCoverageService") as mock_coverage_cls:
+            mock_coverage_cls.return_value.compute_coverage = AsyncMock(return_value=coverage)
             result = await service.generate_epistemic_plan(
                 scenario_id=uuid.uuid4(),
                 engagement_id=uuid.uuid4(),
@@ -247,12 +235,8 @@ class TestEpistemicPlannerService:
             aggregate_confidence=0.05,
         )
 
-        with patch(
-            "src.simulation.coverage.EvidenceCoverageService"
-        ) as mock_coverage_cls:
-            mock_coverage_cls.return_value.compute_coverage = AsyncMock(
-                return_value=coverage
-            )
+        with patch("src.simulation.coverage.EvidenceCoverageService") as mock_coverage_cls:
+            mock_coverage_cls.return_value.compute_coverage = AsyncMock(return_value=coverage)
             result = await service.generate_epistemic_plan(
                 scenario_id=uuid.uuid4(),
                 engagement_id=uuid.uuid4(),
@@ -282,12 +266,8 @@ class TestEpistemicPlannerService:
             aggregate_confidence=0.0,
         )
 
-        with patch(
-            "src.simulation.coverage.EvidenceCoverageService"
-        ) as mock_coverage_cls:
-            mock_coverage_cls.return_value.compute_coverage = AsyncMock(
-                return_value=coverage
-            )
+        with patch("src.simulation.coverage.EvidenceCoverageService") as mock_coverage_cls:
+            mock_coverage_cls.return_value.compute_coverage = AsyncMock(return_value=coverage)
 
             # Without graph connections
             result_no_graph = await service.generate_epistemic_plan(

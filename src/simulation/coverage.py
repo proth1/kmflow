@@ -105,11 +105,7 @@ class EvidenceCoverageService:
         removed_element_ids: set[str] = set()
 
         for mod in modifications:
-            mod_type = (
-                mod.modification_type.value
-                if hasattr(mod.modification_type, "value")
-                else mod.modification_type
-            )
+            mod_type = mod.modification_type.value if hasattr(mod.modification_type, "value") else mod.modification_type
             if mod_type in (ModificationType.TASK_REMOVE, ModificationType.CONTROL_REMOVE):
                 removed_element_ids.add(mod.element_id)
             elif mod_type in (ModificationType.TASK_ADD, ModificationType.CONTROL_ADD):
@@ -171,9 +167,7 @@ class EvidenceCoverageService:
         bright = sum(1 for e in active if e.classification == "bright")
         dim = sum(1 for e in active if e.classification == "dim")
         dark = sum(1 for e in active if e.classification == "dark")
-        avg_confidence = (
-            sum(e.confidence for e in active) / len(active) if active else 0.0
-        )
+        avg_confidence = sum(e.confidence for e in active) / len(active) if active else 0.0
 
         return ScenarioCoverageResult(
             scenario_id=str(scenario_id),

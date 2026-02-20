@@ -176,10 +176,7 @@ class EpistemicPlannerService:
         )
 
         # 2. Identify elements needing evidence (dim + dark, exclude removed)
-        target_elements = [
-            e for e in coverage.elements
-            if e.classification in ("dim", "dark") and not e.is_removed
-        ]
+        target_elements = [e for e in coverage.elements if e.classification in ("dim", "dark") and not e.is_removed]
 
         if not target_elements:
             return EpistemicPlanResult(scenario_id=str(scenario_id))
@@ -202,14 +199,10 @@ class EpistemicPlannerService:
                 f"sources: {element.evidence_count})"
             )
 
-            category = _recommend_evidence_category(
-                element.classification, element.element_name
-            )
+            category = _recommend_evidence_category(element.classification, element.element_name)
             type_weight = _get_type_weight(category)
 
-            uplift, projected = calculate_confidence_uplift(
-                element.confidence, element.evidence_count, type_weight
-            )
+            uplift, projected = calculate_confidence_uplift(element.confidence, element.evidence_count, type_weight)
 
             cascade_severity = impact_by_element.get(element.element_name, 0.1)
             info_gain = compute_information_gain(uplift, cascade_severity)

@@ -1400,7 +1400,9 @@ class EpistemicAction(Base):
     scenario: Mapped[SimulationScenario] = relationship("SimulationScenario")
 
     def __repr__(self) -> str:
-        return f"<EpistemicAction(id={self.id}, element='{self.target_element_name}', gain={self.information_gain_score})>"
+        return (
+            f"<EpistemicAction(id={self.id}, element='{self.target_element_name}', gain={self.information_gain_score})>"
+        )
 
 
 # =============================================================================
@@ -1436,9 +1438,7 @@ class FinancialAssumption(Base):
     engagement_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
     )
-    assumption_type: Mapped[FinancialAssumptionType] = mapped_column(
-        Enum(FinancialAssumptionType), nullable=False
-    )
+    assumption_type: Mapped[FinancialAssumptionType] = mapped_column(Enum(FinancialAssumptionType), nullable=False)
     name: Mapped[str] = mapped_column(String(256), nullable=False)
     value: Mapped[float] = mapped_column(Float, nullable=False)
     unit: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -1481,9 +1481,7 @@ class AlternativeSuggestion(Base):
     disposition_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     llm_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     llm_response: Mapped[str] = mapped_column(Text, nullable=False)
-    created_by: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
-    )
+    created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     scenario: Mapped[SimulationScenario] = relationship("SimulationScenario")
