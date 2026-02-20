@@ -7,9 +7,10 @@ from uuid import uuid4
 
 import pytest
 
+from src.api.routes.simulations import _check_llm_rate_limit, _llm_request_log
 from src.simulation.financial import compute_financial_impact
 from src.simulation.ranking import rank_scenarios
-from src.simulation.suggester import AlternativeSuggesterService
+from src.simulation.suggester import AlternativeSuggesterService, _sanitize_text
 
 
 class TestComputeFinancialImpactIntegration:
@@ -101,3 +102,62 @@ class TestAlternativeSuggesterService:
             result = await service.generate_suggestions(scenario, uuid4())
             assert len(result) == 1
             assert "LLM_UNAVAILABLE" in result[0]["llm_response"]
+
+    def test_prompt_uses_xml_delimiters(self) -> None:
+        """Prompt should wrap user data in XML tags for injection defense."""
+        service = AlternativeSuggesterService()
+        scenario = MagicMock()
+        scenario.name = "Test"
+        scenario.simulation_type.value = "what_if"
+        scenario.description = "desc"
+        scenario.modifications = []
+
+        prompt = service._build_prompt(scenario, None)
+        assert "<scenario_data>" in prompt
+        assert "<name>Test</name>" in prompt
+
+    def test_prompt_truncates_long_description(self) -> None:
+        service = AlternativeSuggesterService()
+        scenario = MagicMock()
+        scenario.name = "Test"
+        scenario.simulation_type.value = "what_if"
+        scenario.description = "x" * 5000
+        scenario.modifications = []
+
+        prompt = service._build_prompt(scenario, None)
+        # Description should be truncated to 1000 chars
+        assert len(prompt) < 5000
+
+
+class TestSanitizeText:
+    """Tests for input sanitisation."""
+
+    def test_strips_control_chars(self) -> None:
+        assert _sanitize_text("hello\x00world", 100) == "helloworld"
+
+    def test_preserves_newlines(self) -> None:
+        assert _sanitize_text("hello\nworld", 100) == "hello\nworld"
+
+    def test_truncates_to_max_len(self) -> None:
+        assert len(_sanitize_text("a" * 500, 200)) == 200
+
+
+class TestLLMRateLimit:
+    """Tests for the in-memory rate limiter."""
+
+    def test_allows_under_limit(self) -> None:
+        user = str(uuid4())
+        _llm_request_log.pop(user, None)
+        _check_llm_rate_limit(user)  # Should not raise
+
+    def test_blocks_over_limit(self) -> None:
+        from fastapi import HTTPException as FastAPIHTTPException
+
+        user = str(uuid4())
+        _llm_request_log.pop(user, None)
+        for _ in range(5):
+            _check_llm_rate_limit(user)
+
+        with pytest.raises(FastAPIHTTPException) as exc_info:
+            _check_llm_rate_limit(user)
+        assert exc_info.value.status_code == 429

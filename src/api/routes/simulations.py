@@ -7,6 +7,8 @@ including scenario modifications, evidence coverage, and comparison.
 from __future__ import annotations
 
 import logging
+import time
+from collections import defaultdict
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -43,6 +45,25 @@ router = APIRouter(prefix="/api/v1/simulations", tags=["simulations"])
 VALID_TEMPLATE_KEYS = frozenset(
     {"consolidate_adjacent", "automate_gateway", "shift_decision_boundary", "remove_control"}
 )
+
+# Simple in-memory rate limiter for LLM endpoints (per-user, 5 requests/minute)
+_LLM_RATE_LIMIT = 5
+_LLM_RATE_WINDOW = 60  # seconds
+_llm_request_log: dict[str, list[float]] = defaultdict(list)
+
+
+def _check_llm_rate_limit(user_id: str) -> None:
+    """Raise 429 if the user exceeds LLM request rate limit."""
+    now = time.monotonic()
+    window_start = now - _LLM_RATE_WINDOW
+    # Prune old entries
+    _llm_request_log[user_id] = [t for t in _llm_request_log[user_id] if t > window_start]
+    if len(_llm_request_log[user_id]) >= _LLM_RATE_LIMIT:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Rate limit exceeded: max {_LLM_RATE_LIMIT} LLM requests per {_LLM_RATE_WINDOW}s",
+        )
+    _llm_request_log[user_id].append(now)
 
 
 # -- Schemas ------------------------------------------------------------------
@@ -694,16 +715,16 @@ class EpistemicPlanResponse(BaseModel):
     aggregated_view: EpistemicPlanAggregates
 
 
-@router.get("/scenarios/{scenario_id}/epistemic-plan", response_model=EpistemicPlanResponse)
-async def get_epistemic_plan(
+@router.post("/scenarios/{scenario_id}/epistemic-plan", response_model=EpistemicPlanResponse)
+async def generate_epistemic_plan(
     scenario_id: UUID,
     request: Request,
     limit: int = Query(default=10, ge=1, le=100),
     create_shelf_request: bool = Query(default=False),
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("simulation:read")),
+    user: User = Depends(require_permission("simulation:create")),
 ) -> dict[str, Any]:
-    """Get epistemic action plan ranking evidence gaps by information gain."""
+    """Generate epistemic action plan ranking evidence gaps by information gain."""
     scenario = await _get_scenario_or_404(session, scenario_id)
 
     from src.semantic.graph import KnowledgeGraphService
@@ -718,6 +739,13 @@ async def get_epistemic_plan(
         engagement_id=scenario.engagement_id,
         session=session,
         process_graph=scenario.parameters or {},
+    )
+
+    # Delete previous actions for this scenario before persisting new ones
+    from sqlalchemy import delete as sql_delete
+
+    await session.execute(
+        sql_delete(EpistemicAction).where(EpistemicAction.scenario_id == scenario_id)
     )
 
     # Persist epistemic actions
@@ -855,6 +883,14 @@ async def create_financial_assumption(
 ) -> dict[str, Any]:
     """Create a financial assumption for a scenario's engagement."""
     scenario = await _get_scenario_or_404(session, scenario_id)
+
+    # Prevent cross-engagement assignment
+    if payload.engagement_id != scenario.engagement_id:
+        raise HTTPException(
+            status_code=422,
+            detail="engagement_id must match the scenario's engagement",
+        )
+
     assumption = FinancialAssumption(
         engagement_id=payload.engagement_id,
         assumption_type=payload.assumption_type,
@@ -979,6 +1015,8 @@ async def request_suggestions(
     user: User = Depends(require_permission("simulation:create")),
 ) -> dict[str, Any]:
     """Request LLM-generated alternative suggestions for a scenario."""
+    _check_llm_rate_limit(str(user.id))
+
     result = await session.execute(
         select(SimulationScenario)
         .where(SimulationScenario.id == scenario_id)
@@ -1069,11 +1107,13 @@ async def update_suggestion_disposition(
     suggestion.disposition = payload.disposition
     suggestion.disposition_notes = payload.disposition_notes
 
-    action = (
-        AuditAction.SUGGESTION_ACCEPTED
-        if payload.disposition == SuggestionDisposition.ACCEPTED
-        else AuditAction.SUGGESTION_REJECTED
-    )
+    if payload.disposition == SuggestionDisposition.ACCEPTED:
+        action = AuditAction.SUGGESTION_ACCEPTED
+    elif payload.disposition == SuggestionDisposition.REJECTED:
+        action = AuditAction.SUGGESTION_REJECTED
+    else:
+        # MODIFIED is a form of acceptance with changes
+        action = AuditAction.SUGGESTION_ACCEPTED
     await _log_audit(
         session, scenario.engagement_id, action,
         f"Suggestion {suggestion_id} -> {payload.disposition.value}",
@@ -1172,6 +1212,14 @@ async def rank_scenarios(
 ) -> dict[str, Any]:
     """Rank all scenarios for an engagement by composite score."""
     from src.simulation.ranking import rank_scenarios as compute_ranking
+
+    # Validate weights sum to ~1.0
+    weight_sum = w_evidence + w_simulation + w_financial + w_governance
+    if abs(weight_sum - 1.0) > 0.01:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Weights must sum to 1.0 (got {weight_sum:.4f})",
+        )
 
     # Fetch all scenarios for this engagement
     result = await session.execute(

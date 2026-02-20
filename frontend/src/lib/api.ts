@@ -1591,8 +1591,9 @@ export async function fetchEpistemicPlan(
   limit = 10,
   createShelfRequest = false,
 ): Promise<EpistemicPlanData> {
-  return apiGet<EpistemicPlanData>(
+  return apiPost<EpistemicPlanData>(
     `/api/v1/simulations/scenarios/${scenarioId}/epistemic-plan?limit=${limit}&create_shelf_request=${createShelfRequest}`,
+    {},
   );
 }
 
