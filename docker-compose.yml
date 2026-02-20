@@ -3,6 +3,10 @@ services:
   postgres:
     image: pgvector/pgvector:0.8.0-pg15
     container_name: kmflow-postgres
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     deploy:
       resources:
         limits:
@@ -28,6 +32,10 @@ services:
   neo4j:
     image: neo4j:5.25-community
     container_name: kmflow-neo4j
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     deploy:
       resources:
         limits:
@@ -58,6 +66,10 @@ services:
     image: redis:7.4-alpine
     container_name: kmflow-redis
     command: redis-server --requirepass ${REDIS_PASSWORD:-dev_redis_password}
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     deploy:
       resources:
         limits:
@@ -79,6 +91,10 @@ services:
   cib7:
     image: cibseven/cibseven:run-2.1.0
     container_name: kmflow-cib7
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     environment:
       DB_DRIVER: org.postgresql.Driver
       DB_URL: jdbc:postgresql://postgres:5432/camunda
@@ -107,6 +123,10 @@ services:
     image: minio/minio:RELEASE.2025-01-20T14-49-07Z
     container_name: kmflow-minio
     command: server /data --console-address ":9001"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-kmflow-dev}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-kmflow-dev-secret}
@@ -129,6 +149,10 @@ services:
   minio-init:
     image: minio/mc
     container_name: kmflow-minio-init
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     depends_on:
       minio:
         condition: service_healthy
@@ -146,6 +170,10 @@ services:
   mailpit:
     image: axllent/mailpit:v1.22
     container_name: kmflow-mailpit
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     ports:
       - "${SMTP_PORT:-1026}:1025"
       - "${MAILPIT_UI_PORT:-8026}:8025"
@@ -159,6 +187,10 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     container_name: kmflow-backend
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     environment:
       APP_ENV: development
       DEBUG: "true"
@@ -215,6 +247,10 @@ services:
       args:
         NEXT_PUBLIC_API_URL: http://localhost:8002
     container_name: kmflow-frontend
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8002
       API_URL: http://backend:8000

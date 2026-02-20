@@ -45,6 +45,12 @@ def _make_mock_driver() -> MagicMock:
     mock_session.execute_write = AsyncMock(side_effect=_execute_write)
     mock_session._mock_tx = mock_tx  # expose for test assertions
 
+    # Support execute_read() which passes a transaction function (same tx object)
+    async def _execute_read(tx_func):
+        return await tx_func(mock_tx)
+
+    mock_session.execute_read = AsyncMock(side_effect=_execute_read)
+
     mock_session.__aenter__ = AsyncMock(return_value=mock_session)
     mock_session.__aexit__ = AsyncMock(return_value=None)
 
@@ -65,11 +71,17 @@ def graph_service(mock_driver: MagicMock) -> KnowledgeGraphService:
 
 
 def _set_query_result(mock_driver: MagicMock, data: list[dict]) -> None:
-    """Configure the mock driver session to return specific data."""
+    """Configure the mock driver session to return specific data for read queries.
+
+    Configures both session.run (legacy) and the transaction run used by
+    execute_read() so that read-only queries return the provided data.
+    """
     mock_result = AsyncMock()
     mock_result.data = AsyncMock(return_value=data)
     mock_session = mock_driver.session.return_value
     mock_session.run = AsyncMock(return_value=mock_result)
+    # execute_read() passes a tx to the function; configure tx.run too
+    mock_session._mock_tx.run = AsyncMock(return_value=mock_result)
 
 
 # ---------------------------------------------------------------------------
@@ -199,9 +211,9 @@ class TestFindNodes:
         )
         nodes = await graph_service.find_nodes("Activity", filters={"engagement_id": "eng-1"})
         assert len(nodes) == 1
-        # Verify the query included WHERE clause
+        # Verify the query included WHERE clause (via execute_read tx)
         mock_session = mock_driver.session.return_value
-        query = mock_session.run.call_args[0][0]
+        query = mock_session._mock_tx.run.call_args[0][0]
         assert "WHERE" in query
 
     @pytest.mark.asyncio
@@ -326,8 +338,9 @@ class TestGetRelationships:
         _set_query_result(mock_driver, [{"r": {"id": "r1"}, "from_id": "n1", "to_id": "n2", "rel_type": "USES"}])
         rels = await graph_service.get_relationships("n1", direction="outgoing", relationship_type="USES")
         assert len(rels) == 1
+        # Verify the query used the relationship type filter (via execute_read tx)
         mock_session = mock_driver.session.return_value
-        query = mock_session.run.call_args[0][0]
+        query = mock_session._mock_tx.run.call_args[0][0]
         assert "USES" in query
 
     @pytest.mark.asyncio
@@ -369,8 +382,9 @@ class TestTraverse:
         """Should filter by relationship types."""
         _set_query_result(mock_driver, [{"connected": {"id": "n2"}, "labels": ["Activity"]}])
         await graph_service.traverse("n1", depth=1, relationship_types=["FOLLOWED_BY", "USES"])
+        # Verify the query included relationship type filter (via execute_read tx)
         mock_session = mock_driver.session.return_value
-        query = mock_session.run.call_args[0][0]
+        query = mock_session._mock_tx.run.call_args[0][0]
         assert "FOLLOWED_BY" in query
         assert "USES" in query
 
@@ -422,7 +436,8 @@ class TestEngagementSubgraph:
             ]
         )
 
-        mock_session.run = AsyncMock(side_effect=[node_result, rel_result])
+        # get_engagement_subgraph makes two read queries via execute_read; configure tx.run
+        mock_session._mock_tx.run = AsyncMock(side_effect=[node_result, rel_result])
 
         subgraph = await graph_service.get_engagement_subgraph("eng-1")
         assert len(subgraph["nodes"]) == 2
@@ -438,7 +453,7 @@ class TestEngagementSubgraph:
 
         empty_result = AsyncMock()
         empty_result.data = AsyncMock(return_value=[])
-        mock_session.run = AsyncMock(return_value=empty_result)
+        mock_session._mock_tx.run = AsyncMock(return_value=empty_result)
 
         subgraph = await graph_service.get_engagement_subgraph("eng-empty")
         assert subgraph["nodes"] == []
@@ -474,7 +489,8 @@ class TestGetStats:
             ]
         )
 
-        mock_session.run = AsyncMock(side_effect=[node_stats, rel_stats])
+        # get_stats makes two read queries via execute_read; configure tx.run
+        mock_session._mock_tx.run = AsyncMock(side_effect=[node_stats, rel_stats])
 
         stats = await graph_service.get_stats("eng-1")
         assert isinstance(stats, GraphStats)
@@ -489,7 +505,7 @@ class TestGetStats:
         mock_session = mock_driver.session.return_value
         empty = AsyncMock()
         empty.data = AsyncMock(return_value=[])
-        mock_session.run = AsyncMock(return_value=empty)
+        mock_session._mock_tx.run = AsyncMock(return_value=empty)
 
         stats = await graph_service.get_stats("eng-empty")
         assert stats.node_count == 0

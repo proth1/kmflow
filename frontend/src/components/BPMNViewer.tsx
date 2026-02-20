@@ -180,34 +180,20 @@ export default function BPMNViewerComponent({
   if (error) {
     return (
       <div
-        style={{
-          padding: "24px",
-          backgroundColor: "#fef2f2",
-          border: "1px solid #fecaca",
-          borderRadius: "8px",
-          color: "#dc2626",
-          textAlign: "center",
-        }}
+        className="p-6 bg-red-50 border border-red-200 rounded-lg text-red-600 text-center"
         data-testid="bpmn-error"
       >
         <strong>Failed to render BPMN diagram</strong>
-        <div style={{ fontSize: "13px", marginTop: "8px" }}>{error}</div>
+        <div className="text-[13px] mt-2">{error}</div>
       </div>
     );
   }
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+    <div className="relative w-full h-full">
       {loading && (
         <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            color: "#6b7280",
-            fontSize: "14px",
-          }}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-500 text-sm"
           data-testid="bpmn-loading"
         >
           Loading diagram...
@@ -215,11 +201,7 @@ export default function BPMNViewerComponent({
       )}
       <div
         ref={containerRef}
-        style={{
-          width: "100%",
-          height: "100%",
-          minHeight: "400px",
-        }}
+        className="w-full h-full min-h-[400px]"
         data-testid="bpmn-container"
       />
     </div>

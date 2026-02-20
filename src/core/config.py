@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     postgres_user: str = "kmflow"
     postgres_password: str = "kmflow_dev_password"
     database_url: str | None = None
+    db_pool_size: int = 20
+    db_max_overflow: int = 10
 
     # ── Neo4j ────────────────────────────────────────────────────
     neo4j_uri: str = "bolt://localhost:7687"
@@ -86,9 +88,12 @@ class Settings(BaseSettings):
     copilot_rate_limit_window: int = 60  # seconds
 
     # ── Data Retention (Phase 5) ──────────────────────────────
+    # TODO(DPA): GDPR Article 28 requires Data Processing Agreements between the
+    # platform operator and each client. Retention periods below must align with
+    # agreed DPA terms. See docs/audit-findings/D2-compliance.md for full context.
     retention_cleanup_enabled: bool = False
-    evidence_retention_days: int = 365
-    audit_retention_days: int = 730
+    evidence_retention_days: int = 365  # Default: 1 year; override per DPA terms
+    audit_retention_days: int = 730  # Default: 2 years; regulatory minimum may vary
 
     # ── Encryption Key Rotation (Phase 5) ──────────────────────
     encryption_key_previous: str = ""  # Previous key for rotation

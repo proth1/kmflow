@@ -3,10 +3,6 @@
  *
  * Wraps fetch with the base URL from environment variables
  * and provides typed response handling.
- *
- * TODO: Split into domain modules when this file exceeds 1500 lines.
- * Suggested modules: api/evidence.ts, api/governance.ts, api/monitoring.ts,
- * api/reports.ts, api/admin.ts
  */
 
 const API_BASE_URL =

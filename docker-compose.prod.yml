@@ -9,6 +9,11 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    ports: []  # No host port exposure in production
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
@@ -29,6 +34,11 @@ services:
   neo4j:
     environment:
       NEO4J_AUTH: ${NEO4J_USER:?Set NEO4J_USER}/${NEO4J_PASSWORD:?Set NEO4J_PASSWORD}
+    ports: []  # No host port exposure in production
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     deploy:
       resources:
         limits:
@@ -45,6 +55,11 @@ services:
 
   redis:
     command: redis-server --requirepass ${REDIS_PASSWORD:?Set REDIS_PASSWORD} --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports: []  # No host port exposure in production
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     deploy:
       resources:
         limits:
@@ -64,6 +79,10 @@ services:
       APP_ENV: production
       DEBUG: "false"
       LOG_LEVEL: WARNING
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     deploy:
       resources:
         limits:
@@ -82,6 +101,10 @@ services:
   frontend:
     environment:
       NODE_ENV: production
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     deploy:
       resources:
         limits:

@@ -256,7 +256,7 @@ class Engagement(Base):
         Enum(EngagementStatus), default=EngagementStatus.DRAFT, nullable=False
     )
     team: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
-    retention_days: Mapped[int | None] = mapped_column(BigInteger, nullable=True, default=None)
+    retention_days: Mapped[int | None] = mapped_column(BigInteger, nullable=True, default=365)  # 365-day default satisfies data minimization; None = indefinite (not recommended)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

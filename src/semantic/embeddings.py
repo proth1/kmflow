@@ -10,6 +10,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+import numpy as np
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -231,11 +233,12 @@ def cosine_similarity(vec_a: list[float], vec_b: list[float]) -> float:
     if len(vec_a) != len(vec_b):
         raise ValueError(f"Vector dimensions must match: {len(vec_a)} != {len(vec_b)}")
 
-    dot = sum(a * b for a, b in zip(vec_a, vec_b, strict=True))
-    norm_a = sum(a * a for a in vec_a) ** 0.5
-    norm_b = sum(b * b for b in vec_b) ** 0.5
+    a = np.array(vec_a, dtype=np.float64)
+    b = np.array(vec_b, dtype=np.float64)
+    norm_a = np.linalg.norm(a)
+    norm_b = np.linalg.norm(b)
 
     if norm_a == 0 or norm_b == 0:
         return 0.0
 
-    return float(dot / (norm_a * norm_b))
+    return float(np.dot(a, b) / (norm_a * norm_b))

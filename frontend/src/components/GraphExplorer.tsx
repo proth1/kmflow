@@ -218,8 +218,7 @@ export default function GraphExplorer({ nodes, edges }: GraphExplorerProps) {
 
         <div
           ref={containerRef}
-          className="flex-1 rounded-lg border border-gray-200 bg-white"
-          style={{ minHeight: "500px" }}
+          className="flex-1 rounded-lg border border-gray-200 bg-white min-h-[500px]"
         />
       </div>
 

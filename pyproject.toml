@@ -35,7 +35,7 @@ dependencies = [
     "python-dotenv>=1.0.1,<2.0",
     "httpx>=0.28.0,<1.0",
     "python-multipart>=0.0.22,<1.0",
-    "aiofiles>=24.1.0,<25.0",
+    "aiofiles>=24.1.0",
     "slowapi>=0.1.9,<1.0",
     "python-magic>=0.4.27,<1.0",
     # Evidence parsing
@@ -93,6 +93,9 @@ databricks = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["src*"]
+
+[tool.coverage.report]
+fail_under = 70
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

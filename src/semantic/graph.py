@@ -111,7 +111,10 @@ class KnowledgeGraphService:
         query: str,
         parameters: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
-        """Execute a Cypher query and return results as dicts.
+        """Execute a read-only Cypher query within a read transaction.
+
+        Uses session.execute_read() to ensure the query is routed to a
+        read replica in a cluster and cannot accidentally perform writes.
 
         Args:
             query: Cypher query string with $parameter placeholders.
@@ -120,10 +123,13 @@ class KnowledgeGraphService:
         Returns:
             List of result records as dicts.
         """
+
+        async def _tx_func(tx):
+            result = await tx.run(query, parameters or {})
+            return await result.data()
+
         async with self._driver.session() as session:
-            result = await session.run(query, parameters or {})
-            records = await result.data()
-            return records
+            return await session.execute_read(_tx_func)
 
     async def _run_write_query(
         self,
