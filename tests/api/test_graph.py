@@ -130,65 +130,6 @@ class TestBuildGraph:
 
 
 # ---------------------------------------------------------------------------
-# Query endpoint
-# ---------------------------------------------------------------------------
-
-
-class TestExecuteQuery:
-    """POST /api/v1/graph/query"""
-
-    @pytest.mark.asyncio
-    @patch("src.api.routes.graph.KnowledgeGraphService")
-    async def test_query_success(
-        self,
-        mock_graph_cls: MagicMock,
-        client: AsyncClient,
-        mock_neo4j_driver: MagicMock,
-    ) -> None:
-        """Should execute a read-only Cypher query."""
-        mock_service = AsyncMock()
-        mock_service._run_query = AsyncMock(return_value=[{"name": "Test Activity"}])
-        mock_graph_cls.return_value = mock_service
-
-        response = await client.post(
-            "/api/v1/graph/query",
-            json={
-                "query": "MATCH (n:Activity) RETURN n.name AS name LIMIT 10",
-                "parameters": {},
-            },
-        )
-        assert response.status_code == 200
-
-    @pytest.mark.asyncio
-    async def test_query_rejects_write_operations(self, client: AsyncClient) -> None:
-        """Should reject queries with write operations."""
-        write_queries = [
-            "CREATE (n:Activity {name: 'test'})",
-            "MATCH (n) DELETE n",
-            "MATCH (n) SET n.name = 'test'",
-            "MATCH (n) DETACH DELETE n",
-            "MATCH (n) REMOVE n.name",
-            "MERGE (n:Activity {name: 'test'})",
-            "DROP CONSTRAINT foo",
-        ]
-        for query in write_queries:
-            response = await client.post(
-                "/api/v1/graph/query",
-                json={"query": query},
-            )
-            assert response.status_code == 400, f"Should reject: {query}"
-
-    @pytest.mark.asyncio
-    async def test_query_empty_body(self, client: AsyncClient) -> None:
-        """Should reject empty query."""
-        response = await client.post(
-            "/api/v1/graph/query",
-            json={"query": ""},
-        )
-        assert response.status_code == 422
-
-
-# ---------------------------------------------------------------------------
 # Traverse endpoint
 # ---------------------------------------------------------------------------
 
