@@ -66,9 +66,13 @@ class VisioParser(BaseParser):
                 connectors_found = 0
 
                 for page_file in sorted(page_files):
+                    # Validate zip entry path (prevent zip-slip)
+                    if '..' in page_file or page_file.startswith('/'):
+                        continue
                     page_num = self._extract_page_number(page_file)
                     xml_content = zf.read(page_file)
-                    tree = etree.fromstring(xml_content)
+                    parser = etree.XMLParser(resolve_entities=False, no_network=True, dtd_validation=False)
+                    tree = etree.fromstring(xml_content, parser)
 
                     # Extract shapes
                     shapes = tree.findall(".//v:Shape", VISIO_NS)

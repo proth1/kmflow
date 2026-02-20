@@ -8,14 +8,13 @@ from __future__ import annotations
 
 import logging
 import time
-from collections import defaultdict
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -53,7 +52,7 @@ VALID_TEMPLATE_KEYS = frozenset(
 _LLM_RATE_LIMIT = 5
 _LLM_RATE_WINDOW = 60  # seconds
 _LLM_MAX_TRACKED_USERS = 10_000
-_llm_request_log: dict[str, list[float]] = defaultdict(list)
+_llm_request_log: dict[str, list[float]] = {}
 
 
 def _check_llm_rate_limit(user_id: str) -> None:
@@ -71,13 +70,16 @@ def _check_llm_rate_limit(user_id: str) -> None:
         for uid in stale:
             del _llm_request_log[uid]
     # Prune old entries for this user
-    _llm_request_log[user_id] = [t for t in _llm_request_log[user_id] if t > window_start]
-    if len(_llm_request_log[user_id]) >= _LLM_RATE_LIMIT:
+    user_log = _llm_request_log.get(user_id, [])
+    user_log = [t for t in user_log if t > window_start]
+    if len(user_log) >= _LLM_RATE_LIMIT:
+        _llm_request_log[user_id] = user_log
         raise HTTPException(
             status_code=429,
             detail=f"Rate limit exceeded: max {_LLM_RATE_LIMIT} LLM requests per {_LLM_RATE_WINDOW}s",
         )
-    _llm_request_log[user_id].append(now)
+    user_log.append(now)
+    _llm_request_log[user_id] = user_log
 
 
 # -- Schemas ------------------------------------------------------------------
@@ -290,18 +292,26 @@ async def create_scenario(
 async def list_scenarios(
     engagement_id: UUID | None = None,
     simulation_type: SimulationType | None = None,
+    limit: int = 50,
+    offset: int = 0,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """List simulation scenarios."""
     query = select(SimulationScenario)
+    count_query = select(func.count(SimulationScenario.id))
     if engagement_id:
         query = query.where(SimulationScenario.engagement_id == engagement_id)
+        count_query = count_query.where(SimulationScenario.engagement_id == engagement_id)
     if simulation_type:
         query = query.where(SimulationScenario.simulation_type == simulation_type)
+        count_query = count_query.where(SimulationScenario.simulation_type == simulation_type)
+    query = query.offset(offset).limit(limit)
     result = await session.execute(query)
     items = [_scenario_to_response(s) for s in result.scalars().all()]
-    return {"items": items, "total": len(items)}
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
+    return {"items": items, "total": total}
 
 
 @router.get("/scenarios/{scenario_id}", response_model=ScenarioResponse)
@@ -427,14 +437,21 @@ async def add_modification(
 @router.get("/scenarios/{scenario_id}/modifications", response_model=ModificationList)
 async def list_modifications(
     scenario_id: UUID,
+    limit: int = 50,
+    offset: int = 0,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """List modifications for a scenario."""
     await _get_scenario_or_404(session, scenario_id)
-    result = await session.execute(select(ScenarioModification).where(ScenarioModification.scenario_id == scenario_id))
+    query = select(ScenarioModification).where(ScenarioModification.scenario_id == scenario_id)
+    count_query = select(func.count(ScenarioModification.id)).where(ScenarioModification.scenario_id == scenario_id)
+    query = query.offset(offset).limit(limit)
+    result = await session.execute(query)
     items = [_modification_to_response(m) for m in result.scalars().all()]
-    return {"items": items, "total": len(items)}
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
+    return {"items": items, "total": total}
 
 
 @router.delete(
@@ -678,16 +695,23 @@ async def compare_scenarios(
 @router.get("/results", response_model=SimulationResultList)
 async def list_results(
     scenario_id: UUID | None = None,
+    limit: int = 50,
+    offset: int = 0,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """List simulation results."""
     query = select(SimulationResult)
+    count_query = select(func.count(SimulationResult.id))
     if scenario_id:
         query = query.where(SimulationResult.scenario_id == scenario_id)
+        count_query = count_query.where(SimulationResult.scenario_id == scenario_id)
+    query = query.offset(offset).limit(limit)
     result = await session.execute(query)
     items = [_result_to_response(r) for r in result.scalars().all()]
-    return {"items": items, "total": len(items)}
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
+    return {"items": items, "total": total}
 
 
 @router.get("/results/{result_id}", response_model=SimulationResultResponse)
@@ -937,16 +961,23 @@ async def create_financial_assumption(
 )
 async def list_financial_assumptions(
     scenario_id: UUID,
+    limit: int = 50,
+    offset: int = 0,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """List financial assumptions for a scenario's engagement."""
     scenario = await _get_scenario_or_404(session, scenario_id)
-    result = await session.execute(
-        select(FinancialAssumption).where(FinancialAssumption.engagement_id == scenario.engagement_id)
+    query = select(FinancialAssumption).where(FinancialAssumption.engagement_id == scenario.engagement_id)
+    count_query = select(func.count(FinancialAssumption.id)).where(
+        FinancialAssumption.engagement_id == scenario.engagement_id
     )
+    query = query.offset(offset).limit(limit)
+    result = await session.execute(query)
     items = [_assumption_to_response(a) for a in result.scalars().all()]
-    return {"items": items, "total": len(items)}
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
+    return {"items": items, "total": total}
 
 
 @router.delete(
@@ -1083,16 +1114,21 @@ async def request_suggestions(
 @router.get("/scenarios/{scenario_id}/suggestions", response_model=SuggestionListResponse)
 async def list_suggestions(
     scenario_id: UUID,
+    limit: int = 50,
+    offset: int = 0,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """List alternative suggestions for a scenario."""
     await _get_scenario_or_404(session, scenario_id)
-    result = await session.execute(
-        select(AlternativeSuggestion).where(AlternativeSuggestion.scenario_id == scenario_id)
-    )
+    query = select(AlternativeSuggestion).where(AlternativeSuggestion.scenario_id == scenario_id)
+    count_query = select(func.count(AlternativeSuggestion.id)).where(AlternativeSuggestion.scenario_id == scenario_id)
+    query = query.offset(offset).limit(limit)
+    result = await session.execute(query)
     items = [_suggestion_to_response(s) for s in result.scalars().all()]
-    return {"items": items, "total": len(items)}
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
+    return {"items": items, "total": total}
 
 
 @router.patch(

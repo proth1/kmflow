@@ -51,7 +51,8 @@ class BpmnParser(BaseParser):
         fragments: list[ParsedFragment] = []
         metadata: dict[str, str | int | float | bool | None] = {}
 
-        tree = etree.parse(file_path)  # noqa: S320
+        parser = etree.XMLParser(resolve_entities=False, no_network=True, dtd_validation=False)
+        tree = etree.parse(file_path, parser)
         root = tree.getroot()
 
         # Detect namespace from root

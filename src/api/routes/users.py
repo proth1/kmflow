@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
 from src.core.auth import get_current_user, hash_password
-from src.core.models import Engagement, EngagementMember, User, UserRole
+from src.core.models import AuditAction, AuditLog, Engagement, EngagementMember, User, UserRole
 from src.core.permissions import has_permission, has_role_level
 
 logger = logging.getLogger(__name__)
@@ -127,6 +127,14 @@ async def create_user(
     )
     session.add(user)
     await session.flush()
+
+    audit = AuditLog(
+        action=AuditAction.USER_CREATED,
+        actor=str(current_user.id),
+        details=f"Created user {payload.email} with role {payload.role}",
+    )
+    session.add(audit)
+
     await session.commit()
     await session.refresh(user)
     return user
@@ -162,7 +170,17 @@ async def get_user(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> User:
-    """Get a user by ID."""
+    """Get a user by ID.
+
+    Non-admin users may only view their own profile.
+    """
+    # Non-admin users can only view their own profile (IDOR prevention)
+    if not has_role_level(current_user, UserRole.PLATFORM_ADMIN) and current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only view your own profile",
+        )
+
     result = await session.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if user is None:
@@ -198,6 +216,13 @@ async def update_user(
     update_data = payload.model_dump(exclude_unset=True)
     for field_name, value in update_data.items():
         setattr(user, field_name, value)
+
+    audit = AuditLog(
+        action=AuditAction.USER_UPDATED,
+        actor=str(current_user.id),
+        details=f"Updated user {user_id}: {list(update_data.keys())}",
+    )
+    session.add(audit)
 
     await session.commit()
     await session.refresh(user)
@@ -263,6 +288,15 @@ async def add_engagement_member(
     )
     session.add(member)
     await session.flush()
+
+    audit = AuditLog(
+        engagement_id=engagement_id,
+        action=AuditAction.MEMBER_ADDED,
+        actor=str(current_user.id),
+        details=f"Added user {payload.user_id} as {payload.role_in_engagement}",
+    )
+    session.add(audit)
+
     await session.commit()
     await session.refresh(member)
     return member
@@ -299,6 +333,15 @@ async def remove_engagement_member(
         )
 
     await session.delete(member)
+
+    audit = AuditLog(
+        engagement_id=engagement_id,
+        action=AuditAction.MEMBER_REMOVED,
+        actor=str(current_user.id),
+        details=f"Removed user {user_id} from engagement",
+    )
+    session.add(audit)
+
     await session.commit()
 
 

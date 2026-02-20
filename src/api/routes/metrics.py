@@ -17,6 +17,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
 from src.core.models import (
+    AuditAction,
+    AuditLog,
     MetricCategory,
     MetricReading,
     SuccessMetric,
@@ -115,7 +117,7 @@ class MetricAggregateSummary(BaseModel):
 async def create_metric(
     payload: SuccessMetricCreate,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> SuccessMetric:
     """Create a success metric definition."""
     metric = SuccessMetric(
@@ -126,6 +128,14 @@ async def create_metric(
         description=payload.description,
     )
     session.add(metric)
+
+    audit = AuditLog(
+        action=AuditAction.METRIC_DEFINED,
+        actor=str(user.id),
+        details=f"Defined metric: {payload.name} (target={payload.target_value} {payload.unit})",
+    )
+    session.add(audit)
+
     await session.commit()
     await session.refresh(metric)
     return metric
@@ -176,7 +186,7 @@ async def get_metric(
 async def record_reading(
     payload: MetricReadingCreate,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> MetricReading:
     """Record a new metric reading."""
     # Verify metric exists
@@ -191,6 +201,15 @@ async def record_reading(
         notes=payload.notes,
     )
     session.add(reading)
+
+    audit = AuditLog(
+        engagement_id=payload.engagement_id,
+        action=AuditAction.METRIC_READING_RECORDED,
+        actor=str(user.id),
+        details=f"Recorded reading: metric={payload.metric_id}, value={payload.value}",
+    )
+    session.add(audit)
+
     await session.commit()
     await session.refresh(reading)
     return reading
@@ -307,7 +326,7 @@ async def get_metric_summary(
 @router.post("/seed", status_code=status.HTTP_201_CREATED)
 async def seed_metrics(
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> dict[str, Any]:
     """Seed the database with 15 standard success metric definitions."""
     from src.data.seed_metrics import get_metric_seeds
@@ -320,6 +339,14 @@ async def seed_metrics(
             metric = SuccessMetric(**seed_data)
             session.add(metric)
             count += 1
+
+    if count > 0:
+        audit = AuditLog(
+            action=AuditAction.METRICS_SEEDED,
+            actor=str(user.id),
+            details=f"Seeded {count} metric definitions",
+        )
+        session.add(audit)
 
     await session.commit()
     return {"metrics_seeded": count}

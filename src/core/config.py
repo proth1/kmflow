@@ -63,7 +63,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
     jwt_refresh_token_expire_minutes: int = 10080  # 7 days
-    auth_dev_mode: bool = True  # Allow local dev tokens
+    auth_dev_mode: bool = False  # Allow local dev tokens
     encryption_key: str = "dev-encryption-key-change-in-production"
 
     # ── RAG Copilot (Phase 4) ─────────────────────────────────────
@@ -163,6 +163,20 @@ class Settings(BaseSettings):
             )
         if not self.redis_url:
             self.redis_url = f"redis://{self.redis_host}:{self.redis_port}/0"
+        return self
+
+    @model_validator(mode="after")
+    def reject_default_secrets_in_production(self) -> Settings:
+        """Block startup when default development secrets are present outside development."""
+        if self.app_env == "development":
+            return self
+        has_default_jwt = "dev-secret-key" in self.jwt_secret_key
+        has_default_enc = "dev-encryption-key" in self.encryption_key
+        if has_default_jwt or has_default_enc or self.auth_dev_mode:
+            raise ValueError(
+                "FATAL: Default development secrets detected in non-development environment. "
+                "Set JWT_SECRET_KEY, ENCRYPTION_KEY, and AUTH_DEV_MODE=false"
+            )
         return self
 
 

@@ -17,7 +17,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
-from src.core.models import Annotation, User
+from src.core.models import Annotation, AuditAction, AuditLog, User
 from src.core.permissions import require_permission
 
 logger = logging.getLogger(__name__)
@@ -72,7 +72,7 @@ class AnnotationList(BaseModel):
 async def create_annotation(
     payload: AnnotationCreate,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> Annotation:
     """Create a new annotation on an engagement artifact."""
     annotation = Annotation(
@@ -83,6 +83,15 @@ async def create_annotation(
         content=payload.content,
     )
     session.add(annotation)
+
+    audit = AuditLog(
+        engagement_id=payload.engagement_id,
+        action=AuditAction.ANNOTATION_CREATED,
+        actor=str(user.id) if hasattr(user, "id") else "system",
+        details=f"Created annotation on {payload.target_type}:{payload.target_id}",
+    )
+    session.add(audit)
+
     await session.commit()
     await session.refresh(annotation)
     return annotation
@@ -144,7 +153,7 @@ async def update_annotation(
     annotation_id: UUID,
     payload: AnnotationUpdate,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> Annotation:
     """Update an annotation's content."""
     result = await session.execute(select(Annotation).where(Annotation.id == annotation_id))
@@ -153,6 +162,15 @@ async def update_annotation(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Annotation {annotation_id} not found")
 
     annotation.content = payload.content
+
+    audit = AuditLog(
+        engagement_id=annotation.engagement_id,
+        action=AuditAction.ANNOTATION_UPDATED,
+        actor=str(user.id) if hasattr(user, "id") else "system",
+        details=f"Updated annotation {annotation_id}",
+    )
+    session.add(audit)
+
     await session.commit()
     await session.refresh(annotation)
     return annotation
@@ -162,7 +180,7 @@ async def update_annotation(
 async def delete_annotation(
     annotation_id: UUID,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> None:
     """Delete an annotation. Only the author may delete their own annotation."""
     result = await session.execute(select(Annotation).where(Annotation.id == annotation_id))
@@ -176,6 +194,14 @@ async def delete_annotation(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot delete another user's annotation",
         )
+
+    audit = AuditLog(
+        engagement_id=annotation.engagement_id,
+        action=AuditAction.ANNOTATION_DELETED,
+        actor=str(user.id) if hasattr(user, "id") else "system",
+        details=f"Deleted annotation {annotation_id}",
+    )
+    session.add(audit)
 
     await session.delete(annotation)
     await session.commit()

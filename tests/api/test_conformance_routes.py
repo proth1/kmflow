@@ -67,9 +67,11 @@ class TestConformanceRoutes:
         m.process_area = "lending"
         m.created_at = datetime.now(UTC)
 
-        mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = [m]
-        mock_db_session.execute.return_value = mock_result
+        mock_list_result = MagicMock()
+        mock_list_result.scalars.return_value.all.return_value = [m]
+        mock_count_result = MagicMock()
+        mock_count_result.scalar.return_value = 1
+        mock_db_session.execute.side_effect = [mock_list_result, mock_count_result]
 
         response = await client.get("/api/v1/conformance/reference-models")
         assert response.status_code == 200
@@ -78,9 +80,11 @@ class TestConformanceRoutes:
         assert data["items"][0]["name"] == "Model 1"
 
     async def test_list_reference_models_empty(self, client, mock_db_session):
-        mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = []
-        mock_db_session.execute.return_value = mock_result
+        mock_list_result = MagicMock()
+        mock_list_result.scalars.return_value.all.return_value = []
+        mock_count_result = MagicMock()
+        mock_count_result.scalar.return_value = 0
+        mock_db_session.execute.side_effect = [mock_list_result, mock_count_result]
 
         response = await client.get("/api/v1/conformance/reference-models")
         assert response.status_code == 200
@@ -138,9 +142,11 @@ class TestConformanceRoutes:
         cr.deviations = {"items": []}
         cr.created_at = datetime.now(UTC)
 
-        mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = [cr]
-        mock_db_session.execute.return_value = mock_result
+        mock_list_result = MagicMock()
+        mock_list_result.scalars.return_value.all.return_value = [cr]
+        mock_count_result = MagicMock()
+        mock_count_result.scalar.return_value = 1
+        mock_db_session.execute.side_effect = [mock_list_result, mock_count_result]
 
         response = await client.get("/api/v1/conformance/results")
         assert response.status_code == 200

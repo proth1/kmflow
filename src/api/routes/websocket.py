@@ -14,7 +14,7 @@ from typing import Any
 
 from fastapi import APIRouter, Query, Request, WebSocket, WebSocketDisconnect
 
-from src.core.auth import decode_token
+from src.core.auth import decode_token, is_token_blacklisted
 from src.core.config import get_settings
 from src.core.redis import CHANNEL_ALERTS, CHANNEL_DEVIATIONS, CHANNEL_MONITORING
 
@@ -127,10 +127,25 @@ async def monitoring_websocket(
 
     try:
         settings = get_settings()
-        decode_token(token, settings)
+        payload = decode_token(token, settings)
     except Exception as e:
         logger.warning("WebSocket authentication failed: %s", e)
         await websocket.close(code=1008, reason="Invalid or expired token")
+        return
+
+    # Reject non-access tokens (e.g. refresh tokens)
+    if payload.get("type") != "access":
+        await websocket.close(code=1008, reason="Invalid token type")
+        return
+
+    # Check token blacklist
+    try:
+        if await is_token_blacklisted(websocket, token):
+            await websocket.close(code=1008, reason="Token has been revoked")
+            return
+    except Exception:
+        logger.warning("Token blacklist check failed for WebSocket — failing closed")
+        await websocket.close(code=1008, reason="Authentication check failed")
         return
 
     # Check connection limit
@@ -199,10 +214,25 @@ async def alerts_websocket(
 
     try:
         settings = get_settings()
-        decode_token(token, settings)
+        payload = decode_token(token, settings)
     except Exception as e:
         logger.warning("WebSocket authentication failed: %s", e)
         await websocket.close(code=1008, reason="Invalid or expired token")
+        return
+
+    # Reject non-access tokens (e.g. refresh tokens)
+    if payload.get("type") != "access":
+        await websocket.close(code=1008, reason="Invalid token type")
+        return
+
+    # Check token blacklist
+    try:
+        if await is_token_blacklisted(websocket, token):
+            await websocket.close(code=1008, reason="Token has been revoked")
+            return
+    except Exception:
+        logger.warning("Token blacklist check failed for WebSocket — failing closed")
+        await websocket.close(code=1008, reason="Authentication check failed")
         return
 
     # Check connection limit

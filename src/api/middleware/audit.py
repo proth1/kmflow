@@ -57,5 +57,19 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
             engagement_id or "none",
         )
 
+        # Also persist to database for compliance
+        try:
+            from src.core.audit import log_audit_event_async
+            await log_audit_event_async(
+                method=request.method,
+                path=request.url.path,
+                user_id=user_id,
+                status_code=response.status_code,
+                engagement_id=engagement_id,
+                duration_ms=duration_ms,
+            )
+        except Exception:
+            pass  # Don't fail requests if audit persistence fails
+
         response.headers["X-Audit-Logged"] = "true"
         return response

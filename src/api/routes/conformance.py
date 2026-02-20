@@ -12,7 +12,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
@@ -20,6 +20,8 @@ from src.conformance.bpmn_parser import parse_bpmn_xml
 from src.conformance.checker import ConformanceChecker
 from src.conformance.metrics import calculate_metrics
 from src.core.models import (
+    AuditAction,
+    AuditLog,
     ConformanceResult,
     ProcessModel,
     ReferenceProcessModel,
@@ -143,6 +145,14 @@ async def create_reference_model(
         },
     )
     session.add(model)
+
+    audit = AuditLog(
+        action=AuditAction.CONFORMANCE_MODEL_CREATED,
+        actor=str(user.id),
+        details=f"Created reference model: {payload.name} ({payload.industry}/{payload.process_area})",
+    )
+    session.add(audit)
+
     await session.commit()
     await session.refresh(model)
 
@@ -158,16 +168,24 @@ async def create_reference_model(
 @router.get("/reference-models", response_model=ReferenceModelList)
 async def list_reference_models(
     industry: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
     user: User = Depends(require_permission("conformance:check")),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     """List available reference models."""
     query = select(ReferenceProcessModel)
+    count_query = select(func.count(ReferenceProcessModel.id))
     if industry:
         query = query.where(ReferenceProcessModel.industry == industry)
+        count_query = count_query.where(ReferenceProcessModel.industry == industry)
+    query = query.offset(offset).limit(limit)
 
     result = await session.execute(query)
     models = result.scalars().all()
+
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
 
     return {
         "items": [
@@ -180,7 +198,7 @@ async def list_reference_models(
             }
             for m in models
         ],
-        "total": len(list(models)),
+        "total": total,
     }
 
 
@@ -246,6 +264,15 @@ async def run_conformance_check(
         },
     )
     session.add(db_result)
+
+    audit = AuditLog(
+        engagement_id=payload.engagement_id,
+        action=AuditAction.CONFORMANCE_CHECK_RUN,
+        actor=str(user.id),
+        details=f"Conformance check: fitness={check_result.fitness_score:.3f}, precision={check_result.precision_score:.3f}",
+    )
+    session.add(audit)
+
     await session.commit()
     await session.refresh(db_result)
 
@@ -300,17 +327,24 @@ async def get_conformance_result(
 @router.get("/results", response_model=ConformanceResultList)
 async def list_conformance_results(
     engagement_id: UUID | None = None,
+    limit: int = 50,
+    offset: int = 0,
     user: User = Depends(require_permission("conformance:check")),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     """List conformance check results."""
     query = select(ConformanceResult)
+    count_query = select(func.count(ConformanceResult.id))
     if engagement_id:
         query = query.where(ConformanceResult.engagement_id == engagement_id)
-    query = query.order_by(ConformanceResult.created_at.desc())
+        count_query = count_query.where(ConformanceResult.engagement_id == engagement_id)
+    query = query.order_by(ConformanceResult.created_at.desc()).offset(offset).limit(limit)
 
     result = await session.execute(query)
     results = result.scalars().all()
+
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
 
     return {
         "items": [
@@ -325,5 +359,5 @@ async def list_conformance_results(
             }
             for cr in results
         ],
-        "total": len(list(results)),
+        "total": total,
     }

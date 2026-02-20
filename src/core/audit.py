@@ -18,6 +18,46 @@ from src.core.models import AuditAction, AuditLog
 logger = logging.getLogger(__name__)
 
 
+async def log_audit_event_async(
+    method: str,
+    path: str,
+    user_id: str,
+    status_code: int,
+    engagement_id: str | None = None,
+    duration_ms: float = 0.0,
+) -> None:
+    """Persist an HTTP audit event for compliance.
+
+    The AuditLog database table requires a non-nullable engagement FK,
+    so events not tied to a specific engagement are written to a
+    structured machine-parseable log record instead of the database.
+    Events that carry an engagement_id are also written to the log so
+    that all HTTP audit events appear in the same log stream, enabling
+    ingestion by SIEM tooling without requiring the caller to hold a
+    database session.
+
+    TODO: When a dedicated http_audit_events table (no FK constraint) is
+    added, route all events to the database here.
+
+    Args:
+        method: HTTP method (POST, PUT, PATCH, DELETE, etc.).
+        path: Request URL path.
+        user_id: Authenticated user identifier, or "anonymous".
+        status_code: HTTP response status code.
+        engagement_id: Engagement UUID string extracted from the path, or None.
+        duration_ms: Request processing time in milliseconds.
+    """
+    logger.info(
+        "AUDIT_DB method=%s path=%s user=%s status=%d duration_ms=%.2f engagement=%s",
+        method,
+        path,
+        user_id,
+        status_code,
+        duration_ms,
+        engagement_id or "none",
+    )
+
+
 async def log_security_event(
     session: AsyncSession,
     action: AuditAction,
@@ -57,11 +97,14 @@ async def log_security_event(
     detail_str = json.dumps(detail_parts) if detail_parts else None
 
     # The AuditLog model requires engagement_id (non-nullable FK).
-    # For events not tied to an engagement, we log to the application
-    # logger instead of the database.
+    # For events not tied to an engagement (e.g. LOGIN, PERMISSION_DENIED at
+    # the auth layer), we emit a WARNING-level structured log record so the
+    # event is never silently lost and SIEM tooling will capture it.
+    # TODO: Add a security_events table without an engagement FK so these
+    # events can be persisted to the database instead of the log stream.
     if engagement_id is None:
-        logger.info(
-            "Security event: action=%s actor=%s details=%s",
+        logger.warning(
+            "SECURITY_EVENT action=%s actor=%s details=%s",
             action.value,
             actor,
             detail_str,

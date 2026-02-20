@@ -1,21 +1,45 @@
-FROM python:3.12-slim AS base
+FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
-# Install system dependencies
+# Install build-time system dependencies (gcc needed for some Python packages)
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc libpq-dev curl && \
+    apt-get install -y --no-install-recommends gcc libpq-dev && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy all project files needed for install
+# Copy project files needed for install
 COPY pyproject.toml ./
 COPY src/ ./src/
 COPY alembic/ ./alembic/
 COPY alembic.ini ./
 
-# Install Python dependencies
-RUN pip install --no-cache-dir ".[dev]"
+# Install Python dependencies into a prefix so we can copy them cleanly
+RUN pip install --no-cache-dir --prefix=/install ".[dev]"
+
+# ── Runtime stage ─────────────────────────────────────────────
+FROM python:3.12-slim AS runtime
+
+WORKDIR /app
+
+# Install only runtime system dependencies (libpq for psycopg2, curl for healthcheck)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libpq5 curl && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user to run the application
+RUN adduser --disabled-password --no-create-home --gecos "" appuser
+
+# Copy installed packages from builder stage
+COPY --from=builder /install /usr/local
+
+# Copy application source
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/alembic ./alembic
+COPY --from=builder /app/alembic.ini ./alembic.ini
+COPY --from=builder /app/pyproject.toml ./pyproject.toml
 
 EXPOSE 8000
 
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+USER appuser
+
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

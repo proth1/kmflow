@@ -29,7 +29,7 @@ from src.core.models import (
     TOMGapType,
     User,
 )
-from src.core.permissions import require_permission
+from src.core.permissions import require_engagement_access, require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -193,7 +193,7 @@ async def _verify_engagement(session: AsyncSession, engagement_id: UUID) -> None
 async def create_tom(
     payload: TOMCreate,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> TargetOperatingModel:
     """Create a new target operating model."""
     await _verify_engagement(session, payload.engagement_id)
@@ -253,7 +253,7 @@ async def update_tom(
     tom_id: UUID,
     payload: TOMUpdate,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> TargetOperatingModel:
     """Update a TOM (partial update)."""
     result = await session.execute(select(TargetOperatingModel).where(TargetOperatingModel.id == tom_id))
@@ -277,7 +277,7 @@ async def update_tom(
 async def create_gap(
     payload: GapCreate,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> GapAnalysisResult:
     """Create a gap analysis result."""
     await _verify_engagement(session, payload.engagement_id)
@@ -356,7 +356,7 @@ class BenchmarkList(BaseModel):
 async def create_best_practice(
     payload: BestPracticeCreate,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> BestPractice:
     """Create a best practice entry."""
     bp = BestPractice(
@@ -428,7 +428,7 @@ async def get_best_practice(
 async def create_benchmark(
     payload: BenchmarkCreate,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> Benchmark:
     """Create a benchmark entry."""
     bm = Benchmark(
@@ -493,7 +493,7 @@ async def get_benchmark(
 @router.post("/seed", status_code=status.HTTP_201_CREATED)
 async def seed_best_practices_and_benchmarks(
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> dict[str, Any]:
     """Seed the database with standard best practices and benchmarks."""
     from src.data.seeds import get_benchmark_seeds, get_best_practice_seeds
@@ -526,7 +526,8 @@ async def run_alignment(
     tom_id: UUID,
     request: Request,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Run TOM alignment analysis for an engagement."""
     from src.semantic.graph import KnowledgeGraphService
@@ -558,6 +559,7 @@ async def get_maturity_scores(
     engagement_id: UUID,
     request: Request,
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Get current maturity scores for an engagement."""
     from src.semantic.graph import KnowledgeGraphService
@@ -581,7 +583,8 @@ async def get_maturity_scores(
 async def prioritize_gaps(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Get prioritized gap list for an engagement."""
     from src.tom.alignment import TOMAlignmentEngine
@@ -648,6 +651,7 @@ async def get_conformance_summary(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Get conformance summary for all models in an engagement."""
     from src.core.models import ProcessModel, ProcessModelStatus
@@ -682,7 +686,8 @@ async def generate_roadmap(
     engagement_id: UUID,
     tom_id: UUID,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Generate a transformation roadmap."""
     from src.tom.roadmap import RoadmapGenerator
@@ -713,6 +718,7 @@ async def get_roadmap_summary(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Get roadmap summary with gap counts per dimension."""
     gap_result = await session.execute(

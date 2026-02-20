@@ -20,6 +20,8 @@ from src.api.deps import get_session
 from src.core.models import (
     AlertSeverity,
     AlertStatus,
+    AuditAction,
+    AuditLog,
     DeviationCategory,
     MonitoringAlert,
     MonitoringJob,
@@ -29,7 +31,7 @@ from src.core.models import (
     ProcessDeviation,
     User,
 )
-from src.core.permissions import require_permission
+from src.core.permissions import require_engagement_access, require_permission
 from src.monitoring.baseline import compute_process_hash, create_baseline_snapshot
 from src.monitoring.config import validate_cron_expression, validate_monitoring_config
 
@@ -242,6 +244,15 @@ async def create_monitoring_job(
         config_json=payload.config,
     )
     session.add(job)
+
+    audit = AuditLog(
+        engagement_id=payload.engagement_id,
+        action=AuditAction.MONITORING_CONFIGURED,
+        actor=str(user.id),
+        details=f"Created monitoring job: {payload.name}",
+    )
+    session.add(audit)
+
     await session.commit()
     await session.refresh(job)
     return _job_to_response(job)
@@ -251,18 +262,26 @@ async def create_monitoring_job(
 async def list_monitoring_jobs(
     engagement_id: UUID | None = None,
     status_filter: MonitoringStatus | None = None,
+    limit: int = 50,
+    offset: int = 0,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("monitoring:read")),
 ) -> dict[str, Any]:
     """List monitoring jobs with optional filters."""
     query = select(MonitoringJob)
+    count_query = select(func.count(MonitoringJob.id))
     if engagement_id:
         query = query.where(MonitoringJob.engagement_id == engagement_id)
+        count_query = count_query.where(MonitoringJob.engagement_id == engagement_id)
     if status_filter:
         query = query.where(MonitoringJob.status == status_filter)
+        count_query = count_query.where(MonitoringJob.status == status_filter)
+    query = query.offset(offset).limit(limit)
     result = await session.execute(query)
     items = [_job_to_response(j) for j in result.scalars().all()]
-    return {"items": items, "total": len(items)}
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
+    return {"items": items, "total": total}
 
 
 @router.get("/jobs/{job_id}", response_model=MonitoringJobResponse)
@@ -321,6 +340,15 @@ async def activate_monitoring_job(
         raise HTTPException(status_code=404, detail=f"Monitoring job {job_id} not found")
 
     job.status = MonitoringStatus.ACTIVE
+
+    audit = AuditLog(
+        engagement_id=job.engagement_id,
+        action=AuditAction.MONITORING_ACTIVATED,
+        actor=str(user.id),
+        details=f"Activated monitoring job: {job.name}",
+    )
+    session.add(audit)
+
     await session.commit()
     await session.refresh(job)
     return _job_to_response(job)
@@ -357,6 +385,15 @@ async def stop_monitoring_job(
         raise HTTPException(status_code=404, detail=f"Monitoring job {job_id} not found")
 
     job.status = MonitoringStatus.STOPPED
+
+    audit = AuditLog(
+        engagement_id=job.engagement_id,
+        action=AuditAction.MONITORING_STOPPED,
+        actor=str(user.id),
+        details=f"Stopped monitoring job: {job.name}",
+    )
+    session.add(audit)
+
     await session.commit()
     await session.refresh(job)
     return _job_to_response(job)
@@ -389,6 +426,15 @@ async def create_baseline(
         is_active=True,
     )
     session.add(baseline)
+
+    audit = AuditLog(
+        engagement_id=payload.engagement_id,
+        action=AuditAction.BASELINE_CREATED,
+        actor=str(user.id),
+        details=f"Created baseline: {payload.name} ({element_count} elements)",
+    )
+    session.add(audit)
+
     await session.commit()
     await session.refresh(baseline)
     return _baseline_to_response(baseline)
@@ -397,16 +443,23 @@ async def create_baseline(
 @router.get("/baselines", response_model=BaselineList)
 async def list_baselines(
     engagement_id: UUID | None = None,
+    limit: int = 50,
+    offset: int = 0,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("monitoring:read")),
 ) -> dict[str, Any]:
     """List process baselines."""
     query = select(ProcessBaseline)
+    count_query = select(func.count(ProcessBaseline.id))
     if engagement_id:
         query = query.where(ProcessBaseline.engagement_id == engagement_id)
+        count_query = count_query.where(ProcessBaseline.engagement_id == engagement_id)
+    query = query.offset(offset).limit(limit)
     result = await session.execute(query)
     items = [_baseline_to_response(b) for b in result.scalars().all()]
-    return {"items": items, "total": len(items)}
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
+    return {"items": items, "total": total}
 
 
 @router.get("/baselines/{baseline_id}", response_model=BaselineResponse)
@@ -547,6 +600,19 @@ async def alert_action(
     elif payload.action == "dismiss":
         alert.status = AlertStatus.DISMISSED
 
+    audit_action = {
+        "acknowledge": AuditAction.ALERT_ACKNOWLEDGED,
+        "resolve": AuditAction.ALERT_RESOLVED,
+        "dismiss": AuditAction.ALERT_RESOLVED,
+    }.get(payload.action, AuditAction.ALERT_ACKNOWLEDGED)
+    audit = AuditLog(
+        engagement_id=alert.engagement_id,
+        action=audit_action,
+        actor=payload.actor,
+        details=f"Alert {alert_id} action: {payload.action}",
+    )
+    session.add(audit)
+
     await session.commit()
     await session.refresh(alert)
     return _alert_to_response(alert)
@@ -560,6 +626,7 @@ async def get_monitoring_stats(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("monitoring:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Get monitoring statistics for an engagement."""
     active_q = await session.execute(

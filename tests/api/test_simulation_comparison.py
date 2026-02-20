@@ -148,10 +148,13 @@ class TestModificationsCRUD:
     async def test_list_modifications(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         scenario = _make_scenario()
         mod = _make_modification(scenario_id=scenario.id)
+        mock_count_result = MagicMock()
+        mock_count_result.scalar.return_value = 1
         mock_db_session.execute = AsyncMock(
             side_effect=[
                 _mock_scalar_result(scenario),
                 _mock_scalars_result([mod]),
+                mock_count_result,
             ]
         )
 

@@ -10,7 +10,7 @@ import hmac
 import logging
 import secrets
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -51,7 +51,7 @@ async def generate_api_key(
     await db.commit()
     await db.refresh(api_key)
 
-    logger.info(f"Generated API key {key_id} for user {user_id}, client {client_name}")
+    logger.info("Generated API key %s for user %s, client %s", key_id, user_id, client_name)
     return {"key_id": key_id, "api_key": f"{key_id}.{raw_key}"}
 
 
@@ -80,20 +80,20 @@ async def validate_api_key(db: AsyncSession, api_key: str) -> dict[str, Any] | N
     key_record = result.scalar_one_or_none()
 
     if not key_record:
-        logger.warning(f"API key {key_id} not found or inactive")
+        logger.warning("API key %s not found or inactive", key_id)
         return None
 
     # Hash the incoming key and compare with stored hash
     incoming_hash = hashlib.sha256(raw_key.encode()).hexdigest()
     if not hmac.compare_digest(incoming_hash, key_record.key_hash):
-        logger.warning(f"API key {key_id} hash mismatch")
+        logger.warning("API key %s hash mismatch", key_id)
         return None
 
     # Update last_used_at timestamp
-    key_record.last_used_at = datetime.utcnow()
+    key_record.last_used_at = datetime.now(UTC)
     await db.commit()
 
-    logger.info(f"Validated API key {key_id} for user {key_record.user_id}")
+    logger.info("Validated API key %s for user %s", key_id, key_record.user_id)
     return {
         "key_id": key_id,
         "client_name": key_record.client_name,
@@ -116,13 +116,13 @@ async def revoke_api_key(db: AsyncSession, key_id: str) -> bool:
     key_record = result.scalar_one_or_none()
 
     if not key_record:
-        logger.warning(f"API key {key_id} not found for revocation")
+        logger.warning("API key %s not found for revocation", key_id)
         return False
 
     key_record.is_active = False
     await db.commit()
 
-    logger.info(f"Revoked API key {key_id}")
+    logger.info("Revoked API key %s", key_id)
     return True
 
 

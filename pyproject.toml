@@ -12,6 +12,8 @@ authors = [
     {name = "KMFlow Team"},
 ]
 
+# NOTE: Run `pip freeze > requirements.lock` after any dependency change
+# to maintain a lock file for deterministic builds.
 dependencies = [
     # Web framework
     "fastapi>=0.115.0,<1.0",
@@ -47,6 +49,7 @@ dependencies = [
     # Authentication
     "PyJWT[crypto]>=2.9.0,<3.0",
     "bcrypt>=4.0.0,<5.0",
+    "cryptography>=42.0.0,<44.0",
     "email-validator>=2.0.0,<3.0",
 ]
 

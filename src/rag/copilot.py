@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -16,6 +17,14 @@ from src.rag.prompts import SYSTEM_PROMPT, build_context_string, get_prompt_temp
 from src.rag.retrieval import HybridRetriever, RetrievalResult
 
 logger = logging.getLogger(__name__)
+
+
+def _sanitize_input(text: str) -> str:
+    """Sanitize user input for LLM prompt injection prevention."""
+    # Strip control characters
+    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+    # Truncate to reasonable length
+    return text[:5000]
 
 
 @dataclass
@@ -90,10 +99,11 @@ class CopilotOrchestrator:
 
         # 3. Build prompt from template
         template = get_prompt_template(query_type)
+        sanitized_query = _sanitize_input(query)
         user_prompt = template.format(
             engagement_id=engagement_id,
             context=context_string,
-            query=query,
+            query=sanitized_query,
         )
 
         # 4. Generate response (using Anthropic API if available, else stub)
@@ -201,10 +211,11 @@ class CopilotOrchestrator:
         ]
         context_string = build_context_string(contexts)
         template = get_prompt_template(query_type)
+        sanitized_query = _sanitize_input(query)
         user_prompt = template.format(
             engagement_id=engagement_id,
             context=context_string,
-            query=query,
+            query=sanitized_query,
         )
 
         # 3. Stream response

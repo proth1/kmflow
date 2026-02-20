@@ -359,7 +359,7 @@ class TestUpdateEngagement:
 
 
 class TestArchiveEngagement:
-    """DELETE /api/v1/engagements/{id}"""
+    """PATCH /api/v1/engagements/{id}/archive"""
 
     @pytest.mark.asyncio
     async def test_archive_engagement(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
@@ -367,7 +367,7 @@ class TestArchiveEngagement:
         eng = _make_engagement(status=EngagementStatus.ACTIVE)
         mock_db_session.execute.return_value = _mock_scalar_result(eng)
 
-        response = await client.delete(f"/api/v1/engagements/{eng.id}")
+        response = await client.patch(f"/api/v1/engagements/{eng.id}/archive")
         assert response.status_code == 200
         assert eng.status == EngagementStatus.ARCHIVED
 
@@ -381,7 +381,7 @@ class TestArchiveEngagement:
         mock_db_session.execute.return_value = _mock_scalar_result(None)
 
         fake_id = uuid.uuid4()
-        response = await client.delete(f"/api/v1/engagements/{fake_id}")
+        response = await client.patch(f"/api/v1/engagements/{fake_id}/archive")
         assert response.status_code == 404
 
     @pytest.mark.asyncio
@@ -390,7 +390,7 @@ class TestArchiveEngagement:
         eng = _make_engagement(status=EngagementStatus.ARCHIVED)
         mock_db_session.execute.return_value = _mock_scalar_result(eng)
 
-        response = await client.delete(f"/api/v1/engagements/{eng.id}")
+        response = await client.patch(f"/api/v1/engagements/{eng.id}/archive")
         assert response.status_code == 200
         assert eng.status == EngagementStatus.ARCHIVED
 
@@ -578,11 +578,11 @@ class TestAuditLogCreation:
 
     @pytest.mark.asyncio
     async def test_archive_generates_audit_log(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
-        """DELETE should create an ENGAGEMENT_ARCHIVED audit entry."""
+        """PATCH /archive should create an ENGAGEMENT_ARCHIVED audit entry."""
         eng = _make_engagement(status=EngagementStatus.ACTIVE)
         mock_db_session.execute.return_value = _mock_scalar_result(eng)
 
-        response = await client.delete(f"/api/v1/engagements/{eng.id}")
+        response = await client.patch(f"/api/v1/engagements/{eng.id}/archive")
         assert response.status_code == 200
 
         add_calls = mock_db_session.add.call_args_list

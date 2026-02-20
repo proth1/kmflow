@@ -323,6 +323,7 @@ class TestErrorHandling:
         """Should continue building even if individual node creation fails."""
         mock_graph = AsyncMock(spec=KnowledgeGraphService)
         mock_graph.create_node = AsyncMock(side_effect=Exception("Neo4j error"))
+        mock_graph.batch_create_nodes = AsyncMock(side_effect=Exception("Neo4j error"))
         mock_graph.get_node = AsyncMock(return_value=None)
         mock_graph.create_relationship = AsyncMock()
 

@@ -26,7 +26,7 @@ from src.core.models import (
     EvidenceItem,
     User,
 )
-from src.core.permissions import require_permission
+from src.core.permissions import require_engagement_access, require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -215,6 +215,7 @@ async def list_engagements(
 async def get_engagement(
     engagement_id: UUID,
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
     session: AsyncSession = Depends(get_session),
 ) -> Engagement:
     """Get a specific engagement by ID."""
@@ -226,6 +227,7 @@ async def update_engagement(
     engagement_id: UUID,
     payload: EngagementUpdate,
     user: User = Depends(require_permission("engagement:update")),
+    _engagement_user: User = Depends(require_engagement_access),
     session: AsyncSession = Depends(get_session),
 ) -> Engagement:
     """Update an engagement's fields (partial update).
@@ -262,13 +264,14 @@ async def update_engagement(
     return engagement
 
 
-@router.delete("/{engagement_id}", response_model=EngagementResponse)
+@router.patch("/{engagement_id}/archive", response_model=EngagementResponse)
 async def archive_engagement(
     engagement_id: UUID,
     user: User = Depends(require_permission("engagement:delete")),
+    _engagement_user: User = Depends(require_engagement_access),
     session: AsyncSession = Depends(get_session),
 ) -> Engagement:
-    """Soft-delete an engagement by setting its status to ARCHIVED."""
+    """Archive an engagement by setting its status to ARCHIVED."""
     engagement = await _get_engagement_or_404(session, engagement_id)
 
     previous_status = engagement.status
@@ -288,6 +291,7 @@ async def archive_engagement(
 async def get_engagement_dashboard(
     engagement_id: UUID,
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     """Get an engagement dashboard with evidence summary.
@@ -333,6 +337,7 @@ async def get_engagement_dashboard(
 async def get_audit_logs(
     engagement_id: UUID,
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
     session: AsyncSession = Depends(get_session),
 ) -> list[AuditLog]:
     """Get audit log entries for an engagement."""

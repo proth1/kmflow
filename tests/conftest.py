@@ -58,7 +58,14 @@ def mock_db_session() -> AsyncMock:
     refresh, rollback, close) use AsyncMock.
     """
     session = AsyncMock()
-    session.execute = AsyncMock()
+    # execute returns a sync MagicMock result object so that
+    # result.scalar_one_or_none(), result.scalars().all(), etc. work
+    # without awaiting (they are sync in SQLAlchemy).
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = None
+    mock_result.scalar.return_value = 0
+    mock_result.scalars.return_value.all.return_value = []
+    session.execute = AsyncMock(return_value=mock_result)
     session.commit = AsyncMock()
     session.rollback = AsyncMock()
     session.close = AsyncMock()
@@ -132,7 +139,7 @@ async def test_app(
     The lifespan is skipped; instead, we manually set app.state
     with mock objects.
     """
-    from fastapi import FastAPI
+    from fastapi import FastAPI, HTTPException, Request
     from fastapi.middleware.cors import CORSMiddleware
 
     from src.api.middleware.security import (

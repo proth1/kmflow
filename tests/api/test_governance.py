@@ -187,14 +187,18 @@ class TestListCatalogEntries:
         governance_client: AsyncClient,
         mock_db_session: AsyncMock,
     ) -> None:
-        result = MagicMock()
-        result.scalars.return_value.all.return_value = []
-        mock_db_session.execute = AsyncMock(return_value=result)
+        mock_list_result = MagicMock()
+        mock_list_result.scalars.return_value.all.return_value = []
+        mock_count_result = MagicMock()
+        mock_count_result.scalar.return_value = 0
+        mock_db_session.execute = AsyncMock(side_effect=[mock_list_result, mock_count_result])
 
         response = await governance_client.get("/api/v1/governance/catalog")
 
         assert response.status_code == 200
-        assert response.json() == []
+        data = response.json()
+        assert data["items"] == []
+        assert data["total"] == 0
 
     @pytest.mark.asyncio
     async def test_returns_200_with_entries(
@@ -220,17 +224,20 @@ class TestListCatalogEntries:
         entry.created_at = datetime.now(UTC)
         entry.updated_at = datetime.now(UTC)
 
-        result = MagicMock()
-        result.scalars.return_value.all.return_value = [entry]
-        mock_db_session.execute = AsyncMock(return_value=result)
+        mock_list_result = MagicMock()
+        mock_list_result.scalars.return_value.all.return_value = [entry]
+        mock_count_result = MagicMock()
+        mock_count_result.scalar.return_value = 1
+        mock_db_session.execute = AsyncMock(side_effect=[mock_list_result, mock_count_result])
 
         response = await governance_client.get("/api/v1/governance/catalog")
 
         assert response.status_code == 200
         data = response.json()
-        assert isinstance(data, list)
-        assert len(data) == 1
-        assert data[0]["dataset_name"] == "my_dataset"
+        assert isinstance(data["items"], list)
+        assert len(data["items"]) == 1
+        assert data["items"][0]["dataset_name"] == "my_dataset"
+        assert data["total"] == 1
 
 
 # ---------------------------------------------------------------------------

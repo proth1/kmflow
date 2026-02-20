@@ -15,6 +15,7 @@
     "test:e2e:ui": "E2E_LOCAL=true playwright test --ui",
     "test:e2e:report": "playwright show-report playwright-report"
   },
+  "//": "D3-03 NOTE: @tailwindcss/postcss, postcss, tailwindcss, tailwindcss-animate are intentionally in dependencies (not devDependencies). postcss.config.js loads @tailwindcss/postcss as a PostCSS plugin at Next.js build time. If the build step ever uses `npm ci --omit=dev`, moving these to devDependencies would break the build. Revisit when the CI pipeline is confirmed to install all deps.",
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-select": "^2.2.6",

@@ -13,7 +13,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
@@ -161,16 +161,23 @@ async def create_connection(
 @router.get("/connections", response_model=ConnectionList)
 async def list_connections(
     engagement_id: UUID | None = None,
+    limit: int = 50,
+    offset: int = 0,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """List all connections, optionally filtered by engagement."""
     query = select(IntegrationConnection)
+    count_query = select(func.count(IntegrationConnection.id))
     if engagement_id:
         query = query.where(IntegrationConnection.engagement_id == engagement_id)
+        count_query = count_query.where(IntegrationConnection.engagement_id == engagement_id)
+    query = query.offset(offset).limit(limit)
     result = await session.execute(query)
     items = [_conn_to_response(c) for c in result.scalars().all()]
-    return {"items": items, "total": len(items)}
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
+    return {"items": items, "total": total}
 
 
 @router.get("/connections/{connection_id}", response_model=ConnectionResponse)

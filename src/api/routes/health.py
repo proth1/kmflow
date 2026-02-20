@@ -15,7 +15,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.get("/health")
+@router.get("/api/v1/health")
 async def health_check(request: Request) -> dict[str, Any]:
     """Check the health of all platform services.
 

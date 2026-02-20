@@ -224,8 +224,8 @@ class DatabricksBackend:
                 if getattr(wh, "state", None) in ("RUNNING", "STOPPED"):
                     self._warehouse_id = str(wh.id)
                     return self._warehouse_id
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Warehouse discovery failed: %s", e)
         return ""
 
     # ------------------------------------------------------------------

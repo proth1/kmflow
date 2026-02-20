@@ -42,7 +42,8 @@ class XesParser(BaseParser):
             return result
 
         try:
-            tree = etree.parse(file_path)
+            parser = etree.XMLParser(resolve_entities=False, no_network=True, dtd_validation=False)
+            tree = etree.parse(file_path, parser)
             root = tree.getroot()
 
             # Handle both namespaced and non-namespaced XES files

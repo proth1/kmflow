@@ -15,7 +15,10 @@ Supports incremental mode: add new evidence without rebuilding the graph.
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import uuid
+from collections import defaultdict
 from dataclasses import dataclass, field
 
 from sqlalchemy import select
@@ -131,7 +134,10 @@ class KnowledgeGraphBuilder:
         self,
         fragments: list[tuple[str, str, str]],
     ) -> tuple[list[ExtractedEntity], dict[str, list[str]]]:
-        """Run entity extraction on all fragments.
+        """Run entity extraction on all fragments concurrently.
+
+        Uses asyncio.gather with a semaphore (max 10 concurrent) instead of
+        sequential awaiting to reduce total extraction time.
 
         Args:
             fragments: List of (fragment_id, content, evidence_id) tuples.
@@ -140,12 +146,27 @@ class KnowledgeGraphBuilder:
             Tuple of (all_entities, entity_to_evidence_map).
             entity_to_evidence_map maps entity IDs to evidence item IDs.
         """
+        sem = asyncio.Semaphore(10)
+
+        async def _extract_with_sem(
+            fragment_id: str, content: str
+        ):
+            async with sem:
+                return await extract_entities(content, fragment_id=fragment_id)
+
+        tasks = [
+            _extract_with_sem(fragment_id, content)
+            for fragment_id, content, _ in fragments
+        ]
+        raw_results = await asyncio.gather(*tasks, return_exceptions=True)
+
         all_entities: list[ExtractedEntity] = []
-        # Track which entities came from which evidence items
         entity_evidence_map: dict[str, list[str]] = {}
 
-        for fragment_id, content, evidence_id in fragments:
-            result = await extract_entities(content, fragment_id=fragment_id)
+        for (fragment_id, _content, evidence_id), result in zip(fragments, raw_results):
+            if isinstance(result, Exception):
+                logger.warning("Entity extraction failed for fragment %s: %s", fragment_id, result)
+                continue
             for entity in result.entities:
                 all_entities.append(entity)
                 if entity.id not in entity_evidence_map:
@@ -162,6 +183,9 @@ class KnowledgeGraphBuilder:
     ) -> dict[str, str]:
         """Create Neo4j nodes for resolved entities.
 
+        Groups entities by label and batch-creates them using UNWIND to
+        avoid N+1 round-trips to Neo4j.
+
         Args:
             entities: List of resolved entities to create nodes for.
             engagement_id: Engagement ID for scoping.
@@ -170,31 +194,49 @@ class KnowledgeGraphBuilder:
             Dict mapping entity ID to created node ID.
         """
         entity_to_node: dict[str, str] = {}
-        nodes_by_label: dict[str, int] = {}
+
+        # Bucket entities by their Neo4j label so we can batch per label
+        nodes_by_label: dict[str, list[dict]] = defaultdict(list)
+        # Preserve the entity.id -> props["id"] mapping for the return value
+        entity_id_to_node_id: dict[str, str] = {}
 
         for entity in entities:
             label = _ENTITY_TYPE_TO_LABEL.get(entity.entity_type)
             if not label:
                 continue
 
-            properties = {
-                "id": entity.id,
+            node_id = str(uuid.uuid4())
+            props: dict = {
+                "id": node_id,
                 "name": entity.name,
                 "engagement_id": engagement_id,
                 "confidence": entity.confidence,
                 "entity_type": entity.entity_type,
             }
             if entity.aliases:
-                properties["aliases"] = ",".join(entity.aliases)
+                props["aliases"] = ",".join(entity.aliases)
 
+            nodes_by_label[label].append(props)
+            entity_id_to_node_id[entity.id] = node_id
+
+        # Batch create per label — one Cypher round-trip per distinct label
+        for label, props_list in nodes_by_label.items():
             try:
-                node = await self._graph.create_node(label, properties)
-                entity_to_node[entity.id] = node.id
-                nodes_by_label[label] = nodes_by_label.get(label, 0) + 1
+                await self._graph.batch_create_nodes(label, props_list)
+                for props in props_list:
+                    # Find the entity whose node_id matches and record the mapping
+                    entity_to_node[props["id"]] = props["id"]
             except Exception as e:
-                logger.warning("Failed to create node for entity %s: %s", entity.name, e)
+                logger.warning("Failed to batch-create nodes for label %s: %s", label, e)
 
-        return entity_to_node
+        # Build the entity.id -> node_id mapping for callers
+        result: dict[str, str] = {}
+        for entity in entities:
+            node_id = entity_id_to_node_id.get(entity.id)
+            if node_id and node_id in entity_to_node:
+                result[entity.id] = node_id
+
+        return result
 
     async def _create_evidence_links(
         self,
@@ -362,8 +404,8 @@ class KnowledgeGraphBuilder:
                             properties={"inferred": True},
                         )
                         count += 1
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug("Relationship creation skipped for %s -> %s: %s", act_node, role_node, e)
 
         # Activity -> System = USES
         for activity in activities:
@@ -379,8 +421,8 @@ class KnowledgeGraphBuilder:
                             properties={"inferred": True},
                         )
                         count += 1
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug("Relationship creation skipped for %s -> %s: %s", act_node, sys_node, e)
 
         # Decision -> Activity = REQUIRES
         for decision in decisions:
@@ -396,8 +438,8 @@ class KnowledgeGraphBuilder:
                             properties={"inferred": True},
                         )
                         count += 1
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug("Relationship creation skipped for %s -> %s: %s", dec_node, act_node, e)
 
         return count
 

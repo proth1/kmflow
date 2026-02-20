@@ -134,6 +134,23 @@ class AuditAction(enum.StrEnum):
     SUGGESTION_ACCEPTED = "suggestion_accepted"
     SUGGESTION_REJECTED = "suggestion_rejected"
     FINANCIAL_ASSUMPTION_CREATED = "financial_assumption_created"
+    # -- Cross-cutting audit actions ---------------------------------------------
+    USER_CREATED = "user_created"
+    USER_UPDATED = "user_updated"
+    MEMBER_ADDED = "member_added"
+    MEMBER_REMOVED = "member_removed"
+    ANNOTATION_CREATED = "annotation_created"
+    ANNOTATION_UPDATED = "annotation_updated"
+    ANNOTATION_DELETED = "annotation_deleted"
+    CONFORMANCE_MODEL_CREATED = "conformance_model_created"
+    CONFORMANCE_CHECK_RUN = "conformance_check_run"
+    METRIC_DEFINED = "metric_defined"
+    METRIC_READING_RECORDED = "metric_reading_recorded"
+    METRICS_SEEDED = "metrics_seeded"
+    PATTERN_UPDATED = "pattern_updated"
+    PATTERN_DELETED = "pattern_deleted"
+    PORTAL_UPLOAD = "portal_upload"
+    BASELINE_CREATED = "baseline_created"
 
 
 # -- Phase 2: Regulatory / Policy / Control enums ----------------------------
@@ -927,8 +944,8 @@ class MetricReading(Base):
     __tablename__ = "metric_readings"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    metric_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("success_metrics.id"), nullable=False)
-    engagement_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("engagements.id"), nullable=False)
+    metric_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("success_metrics.id", ondelete="CASCADE"), nullable=False)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False)
     value: Mapped[float] = mapped_column(Float, nullable=False)
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -945,7 +962,7 @@ class Annotation(Base):
     __tablename__ = "annotations"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    engagement_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("engagements.id"), nullable=False)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False)
     target_type: Mapped[str] = mapped_column(String(100), nullable=False)
     target_id: Mapped[str] = mapped_column(String(255), nullable=False)
     author_id: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -1481,7 +1498,7 @@ class AlternativeSuggestion(Base):
     disposition_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     llm_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     llm_response: Mapped[str] = mapped_column(Text, nullable=False)
-    created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     scenario: Mapped[SimulationScenario] = relationship("SimulationScenario")

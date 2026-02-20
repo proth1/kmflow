@@ -13,7 +13,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 
-from src.mcp.auth import verify_api_key
+from src.mcp.auth import validate_api_key
 from src.mcp.schemas import MCPServerInfo, MCPToolCall, MCPToolResult
 from src.mcp.tools import TOOL_DEFINITIONS
 
@@ -31,7 +31,9 @@ async def _verify_mcp_auth(request: Request) -> dict[str, Any]:
             detail="Missing or invalid Authorization header",
         )
     api_key = auth[7:]
-    client = verify_api_key(api_key)
+    session_factory = request.app.state.db_session_factory
+    async with session_factory() as session:
+        client = await validate_api_key(session, api_key)
     if not client:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -41,7 +43,9 @@ async def _verify_mcp_auth(request: Request) -> dict[str, Any]:
 
 
 @router.get("/info", response_model=MCPServerInfo)
-async def server_info() -> dict[str, Any]:
+async def server_info(
+    client: dict[str, Any] = Depends(_verify_mcp_auth),
+) -> dict[str, Any]:
     """Get MCP server information and available tools."""
     return {
         "name": "kmflow",
@@ -112,7 +116,9 @@ async def call_tool_stream(
 
 
 @router.get("/tools")
-async def list_tools() -> list[dict[str, Any]]:
+async def list_tools(
+    client: dict[str, Any] = Depends(_verify_mcp_auth),
+) -> list[dict[str, Any]]:
     """List available MCP tools."""
     return TOOL_DEFINITIONS
 

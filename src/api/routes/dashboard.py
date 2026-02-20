@@ -7,8 +7,8 @@ including evidence coverage, confidence distribution, and recent activity.
 from __future__ import annotations
 
 import logging
-import uuid
 from typing import Any
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -29,7 +29,7 @@ from src.core.models import (
     ShelfRequestItemStatus,
     User,
 )
-from src.core.permissions import require_permission
+from src.core.permissions import require_engagement_access, require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -140,32 +140,22 @@ def _classify_confidence(score: float) -> str:
     return "VERY_LOW"
 
 
-def _validate_engagement_id(engagement_id: str) -> uuid.UUID:
-    """Validate and return engagement UUID, raising 400 on invalid format."""
-    try:
-        return uuid.UUID(engagement_id)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid engagement ID format",
-        ) from None
-
-
 # -- Routes -------------------------------------------------------------------
 
 
 @router.get("/{engagement_id}", response_model=DashboardResponse)
 async def get_dashboard(
-    engagement_id: str,
+    engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Get aggregated dashboard data for an engagement.
 
     Returns evidence coverage, confidence scores, gap counts,
     and recent activity.
     """
-    eng_uuid = _validate_engagement_id(engagement_id)
+    eng_uuid = engagement_id
 
     # Verify engagement exists
     eng_result = await session.execute(select(Engagement).where(Engagement.id == eng_uuid))
@@ -269,16 +259,17 @@ async def get_dashboard(
     response_model=EvidenceCoverageResponse,
 )
 async def get_evidence_coverage(
-    engagement_id: str,
+    engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Get detailed evidence coverage by category.
 
     Compares shelf data request items (requested) vs received items
     per evidence category.
     """
-    eng_uuid = _validate_engagement_id(engagement_id)
+    eng_uuid = engagement_id
 
     # Verify engagement exists
     eng_result = await session.execute(select(Engagement.id).where(Engagement.id == eng_uuid))
@@ -333,16 +324,17 @@ async def get_evidence_coverage(
     response_model=ConfidenceDistributionResponse,
 )
 async def get_confidence_distribution(
-    engagement_id: str,
+    engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Get confidence distribution across process elements.
 
     Uses the latest completed process model for the engagement
     and buckets elements by confidence level.
     """
-    eng_uuid = _validate_engagement_id(engagement_id)
+    eng_uuid = engagement_id
 
     # Verify engagement exists
     eng_result = await session.execute(select(Engagement.id).where(Engagement.id == eng_uuid))

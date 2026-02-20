@@ -28,7 +28,7 @@ from src.core.models import (
     Regulation,
     User,
 )
-from src.core.permissions import require_permission
+from src.core.permissions import require_engagement_access, require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -193,7 +193,7 @@ async def _verify_engagement(session: AsyncSession, engagement_id: UUID) -> None
 async def create_policy(
     payload: PolicyCreate,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> Policy:
     """Create a new policy."""
     await _verify_engagement(session, payload.engagement_id)
@@ -259,7 +259,7 @@ async def get_policy(
 async def create_control(
     payload: ControlCreate,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> Control:
     """Create a new control."""
     await _verify_engagement(session, payload.engagement_id)
@@ -319,7 +319,7 @@ async def get_control(
 async def create_regulation(
     payload: RegulationCreate,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> Regulation:
     """Create a new regulation."""
     await _verify_engagement(session, payload.engagement_id)
@@ -362,7 +362,7 @@ async def update_regulation(
     regulation_id: UUID,
     payload: RegulationUpdate,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> Regulation:
     """Update a regulation's fields (partial update)."""
     result = await session.execute(select(Regulation).where(Regulation.id == regulation_id))
@@ -387,7 +387,8 @@ async def build_governance_overlay(
     engagement_id: UUID,
     request: Request,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Build governance chains in the knowledge graph for an engagement."""
     from src.core.regulatory import RegulatoryOverlayEngine
@@ -414,6 +415,7 @@ async def get_compliance_state(
     request: Request,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Assess compliance state for an engagement."""
     from src.core.regulatory import RegulatoryOverlayEngine
@@ -439,6 +441,7 @@ async def get_ungoverned_processes(
     engagement_id: UUID,
     request: Request,
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Find processes without governance links."""
     from src.core.regulatory import RegulatoryOverlayEngine

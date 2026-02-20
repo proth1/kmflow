@@ -19,6 +19,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.types import ASGIApp
 
 from src.api.version import API_VERSION
+from src.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Add standard security headers and API version to every response."""
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        settings = get_settings()
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
@@ -60,6 +62,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-API-Version"] = API_VERSION
+        # Only add HSTS in non-development environments
+        if not getattr(settings, "debug", False):
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data:; font-src 'self'"
+        )
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"
         return response
 
 
