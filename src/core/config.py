@@ -68,6 +68,15 @@ class Settings(BaseSettings):
     auth_dev_mode: bool = False  # Allow local dev tokens
     encryption_key: str = "dev-encryption-key-change-in-production"
 
+    # ── Cookie Auth (Issue #156) ──────────────────────────────────
+    # cookie_domain: Set to the shared domain (e.g. ".example.com") for
+    # multi-subdomain deployments, or leave empty to default to the
+    # request host (suitable for single-host deployments).
+    cookie_domain: str = ""
+    # cookie_secure: Must be True in production (HTTPS required for
+    # Secure cookies). Defaults to True; set False only in local dev.
+    cookie_secure: bool = True
+
     # ── RAG Copilot (Phase 4) ─────────────────────────────────────
     copilot_model: str = "claude-sonnet-4-5-20250929"
     copilot_max_context_tokens: int = 4000
@@ -94,6 +103,13 @@ class Settings(BaseSettings):
     retention_cleanup_enabled: bool = False
     evidence_retention_days: int = 365  # Default: 1 year; override per DPA terms
     audit_retention_days: int = 730  # Default: 2 years; regulatory minimum may vary
+
+    # ── GDPR (Issue #165) ────────────────────────────────────
+    # Grace period before erasure is executed after a subject request.
+    # During this window the user can cancel their erasure request.
+    # A background job (not yet implemented) should anonymize the account
+    # once erasure_scheduled_at passes.
+    gdpr_erasure_grace_days: int = 30
 
     # ── Encryption Key Rotation (Phase 5) ──────────────────────
     encryption_key_previous: str = ""  # Previous key for rotation
