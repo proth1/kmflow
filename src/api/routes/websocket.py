@@ -12,10 +12,11 @@ import json
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, Query, Request, WebSocket, WebSocketDisconnect
 
-from src.core.auth import decode_token
+from src.core.auth import decode_token, get_current_user, is_token_blacklisted
 from src.core.config import get_settings
+from src.core.models import User
 from src.core.redis import CHANNEL_ALERTS, CHANNEL_DEVIATIONS, CHANNEL_MONITORING
 
 logger = logging.getLogger(__name__)
@@ -94,8 +95,8 @@ async def _redis_subscriber(
                     # Only forward events for this engagement
                     if data.get("engagement_id") == engagement_id:
                         await manager.broadcast(engagement_id, data)
-                except (json.JSONDecodeError, TypeError):
-                    pass
+                except (json.JSONDecodeError, TypeError) as e:
+                    logger.debug("Skipping malformed Redis message on channel %s: %s", message.get("channel"), e)
             await asyncio.sleep(0.1)
     finally:
         await pubsub.unsubscribe(*channels)
@@ -127,10 +128,25 @@ async def monitoring_websocket(
 
     try:
         settings = get_settings()
-        decode_token(token, settings)
+        payload = decode_token(token, settings)
     except Exception as e:
         logger.warning("WebSocket authentication failed: %s", e)
         await websocket.close(code=1008, reason="Invalid or expired token")
+        return
+
+    # Reject non-access tokens (e.g. refresh tokens)
+    if payload.get("type") != "access":
+        await websocket.close(code=1008, reason="Invalid token type")
+        return
+
+    # Check token blacklist
+    try:
+        if await is_token_blacklisted(websocket, token):
+            await websocket.close(code=1008, reason="Token has been revoked")
+            return
+    except Exception:
+        logger.warning("Token blacklist check failed for WebSocket — failing closed")
+        await websocket.close(code=1008, reason="Authentication check failed")
         return
 
     # Check connection limit
@@ -168,7 +184,7 @@ async def monitoring_websocket(
                 # Send heartbeat
                 await websocket.send_json({"type": "heartbeat"})
     except WebSocketDisconnect:
-        pass
+        logger.debug("WebSocket client disconnected for engagement %s", engagement_id)
     except Exception:
         logger.exception("WebSocket error for engagement %s", engagement_id)
     finally:
@@ -199,10 +215,25 @@ async def alerts_websocket(
 
     try:
         settings = get_settings()
-        decode_token(token, settings)
+        payload = decode_token(token, settings)
     except Exception as e:
         logger.warning("WebSocket authentication failed: %s", e)
         await websocket.close(code=1008, reason="Invalid or expired token")
+        return
+
+    # Reject non-access tokens (e.g. refresh tokens)
+    if payload.get("type") != "access":
+        await websocket.close(code=1008, reason="Invalid token type")
+        return
+
+    # Check token blacklist
+    try:
+        if await is_token_blacklisted(websocket, token):
+            await websocket.close(code=1008, reason="Token has been revoked")
+            return
+    except Exception:
+        logger.warning("Token blacklist check failed for WebSocket — failing closed")
+        await websocket.close(code=1008, reason="Authentication check failed")
         return
 
     # Check connection limit
@@ -236,8 +267,8 @@ async def alerts_websocket(
                     data = json.loads(message["data"])
                     if data.get("engagement_id") == engagement_id:
                         await websocket.send_json(data)
-                except (json.JSONDecodeError, TypeError):
-                    pass
+                except (json.JSONDecodeError, TypeError) as e:
+                    logger.debug("Skipping malformed Redis alert message: %s", e)
 
             # Check for client disconnect
             try:
@@ -247,7 +278,7 @@ async def alerts_websocket(
             except TimeoutError:
                 pass
     except WebSocketDisconnect:
-        pass
+        logger.debug("Alert WebSocket client disconnected for engagement %s", engagement_id)
     except Exception:
         logger.exception("Alert WebSocket error")
     finally:
@@ -258,8 +289,10 @@ async def alerts_websocket(
 
 
 @router.get("/api/v1/ws/status")
-async def websocket_status() -> dict[str, Any]:
-    """Get WebSocket connection status."""
+async def websocket_status(
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Get WebSocket connection status. Requires authentication."""
     return {
         "active_connections": manager.active_connections,
         "engagement_ids": manager.get_engagement_ids(),

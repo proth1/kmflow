@@ -17,9 +17,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
+from src.core.audit import log_audit
 from src.core.models import (
     AuditAction,
-    AuditLog,
     Control,
     ControlEffectiveness,
     Engagement,
@@ -28,7 +28,7 @@ from src.core.models import (
     Regulation,
     User,
 )
-from src.core.permissions import require_permission
+from src.core.permissions import require_engagement_access, require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -167,25 +167,6 @@ class RegulationList(BaseModel):
     total: int
 
 
-# -- Helpers ------------------------------------------------------------------
-
-
-async def _log_audit(
-    session: AsyncSession,
-    engagement_id: UUID,
-    action: AuditAction,
-    details: str | None = None,
-) -> None:
-    audit = AuditLog(engagement_id=engagement_id, action=action, actor="system", details=details)
-    session.add(audit)
-
-
-async def _verify_engagement(session: AsyncSession, engagement_id: UUID) -> None:
-    result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
-    if not result.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {engagement_id} not found")
-
-
 # -- Policy Routes ------------------------------------------------------------
 
 
@@ -193,10 +174,12 @@ async def _verify_engagement(session: AsyncSession, engagement_id: UUID) -> None
 async def create_policy(
     payload: PolicyCreate,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> Policy:
     """Create a new policy."""
-    await _verify_engagement(session, payload.engagement_id)
+    eng_result = await session.execute(select(Engagement).where(Engagement.id == payload.engagement_id))
+    if not eng_result.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found")
     policy = Policy(
         engagement_id=payload.engagement_id,
         name=payload.name,
@@ -207,7 +190,7 @@ async def create_policy(
     )
     session.add(policy)
     await session.flush()
-    await _log_audit(session, payload.engagement_id, AuditAction.POLICY_CREATED, json.dumps({"name": payload.name}))
+    await log_audit(session, payload.engagement_id, AuditAction.POLICY_CREATED, json.dumps({"name": payload.name}))
     await session.commit()
     await session.refresh(policy)
     return policy
@@ -259,10 +242,12 @@ async def get_policy(
 async def create_control(
     payload: ControlCreate,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> Control:
     """Create a new control."""
-    await _verify_engagement(session, payload.engagement_id)
+    eng_result = await session.execute(select(Engagement).where(Engagement.id == payload.engagement_id))
+    if not eng_result.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found")
     control = Control(
         engagement_id=payload.engagement_id,
         name=payload.name,
@@ -273,7 +258,7 @@ async def create_control(
     )
     session.add(control)
     await session.flush()
-    await _log_audit(session, payload.engagement_id, AuditAction.CONTROL_CREATED, json.dumps({"name": payload.name}))
+    await log_audit(session, payload.engagement_id, AuditAction.CONTROL_CREATED, json.dumps({"name": payload.name}))
     await session.commit()
     await session.refresh(control)
     return control
@@ -319,10 +304,12 @@ async def get_control(
 async def create_regulation(
     payload: RegulationCreate,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> Regulation:
     """Create a new regulation."""
-    await _verify_engagement(session, payload.engagement_id)
+    eng_result = await session.execute(select(Engagement).where(Engagement.id == payload.engagement_id))
+    if not eng_result.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found")
     regulation = Regulation(
         engagement_id=payload.engagement_id,
         name=payload.name,
@@ -332,7 +319,7 @@ async def create_regulation(
     )
     session.add(regulation)
     await session.flush()
-    await _log_audit(session, payload.engagement_id, AuditAction.REGULATION_CREATED, json.dumps({"name": payload.name}))
+    await log_audit(session, payload.engagement_id, AuditAction.REGULATION_CREATED, json.dumps({"name": payload.name}))
     await session.commit()
     await session.refresh(regulation)
     return regulation
@@ -362,7 +349,7 @@ async def update_regulation(
     regulation_id: UUID,
     payload: RegulationUpdate,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
 ) -> Regulation:
     """Update a regulation's fields (partial update)."""
     result = await session.execute(select(Regulation).where(Regulation.id == regulation_id))
@@ -387,7 +374,8 @@ async def build_governance_overlay(
     engagement_id: UUID,
     request: Request,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("engagement:update")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Build governance chains in the knowledge graph for an engagement."""
     from src.core.regulatory import RegulatoryOverlayEngine
@@ -414,6 +402,7 @@ async def get_compliance_state(
     request: Request,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Assess compliance state for an engagement."""
     from src.core.regulatory import RegulatoryOverlayEngine
@@ -439,6 +428,7 @@ async def get_ungoverned_processes(
     engagement_id: UUID,
     request: Request,
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Find processes without governance links."""
     from src.core.regulatory import RegulatoryOverlayEngine

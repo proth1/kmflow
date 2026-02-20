@@ -7,6 +7,7 @@ and REST API for SOQL queries and data extraction.
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 import httpx
@@ -15,6 +16,21 @@ from src.integrations.base import BaseConnector, ConnectionConfig
 from src.integrations.utils import DEFAULT_TIMEOUT, paginate_cursor, retry_request
 
 logger = logging.getLogger(__name__)
+
+VALID_SOBJECT_PATTERN = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
+VALID_FIELD_PATTERN = re.compile(r'^[A-Za-z_][A-Za-z0-9_.]*$')
+
+
+def _validate_sobject_name(name: str) -> str:
+    if not VALID_SOBJECT_PATTERN.match(name):
+        raise ValueError(f"Invalid Salesforce object name: {name}")
+    return name
+
+
+def _validate_field_name(name: str) -> str:
+    if not VALID_FIELD_PATTERN.match(name):
+        raise ValueError(f"Invalid Salesforce field name: {name}")
+    return name
 
 
 class SalesforceConnector(BaseConnector):
@@ -103,9 +119,10 @@ class SalesforceConnector(BaseConnector):
         if not await self._authenticate():
             return {"records_synced": 0, "errors": ["Salesforce authentication failed"]}
 
-        object_type = kwargs.get("object_type", "Case")
-        fields = kwargs.get("fields", ["Id", "Name", "Description", "CreatedDate", "Status"])
-        soql = kwargs.get("soql_query", f"SELECT {', '.join(fields)} FROM {object_type}")
+        object_type = _validate_sobject_name(kwargs.get("object_type", "Case"))
+        fields = [_validate_field_name(f) for f in kwargs.get("fields", ["Id", "Name", "Description", "CreatedDate", "Status"])]
+        # _soql_override is set internally by sync_incremental for WHERE-clause queries only
+        soql = kwargs.get("_soql_override") or f"SELECT {', '.join(fields)} FROM {object_type}"
 
         records_synced = 0
         errors: list[str] = []
@@ -148,7 +165,10 @@ class SalesforceConnector(BaseConnector):
     async def sync_incremental(self, engagement_id: str, since: str | None = None, **kwargs: Any) -> dict[str, Any]:
         """Incremental sync using LastModifiedDate filter."""
         if since:
-            object_type = kwargs.get("object_type", "Case")
-            fields = kwargs.get("fields", ["Id", "Name", "Description", "CreatedDate", "Status"])
-            kwargs["soql_query"] = f"SELECT {', '.join(fields)} FROM {object_type} WHERE LastModifiedDate > {since}"
+            object_type = _validate_sobject_name(kwargs.get("object_type", "Case"))
+            fields = [_validate_field_name(f) for f in kwargs.get("fields", ["Id", "Name", "Description", "CreatedDate", "Status"])]
+            # Build SOQL directly here so sync_data does not need to accept a raw soql_query
+            kwargs["_soql_override"] = f"SELECT {', '.join(fields)} FROM {object_type} WHERE LastModifiedDate > {since}"
+            kwargs["object_type"] = object_type
+            kwargs["fields"] = fields
         return await self.sync_data(engagement_id, **kwargs)

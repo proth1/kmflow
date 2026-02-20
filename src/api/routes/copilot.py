@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
 from src.core.models import CopilotMessage, User
-from src.core.permissions import require_permission
+from src.core.permissions import require_engagement_access, require_permission
 from src.core.rate_limiter import copilot_rate_limit
 
 logger = logging.getLogger(__name__)
@@ -107,7 +107,7 @@ async def copilot_chat(
         logger.exception("Copilot chat failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Copilot error: {e}",
+            detail="Copilot processing failed",
         ) from e
 
     citations = [
@@ -155,6 +155,7 @@ async def copilot_chat(
 async def get_chat_history(
     engagement_id: UUID,
     user: User = Depends(require_permission("copilot:query")),
+    _engagement_user: User = Depends(require_engagement_access),
     session: AsyncSession = Depends(get_session),
     limit: int = Query(default=50, le=200),
     offset: int = Query(default=0, ge=0),

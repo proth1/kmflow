@@ -15,8 +15,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
-from src.core.models import User
-from src.core.permissions import require_permission
+from src.core.models import User, UserRole
+from src.core.permissions import require_engagement_access, require_permission, require_role
 from src.semantic.builder import KnowledgeGraphBuilder
 from src.semantic.embeddings import EmbeddingService
 from src.semantic.graph import (
@@ -180,7 +180,7 @@ async def build_graph(
         logger.exception("Graph build failed for engagement %s", payload.engagement_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Graph build failed: {e}",
+            detail="Graph build failed",
         ) from e
 
 
@@ -188,16 +188,20 @@ async def build_graph(
 async def execute_query(
     payload: CypherQueryRequest,
     graph_service: KnowledgeGraphService = Depends(get_graph_service),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_role(UserRole.PLATFORM_ADMIN)),
 ) -> list[dict[str, Any]]:
     """Execute a read-only Cypher query against the knowledge graph.
 
-    Only read operations (MATCH, RETURN) are allowed.
+    Only read operations (MATCH, RETURN) are allowed. Restricted to platform admins.
     Parameters should be used for all variable values to prevent injection.
     """
-    # Basic write-protection: reject mutations
+    # Write-protection: reject mutations and APOC procedure calls.
+    # APOC procedures can bypass read-only intent (e.g., apoc.do.*, apoc.periodic.*).
     query_upper = payload.query.upper().strip()
-    write_keywords = ["CREATE", "DELETE", "DETACH", "SET", "REMOVE", "MERGE", "DROP"]
+    write_keywords = [
+        "CREATE", "DELETE", "DETACH", "SET", "REMOVE", "MERGE", "DROP",
+        "CALL", "LOAD", "FOREACH", "APOC",
+    ]
     for keyword in write_keywords:
         if keyword in query_upper:
             raise HTTPException(
@@ -209,9 +213,10 @@ async def execute_query(
         results = await graph_service._run_query(payload.query, payload.parameters)
         return results
     except Exception as e:
+        logger.exception("Cypher query execution failed")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Query execution failed: {e}",
+            detail="Query execution failed",
         ) from e
 
 
@@ -279,7 +284,7 @@ async def semantic_search(
             detail="top_k must be between 1 and 100",
         )
 
-    embedding_service = get_embedding_service()
+    embedding_service = EmbeddingService()
     eng_id = str(engagement_id) if engagement_id else None
 
     results = await embedding_service.search_by_text(
@@ -296,6 +301,7 @@ async def get_graph_stats(
     engagement_id: UUID,
     graph_service: KnowledgeGraphService = Depends(get_graph_service),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Get statistics for an engagement's knowledge graph.
 
@@ -315,6 +321,7 @@ async def get_engagement_subgraph(
     engagement_id: UUID,
     graph_service: KnowledgeGraphService = Depends(get_graph_service),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Get the full knowledge graph for an engagement as JSON.
 
@@ -367,6 +374,7 @@ async def export_cytoscape(
     engagement_id: UUID,
     graph_service: KnowledgeGraphService = Depends(get_graph_service),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Export engagement graph in Cytoscape.js compatible format."""
     subgraph = await graph_service.get_engagement_subgraph(str(engagement_id))
@@ -442,5 +450,5 @@ async def run_bridges(
         logger.exception("Bridge execution failed for engagement %s", engagement_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Bridge execution failed: {e}",
+            detail="Bridge execution failed",
         ) from e

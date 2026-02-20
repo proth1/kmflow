@@ -29,7 +29,7 @@ def _get_bp_matcher_class() -> type | None:
 
             _BPMatcher = BestPracticeMatcher
         except ImportError:
-            pass
+            logger.debug("BestPracticeMatcher not available; skipping best practice matching")
     return _BPMatcher
 
 

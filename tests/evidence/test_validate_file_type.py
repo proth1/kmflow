@@ -68,10 +68,21 @@ class TestValidateFileType:
             assert result == mime
 
     def test_none_mime_uses_magic_detection(self) -> None:
-        """When mime_type is None, magic detection determines the type."""
+        """When mime_type is None, magic detection determines the type.
+        octet-stream is only accepted for known evidence extensions (.bpmn, .xes, .vsdx).
+        """
         with patch.dict("sys.modules", {"magic": _make_magic_module("application/octet-stream")}):
-            result = validate_file_type(b"some content", "file.bin", mime_type=None)
+            result = validate_file_type(b"<bpmn>", "process.bpmn", mime_type=None)
         assert result == "application/octet-stream"
+
+    def test_octet_stream_rejected_for_unknown_extension(self) -> None:
+        """application/octet-stream with an unknown extension should be rejected."""
+        with (
+            patch.dict("sys.modules", {"magic": _make_magic_module("application/octet-stream")}),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            validate_file_type(b"binary data", "file.bin", mime_type=None)
+        assert exc_info.value.status_code == 415
 
     def test_office_document_types_accepted(self) -> None:
         """Microsoft Office MIME types should be accepted."""
@@ -114,7 +125,9 @@ class TestValidateFileType:
         assert result == "application/pdf"
 
     def test_magic_unavailable_none_mime_falls_back_to_octet_stream(self) -> None:
-        """When python-magic is unavailable and mime_type is None, falls back to octet-stream."""
+        """When python-magic is unavailable and mime_type is None, falls back to octet-stream.
+        Accepted only for known evidence extensions such as .bpmn.
+        """
         with patch.dict("sys.modules", {"magic": None}):
-            result = validate_file_type(b"binary data", "file.bin", mime_type=None)
+            result = validate_file_type(b"<bpmn>", "process.bpmn", mime_type=None)
         assert result == "application/octet-stream"

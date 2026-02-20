@@ -211,6 +211,14 @@ async def get_current_user(
     token = credentials.credentials
     payload = decode_token(token, settings)
 
+    # Reject non-access tokens (e.g. refresh tokens)
+    if payload.get("type") != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token type",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     # Check blacklist
     if await is_token_blacklisted(request, token):
         raise HTTPException(

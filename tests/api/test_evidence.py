@@ -219,14 +219,14 @@ class TestBatchValidate:
 
     @pytest.mark.asyncio
     async def test_batch_validate(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
-        """Should validate multiple evidence items."""
+        """Should validate multiple evidence items via bulk fetch."""
         ev1 = _make_evidence()
         ev2 = _make_evidence()
 
-        mock_db_session.execute.side_effect = [
-            _mock_scalar_result(ev1),
-            _mock_scalar_result(ev2),
-        ]
+        # Bulk-fetch returns all items via .scalars().all()
+        mock_bulk_result = MagicMock()
+        mock_bulk_result.scalars.return_value.all.return_value = [ev1, ev2]
+        mock_db_session.execute.return_value = mock_bulk_result
 
         response = await client.post(
             "/api/v1/evidence/validate-batch",
@@ -245,10 +245,10 @@ class TestBatchValidate:
         """Should report errors for missing items."""
         ev1 = _make_evidence()
 
-        mock_db_session.execute.side_effect = [
-            _mock_scalar_result(ev1),
-            _mock_scalar_result(None),  # Not found
-        ]
+        # Bulk-fetch returns only ev1 (fake_id not found)
+        mock_bulk_result = MagicMock()
+        mock_bulk_result.scalars.return_value.all.return_value = [ev1]
+        mock_db_session.execute.return_value = mock_bulk_result
 
         fake_id = uuid.uuid4()
         response = await client.post(

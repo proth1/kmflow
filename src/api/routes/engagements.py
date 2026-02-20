@@ -11,7 +11,7 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,7 +26,7 @@ from src.core.models import (
     EvidenceItem,
     User,
 )
-from src.core.permissions import require_permission
+from src.core.permissions import require_engagement_access, require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +90,13 @@ class AuditLogResponse(BaseModel):
     actor: str
     details: str | None
     created_at: Any
+
+
+class AuditLogList(BaseModel):
+    """Schema for listing audit log entries."""
+
+    items: list[AuditLogResponse]
+    total: int
 
 
 class DashboardResponse(BaseModel):
@@ -168,8 +175,8 @@ async def create_engagement(
 
 @router.get("/", response_model=EngagementList)
 async def list_engagements(
-    limit: int = 20,
-    offset: int = 0,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     status_filter: EngagementStatus | None = None,
     client: str | None = None,
     business_area: str | None = None,
@@ -215,6 +222,7 @@ async def list_engagements(
 async def get_engagement(
     engagement_id: UUID,
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
     session: AsyncSession = Depends(get_session),
 ) -> Engagement:
     """Get a specific engagement by ID."""
@@ -226,6 +234,7 @@ async def update_engagement(
     engagement_id: UUID,
     payload: EngagementUpdate,
     user: User = Depends(require_permission("engagement:update")),
+    _engagement_user: User = Depends(require_engagement_access),
     session: AsyncSession = Depends(get_session),
 ) -> Engagement:
     """Update an engagement's fields (partial update).
@@ -262,13 +271,14 @@ async def update_engagement(
     return engagement
 
 
-@router.delete("/{engagement_id}", response_model=EngagementResponse)
+@router.patch("/{engagement_id}/archive", response_model=EngagementResponse)
 async def archive_engagement(
     engagement_id: UUID,
     user: User = Depends(require_permission("engagement:delete")),
+    _engagement_user: User = Depends(require_engagement_access),
     session: AsyncSession = Depends(get_session),
 ) -> Engagement:
-    """Soft-delete an engagement by setting its status to ARCHIVED."""
+    """Archive an engagement by setting its status to ARCHIVED."""
     engagement = await _get_engagement_or_404(session, engagement_id)
 
     previous_status = engagement.status
@@ -288,6 +298,7 @@ async def archive_engagement(
 async def get_engagement_dashboard(
     engagement_id: UUID,
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     """Get an engagement dashboard with evidence summary.
@@ -329,17 +340,29 @@ async def get_engagement_dashboard(
     }
 
 
-@router.get("/{engagement_id}/audit-logs", response_model=list[AuditLogResponse])
+@router.get("/{engagement_id}/audit-logs", response_model=AuditLogList)
 async def get_audit_logs(
     engagement_id: UUID,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
     session: AsyncSession = Depends(get_session),
-) -> list[AuditLog]:
+) -> dict[str, Any]:
     """Get audit log entries for an engagement."""
     # Verify engagement exists
     await _get_engagement_or_404(session, engagement_id)
 
-    result = await session.execute(
-        select(AuditLog).where(AuditLog.engagement_id == engagement_id).order_by(AuditLog.created_at.desc())
+    count_result = await session.execute(
+        select(func.count()).select_from(AuditLog).where(AuditLog.engagement_id == engagement_id)
     )
-    return list(result.scalars().all())
+    total = count_result.scalar() or 0
+
+    result = await session.execute(
+        select(AuditLog)
+        .where(AuditLog.engagement_id == engagement_id)
+        .order_by(AuditLog.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    return {"items": list(result.scalars().all()), "total": total}

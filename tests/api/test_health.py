@@ -16,7 +16,7 @@ async def test_health_all_services_up(client: AsyncClient, mock_db_session: Asyn
     mock_result.scalar.return_value = 1
     mock_db_session.execute.return_value = mock_result
 
-    response = await client.get("/health")
+    response = await client.get("/api/v1/health")
     assert response.status_code == 200
 
     data = response.json()
@@ -44,7 +44,7 @@ async def test_health_degraded_when_redis_down(
     # Redis fails
     mock_redis_client.ping.side_effect = ConnectionError("Redis down")
 
-    response = await client.get("/health")
+    response = await client.get("/api/v1/health")
     assert response.status_code == 200
 
     data = response.json()
@@ -65,7 +65,7 @@ async def test_health_unhealthy_when_all_down(
     mock_neo4j_driver.verify_connectivity.side_effect = ConnectionError("Neo4j down")
     mock_redis_client.ping.side_effect = ConnectionError("Redis down")
 
-    response = await client.get("/health")
+    response = await client.get("/api/v1/health")
     assert response.status_code == 200
 
     data = response.json()
@@ -80,7 +80,7 @@ async def test_health_response_structure(client: AsyncClient, mock_db_session: A
     mock_result.scalar.return_value = 1
     mock_db_session.execute.return_value = mock_result
 
-    response = await client.get("/health")
+    response = await client.get("/api/v1/health")
     data = response.json()
 
     assert "status" in data

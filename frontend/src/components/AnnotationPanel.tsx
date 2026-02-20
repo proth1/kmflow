@@ -7,8 +7,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { apiGet, apiPost, apiDelete } from "@/lib/api";
 
 interface Annotation {
   id: string;
@@ -45,15 +44,12 @@ export default function AnnotationPanel({
         target_type: targetType,
         target_id: targetId,
       });
-      const res = await fetch(
-        `${API_BASE}/api/v1/annotations/?${params.toString()}`,
+      const data = await apiGet<{ items: Annotation[] }>(
+        `/api/v1/annotations/?${params.toString()}`,
       );
-      if (res.ok) {
-        const data = await res.json();
-        setAnnotations(data.items || []);
-      }
-    } catch {
-      // Silently handle fetch errors
+      setAnnotations(data.items || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load annotations");
     } finally {
       setLoading(false);
     }
@@ -69,23 +65,12 @@ export default function AnnotationPanel({
     setError(null);
 
     try {
-      const res = await fetch(`${API_BASE}/api/v1/annotations/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          engagement_id: engagementId,
-          target_type: targetType,
-          target_id: targetId,
-          content: newContent.trim(),
-        }),
+      await apiPost<Annotation>("/api/v1/annotations/", {
+        engagement_id: engagementId,
+        target_type: targetType,
+        target_id: targetId,
+        content: newContent.trim(),
       });
-
-      if (!res.ok) {
-        const errData = await res
-          .json()
-          .catch(() => ({ detail: "Failed to save" }));
-        throw new Error(errData.detail || "Failed to save annotation");
-      }
 
       setNewContent("");
       await fetchAnnotations();
@@ -98,14 +83,7 @@ export default function AnnotationPanel({
 
   const handleDelete = async (annotationId: string) => {
     try {
-      const res = await fetch(`${API_BASE}/api/v1/annotations/${annotationId}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({ detail: "Delete failed" }));
-        setError(errData.detail || "Failed to delete annotation");
-        return;
-      }
+      await apiDelete(`/api/v1/annotations/${annotationId}`);
       setAnnotations((prev) => prev.filter((a) => a.id !== annotationId));
     } catch {
       setError("Failed to delete annotation");

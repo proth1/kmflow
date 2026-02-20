@@ -359,7 +359,7 @@ class TestUpdateEngagement:
 
 
 class TestArchiveEngagement:
-    """DELETE /api/v1/engagements/{id}"""
+    """PATCH /api/v1/engagements/{id}/archive"""
 
     @pytest.mark.asyncio
     async def test_archive_engagement(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
@@ -367,7 +367,7 @@ class TestArchiveEngagement:
         eng = _make_engagement(status=EngagementStatus.ACTIVE)
         mock_db_session.execute.return_value = _mock_scalar_result(eng)
 
-        response = await client.delete(f"/api/v1/engagements/{eng.id}")
+        response = await client.patch(f"/api/v1/engagements/{eng.id}/archive")
         assert response.status_code == 200
         assert eng.status == EngagementStatus.ARCHIVED
 
@@ -381,7 +381,7 @@ class TestArchiveEngagement:
         mock_db_session.execute.return_value = _mock_scalar_result(None)
 
         fake_id = uuid.uuid4()
-        response = await client.delete(f"/api/v1/engagements/{fake_id}")
+        response = await client.patch(f"/api/v1/engagements/{fake_id}/archive")
         assert response.status_code == 404
 
     @pytest.mark.asyncio
@@ -390,7 +390,7 @@ class TestArchiveEngagement:
         eng = _make_engagement(status=EngagementStatus.ARCHIVED)
         mock_db_session.execute.return_value = _mock_scalar_result(eng)
 
-        response = await client.delete(f"/api/v1/engagements/{eng.id}")
+        response = await client.patch(f"/api/v1/engagements/{eng.id}/archive")
         assert response.status_code == 200
         assert eng.status == EngagementStatus.ARCHIVED
 
@@ -482,7 +482,7 @@ class TestAuditLogs:
 
     @pytest.mark.asyncio
     async def test_get_audit_logs(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
-        """Should return audit log entries for an engagement."""
+        """Should return paginated audit log entries for an engagement."""
         eng = _make_engagement()
         log1 = AuditLog(
             id=uuid.uuid4(),
@@ -493,9 +493,11 @@ class TestAuditLogs:
         )
 
         # 1st call: verify engagement exists
-        # 2nd call: fetch audit logs
+        # 2nd call: count query
+        # 3rd call: fetch audit logs
         mock_db_session.execute.side_effect = [
             _mock_scalar_result(eng),
+            _mock_count_result(1),
             _mock_scalars_result([log1]),
         ]
 
@@ -503,23 +505,27 @@ class TestAuditLogs:
         assert response.status_code == 200
 
         data = response.json()
-        assert len(data) == 1
-        assert data[0]["action"] == "engagement_created"
-        assert data[0]["actor"] == "system"
+        assert data["total"] == 1
+        assert len(data["items"]) == 1
+        assert data["items"][0]["action"] == "engagement_created"
+        assert data["items"][0]["actor"] == "system"
 
     @pytest.mark.asyncio
     async def test_audit_logs_empty(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
-        """Should return empty list when no audit logs exist."""
+        """Should return empty paginated result when no audit logs exist."""
         eng = _make_engagement()
 
         mock_db_session.execute.side_effect = [
             _mock_scalar_result(eng),
+            _mock_count_result(0),
             _mock_scalars_result([]),
         ]
 
         response = await client.get(f"/api/v1/engagements/{eng.id}/audit-logs")
         assert response.status_code == 200
-        assert response.json() == []
+        data = response.json()
+        assert data["total"] == 0
+        assert data["items"] == []
 
     @pytest.mark.asyncio
     async def test_audit_logs_not_found(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
@@ -578,11 +584,11 @@ class TestAuditLogCreation:
 
     @pytest.mark.asyncio
     async def test_archive_generates_audit_log(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
-        """DELETE should create an ENGAGEMENT_ARCHIVED audit entry."""
+        """PATCH /archive should create an ENGAGEMENT_ARCHIVED audit entry."""
         eng = _make_engagement(status=EngagementStatus.ACTIVE)
         mock_db_session.execute.return_value = _mock_scalar_result(eng)
 
-        response = await client.delete(f"/api/v1/engagements/{eng.id}")
+        response = await client.patch(f"/api/v1/engagements/{eng.id}/archive")
         assert response.status_code == 200
 
         add_calls = mock_db_session.add.call_args_list

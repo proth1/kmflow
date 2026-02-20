@@ -26,7 +26,7 @@ def mock_graph_service() -> AsyncMock:
     """Create a mock KnowledgeGraphService."""
     service = AsyncMock(spec=KnowledgeGraphService)
 
-    # create_node returns a GraphNode
+    # create_node returns a GraphNode (used by callers outside the builder)
     async def _create_node(label: str, properties: dict) -> GraphNode:
         return GraphNode(
             id=properties.get("id", uuid.uuid4().hex[:16]),
@@ -35,6 +35,12 @@ def mock_graph_service() -> AsyncMock:
         )
 
     service.create_node = AsyncMock(side_effect=_create_node)
+    # batch_create_nodes returns a list of ids matching input props
+    async def _batch_create_nodes(label: str, props_list: list) -> list:
+        return [p.get("id", uuid.uuid4().hex[:16]) for p in props_list]
+
+    service.batch_create_nodes = AsyncMock(side_effect=_batch_create_nodes)
+    service.batch_create_relationships = AsyncMock(return_value=0)
     service.create_relationship = AsyncMock()
     service.get_node = AsyncMock(return_value=None)
     return service
@@ -229,7 +235,7 @@ class TestNodeCreation:
         builder: KnowledgeGraphBuilder,
         mock_graph_service: AsyncMock,
     ) -> None:
-        """Should create a Neo4j node for each resolved entity."""
+        """Should create a Neo4j node for each resolved entity via batch_create_nodes."""
         fragments = [
             (str(uuid.uuid4()), "The Operations Manager uses Oracle system", str(uuid.uuid4())),
         ]
@@ -237,8 +243,9 @@ class TestNodeCreation:
 
         result = await builder.build_knowledge_graph(session, "eng-1")
 
-        # create_node should have been called for each entity
-        assert mock_graph_service.create_node.call_count >= result.node_count
+        # batch_create_nodes should have been called at least once when entities were extracted
+        if result.node_count > 0:
+            assert mock_graph_service.batch_create_nodes.call_count >= 1
 
     @pytest.mark.asyncio
     async def test_nodes_scoped_to_engagement(
@@ -254,10 +261,12 @@ class TestNodeCreation:
 
         await builder.build_knowledge_graph(session, "eng-42")
 
-        # Check that each create_node call includes engagement_id
-        for call in mock_graph_service.create_node.call_args_list:
-            props = call.args[1] if len(call.args) > 1 else call.kwargs.get("properties", {})
-            assert props.get("engagement_id") == "eng-42"
+        # batch_create_nodes receives lists of property dicts — check every dict
+        for call in mock_graph_service.batch_create_nodes.call_args_list:
+            # args: (label, props_list)
+            props_list = call.args[1] if len(call.args) > 1 else call.kwargs.get("props_list", [])
+            for props in props_list:
+                assert props.get("engagement_id") == "eng-42"
 
 
 # ---------------------------------------------------------------------------
@@ -323,6 +332,7 @@ class TestErrorHandling:
         """Should continue building even if individual node creation fails."""
         mock_graph = AsyncMock(spec=KnowledgeGraphService)
         mock_graph.create_node = AsyncMock(side_effect=Exception("Neo4j error"))
+        mock_graph.batch_create_nodes = AsyncMock(side_effect=Exception("Neo4j error"))
         mock_graph.get_node = AsyncMock(return_value=None)
         mock_graph.create_relationship = AsyncMock()
 

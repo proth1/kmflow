@@ -6,7 +6,7 @@ Configures the FastAPI app with:
 - Route registration (14 Phase 1-2 routers + 6 Phase 3 routers + 2 Phase 4 routers
   + 1 Phase 5 router + Phase C lineage router + Phase D governance router)
 - MCP server mounted at /mcp
-- OpenAPI documentation at /docs
+- OpenAPI documentation at /docs (debug mode only)
 """
 
 from __future__ import annotations
@@ -20,6 +20,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from src.api.middleware.audit import AuditLoggingMiddleware
 from src.api.middleware.security import (
@@ -29,7 +32,7 @@ from src.api.middleware.security import (
 )
 from src.api.routes import (
     admin,
-    auth,
+    auth as auth_routes,
     camunda,
     conformance,
     copilot,
@@ -57,6 +60,7 @@ from src.api.routes import (
 from src.api.routes import (
     annotations as annotations_routes,
 )
+from src.api.routes.auth import limiter
 from src.api.version import API_VERSION
 from src.core.config import get_settings
 from src.core.database import create_engine
@@ -152,19 +156,26 @@ def create_app() -> FastAPI:
         title=settings.app_name,
         description="AI-powered Process Intelligence platform for consulting engagements",
         version=API_VERSION,
-        docs_url="/docs",
-        redoc_url="/redoc",
+        docs_url="/docs" if settings.debug else None,
+        redoc_url="/redoc" if settings.debug else None,
         lifespan=lifespan,
     )
 
+    # -- Rate Limiter (slowapi) ---
+    # Register the limiter on app.state so SlowAPIMiddleware and the
+    # @limiter.limit decorators on individual routes can find it.
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
     # -- Security Middleware ---
-    # Note: middleware is applied in reverse order (last added = first executed)
+    # Note: middleware is applied in reverse order (last added = first executed).
+    # SlowAPIMiddleware is added last so it runs first in the request pipeline.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Accept"],
     )
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(AuditLoggingMiddleware)
@@ -174,6 +185,7 @@ def create_app() -> FastAPI:
         max_requests=settings.rate_limit_requests,
         window_seconds=settings.rate_limit_window_seconds,
     )
+    app.add_middleware(SlowAPIMiddleware)
 
     # -- Phase 1-2 Routes ---
     app.include_router(health.router)
@@ -183,7 +195,7 @@ def create_app() -> FastAPI:
     app.include_router(graph.router)
     app.include_router(pov.router)
     app.include_router(dashboard.router)
-    app.include_router(auth.router)
+    app.include_router(auth_routes.router)
     app.include_router(users.router)
     app.include_router(regulatory.router)
     app.include_router(tom.router)

@@ -27,7 +27,7 @@ from src.core.models import (
     User,
     ValidationStatus,
 )
-from src.core.permissions import require_permission
+from src.core.permissions import require_engagement_access, require_permission
 from src.evidence.pipeline import ingest_evidence
 from src.evidence.quality import score_evidence
 
@@ -339,13 +339,19 @@ async def batch_validate(
     updated_count = 0
     errors: list[str] = []
 
-    for eid in payload.evidence_ids:
-        result = await session.execute(select(EvidenceItem).where(EvidenceItem.id == eid))
-        evidence = result.scalar_one_or_none()
-        if not evidence:
-            errors.append(f"Evidence item {eid} not found")
-            continue
+    # Bulk-fetch all evidence items in a single query (Fix N+1)
+    result = await session.execute(
+        select(EvidenceItem).where(EvidenceItem.id.in_(payload.evidence_ids))
+    )
+    evidence_map = {item.id: item for item in result.scalars().all()}
 
+    # Identify missing items
+    for eid in payload.evidence_ids:
+        if eid not in evidence_map:
+            errors.append(f"Evidence item {eid} not found")
+
+    # Update found items
+    for eid, evidence in evidence_map.items():
         old_status = evidence.validation_status
         evidence.validation_status = payload.validation_status
 

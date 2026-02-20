@@ -32,7 +32,7 @@ class TestAppCreation:
         """App should have health and engagement routes."""
         app = create_app()
         route_paths = [route.path for route in app.routes]
-        assert "/health" in route_paths
+        assert "/api/v1/health" in route_paths
         assert "/api/v1/engagements/" in route_paths
         assert "/api/v1/engagements/{engagement_id}" in route_paths
 

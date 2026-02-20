@@ -8,6 +8,7 @@ isolation between consulting engagements.
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from dataclasses import dataclass, field
 from typing import Any
@@ -22,6 +23,16 @@ from src.semantic.ontology.loader import (
 )
 
 logger = logging.getLogger(__name__)
+
+_VALID_PROPERTY_KEY = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
+
+
+def _validate_property_keys(props: dict[str, Any]) -> None:
+    """Validate that property keys are safe Cypher identifiers."""
+    for key in props:
+        if not _VALID_PROPERTY_KEY.match(key):
+            raise ValueError(f"Invalid property key: {key!r}")
+
 
 # Valid node labels and relationship types loaded from the YAML ontology.
 # Exported as module-level constants for backward compatibility.
@@ -100,7 +111,10 @@ class KnowledgeGraphService:
         query: str,
         parameters: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
-        """Execute a Cypher query and return results as dicts.
+        """Execute a read-only Cypher query within a read transaction.
+
+        Uses session.execute_read() to ensure the query is routed to a
+        read replica in a cluster and cannot accidentally perform writes.
 
         Args:
             query: Cypher query string with $parameter placeholders.
@@ -109,10 +123,13 @@ class KnowledgeGraphService:
         Returns:
             List of result records as dicts.
         """
+
+        async def _tx_func(tx):
+            result = await tx.run(query, parameters or {})
+            return await result.data()
+
         async with self._driver.session() as session:
-            result = await session.run(query, parameters or {})
-            records = await result.data()
-            return records
+            return await session.execute_read(_tx_func)
 
     async def _run_write_query(
         self,
@@ -168,6 +185,8 @@ class KnowledgeGraphService:
         if "engagement_id" not in properties:
             raise ValueError("Node properties must include 'engagement_id'")
 
+        _validate_property_keys(properties)
+
         node_id = properties.get("id", uuid.uuid4().hex[:16])
         props = {**properties, "id": node_id}
 
@@ -210,12 +229,15 @@ class KnowledgeGraphService:
         self,
         label: str,
         filters: dict[str, Any] | None = None,
+        limit: int = 500,
     ) -> list[GraphNode]:
         """Query nodes by label with optional property filters.
 
         Args:
             label: Node label to filter by.
             filters: Optional property filters (exact match).
+            limit: Maximum number of nodes to return (default 500). Guards
+                against unbounded scans on large graphs.
 
         Returns:
             List of matching GraphNodes.
@@ -223,8 +245,11 @@ class KnowledgeGraphService:
         if label not in VALID_NODE_LABELS:
             raise ValueError(f"Invalid node label: {label}")
 
+        if filters:
+            _validate_property_keys(filters)
+
         where_clauses = []
-        params: dict[str, Any] = {}
+        params: dict[str, Any] = {"limit": limit}
 
         if filters:
             for i, (key, value) in enumerate(filters.items()):
@@ -235,7 +260,7 @@ class KnowledgeGraphService:
         where_str = " AND ".join(where_clauses)
         where_clause = f"WHERE {where_str}" if where_str else ""
 
-        query = f"MATCH (n:{label}) {where_clause} RETURN n"
+        query = f"MATCH (n:{label}) {where_clause} RETURN n LIMIT $limit"
         records = await self._run_query(query, params)
 
         return [
@@ -246,6 +271,35 @@ class KnowledgeGraphService:
             )
             for record in records
         ]
+
+    async def batch_create_nodes(
+        self,
+        label: str,
+        props_list: list[dict[str, Any]],
+    ) -> list[str]:
+        """Create multiple nodes of the same label in a single transaction.
+
+        Uses UNWIND to avoid N+1 round-trips for bulk node creation.
+
+        Args:
+            label: Node label (must be in VALID_NODE_LABELS).
+            props_list: List of property dicts. Each dict must include 'name',
+                'engagement_id', and 'id'.
+
+        Returns:
+            List of created node IDs in the same order as props_list.
+
+        Raises:
+            ValueError: If label is invalid or any property key is unsafe.
+        """
+        if label not in VALID_NODE_LABELS:
+            raise ValueError(f"Invalid node label: {label}")
+        for props in props_list:
+            _validate_property_keys(props)
+
+        query = f"UNWIND $nodes AS props CREATE (n:{label}) SET n = props RETURN n.id AS id"
+        records = await self._run_write_query(query, {"nodes": props_list})
+        return [r["id"] for r in records]
 
     # -----------------------------------------------------------------
     # Relationship operations
@@ -277,6 +331,9 @@ class KnowledgeGraphService:
                 f"Invalid relationship type: {relationship_type}. Must be one of {VALID_RELATIONSHIP_TYPES}"
             )
 
+        if properties:
+            _validate_property_keys(properties)
+
         rel_id = uuid.uuid4().hex[:16]
         props = {**(properties or {}), "id": rel_id}
 
@@ -300,6 +357,59 @@ class KnowledgeGraphService:
             relationship_type=relationship_type,
             properties=props,
         )
+
+    async def batch_create_relationships(
+        self,
+        relationship_type: str,
+        rels: list[dict[str, Any]],
+    ) -> int:
+        """Create multiple relationships of the same type in a single transaction.
+
+        Uses UNWIND to avoid N+1 round-trips for bulk relationship creation.
+        Silently skips pairs where either node does not exist.
+
+        Args:
+            relationship_type: Edge type (must be in VALID_RELATIONSHIP_TYPES).
+            rels: List of dicts, each with 'from_id', 'to_id', and optional
+                'properties' (a dict of relationship properties).
+
+        Returns:
+            Number of relationships created.
+
+        Raises:
+            ValueError: If relationship_type is invalid.
+        """
+        if relationship_type not in VALID_RELATIONSHIP_TYPES:
+            raise ValueError(
+                f"Invalid relationship type: {relationship_type}. "
+                f"Must be one of {VALID_RELATIONSHIP_TYPES}"
+            )
+
+        if not rels:
+            return 0
+
+        # Normalise: ensure each entry has a 'properties' dict and a rel 'id'
+        normalised = []
+        for rel in rels:
+            props = dict(rel.get("properties") or {})
+            props["id"] = uuid.uuid4().hex[:16]
+            normalised.append(
+                {
+                    "from_id": rel["from_id"],
+                    "to_id": rel["to_id"],
+                    "props": props,
+                }
+            )
+
+        query = f"""
+        UNWIND $rels AS rel
+        MATCH (a {{id: rel.from_id}}), (b {{id: rel.to_id}})
+        CREATE (a)-[r:{relationship_type}]->(b)
+        SET r = rel.props
+        RETURN count(r) AS created
+        """
+        records = await self._run_write_query(query, {"rels": normalised})
+        return records[0]["created"] if records else 0
 
     async def get_relationships(
         self,
@@ -358,6 +468,7 @@ class KnowledgeGraphService:
         start_id: str,
         depth: int = 2,
         relationship_types: list[str] | None = None,
+        limit: int = 200,
     ) -> list[GraphNode]:
         """Traverse the graph from a starting node.
 
@@ -365,6 +476,8 @@ class KnowledgeGraphService:
             start_id: Node ID to start traversal from.
             depth: Maximum traversal depth (default 2).
             relationship_types: Optional list of relationship types to follow.
+            limit: Maximum number of nodes to return (default 200). Guards
+                against unbounded results from highly-connected subgraphs.
 
         Returns:
             List of discovered GraphNodes (excluding start node).
@@ -379,8 +492,9 @@ class KnowledgeGraphService:
         query = f"""
         MATCH (start {{id: $start_id}})-[r{rel_filter}*1..{depth}]-(connected)
         RETURN DISTINCT connected, labels(connected) AS labels
+        LIMIT $limit
         """
-        records = await self._run_query(query, {"start_id": start_id})
+        records = await self._run_query(query, {"start_id": start_id, "limit": limit})
 
         return [
             GraphNode(
@@ -429,11 +543,15 @@ class KnowledgeGraphService:
     async def get_engagement_subgraph(
         self,
         engagement_id: str,
+        limit: int = 500,
     ) -> dict[str, Any]:
         """Get the full knowledge graph for an engagement.
 
         Args:
             engagement_id: The engagement to get the subgraph for.
+            limit: Maximum number of nodes and relationships to return
+                (default 500). Guards against unbounded result sets on
+                large engagements.
 
         Returns:
             Dict with 'nodes' and 'relationships' lists.
@@ -442,8 +560,9 @@ class KnowledgeGraphService:
         node_query = """
         MATCH (n {engagement_id: $engagement_id})
         RETURN n, labels(n) AS labels
+        LIMIT $limit
         """
-        node_records = await self._run_query(node_query, {"engagement_id": engagement_id})
+        node_records = await self._run_query(node_query, {"engagement_id": engagement_id, "limit": limit})
 
         nodes = [
             GraphNode(
@@ -458,8 +577,9 @@ class KnowledgeGraphService:
         rel_query = """
         MATCH (a {engagement_id: $engagement_id})-[r]->(b {engagement_id: $engagement_id})
         RETURN r, a.id AS from_id, b.id AS to_id, type(r) AS rel_type
+        LIMIT $limit
         """
-        rel_records = await self._run_query(rel_query, {"engagement_id": engagement_id})
+        rel_records = await self._run_query(rel_query, {"engagement_id": engagement_id, "limit": limit})
 
         relationships = [
             GraphRelationship(

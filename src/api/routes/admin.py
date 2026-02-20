@@ -95,7 +95,7 @@ async def rotate_encryption_key(
         logger.error("Key rotation failed after %d credentials, rolled back: %s", rotated, e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Key rotation failed and was rolled back. {rotated} credentials were NOT persisted. Error: {e}",
+            detail=f"Key rotation failed and was rolled back. {rotated} credentials were NOT persisted.",
         ) from e
 
     return {

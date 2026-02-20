@@ -10,7 +10,7 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.deps import get_session
 from src.core.models import (
     AlertStatus,
+    AuditAction,
+    AuditLog,
     Engagement,
     EvidenceItem,
     GapAnalysisResult,
@@ -25,7 +27,7 @@ from src.core.models import (
     ProcessModel,
     User,
 )
-from src.core.permissions import require_permission
+from src.core.permissions import require_engagement_access, require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +80,7 @@ async def portal_overview(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("portal:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Get high-level overview for client portal."""
     result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
@@ -123,12 +126,18 @@ async def portal_overview(
 @router.get("/{engagement_id}/findings", response_model=PortalFindingsList)
 async def portal_findings(
     engagement_id: UUID,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("portal:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Get gap analysis findings for client review."""
+    count_result = await session.execute(
+        select(func.count(GapAnalysisResult.id)).where(GapAnalysisResult.engagement_id == engagement_id)
+    )
+    total = count_result.scalar() or 0
+
     result = await session.execute(
         select(GapAnalysisResult)
         .where(GapAnalysisResult.engagement_id == engagement_id)
@@ -149,7 +158,7 @@ async def portal_findings(
         for g in gaps
     ]
 
-    return {"items": items, "total": len(items)}
+    return {"items": items, "total": total}
 
 
 @router.get("/{engagement_id}/evidence-status", response_model=PortalEvidenceSummary)
@@ -157,6 +166,7 @@ async def portal_evidence_status(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("portal:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Get evidence status summary for client portal."""
     result = await session.execute(
@@ -197,6 +207,7 @@ async def portal_process(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("portal:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Get process model data for the interactive explorer."""
     result = await session.execute(
@@ -234,6 +245,7 @@ async def portal_upload(
     file: UploadFile = File(...),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("portal:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Upload evidence via client portal.
 
@@ -299,6 +311,15 @@ async def portal_upload(
             source="client_portal",
         )
         session.add(evidence)
+
+        audit = AuditLog(
+            engagement_id=engagement_id,
+            action=AuditAction.PORTAL_UPLOAD,
+            actor=str(user.id),
+            details=f"Portal upload: {file.filename} ({len(content)} bytes, {category})",
+        )
+        session.add(audit)
+
         await session.commit()
         await session.refresh(evidence)
 

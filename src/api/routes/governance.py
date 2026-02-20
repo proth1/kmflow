@@ -14,13 +14,13 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
 from src.core.models import DataCatalogEntry, DataClassification, DataLayer, User
-from src.core.permissions import require_permission
+from src.core.permissions import require_engagement_access, require_permission
 from src.datalake.backend import get_storage_backend
 from src.datalake.silver import SilverLayerWriter
 from src.governance.alerting import check_and_alert_sla_breaches
@@ -143,25 +143,40 @@ class SLACheckResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@router.get("/catalog", response_model=list[CatalogEntryResponse])
+class CatalogEntryList(BaseModel):
+    """Response schema for listing catalog entries."""
+
+    items: list[CatalogEntryResponse]
+    total: int
+
+
+@router.get("/catalog", response_model=CatalogEntryList)
 async def list_catalog_entries(
     engagement_id: uuid.UUID | None = None,
-    limit: int = 100,
-    offset: int = 0,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("governance:read")),
-) -> list[DataCatalogEntry]:
+) -> dict[str, Any]:
     """List all data catalog entries.
 
     Optionally filter by engagement_id. Supports pagination via
     ``limit`` and ``offset`` query parameters.
     """
+    from sqlalchemy import func, select as sa_select
+
     svc = DataCatalogService(session)
-    return await svc.list_entries(
+    items = await svc.list_entries(
         engagement_id=engagement_id,
         limit=limit,
         offset=offset,
     )
+    count_query = sa_select(func.count()).select_from(DataCatalogEntry)
+    if engagement_id is not None:
+        count_query = count_query.where(DataCatalogEntry.engagement_id == engagement_id)
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
+    return {"items": items, "total": total}
 
 
 @router.post(
@@ -318,6 +333,7 @@ async def export_governance(
     engagement_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("governance:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> Response:
     """Export a governance package ZIP for an engagement.
 
@@ -416,6 +432,7 @@ async def trigger_migration(
     dry_run: bool = False,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("governance:write")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> MigrationResult:
     """Trigger bulk migration of evidence data to Delta Lake layers.
 
@@ -451,6 +468,7 @@ async def check_sla_and_create_alerts(
     engagement_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("governance:write")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> list[dict[str, Any]]:
     """Check quality SLAs for all catalog entries and create alerts for breaches.
 
@@ -502,6 +520,7 @@ async def get_governance_health(
     engagement_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("governance:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Return SLA compliance summary for all catalog entries in an engagement.
 

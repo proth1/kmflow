@@ -13,11 +13,11 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
-from src.core.models import PatternAccessRule, PatternCategory, PatternLibraryEntry, User
+from src.core.models import AuditAction, AuditLog, PatternAccessRule, PatternCategory, PatternLibraryEntry, User
 from src.core.permissions import require_permission
 
 logger = logging.getLogger(__name__)
@@ -138,6 +138,15 @@ async def create_pattern(
         tags=payload.tags,
     )
     session.add(pattern)
+
+    audit = AuditLog(
+        engagement_id=payload.source_engagement_id,
+        action=AuditAction.PATTERN_CREATED,
+        actor=str(user.id),
+        details=f"Created pattern: {payload.title} ({payload.category})",
+    )
+    session.add(audit)
+
     await session.commit()
     await session.refresh(pattern)
     return _pattern_to_response(pattern)
@@ -154,15 +163,20 @@ async def list_patterns(
 ) -> dict[str, Any]:
     """List patterns with optional filters."""
     query = select(PatternLibraryEntry)
+    count_query = select(func.count(PatternLibraryEntry.id))
     if category:
         query = query.where(PatternLibraryEntry.category == category)
+        count_query = count_query.where(PatternLibraryEntry.category == category)
     if industry:
         query = query.where(PatternLibraryEntry.industry == industry)
+        count_query = count_query.where(PatternLibraryEntry.industry == industry)
     query = query.offset(offset).limit(limit)
 
     result = await session.execute(query)
     items = [_pattern_to_response(p) for p in result.scalars().all()]
-    return {"items": items, "total": len(items)}
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
+    return {"items": items, "total": total}
 
 
 @router.get("/{pattern_id}", response_model=PatternResponse)
@@ -201,6 +215,14 @@ async def update_pattern(
     if payload.industry is not None:
         pattern.industry = payload.industry
 
+    audit = AuditLog(
+        engagement_id=pattern.source_engagement_id,
+        action=AuditAction.PATTERN_UPDATED,
+        actor=str(user.id),
+        details=f"Updated pattern {pattern_id}: {pattern.title}",
+    )
+    session.add(audit)
+
     await session.commit()
     await session.refresh(pattern)
     return _pattern_to_response(pattern)
@@ -217,6 +239,14 @@ async def delete_pattern(
     pattern = result.scalar_one_or_none()
     if not pattern:
         raise HTTPException(status_code=404, detail=f"Pattern {pattern_id} not found")
+    audit = AuditLog(
+        engagement_id=pattern.source_engagement_id,
+        action=AuditAction.PATTERN_DELETED,
+        actor=str(user.id),
+        details=f"Deleted pattern {pattern_id}: {pattern.title}",
+    )
+    session.add(audit)
+
     await session.delete(pattern)
     await session.commit()
 
@@ -229,15 +259,20 @@ async def search_patterns(
 ) -> dict[str, Any]:
     """Search patterns by text query, industry, and categories."""
     query = select(PatternLibraryEntry)
+    count_query = select(func.count(PatternLibraryEntry.id))
     if payload.industry:
         query = query.where(PatternLibraryEntry.industry == payload.industry)
+        count_query = count_query.where(PatternLibraryEntry.industry == payload.industry)
     if payload.categories:
         query = query.where(PatternLibraryEntry.category.in_(payload.categories))
+        count_query = count_query.where(PatternLibraryEntry.category.in_(payload.categories))
     query = query.limit(payload.limit)
 
     result = await session.execute(query)
     items = [_pattern_to_response(p) for p in result.scalars().all()]
-    return {"items": items, "total": len(items)}
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
+    return {"items": items, "total": total}
 
 
 @router.post("/{pattern_id}/apply", response_model=PatternResponse)

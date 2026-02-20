@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
 from src.core.models import EvidenceItem, User
-from src.core.permissions import require_permission
+from src.core.permissions import require_engagement_access, require_permission
 from src.datalake.lineage import get_lineage_by_id, get_lineage_chain
 
 logger = logging.getLogger(__name__)
@@ -79,6 +79,7 @@ async def get_evidence_lineage(
     evidence_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Get the full lineage chain for an evidence item.
 
@@ -124,6 +125,7 @@ async def get_lineage_record(
     lineage_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> Any:
     """Get a specific lineage record by ID.
 

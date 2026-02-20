@@ -93,10 +93,10 @@ class TestGetDashboard:
 
     @pytest.mark.asyncio
     async def test_dashboard_invalid_id(self, client, mock_db_session):
-        """Returns 400 for invalid engagement ID format."""
+        """Returns 422 for invalid engagement ID format (FastAPI UUID validation)."""
         response = await client.get("/api/v1/dashboard/not-a-uuid")
 
-        assert response.status_code == 400
+        assert response.status_code == 422
 
     @pytest.mark.asyncio
     async def test_dashboard_with_model_and_gaps(self, client, mock_db_session, mock_engagement, engagement_id):

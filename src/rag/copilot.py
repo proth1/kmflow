@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -12,10 +13,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import get_settings
 from src.rag.embeddings import EmbeddingService
-from src.rag.prompts import SYSTEM_PROMPT, build_context_string, get_prompt_template
+from src.rag.prompts import SYSTEM_PROMPT, build_context_string, get_prompt_template, strip_system_prompt_leakage
 from src.rag.retrieval import HybridRetriever, RetrievalResult
 
 logger = logging.getLogger(__name__)
+
+
+def _sanitize_input(text: str) -> str:
+    """Sanitize user input for LLM prompt injection prevention."""
+    # Strip control characters
+    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+    # Truncate to reasonable length
+    return text[:5000]
 
 
 @dataclass
@@ -90,17 +99,20 @@ class CopilotOrchestrator:
 
         # 3. Build prompt from template
         template = get_prompt_template(query_type)
+        sanitized_query = _sanitize_input(query)
         user_prompt = template.format(
             engagement_id=engagement_id,
             context=context_string,
-            query=query,
+            query=sanitized_query,
         )
 
         # 4. Generate response (using Anthropic API if available, else stub)
-        answer = await self._generate_response(
-            system_prompt=SYSTEM_PROMPT,
-            user_prompt=user_prompt,
-            history=history,
+        answer = self._validate_response(
+            await self._generate_response(
+                system_prompt=SYSTEM_PROMPT,
+                user_prompt=user_prompt,
+                history=history,
+            )
         )
 
         # 5. Extract citations from retrieval results
@@ -201,10 +213,11 @@ class CopilotOrchestrator:
         ]
         context_string = build_context_string(contexts)
         template = get_prompt_template(query_type)
+        sanitized_query = _sanitize_input(query)
         user_prompt = template.format(
             engagement_id=engagement_id,
             context=context_string,
-            query=query,
+            query=sanitized_query,
         )
 
         # 3. Stream response
@@ -219,6 +232,8 @@ class CopilotOrchestrator:
                     messages.append({"role": msg["role"], "content": msg["content"]})
             messages.append({"role": "user", "content": user_prompt})
 
+            total_streamed = 0
+            max_response_len = 10000
             async with client.messages.stream(
                 model=self.settings.copilot_model,
                 max_tokens=self.settings.copilot_max_response_tokens,
@@ -226,7 +241,11 @@ class CopilotOrchestrator:
                 messages=messages,  # type: ignore[arg-type]
             ) as stream:
                 async for text_chunk in stream.text_stream:
-                    yield f"data: {text_chunk}\n\n"
+                    if total_streamed >= max_response_len:
+                        break
+                    validated_chunk = self._validate_response(text_chunk)
+                    total_streamed += len(validated_chunk)
+                    yield f"data: {validated_chunk}\n\n"
 
         except ImportError:
             logger.warning("anthropic package not installed, yielding stub response")
@@ -236,6 +255,14 @@ class CopilotOrchestrator:
             yield f"data: {self._stub_response(user_prompt)}\n\n"
 
         yield "data: [DONE]\n\n"
+
+    def _validate_response(self, response: str) -> str:
+        """Validate and sanitize LLM response before returning to user."""
+        max_response_len = 10000
+        if len(response) > max_response_len:
+            response = response[:max_response_len] + "\n\n[Response truncated]"
+        response = strip_system_prompt_leakage(response)
+        return response
 
     def _stub_response(self, prompt: str) -> str:
         """Fallback stub response when Claude API is unavailable."""

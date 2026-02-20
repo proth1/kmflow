@@ -134,6 +134,23 @@ class AuditAction(enum.StrEnum):
     SUGGESTION_ACCEPTED = "suggestion_accepted"
     SUGGESTION_REJECTED = "suggestion_rejected"
     FINANCIAL_ASSUMPTION_CREATED = "financial_assumption_created"
+    # -- Cross-cutting audit actions ---------------------------------------------
+    USER_CREATED = "user_created"
+    USER_UPDATED = "user_updated"
+    MEMBER_ADDED = "member_added"
+    MEMBER_REMOVED = "member_removed"
+    ANNOTATION_CREATED = "annotation_created"
+    ANNOTATION_UPDATED = "annotation_updated"
+    ANNOTATION_DELETED = "annotation_deleted"
+    CONFORMANCE_MODEL_CREATED = "conformance_model_created"
+    CONFORMANCE_CHECK_RUN = "conformance_check_run"
+    METRIC_DEFINED = "metric_defined"
+    METRIC_READING_RECORDED = "metric_reading_recorded"
+    METRICS_SEEDED = "metrics_seeded"
+    PATTERN_UPDATED = "pattern_updated"
+    PATTERN_DELETED = "pattern_deleted"
+    PORTAL_UPLOAD = "portal_upload"
+    BASELINE_CREATED = "baseline_created"
 
 
 # -- Phase 2: Regulatory / Policy / Control enums ----------------------------
@@ -239,7 +256,7 @@ class Engagement(Base):
         Enum(EngagementStatus), default=EngagementStatus.DRAFT, nullable=False
     )
     team: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
-    retention_days: Mapped[int | None] = mapped_column(BigInteger, nullable=True, default=None)
+    retention_days: Mapped[int | None] = mapped_column(BigInteger, nullable=True, default=365)  # 365-day default satisfies data minimization; None = indefinite (not recommended)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -340,6 +357,7 @@ class EvidenceFragment(Base):
     """
 
     __tablename__ = "evidence_fragments"
+    __table_args__ = (Index("ix_evidence_fragments_evidence_id", "evidence_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     evidence_id: Mapped[uuid.UUID] = mapped_column(
@@ -854,6 +872,7 @@ class BestPractice(Base):
     """An industry best practice for TOM alignment benchmarking."""
 
     __tablename__ = "best_practices"
+    __table_args__ = (UniqueConstraint("domain", "industry", "tom_dimension", name="uq_best_practice_domain_industry_dimension"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     domain: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -871,6 +890,7 @@ class Benchmark(Base):
     """An industry benchmark for process performance comparison."""
 
     __tablename__ = "benchmarks"
+    __table_args__ = (UniqueConstraint("metric_name", "industry", name="uq_benchmark_metric_industry"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     metric_name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -906,6 +926,7 @@ class SuccessMetric(Base):
     """Definition of a success metric for engagement measurement."""
 
     __tablename__ = "success_metrics"
+    __table_args__ = (UniqueConstraint("name", "category", name="uq_success_metric_name_category"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -925,10 +946,14 @@ class MetricReading(Base):
     """A recorded value for a success metric at a point in time."""
 
     __tablename__ = "metric_readings"
+    __table_args__ = (
+        Index("ix_metric_readings_metric_id", "metric_id"),
+        Index("ix_metric_readings_engagement_id", "engagement_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    metric_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("success_metrics.id"), nullable=False)
-    engagement_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("engagements.id"), nullable=False)
+    metric_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("success_metrics.id", ondelete="CASCADE"), nullable=False)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False)
     value: Mapped[float] = mapped_column(Float, nullable=False)
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -943,9 +968,10 @@ class Annotation(Base):
     """SME annotation attached to engagement artifacts."""
 
     __tablename__ = "annotations"
+    __table_args__ = (Index("ix_annotations_engagement_id", "engagement_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    engagement_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("engagements.id"), nullable=False)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False)
     target_type: Mapped[str] = mapped_column(String(100), nullable=False)
     target_id: Mapped[str] = mapped_column(String(255), nullable=False)
     author_id: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -1205,6 +1231,7 @@ class MonitoringAlert(Base):
     __tablename__ = "monitoring_alerts"
     __table_args__ = (
         Index("ix_monitoring_alerts_engagement_id", "engagement_id"),
+        Index("ix_monitoring_alerts_monitoring_job_id", "monitoring_job_id"),
         Index("ix_monitoring_alerts_status", "status"),
     )
 
@@ -1271,7 +1298,11 @@ class PatternAccessRule(Base):
     """Controls which engagements can consume patterns."""
 
     __tablename__ = "pattern_access_rules"
-    __table_args__ = (UniqueConstraint("pattern_id", "engagement_id", name="uq_pattern_engagement"),)
+    __table_args__ = (
+        UniqueConstraint("pattern_id", "engagement_id", name="uq_pattern_engagement"),
+        Index("ix_pattern_access_rules_pattern_id", "pattern_id"),
+        Index("ix_pattern_access_rules_engagement_id", "engagement_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     pattern_id: Mapped[uuid.UUID] = mapped_column(
@@ -1481,7 +1512,7 @@ class AlternativeSuggestion(Base):
     disposition_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     llm_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     llm_response: Mapped[str] = mapped_column(Text, nullable=False)
-    created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     scenario: Mapped[SimulationScenario] = relationship("SimulationScenario")
@@ -1715,3 +1746,35 @@ class DataCatalogEntry(Base):
 
     def __repr__(self) -> str:
         return f"<DataCatalogEntry(id={self.id}, name='{self.dataset_name}', layer={self.layer})>"
+
+
+# =============================================================================
+# Audit: HTTP request audit events (no engagement FK)
+# =============================================================================
+
+
+class HttpAuditEvent(Base):
+    """HTTP request audit events for compliance (no engagement FK required).
+
+    Stores all mutating HTTP requests without requiring a valid engagement
+    foreign key, enabling audit logging for requests that are not tied to
+    a specific engagement (e.g. login, user creation).
+    """
+
+    __tablename__ = "http_audit_events"
+    __table_args__ = (
+        Index("ix_http_audit_events_user_id", "user_id"),
+        Index("ix_http_audit_events_created_at", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    method: Mapped[str] = mapped_column(String(10), nullable=False)
+    path: Mapped[str] = mapped_column(String(2048), nullable=False)
+    user_id: Mapped[str] = mapped_column(String(255), nullable=False, default="anonymous")
+    status_code: Mapped[int] = mapped_column(nullable=False)
+    engagement_id: Mapped[str | None] = mapped_column(String(36), nullable=True)  # No FK - just string reference
+    duration_ms: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<HttpAuditEvent(id={self.id}, method='{self.method}', path='{self.path}', user='{self.user_id}')>"

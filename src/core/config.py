@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     postgres_user: str = "kmflow"
     postgres_password: str = "kmflow_dev_password"
     database_url: str | None = None
+    db_pool_size: int = 20
+    db_max_overflow: int = 10
 
     # ── Neo4j ────────────────────────────────────────────────────
     neo4j_uri: str = "bolt://localhost:7687"
@@ -63,13 +65,16 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
     jwt_refresh_token_expire_minutes: int = 10080  # 7 days
-    auth_dev_mode: bool = True  # Allow local dev tokens
+    auth_dev_mode: bool = False  # Allow local dev tokens
     encryption_key: str = "dev-encryption-key-change-in-production"
 
     # ── RAG Copilot (Phase 4) ─────────────────────────────────────
     copilot_model: str = "claude-sonnet-4-5-20250929"
     copilot_max_context_tokens: int = 4000
     copilot_max_response_tokens: int = 2000
+
+    # ── Simulation Suggester ──────────────────────────────────────
+    suggester_model: str = "claude-sonnet-4-5-20250929"
 
     # ── WebSocket Limits (Phase 4) ────────────────────────────────
     ws_max_connections_per_engagement: int = 10
@@ -83,7 +88,12 @@ class Settings(BaseSettings):
     copilot_rate_limit_window: int = 60  # seconds
 
     # ── Data Retention (Phase 5) ──────────────────────────────
+    # TODO(DPA): GDPR Article 28 requires Data Processing Agreements between the
+    # platform operator and each client. Retention periods below must align with
+    # agreed DPA terms. See docs/audit-findings/D2-compliance.md for full context.
     retention_cleanup_enabled: bool = False
+    evidence_retention_days: int = 365  # Default: 1 year; override per DPA terms
+    audit_retention_days: int = 730  # Default: 2 years; regulatory minimum may vary
 
     # ── Encryption Key Rotation (Phase 5) ──────────────────────
     encryption_key_previous: str = ""  # Previous key for rotation
@@ -163,6 +173,20 @@ class Settings(BaseSettings):
             )
         if not self.redis_url:
             self.redis_url = f"redis://{self.redis_host}:{self.redis_port}/0"
+        return self
+
+    @model_validator(mode="after")
+    def reject_default_secrets_in_production(self) -> Settings:
+        """Block startup when default development secrets are present outside development."""
+        if self.app_env == "development":
+            return self
+        has_default_jwt = "dev-secret-key" in self.jwt_secret_key
+        has_default_enc = "dev-encryption-key" in self.encryption_key
+        if has_default_jwt or has_default_enc or self.auth_dev_mode:
+            raise ValueError(
+                "FATAL: Default development secrets detected in non-development environment. "
+                "Set JWT_SECRET_KEY, ENCRYPTION_KEY, and AUTH_DEV_MODE=false"
+            )
         return self
 
 

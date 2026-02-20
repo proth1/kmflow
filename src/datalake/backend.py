@@ -130,6 +130,16 @@ class StorageBackend(Protocol):
 
 
 # ---------------------------------------------------------------------------
+# Shared utilities
+# ---------------------------------------------------------------------------
+
+
+def sanitize_filename(file_name: str) -> str:
+    """Strip directory components from a filename to prevent path injection."""
+    return Path(file_name).name
+
+
+# ---------------------------------------------------------------------------
 # Local filesystem backend (current behavior)
 # ---------------------------------------------------------------------------
 
@@ -152,11 +162,6 @@ class LocalFilesystemBackend:
             raise ValueError(f"Path is outside storage boundary: {path}")
         return resolved
 
-    @staticmethod
-    def _sanitize_filename(file_name: str) -> str:
-        """Strip directory components from filename to prevent path injection."""
-        return Path(file_name).name
-
     async def write(
         self,
         engagement_id: str,
@@ -164,7 +169,7 @@ class LocalFilesystemBackend:
         content: bytes,
         metadata: dict[str, Any] | None = None,
     ) -> StorageMetadata:
-        safe_name = self._sanitize_filename(file_name)
+        safe_name = sanitize_filename(file_name)
         engagement_dir = self._base_path / engagement_id
         engagement_dir.mkdir(parents=True, exist_ok=True)
 
@@ -246,11 +251,6 @@ class DeltaLakeBackend:
             raise ValueError(f"Path is outside storage boundary: {path}")
         return resolved
 
-    @staticmethod
-    def _sanitize_filename(file_name: str) -> str:
-        """Strip directory components from filename to prevent path injection."""
-        return Path(file_name).name
-
     def _ensure_table(self) -> None:
         """Create the Delta table if it doesn't exist (cached after first check)."""
         if self._table_initialized:
@@ -304,7 +304,7 @@ class DeltaLakeBackend:
 
         self._ensure_table()
 
-        safe_name = self._sanitize_filename(file_name)
+        safe_name = sanitize_filename(file_name)
         content_hash = hashlib.sha256(content).hexdigest()
         record_id = uuid.uuid4().hex
         now = datetime.now(UTC).isoformat()

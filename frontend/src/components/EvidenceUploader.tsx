@@ -9,7 +9,10 @@ import { useCallback, useState, useRef } from "react";
 
 const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".xlsx", ".csv", ".png", ".jpg", ".jpeg"];
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE =
+  typeof window === "undefined"
+    ? process.env.API_URL || "http://localhost:8000"
+    : process.env.NEXT_PUBLIC_API_URL || "http://localhost:8002";
 
 interface UploadResult {
   id: string;
@@ -75,19 +78,23 @@ export default function EvidenceUploader({ engagementId, onUploadComplete }: Evi
         newUploads.push({ file, progress: 0, status: "pending" });
       }
 
-      if (newUploads.length > 0) {
-        setUploads((prev) => [...prev, ...newUploads]);
-        // Start uploading each file
-        newUploads.forEach((upload, idx) => {
-          const uploadIdx = uploads.length + idx;
-          uploadFile(upload.file, uploadIdx);
+      if (newUploads.length === 0) return;
+
+      // Use functional updater so we read actual current length rather than
+      // the stale closure value, avoiding index bugs when files are added
+      // in quick succession or when uploads already exist.
+      setUploads((prev) => {
+        const startIdx = prev.length;
+        newUploads.forEach((upload, i) => {
+          uploadFile(upload.file, startIdx + i, engagementId);
         });
-      }
+        return [...prev, ...newUploads];
+      });
     },
-    [uploads.length, engagementId],
+    [engagementId],
   );
 
-  const uploadFile = async (file: File, index: number) => {
+  const uploadFile = async (file: File, index: number, eid: string) => {
     setUploads((prev) =>
       prev.map((u, i) => (i === index ? { ...u, status: "uploading", progress: 10 } : u)),
     );
@@ -95,8 +102,13 @@ export default function EvidenceUploader({ engagementId, onUploadComplete }: Evi
     const formData = new FormData();
     formData.append("file", file);
 
+    // Mirror the auth strategy from api.ts: cookie via credentials + optional
+    // legacy localStorage token for backward compatibility.
+    const token = typeof window !== "undefined" ? localStorage.getItem("kmflow_token") : null;
+    const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
     try {
-      // Simulate progress updates
+      // Simulate progress while the request is in-flight
       const progressInterval = setInterval(() => {
         setUploads((prev) =>
           prev.map((u, i) =>
@@ -108,8 +120,8 @@ export default function EvidenceUploader({ engagementId, onUploadComplete }: Evi
       }, 300);
 
       const response = await fetch(
-        `${API_BASE}/api/v1/portal/${engagementId}/upload`,
-        { method: "POST", body: formData },
+        `${API_BASE}/api/v1/portal/${eid}/upload`,
+        { method: "POST", headers, credentials: "include", body: formData },
       );
 
       clearInterval(progressInterval);
@@ -185,6 +197,7 @@ export default function EvidenceUploader({ engagementId, onUploadComplete }: Evi
           multiple
           accept={ALLOWED_EXTENSIONS.join(",")}
           onChange={(e) => e.target.files && addFiles(e.target.files)}
+          aria-label="Upload evidence files"
           className="hidden"
         />
       </div>

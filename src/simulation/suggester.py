@@ -8,16 +8,15 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import re
 from typing import Any
 from uuid import UUID
 
-import httpx
+import anthropic
+
+from src.core.config import Settings, get_settings
 
 logger = logging.getLogger(__name__)
-
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
 # Input sanitisation limits
 _MAX_NAME_LEN = 200
@@ -35,6 +34,9 @@ def _sanitize_text(text: str, max_len: int) -> str:
 
 class AlternativeSuggesterService:
     """Generates alternative scenario suggestions using Claude."""
+
+    def __init__(self, settings: Settings | None = None) -> None:
+        self._settings = settings or get_settings()
 
     async def generate_suggestions(
         self,
@@ -116,32 +118,26 @@ Surface unknowns and areas where evidence is insufficient for confident recommen
         return prompt
 
     async def _call_llm(self, prompt: str) -> str:
-        """Call Claude API for suggestions.
+        """Call LLM using Anthropic SDK.
 
-        Uses a 15-second timeout to avoid holding the async worker too long.
-        Raises httpx.TimeoutException on timeout (caught by generate_suggestions
+        The SDK reads ANTHROPIC_API_KEY from the environment automatically.
+        Raises anthropic.APIError on failure (caught by generate_suggestions
         which returns a fallback).
         """
-        if not ANTHROPIC_API_KEY:
-            raise ValueError("ANTHROPIC_API_KEY not configured")
-
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            response = await client.post(
-                "https://api.anthropic.com/v1/messages",
-                headers={
-                    "x-api-key": ANTHROPIC_API_KEY,
-                    "anthropic-version": "2023-06-01",
-                    "content-type": "application/json",
-                },
-                json={
-                    "model": "claude-sonnet-4-20250514",
-                    "max_tokens": 2000,
-                    "messages": [{"role": "user", "content": prompt}],
-                },
+        try:
+            client = anthropic.AsyncAnthropic()  # Uses ANTHROPIC_API_KEY env var
+            model = self._settings.suggester_model
+            response = await client.messages.create(
+                model=model,
+                max_tokens=2000,
+                messages=[{"role": "user", "content": prompt}],
             )
-            response.raise_for_status()
-            data = response.json()
-            return data["content"][0]["text"]
+            return response.content[0].text
+        except Exception as e:
+            logger.error("LLM call failed: %s", e)
+            raise
+
+    _MAX_SUGGESTION_LEN = 2000
 
     def _parse_response(self, llm_response: str, prompt: str) -> list[dict[str, Any]]:
         """Parse LLM response into structured suggestions."""
@@ -154,10 +150,16 @@ Surface unknowns and areas where evidence is insufficient for confident recommen
                 parsed = json.loads(llm_response[start:end])
                 results = []
                 for item in parsed:
+                    suggestion_text = _sanitize_text(
+                        item.get("suggestion_text", ""), self._MAX_SUGGESTION_LEN
+                    )
+                    rationale = _sanitize_text(
+                        item.get("rationale", ""), self._MAX_SUGGESTION_LEN
+                    )
                     results.append(
                         {
-                            "suggestion_text": item.get("suggestion_text", ""),
-                            "rationale": item.get("rationale", ""),
+                            "suggestion_text": suggestion_text,
+                            "rationale": rationale,
                             "governance_flags": item.get("governance_flags"),
                             "evidence_gaps": item.get("evidence_gaps"),
                             "llm_prompt": prompt,
@@ -171,7 +173,7 @@ Surface unknowns and areas where evidence is insufficient for confident recommen
         # Fallback: treat entire response as single suggestion
         return [
             {
-                "suggestion_text": llm_response[:500],
+                "suggestion_text": _sanitize_text(llm_response, 500),
                 "rationale": "Auto-parsed from unstructured LLM response",
                 "governance_flags": {"parse_warning": "Response was not structured JSON"},
                 "evidence_gaps": None,

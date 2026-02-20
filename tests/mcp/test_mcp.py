@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import uuid
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -91,23 +93,32 @@ class TestMCPAuthAsync:
 class TestMCPServerRoutes:
     """Test suite for MCP server routes via FastAPI test client."""
 
-    async def test_get_mcp_info(self, client) -> None:
-        """GET /mcp/info should return server info (200)."""
-        response = await client.get("/mcp/info")
-        assert response.status_code == 200
-        data = response.json()
-        assert "name" in data
-        assert data["name"] == "kmflow"
-        assert "version" in data
-        assert "tools" in data
+    @pytest.fixture(autouse=True)
+    def _setup_mcp_key(self, test_app: Any, mock_db_session: AsyncMock) -> None:
+        """Configure mock DB to return a valid MCPAPIKey for test bearer tokens."""
+        mock_key = MagicMock()
+        mock_key.key_id = "kmflow_testkey"
+        mock_key.key_hash = hashlib.sha256(b"secretvalue").hexdigest()
+        mock_key.is_active = True
+        mock_key.user_id = uuid.uuid4()
+        mock_key.client_name = "test-client"
+        mock_key.expires_at = None
 
-    async def test_get_mcp_tools(self, client) -> None:
-        """GET /mcp/tools should return tool list (200)."""
+        # Make execute return a result that finds this key
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = mock_key
+        mock_result.scalars.return_value.all.return_value = []
+        mock_db_session.execute = AsyncMock(return_value=mock_result)
+
+    async def test_get_mcp_info_no_auth(self, client) -> None:
+        """GET /mcp/info without auth should return 401."""
+        response = await client.get("/mcp/info")
+        assert response.status_code == 401
+
+    async def test_get_mcp_tools_no_auth(self, client) -> None:
+        """GET /mcp/tools without auth should return 401."""
         response = await client.get("/mcp/tools")
-        assert response.status_code == 200
-        tools = response.json()
-        assert isinstance(tools, list)
-        assert len(tools) > 0
+        assert response.status_code == 401
 
     async def test_post_tools_call_no_auth(self, client) -> None:
         """POST /mcp/tools/call without auth should return 401."""

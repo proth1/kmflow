@@ -13,9 +13,56 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.models import AuditAction, AuditLog
+from src.core.models import AuditAction, AuditLog, HttpAuditEvent
 
 logger = logging.getLogger(__name__)
+
+
+async def log_audit_event_async(
+    method: str,
+    path: str,
+    user_id: str,
+    status_code: int,
+    engagement_id: str | None = None,
+    duration_ms: float = 0.0,
+    session: AsyncSession | None = None,
+) -> None:
+    """Persist an HTTP audit event for compliance.
+
+    Always writes a structured log record for SIEM ingestion.
+    When a database session is provided, also persists the event to the
+    http_audit_events table (no engagement FK constraint).
+
+    Args:
+        method: HTTP method (POST, PUT, PATCH, DELETE, etc.).
+        path: Request URL path.
+        user_id: Authenticated user identifier, or "anonymous".
+        status_code: HTTP response status code.
+        engagement_id: Engagement UUID string extracted from the path, or None.
+        duration_ms: Request processing time in milliseconds.
+        session: Optional database session for persistence.
+    """
+    logger.info(
+        "AUDIT_DB method=%s path=%s user=%s status=%d duration_ms=%.2f engagement=%s",
+        method,
+        path,
+        user_id,
+        status_code,
+        duration_ms,
+        engagement_id or "none",
+    )
+
+    if session is not None:
+        event = HttpAuditEvent(
+            method=method,
+            path=path,
+            user_id=user_id,
+            status_code=status_code,
+            engagement_id=engagement_id,
+            duration_ms=duration_ms,
+        )
+        session.add(event)
+        await session.commit()
 
 
 async def log_security_event(
@@ -57,11 +104,14 @@ async def log_security_event(
     detail_str = json.dumps(detail_parts) if detail_parts else None
 
     # The AuditLog model requires engagement_id (non-nullable FK).
-    # For events not tied to an engagement, we log to the application
-    # logger instead of the database.
+    # For events not tied to an engagement (e.g. LOGIN, PERMISSION_DENIED at
+    # the auth layer), we emit a WARNING-level structured log record so the
+    # event is never silently lost and SIEM tooling will capture it.
+    # TODO: Add a security_events table without an engagement FK so these
+    # events can be persisted to the database instead of the log stream.
     if engagement_id is None:
-        logger.info(
-            "Security event: action=%s actor=%s details=%s",
+        logger.warning(
+            "SECURITY_EVENT action=%s actor=%s details=%s",
             action.value,
             actor,
             detail_str,
@@ -130,3 +180,16 @@ async def log_data_access(
         resource=resource,
         ip_address=ip_address,
     )
+
+
+async def log_audit(
+    session: AsyncSession,
+    engagement_id: UUID,
+    action: AuditAction,
+    details: str | None = None,
+    *,
+    actor: str = "system",
+) -> None:
+    """Create an audit log entry for a business action."""
+    audit = AuditLog(engagement_id=engagement_id, action=action, actor=actor, details=details)
+    session.add(audit)

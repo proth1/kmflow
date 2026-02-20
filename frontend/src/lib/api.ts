@@ -3,10 +3,6 @@
  *
  * Wraps fetch with the base URL from environment variables
  * and provides typed response handling.
- *
- * TODO: Split into domain modules when this file exceeds 1500 lines.
- * Suggested modules: api/evidence.ts, api/governance.ts, api/monitoring.ts,
- * api/reports.ts, api/admin.ts
  */
 
 const API_BASE_URL =
@@ -15,7 +11,12 @@ const API_BASE_URL =
     : process.env.NEXT_PUBLIC_API_URL || "http://localhost:8002";
 
 /**
- * Get the current auth token from localStorage (browser only).
+ * DEPRECATED: Reading JWT from localStorage is a transitional fallback.
+ * The preferred auth mechanism is an HttpOnly cookie set by the server on
+ * login. The cookie is transmitted automatically via `credentials: 'include'`
+ * on every fetch. Do NOT write new tokens to localStorage; the backend should
+ * set the cookie instead. This function will be removed once all clients have
+ * migrated off the localStorage path (tracked in C2-01).
  */
 function getAuthToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -23,10 +24,16 @@ function getAuthToken(): string | null {
 }
 
 /**
- * Build common headers including Authorization if a token is available.
+ * Build common headers. If a legacy localStorage token is present it is
+ * forwarded as an Authorization header for backward compatibility. New auth
+ * flows rely on the HttpOnly cookie sent automatically via
+ * `credentials: 'include'` — no Authorization header is required.
  */
 function authHeaders(extra?: Record<string, string>): Record<string, string> {
   const headers: Record<string, string> = { ...extra };
+  // Transitional fallback: honour a token already in storage but never write
+  // a new one here. Remove this block once the HttpOnly cookie migration is
+  // complete on all backend auth routes (C2-01).
   const token = getAuthToken();
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
@@ -161,6 +168,7 @@ export interface GapData {
 export async function fetchHealth(): Promise<HealthResponse> {
   const response = await fetch(`${API_BASE_URL}/health`, {
     headers: authHeaders(),
+    credentials: "include",
     cache: "no-store",
   });
 
@@ -177,6 +185,7 @@ export async function fetchHealth(): Promise<HealthResponse> {
 export async function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: authHeaders(),
+    credentials: "include",
     signal,
   });
 
@@ -195,6 +204,7 @@ export async function apiPost<T>(path: string, body: unknown, signal?: AbortSign
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
     headers: authHeaders({ "Content-Type": "application/json" }),
+    credentials: "include",
     body: JSON.stringify(body),
     signal,
   });
@@ -974,7 +984,7 @@ export async function uploadPortalEvidence(
   formData.append("file", file);
   const res = await fetch(
     `${API_BASE_URL}/api/v1/portal/${engagementId}/upload`,
-    { method: "POST", headers: authHeaders(), body: formData },
+    { method: "POST", headers: authHeaders(), credentials: "include", body: formData },
   );
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: "Upload failed" }));
@@ -1431,6 +1441,7 @@ export async function apiPut<T>(path: string, body: unknown, signal?: AbortSigna
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "PUT",
     headers: authHeaders({ "Content-Type": "application/json" }),
+    credentials: "include",
     body: JSON.stringify(body),
     signal,
   });
@@ -1445,6 +1456,7 @@ export async function apiPatch<T>(path: string, body: unknown, signal?: AbortSig
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "PATCH",
     headers: authHeaders({ "Content-Type": "application/json" }),
+    credentials: "include",
     body: JSON.stringify(body),
     signal,
   });
@@ -1459,6 +1471,7 @@ export async function apiDelete(path: string, signal?: AbortSignal): Promise<voi
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "DELETE",
     headers: authHeaders(),
+    credentials: "include",
     signal,
   });
   if (!response.ok) {
