@@ -77,6 +77,8 @@ class ArisParser(BaseParser):
             return ParseResult(error=f"Failed to parse ARIS file: {e}")
 
         root = tree.getroot()
+        if root is None:
+            return ParseResult(error="Empty XML document")
         fragments: list[ParsedFragment] = []
 
         # Extract objects (ObjDef)

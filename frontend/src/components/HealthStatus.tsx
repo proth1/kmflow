@@ -58,9 +58,9 @@ export default function HealthStatus() {
 
   if (error) {
     return (
-      <div className="flex items-center gap-2 text-sm text-red-600" data-testid="health-error">
-        <span className="w-3 h-3 rounded-full bg-red-500 shrink-0" />
-        Backend unreachable: {error}
+      <div className="flex items-center gap-2 text-sm text-[hsl(var(--muted-foreground))]" data-testid="health-error">
+        <span className="w-3 h-3 rounded-full shrink-0 bg-gray-400" />
+        Backend services not connected
       </div>
     );
   }

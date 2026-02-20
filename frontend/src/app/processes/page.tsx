@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   fetchProcessDefinitions,
   fetchProcessInstances,
@@ -37,8 +37,9 @@ export default function ProcessesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState<string | null>(null);
+  const isInitialLoad = useRef(true);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (silent = false) => {
     setLoading(true);
     setError(null);
     try {
@@ -51,25 +52,27 @@ export default function ProcessesPage() {
       setInstances(insts);
       setTasks(tks);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to connect to Camunda engine",
-      );
+      if (!silent) {
+        setError(
+          err instanceof Error ? err.message : "Failed to connect to Camunda engine",
+        );
+      }
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadData();
+    const silent = isInitialLoad.current;
+    isInitialLoad.current = false;
+    loadData(silent);
   }, [loadData]);
 
   async function handleStart(key: string) {
     setStarting(key);
     try {
       await startProcess(key);
-      await loadData();
+      await loadData(false);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to start process",
@@ -108,7 +111,7 @@ export default function ProcessesPage() {
                   variant="outline"
                   size="sm"
                   className="mt-3"
-                  onClick={loadData}
+                  onClick={() => loadData(false)}
                 >
                   <RefreshCw className="h-3 w-3 mr-1.5" />
                   Retry
@@ -130,7 +133,7 @@ export default function ProcessesPage() {
             Deploy and manage BPMN process models via CIB7
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={loadData}>
+        <Button variant="outline" size="sm" onClick={() => loadData(false)}>
           <RefreshCw className="h-3 w-3 mr-1.5" />
           Refresh
         </Button>

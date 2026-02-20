@@ -32,7 +32,7 @@ dependencies = [
     "pyyaml>=6.0,<7.0",
     "python-dotenv>=1.0.1,<2.0",
     "httpx>=0.28.0,<1.0",
-    "python-multipart>=0.0.18,<1.0",
+    "python-multipart>=0.0.22,<1.0",
     "aiofiles>=24.1.0,<25.0",
     "slowapi>=0.1.9,<1.0",
     "python-magic>=0.4.27,<1.0",
@@ -63,6 +63,9 @@ dev = [
     # Type stubs
     "types-redis>=4.6.0",
     "types-PyYAML>=6.0.0",
+    "types-defusedxml>=0.7.0",
+    "types-openpyxl>=3.1.0",
+    "lxml-stubs>=0.5.0",
 ]
 ml = [
     # Semantic similarity (optional, for enhanced embeddings)
@@ -142,5 +145,14 @@ module = [
     "anthropic.*",
     "cv2.*",
     "aiofiles.*",
+    "deltalake.*",
+    "pyarrow.*",
+    "databricks.*",
+    "weasyprint.*",
+    "magic.*",
+    "pdfplumber.*",
+    "python_docx.*",
+    "docx.*",
+    "slowapi.*",
 ]
 ignore_missing_imports = true

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   fetchConnectorTypes,
   fetchConnections,
@@ -57,8 +57,9 @@ export default function IntegrationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const isInitialLoad = useRef(true);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (silent = false) => {
     setLoading(true);
     setError(null);
     try {
@@ -69,16 +70,20 @@ export default function IntegrationsPage() {
       setConnectorTypes(types);
       setConnections(conns.items);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load integration data",
-      );
+      if (!silent) {
+        setError(
+          err instanceof Error ? err.message : "Failed to load integration data",
+        );
+      }
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadData();
+    const silent = isInitialLoad.current;
+    isInitialLoad.current = false;
+    loadData(silent);
   }, [loadData]);
 
   async function handleTest(connId: string) {
@@ -88,7 +93,7 @@ export default function IntegrationsPage() {
       if (!result.success) {
         setError(`Test failed: ${result.message}`);
       }
-      await loadData();
+      await loadData(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Test failed");
     } finally {
@@ -103,7 +108,7 @@ export default function IntegrationsPage() {
       if (result.errors.length > 0) {
         setError(`Sync errors: ${result.errors.join(", ")}`);
       }
-      await loadData();
+      await loadData(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sync failed");
     } finally {
@@ -132,7 +137,7 @@ export default function IntegrationsPage() {
             Manage external system connectors and data sync
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={loadData}>
+        <Button variant="outline" size="sm" onClick={() => loadData(false)}>
           <RefreshCw className="h-3 w-3 mr-1.5" />
           Refresh
         </Button>

@@ -50,7 +50,7 @@ describe("HealthStatus", () => {
       expect(screen.getByTestId("health-error")).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/Backend unreachable/)).toBeInTheDocument();
+    expect(screen.getByText(/Backend services not connected/)).toBeInTheDocument();
   });
 
   it("displays degraded status", async () => {
