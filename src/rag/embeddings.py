@@ -18,6 +18,26 @@ logger = logging.getLogger(__name__)
 # Default embedding dimension (matches pgvector column on EvidenceFragment)
 EMBEDDING_DIMENSION = 768
 
+# Module-level singleton instances keyed by (model_name, dimension).
+# Avoids reloading the SentenceTransformer model for each call site that
+# constructs EmbeddingService() independently.
+_instances: dict[tuple[str, int], "EmbeddingService"] = {}
+
+
+def get_embedding_service(
+    model_name: str = "all-mpnet-base-v2",
+    dimension: int = EMBEDDING_DIMENSION,
+) -> "EmbeddingService":
+    """Return a cached EmbeddingService singleton for the given config.
+
+    Call sites that previously did ``EmbeddingService()`` should use this
+    factory instead so the underlying SentenceTransformer is loaded only once.
+    """
+    key = (model_name, dimension)
+    if key not in _instances:
+        _instances[key] = EmbeddingService(model_name=model_name, dimension=dimension)
+    return _instances[key]
+
 
 class EmbeddingService:
     """Unified embedding service for RAG queries and document fragments.

@@ -7,6 +7,7 @@ including evidence coverage, confidence distribution, and recent activity.
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 from uuid import UUID
 
@@ -34,6 +35,29 @@ from src.core.permissions import require_engagement_access, require_permission
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/dashboard", tags=["dashboard"])
+
+# Simple in-memory TTL cache for dashboard queries.
+# Dashboard data is aggregated and relatively expensive to recompute;
+# 30-second staleness is acceptable for monitoring use cases.
+_DASHBOARD_CACHE_TTL = 30  # seconds
+_dashboard_cache: dict[str, tuple[float, Any]] = {}
+
+
+def _cache_get(key: str) -> Any | None:
+    """Return cached value if present and not expired, else None."""
+    entry = _dashboard_cache.get(key)
+    if entry is None:
+        return None
+    ts, value = entry
+    if time.monotonic() - ts > _DASHBOARD_CACHE_TTL:
+        del _dashboard_cache[key]
+        return None
+    return value
+
+
+def _cache_set(key: str, value: Any) -> None:
+    """Store value in cache with current timestamp."""
+    _dashboard_cache[key] = (time.monotonic(), value)
 
 
 # -- Response Schemas ----------------------------------------------------------
@@ -157,6 +181,11 @@ async def get_dashboard(
     """
     eng_uuid = engagement_id
 
+    cache_key = f"dashboard:{eng_uuid}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     # Verify engagement exists
     eng_result = await session.execute(select(Engagement).where(Engagement.id == eng_uuid))
     engagement = eng_result.scalar_one_or_none()
@@ -242,7 +271,7 @@ async def get_dashboard(
         for log in audit_logs
     ]
 
-    return {
+    result = {
         "engagement_id": str(eng_uuid),
         "engagement_name": engagement.name,
         "evidence_coverage_pct": evidence_coverage_pct,
@@ -252,6 +281,8 @@ async def get_dashboard(
         "process_model_count": process_model_count,
         "recent_activity": recent_activity,
     }
+    _cache_set(cache_key, result)
+    return result
 
 
 @router.get(
@@ -270,6 +301,11 @@ async def get_evidence_coverage(
     per evidence category.
     """
     eng_uuid = engagement_id
+
+    cache_key = f"evidence_coverage:{eng_uuid}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
 
     # Verify engagement exists
     eng_result = await session.execute(select(Engagement.id).where(Engagement.id == eng_uuid))
@@ -312,11 +348,13 @@ async def get_evidence_coverage(
 
     overall = round(total_received / total_requested * 100, 1) if total_requested > 0 else 0.0
 
-    return {
+    result = {
         "engagement_id": str(eng_uuid),
         "overall_coverage_pct": overall,
         "categories": categories,
     }
+    _cache_set(cache_key, result)
+    return result
 
 
 @router.get(
@@ -335,6 +373,11 @@ async def get_confidence_distribution(
     and buckets elements by confidence level.
     """
     eng_uuid = engagement_id
+
+    cache_key = f"confidence_distribution:{eng_uuid}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
 
     # Verify engagement exists
     eng_result = await session.execute(select(Engagement.id).where(Engagement.id == eng_uuid))
@@ -358,7 +401,7 @@ async def get_confidence_distribution(
 
     if not latest_model:
         # No completed model yet -- return empty distribution
-        return {
+        empty_result = {
             "engagement_id": str(eng_uuid),
             "model_id": None,
             "overall_confidence": 0.0,
@@ -367,6 +410,8 @@ async def get_confidence_distribution(
             ],
             "weakest_elements": [],
         }
+        _cache_set(cache_key, empty_result)
+        return empty_result
 
     # Get all elements for this model
     elements_result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == latest_model.id))
@@ -395,10 +440,12 @@ async def get_confidence_distribution(
         for e in sorted_elements[:5]
     ]
 
-    return {
+    result = {
         "engagement_id": str(eng_uuid),
         "model_id": str(latest_model.id),
         "overall_confidence": latest_model.confidence_score,
         "distribution": distribution,
         "weakest_elements": weakest,
     }
+    _cache_set(cache_key, result)
+    return result

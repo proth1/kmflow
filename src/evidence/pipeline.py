@@ -75,9 +75,16 @@ ALLOWED_MIME_TYPES = frozenset(
         "application/zip",
         "application/gzip",
         # BPMN
-        "application/octet-stream",  # .bpmn files often get this
+        # application/octet-stream is intentionally excluded from the allowlist.
+        # .bpmn files that arrive as octet-stream are re-validated below by
+        # extension in validate_file_type() before being accepted.
     }
 )
+
+
+# Extensions that may legitimately arrive as application/octet-stream.
+# For any other octet-stream upload the file is rejected.
+_OCTET_STREAM_ALLOWED_EXTENSIONS = frozenset({".bpmn", ".bpmn2", ".xes", ".vsdx"})
 
 
 def validate_file_type(file_content: bytes, file_name: str, mime_type: str | None = None) -> str:
@@ -104,6 +111,19 @@ def validate_file_type(file_content: bytes, file_name: str, mime_type: str | Non
         logger.debug("python-magic not available, using client-provided MIME type")
     except Exception:
         logger.debug("Magic detection failed, using client-provided MIME type")
+
+    if detected_type == "application/octet-stream":
+        # Require secondary extension check: only known binary evidence formats
+        # are permitted to arrive with a generic octet-stream content type.
+        from pathlib import Path
+
+        ext = Path(file_name).suffix.lower()
+        if ext not in _OCTET_STREAM_ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=415,
+                detail="File type 'application/octet-stream' is not allowed for this extension. Upload a supported document, image, or data file.",
+            )
+        return detected_type
 
     if detected_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(

@@ -71,6 +71,9 @@ class Settings(BaseSettings):
     copilot_max_context_tokens: int = 4000
     copilot_max_response_tokens: int = 2000
 
+    # ── Simulation Suggester ──────────────────────────────────────
+    suggester_model: str = "claude-sonnet-4-5-20250929"
+
     # ── WebSocket Limits (Phase 4) ────────────────────────────────
     ws_max_connections_per_engagement: int = 10
 

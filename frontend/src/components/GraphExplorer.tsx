@@ -172,9 +172,12 @@ export default function GraphExplorer({ nodes, edges }: GraphExplorerProps) {
     <div className="flex h-full gap-4">
       <div className="flex flex-1 flex-col">
         <div className="mb-3 flex items-center gap-3">
+          <label htmlFor="graph-layout" className="sr-only">Graph layout</label>
           <select
+            id="graph-layout"
             value={layout}
             onChange={(e) => setLayout(e.target.value as LayoutName)}
+            aria-label="Graph layout"
             className="rounded-md border border-gray-300 px-3 py-1.5 text-sm"
           >
             <option value="cose">Force-directed</option>
@@ -182,11 +185,14 @@ export default function GraphExplorer({ nodes, edges }: GraphExplorerProps) {
             <option value="circle">Circular</option>
             <option value="grid">Grid</option>
           </select>
+          <label htmlFor="graph-search" className="sr-only">Search nodes</label>
           <input
+            id="graph-search"
             type="text"
             placeholder="Search nodes..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search nodes"
             className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm"
           />
         </div>
@@ -196,6 +202,8 @@ export default function GraphExplorer({ nodes, edges }: GraphExplorerProps) {
             <button
               key={type}
               onClick={() => toggleType(type)}
+              aria-label={`${activeTypes.has(type) ? "Hide" : "Show"} ${type} nodes`}
+              aria-pressed={activeTypes.has(type)}
               className={`rounded-full px-3 py-1 text-xs font-medium ${
                 activeTypes.has(type)
                   ? "text-white"
@@ -223,6 +231,7 @@ export default function GraphExplorer({ nodes, edges }: GraphExplorerProps) {
             </h3>
             <button
               onClick={() => setSelectedNode(null)}
+              aria-label="Close node details"
               className="text-gray-400 hover:text-gray-600"
             >
               x

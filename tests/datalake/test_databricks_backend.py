@@ -18,6 +18,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from src.datalake.backend import sanitize_filename
 from src.datalake.databricks_backend import DatabricksBackend
 
 # ---------------------------------------------------------------------------
@@ -94,9 +95,9 @@ class TestPathValidation:
             backend._validate_volume_path("/Volumes/kmflow/evidence/raw_evidence/../secret/file")
 
     def test_sanitize_filename_strips_dirs(self) -> None:
-        assert DatabricksBackend._sanitize_filename("../../../etc/passwd") == "passwd"
-        assert DatabricksBackend._sanitize_filename("subdir/file.pdf") == "file.pdf"
-        assert DatabricksBackend._sanitize_filename("normal.xlsx") == "normal.xlsx"
+        assert sanitize_filename("../../../etc/passwd") == "passwd"
+        assert sanitize_filename("subdir/file.pdf") == "file.pdf"
+        assert sanitize_filename("normal.xlsx") == "normal.xlsx"
 
     def test_sanitize_path_component(self) -> None:
         assert DatabricksBackend._sanitize_path_component("eng-123") == "eng-123"

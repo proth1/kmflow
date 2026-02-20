@@ -14,7 +14,7 @@ COPY alembic/ ./alembic/
 COPY alembic.ini ./
 
 # Install Python dependencies into a prefix so we can copy them cleanly
-RUN pip install --no-cache-dir --prefix=/install ".[dev]"
+RUN pip install --no-cache-dir --prefix=/install "."
 
 # ── Runtime stage ─────────────────────────────────────────────
 FROM python:3.12-slim AS runtime

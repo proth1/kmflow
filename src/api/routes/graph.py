@@ -195,11 +195,12 @@ async def execute_query(
     Only read operations (MATCH, RETURN) are allowed. Restricted to platform admins.
     Parameters should be used for all variable values to prevent injection.
     """
-    # Write-protection: reject mutations (expanded blocklist)
+    # Write-protection: reject mutations and APOC procedure calls.
+    # APOC procedures can bypass read-only intent (e.g., apoc.do.*, apoc.periodic.*).
     query_upper = payload.query.upper().strip()
     write_keywords = [
         "CREATE", "DELETE", "DETACH", "SET", "REMOVE", "MERGE", "DROP",
-        "CALL", "LOAD", "FOREACH",
+        "CALL", "LOAD", "FOREACH", "APOC",
     ]
     for keyword in write_keywords:
         if keyword in query_upper:
@@ -283,7 +284,7 @@ async def semantic_search(
             detail="top_k must be between 1 and 100",
         )
 
-    embedding_service = get_embedding_service()
+    embedding_service = EmbeddingService()
     eng_id = str(engagement_id) if engagement_id else None
 
     results = await embedding_service.search_by_text(

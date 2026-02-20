@@ -197,6 +197,7 @@ export default function EvidenceUploader({ engagementId, onUploadComplete }: Evi
           multiple
           accept={ALLOWED_EXTENSIONS.join(",")}
           onChange={(e) => e.target.files && addFiles(e.target.files)}
+          aria-label="Upload evidence files"
           className="hidden"
         />
       </div>

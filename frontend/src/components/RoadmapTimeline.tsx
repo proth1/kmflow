@@ -88,6 +88,8 @@ export default function RoadmapTimeline({
                 onClick={() =>
                   setExpandedPhase(isExpanded ? null : phase.phase_number)
                 }
+                aria-label={`${isExpanded ? "Collapse" : "Expand"} Phase ${phase.phase_number}: ${phase.name}`}
+                aria-expanded={isExpanded}
                 className={cn(
                   "w-full flex items-center gap-4 p-4 px-5 border-none cursor-pointer text-left border-l-4",
                   colors.bg,

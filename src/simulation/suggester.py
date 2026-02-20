@@ -14,6 +14,8 @@ from uuid import UUID
 
 import anthropic
 
+from src.core.config import Settings, get_settings
+
 logger = logging.getLogger(__name__)
 
 # Input sanitisation limits
@@ -32,6 +34,9 @@ def _sanitize_text(text: str, max_len: int) -> str:
 
 class AlternativeSuggesterService:
     """Generates alternative scenario suggestions using Claude."""
+
+    def __init__(self, settings: Settings | None = None) -> None:
+        self._settings = settings or get_settings()
 
     async def generate_suggestions(
         self,
@@ -121,11 +126,7 @@ Surface unknowns and areas where evidence is insufficient for confident recommen
         """
         try:
             client = anthropic.AsyncAnthropic()  # Uses ANTHROPIC_API_KEY env var
-            model = (
-                self._settings.copilot_model
-                if hasattr(self, "_settings")
-                else "claude-sonnet-4-5-20250929"
-            )
+            model = self._settings.suggester_model
             response = await client.messages.create(
                 model=model,
                 max_tokens=2000,

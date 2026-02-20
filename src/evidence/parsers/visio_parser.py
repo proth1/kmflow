@@ -7,6 +7,7 @@ A .vsdx file is a ZIP archive containing XML files.
 from __future__ import annotations
 
 import logging
+import os
 import zipfile
 from pathlib import Path
 
@@ -66,8 +67,13 @@ class VisioParser(BaseParser):
                 connectors_found = 0
 
                 for page_file in sorted(page_files):
-                    # Validate zip entry path (prevent zip-slip)
-                    if '..' in page_file or page_file.startswith('/'):
+                    # Validate zip entry path (prevent zip-slip).
+                    # Normalize the path and confirm it does not escape the
+                    # archive root — reject any entry that contains ".." after
+                    # normalization or that is an absolute path.
+                    normalized = os.path.normpath(page_file)
+                    if os.path.isabs(normalized) or normalized.startswith(".."):
+                        logger.warning("Zip-slip attempt rejected for entry: %s", page_file)
                         continue
                     page_num = self._extract_page_number(page_file)
                     xml_content = zf.read(page_file)

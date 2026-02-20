@@ -15,6 +15,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.rag.embeddings import EMBEDDING_DIMENSION
 from src.rag.embeddings import EmbeddingService as _RagEmbeddingService
+from src.rag.embeddings import get_embedding_service as _get_rag_embedding_service
+
+# Re-export for callers that import from this module
+__all__ = ["EmbeddingService", "cosine_similarity", "get_embedding_service"]
+
+
+def get_embedding_service(dimension: int = EMBEDDING_DIMENSION) -> "EmbeddingService":
+    """Return a cached EmbeddingService singleton for the given dimension."""
+    key = ("semantic", dimension)
+    if key not in _semantic_instances:
+        _semantic_instances[key] = EmbeddingService(dimension=dimension)
+    return _semantic_instances[key]
+
+
+_semantic_instances: dict[tuple[str, int], "EmbeddingService"] = {}
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +48,7 @@ class EmbeddingService:
             dimension: Target embedding vector dimension.
         """
         self._dimension = dimension
-        self._rag_service = _RagEmbeddingService(dimension=dimension)
+        self._rag_service = _get_rag_embedding_service(dimension=dimension)
 
     @property
     def dimension(self) -> int:

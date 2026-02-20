@@ -142,6 +142,8 @@ function SidebarContent({
             {!collapsed && (
               <button
                 onClick={() => onToggleSection(section.title)}
+                aria-label={`${isSectionCollapsed ? "Expand" : "Collapse"} ${section.title} section`}
+                aria-expanded={!isSectionCollapsed}
                 className="flex w-full items-center justify-between px-2 py-1 mb-0.5"
               >
                 <span className="text-xs font-semibold uppercase tracking-wider text-[hsl(var(--primary))] opacity-70">

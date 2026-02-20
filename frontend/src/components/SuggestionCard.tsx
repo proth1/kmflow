@@ -110,6 +110,7 @@ export default function SuggestionCard({
               placeholder="Notes (optional)"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
+              aria-label="Notes (optional)"
               className="border rounded px-2 py-1 text-xs w-full"
             />
             <div className="flex gap-2">

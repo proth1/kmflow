@@ -20,7 +20,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from src.datalake.backend import StorageMetadata
+from src.datalake.backend import StorageMetadata, sanitize_filename
 
 logger = logging.getLogger(__name__)
 
@@ -145,11 +145,6 @@ class DatabricksBackend:
         return f"{self._volume_base}/{safe_engagement}/{unique_name}"
 
     @staticmethod
-    def _sanitize_filename(file_name: str) -> str:
-        """Strip directory components from filename to prevent path injection."""
-        return Path(file_name).name
-
-    @staticmethod
     def _sanitize_path_component(component: str) -> str:
         """Remove characters that could escape the Volumes path hierarchy.
 
@@ -260,7 +255,7 @@ class DatabricksBackend:
 
         w = self._get_client()
 
-        safe_name = self._sanitize_filename(file_name)
+        safe_name = sanitize_filename(file_name)
         content_hash = hashlib.sha256(content).hexdigest()
         record_id = uuid.uuid4().hex
         now = datetime.now(UTC).isoformat()

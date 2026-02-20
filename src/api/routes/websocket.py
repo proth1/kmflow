@@ -12,10 +12,11 @@ import json
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, Query, Request, WebSocket, WebSocketDisconnect
 
-from src.core.auth import decode_token, is_token_blacklisted
+from src.core.auth import decode_token, get_current_user, is_token_blacklisted
 from src.core.config import get_settings
+from src.core.models import User
 from src.core.redis import CHANNEL_ALERTS, CHANNEL_DEVIATIONS, CHANNEL_MONITORING
 
 logger = logging.getLogger(__name__)
@@ -288,8 +289,10 @@ async def alerts_websocket(
 
 
 @router.get("/api/v1/ws/status")
-async def websocket_status() -> dict[str, Any]:
-    """Get WebSocket connection status."""
+async def websocket_status(
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Get WebSocket connection status. Requires authentication."""
     return {
         "active_connections": manager.active_connections,
         "engagement_ids": manager.get_engagement_ids(),
