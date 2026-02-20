@@ -77,12 +77,12 @@ def compute_financial_impact(
         reverse=True,
     )
 
-    delta: float | None = None
+    baseline_delta: float | None = None
     if baseline_expected is not None:
-        delta = round(expected_total - baseline_expected, 2)
+        baseline_delta = round(expected_total - baseline_expected, 2)
 
     return {
         "cost_range": cost_range,
         "sensitivity_analysis": sensitivity,
-        "delta_vs_baseline": delta,
+        "delta_vs_baseline": baseline_delta,
     }
