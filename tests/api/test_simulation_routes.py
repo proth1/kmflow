@@ -75,6 +75,8 @@ class TestScenarioRoutes:
         mock_scenario.simulation_type = SimulationType.WHAT_IF
         mock_scenario.parameters = {"resources": 10}
         mock_scenario.description = "A test scenario"
+        mock_scenario.status = "draft"
+        mock_scenario.evidence_confidence_score = None
         mock_scenario.created_at = datetime.now(UTC)
 
         mock_result = MagicMock()
