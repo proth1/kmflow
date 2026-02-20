@@ -201,8 +201,10 @@ async def _log_audit(
     engagement_id: UUID,
     action: AuditAction,
     details: str | None = None,
+    *,
+    actor: str = "system",
 ) -> None:
-    audit = AuditLog(engagement_id=engagement_id, action=action, actor="system", details=details)
+    audit = AuditLog(engagement_id=engagement_id, action=action, actor=actor, details=details)
     session.add(audit)
 
 
@@ -238,7 +240,7 @@ async def create_scenario(
         description=payload.description,
     )
     session.add(scenario)
-    await _log_audit(session, payload.engagement_id, AuditAction.SIMULATION_CREATED, f"Scenario: {payload.name}")
+    await _log_audit(session, payload.engagement_id, AuditAction.SIMULATION_CREATED, f"Scenario: {payload.name}", actor=str(user.id))
     await session.commit()
     await session.refresh(scenario)
     return _scenario_to_response(scenario)
@@ -326,7 +328,7 @@ async def run_scenario(
         sim_result.error_message = str(e)
         sim_result.completed_at = datetime.now(UTC)
 
-    await _log_audit(session, scenario.engagement_id, AuditAction.SIMULATION_EXECUTED, f"Scenario: {scenario.name}")
+    await _log_audit(session, scenario.engagement_id, AuditAction.SIMULATION_EXECUTED, f"Scenario: {scenario.name}", actor=str(user.id))
     await session.commit()
     await session.refresh(sim_result)
     return _result_to_response(sim_result)
@@ -369,6 +371,7 @@ async def add_modification(
         scenario.engagement_id,
         AuditAction.SCENARIO_MODIFIED,
         f"Added {payload.modification_type} on {payload.element_name}",
+        actor=str(user.id),
     )
     await session.commit()
     await session.refresh(mod)
@@ -420,6 +423,7 @@ async def delete_modification(
         scenario.engagement_id,
         AuditAction.SCENARIO_MODIFIED,
         f"Removed modification {modification_id}",
+        actor=str(user.id),
     )
     await session.commit()
 
@@ -495,6 +499,8 @@ async def compare_scenarios(
     user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """Compare baseline scenario with alternatives side-by-side."""
+    import asyncio
+
     # Fetch baseline
     baseline = await _get_scenario_or_404(session, scenario_id)
 
@@ -507,7 +513,11 @@ async def compare_scenarios(
     if not compare_ids:
         raise HTTPException(status_code=422, detail="At least one comparison scenario ID is required")
 
-    # Fetch baseline's latest completed result
+    if len(compare_ids) > 10:
+        raise HTTPException(status_code=422, detail="Maximum 10 comparison scenarios allowed")
+
+    # Batch-fetch baseline result + all comparison scenarios and results
+    all_ids = compare_ids
     baseline_result_row = await session.execute(
         select(SimulationResult)
         .where(
@@ -520,6 +530,38 @@ async def compare_scenarios(
     baseline_result = baseline_result_row.scalar_one_or_none()
     baseline_metrics = baseline_result.metrics if baseline_result else {}
 
+    # Batch-fetch all comparison scenarios with their modifications
+    cmp_scenarios_row = await session.execute(
+        select(SimulationScenario)
+        .where(SimulationScenario.id.in_(all_ids))
+        .options(selectinload(SimulationScenario.modifications))
+    )
+    cmp_scenarios_map = {s.id: s for s in cmp_scenarios_row.scalars().all()}
+
+    # Batch-fetch latest completed result per comparison scenario
+    from sqlalchemy import func as sa_func
+
+    latest_subq = (
+        select(
+            SimulationResult.scenario_id,
+            sa_func.max(SimulationResult.completed_at).label("max_completed"),
+        )
+        .where(
+            SimulationResult.scenario_id.in_(all_ids),
+            SimulationResult.status == SimulationStatus.COMPLETED,
+        )
+        .group_by(SimulationResult.scenario_id)
+        .subquery()
+    )
+    results_row = await session.execute(
+        select(SimulationResult).join(
+            latest_subq,
+            (SimulationResult.scenario_id == latest_subq.c.scenario_id)
+            & (SimulationResult.completed_at == latest_subq.c.max_completed),
+        )
+    )
+    results_map = {r.scenario_id: r for r in results_row.scalars().all()}
+
     from src.semantic.graph import KnowledgeGraphService
     from src.simulation.coverage import EvidenceCoverageService
     from src.simulation.impact import compare_simulation_results
@@ -528,38 +570,21 @@ async def compare_scenarios(
     graph_service = KnowledgeGraphService(driver)
     coverage_service = EvidenceCoverageService(graph_service)
 
-    comparisons: list[dict[str, Any]] = []
-
-    for cid in compare_ids:
-        # Fetch comparison scenario
-        cmp_result_row = await session.execute(
-            select(SimulationScenario).where(SimulationScenario.id == cid)
-        )
-        cmp_scenario = cmp_result_row.scalar_one_or_none()
+    # Compute coverage concurrently for all found scenarios
+    async def _build_entry(cid: UUID) -> dict[str, Any]:
+        cmp_scenario = cmp_scenarios_map.get(cid)
         if not cmp_scenario:
-            comparisons.append({
+            return {
                 "scenario_id": str(cid),
                 "scenario_name": "Not Found",
                 "deltas": None,
                 "assessment": None,
                 "coverage_summary": None,
-            })
-            continue
+            }
 
-        # Fetch latest completed result for comparison scenario
-        sim_result_row = await session.execute(
-            select(SimulationResult)
-            .where(
-                SimulationResult.scenario_id == cid,
-                SimulationResult.status == SimulationStatus.COMPLETED,
-            )
-            .order_by(SimulationResult.completed_at.desc())
-            .limit(1)
-        )
-        sim_result = sim_result_row.scalar_one_or_none()
+        sim_result = results_map.get(cid)
         sim_metrics = sim_result.metrics if sim_result else {}
 
-        # Compare metrics
         deltas = None
         assessment = None
         if baseline_metrics and sim_metrics:
@@ -567,18 +592,13 @@ async def compare_scenarios(
             deltas = comparison.get("deltas")
             assessment = comparison.get("assessment")
 
-        # Get coverage summary
-        cmp_mods_row = await session.execute(
-            select(ScenarioModification).where(ScenarioModification.scenario_id == cid)
-        )
-        cmp_mods = list(cmp_mods_row.scalars().all())
         coverage = await coverage_service.compute_coverage(
             scenario_id=cid,
             engagement_id=cmp_scenario.engagement_id,
-            modifications=cmp_mods,
+            modifications=list(cmp_scenario.modifications),
         )
 
-        comparisons.append({
+        return {
             "scenario_id": str(cid),
             "scenario_name": cmp_scenario.name,
             "deltas": deltas,
@@ -588,13 +608,16 @@ async def compare_scenarios(
                 "dim": coverage.dim_count,
                 "dark": coverage.dark_count,
             },
-        })
+        }
+
+    comparisons = await asyncio.gather(*[_build_entry(cid) for cid in compare_ids])
 
     await _log_audit(
         session,
         baseline.engagement_id,
         AuditAction.SCENARIO_COMPARED,
         f"Compared {baseline.name} with {len(compare_ids)} scenario(s)",
+        actor=str(user.id),
     )
     await session.commit()
 

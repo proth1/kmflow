@@ -121,7 +121,7 @@ export default function SimulationsPage() {
         name: newName.trim(),
         simulation_type: newType,
         description: newDescription.trim() || undefined,
-        engagement_id: scenarios[0]?.engagement_id || "00000000-0000-0000-0000-000000000000",
+        engagement_id: scenarios[0]?.engagement_id ?? "",
       });
       setNewName("");
       setNewDescription("");
@@ -325,10 +325,10 @@ export default function SimulationsPage() {
                     className="border rounded px-3 py-1.5 text-sm w-full"
                   />
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={handleCreate} disabled={creating || !newName.trim()}>
+                    <Button size="sm" onClick={handleCreate} disabled={creating || !newName.trim() || !scenarios[0]?.engagement_id}>
                       {creating ? "Creating..." : "Create"}
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setShowCreate(false)}>
+                    <Button size="sm" variant="ghost" onClick={() => { setShowCreate(false); setError(null); }}>
                       Cancel
                     </Button>
                   </div>
@@ -468,8 +468,9 @@ export default function SimulationsPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium mb-1 block">Baseline Scenario</label>
+                  <label htmlFor="baseline-select" className="text-sm font-medium mb-1 block">Baseline Scenario</label>
                   <select
+                    id="baseline-select"
                     value={baselineId}
                     onChange={(e) => setBaselineId(e.target.value)}
                     className="border rounded px-3 py-1.5 text-sm w-full"
@@ -611,8 +612,9 @@ export default function SimulationsPage() {
             <CardContent className="space-y-4">
               <div className="flex items-end gap-3">
                 <div className="flex-1">
-                  <label className="text-sm font-medium mb-1 block">Select Scenario</label>
+                  <label htmlFor="coverage-select" className="text-sm font-medium mb-1 block">Select Scenario</label>
                   <select
+                    id="coverage-select"
                     value={coverageScenarioId}
                     onChange={(e) => setCoverageScenarioId(e.target.value)}
                     className="border rounded px-3 py-1.5 text-sm w-full"

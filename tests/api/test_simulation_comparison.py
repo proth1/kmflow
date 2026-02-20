@@ -337,11 +337,10 @@ class TestCompareScenarios:
 
         mock_db_session.execute = AsyncMock(
             side_effect=[
-                _mock_scalar_result(baseline),        # fetch baseline
-                _mock_scalar_result(baseline_result),  # baseline result
-                _mock_scalar_result(alt_scenario),     # fetch alt scenario
-                _mock_scalar_result(alt_result),       # alt result
-                _mock_scalars_result([]),               # alt modifications
+                _mock_scalar_result(baseline),          # fetch baseline
+                _mock_scalar_result(baseline_result),    # baseline result
+                _mock_scalars_result([alt_scenario]),     # batch-fetch comparison scenarios
+                _mock_scalars_result([alt_result]),       # batch-fetch latest results
             ]
         )
 
@@ -367,11 +366,10 @@ class TestCompareScenarios:
 
         mock_db_session.execute = AsyncMock(
             side_effect=[
-                _mock_scalar_result(baseline),       # fetch baseline
-                _mock_scalar_result(None),            # no baseline result
-                _mock_scalar_result(alt_scenario),    # alt scenario
-                _mock_scalar_result(None),            # no alt result
-                _mock_scalars_result([]),              # alt modifications
+                _mock_scalar_result(baseline),         # fetch baseline
+                _mock_scalar_result(None),              # no baseline result
+                _mock_scalars_result([alt_scenario]),    # batch-fetch comparison scenarios
+                _mock_scalars_result([]),                # batch-fetch latest results (none)
             ]
         )
 

@@ -188,10 +188,21 @@ class EvidenceCoverageService:
         self,
         engagement_id: UUID,
     ) -> list[dict[str, Any]]:
-        """Fetch element evidence counts and confidence from Neo4j."""
+        """Fetch element evidence counts and confidence from Neo4j.
+
+        Uses UNION ALL with label-first matching to leverage Neo4j label
+        indexes instead of scanning all nodes by property.
+        """
         query = """
-            MATCH (p {engagement_id: $eid})
-            WHERE p:Process OR p:Activity
+            MATCH (p:Process)
+            WHERE p.engagement_id = $eid
+            OPTIONAL MATCH (p)-[r:SUPPORTED_BY]->(e:Evidence)
+            RETURN p.id AS id, p.name AS name,
+                   count(e) AS evidence_count,
+                   avg(r.confidence) AS avg_confidence
+            UNION ALL
+            MATCH (p:Activity)
+            WHERE p.engagement_id = $eid
             OPTIONAL MATCH (p)-[r:SUPPORTED_BY]->(e:Evidence)
             RETURN p.id AS id, p.name AS name,
                    count(e) AS evidence_count,
