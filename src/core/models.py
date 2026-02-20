@@ -128,6 +128,12 @@ class AuditAction(enum.StrEnum):
     SIMULATION_EXECUTED = "simulation_executed"
     SCENARIO_MODIFIED = "scenario_modified"
     SCENARIO_COMPARED = "scenario_compared"
+    EPISTEMIC_PLAN_GENERATED = "epistemic_plan_generated"
+    # -- Phase 4: Financial / Suggestions ----------------------------------------
+    SUGGESTION_CREATED = "suggestion_created"
+    SUGGESTION_ACCEPTED = "suggestion_accepted"
+    SUGGESTION_REJECTED = "suggestion_rejected"
+    FINANCIAL_ASSUMPTION_CREATED = "financial_assumption_created"
 
 
 # -- Phase 2: Regulatory / Policy / Control enums ----------------------------
@@ -1365,6 +1371,119 @@ class ScenarioModification(Base):
 
     def __repr__(self) -> str:
         return f"<ScenarioModification(id={self.id}, type={self.modification_type}, element='{self.element_name}')>"
+
+
+class EpistemicAction(Base):
+    """A ranked evidence gap action for epistemic planning."""
+
+    __tablename__ = "epistemic_actions"
+    __table_args__ = (Index("ix_epistemic_actions_scenario_id", "scenario_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    scenario_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("simulation_scenarios.id", ondelete="CASCADE"), nullable=False
+    )
+    target_element_id: Mapped[str] = mapped_column(String(512), nullable=False)
+    target_element_name: Mapped[str] = mapped_column(String(512), nullable=False)
+    evidence_gap_description: Mapped[str] = mapped_column(Text, nullable=False)
+    current_confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    estimated_confidence_uplift: Mapped[float] = mapped_column(Float, nullable=False)
+    projected_confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    information_gain_score: Mapped[float] = mapped_column(Float, nullable=False)
+    recommended_evidence_category: Mapped[str] = mapped_column(String(100), nullable=False)
+    priority: Mapped[str] = mapped_column(String(20), nullable=False)
+    shelf_request_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("shelf_data_requests.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    scenario: Mapped[SimulationScenario] = relationship("SimulationScenario")
+
+    def __repr__(self) -> str:
+        return f"<EpistemicAction(id={self.id}, element='{self.target_element_name}', gain={self.information_gain_score})>"
+
+
+# =============================================================================
+# Phase 4: Financial Assumptions & Alternative Suggestions
+# =============================================================================
+
+
+class FinancialAssumptionType(enum.StrEnum):
+    """Types of financial assumptions."""
+
+    COST_PER_ROLE = "cost_per_role"
+    TECHNOLOGY_COST = "technology_cost"
+    VOLUME_FORECAST = "volume_forecast"
+    IMPLEMENTATION_COST = "implementation_cost"
+
+
+class SuggestionDisposition(enum.StrEnum):
+    """Disposition states for alternative suggestions."""
+
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    MODIFIED = "modified"
+    REJECTED = "rejected"
+
+
+class FinancialAssumption(Base):
+    """A financial assumption for scenario cost modelling."""
+
+    __tablename__ = "financial_assumptions"
+    __table_args__ = (Index("ix_financial_assumptions_engagement_id", "engagement_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    assumption_type: Mapped[FinancialAssumptionType] = mapped_column(
+        Enum(FinancialAssumptionType), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(256), nullable=False)
+    value: Mapped[float] = mapped_column(Float, nullable=False)
+    unit: Mapped[str] = mapped_column(String(50), nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    source_evidence_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("evidence_items.id", ondelete="SET NULL"), nullable=True
+    )
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    engagement: Mapped[Engagement] = relationship("Engagement")
+
+    def __repr__(self) -> str:
+        return f"<FinancialAssumption(id={self.id}, name='{self.name}', type={self.assumption_type})>"
+
+
+class AlternativeSuggestion(Base):
+    """An LLM-generated alternative scenario suggestion."""
+
+    __tablename__ = "alternative_suggestions"
+    __table_args__ = (Index("ix_alternative_suggestions_scenario_id", "scenario_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    scenario_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("simulation_scenarios.id", ondelete="CASCADE"), nullable=False
+    )
+    suggestion_text: Mapped[str] = mapped_column(Text, nullable=False)
+    rationale: Mapped[str] = mapped_column(Text, nullable=False)
+    governance_flags: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    evidence_gaps: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    disposition: Mapped[SuggestionDisposition] = mapped_column(
+        Enum(SuggestionDisposition), default=SuggestionDisposition.PENDING, nullable=False
+    )
+    disposition_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    llm_prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    llm_response: Mapped[str] = mapped_column(Text, nullable=False)
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    scenario: Mapped[SimulationScenario] = relationship("SimulationScenario")
+
+    def __repr__(self) -> str:
+        return f"<AlternativeSuggestion(id={self.id}, disposition={self.disposition})>"
 
 
 # =============================================================================

@@ -19,14 +19,19 @@ from sqlalchemy.orm import selectinload
 
 from src.api.deps import get_session
 from src.core.models import (
+    AlternativeSuggestion,
     AuditAction,
     AuditLog,
+    EpistemicAction,
+    FinancialAssumption,
+    FinancialAssumptionType,
     ModificationType,
     ScenarioModification,
     SimulationResult,
     SimulationScenario,
     SimulationStatus,
     SimulationType,
+    SuggestionDisposition,
     User,
 )
 from src.core.permissions import require_permission
@@ -658,3 +663,580 @@ async def get_result(
     if not sim_result:
         raise HTTPException(status_code=404, detail=f"Result {result_id} not found")
     return _result_to_response(sim_result)
+
+
+# =============================================================================
+# Phase 3.2: Epistemic Action Planner
+# =============================================================================
+
+
+class EpistemicActionResponse(BaseModel):
+    target_element_id: str
+    target_element_name: str
+    evidence_gap_description: str
+    current_confidence: float
+    estimated_confidence_uplift: float
+    projected_confidence: float
+    information_gain_score: float
+    recommended_evidence_category: str
+    priority: str
+
+
+class EpistemicPlanAggregates(BaseModel):
+    total: int
+    high_priority_count: int
+    estimated_aggregate_uplift: float
+
+
+class EpistemicPlanResponse(BaseModel):
+    scenario_id: str
+    actions: list[EpistemicActionResponse]
+    aggregated_view: EpistemicPlanAggregates
+
+
+@router.get("/scenarios/{scenario_id}/epistemic-plan", response_model=EpistemicPlanResponse)
+async def get_epistemic_plan(
+    scenario_id: UUID,
+    request: Request,
+    limit: int = Query(default=10, ge=1, le=100),
+    create_shelf_request: bool = Query(default=False),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:read")),
+) -> dict[str, Any]:
+    """Get epistemic action plan ranking evidence gaps by information gain."""
+    scenario = await _get_scenario_or_404(session, scenario_id)
+
+    from src.semantic.graph import KnowledgeGraphService
+    from src.simulation.epistemic import EpistemicPlannerService
+
+    driver = request.app.state.neo4j_driver
+    graph_service = KnowledgeGraphService(driver)
+    planner = EpistemicPlannerService(graph_service)
+
+    plan = await planner.generate_epistemic_plan(
+        scenario_id=scenario_id,
+        engagement_id=scenario.engagement_id,
+        session=session,
+        process_graph=scenario.parameters or {},
+    )
+
+    # Persist epistemic actions
+    for action in plan.actions[:limit]:
+        ea = EpistemicAction(
+            scenario_id=scenario_id,
+            target_element_id=action.target_element_id,
+            target_element_name=action.target_element_name,
+            evidence_gap_description=action.evidence_gap_description,
+            current_confidence=action.current_confidence,
+            estimated_confidence_uplift=action.estimated_confidence_uplift,
+            projected_confidence=action.projected_confidence,
+            information_gain_score=action.information_gain_score,
+            recommended_evidence_category=action.recommended_evidence_category,
+            priority=action.priority,
+        )
+        session.add(ea)
+
+    # Optionally create shelf request from high-priority actions
+    if create_shelf_request and plan.high_priority_count > 0:
+        from src.core.models import ShelfDataRequest, ShelfDataRequestItem
+
+        shelf = ShelfDataRequest(
+            engagement_id=scenario.engagement_id,
+            title=f"Evidence gaps for scenario: {scenario.name}",
+            description="Auto-generated from epistemic action plan",
+        )
+        session.add(shelf)
+        await session.flush()
+
+        for action in plan.actions[:limit]:
+            if action.priority == "high":
+                item = ShelfDataRequestItem(
+                    request_id=shelf.id,
+                    category=action.recommended_evidence_category,
+                    item_name=f"Evidence for: {action.target_element_name}",
+                    description=action.evidence_gap_description,
+                    priority="high",
+                )
+                session.add(item)
+
+    await _log_audit(
+        session, scenario.engagement_id,
+        AuditAction.EPISTEMIC_PLAN_GENERATED,
+        f"Generated {plan.total_actions} actions for {scenario.name}",
+        actor=str(user.id),
+    )
+    await session.commit()
+
+    return {
+        "scenario_id": str(scenario_id),
+        "actions": [
+            {
+                "target_element_id": a.target_element_id,
+                "target_element_name": a.target_element_name,
+                "evidence_gap_description": a.evidence_gap_description,
+                "current_confidence": a.current_confidence,
+                "estimated_confidence_uplift": a.estimated_confidence_uplift,
+                "projected_confidence": a.projected_confidence,
+                "information_gain_score": a.information_gain_score,
+                "recommended_evidence_category": a.recommended_evidence_category,
+                "priority": a.priority,
+            }
+            for a in plan.actions[:limit]
+        ],
+        "aggregated_view": {
+            "total": plan.total_actions,
+            "high_priority_count": plan.high_priority_count,
+            "estimated_aggregate_uplift": plan.estimated_aggregate_uplift,
+        },
+    }
+
+
+# =============================================================================
+# Phase 4.1: Financial Assumptions
+# =============================================================================
+
+
+class FinancialAssumptionCreate(BaseModel):
+    engagement_id: UUID
+    assumption_type: FinancialAssumptionType
+    name: str = Field(..., min_length=1, max_length=256)
+    value: float
+    unit: str = Field(..., min_length=1, max_length=50)
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    source_evidence_id: UUID | None = None
+    notes: str | None = None
+
+
+class FinancialAssumptionResponse(BaseModel):
+    id: str
+    engagement_id: str
+    assumption_type: str
+    name: str
+    value: float
+    unit: str
+    confidence: float
+    source_evidence_id: str | None = None
+    notes: str | None = None
+    created_at: str
+
+
+class FinancialAssumptionListResponse(BaseModel):
+    items: list[FinancialAssumptionResponse]
+    total: int
+
+
+def _assumption_to_response(a: FinancialAssumption) -> dict[str, Any]:
+    return {
+        "id": str(a.id),
+        "engagement_id": str(a.engagement_id),
+        "assumption_type": a.assumption_type.value
+        if isinstance(a.assumption_type, FinancialAssumptionType)
+        else a.assumption_type,
+        "name": a.name,
+        "value": a.value,
+        "unit": a.unit,
+        "confidence": a.confidence,
+        "source_evidence_id": str(a.source_evidence_id) if a.source_evidence_id else None,
+        "notes": a.notes,
+        "created_at": a.created_at.isoformat() if a.created_at else "",
+    }
+
+
+@router.post(
+    "/scenarios/{scenario_id}/financial-assumptions",
+    response_model=FinancialAssumptionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_financial_assumption(
+    scenario_id: UUID,
+    payload: FinancialAssumptionCreate,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:create")),
+) -> dict[str, Any]:
+    """Create a financial assumption for a scenario's engagement."""
+    scenario = await _get_scenario_or_404(session, scenario_id)
+    assumption = FinancialAssumption(
+        engagement_id=payload.engagement_id,
+        assumption_type=payload.assumption_type,
+        name=payload.name,
+        value=payload.value,
+        unit=payload.unit,
+        confidence=payload.confidence,
+        source_evidence_id=payload.source_evidence_id,
+        notes=payload.notes,
+    )
+    session.add(assumption)
+    await _log_audit(
+        session, scenario.engagement_id,
+        AuditAction.FINANCIAL_ASSUMPTION_CREATED,
+        f"Assumption: {payload.name}",
+        actor=str(user.id),
+    )
+    await session.commit()
+    await session.refresh(assumption)
+    return _assumption_to_response(assumption)
+
+
+@router.get(
+    "/scenarios/{scenario_id}/financial-assumptions",
+    response_model=FinancialAssumptionListResponse,
+)
+async def list_financial_assumptions(
+    scenario_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:read")),
+) -> dict[str, Any]:
+    """List financial assumptions for a scenario's engagement."""
+    scenario = await _get_scenario_or_404(session, scenario_id)
+    result = await session.execute(
+        select(FinancialAssumption).where(
+            FinancialAssumption.engagement_id == scenario.engagement_id
+        )
+    )
+    items = [_assumption_to_response(a) for a in result.scalars().all()]
+    return {"items": items, "total": len(items)}
+
+
+@router.delete(
+    "/scenarios/{scenario_id}/financial-assumptions/{assumption_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_financial_assumption(
+    scenario_id: UUID,
+    assumption_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:create")),
+) -> None:
+    """Delete a financial assumption."""
+    await _get_scenario_or_404(session, scenario_id)
+    result = await session.execute(
+        select(FinancialAssumption).where(FinancialAssumption.id == assumption_id)
+    )
+    assumption = result.scalar_one_or_none()
+    if not assumption:
+        raise HTTPException(status_code=404, detail=f"Assumption {assumption_id} not found")
+    await session.delete(assumption)
+    await session.commit()
+
+
+# =============================================================================
+# Phase 4.1: Alternative Suggestions
+# =============================================================================
+
+
+class SuggestionCreate(BaseModel):
+    context_notes: str | None = None
+
+
+class SuggestionResponse(BaseModel):
+    id: str
+    scenario_id: str
+    suggestion_text: str
+    rationale: str
+    governance_flags: dict[str, Any] | None = None
+    evidence_gaps: dict[str, Any] | None = None
+    disposition: str
+    disposition_notes: str | None = None
+    created_at: str
+
+
+class SuggestionListResponse(BaseModel):
+    items: list[SuggestionResponse]
+    total: int
+
+
+class SuggestionDispositionUpdate(BaseModel):
+    disposition: SuggestionDisposition
+    disposition_notes: str | None = None
+
+
+def _suggestion_to_response(s: AlternativeSuggestion) -> dict[str, Any]:
+    return {
+        "id": str(s.id),
+        "scenario_id": str(s.scenario_id),
+        "suggestion_text": s.suggestion_text,
+        "rationale": s.rationale,
+        "governance_flags": s.governance_flags,
+        "evidence_gaps": s.evidence_gaps,
+        "disposition": s.disposition.value
+        if isinstance(s.disposition, SuggestionDisposition)
+        else s.disposition,
+        "disposition_notes": s.disposition_notes,
+        "created_at": s.created_at.isoformat() if s.created_at else "",
+    }
+
+
+@router.post(
+    "/scenarios/{scenario_id}/suggestions",
+    response_model=SuggestionListResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def request_suggestions(
+    scenario_id: UUID,
+    payload: SuggestionCreate,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:create")),
+) -> dict[str, Any]:
+    """Request LLM-generated alternative suggestions for a scenario."""
+    result = await session.execute(
+        select(SimulationScenario)
+        .where(SimulationScenario.id == scenario_id)
+        .options(selectinload(SimulationScenario.modifications))
+    )
+    scenario = result.scalar_one_or_none()
+    if not scenario:
+        raise HTTPException(status_code=404, detail=f"Scenario {scenario_id} not found")
+
+    from src.simulation.suggester import AlternativeSuggesterService
+
+    suggester = AlternativeSuggesterService()
+    suggestions = await suggester.generate_suggestions(
+        scenario=scenario,
+        user_id=user.id,
+        context_notes=payload.context_notes,
+    )
+
+    items = []
+    for s_data in suggestions:
+        suggestion = AlternativeSuggestion(
+            scenario_id=scenario_id,
+            suggestion_text=s_data["suggestion_text"],
+            rationale=s_data["rationale"],
+            governance_flags=s_data.get("governance_flags"),
+            evidence_gaps=s_data.get("evidence_gaps"),
+            llm_prompt=s_data["llm_prompt"],
+            llm_response=s_data["llm_response"],
+            created_by=user.id,
+        )
+        session.add(suggestion)
+        items.append(suggestion)
+
+    await _log_audit(
+        session, scenario.engagement_id,
+        AuditAction.SUGGESTION_CREATED,
+        f"Generated {len(items)} suggestions for {scenario.name}",
+        actor=str(user.id),
+    )
+    await session.commit()
+    for s in items:
+        await session.refresh(s)
+
+    return {
+        "items": [_suggestion_to_response(s) for s in items],
+        "total": len(items),
+    }
+
+
+@router.get("/scenarios/{scenario_id}/suggestions", response_model=SuggestionListResponse)
+async def list_suggestions(
+    scenario_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:read")),
+) -> dict[str, Any]:
+    """List alternative suggestions for a scenario."""
+    await _get_scenario_or_404(session, scenario_id)
+    result = await session.execute(
+        select(AlternativeSuggestion).where(AlternativeSuggestion.scenario_id == scenario_id)
+    )
+    items = [_suggestion_to_response(s) for s in result.scalars().all()]
+    return {"items": items, "total": len(items)}
+
+
+@router.patch(
+    "/scenarios/{scenario_id}/suggestions/{suggestion_id}",
+    response_model=SuggestionResponse,
+)
+async def update_suggestion_disposition(
+    scenario_id: UUID,
+    suggestion_id: UUID,
+    payload: SuggestionDispositionUpdate,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:create")),
+) -> dict[str, Any]:
+    """Accept, modify, or reject a suggestion."""
+    scenario = await _get_scenario_or_404(session, scenario_id)
+    result = await session.execute(
+        select(AlternativeSuggestion).where(
+            AlternativeSuggestion.id == suggestion_id,
+            AlternativeSuggestion.scenario_id == scenario_id,
+        )
+    )
+    suggestion = result.scalar_one_or_none()
+    if not suggestion:
+        raise HTTPException(status_code=404, detail=f"Suggestion {suggestion_id} not found")
+
+    suggestion.disposition = payload.disposition
+    suggestion.disposition_notes = payload.disposition_notes
+
+    action = (
+        AuditAction.SUGGESTION_ACCEPTED
+        if payload.disposition == SuggestionDisposition.ACCEPTED
+        else AuditAction.SUGGESTION_REJECTED
+    )
+    await _log_audit(
+        session, scenario.engagement_id, action,
+        f"Suggestion {suggestion_id} -> {payload.disposition.value}",
+        actor=str(user.id),
+    )
+    await session.commit()
+    await session.refresh(suggestion)
+    return _suggestion_to_response(suggestion)
+
+
+# =============================================================================
+# Phase 4.2: Financial Impact Estimation
+# =============================================================================
+
+
+class CostRange(BaseModel):
+    optimistic: float
+    expected: float
+    pessimistic: float
+
+
+class SensitivityEntry(BaseModel):
+    assumption_name: str
+    base_value: float
+    impact_range: CostRange
+
+
+class FinancialImpactResponse(BaseModel):
+    scenario_id: str
+    cost_range: CostRange
+    sensitivity_analysis: list[SensitivityEntry]
+    assumption_count: int
+    delta_vs_baseline: float | None = None
+
+
+@router.get("/scenarios/{scenario_id}/financial-impact", response_model=FinancialImpactResponse)
+async def get_financial_impact(
+    scenario_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:read")),
+) -> dict[str, Any]:
+    """Compute financial impact estimation for a scenario."""
+    scenario = await _get_scenario_or_404(session, scenario_id)
+
+    from src.simulation.financial import compute_financial_impact
+
+    result = await session.execute(
+        select(FinancialAssumption).where(
+            FinancialAssumption.engagement_id == scenario.engagement_id
+        )
+    )
+    assumptions = list(result.scalars().all())
+
+    impact = compute_financial_impact(assumptions)
+
+    return {
+        "scenario_id": str(scenario_id),
+        "cost_range": impact["cost_range"],
+        "sensitivity_analysis": impact["sensitivity_analysis"],
+        "assumption_count": len(assumptions),
+        "delta_vs_baseline": impact.get("delta_vs_baseline"),
+    }
+
+
+# =============================================================================
+# Phase 4.2: Scenario Ranking
+# =============================================================================
+
+
+class ScenarioRankEntry(BaseModel):
+    scenario_id: str
+    scenario_name: str
+    composite_score: float
+    evidence_score: float
+    simulation_score: float
+    financial_score: float
+    governance_score: float
+
+
+class ScenarioRankResponse(BaseModel):
+    engagement_id: str
+    rankings: list[ScenarioRankEntry]
+    weights: dict[str, float]
+
+
+@router.get("/scenarios/rank", response_model=ScenarioRankResponse)
+async def rank_scenarios(
+    engagement_id: UUID,
+    request: Request,
+    w_evidence: float = Query(default=0.30, ge=0.0, le=1.0),
+    w_simulation: float = Query(default=0.25, ge=0.0, le=1.0),
+    w_financial: float = Query(default=0.25, ge=0.0, le=1.0),
+    w_governance: float = Query(default=0.20, ge=0.0, le=1.0),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:read")),
+) -> dict[str, Any]:
+    """Rank all scenarios for an engagement by composite score."""
+    from src.simulation.ranking import rank_scenarios as compute_ranking
+
+    # Fetch all scenarios for this engagement
+    result = await session.execute(
+        select(SimulationScenario).where(
+            SimulationScenario.engagement_id == engagement_id
+        )
+    )
+    scenarios = list(result.scalars().all())
+
+    weights = {
+        "evidence": w_evidence,
+        "simulation": w_simulation,
+        "financial": w_financial,
+        "governance": w_governance,
+    }
+
+    if not scenarios:
+        return {
+            "engagement_id": str(engagement_id),
+            "rankings": [],
+            "weights": weights,
+        }
+
+    # Fetch assumptions for financial scoring
+    fa_result = await session.execute(
+        select(FinancialAssumption).where(
+            FinancialAssumption.engagement_id == engagement_id
+        )
+    )
+    assumptions = list(fa_result.scalars().all())
+
+    # Fetch latest simulation results per scenario
+    from sqlalchemy import func as sa_func
+
+    scenario_ids = [s.id for s in scenarios]
+    latest_subq = (
+        select(
+            SimulationResult.scenario_id,
+            sa_func.max(SimulationResult.completed_at).label("max_completed"),
+        )
+        .where(
+            SimulationResult.scenario_id.in_(scenario_ids),
+            SimulationResult.status == SimulationStatus.COMPLETED,
+        )
+        .group_by(SimulationResult.scenario_id)
+        .subquery()
+    )
+    results_row = await session.execute(
+        select(SimulationResult).join(
+            latest_subq,
+            (SimulationResult.scenario_id == latest_subq.c.scenario_id)
+            & (SimulationResult.completed_at == latest_subq.c.max_completed),
+        )
+    )
+    results_map = {r.scenario_id: r for r in results_row.scalars().all()}
+
+    rankings = compute_ranking(
+        scenarios=scenarios,
+        results_map=results_map,
+        assumptions=assumptions,
+        weights=weights,
+    )
+
+    return {
+        "engagement_id": str(engagement_id),
+        "rankings": rankings,
+        "weights": weights,
+    }
