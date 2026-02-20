@@ -46,17 +46,31 @@ VALID_TEMPLATE_KEYS = frozenset(
     {"consolidate_adjacent", "automate_gateway", "shift_decision_boundary", "remove_control"}
 )
 
-# Simple in-memory rate limiter for LLM endpoints (per-user, 5 requests/minute)
+# In-memory rate limiter for LLM endpoints (per-user, 5 requests/minute).
+# NOTE: This is per-process only. In multi-worker deployments (uvicorn --workers N),
+# the effective limit becomes N * _LLM_RATE_LIMIT. For production multi-worker
+# deployments, replace with Redis-based rate limiting.
 _LLM_RATE_LIMIT = 5
 _LLM_RATE_WINDOW = 60  # seconds
+_LLM_MAX_TRACKED_USERS = 10_000
 _llm_request_log: dict[str, list[float]] = defaultdict(list)
 
 
 def _check_llm_rate_limit(user_id: str) -> None:
-    """Raise 429 if the user exceeds LLM request rate limit."""
+    """Raise 429 if the user exceeds LLM request rate limit.
+
+    This is an in-memory, single-process rate limiter. It does not share
+    state across multiple uvicorn workers. For multi-worker deployments,
+    use Redis-based rate limiting instead.
+    """
     now = time.monotonic()
     window_start = now - _LLM_RATE_WINDOW
-    # Prune old entries
+    # Evict stale users to prevent unbounded memory growth
+    if len(_llm_request_log) > _LLM_MAX_TRACKED_USERS:
+        stale = [uid for uid, ts in _llm_request_log.items() if not ts or ts[-1] < window_start]
+        for uid in stale:
+            del _llm_request_log[uid]
+    # Prune old entries for this user
     _llm_request_log[user_id] = [t for t in _llm_request_log[user_id] if t > window_start]
     if len(_llm_request_log[user_id]) >= _LLM_RATE_LIMIT:
         raise HTTPException(
