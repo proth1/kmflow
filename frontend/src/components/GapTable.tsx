@@ -81,12 +81,20 @@ export default function GapTable({ gaps }: GapTableProps) {
             <TableHead
               className="cursor-pointer hover:text-[hsl(var(--foreground))]"
               onClick={() => toggleSort("severity")}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("severity"); } }}
+              aria-label={`Sort by severity${sortField === "severity" ? `, currently ${sortDir === "asc" ? "ascending" : "descending"}` : ""}`}
             >
               Severity {sortField === "severity" ? (sortDir === "asc" ? "\u2191" : "\u2193") : ""}
             </TableHead>
             <TableHead
               className="cursor-pointer hover:text-[hsl(var(--foreground))]"
               onClick={() => toggleSort("gap_type")}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("gap_type"); } }}
+              aria-label={`Sort by type${sortField === "gap_type" ? `, currently ${sortDir === "asc" ? "ascending" : "descending"}` : ""}`}
             >
               Type {sortField === "gap_type" ? (sortDir === "asc" ? "\u2191" : "\u2193") : ""}
             </TableHead>

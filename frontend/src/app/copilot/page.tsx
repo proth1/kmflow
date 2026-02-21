@@ -95,10 +95,11 @@ export default function CopilotChat() {
 
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label htmlFor="copilot-engagement-id" className="block text-sm font-medium text-gray-700">
               Engagement ID
             </label>
             <input
+              id="copilot-engagement-id"
               type="text"
               value={engagementId}
               onChange={(e) => setEngagementId(e.target.value)}
@@ -108,10 +109,11 @@ export default function CopilotChat() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label htmlFor="copilot-query-type" className="block text-sm font-medium text-gray-700">
               Query Type
             </label>
             <select
+              id="copilot-query-type"
               value={queryType}
               onChange={(e) => setQueryType(e.target.value as QueryType)}
               className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm"
@@ -204,6 +206,7 @@ export default function CopilotChat() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Ask a question..."
               disabled={isLoading || !engagementId}
+              aria-label="Chat message"
               className="flex-1 rounded-md border border-gray-300 p-2 text-sm disabled:bg-gray-100"
             />
             <button
