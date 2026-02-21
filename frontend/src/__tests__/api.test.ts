@@ -1,26 +1,25 @@
 /**
- * Tests for authHeaders() and getAuthToken() in the API client.
+ * Tests for the API client auth strategy.
  *
- * Since authHeaders and getAuthToken are not exported, we test them
- * indirectly through the exported fetch functions that use them.
- * We also test the module-level behavior via localStorage.
+ * After the HttpOnly JWT cookie migration (PR #177), browser auth is handled
+ * exclusively via the `kmflow_access` HttpOnly cookie — the client sets
+ * `credentials: "include"` on every fetch, and `authHeaders()` no longer
+ * injects an Authorization header from localStorage.
  */
 
 // Mock fetch globally before importing the module
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
-// We need to test authHeaders behavior via the exported functions
 import { fetchHealth, apiPost } from "@/lib/api";
 
-describe("authHeaders via fetchHealth", () => {
+describe("API client auth", () => {
   beforeEach(() => {
     mockFetch.mockReset();
     localStorage.clear();
   });
 
-  it("includes Authorization header when token is in localStorage", async () => {
-    localStorage.setItem("kmflow_token", "test-jwt-token");
+  it("uses credentials: include for cookie-based auth", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -34,10 +33,11 @@ describe("authHeaders via fetchHealth", () => {
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const [, options] = mockFetch.mock.calls[0];
-    expect(options.headers["Authorization"]).toBe("Bearer test-jwt-token");
+    expect(options.credentials).toBe("include");
   });
 
-  it("omits Authorization header when no token in localStorage", async () => {
+  it("does not inject Authorization header from localStorage", async () => {
+    localStorage.setItem("kmflow_token", "test-jwt-token");
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -67,8 +67,7 @@ describe("authHeaders via fetchHealth", () => {
     await expect(fetchHealth()).resolves.toBeDefined();
   });
 
-  it("includes extra headers alongside Authorization", async () => {
-    localStorage.setItem("kmflow_token", "my-token");
+  it("includes Content-Type header and credentials on POST", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ id: "1" }),
@@ -77,7 +76,9 @@ describe("authHeaders via fetchHealth", () => {
     await apiPost("/api/v1/test", { data: true });
 
     const [, options] = mockFetch.mock.calls[0];
-    expect(options.headers["Authorization"]).toBe("Bearer my-token");
     expect(options.headers["Content-Type"]).toBe("application/json");
+    expect(options.credentials).toBe("include");
+    // No Authorization header injected — auth is cookie-based
+    expect(options.headers["Authorization"]).toBeUndefined();
   });
 });
