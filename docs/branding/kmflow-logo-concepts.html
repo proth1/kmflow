@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KMFlow Logo Concepts</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #f8fafc;
+    color: #1e293b;
+    padding: 40px 20px;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 60px;
+  }
+
+  .header h1 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 12px;
+  }
+
+  .header p {
+    font-size: 1.1rem;
+    color: #64748b;
+    max-width: 680px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  .concepts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+    gap: 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .concept-card {
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 8px 32px rgba(0,0,0,0.04);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .concept-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1), 0 16px 48px rgba(0,0,0,0.08);
+  }
+
+  .logo-display {
+    padding: 50px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 280px;
+  }
+
+  .logo-display.dark {
+    background: #0f172a;
+  }
+
+  .logo-display.charcoal {
+    background: #1c1c1e;
+  }
+
+  .logo-display svg {
+    max-width: 360px;
+    height: auto;
+  }
+
+  .concept-info {
+    padding: 24px 32px 28px;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  .concept-number {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #94a3b8;
+    margin-bottom: 6px;
+  }
+
+  .concept-name {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #0f172a;
+    margin-bottom: 8px;
+  }
+
+  .concept-desc {
+    font-size: 0.9rem;
+    color: #64748b;
+    line-height: 1.6;
+  }
+
+  .footer {
+    text-align: center;
+    margin-top: 80px;
+    padding: 40px;
+    color: #94a3b8;
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>KMFlow Logo Concepts</h1>
+  <p>Ten distinct logo directions for the AI-powered Process Intelligence platform.
+     KMFlow ingests diverse client evidence, builds semantic knowledge graphs,
+     and generates confidence-scored process views for consulting engagements.</p>
+</div>
+
+<div class="concepts-grid">
+
+  <!-- ============================================================ -->
+  <!-- CONCEPT 1: Flowing Nodes -->
+  <!-- ============================================================ -->
+  <div class="concept-card">
+    <div class="logo-display">
+      <svg viewBox="0 0 400 170" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="c1a" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#1a365d"/>
+            <stop offset="100%" stop-color="#0d9488"/>
+          </linearGradient>
+          <linearGradient id="c1b" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#1a365d"/>
+            <stop offset="50%" stop-color="#1e6091"/>
+            <stop offset="100%" stop-color="#0d9488"/>
+          </linearGradient>
+        </defs>
+        <path d="M 108,55 C 140,55 140,40 170,40" stroke="url(#c1b)" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M 108,55 C 145,55 145,70 175,70" stroke="url(#c1b)" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M 192,40 C 220,40 220,50 248,50" stroke="url(#c1b)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M 197,70 C 225,70 225,50 248,50" stroke="url(#c1b)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M 270,50 C 290,50 290,55 305,55" stroke="url(#c1b)" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <circle cx="95" cy="55" r="14" fill="url(#c1a)" opacity="0.9"/>
+        <circle cx="95" cy="55" r="6" fill="white" opacity="0.9"/>
+        <circle cx="182" cy="40" r="11" fill="url(#c1a)" opacity="0.8"/>
+        <circle cx="182" cy="40" r="4.5" fill="white" opacity="0.85"/>
+        <circle cx="186" cy="70" r="11" fill="url(#c1a)" opacity="0.7"/>
+        <circle cx="186" cy="70" r="4.5" fill="white" opacity="0.8"/>
+        <circle cx="258" cy="50" r="13" fill="url(#c1a)" opacity="0.85"/>
+        <circle cx="258" cy="50" r="5.5" fill="white" opacity="0.9"/>
+        <circle cx="312" cy="55" r="8" fill="#0d9488" opacity="0.6"/>
+        <circle cx="312" cy="55" r="3" fill="white" opacity="0.7"/>
+        <text x="200" y="130" text-anchor="middle" font-family="Outfit, sans-serif" font-size="38" fill="#1a365d">
+          <tspan font-weight="700">KM</tspan><tspan font-weight="400" fill="#0d9488">Flow</tspan>
+        </text>
+      </svg>
+    </div>
+    <div class="concept-info">
+      <div class="concept-number">Concept 01</div>
+      <div class="concept-name">Flowing Nodes</div>
+      <div class="concept-desc">Connected process nodes with flowing curved paths. Neural networks meet workflow orchestration. Deep blue to teal gradient conveys depth and intelligence.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- CONCEPT 2: Abstract Wave Ribbons -->
+  <!-- ============================================================ -->
+  <div class="concept-card">
+    <div class="logo-display">
+      <svg viewBox="0 0 400 170" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="c2a" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#2563eb"/>
+            <stop offset="100%" stop-color="#7c3aed"/>
+          </linearGradient>
+          <linearGradient id="c2b" x1="100%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#2563eb"/>
+            <stop offset="100%" stop-color="#7c3aed" stop-opacity="0.6"/>
+          </linearGradient>
+          <linearGradient id="c2c" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#7c3aed" stop-opacity="0.4"/>
+            <stop offset="100%" stop-color="#2563eb"/>
+          </linearGradient>
+        </defs>
+        <path d="M 235,18 C 172,18 140,34 140,52 C 140,70 172,86 235,86" stroke="url(#c2a)" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.9"/>
+        <path d="M 242,26 C 186,26 158,40 158,54 C 158,68 186,82 242,82" stroke="url(#c2b)" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.55"/>
+        <path d="M 224,10 C 158,10 124,30 124,52 C 124,74 158,94 224,94" stroke="url(#c2c)" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.35"/>
+        <circle cx="237" cy="18" r="5" fill="#2563eb"/>
+        <circle cx="237" cy="86" r="5" fill="#7c3aed"/>
+        <text x="200" y="135" text-anchor="middle" font-family="Outfit, sans-serif" font-size="38" fill="#1e293b">
+          <tspan font-weight="600">KM</tspan><tspan font-weight="300" fill="#7c3aed">Flow</tspan>
+        </text>
+      </svg>
+    </div>
+    <div class="concept-info">
+      <div class="concept-number">Concept 02</div>
+      <div class="concept-name">Abstract Wave Ribbons</div>
+      <div class="concept-desc">Overlapping curved ribbons forming a subtle "K" shape. Blue to violet palette conveys innovation and premium technology. Dynamic yet elegant.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- CONCEPT 3: Gear + Flow -->
+  <!-- ============================================================ -->
+  <div class="concept-card">
+    <div class="logo-display">
+      <svg viewBox="0 0 400 170" xmlns="http://www.w3.org/2000/svg">
+        <g transform="translate(165, 52)">
+          <path d="M -28,0 A 28,28 0 0,1 0,-28" stroke="#4338ca" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <path d="M -28,0 A 28,28 0 0,0 0,28" stroke="#4338ca" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <rect x="-35" y="-4" width="10" height="8" rx="2" fill="#4338ca"/>
+          <rect x="-4" y="-35" width="8" height="10" rx="2" fill="#4338ca"/>
+          <rect x="-4" y="25" width="8" height="10" rx="2" fill="#4338ca"/>
+          <circle cx="0" cy="0" r="10" fill="none" stroke="#4338ca" stroke-width="3"/>
+          <circle cx="0" cy="0" r="3" fill="#4338ca"/>
+        </g>
+        <path d="M 195,39 C 220,39 230,32 260,32" stroke="#f59e0b" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+        <path d="M 195,52 C 225,52 240,52 270,52" stroke="#4338ca" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.7"/>
+        <path d="M 195,65 C 220,65 230,72 260,72" stroke="#f59e0b" stroke-width="3.5" fill="none" stroke-linecap="round" opacity="0.7"/>
+        <circle cx="264" cy="32" r="4" fill="#f59e0b"/>
+        <circle cx="274" cy="52" r="3" fill="#4338ca" opacity="0.6"/>
+        <circle cx="264" cy="72" r="4" fill="#f59e0b" opacity="0.7"/>
+        <text x="200" y="130" text-anchor="middle" font-family="Outfit, sans-serif" font-size="38" fill="#1e293b">
+          <tspan font-weight="700" fill="#4338ca">KM</tspan><tspan font-weight="400" fill="#f59e0b">Flow</tspan>
+        </text>
+      </svg>
+    </div>
+    <div class="concept-info">
+      <div class="concept-number">Concept 03</div>
+      <div class="concept-name">Gear + Flow</div>
+      <div class="concept-desc">Partial stylized gear (automation engine) with flowing lines emerging outward. Indigo and amber create strong contrast. Engineering meets intelligence.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- CONCEPT 4: Diamond Paths (BPMN-inspired) -->
+  <!-- ============================================================ -->
+  <div class="concept-card">
+    <div class="logo-display">
+      <svg viewBox="0 0 400 170" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="c4a" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#059669"/>
+            <stop offset="100%" stop-color="#0f766e"/>
+          </linearGradient>
+          <linearGradient id="c4b" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#059669"/>
+            <stop offset="100%" stop-color="#0d9488"/>
+          </linearGradient>
+        </defs>
+        <g transform="translate(185, 52)">
+          <rect x="-22" y="-22" width="44" height="44" rx="4" fill="url(#c4a)" transform="rotate(45)"/>
+          <rect x="-10" y="-10" width="20" height="20" rx="2" fill="white" opacity="0.25" transform="rotate(45)"/>
+        </g>
+        <path d="M 120,52 L 155,52" stroke="#059669" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <circle cx="117" cy="52" r="6" fill="#059669" opacity="0.5"/>
+        <path d="M 215,37 C 240,27 260,22 295,22" stroke="url(#c4b)" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M 218,52 C 245,52 265,52 295,52" stroke="url(#c4b)" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M 215,67 C 240,77 260,82 295,82" stroke="url(#c4b)" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <circle cx="298" cy="22" r="5" fill="#0d9488" opacity="0.8"/>
+        <circle cx="298" cy="52" r="5" fill="#059669" opacity="0.8"/>
+        <circle cx="298" cy="82" r="5" fill="#0f766e" opacity="0.8"/>
+        <text x="200" y="130" text-anchor="middle" font-family="Outfit, sans-serif" font-size="38" fill="#0f172a">
+          <tspan font-weight="700" fill="#059669">KM</tspan><tspan font-weight="400" fill="#0f766e">Flow</tspan>
+        </text>
+      </svg>
+    </div>
+    <div class="concept-info">
+      <div class="concept-number">Concept 04</div>
+      <div class="concept-name">Diamond Paths</div>
+      <div class="concept-desc">BPMN gateway diamond with three graceful decision paths. Emerald to teal palette directly references process intelligence and decision flow analysis.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- CONCEPT 5: Neural Process (Dark) -->
+  <!-- ============================================================ -->
+  <div class="concept-card">
+    <div class="logo-display dark">
+      <svg viewBox="0 0 400 170" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="195" cy="50" r="42" fill="none" stroke="#334155" stroke-width="2" opacity="0.5"/>
+        <line x1="170" y1="33" x2="195" y2="50" stroke="#475569" stroke-width="1.5" opacity="0.5"/>
+        <line x1="170" y1="68" x2="195" y2="50" stroke="#475569" stroke-width="1.5" opacity="0.5"/>
+        <line x1="170" y1="33" x2="195" y2="33" stroke="#475569" stroke-width="1.5" opacity="0.4"/>
+        <line x1="170" y1="68" x2="195" y2="68" stroke="#475569" stroke-width="1.5" opacity="0.4"/>
+        <line x1="195" y1="33" x2="220" y2="43" stroke="#475569" stroke-width="1.5" opacity="0.5"/>
+        <line x1="195" y1="68" x2="220" y2="58" stroke="#475569" stroke-width="1.5" opacity="0.5"/>
+        <line x1="195" y1="50" x2="220" y2="43" stroke="#06b6d4" stroke-width="2" opacity="0.8"/>
+        <line x1="195" y1="50" x2="220" y2="58" stroke="#06b6d4" stroke-width="2" opacity="0.8"/>
+        <line x1="220" y1="43" x2="220" y2="58" stroke="#06b6d4" stroke-width="1.5" opacity="0.4"/>
+        <line x1="160" y1="50" x2="170" y2="33" stroke="#06b6d4" stroke-width="2.5" opacity="0.7"/>
+        <line x1="160" y1="50" x2="170" y2="68" stroke="#06b6d4" stroke-width="2.5" opacity="0.7"/>
+        <circle cx="160" cy="50" r="5" fill="#06b6d4"/>
+        <circle cx="170" cy="33" r="4" fill="#94a3b8"/>
+        <circle cx="170" cy="68" r="4" fill="#94a3b8"/>
+        <circle cx="195" cy="33" r="3.5" fill="#64748b"/>
+        <circle cx="195" cy="50" r="6" fill="#06b6d4"/>
+        <circle cx="195" cy="50" r="2.5" fill="#0f172a"/>
+        <circle cx="195" cy="68" r="3.5" fill="#64748b"/>
+        <circle cx="220" cy="43" r="4.5" fill="#06b6d4" opacity="0.8"/>
+        <circle cx="220" cy="58" r="4.5" fill="#06b6d4" opacity="0.8"/>
+        <text x="200" y="130" text-anchor="middle" font-family="Outfit, sans-serif" font-size="38">
+          <tspan font-weight="600" fill="#e2e8f0">KM</tspan><tspan font-weight="300" fill="#06b6d4">Flow</tspan>
+        </text>
+      </svg>
+    </div>
+    <div class="concept-info">
+      <div class="concept-number">Concept 05</div>
+      <div class="concept-name">Neural Process</div>
+      <div class="concept-desc">Neural network meets directed process flows in a circular container. Dark slate with cyan accents. Intellectual, sophisticated AI aesthetic.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- CONCEPT 6: Knowledge Graph -->
+  <!-- ============================================================ -->
+  <div class="concept-card">
+    <div class="logo-display">
+      <svg viewBox="0 0 400 170" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="c6a" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#dc2626"/>
+            <stop offset="100%" stop-color="#ea580c"/>
+          </linearGradient>
+        </defs>
+        <!-- Knowledge graph: interconnected hexagonal nodes -->
+        <line x1="170" y1="35" x2="200" y2="52" stroke="#fed7aa" stroke-width="2"/>
+        <line x1="170" y1="70" x2="200" y2="52" stroke="#fed7aa" stroke-width="2"/>
+        <line x1="200" y1="52" x2="230" y2="35" stroke="#fca5a5" stroke-width="2.5"/>
+        <line x1="200" y1="52" x2="230" y2="70" stroke="#fca5a5" stroke-width="2.5"/>
+        <line x1="170" y1="35" x2="170" y2="70" stroke="#fed7aa" stroke-width="1.5" opacity="0.5"/>
+        <line x1="230" y1="35" x2="230" y2="70" stroke="#fca5a5" stroke-width="1.5" opacity="0.5"/>
+        <line x1="170" y1="35" x2="200" y2="25" stroke="#fed7aa" stroke-width="1.5" opacity="0.4"/>
+        <line x1="230" y1="35" x2="200" y2="25" stroke="#fca5a5" stroke-width="1.5" opacity="0.4"/>
+        <!-- Nodes with hexagonal feel (circles for clean rendering) -->
+        <circle cx="200" cy="25" r="6" fill="#fdba74" opacity="0.6"/>
+        <circle cx="170" cy="35" r="8" fill="#ea580c" opacity="0.7"/>
+        <circle cx="230" cy="35" r="8" fill="#dc2626" opacity="0.8"/>
+        <circle cx="200" cy="52" r="12" fill="url(#c6a)"/>
+        <circle cx="200" cy="52" r="5" fill="white" opacity="0.9"/>
+        <circle cx="170" cy="70" r="8" fill="#ea580c" opacity="0.6"/>
+        <circle cx="230" cy="70" r="8" fill="#dc2626" opacity="0.7"/>
+        <!-- K and M letters subtly visible in the central node -->
+        <text x="200" y="56" text-anchor="middle" font-family="Outfit, sans-serif" font-size="9" fill="white" font-weight="700" opacity="0.9">KM</text>
+        <text x="200" y="128" text-anchor="middle" font-family="Outfit, sans-serif" font-size="38" fill="#1e293b">
+          <tspan font-weight="700" fill="#dc2626">KM</tspan><tspan font-weight="400" fill="#ea580c">Flow</tspan>
+        </text>
+      </svg>
+    </div>
+    <div class="concept-info">
+      <div class="concept-number">Concept 06</div>
+      <div class="concept-name">Knowledge Graph</div>
+      <div class="concept-desc">Interconnected semantic graph nodes radiating from a central hub. Red-orange palette signals energy and transformation. Represents the knowledge graph core of KMFlow.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- CONCEPT 7: Stacked Layers -->
+  <!-- ============================================================ -->
+  <div class="concept-card">
+    <div class="logo-display">
+      <svg viewBox="0 0 400 170" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="c7a" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#0ea5e9"/>
+            <stop offset="100%" stop-color="#0284c7"/>
+          </linearGradient>
+        </defs>
+        <!-- Three stacked parallelogram layers (evidence -> process -> insight) -->
+        <g transform="translate(200, 52)">
+          <!-- Bottom layer (evidence) -->
+          <path d="M -30,18 L 30,18 L 36,8 L -24,8 Z" fill="#0284c7" opacity="0.4"/>
+          <!-- Middle layer (process) -->
+          <path d="M -30,6 L 30,6 L 36,-4 L -24,-4 Z" fill="#0284c7" opacity="0.65"/>
+          <!-- Top layer (insight) -->
+          <path d="M -30,-6 L 30,-6 L 36,-16 L -24,-16 Z" fill="url(#c7a)"/>
+          <!-- Flow arrow emerging right -->
+          <path d="M 38,1 L 56,1" stroke="#0ea5e9" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M 52,-3 L 58,1 L 52,5" stroke="#0ea5e9" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+        <text x="200" y="128" text-anchor="middle" font-family="Space Grotesk, Outfit, sans-serif" font-size="38" fill="#0f172a">
+          <tspan font-weight="700" fill="#0284c7">KM</tspan><tspan font-weight="400" fill="#0ea5e9">Flow</tspan>
+        </text>
+      </svg>
+    </div>
+    <div class="concept-info">
+      <div class="concept-number">Concept 07</div>
+      <div class="concept-name">Stacked Layers</div>
+      <div class="concept-desc">Three ascending layers (evidence, process, insight) with a forward-pointing flow arrow. Sky blue palette. Represents the transformation pipeline from data to knowledge.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- CONCEPT 8: Monogram Shield -->
+  <!-- ============================================================ -->
+  <div class="concept-card">
+    <div class="logo-display charcoal">
+      <svg viewBox="0 0 400 170" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="c8a" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#c084fc"/>
+            <stop offset="100%" stop-color="#a855f7"/>
+          </linearGradient>
+          <linearGradient id="c8b" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#e9d5ff"/>
+            <stop offset="100%" stop-color="#c084fc"/>
+          </linearGradient>
+        </defs>
+        <!-- Rounded square container -->
+        <rect x="168" y="14" width="64" height="64" rx="14" fill="url(#c8a)"/>
+        <!-- "KM" monogram inside -->
+        <text x="200" y="53" text-anchor="middle" font-family="Outfit, sans-serif" font-size="28" fill="white" font-weight="700" letter-spacing="-1">KM</text>
+        <!-- Subtle flow line underneath the square -->
+        <path d="M 178,82 C 190,88 210,88 222,82" stroke="#c084fc" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.6"/>
+        <text x="200" y="128" text-anchor="middle" font-family="Outfit, sans-serif" font-size="36">
+          <tspan font-weight="700" fill="#e9d5ff">KM</tspan><tspan font-weight="300" fill="#c084fc">Flow</tspan>
+        </text>
+      </svg>
+    </div>
+    <div class="concept-info">
+      <div class="concept-number">Concept 08</div>
+      <div class="concept-name">Monogram Shield</div>
+      <div class="concept-desc">Bold "KM" monogram inside a rounded square container. Purple gradient on dark background. Premium app-icon aesthetic - works as favicon and mobile icon out of the box.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- CONCEPT 9: Convergence Arrows -->
+  <!-- ============================================================ -->
+  <div class="concept-card">
+    <div class="logo-display">
+      <svg viewBox="0 0 400 170" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="c9a" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#0f766e"/>
+            <stop offset="100%" stop-color="#14b8a6"/>
+          </linearGradient>
+          <linearGradient id="c9b" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#1d4ed8"/>
+            <stop offset="100%" stop-color="#3b82f6"/>
+          </linearGradient>
+        </defs>
+        <!-- Three converging arrow streams -->
+        <!-- Top stream -->
+        <path d="M 135,28 C 155,28 170,38 190,44" stroke="url(#c9a)" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <!-- Middle stream -->
+        <path d="M 130,52 L 190,52" stroke="#1e293b" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <!-- Bottom stream -->
+        <path d="M 135,76 C 155,76 170,66 190,60" stroke="url(#c9b)" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <!-- Convergence point -->
+        <circle cx="198" cy="52" r="10" fill="#1e293b"/>
+        <circle cx="198" cy="52" r="4" fill="white"/>
+        <!-- Single output arrow -->
+        <path d="M 210,52 L 265,52" stroke="#1e293b" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <path d="M 258,45 L 270,52 L 258,59" stroke="#1e293b" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Small source dots -->
+        <circle cx="130" cy="28" r="4" fill="#0f766e" opacity="0.6"/>
+        <circle cx="125" cy="52" r="4" fill="#1e293b" opacity="0.4"/>
+        <circle cx="130" cy="76" r="4" fill="#1d4ed8" opacity="0.6"/>
+        <text x="200" y="128" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="38" fill="#1e293b">
+          <tspan font-weight="700">KM</tspan><tspan font-weight="400" fill="#64748b">Flow</tspan>
+        </text>
+      </svg>
+    </div>
+    <div class="concept-info">
+      <div class="concept-number">Concept 09</div>
+      <div class="concept-name">Convergence Arrows</div>
+      <div class="concept-desc">Three diverse evidence streams converging into a single insight arrow. Teal, dark, and blue inputs unify through a central node. Captures the evidence-first methodology.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- CONCEPT 10: Infinity Process -->
+  <!-- ============================================================ -->
+  <div class="concept-card">
+    <div class="logo-display">
+      <svg viewBox="0 0 400 170" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="c10a" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#be185d"/>
+            <stop offset="40%" stop-color="#9333ea"/>
+            <stop offset="100%" stop-color="#2563eb"/>
+          </linearGradient>
+        </defs>
+        <!-- Infinity/figure-8 loop representing continuous process flow -->
+        <path d="M 200,52 C 200,30 170,20 155,20 C 135,20 120,35 120,52 C 120,69 135,84 155,84 C 170,84 200,74 200,52 C 200,30 230,20 245,20 C 265,20 280,35 280,52 C 280,69 265,84 245,84 C 230,84 200,74 200,52"
+              stroke="url(#c10a)" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <!-- Center highlight dot -->
+        <circle cx="200" cy="52" r="5" fill="#9333ea"/>
+        <circle cx="200" cy="52" r="2" fill="white"/>
+        <!-- Direction indicators -->
+        <circle cx="138" cy="30" r="3" fill="#be185d" opacity="0.6"/>
+        <circle cx="262" cy="30" r="3" fill="#2563eb" opacity="0.6"/>
+        <text x="200" y="130" text-anchor="middle" font-family="Outfit, sans-serif" font-size="38" fill="#1e293b">
+          <tspan font-weight="700" fill="#9333ea">KM</tspan><tspan font-weight="400" fill="#6366f1">Flow</tspan>
+        </text>
+      </svg>
+    </div>
+    <div class="concept-info">
+      <div class="concept-number">Concept 10</div>
+      <div class="concept-name">Infinity Process</div>
+      <div class="concept-desc">Figure-8/infinity loop symbolizing continuous process improvement cycles. Rose to purple to blue gradient. Conveys perpetual knowledge flow and iterative refinement.</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <p>KMFlow Logo Concepts - 10 Directions for Review</p>
+  <p style="margin-top: 8px;">All concepts are SVG vector format, infinitely scalable</p>
+</div>
+
+</body>
+</html>
