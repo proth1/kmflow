@@ -49,15 +49,17 @@ export default function RankingTab({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {(["evidence", "simulation", "financial", "governance"] as const).map((dim) => (
             <div key={dim} className="space-y-1">
-              <label className="text-xs font-medium capitalize">
+              <label htmlFor={`weight-${dim}`} className="text-xs font-medium capitalize">
                 {dim}: {(weights[dim] * 100).toFixed(0)}%
               </label>
               <input
+                id={`weight-${dim}`}
                 type="range"
                 min="0"
                 max="1"
                 step="0.05"
                 value={weights[dim]}
+                aria-label={`${dim} weight: ${(weights[dim] * 100).toFixed(0)}%`}
                 onChange={(e) =>
                   onWeightsChange({ ...weights, [dim]: parseFloat(e.target.value) })
                 }

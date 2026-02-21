@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { apiPost } from "@/lib/api";
 
 type Message = {
   role: "user" | "assistant";
@@ -49,23 +49,15 @@ export default function CopilotChat() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE}/api/v1/copilot/chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          engagement_id: engagementId,
-          query: query,
-          query_type: queryType,
-        }),
+      const data = await apiPost<{
+        answer: string;
+        citations: Citation[];
+        context_tokens_used: number;
+      }>("/api/v1/copilot/chat", {
+        engagement_id: engagementId,
+        query: query,
+        query_type: queryType,
       });
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
-
-      const data = await response.json();
 
       const assistantMessage: Message = {
         role: "assistant",

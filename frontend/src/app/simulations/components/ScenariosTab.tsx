@@ -78,6 +78,7 @@ export default function ScenariosTab({
               <input
                 type="text"
                 placeholder="Scenario name"
+                aria-label="Scenario name"
                 value={newName}
                 onChange={(e) => onNewNameChange(e.target.value)}
                 className="border rounded px-3 py-1.5 text-sm w-full"
@@ -85,6 +86,7 @@ export default function ScenariosTab({
               <select
                 value={newType}
                 onChange={(e) => onNewTypeChange(e.target.value)}
+                aria-label="Simulation type"
                 className="border rounded px-3 py-1.5 text-sm w-full"
               >
                 {SIMULATION_TYPES.map((t) => (
@@ -97,6 +99,7 @@ export default function ScenariosTab({
             <input
               type="text"
               placeholder="Description (optional)"
+              aria-label="Scenario description (optional)"
               value={newDescription}
               onChange={(e) => onNewDescriptionChange(e.target.value)}
               className="border rounded px-3 py-1.5 text-sm w-full"
