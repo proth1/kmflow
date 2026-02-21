@@ -12,6 +12,7 @@ import pytest
 from httpx import AsyncClient
 
 from src.core.models import (
+    DataClassification,
     EvidenceCategory,
     EvidenceFragment,
     EvidenceItem,
@@ -44,6 +45,7 @@ def _make_evidence(**overrides) -> EvidenceItem:  # noqa: ANN003
         "consistency_score": 0.8,
         "duplicate_of_id": None,
         "validation_status": ValidationStatus.PENDING,
+        "classification": DataClassification.INTERNAL,
     }
     defaults.update(overrides)
     return EvidenceItem(**defaults)

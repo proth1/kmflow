@@ -19,7 +19,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from httpx import AsyncClient
 
-from src.core.models import EvidenceCategory, EvidenceItem, ValidationStatus
+from src.core.models import DataClassification, EvidenceCategory, EvidenceItem, ValidationStatus
 
 
 # ---------------------------------------------------------------------------
@@ -52,6 +52,7 @@ def _make_evidence_item(**overrides) -> EvidenceItem:  # noqa: ANN003
         "consistency_score": 0.8,
         "duplicate_of_id": None,
         "validation_status": ValidationStatus.PENDING,
+        "classification": DataClassification.INTERNAL,
     }
     defaults.update(overrides)
     return EvidenceItem(**defaults)
