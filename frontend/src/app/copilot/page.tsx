@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { apiPost } from "@/lib/api";
 
 type Message = {
   role: "user" | "assistant";
@@ -49,23 +49,15 @@ export default function CopilotChat() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE}/api/v1/copilot/chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          engagement_id: engagementId,
-          query: query,
-          query_type: queryType,
-        }),
+      const data = await apiPost<{
+        answer: string;
+        citations: Citation[];
+        context_tokens_used: number;
+      }>("/api/v1/copilot/chat", {
+        engagement_id: engagementId,
+        query: query,
+        query_type: queryType,
       });
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
-
-      const data = await response.json();
 
       const assistantMessage: Message = {
         role: "assistant",
@@ -95,10 +87,11 @@ export default function CopilotChat() {
 
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label htmlFor="copilot-engagement-id" className="block text-sm font-medium text-gray-700">
               Engagement ID
             </label>
             <input
+              id="copilot-engagement-id"
               type="text"
               value={engagementId}
               onChange={(e) => setEngagementId(e.target.value)}
@@ -108,10 +101,11 @@ export default function CopilotChat() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label htmlFor="copilot-query-type" className="block text-sm font-medium text-gray-700">
               Query Type
             </label>
             <select
+              id="copilot-query-type"
               value={queryType}
               onChange={(e) => setQueryType(e.target.value as QueryType)}
               className="mt-1 block w-full rounded-md border border-gray-300 p-2 text-sm"
@@ -204,6 +198,7 @@ export default function CopilotChat() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Ask a question..."
               disabled={isLoading || !engagementId}
+              aria-label="Chat message"
               className="flex-1 rounded-md border border-gray-300 p-2 text-sm disabled:bg-gray-100"
             />
             <button

@@ -82,8 +82,8 @@ class AuditLog(Base):
     __table_args__ = (Index("ix_audit_logs_engagement_id", "engagement_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    engagement_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    engagement_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="SET NULL"), nullable=True
     )
     action: Mapped[AuditAction] = mapped_column(Enum(AuditAction), nullable=False)
     actor: Mapped[str] = mapped_column(String(255), nullable=False, default="system")
@@ -91,7 +91,7 @@ class AuditLog(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
-    engagement: Mapped["Engagement"] = relationship("Engagement", back_populates="audit_logs")
+    engagement: Mapped["Engagement | None"] = relationship("Engagement", back_populates="audit_logs")
 
     def __repr__(self) -> str:
         return f"<AuditLog(id={self.id}, action={self.action}, engagement_id={self.engagement_id})>"

@@ -78,7 +78,7 @@ class Engagement(Base):
         "EvidenceItem", back_populates="engagement", cascade="all, delete-orphan"
     )
     audit_logs: Mapped[list["AuditLog"]] = relationship(
-        "AuditLog", back_populates="engagement", cascade="all, delete-orphan"
+        "AuditLog", back_populates="engagement", passive_deletes=True
     )
     shelf_data_requests: Mapped[list["ShelfDataRequest"]] = relationship(
         "ShelfDataRequest", back_populates="engagement", cascade="all, delete-orphan"

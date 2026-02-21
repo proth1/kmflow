@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.models import (
     AuditLog,
+    CopilotMessage,
     Engagement,
     EngagementStatus,
     EvidenceFragment,
@@ -101,6 +102,26 @@ async def cleanup_expired_engagements(session: AsyncSession) -> int:
         logger.info("Retention cleanup: processed %d expired engagements", count)
 
     return count
+
+
+async def cleanup_old_copilot_messages(session: AsyncSession, retention_days: int) -> int:
+    """Delete copilot_messages older than retention_days.
+
+    Copilot conversation history is ephemeral and should not accumulate
+    indefinitely.  This function removes messages older than the configured
+    retention window.
+
+    Returns the number of rows deleted.
+    """
+    cutoff = datetime.now(UTC) - timedelta(days=retention_days)
+    result = await session.execute(
+        delete(CopilotMessage).where(CopilotMessage.created_at < cutoff)
+    )
+    deleted = result.rowcount or 0
+    if deleted:
+        await session.commit()
+        logger.info("Retention cleanup: deleted %d copilot_messages older than %d days", deleted, retention_days)
+    return deleted
 
 
 async def cleanup_old_http_audit_events(session: AsyncSession, retention_days: int) -> int:

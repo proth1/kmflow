@@ -80,9 +80,12 @@ export default function ProcessExplorerPage() {
 
       {models.length > 1 && (
         <div className="mb-4">
+          <label htmlFor="process-model-select" className="sr-only">Process model</label>
           <select
+            id="process-model-select"
             value={selectedModel}
             onChange={(e) => { setSelectedModel(Number(e.target.value)); setSelectedElement(null); }}
+            aria-label="Select process model"
             className="rounded-md border border-gray-300 p-2 text-sm"
           >
             {models.map((m, i) => (
@@ -134,6 +137,7 @@ export default function ProcessExplorerPage() {
             )}
             <button
               onClick={() => setSelectedElement(null)}
+              aria-label="Close element detail panel"
               className="mt-4 text-xs text-gray-400 hover:text-gray-600"
             >
               Close panel

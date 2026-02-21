@@ -20,6 +20,7 @@ from src.api.deps import get_session
 from src.core.models import (
     AuditAction,
     AuditLog,
+    DataClassification,
     EvidenceCategory,
     EvidenceFragment,
     EvidenceItem,
@@ -62,6 +63,7 @@ class EvidenceResponse(BaseModel):
     quality_score: float | None = None
     duplicate_of_id: UUID | None = None
     validation_status: ValidationStatus
+    classification: DataClassification = DataClassification.INTERNAL
     created_at: Any | None = None
     updated_at: Any | None = None
 
@@ -236,6 +238,7 @@ async def get_evidence(
             "quality_score": evidence.quality_score,
             "duplicate_of_id": evidence.duplicate_of_id,
             "validation_status": evidence.validation_status,
+            "classification": evidence.classification,
             "created_at": evidence.created_at,
             "updated_at": evidence.updated_at,
         },
@@ -248,6 +251,7 @@ async def list_evidence(
     engagement_id: UUID | None = None,
     category: EvidenceCategory | None = None,
     validation_status: ValidationStatus | None = None,
+    classification: DataClassification | None = None,
     limit: int = 20,
     offset: int = 0,
     session: AsyncSession = Depends(get_session),
@@ -259,6 +263,7 @@ async def list_evidence(
     - engagement_id: Filter by engagement
     - category: Filter by evidence category
     - validation_status: Filter by validation status
+    - classification: Filter by data sensitivity classification
     - limit: Maximum results (default 20)
     - offset: Number of results to skip (default 0)
     """
@@ -274,6 +279,9 @@ async def list_evidence(
     if validation_status is not None:
         query = query.where(EvidenceItem.validation_status == validation_status)
         count_query = count_query.where(EvidenceItem.validation_status == validation_status)
+    if classification is not None:
+        query = query.where(EvidenceItem.classification == classification)
+        count_query = count_query.where(EvidenceItem.classification == classification)
 
     query = query.offset(offset).limit(limit).order_by(EvidenceItem.created_at.desc())
 
