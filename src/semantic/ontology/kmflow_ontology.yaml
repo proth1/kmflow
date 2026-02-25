@@ -135,6 +135,27 @@ node_types:
       - name
       - engagement_id
 
+  Application:
+    description: A desktop or web application observed during task mining.
+    extractable: false
+    required_properties:
+      - name
+      - engagement_id
+    optional_properties:
+      - app_category
+      - platform
+
+  UserAction:
+    description: An aggregated user action observed via desktop task mining.
+    extractable: false
+    required_properties:
+      - name
+      - engagement_id
+      - action_category
+    optional_properties:
+      - duration_seconds
+      - event_count
+
 # ---------------------------------------------------------------------------
 # Relationship Types
 # ---------------------------------------------------------------------------
@@ -270,6 +291,22 @@ relationship_types:
       - Activity
       - Process
       - Document
+
+  PERFORMED_IN:
+    description: A user action was performed in a specific application.
+    valid_from:
+      - UserAction
+    valid_to:
+      - Application
+
+  PRECEDED_BY:
+    description: >
+      Temporal ordering between user actions observed via task mining.
+      UserAction A PRECEDED_BY UserAction B means B happened before A.
+    valid_from:
+      - UserAction
+    valid_to:
+      - UserAction
 
 # ---------------------------------------------------------------------------
 # Evidence Categories (mirrors EvidenceCategory enum for reference)

@@ -429,6 +429,17 @@ async def admin_anonymize_user(
         {"uid": user_id_str},
     )
 
+    # Anonymise task mining data — delete events/actions/quarantine for
+    # agents registered by this user's engagements. Agent records are
+    # kept but hostname is anonymised.
+    await session.execute(
+        text(
+            "UPDATE task_mining_agents SET hostname = 'anonymized', "
+            "approved_by = NULL WHERE approved_by = :uid"
+        ),
+        {"uid": user_id_str},
+    )
+
     now = datetime.now(UTC)
     await session.commit()
 

@@ -150,6 +150,15 @@ class Settings(BaseSettings):
     # ── Pattern Library (Phase 3) ────────────────────────────────
     pattern_anonymization_enabled: bool = True
 
+    # ── Task Mining ───────────────────────────────────────────────
+    taskmining_enabled: bool = False
+    taskmining_worker_count: int = 1
+    taskmining_stream_max_len: int = 10000
+    taskmining_event_retention_days: int = 90
+    taskmining_action_retention_days: int = 365
+    taskmining_pii_quarantine_hours: int = 24
+    taskmining_batch_max_size: int = 1000
+
     @property
     def jwt_verification_keys(self) -> list[str]:
         """Return list of keys to try for JWT verification (supports rotation).

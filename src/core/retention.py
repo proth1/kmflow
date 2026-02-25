@@ -20,6 +20,11 @@ from src.core.models import (
     EvidenceFragment,
     EvidenceItem,
     HttpAuditEvent,
+    PIIQuarantine,
+    QuarantineStatus,
+    TaskMiningAction,
+    TaskMiningEvent,
+    TaskMiningSession,
 )
 
 logger = logging.getLogger(__name__)
@@ -139,4 +144,63 @@ async def cleanup_old_http_audit_events(session: AsyncSession, retention_days: i
     if deleted:
         await session.commit()
         logger.info("Retention cleanup: deleted %d http_audit_events older than %d days", deleted, retention_days)
+    return deleted
+
+
+async def cleanup_old_task_mining_events(session: AsyncSession, retention_days: int) -> int:
+    """Delete task_mining_events older than retention_days.
+
+    Raw events are high-volume and should be purged after the configured
+    retention period (default 90 days). Aggregated actions are kept longer.
+
+    Returns the number of rows deleted.
+    """
+    cutoff = datetime.now(UTC) - timedelta(days=retention_days)
+    result = await session.execute(
+        delete(TaskMiningEvent).where(TaskMiningEvent.created_at < cutoff)
+    )
+    deleted = result.rowcount or 0
+    if deleted:
+        await session.commit()
+        logger.info("Retention cleanup: deleted %d task_mining_events older than %d days", deleted, retention_days)
+    return deleted
+
+
+async def cleanup_old_task_mining_actions(session: AsyncSession, retention_days: int) -> int:
+    """Delete task_mining_actions older than retention_days.
+
+    Aggregated actions are retained longer than raw events (default 365 days).
+
+    Returns the number of rows deleted.
+    """
+    cutoff = datetime.now(UTC) - timedelta(days=retention_days)
+    result = await session.execute(
+        delete(TaskMiningAction).where(TaskMiningAction.created_at < cutoff)
+    )
+    deleted = result.rowcount or 0
+    if deleted:
+        await session.commit()
+        logger.info("Retention cleanup: deleted %d task_mining_actions older than %d days", deleted, retention_days)
+    return deleted
+
+
+async def cleanup_expired_pii_quarantine(session: AsyncSession) -> int:
+    """Auto-delete quarantined PII events past their expiry.
+
+    Quarantined events with status PENDING_REVIEW that have passed
+    their auto_delete_at timestamp are permanently deleted.
+
+    Returns the number of rows deleted.
+    """
+    now = datetime.now(UTC)
+    result = await session.execute(
+        delete(PIIQuarantine).where(
+            PIIQuarantine.status == QuarantineStatus.PENDING_REVIEW,
+            PIIQuarantine.auto_delete_at <= now,
+        )
+    )
+    deleted = result.rowcount or 0
+    if deleted:
+        await session.commit()
+        logger.info("Retention cleanup: auto-deleted %d expired PII quarantine items", deleted)
     return deleted
