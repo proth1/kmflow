@@ -188,10 +188,12 @@ relationship_types:
     valid_from:
       - Activity
       - Process
+      - UserAction
     valid_to:
       - Process
       - Policy
       - TOM
+      - Activity
 
   IMPLEMENTS:
     description: Activity or control implements a policy or regulation.
@@ -307,6 +309,25 @@ relationship_types:
       - UserAction
     valid_to:
       - UserAction
+
+  SUPPORTS:
+    description: >
+      Observed task mining behavior supports a documented activity.
+      Created by the semantic bridge when UserAction descriptions match
+      Activity names above the similarity threshold.
+    valid_from:
+      - UserAction
+    valid_to:
+      - Activity
+
+  MAPS_TO:
+    description: >
+      A desktop application maps to a known system in the TOM/architecture.
+      Created by the semantic bridge when Application names match System nodes.
+    valid_from:
+      - Application
+    valid_to:
+      - System
 
 # ---------------------------------------------------------------------------
 # Evidence Categories (mirrors EvidenceCategory enum for reference)

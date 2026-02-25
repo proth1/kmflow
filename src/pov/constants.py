@@ -10,6 +10,7 @@ from __future__ import annotations
 # Higher weight = more authoritative evidence type.
 EVIDENCE_TYPE_WEIGHTS: dict[str, float] = {
     "structured_data": 1.0,
+    "task_mining": 0.90,
     "bpm_process_models": 0.85,
     "documents": 0.75,
     "controls_evidence": 0.70,
