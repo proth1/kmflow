@@ -21,3 +21,4 @@ export * from "./integrations";
 export * from "./shelf-requests";
 export * from "./metrics";
 export * from "./annotations";
+export * from "./taskmining";
