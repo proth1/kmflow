@@ -219,10 +219,8 @@ class TestDetectVariantsIntegration:
         result = await detect_variants(mock_graph_service, "eng-1")
 
         assert result.sessions_analyzed >= 0
-        # No variants because observed matches expected
-        conforming_variants = [v for v in result.variants if v.deviation_type]
-        # The conforming check may or may not produce variants depending on
-        # whether the UA chain resolves correctly. Key: no crash.
+        # Conforming behavior: observed matches expected → no variants
+        assert len(result.variants) == 0
         assert result.errors == []
 
     @pytest.mark.asyncio

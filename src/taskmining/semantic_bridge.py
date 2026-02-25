@@ -25,6 +25,10 @@ _SUGGESTED_THRESHOLD = 0.5
 # Similarity threshold for MAPS_TO relationships
 _MAPS_TO_THRESHOLD = 0.6
 
+# Max nodes to fetch per label (guards against silent truncation from
+# the default find_nodes limit of 500).
+_MAX_NODES = 10000
+
 
 @runtime_checkable
 class EmbeddingServiceProtocol(Protocol):
@@ -76,10 +80,10 @@ async def run_semantic_bridge(
 
     # -- SUPPORTS: UserAction → Activity ------------------------------------
     user_actions = await graph_service.find_nodes(
-        "UserAction", {"engagement_id": engagement_id}
+        "UserAction", {"engagement_id": engagement_id}, limit=_MAX_NODES
     )
     activities = await graph_service.find_nodes(
-        "Activity", {"engagement_id": engagement_id}
+        "Activity", {"engagement_id": engagement_id}, limit=_MAX_NODES
     )
 
     if user_actions and activities:
@@ -89,10 +93,10 @@ async def run_semantic_bridge(
 
     # -- MAPS_TO: Application → System --------------------------------------
     applications = await graph_service.find_nodes(
-        "Application", {"engagement_id": engagement_id}
+        "Application", {"engagement_id": engagement_id}, limit=_MAX_NODES
     )
     systems = await graph_service.find_nodes(
-        "System", {"engagement_id": engagement_id}
+        "System", {"engagement_id": engagement_id}, limit=_MAX_NODES
     )
 
     if applications and systems:

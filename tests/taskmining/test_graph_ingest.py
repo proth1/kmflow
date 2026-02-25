@@ -223,7 +223,7 @@ class TestDetectAppCategory:
         ("VS Code", "development"),
         ("IntelliJ IDEA", "development"),
         ("PyCharm", "development"),
-        ("Calculator", "spreadsheet"),  # "calc" matches spreadsheet heuristic
+        ("Calculator", "other"),
         ("Custom App", "other"),
     ])
     def test_categorizes_app(self, app_name: str, expected: str):

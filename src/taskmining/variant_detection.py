@@ -19,6 +19,9 @@ from src.semantic.graph import GraphNode, KnowledgeGraphService
 
 logger = logging.getLogger(__name__)
 
+# Max nodes to fetch per label (guards against silent truncation).
+_MAX_NODES = 10000
+
 _SEVERITY_MAP = {
     "missing_step": "warning",
     "extra_step": "info",
@@ -70,7 +73,7 @@ async def detect_variants(
 
     # Load processes with their expected activity sequences
     processes = await graph_service.find_nodes(
-        "Process", {"engagement_id": engagement_id}
+        "Process", {"engagement_id": engagement_id}, limit=_MAX_NODES
     )
     if not processes:
         logger.info("No processes found for engagement %s", engagement_id)
@@ -78,7 +81,7 @@ async def detect_variants(
 
     # Load UserAction nodes with their PRECEDED_BY chains and SUPPORTS links
     user_actions = await graph_service.find_nodes(
-        "UserAction", {"engagement_id": engagement_id}
+        "UserAction", {"engagement_id": engagement_id}, limit=_MAX_NODES
     )
     if not user_actions:
         logger.info("No UserActions found for engagement %s", engagement_id)
@@ -253,9 +256,9 @@ async def _build_session_sequences(
     # Build inverse map for forward traversal
     successor_of: dict[str, str] = {v: k for k, v in preceded_by.items()}
 
-    # Find chain ends (no successor = last in chain, start traversal from front)
+    # Find chain starts (no predecessor = first in temporal sequence)
     ua_ids = {ua.id for ua in user_actions}
-    chain_starts = [uid for uid in ua_ids if uid not in has_successor]
+    chain_starts = [uid for uid in ua_ids if uid not in preceded_by]
 
     sessions: dict[str, list[str]] = {}
     for start_id in chain_starts:

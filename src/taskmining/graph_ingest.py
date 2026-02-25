@@ -177,7 +177,7 @@ async def ingest_actions_to_graph(
 def _detect_app_category(app_name: str) -> str:
     """Heuristic app category from name."""
     lower = app_name.lower()
-    if any(kw in lower for kw in ("excel", "sheets", "calc", "numbers")):
+    if any(kw in lower for kw in ("excel", "sheets", "libreoffice calc", "numbers")):
         return "spreadsheet"
     if any(kw in lower for kw in ("chrome", "firefox", "safari", "edge", "browser")):
         return "browser"
