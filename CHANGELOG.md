@@ -3,6 +3,20 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.061] - 2026-02-25
+### Added
+- Knowledge graph integration for task mining: graph ingestion, semantic bridge, LCD weight, variant detection (#225)
+- Graph ingestion service: creates Application/UserAction nodes with PERFORMED_IN and PRECEDED_BY relationships (#226)
+- Semantic bridge: links UserAction→Activity (SUPPORTS) and Application→System (MAPS_TO) via embedding cosine similarity (#227)
+- LCD evidence weight: `task_mining: 0.90` in EVIDENCE_TYPE_WEIGHTS, above BPM models and documents (#228)
+- Process variant detection: detects extra/missing/reordered steps, creates DEVIATES_FROM relationships (#229)
+- Ontology extensions: SUPPORTS, MAPS_TO relationship types; DEVIATES_FROM extended for UserAction
+- 71 new tests across 4 test files (2243 total backend)
+
+### Fixed
+- Chain traversal bug in variant detection: correctly identifies temporal chain starts (nodes with no predecessor)
+- App category heuristic: "Calculator" no longer falsely categorized as spreadsheet
+
 ## [2026.02.060] - 2026-02-25
 ### Added
 - Task mining admin dashboard: 4 frontend pages for agent management, capture policy, activity monitoring, quarantine review (#215)

@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.060
+**Version**: 2026.02.061
 **Last Updated**: 2026-02-25
 
 ## Quick Stats
@@ -9,7 +9,7 @@
 |--------|-------|
 | SQLAlchemy Models | 78+ classes across 12 modules |
 | API Routes | 25+ routers |
-| Test Count | 2172 backend + 206 frontend passing |
+| Test Count | 2243 backend + 206 frontend passing |
 | Coverage | >80% |
 | Python Version | 3.12+ |
 | FastAPI Version | 0.109+ |
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.061 | 2026-02-25 | Knowledge graph integration: ingestion, semantic bridge, LCD weight, variant detection |
 | 2026.02.060 | 2026-02-25 | Admin dashboard: agents, policy, activity monitoring, quarantine review |
 | 2026.02.059 | 2026-02-25 | Privacy and compliance: PII tests, consent, audit, quarantine cleanup |
 | 2026.02.058 | 2026-02-25 | Action aggregation engine: session grouping, classification, materialization |
@@ -44,7 +45,7 @@
 
 ## Platform Health
 
-- All 1858 tests passing
+- All 2243 backend + 206 frontend tests passing
 - No known critical vulnerabilities
 - Backend lint/format/type checks clean
 
@@ -67,7 +68,7 @@ src/                  # Backend (FastAPI)
   semantic/           # Knowledge graph engine
   pov/                # LCD algorithm, POV generator
   tom/                # TOM alignment, gap analysis
-  taskmining/         # Task mining (NEW: PII engine, processor, worker)
+  taskmining/         # Task mining (PII, processor, worker, graph integration)
   integrations/       # External connectors
 frontend/             # Next.js 14+ frontend
 docs/                 # PRD, presentations
