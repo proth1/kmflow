@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kmflow-agent"
+version = "1.0.0"
+description = "KMFlow Desktop Agent — Python Intelligence Layer"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28.0",
+    "PyJWT[crypto]>=2.9.0",
+    "psutil>=5.9.0",
+    "cryptography>=42.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "respx>=0.22",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

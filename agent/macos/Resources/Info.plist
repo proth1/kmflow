@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleExecutable</key>
+    <string>KMFlowAgent</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.kmflow.agent</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>KMFlow Agent</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+
+    <!-- Menu bar only app (no Dock icon) -->
+    <key>LSUIElement</key>
+    <true/>
+
+    <!-- Minimum macOS version -->
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+
+    <!-- Usage descriptions for permission prompts -->
+    <key>NSAccessibilityUsageDescription</key>
+    <string>KMFlow Agent needs Accessibility access to observe application switches, window titles, and keyboard/mouse activity for process mining analysis.</string>
+
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>KMFlow Agent needs Screen Recording access for optional screenshot-based process analysis (Phase 2).</string>
+
+    <!-- Login item support -->
+    <key>SMAppServiceEnabled</key>
+    <true/>
+</dict>
+</plist>
