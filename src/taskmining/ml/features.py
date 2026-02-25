@@ -12,25 +12,16 @@ import logging
 from dataclasses import dataclass, field
 
 from src.taskmining.aggregation.session import AggregatedSession
+from src.taskmining.app_categories import (
+    APP_CATEGORIES as _APP_CATEGORIES,
+    detect_app_category,
+)
 
 logger = logging.getLogger(__name__)
 
 # Feature schema version — bump when features are added/removed/reordered
 # so that persisted models are invalidated on schema change.
 FEATURE_SCHEMA_VERSION = 1
-
-# App categories for one-hot encoding (matches graph_ingest._detect_app_category)
-_APP_CATEGORIES = [
-    "spreadsheet",
-    "browser",
-    "email",
-    "communication",
-    "document",
-    "crm",
-    "project_management",
-    "development",
-    "other",
-]
 
 # Feature names in the order they appear in the vector
 FEATURE_NAMES: list[str] = [
@@ -63,30 +54,6 @@ FEATURE_NAMES: list[str] = [
     # App category one-hot (9 features)
     *[f"app_cat_{cat}" for cat in _APP_CATEGORIES],
 ]
-
-
-def detect_app_category(app_name: str) -> str:
-    """Detect app category from name (mirrors graph_ingest heuristic)."""
-    lower = app_name.lower()
-    if any(kw in lower for kw in ("excel", "sheets", "libreoffice calc", "numbers")):
-        return "spreadsheet"
-    if any(kw in lower for kw in ("chrome", "firefox", "safari", "edge", "browser")):
-        return "browser"
-    if any(kw in lower for kw in ("outlook", "mail", "thunderbird", "gmail")):
-        return "email"
-    if any(kw in lower for kw in ("slack", "teams", "zoom", "meet")):
-        return "communication"
-    if any(kw in lower for kw in ("word", "docs", "pages", "notepad")):
-        return "document"
-    if any(kw in lower for kw in ("salesforce", "dynamics", "hubspot")):
-        return "crm"
-    if any(kw in lower for kw in ("jira", "asana", "trello", "monday")):
-        return "project_management"
-    if any(kw in lower for kw in ("terminal", "iterm", "console", "powershell")):
-        return "development"
-    if any(kw in lower for kw in ("code", "intellij", "xcode", "pycharm", "vscode")):
-        return "development"
-    return "other"
 
 
 def extract_features(session: AggregatedSession) -> list[float]:

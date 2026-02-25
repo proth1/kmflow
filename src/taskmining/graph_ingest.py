@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.models.taskmining import TaskMiningAction
 from src.semantic.graph import KnowledgeGraphService
+from src.taskmining.app_categories import detect_app_category as _detect_app_category
 
 logger = logging.getLogger(__name__)
 
@@ -174,25 +175,3 @@ async def ingest_actions_to_graph(
     return summary
 
 
-def _detect_app_category(app_name: str) -> str:
-    """Heuristic app category from name."""
-    lower = app_name.lower()
-    if any(kw in lower for kw in ("excel", "sheets", "libreoffice calc", "numbers")):
-        return "spreadsheet"
-    if any(kw in lower for kw in ("chrome", "firefox", "safari", "edge", "browser")):
-        return "browser"
-    if any(kw in lower for kw in ("outlook", "mail", "thunderbird", "gmail")):
-        return "email"
-    if any(kw in lower for kw in ("slack", "teams", "zoom", "meet")):
-        return "communication"
-    if any(kw in lower for kw in ("word", "docs", "pages", "notepad")):
-        return "document"
-    if any(kw in lower for kw in ("salesforce", "dynamics", "hubspot")):
-        return "crm"
-    if any(kw in lower for kw in ("jira", "asana", "trello", "monday")):
-        return "project_management"
-    if any(kw in lower for kw in ("terminal", "iterm", "console", "powershell")):
-        return "development"
-    if any(kw in lower for kw in ("code", "intellij", "xcode", "pycharm", "vscode")):
-        return "development"
-    return "other"

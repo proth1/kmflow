@@ -197,3 +197,26 @@ class TestModelPersistence:
         loaded = clf.load_model("/tmp/nonexistent_model_12345.joblib")
         assert loaded is False
         assert not clf.is_trained
+
+    def test_load_schema_version_mismatch_returns_false(self):
+        import joblib
+
+        ds = _build_training_dataset()
+        clf = GradientBoostingTaskClassifier()
+        clf.train(ds)
+
+        with tempfile.NamedTemporaryFile(suffix=".joblib", delete=False) as f:
+            path = f.name
+
+        clf.save_model(path)
+
+        # Tamper with schema version in saved file
+        data = joblib.load(path)
+        data["schema_version"] = 999
+        joblib.dump(data, path)
+
+        clf2 = GradientBoostingTaskClassifier()
+        loaded = clf2.load_model(path)
+
+        assert loaded is False
+        assert not clf2.is_trained
