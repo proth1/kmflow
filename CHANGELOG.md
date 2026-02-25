@@ -3,6 +3,20 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.058] - 2026-02-25
+### Added
+- Action aggregation engine: session grouping, rule-based classification, evidence materialization (#206)
+- SessionAggregator: groups raw desktop events into bounded app sessions by app switches and idle periods
+- ActionClassifier: first-match-wins rule engine with 6 default rules (communication, file_operation, review, data_entry, navigation_url, navigation_scroll)
+- EvidenceMaterializer: converts classified sessions to EvidenceItem records (KM4WORK, reliability=0.90)
+- YAML-configurable classification rules with documented ordering constraints
+- 44 unit tests across 3 test files (session, classifier, materializer)
+
+### Fixed
+- YAML rule ordering aligned with hardcoded defaults (communication first, review before navigation_scroll)
+- Unknown YAML conditions logged at ERROR level instead of WARNING
+- PII upstream filtering contract documented for window_title_sample in materializer
+
 ## [2026.02.057] - 2026-02-25
 ### Added
 - macOS desktop agent: Swift capture layer (21 source files) + Python intelligence layer (17 source files) (#195)
