@@ -3,6 +3,21 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.059] - 2026-02-25
+### Added
+- Privacy and compliance suite: PII detection tests, quarantine cleanup, consent management, audit logging (#210)
+- PII detection test suite: 217+ parametrized tests covering all 7 PII types with ≥99% recall validation
+- Quarantine auto-cleanup job: atomic DELETE of expired PIIQuarantine records with summary reporting
+- Consent management: ConsentRecord model, ConsentManager service, HMAC-SHA256 IP hashing, re-grant state machine
+- Task mining audit logger: 11 new AuditAction enum values, insert-only TaskMiningAuditLogger with 9 convenience methods
+- Alembic migration 028 for consent_records table
+
+### Fixed
+- PII pattern gaps: international phone (word boundary before +), US address (Broadway/Parkway suffixes), financial account (number/routing keywords)
+- Quarantine cleanup TOCTOU: replaced count-then-delete with single atomic DELETE using rowcount
+- Consent re-grant: REVOKED agents can now re-consent (REVOKED → APPROVED transition)
+- IP address hashing: upgraded from bare SHA-256 to HMAC-SHA256 keyed by server secret
+
 ## [2026.02.058] - 2026-02-25
 ### Added
 - Action aggregation engine: session grouping, rule-based classification, evidence materialization (#206)
