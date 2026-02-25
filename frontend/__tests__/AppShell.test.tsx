@@ -96,7 +96,10 @@ describe("AppShell", () => {
         <div>content</div>
       </AppShell>
     );
-    const dashboardLink = screen.getByRole("link", { name: /Dashboard/i });
-    expect(dashboardLink).toHaveClass("bg-[hsl(var(--primary))]/20");
+    const dashboardLinks = screen.getAllByRole("link", { name: /Dashboard/i });
+    // The main Dashboard link (href="/") should be highlighted on the "/" route
+    const mainDashboard = dashboardLinks.find((el) => el.getAttribute("href") === "/");
+    expect(mainDashboard).toBeDefined();
+    expect(mainDashboard).toHaveClass("bg-[hsl(var(--primary))]/20");
   });
 });

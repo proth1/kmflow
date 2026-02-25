@@ -31,6 +31,9 @@ import {
   TrendingUp,
   Settings,
   GitBranch,
+  Monitor,
+  Sliders,
+  ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -111,6 +114,10 @@ const navSections: NavSection[] = [
     title: "Admin",
     items: [
       { label: "Admin", href: "/admin", icon: Settings },
+      { label: "TM Agents", href: "/admin/task-mining/agents", icon: Monitor },
+      { label: "TM Policy", href: "/admin/task-mining/policy", icon: Sliders },
+      { label: "TM Dashboard", href: "/admin/task-mining/dashboard", icon: Activity },
+      { label: "TM Quarantine", href: "/admin/task-mining/quarantine", icon: ShieldAlert },
     ],
   },
 ];
