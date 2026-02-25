@@ -32,7 +32,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole), default=UserRole.PROCESS_ANALYST, insert_default=UserRole.PROCESS_ANALYST, nullable=False
+        Enum(UserRole, values_callable=lambda e: [x.value for x in e]), default=UserRole.PROCESS_ANALYST, insert_default=UserRole.PROCESS_ANALYST, nullable=False
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, insert_default=True, nullable=False)
     external_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True, index=True)

@@ -76,7 +76,7 @@ class SimulationScenario(Base):
         UUID(as_uuid=True), ForeignKey("process_models.id", ondelete="SET NULL"), nullable=True
     )
     name: Mapped[str] = mapped_column(String(512), nullable=False)
-    simulation_type: Mapped[SimulationType] = mapped_column(Enum(SimulationType), nullable=False)
+    simulation_type: Mapped[SimulationType] = mapped_column(Enum(SimulationType, values_callable=lambda e: [x.value for x in e]), nullable=False)
     parameters: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str | None] = mapped_column(String(50), nullable=True, server_default="draft")
@@ -103,7 +103,7 @@ class SimulationResult(Base):
         UUID(as_uuid=True), ForeignKey("simulation_scenarios.id", ondelete="CASCADE"), nullable=False
     )
     status: Mapped[SimulationStatus] = mapped_column(
-        Enum(SimulationStatus), default=SimulationStatus.PENDING, nullable=False
+        Enum(SimulationStatus, values_callable=lambda e: [x.value for x in e]), default=SimulationStatus.PENDING, nullable=False
     )
     metrics: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     impact_analysis: Mapped[dict | None] = mapped_column(JSON, nullable=True)
@@ -130,7 +130,7 @@ class ScenarioModification(Base):
     scenario_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("simulation_scenarios.id", ondelete="CASCADE"), nullable=False
     )
-    modification_type: Mapped[ModificationType] = mapped_column(Enum(ModificationType), nullable=False)
+    modification_type: Mapped[ModificationType] = mapped_column(Enum(ModificationType, values_callable=lambda e: [x.value for x in e]), nullable=False)
     element_id: Mapped[str] = mapped_column(String(512), nullable=False)
     element_name: Mapped[str] = mapped_column(String(512), nullable=False)
     change_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
@@ -185,7 +185,7 @@ class FinancialAssumption(Base):
     engagement_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
     )
-    assumption_type: Mapped[FinancialAssumptionType] = mapped_column(Enum(FinancialAssumptionType), nullable=False)
+    assumption_type: Mapped[FinancialAssumptionType] = mapped_column(Enum(FinancialAssumptionType, values_callable=lambda e: [x.value for x in e]), nullable=False)
     name: Mapped[str] = mapped_column(String(256), nullable=False)
     value: Mapped[float] = mapped_column(Float, nullable=False)
     unit: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -223,7 +223,7 @@ class AlternativeSuggestion(Base):
     governance_flags: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     evidence_gaps: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     disposition: Mapped[SuggestionDisposition] = mapped_column(
-        Enum(SuggestionDisposition), default=SuggestionDisposition.PENDING, nullable=False
+        Enum(SuggestionDisposition, values_callable=lambda e: [x.value for x in e]), default=SuggestionDisposition.PENDING, nullable=False
     )
     disposition_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     llm_prompt: Mapped[str] = mapped_column(Text, nullable=False)

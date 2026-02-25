@@ -51,7 +51,7 @@ class Policy(Base):
         UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(512), nullable=False)
-    policy_type: Mapped[PolicyType] = mapped_column(Enum(PolicyType), nullable=False)
+    policy_type: Mapped[PolicyType] = mapped_column(Enum(PolicyType, values_callable=lambda e: [x.value for x in e]), nullable=False)
     source_evidence_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("evidence_items.id", ondelete="SET NULL"), nullable=True
     )
@@ -82,7 +82,7 @@ class Control(Base):
     name: Mapped[str] = mapped_column(String(512), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     effectiveness: Mapped[ControlEffectiveness] = mapped_column(
-        Enum(ControlEffectiveness), default=ControlEffectiveness.EFFECTIVE, nullable=False
+        Enum(ControlEffectiveness, values_callable=lambda e: [x.value for x in e]), default=ControlEffectiveness.EFFECTIVE, nullable=False
     )
     effectiveness_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     linked_policy_ids: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)

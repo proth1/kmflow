@@ -448,16 +448,26 @@ class KnowledgeGraphService:
 
         records = await self._run_query(query, {"node_id": node_id})
 
-        return [
-            GraphRelationship(
-                id=record["r"].get("id", ""),
-                from_id=record["from_id"],
-                to_id=record["to_id"],
-                relationship_type=record["rel_type"],
-                properties=dict(record["r"]),
+        results = []
+        for record in records:
+            r = record["r"]
+            # Neo4j .data() may return relationships as dicts or tuples
+            if isinstance(r, dict):
+                rel_id = r.get("id", "")
+                rel_props = dict(r)
+            else:
+                rel_id = ""
+                rel_props = {}
+            results.append(
+                GraphRelationship(
+                    id=rel_id,
+                    from_id=record["from_id"],
+                    to_id=record["to_id"],
+                    relationship_type=record["rel_type"],
+                    properties=rel_props,
+                )
             )
-            for record in records
-        ]
+        return results
 
     # -----------------------------------------------------------------
     # Traversal
@@ -581,16 +591,24 @@ class KnowledgeGraphService:
         """
         rel_records = await self._run_query(rel_query, {"engagement_id": engagement_id, "limit": limit})
 
-        relationships = [
-            GraphRelationship(
-                id=record["r"].get("id", ""),
-                from_id=record["from_id"],
-                to_id=record["to_id"],
-                relationship_type=record["rel_type"],
-                properties=dict(record["r"]),
+        relationships = []
+        for record in rel_records:
+            r = record["r"]
+            if isinstance(r, dict):
+                rel_id = r.get("id", "")
+                rel_props = dict(r)
+            else:
+                rel_id = ""
+                rel_props = {}
+            relationships.append(
+                GraphRelationship(
+                    id=rel_id,
+                    from_id=record["from_id"],
+                    to_id=record["to_id"],
+                    relationship_type=record["rel_type"],
+                    properties=rel_props,
+                )
             )
-            for record in rel_records
-        ]
 
         return {
             "nodes": nodes,

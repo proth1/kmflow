@@ -20,13 +20,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # -- Create UserRole enum type --
-    op.execute(
-        "CREATE TYPE userrole AS ENUM "
-        "('platform_admin', 'engagement_lead', 'process_analyst', "
-        "'evidence_reviewer', 'client_viewer')"
-    )
-
     # -- Add new audit action values --
     op.execute("ALTER TYPE auditaction ADD VALUE IF NOT EXISTS 'login'")
     op.execute("ALTER TYPE auditaction ADD VALUE IF NOT EXISTS 'logout'")

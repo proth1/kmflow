@@ -61,7 +61,7 @@ class Engagement(Base):
     business_area: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[EngagementStatus] = mapped_column(
-        Enum(EngagementStatus), default=EngagementStatus.DRAFT, nullable=False
+        Enum(EngagementStatus, values_callable=lambda e: [x.value for x in e]), default=EngagementStatus.DRAFT, nullable=False
     )
     team: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
     retention_days: Mapped[int | None] = mapped_column(BigInteger, nullable=True, default=365)  # 365-day default satisfies data minimization; None = indefinite (not recommended)
@@ -101,7 +101,7 @@ class ShelfDataRequest(Base):
     title: Mapped[str] = mapped_column(String(512), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[ShelfRequestStatus] = mapped_column(
-        Enum(ShelfRequestStatus), default=ShelfRequestStatus.DRAFT, nullable=False
+        Enum(ShelfRequestStatus, values_callable=lambda e: [x.value for x in e]), default=ShelfRequestStatus.DRAFT, nullable=False
     )
     due_date: Mapped[datetime | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -140,14 +140,14 @@ class ShelfDataRequestItem(Base):
     request_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("shelf_data_requests.id", ondelete="CASCADE"), nullable=False
     )
-    category: Mapped[EvidenceCategory] = mapped_column(Enum(EvidenceCategory), nullable=False)
+    category: Mapped[EvidenceCategory] = mapped_column(Enum(EvidenceCategory, values_callable=lambda e: [x.value for x in e]), nullable=False)
     item_name: Mapped[str] = mapped_column(String(512), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     priority: Mapped[ShelfRequestItemPriority] = mapped_column(
-        Enum(ShelfRequestItemPriority), default=ShelfRequestItemPriority.MEDIUM, nullable=False
+        Enum(ShelfRequestItemPriority, values_callable=lambda e: [x.value for x in e]), default=ShelfRequestItemPriority.MEDIUM, nullable=False
     )
     status: Mapped[ShelfRequestItemStatus] = mapped_column(
-        Enum(ShelfRequestItemStatus), default=ShelfRequestItemStatus.PENDING, nullable=False
+        Enum(ShelfRequestItemStatus, values_callable=lambda e: [x.value for x in e]), default=ShelfRequestItemStatus.PENDING, nullable=False
     )
     matched_evidence_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("evidence_items.id", ondelete="SET NULL"), nullable=True

@@ -87,8 +87,8 @@ class GapAnalysisResult(Base):
     tom_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("target_operating_models.id", ondelete="CASCADE"), nullable=False
     )
-    gap_type: Mapped[TOMGapType] = mapped_column(Enum(TOMGapType), nullable=False)
-    dimension: Mapped[TOMDimension] = mapped_column(Enum(TOMDimension), nullable=False)
+    gap_type: Mapped[TOMGapType] = mapped_column(Enum(TOMGapType, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    dimension: Mapped[TOMDimension] = mapped_column(Enum(TOMDimension, values_callable=lambda e: [x.value for x in e]), nullable=False)
     severity: Mapped[float] = mapped_column(Float, default=0.5, nullable=False)
     confidence: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -119,7 +119,7 @@ class BestPractice(Base):
     industry: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     source: Mapped[str | None] = mapped_column(String(512), nullable=True)
-    tom_dimension: Mapped[TOMDimension] = mapped_column(Enum(TOMDimension), nullable=False)
+    tom_dimension: Mapped[TOMDimension] = mapped_column(Enum(TOMDimension, values_callable=lambda e: [x.value for x in e]), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     def __repr__(self) -> str:

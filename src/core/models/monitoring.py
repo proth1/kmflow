@@ -85,7 +85,7 @@ class SuccessMetric(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     unit: Mapped[str] = mapped_column(String(100), nullable=False)
     target_value: Mapped[float] = mapped_column(Float, nullable=False)
-    category: Mapped[MetricCategory] = mapped_column(Enum(MetricCategory), nullable=False)
+    category: Mapped[MetricCategory] = mapped_column(Enum(MetricCategory, values_callable=lambda e: [x.value for x in e]), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
@@ -211,9 +211,9 @@ class MonitoringJob(Base):
         UUID(as_uuid=True), ForeignKey("process_baselines.id", ondelete="SET NULL"), nullable=True
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    source_type: Mapped[MonitoringSourceType] = mapped_column(Enum(MonitoringSourceType), nullable=False)
+    source_type: Mapped[MonitoringSourceType] = mapped_column(Enum(MonitoringSourceType, values_callable=lambda e: [x.value for x in e]), nullable=False)
     status: Mapped[MonitoringStatus] = mapped_column(
-        Enum(MonitoringStatus), default=MonitoringStatus.CONFIGURING, nullable=False
+        Enum(MonitoringStatus, values_callable=lambda e: [x.value for x in e]), default=MonitoringStatus.CONFIGURING, nullable=False
     )
     schedule_cron: Mapped[str] = mapped_column(String(100), default="0 0 * * *", nullable=False)
     config_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
@@ -250,7 +250,7 @@ class ProcessDeviation(Base):
     baseline_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("process_baselines.id", ondelete="SET NULL"), nullable=True
     )
-    category: Mapped[DeviationCategory] = mapped_column(Enum(DeviationCategory), nullable=False)
+    category: Mapped[DeviationCategory] = mapped_column(Enum(DeviationCategory, values_callable=lambda e: [x.value for x in e]), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     affected_element: Mapped[str | None] = mapped_column(String(512), nullable=True)
     magnitude: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
@@ -280,8 +280,8 @@ class MonitoringAlert(Base):
     monitoring_job_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("monitoring_jobs.id", ondelete="CASCADE"), nullable=False
     )
-    severity: Mapped[AlertSeverity] = mapped_column(Enum(AlertSeverity), nullable=False)
-    status: Mapped[AlertStatus] = mapped_column(Enum(AlertStatus), default=AlertStatus.NEW, nullable=False)
+    severity: Mapped[AlertSeverity] = mapped_column(Enum(AlertSeverity, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    status: Mapped[AlertStatus] = mapped_column(Enum(AlertStatus, values_callable=lambda e: [x.value for x in e]), default=AlertStatus.NEW, nullable=False)
     title: Mapped[str] = mapped_column(String(512), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     deviation_ids: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)

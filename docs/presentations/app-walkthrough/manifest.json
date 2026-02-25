@@ -1,0 +1,385 @@
+{
+  "generated": "2026-02-25T22:18:26.741Z",
+  "personas": [
+    {
+      "name": "Platform Admin",
+      "email": "admin@acme-demo.com",
+      "slug": "admin",
+      "pageCount": 23
+    },
+    {
+      "name": "Engagement Lead",
+      "email": "lead@acme-demo.com",
+      "slug": "lead",
+      "pageCount": 16
+    },
+    {
+      "name": "Process Analyst",
+      "email": "analyst@acme-demo.com",
+      "slug": "analyst",
+      "pageCount": 12
+    },
+    {
+      "name": "Client Viewer",
+      "email": "viewer@acme-demo.com",
+      "slug": "viewer",
+      "pageCount": 8
+    }
+  ],
+  "screenshots": [
+    {
+      "filename": "01-admin-home.png",
+      "title": "Home Dashboard",
+      "path": "/",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "02-admin-dashboard-1db9aa11-c73b-5867-82a3-864dd695cf23.png",
+      "title": "Engagement Dashboard",
+      "path": "/dashboard/1db9aa11-c73b-5867-82a3-864dd695cf23",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "03-admin-evidence.png",
+      "title": "Evidence Upload",
+      "path": "/evidence",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "04-admin-graph-1db9aa11-c73b-5867-82a3-864dd695cf23.png",
+      "title": "Knowledge Graph",
+      "path": "/graph/1db9aa11-c73b-5867-82a3-864dd695cf23",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "05-admin-lineage.png",
+      "title": "Data Lineage",
+      "path": "/lineage",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "06-admin-tom-1db9aa11-c73b-5867-82a3-864dd695cf23.png",
+      "title": "TOM Alignment",
+      "path": "/tom/1db9aa11-c73b-5867-82a3-864dd695cf23",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "07-admin-conformance.png",
+      "title": "Conformance Checking",
+      "path": "/conformance",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "08-admin-processes.png",
+      "title": "Process Library",
+      "path": "/processes",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "09-admin-monitoring.png",
+      "title": "Monitoring Dashboard",
+      "path": "/monitoring",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "10-admin-roadmap-1db9aa11-c73b-5867-82a3-864dd695cf23.png",
+      "title": "Engagement Roadmap",
+      "path": "/roadmap/1db9aa11-c73b-5867-82a3-864dd695cf23",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "11-admin-simulations.png",
+      "title": "Simulations",
+      "path": "/simulations",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "12-admin-governance.png",
+      "title": "Governance",
+      "path": "/governance",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "13-admin-reports.png",
+      "title": "Reports",
+      "path": "/reports",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "14-admin-analytics.png",
+      "title": "Analytics",
+      "path": "/analytics",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "15-admin-integrations.png",
+      "title": "Connectors",
+      "path": "/integrations",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "16-admin-shelf-requests.png",
+      "title": "Shelf Requests",
+      "path": "/shelf-requests",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "17-admin-patterns.png",
+      "title": "Pattern Library",
+      "path": "/patterns",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "18-admin-copilot.png",
+      "title": "AI Copilot",
+      "path": "/copilot",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "19-admin-admin.png",
+      "title": "Admin Panel",
+      "path": "/admin",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "20-admin-admin-task-mining-agents.png",
+      "title": "Task Mining Agents",
+      "path": "/admin/task-mining/agents",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "21-admin-admin-task-mining-policy.png",
+      "title": "Task Mining Policy",
+      "path": "/admin/task-mining/policy",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "22-admin-admin-task-mining-dashboard.png",
+      "title": "Task Mining Dashboard",
+      "path": "/admin/task-mining/dashboard",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "23-admin-admin-task-mining-quarantine.png",
+      "title": "Task Mining Quarantine",
+      "path": "/admin/task-mining/quarantine",
+      "persona": "Platform Admin"
+    },
+    {
+      "filename": "24-lead-home.png",
+      "title": "Home Dashboard",
+      "path": "/",
+      "persona": "Engagement Lead"
+    },
+    {
+      "filename": "25-lead-dashboard-1db9aa11-c73b-5867-82a3-864dd695cf23.png",
+      "title": "Engagement Dashboard",
+      "path": "/dashboard/1db9aa11-c73b-5867-82a3-864dd695cf23",
+      "persona": "Engagement Lead"
+    },
+    {
+      "filename": "26-lead-evidence.png",
+      "title": "Evidence Upload",
+      "path": "/evidence",
+      "persona": "Engagement Lead"
+    },
+    {
+      "filename": "27-lead-graph-1db9aa11-c73b-5867-82a3-864dd695cf23.png",
+      "title": "Knowledge Graph",
+      "path": "/graph/1db9aa11-c73b-5867-82a3-864dd695cf23",
+      "persona": "Engagement Lead"
+    },
+    {
+      "filename": "28-lead-lineage.png",
+      "title": "Data Lineage",
+      "path": "/lineage",
+      "persona": "Engagement Lead"
+    },
+    {
+      "filename": "29-lead-tom-1db9aa11-c73b-5867-82a3-864dd695cf23.png",
+      "title": "TOM Alignment",
+      "path": "/tom/1db9aa11-c73b-5867-82a3-864dd695cf23",
+      "persona": "Engagement Lead"
+    },
+    {
+      "filename": "30-lead-conformance.png",
+      "title": "Conformance Checking",
+      "path": "/conformance",
+      "persona": "Engagement Lead"
+    },
+    {
+      "filename": "31-lead-processes.png",
+      "title": "Process Library",
+      "path": "/processes",
+      "persona": "Engagement Lead"
+    },
+    {
+      "filename": "32-lead-monitoring.png",
+      "title": "Monitoring Dashboard",
+      "path": "/monitoring",
+      "persona": "Engagement Lead"
+    },
+    {
+      "filename": "33-lead-roadmap-1db9aa11-c73b-5867-82a3-864dd695cf23.png",
+      "title": "Engagement Roadmap",
+      "path": "/roadmap/1db9aa11-c73b-5867-82a3-864dd695cf23",
+      "persona": "Engagement Lead"
+    },
+    {
+      "filename": "34-lead-simulations.png",
+      "title": "Simulations",
+      "path": "/simulations",
+      "persona": "Engagement Lead"
+    },
+    {
+      "filename": "35-lead-governance.png",
+      "title": "Governance",
+      "path": "/governance",
+      "persona": "Engagement Lead"
+    },
+    {
+      "filename": "36-lead-reports.png",
+      "title": "Reports",
+      "path": "/reports",
+      "persona": "Engagement Lead"
+    },
+    {
+      "filename": "37-lead-analytics.png",
+      "title": "Analytics",
+      "path": "/analytics",
+      "persona": "Engagement Lead"
+    },
+    {
+      "filename": "38-lead-shelf-requests.png",
+      "title": "Shelf Requests",
+      "path": "/shelf-requests",
+      "persona": "Engagement Lead"
+    },
+    {
+      "filename": "39-lead-copilot.png",
+      "title": "AI Copilot",
+      "path": "/copilot",
+      "persona": "Engagement Lead"
+    },
+    {
+      "filename": "40-analyst-home.png",
+      "title": "Home Dashboard",
+      "path": "/",
+      "persona": "Process Analyst"
+    },
+    {
+      "filename": "41-analyst-dashboard-1db9aa11-c73b-5867-82a3-864dd695cf23.png",
+      "title": "Engagement Dashboard",
+      "path": "/dashboard/1db9aa11-c73b-5867-82a3-864dd695cf23",
+      "persona": "Process Analyst"
+    },
+    {
+      "filename": "42-analyst-evidence.png",
+      "title": "Evidence Upload",
+      "path": "/evidence",
+      "persona": "Process Analyst"
+    },
+    {
+      "filename": "43-analyst-graph-1db9aa11-c73b-5867-82a3-864dd695cf23.png",
+      "title": "Knowledge Graph",
+      "path": "/graph/1db9aa11-c73b-5867-82a3-864dd695cf23",
+      "persona": "Process Analyst"
+    },
+    {
+      "filename": "44-analyst-lineage.png",
+      "title": "Data Lineage",
+      "path": "/lineage",
+      "persona": "Process Analyst"
+    },
+    {
+      "filename": "45-analyst-tom-1db9aa11-c73b-5867-82a3-864dd695cf23.png",
+      "title": "TOM Alignment",
+      "path": "/tom/1db9aa11-c73b-5867-82a3-864dd695cf23",
+      "persona": "Process Analyst"
+    },
+    {
+      "filename": "46-analyst-conformance.png",
+      "title": "Conformance Checking",
+      "path": "/conformance",
+      "persona": "Process Analyst"
+    },
+    {
+      "filename": "47-analyst-processes.png",
+      "title": "Process Library",
+      "path": "/processes",
+      "persona": "Process Analyst"
+    },
+    {
+      "filename": "48-analyst-monitoring.png",
+      "title": "Monitoring Dashboard",
+      "path": "/monitoring",
+      "persona": "Process Analyst"
+    },
+    {
+      "filename": "49-analyst-simulations.png",
+      "title": "Simulations",
+      "path": "/simulations",
+      "persona": "Process Analyst"
+    },
+    {
+      "filename": "50-analyst-patterns.png",
+      "title": "Pattern Library",
+      "path": "/patterns",
+      "persona": "Process Analyst"
+    },
+    {
+      "filename": "51-analyst-copilot.png",
+      "title": "AI Copilot",
+      "path": "/copilot",
+      "persona": "Process Analyst"
+    },
+    {
+      "filename": "52-viewer-home.png",
+      "title": "Home Dashboard",
+      "path": "/",
+      "persona": "Client Viewer"
+    },
+    {
+      "filename": "53-viewer-dashboard-1db9aa11-c73b-5867-82a3-864dd695cf23.png",
+      "title": "Engagement Dashboard (Restricted)",
+      "path": "/dashboard/1db9aa11-c73b-5867-82a3-864dd695cf23",
+      "persona": "Client Viewer"
+    },
+    {
+      "filename": "54-viewer-portal.png",
+      "title": "Client Portal Home",
+      "path": "/portal",
+      "persona": "Client Viewer"
+    },
+    {
+      "filename": "55-viewer-portal-1db9aa11-c73b-5867-82a3-864dd695cf23.png",
+      "title": "Client Portal Overview",
+      "path": "/portal/1db9aa11-c73b-5867-82a3-864dd695cf23",
+      "persona": "Client Viewer"
+    },
+    {
+      "filename": "56-viewer-portal-1db9aa11-c73b-5867-82a3-864dd695cf23-evidence.png",
+      "title": "Evidence Status",
+      "path": "/portal/1db9aa11-c73b-5867-82a3-864dd695cf23/evidence",
+      "persona": "Client Viewer"
+    },
+    {
+      "filename": "57-viewer-portal-1db9aa11-c73b-5867-82a3-864dd695cf23-findings.png",
+      "title": "Findings",
+      "path": "/portal/1db9aa11-c73b-5867-82a3-864dd695cf23/findings",
+      "persona": "Client Viewer"
+    },
+    {
+      "filename": "58-viewer-portal-1db9aa11-c73b-5867-82a3-864dd695cf23-process.png",
+      "title": "Process Models",
+      "path": "/portal/1db9aa11-c73b-5867-82a3-864dd695cf23/process",
+      "persona": "Client Viewer"
+    },
+    {
+      "filename": "59-viewer-portal-1db9aa11-c73b-5867-82a3-864dd695cf23-upload.png",
+      "title": "Client Evidence Upload",
+      "path": "/portal/1db9aa11-c73b-5867-82a3-864dd695cf23/upload",
+      "persona": "Client Viewer"
+    }
+  ]
+}

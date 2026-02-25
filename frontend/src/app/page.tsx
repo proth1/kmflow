@@ -21,13 +21,13 @@ const quickActions = [
     icon: Network,
     title: "Knowledge Graph",
     description: "Explore semantic relationships in the evidence graph",
-    href: "/graph/demo-1",
+    href: "/graph/1db9aa11-c73b-5867-82a3-864dd695cf23",
   },
   {
     icon: Target,
     title: "TOM Analysis",
     description: "Automated Target Operating Model gap analysis",
-    href: "/tom/demo-1",
+    href: "/tom/1db9aa11-c73b-5867-82a3-864dd695cf23",
   },
   {
     icon: CheckSquare,

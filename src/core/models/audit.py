@@ -98,7 +98,7 @@ class AuditLog(Base):
     engagement_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="SET NULL"), nullable=True
     )
-    action: Mapped[AuditAction] = mapped_column(Enum(AuditAction), nullable=False)
+    action: Mapped[AuditAction] = mapped_column(Enum(AuditAction, values_callable=lambda e: [x.value for x in e]), nullable=False)
     actor: Mapped[str] = mapped_column(String(255), nullable=False, default="system")
     details: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
