@@ -6,6 +6,7 @@ import {
   updateCaptureConfig,
   type CaptureConfig,
 } from "@/lib/api/taskmining";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   Card,
   CardContent,
@@ -114,6 +115,7 @@ function AppListEditor({ label, description, apps, onChange }: AppListEditorProp
 
 export default function CapturePolicyPage() {
   const [engagementId, setEngagementId] = useState("");
+  const debouncedEngagementId = useDebouncedValue(engagementId, 400);
   const [config, setConfig] = useState<CaptureConfig | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -129,11 +131,11 @@ export default function CapturePolicyPage() {
   const [granularity, setGranularity] = useState("full");
 
   const loadConfig = useCallback(async () => {
-    if (!engagementId) return;
+    if (!debouncedEngagementId) return;
     setLoading(true);
     setError(null);
     try {
-      const result = await fetchCaptureConfig(engagementId);
+      const result = await fetchCaptureConfig(debouncedEngagementId);
       setConfig(result);
       setAllowedApps(result.allowed_apps);
       setBlockedApps(result.blocked_apps);
@@ -145,13 +147,13 @@ export default function CapturePolicyPage() {
     } finally {
       setLoading(false);
     }
-  }, [engagementId]);
+  }, [debouncedEngagementId]);
 
   useEffect(() => {
-    if (engagementId.length >= 8) {
+    if (debouncedEngagementId.length >= 8) {
       loadConfig();
     }
-  }, [engagementId, loadConfig]);
+  }, [debouncedEngagementId, loadConfig]);
 
   useEffect(() => {
     if (!successMsg) return;

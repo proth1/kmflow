@@ -7,6 +7,7 @@ import {
   revokeAgent,
   type TaskMiningAgent,
 } from "@/lib/api/taskmining";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   Card,
   CardContent,
@@ -87,19 +88,20 @@ export default function AgentManagementPage() {
   const [confirmRevoke, setConfirmRevoke] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [engagementId, setEngagementId] = useState("");
+  const debouncedEngagementId = useDebouncedValue(engagementId, 400);
 
   const loadAgents = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     setError(null);
     try {
-      const result = await fetchAgents(engagementId || undefined);
+      const result = await fetchAgents(debouncedEngagementId || undefined);
       setAgents(result.agents);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load agents");
     } finally {
       setLoading(false);
     }
-  }, [engagementId]);
+  }, [debouncedEngagementId]);
 
   useEffect(() => {
     loadAgents();

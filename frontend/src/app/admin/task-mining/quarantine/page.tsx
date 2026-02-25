@@ -6,6 +6,7 @@ import {
   quarantineAction,
   type QuarantineItem,
 } from "@/lib/api/taskmining";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   Card,
   CardContent,
@@ -60,12 +61,13 @@ export default function QuarantineReviewPage() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [filter, setFilter] = useState<QuarantineFilter>("all");
   const [engagementId, setEngagementId] = useState("");
+  const debouncedEngagementId = useDebouncedValue(engagementId, 400);
 
   const loadItems = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     setError(null);
     try {
-      const result = await fetchQuarantine(engagementId || undefined);
+      const result = await fetchQuarantine(debouncedEngagementId || undefined);
       setItems(result.items);
     } catch (err) {
       if (!silent) {
@@ -74,7 +76,7 @@ export default function QuarantineReviewPage() {
     } finally {
       setLoading(false);
     }
-  }, [engagementId]);
+  }, [debouncedEngagementId]);
 
   useEffect(() => {
     loadItems();

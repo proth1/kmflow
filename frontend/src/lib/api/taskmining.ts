@@ -4,7 +4,7 @@
  * Consumed by the admin/task-mining/* pages (Epic #215).
  */
 
-import { apiGet, apiPost, apiPatch, apiPut } from "./client";
+import { apiGet, apiPost, apiPut } from "./client";
 
 // -- Types -------------------------------------------------------------------
 

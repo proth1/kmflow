@@ -10,6 +10,7 @@ import {
   type AppUsageEntry,
 } from "@/lib/api/taskmining";
 import { API_BASE_URL } from "@/lib/api/client";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   Card,
   CardContent,
@@ -71,6 +72,7 @@ const DATE_RANGES = [
 
 export default function TaskMiningDashboard() {
   const [engagementId, setEngagementId] = useState("");
+  const debouncedEngagementId = useDebouncedValue(engagementId, 400);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [agents, setAgents] = useState<TaskMiningAgent[]>([]);
   const [appUsage, setAppUsage] = useState<AppUsageEntry[]>([]);
@@ -86,14 +88,14 @@ export default function TaskMiningDashboard() {
     setError(null);
     try {
       const [statsResult, agentsResult] = await Promise.all([
-        fetchDashboardStats(engagementId || undefined),
-        fetchAgents(engagementId || undefined),
+        fetchDashboardStats(debouncedEngagementId || undefined),
+        fetchAgents(debouncedEngagementId || undefined),
       ]);
       setStats(statsResult);
       setAgents(agentsResult.agents.filter((a) => a.status === "approved"));
 
-      if (engagementId) {
-        const usage = await fetchAppUsage(engagementId, dateRange);
+      if (debouncedEngagementId) {
+        const usage = await fetchAppUsage(debouncedEngagementId, dateRange);
         setAppUsage(usage);
       }
     } catch (err) {
@@ -103,7 +105,7 @@ export default function TaskMiningDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [engagementId, dateRange]);
+  }, [debouncedEngagementId, dateRange]);
 
   // Initial load + periodic refresh
   useEffect(() => {
