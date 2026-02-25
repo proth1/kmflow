@@ -63,10 +63,9 @@ class TestCleanupJobUnit:
     async def test_returns_summary_dict(self) -> None:
         """Cleanup returns rows_deleted, run_at, duration_ms."""
         session = AsyncMock()
-        # Mock count query returning 0
-        count_result = MagicMock()
-        count_result.scalar.return_value = 0
-        session.execute.return_value = count_result
+        delete_result = MagicMock()
+        delete_result.rowcount = 0
+        session.execute.return_value = delete_result
 
         summary = await run_quarantine_cleanup(session)
         assert "rows_deleted" in summary
@@ -78,9 +77,9 @@ class TestCleanupJobUnit:
     async def test_idempotent_no_expired(self) -> None:
         """Running twice with no expired records deletes 0 both times."""
         session = AsyncMock()
-        count_result = MagicMock()
-        count_result.scalar.return_value = 0
-        session.execute.return_value = count_result
+        delete_result = MagicMock()
+        delete_result.rowcount = 0
+        session.execute.return_value = delete_result
 
         r1 = await run_quarantine_cleanup(session)
         r2 = await run_quarantine_cleanup(session)
@@ -91,24 +90,23 @@ class TestCleanupJobUnit:
     async def test_deletes_expired_records(self) -> None:
         """Expired records are deleted when found."""
         session = AsyncMock()
-        # First call returns count=3, second call executes delete
-        count_result = MagicMock()
-        count_result.scalar.return_value = 3
-        session.execute.return_value = count_result
+        delete_result = MagicMock()
+        delete_result.rowcount = 3
+        session.execute.return_value = delete_result
 
         summary = await run_quarantine_cleanup(session)
         assert summary["rows_deleted"] == 3
-        # Should have called execute twice (count + delete) and flush once
-        assert session.execute.call_count == 2
+        # Single atomic DELETE + flush
+        assert session.execute.call_count == 1
         assert session.flush.call_count == 1
 
     @pytest.mark.asyncio
     async def test_custom_now_parameter(self) -> None:
         """The `now` parameter controls which records are considered expired."""
         session = AsyncMock()
-        count_result = MagicMock()
-        count_result.scalar.return_value = 0
-        session.execute.return_value = count_result
+        delete_result = MagicMock()
+        delete_result.rowcount = 0
+        session.execute.return_value = delete_result
 
         custom_now = datetime(2026, 6, 1, 12, 0, tzinfo=timezone.utc)
         summary = await run_quarantine_cleanup(session, now=custom_now)
@@ -118,9 +116,9 @@ class TestCleanupJobUnit:
     async def test_duration_is_positive(self) -> None:
         """Duration should always be non-negative."""
         session = AsyncMock()
-        count_result = MagicMock()
-        count_result.scalar.return_value = 0
-        session.execute.return_value = count_result
+        delete_result = MagicMock()
+        delete_result.rowcount = 0
+        session.execute.return_value = delete_result
 
         summary = await run_quarantine_cleanup(session)
         assert summary["duration_ms"] >= 0

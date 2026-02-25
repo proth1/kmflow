@@ -44,42 +44,32 @@ async def run_quarantine_cleanup(
 
     start = time.monotonic()
 
-    # Count before delete for reporting
-    count_stmt = (
-        select(func.count())
-        .select_from(PIIQuarantine)
+    # Atomic delete — no TOCTOU gap between count and delete
+    delete_stmt = (
+        delete(PIIQuarantine)
         .where(
             PIIQuarantine.auto_delete_at < now,
             PIIQuarantine.status.in_(_CLEANUP_STATUSES),
         )
     )
-    result = await session.execute(count_stmt)
-    rows_to_delete = result.scalar() or 0
+    result = await session.execute(delete_stmt)
+    rows_deleted = result.rowcount or 0
 
-    if rows_to_delete > 0:
-        # Batch delete expired records
-        delete_stmt = (
-            delete(PIIQuarantine)
-            .where(
-                PIIQuarantine.auto_delete_at < now,
-                PIIQuarantine.status.in_(_CLEANUP_STATUSES),
-            )
-        )
-        await session.execute(delete_stmt)
+    if rows_deleted > 0:
         await session.flush()
 
     elapsed_ms = (time.monotonic() - start) * 1000
 
     summary = {
-        "rows_deleted": rows_to_delete,
+        "rows_deleted": rows_deleted,
         "run_at": now.isoformat(),
         "duration_ms": round(elapsed_ms, 2),
     }
 
-    if rows_to_delete > 0:
+    if rows_deleted > 0:
         logger.info(
             "Quarantine cleanup: deleted %d expired records in %.1fms",
-            rows_to_delete,
+            rows_deleted,
             elapsed_ms,
         )
     else:

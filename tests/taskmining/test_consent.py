@@ -85,7 +85,7 @@ class TestRecordConsent:
         assert agent.status == AgentStatus.APPROVED
 
     @pytest.mark.asyncio
-    async def test_ip_address_hashed(self) -> None:
+    async def test_ip_address_hashed_with_hmac(self) -> None:
         session = AsyncMock()
         session.get.return_value = _mock_agent()
 
@@ -96,11 +96,39 @@ class TestRecordConsent:
             engagement_id=uuid.uuid4(),
             consent_type=ConsentType.ENTERPRISE,
             ip_address="192.168.1.1",
+            ip_hash_secret="test-server-secret",
         )
 
         assert record.ip_address_hash is not None
-        assert len(record.ip_address_hash) == 64  # SHA-256 hex
+        assert len(record.ip_address_hash) == 64  # HMAC-SHA256 hex
         assert "192.168.1.1" not in record.ip_address_hash
+
+    @pytest.mark.asyncio
+    async def test_ip_hash_differs_with_different_secrets(self) -> None:
+        """HMAC ensures different secrets produce different hashes."""
+        session = AsyncMock()
+        session.get.return_value = _mock_agent()
+
+        mgr = ConsentManager()
+        r1 = await mgr.record_consent(
+            session,
+            agent_id=uuid.uuid4(),
+            engagement_id=uuid.uuid4(),
+            consent_type=ConsentType.ENTERPRISE,
+            ip_address="10.0.0.1",
+            ip_hash_secret="secret-a",
+        )
+        session.get.return_value = _mock_agent()
+        r2 = await mgr.record_consent(
+            session,
+            agent_id=uuid.uuid4(),
+            engagement_id=uuid.uuid4(),
+            consent_type=ConsentType.ENTERPRISE,
+            ip_address="10.0.0.1",
+            ip_hash_secret="secret-b",
+        )
+
+        assert r1.ip_address_hash != r2.ip_address_hash
 
     @pytest.mark.asyncio
     async def test_no_ip_produces_null_hash(self) -> None:
@@ -116,6 +144,48 @@ class TestRecordConsent:
         )
 
         assert record.ip_address_hash is None
+
+
+class TestReGrantConsent:
+    """Test consent re-grant after revocation (R3 state machine fix)."""
+
+    @pytest.mark.asyncio
+    async def test_revoked_agent_can_regrant(self) -> None:
+        """A REVOKED agent can be re-granted consent and transitions back to APPROVED."""
+        session = AsyncMock()
+        agent = _mock_agent(AgentStatus.REVOKED)
+        agent.revoked_at = datetime.now(timezone.utc)
+        session.get.return_value = agent
+
+        mgr = ConsentManager()
+        record = await mgr.record_consent(
+            session,
+            agent_id=agent.id,
+            engagement_id=agent.engagement_id,
+            consent_type=ConsentType.ENGAGEMENT,
+            capture_mode="action_level",
+        )
+
+        assert record is not None
+        assert agent.status == AgentStatus.APPROVED
+        assert agent.revoked_at is None  # Cleared on re-grant
+
+    @pytest.mark.asyncio
+    async def test_approved_agent_consent_does_not_change_status(self) -> None:
+        """An already APPROVED agent stays APPROVED (no double-transition)."""
+        session = AsyncMock()
+        agent = _mock_agent(AgentStatus.APPROVED)
+        session.get.return_value = agent
+
+        mgr = ConsentManager()
+        await mgr.record_consent(
+            session,
+            agent_id=agent.id,
+            engagement_id=agent.engagement_id,
+            consent_type=ConsentType.ENGAGEMENT,
+        )
+
+        assert agent.status == AgentStatus.APPROVED
 
 
 class TestRevokeConsent:

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import enum
 import hashlib
+import hmac
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -85,6 +86,14 @@ class ConsentRecord(Base):
 class ConsentManager:
     """Manages consent lifecycle for task mining agents."""
 
+    # Agents in these statuses may (re-)grant consent
+    _CONSENTABLE_STATUSES = {AgentStatus.PENDING_APPROVAL, AgentStatus.REVOKED}
+
+    @staticmethod
+    def _hash_ip(ip_address: str, secret: str) -> str:
+        """HMAC-SHA256 hash of an IP address, keyed with a server secret."""
+        return hmac.new(secret.encode(), ip_address.encode(), hashlib.sha256).hexdigest()
+
     async def record_consent(
         self,
         session: AsyncSession,
@@ -93,9 +102,15 @@ class ConsentManager:
         consent_type: ConsentType,
         capture_mode: str = "action_level",
         ip_address: str | None = None,
+        ip_hash_secret: str = "",
     ) -> ConsentRecord:
-        """Record a new consent grant. Transitions agent to APPROVED."""
-        ip_hash = hashlib.sha256(ip_address.encode()).hexdigest() if ip_address else None
+        """Record a new consent grant. Transitions agent to APPROVED.
+
+        Args:
+            ip_hash_secret: Server-side secret for HMAC IP hashing.
+                Pass from settings.jwt_secret_key or equivalent.
+        """
+        ip_hash = self._hash_ip(ip_address, ip_hash_secret) if ip_address else None
 
         record = ConsentRecord(
             agent_id=agent_id,
@@ -107,10 +122,11 @@ class ConsentManager:
         )
         session.add(record)
 
-        # Transition agent status
+        # Transition agent status — allow PENDING_APPROVAL and REVOKED agents
         agent = await session.get(TaskMiningAgent, agent_id)
-        if agent and agent.status == AgentStatus.PENDING_APPROVAL:
+        if agent and agent.status in self._CONSENTABLE_STATUSES:
             agent.status = AgentStatus.APPROVED
+            agent.revoked_at = None  # Clear revocation timestamp on re-grant
 
         logger.info("Consent granted for agent %s (type=%s, mode=%s)", agent_id, consent_type, capture_mode)
         return record
