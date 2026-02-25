@@ -21,12 +21,14 @@ logger = logging.getLogger(__name__)
 
 MONITORING_STREAM = "kmflow:monitoring:tasks"
 ALERT_STREAM = "kmflow:alerts:events"
+TASK_MINING_STREAM = "kmflow:task_mining:events"
 
 # -- Pub/Sub channels ----------------------------------------------------------
 
 CHANNEL_DEVIATIONS = "kmflow:realtime:deviations"
 CHANNEL_ALERTS = "kmflow:realtime:alerts"
 CHANNEL_MONITORING = "kmflow:realtime:monitoring"
+CHANNEL_TASK_MINING = "kmflow:realtime:task_mining"
 
 
 def create_redis_client(settings: Settings) -> aioredis.Redis:

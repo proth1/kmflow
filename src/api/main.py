@@ -54,6 +54,7 @@ from src.api.routes import (
     reports,
     shelf_requests,
     simulations,
+    taskmining,
     tom,
     users,
     websocket,
@@ -130,6 +131,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             task = asyncio.create_task(run_worker(redis_client, f"worker-{i}", shutdown_event))
             worker_tasks.append(task)
         logger.info("Started %d monitoring workers", settings.monitoring_worker_count)
+
+    # -- Task Mining Workers ---
+    if settings.taskmining_enabled and settings.taskmining_worker_count > 0:
+        from src.taskmining.worker import run_worker as run_tm_worker
+
+        for i in range(settings.taskmining_worker_count):
+            task = asyncio.create_task(
+                run_tm_worker(redis_client, f"tm-worker-{i}", shutdown_event)
+            )
+            worker_tasks.append(task)
+        logger.info("Started %d task mining workers", settings.taskmining_worker_count)
 
     app.state.worker_tasks = worker_tasks
 
@@ -231,6 +243,9 @@ def create_app() -> FastAPI:
 
     # -- GDPR Routes (Issue #165) ---
     app.include_router(gdpr.router)
+
+    # -- Task Mining Routes ---
+    app.include_router(taskmining.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)

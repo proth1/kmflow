@@ -87,6 +87,21 @@ from src.core.models.simulation import (
     SimulationType,
     SuggestionDisposition,
 )
+from src.core.models.taskmining import (
+    ActionCategory,
+    AgentStatus,
+    CaptureGranularity,
+    DeploymentMode,
+    DesktopEventType,
+    PIIQuarantine,
+    PIIType,
+    QuarantineStatus,
+    SessionStatus,
+    TaskMiningAction,
+    TaskMiningAgent,
+    TaskMiningEvent,
+    TaskMiningSession,
+)
 from src.core.models.tom import (
     Benchmark,
     BestPractice,
@@ -178,6 +193,20 @@ __all__ = [
     "SimulationStatus",
     "SimulationType",
     "SuggestionDisposition",
+    # taskmining
+    "ActionCategory",
+    "AgentStatus",
+    "CaptureGranularity",
+    "DeploymentMode",
+    "DesktopEventType",
+    "PIIQuarantine",
+    "PIIType",
+    "QuarantineStatus",
+    "SessionStatus",
+    "TaskMiningAction",
+    "TaskMiningAgent",
+    "TaskMiningEvent",
+    "TaskMiningSession",
     # tom
     "Benchmark",
     "BestPractice",

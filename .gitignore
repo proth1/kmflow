@@ -62,3 +62,6 @@ logs/
 # Database
 *.db
 *.sqlite3
+
+# SDLC session state (ephemeral)
+.session-state.json
