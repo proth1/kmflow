@@ -3,6 +3,26 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.057] - 2026-02-25
+### Added
+- macOS desktop agent: Swift capture layer (21 source files) + Python intelligence layer (17 source files) (#195)
+- Swift: CGEventTap input monitoring, NSWorkspace app switch, L1+L2 PII filtering, consent state machine, menu bar UI
+- Python: Unix socket server, encrypted SQLite buffer, batch uploader, config manager, health reporter
+- JWT auth module for agent-to-backend HTTP requests
+- AmEx and JCB credit card PII patterns in both Swift and Python L2 filters
+
+### Security
+- Socket moved from /tmp to user-private ~/Library/Application Support/ with 0600 permissions
+- Auto-generated random encryption key replaces hardcoded fallback
+- Shared authenticated httpx.AsyncClient with JWT bearer tokens
+- Socket reconnection with exponential backoff
+
+### Fixed
+- Async SQLite: all DB ops run via asyncio.to_thread() to avoid event loop blocking
+- AnyCodable now handles arrays and nested dictionaries
+- Menu bar items wired to action handlers via MenuActionDelegate
+- Non-blocking cpu_percent() reads in health reporter
+
 ## [2026.02.056] - 2026-02-25
 ### Added
 - Task Mining backend infrastructure: models, PII engine, API routes, processor, worker (#184)
