@@ -63,5 +63,16 @@ logs/
 *.db
 *.sqlite3
 
+# Swift / macOS agent
+agent/macos/.build/
+agent/macos/.swiftpm/
+agent/macos/DerivedData/
+agent/macos/*.xcodeproj/
+agent/macos/*.xcworkspace/
+
+# Python agent
+agent/python/.venv/
+agent/python/*.egg-info/
+
 # SDLC session state (ephemeral)
 .session-state.json
