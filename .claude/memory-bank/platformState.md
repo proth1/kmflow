@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.061
+**Version**: 2026.02.062
 **Last Updated**: 2026-02-25
 
 ## Quick Stats
@@ -9,7 +9,7 @@
 |--------|-------|
 | SQLAlchemy Models | 78+ classes across 12 modules |
 | API Routes | 25+ routers |
-| Test Count | 2243 backend + 206 frontend passing |
+| Test Count | 2306 backend + 206 frontend passing |
 | Coverage | >80% |
 | Python Version | 3.12+ |
 | FastAPI Version | 0.109+ |
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.062 | 2026-02-25 | ML task segmentation: feature extraction, gradient boosting, hybrid classification, sequence mining |
 | 2026.02.061 | 2026-02-25 | Knowledge graph integration: ingestion, semantic bridge, LCD weight, variant detection |
 | 2026.02.060 | 2026-02-25 | Admin dashboard: agents, policy, activity monitoring, quarantine review |
 | 2026.02.059 | 2026-02-25 | Privacy and compliance: PII tests, consent, audit, quarantine cleanup |
@@ -45,7 +46,7 @@
 
 ## Platform Health
 
-- All 2243 backend + 206 frontend tests passing
+- All 2306 backend + 206 frontend tests passing
 - No known critical vulnerabilities
 - Backend lint/format/type checks clean
 
@@ -68,7 +69,7 @@ src/                  # Backend (FastAPI)
   semantic/           # Knowledge graph engine
   pov/                # LCD algorithm, POV generator
   tom/                # TOM alignment, gap analysis
-  taskmining/         # Task mining (PII, processor, worker, graph integration)
+  taskmining/         # Task mining (PII, processor, worker, graph, ML classification)
   integrations/       # External connectors
 frontend/             # Next.js 14+ frontend
 docs/                 # PRD, presentations

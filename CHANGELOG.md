@@ -3,6 +3,17 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.062] - 2026-02-25
+### Added
+- ML task segmentation pipeline: feature extraction, gradient boosting classifier, hybrid classification, sequence mining (#231)
+- Feature extraction: 30-dim vectors from AggregatedSession with interaction counts/ratios, temporal, app category one-hot (#232)
+- Training data infrastructure: dataset builder, stratified splits, JSON export/import, versioned schemas (#233)
+- Gradient boosting classifier: scikit-learn with calibrated probabilities, joblib model persistence (#234)
+- Hybrid classifier: ML-first with configurable threshold fallback to rule-based classification (#235)
+- Sequence pattern mining: n-gram extraction from classified action sequences (#235)
+- Shared app category module: deduplicated detect_app_category() for graph ingestion and ML features
+- 63 new tests across 4 test files (2306 total backend)
+
 ## [2026.02.061] - 2026-02-25
 ### Added
 - Knowledge graph integration for task mining: graph ingestion, semantic bridge, LCD weight, variant detection (#225)
