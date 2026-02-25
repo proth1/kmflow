@@ -22,12 +22,11 @@ from src.core.models.taskmining import (
     TaskMiningEvent,
     TaskMiningSession,
 )
-from src.core.redis import stream_add
-from src.taskmining.pii.filter import FilterResult, PIIDetection, filter_event
+from src.core.redis import TASK_MINING_STREAM, stream_add
+from src.taskmining.pii.filter import FilterResult, PIIDetection, filter_event, redact_text
 
 logger = logging.getLogger(__name__)
 
-TASK_MINING_STREAM = "kmflow:task_mining:events"
 PII_QUARANTINE_HOURS = 24
 
 
@@ -140,19 +139,42 @@ async def process_event_batch(
     }
 
 
+def _redact_event_data(event_data: dict[str, Any]) -> dict[str, Any]:
+    """Redact PII from event data before quarantine storage.
+
+    Quarantine records store redacted copies — never raw PII.
+    This ensures no plaintext PII persists in the database even
+    during the 24h quarantine review window.
+    """
+    redacted = {}
+    for key, value in event_data.items():
+        if isinstance(value, str):
+            redacted[key] = redact_text(value)
+        elif isinstance(value, dict):
+            redacted[key] = _redact_event_data(value)
+        else:
+            redacted[key] = value
+    return redacted
+
+
 async def _quarantine_event(
     session: AsyncSession,
     engagement_id: uuid.UUID,
     event_data: dict[str, Any],
     detections: list[PIIDetection],
 ) -> None:
-    """Create a quarantine record for a PII-flagged event."""
+    """Create a quarantine record for a PII-flagged event.
+
+    The original event data is redacted before storage — quarantine
+    records never contain plaintext PII. The record preserves metadata
+    (PII type, field, confidence) for review decisions.
+    """
     # Use the highest-confidence detection as the primary PII type
     primary = max(detections, key=lambda d: d.confidence)
 
     quarantine = PIIQuarantine(
         engagement_id=engagement_id,
-        original_event_data=event_data,
+        original_event_data=_redact_event_data(event_data),
         pii_type=primary.pii_type,
         pii_field=primary.field_name,
         detection_confidence=primary.confidence,

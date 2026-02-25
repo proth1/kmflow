@@ -27,6 +27,9 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
+from src.core.auth import get_current_user
+from src.core.models import User
+from src.core.permissions import require_permission
 from src.api.schemas.taskmining import (
     ActionListResponse,
     ActionResponse,
@@ -144,6 +147,7 @@ def _quarantine_to_response(q: PIIQuarantine) -> dict[str, Any]:
 async def register_agent(
     payload: AgentRegisterRequest,
     session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_permission("taskmining:write")),
 ) -> dict[str, Any]:
     """Register a new desktop agent.
 
@@ -187,6 +191,7 @@ async def approve_agent(
     agent_id: UUID,
     payload: AgentApproveRequest,
     session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_permission("taskmining:admin")),
 ) -> dict[str, Any]:
     """Approve or revoke a desktop agent (admin operation)."""
     if payload.status not in (AgentStatus.APPROVED, AgentStatus.REVOKED):
@@ -204,7 +209,7 @@ async def approve_agent(
     agent.status = payload.status
     if payload.status == AgentStatus.APPROVED:
         agent.approved_at = now
-        agent.approved_by = "admin"  # TODO: use current_user when auth is wired
+        agent.approved_by = current_user.email
         if payload.capture_granularity:
             agent.capture_granularity = payload.capture_granularity
         if payload.config_json:
@@ -231,6 +236,7 @@ async def list_agents(
     limit: int = 50,
     offset: int = 0,
     session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
     """List registered agents with optional filters."""
     query = select(TaskMiningAgent)
@@ -264,6 +270,7 @@ async def ingest_events(
     payload: EventBatchRequest,
     request: Request,
     session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_permission("taskmining:write")),
 ) -> dict[str, Any]:
     """Ingest a batch of desktop events from an agent.
 
@@ -349,6 +356,7 @@ async def ingest_events(
 async def get_agent_config(
     agent_id: UUID,
     session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
     """Return capture configuration for an agent.
 
@@ -385,6 +393,7 @@ async def get_agent_config(
 async def agent_heartbeat(
     payload: HeartbeatRequest,
     session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_permission("taskmining:write")),
 ) -> dict[str, Any]:
     """Accept a heartbeat from an agent and return status/config updates."""
     result = await session.execute(
@@ -427,6 +436,7 @@ async def list_sessions(
     limit: int = 50,
     offset: int = 0,
     session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
     """List capture sessions with optional filters."""
     query = select(TaskMiningSession)
@@ -463,6 +473,7 @@ async def list_actions(
     limit: int = 50,
     offset: int = 0,
     session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
     """List aggregated user actions with optional filters."""
     query = select(TaskMiningAction)
@@ -501,6 +512,7 @@ async def list_quarantine(
     limit: int = 50,
     offset: int = 0,
     session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_permission("taskmining:admin")),
 ) -> dict[str, Any]:
     """List PII quarantine items for review."""
     query = select(PIIQuarantine)
@@ -534,6 +546,7 @@ async def quarantine_action(
     quarantine_id: UUID,
     payload: QuarantineActionRequest,
     session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_permission("taskmining:admin")),
 ) -> dict[str, Any]:
     """Release or delete a quarantined event."""
     if payload.action not in ("release", "delete"):
@@ -553,11 +566,11 @@ async def quarantine_action(
     if payload.action == "release":
         item.status = QuarantineStatus.RELEASED
         item.reviewed_at = now
-        item.reviewed_by = "admin"  # TODO: use current_user
+        item.reviewed_by = current_user.email
     else:
         item.status = QuarantineStatus.DELETED
         item.reviewed_at = now
-        item.reviewed_by = "admin"
+        item.reviewed_by = current_user.email
 
     await session.commit()
     await session.refresh(item)
@@ -575,6 +588,7 @@ async def quarantine_action(
 async def get_dashboard_stats(
     engagement_id: UUID | None = None,
     session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
     """Return aggregated dashboard statistics for task mining."""
     filters = []
