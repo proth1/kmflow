@@ -139,6 +139,35 @@ class TestReviewClassification:
         assert result.category == ActionCategory.REVIEW
 
 
+class TestRulePriority:
+    """Verify rule ordering when a session matches multiple rules."""
+
+    def test_communication_wins_over_data_entry(self):
+        """Outlook with heavy typing should still be COMMUNICATION, not DATA_ENTRY."""
+        classifier = ActionClassifier()
+        session = _session(
+            app_bundle_id="Outlook",
+            keyboard_event_count=100,
+            total_event_count=120,  # keyboard_ratio = 0.83 > 0.50 threshold
+        )
+        result = classifier.classify(session)
+        assert result.category == ActionCategory.COMMUNICATION
+        assert result.rule_name == "communication"
+
+    def test_review_wins_over_navigation_scroll(self):
+        """Session with scroll + low keyboard + copy_paste should be REVIEW, not NAVIGATION."""
+        classifier = ActionClassifier()
+        session = _session(
+            scroll_count=25,
+            keyboard_event_count=5,
+            copy_paste_count=3,
+            total_event_count=33,
+        )
+        result = classifier.classify(session)
+        assert result.category == ActionCategory.REVIEW
+        assert result.rule_name == "review"
+
+
 class TestUnknownFallback:
     def test_no_match_returns_unknown(self):
         classifier = ActionClassifier()

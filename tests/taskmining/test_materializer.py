@@ -120,6 +120,28 @@ class TestSkipConditions:
         assert item is None
 
 
+class TestShouldMaterialize:
+    """Test the pre-filter check."""
+
+    def test_valid_session_should_materialize(self):
+        materializer = EvidenceMaterializer()
+        session = _session(total_event_count=50)
+        classification = _classification()
+        assert materializer.should_materialize(session, classification) is True
+
+    def test_zero_events_should_not_materialize(self):
+        materializer = EvidenceMaterializer()
+        session = _session(total_event_count=0)
+        classification = _classification()
+        assert materializer.should_materialize(session, classification) is False
+
+    def test_no_engagement_should_not_materialize(self):
+        materializer = EvidenceMaterializer()
+        session = _session(engagement_id=None, total_event_count=50)
+        classification = _classification()
+        assert materializer.should_materialize(session, classification) is False
+
+
 class TestQualityScores:
     def test_completeness_with_rich_session(self):
         materializer = EvidenceMaterializer()

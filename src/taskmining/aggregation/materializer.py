@@ -3,6 +3,11 @@
 Follows the Soroco connector pattern (src/integrations/soroco.py) for
 persisting EvidenceItem records. First-party observed behavior gets the
 highest reliability score (0.90) in the platform's confidence model.
+
+WARNING: This module assumes window_title_sample has already been PII-filtered
+upstream (Layer 2 on-device or Layer 3 server-side in worker.py). The
+materializer stores it verbatim into metadata_json. Callers must ensure
+PII filtering is applied before invoking materialize_action().
 """
 
 from __future__ import annotations
@@ -133,6 +138,7 @@ class EvidenceMaterializer:
             "classification_confidence": classification.confidence,
             "classification_rule": classification.rule_name,
             "application": session.app_bundle_id,
+            # WARNING: must be PII-filtered upstream before reaching materializer
             "window_title_sample": session.window_title_sample,
             "started_at": session.started_at.isoformat() if session.started_at else None,
             "ended_at": session.ended_at.isoformat() if session.ended_at else None,

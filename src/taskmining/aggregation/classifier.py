@@ -95,7 +95,7 @@ def _check_condition(
     elif condition == "app_in_communication_list":
         return session.app_bundle_id in _COMMUNICATION_APPS
     else:
-        logger.warning("Unknown classification condition: %s", condition)
+        logger.error("Unknown classification condition: %s — rule will not match", condition)
         return False
 
 

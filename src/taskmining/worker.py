@@ -41,6 +41,9 @@ async def process_task(task_data: dict[str, Any]) -> dict[str, Any]:
     task_type = task_data.get("task_type", "unknown")
     logger.debug("Processing task mining task: type=%s", task_type)
 
+    # TODO: Wire up aggregation engine (src/taskmining/aggregation/) here.
+    # SessionAggregator -> ActionClassifier -> EvidenceMaterializer
+    # See Epic #206 stories #207, #208, #209. Stubs below are Phase 1 placeholders.
     if task_type == "aggregate":
         return {
             "status": "aggregated",

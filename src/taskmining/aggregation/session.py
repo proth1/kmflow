@@ -140,7 +140,8 @@ class SessionAggregator:
                 return
 
         session = self._active_session
-        assert session is not None
+        if session is None:
+            return
         session.total_event_count += 1
 
         # Update window title sample if not set
