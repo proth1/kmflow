@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.059
+**Version**: 2026.02.060
 **Last Updated**: 2026-02-25
 
 ## Quick Stats
@@ -9,7 +9,7 @@
 |--------|-------|
 | SQLAlchemy Models | 78+ classes across 12 modules |
 | API Routes | 25+ routers |
-| Test Count | 2172 passing |
+| Test Count | 2172 backend + 206 frontend passing |
 | Coverage | >80% |
 | Python Version | 3.12+ |
 | FastAPI Version | 0.109+ |
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.060 | 2026-02-25 | Admin dashboard: agents, policy, activity monitoring, quarantine review |
 | 2026.02.059 | 2026-02-25 | Privacy and compliance: PII tests, consent, audit, quarantine cleanup |
 | 2026.02.058 | 2026-02-25 | Action aggregation engine: session grouping, classification, materialization |
 | 2026.02.057 | 2026-02-25 | macOS desktop agent: Swift capture + Python intelligence layer |

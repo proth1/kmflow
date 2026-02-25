@@ -4,33 +4,32 @@
 
 ## Current Focus
 
-No active work item. Task Mining Epic 5 merged to main via PR #223.
+No active work item. Task Mining Epic 6 merged to main via PR #224.
 
 ## Recently Completed
 
+- **PR #224 merged** — Admin Dashboard (Epic 6) (v2026.02.060)
+  - 4 frontend pages: agents, policy, dashboard, quarantine
+  - API client module (taskmining.ts), sidebar navigation (4 links)
+  - 38 Jest tests, 206 total frontend tests passing
+  - PR review: 0 CRITICAL, 0 HIGH, 3 MEDIUM fixed (debounce, unused import)
+  - Stories covered: #216-#219
 - **PR #223 merged** — Privacy and Compliance (Epic 5) (v2026.02.059)
-  - PII detection test suite: 217+ tests, ≥99% recall per type, <1% false positive rate
-  - Quarantine auto-cleanup: atomic DELETE, summary dict, count_expired helper
-  - Consent management: ConsentRecord model, ConsentManager, HMAC-SHA256 IP hash, re-grant state machine
-  - Audit logging: 11 new AuditAction values, TaskMiningAuditLogger (insert-only, 9 convenience methods)
-  - Alembic migration 028 for consent_records table
-  - PR review: 1 CRITICAL + 2 HIGH + 2 MEDIUM fixed (migration, HMAC, state machine, TOCTOU, re-grant tests)
+  - PII detection (217+ tests), quarantine cleanup, consent management, audit logging
   - Stories covered: #211-#214
 - **PR #222 merged** — Action Aggregation Engine (Epic 4) (v2026.02.058)
-  - SessionAggregator, ActionClassifier, EvidenceMaterializer
-  - 44 tests, PR review findings fixed
-  - Stories covered: #207-#209
 - **PR #221 merged** — macOS Desktop Agent (Epic 3) (v2026.02.057)
 - **PR #220 merged** — Task Mining backend + SDLC infrastructure (v2026.02.056)
 
 ## Pending Work
 
-- **Epic 6**: Admin Dashboard (4 stories: #216-#219)
 - **Worker.py wiring**: Connect aggregation engine to Redis stream consumer (TODO in worker.py)
+- **Epic 7**: Knowledge Graph Integration (Phase 3)
+- **Epic 8**: ML Task Segmentation (Phase 2-3)
 
 ## Session Notes
 
-- 2172 backend tests + 27 agent tests passing
-- Swift builds via SPM (requires macOS 13+, Command Line Tools or Xcode)
-- PR #221 MEDIUM items not yet addressed: socket/uploader/config/health tests, consent audit trail, data deletion, agent README
-- PR #220 MEDIUM items not yet addressed: processor tests, service layer extraction, dashboard query consolidation
+- 2172 backend tests + 206 frontend tests passing
+- All 6 task mining epics (1-6) complete
+- Phase 1 MVP scope fully implemented: backend, agent, aggregation, privacy, admin dashboard
+- Follow-up items from PR #224: client-side role guard layout, WebSocket auth verification

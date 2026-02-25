@@ -3,6 +3,20 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.060] - 2026-02-25
+### Added
+- Task mining admin dashboard: 4 frontend pages for agent management, capture policy, activity monitoring, quarantine review (#215)
+- Agent management page: approve/revoke with confirmation, status badges, 30s auto-refresh (#216)
+- Capture policy editor: app allowlist/blocklist with bundle ID validation, keystroke mode toggle with DPA confirmation (#217)
+- Real-time activity dashboard: stats cards, WebSocket with exponential backoff, app usage bar chart, agent health (#218)
+- PII quarantine review: TTL countdown, delete/release with reason, urgency filter (#219)
+- Task mining API client module (taskmining.ts) with typed functions for all endpoints
+- 38 Jest tests for API client and page utilities
+- 400ms debounced engagement ID filter on all admin pages
+
+### Fixed
+- AppShell test: disambiguate multiple Dashboard link matches after adding TM Dashboard nav item
+
 ## [2026.02.059] - 2026-02-25
 ### Added
 - Privacy and compliance suite: PII detection tests, quarantine cleanup, consent management, audit logging (#210)
