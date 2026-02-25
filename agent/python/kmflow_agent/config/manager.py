@@ -45,10 +45,12 @@ class ConfigManager:
         self,
         backend_url: str,
         agent_id: str,
+        http_client: httpx.AsyncClient | None = None,
         refresh_interval: int = REFRESH_INTERVAL_SECONDS,
     ) -> None:
         self.backend_url = backend_url
         self.agent_id = agent_id
+        self._client = http_client
         self.refresh_interval = refresh_interval
         self._config = EngagementConfig()
         self._cache_path = os.path.join(CACHE_DIR, "config_cache.json")
@@ -74,12 +76,13 @@ class ConfigManager:
 
     async def _refresh(self) -> None:
         """Fetch config from the backend and update local state."""
+        if self._client is None:
+            return
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    f"{self.backend_url}/api/v1/taskmining/config/{self.agent_id}",
-                    timeout=10.0,
-                )
+            response = await self._client.get(
+                f"{self.backend_url}/api/v1/taskmining/config/{self.agent_id}",
+                timeout=10.0,
+            )
             if response.status_code == 200:
                 data = response.json()
                 self._apply_config(data)

@@ -1,17 +1,25 @@
 /// Unix domain socket client for sending events to the Python intelligence layer.
 ///
-/// Events are serialized as newline-delimited JSON (ndjson) over
-/// `unix:///tmp/kmflow-agent.sock`.
+/// Events are serialized as newline-delimited JSON (ndjson) over a
+/// user-private Unix domain socket.
 
 import Foundation
 
 public actor SocketClient {
+    /// Default socket path in user-private Application Support directory.
+    public static let defaultSocketPath: String = {
+        let home = NSHomeDirectory()
+        return "\(home)/Library/Application Support/KMFlowAgent/agent.sock"
+    }()
+
     private let socketPath: String
     private var fileHandle: FileHandle?
     private let encoder: JSONEncoder
     private var isConnected = false
+    private let maxReconnectAttempts = 5
+    private let baseReconnectDelay: TimeInterval = 1.0
 
-    public init(socketPath: String = "/tmp/kmflow-agent.sock") {
+    public init(socketPath: String = SocketClient.defaultSocketPath) {
         self.socketPath = socketPath
         self.encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
@@ -33,8 +41,8 @@ public actor SocketClient {
         }
         withUnsafeMutablePointer(to: &addr.sun_path) { ptr in
             ptr.withMemoryRebound(to: CChar.self, capacity: pathBytes.count) { dest in
-                _ = pathBytes.withUnsafeBufferPointer { src in
-                    memcpy(dest, src.baseAddress!, src.count)
+                for i in 0..<pathBytes.count {
+                    dest[i] = pathBytes[i]
                 }
             }
         }
@@ -54,14 +62,38 @@ public actor SocketClient {
         isConnected = true
     }
 
-    /// Send a capture event over the socket as ndjson.
+    /// Send a capture event, reconnecting if needed.
     public func send(_ event: CaptureEvent) throws {
-        guard isConnected, let fh = fileHandle else {
+        if !isConnected {
+            try reconnect()
+        }
+        guard let fh = fileHandle else {
             throw SocketError.notConnected
         }
-        var data = try encoder.encode(event)
-        data.append(0x0A) // newline
-        fh.write(data)
+        do {
+            var data = try encoder.encode(event)
+            data.append(0x0A) // newline
+            fh.write(data)
+        } catch {
+            // Write failed — mark disconnected for next attempt
+            isConnected = false
+            fileHandle = nil
+            throw error
+        }
+    }
+
+    /// Attempt reconnection with exponential backoff.
+    private func reconnect() throws {
+        for attempt in 0..<maxReconnectAttempts {
+            do {
+                try connect()
+                return
+            } catch {
+                let delay = baseReconnectDelay * pow(2.0, Double(attempt))
+                Thread.sleep(forTimeInterval: min(delay, 30.0))
+            }
+        }
+        throw SocketError.connectionFailed("Failed after \(maxReconnectAttempts) reconnect attempts")
     }
 
     /// Disconnect from the socket.

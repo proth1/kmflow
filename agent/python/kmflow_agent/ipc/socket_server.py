@@ -1,6 +1,6 @@
 """Unix domain socket server for receiving events from the Swift capture layer.
 
-Listens on /tmp/kmflow-agent.sock and reads newline-delimited JSON events.
+Listens on a user-private Unix domain socket and reads newline-delimited JSON events.
 Each event is L2-filtered and written to the local SQLite buffer.
 """
 
@@ -10,6 +10,7 @@ import asyncio
 import json
 import logging
 import os
+import stat
 from pathlib import Path
 
 from kmflow_agent.buffer.manager import BufferManager
@@ -17,7 +18,9 @@ from kmflow_agent.pii.l2_filter import L2Filter
 
 logger = logging.getLogger(__name__)
 
-SOCKET_PATH = "/tmp/kmflow-agent.sock"
+# User-private directory — not world-readable /tmp
+_SOCKET_DIR = os.path.expanduser("~/Library/Application Support/KMFlowAgent")
+SOCKET_PATH = os.path.join(_SOCKET_DIR, "agent.sock")
 
 
 class SocketServer:
@@ -35,6 +38,10 @@ class SocketServer:
 
     async def serve(self, shutdown_event: asyncio.Event) -> None:
         """Start the socket server and accept connections until shutdown."""
+        # Ensure socket directory exists with restricted permissions
+        socket_dir = os.path.dirname(self.socket_path)
+        os.makedirs(socket_dir, mode=0o700, exist_ok=True)
+
         # Remove stale socket file
         if os.path.exists(self.socket_path):
             os.unlink(self.socket_path)
@@ -42,6 +49,10 @@ class SocketServer:
         server = await asyncio.start_unix_server(
             self._handle_client, path=self.socket_path
         )
+
+        # Restrict socket file permissions to owner-only
+        os.chmod(self.socket_path, stat.S_IRUSR | stat.S_IWUSR)  # 0o600
+
         logger.info("Socket server listening on %s", self.socket_path)
 
         try:

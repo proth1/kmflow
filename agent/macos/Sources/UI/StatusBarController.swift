@@ -8,6 +8,7 @@ import Foundation
 public final class StatusBarController {
     private var statusItem: NSStatusItem?
     private let stateManager: CaptureStateManager
+    private var menuDelegate: MenuActionDelegate?
 
     public init(stateManager: CaptureStateManager) {
         self.stateManager = stateManager
@@ -64,6 +65,14 @@ public final class StatusBarController {
     ) -> NSMenu {
         let menu = NSMenu()
 
+        // Keep delegate alive
+        let delegate = MenuActionDelegate(
+            onPauseResume: onPauseResume,
+            onPreferences: onPreferences,
+            onQuit: onQuit
+        )
+        self.menuDelegate = delegate
+
         // Status line
         let statusItem = NSMenuItem(title: "Status: \(stateManager.state.rawValue)", action: nil, keyEquivalent: "")
         statusItem.isEnabled = false
@@ -82,27 +91,46 @@ public final class StatusBarController {
 
         // Pause/Resume
         if stateManager.state == .capturing {
-            let pauseItem = NSMenuItem(title: "Pause Capture", action: nil, keyEquivalent: "p")
-            pauseItem.target = nil
+            let pauseItem = NSMenuItem(title: "Pause Capture", action: #selector(delegate.pauseResume), keyEquivalent: "p")
+            pauseItem.target = delegate
             menu.addItem(pauseItem)
         } else if stateManager.state == .paused {
-            let resumeItem = NSMenuItem(title: "Resume Capture", action: nil, keyEquivalent: "p")
-            resumeItem.target = nil
+            let resumeItem = NSMenuItem(title: "Resume Capture", action: #selector(delegate.pauseResume), keyEquivalent: "p")
+            resumeItem.target = delegate
             menu.addItem(resumeItem)
         }
 
         menu.addItem(NSMenuItem.separator())
 
         // Preferences
-        let prefsItem = NSMenuItem(title: "Preferences...", action: nil, keyEquivalent: ",")
+        let prefsItem = NSMenuItem(title: "Preferences...", action: #selector(delegate.preferences), keyEquivalent: ",")
+        prefsItem.target = delegate
         menu.addItem(prefsItem)
 
         menu.addItem(NSMenuItem.separator())
 
         // Quit
-        let quitItem = NSMenuItem(title: "Quit KMFlow Agent", action: nil, keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "Quit KMFlow Agent", action: #selector(delegate.quit), keyEquivalent: "q")
+        quitItem.target = delegate
         menu.addItem(quitItem)
 
         return menu
     }
+}
+
+/// Target for NSMenuItem actions — bridges closures to @objc selectors.
+final class MenuActionDelegate: NSObject {
+    private let onPauseResume: () -> Void
+    private let onPreferences: () -> Void
+    private let onQuit: () -> Void
+
+    init(onPauseResume: @escaping () -> Void, onPreferences: @escaping () -> Void, onQuit: @escaping () -> Void) {
+        self.onPauseResume = onPauseResume
+        self.onPreferences = onPreferences
+        self.onQuit = onQuit
+    }
+
+    @objc func pauseResume() { onPauseResume() }
+    @objc func preferences() { onPreferences() }
+    @objc func quit() { onQuit() }
 }

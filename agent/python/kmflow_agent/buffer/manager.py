@@ -7,6 +7,7 @@ Encryption wraps individual event payloads using AES-256-GCM.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -50,27 +51,38 @@ class BufferManager:
         self.db_path = db_path
         self._encryption_key = encryption_key or self._default_key()
         self._conn: sqlite3.Connection | None = None
+        self._write_count = 0
         self._ensure_db()
 
     def _default_key(self) -> bytes:
-        """Get encryption key from env or generate a transient one for dev."""
+        """Get encryption key from env or generate and persist a random key."""
         env_key = os.environ.get("KMFLOW_BUFFER_KEY")
         if env_key:
             return env_key.encode("utf-8")[:32].ljust(32, b"\0")
-        # Dev fallback — not for production
-        return b"kmflow-dev-key-not-for-prod-use!"
+
+        # Generate a random key on first run and persist it
+        key_path = Path(self.db_path).parent / ".buffer_key"
+        if key_path.exists():
+            return key_path.read_bytes()[:32]
+
+        key_path.parent.mkdir(parents=True, exist_ok=True)
+        key = os.urandom(32)
+        key_path.write_bytes(key)
+        os.chmod(key_path, 0o600)
+        logger.info("Generated new buffer encryption key at %s", key_path)
+        return key
 
     def _ensure_db(self) -> None:
         """Create the database directory and tables."""
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(self.db_path)
+        self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self._conn.execute("PRAGMA journal_mode=WAL;")
         self._conn.execute(CREATE_TABLE)
         self._conn.execute(CREATE_INDEX)
         self._conn.commit()
 
-    async def write_event(self, event: dict[str, Any]) -> str:
-        """Write an event to the buffer. Returns the event ID."""
+    def _db_write_event(self, event: dict[str, Any]) -> str:
+        """Synchronous DB write — called via asyncio.to_thread."""
         event_id = str(uuid.uuid4())
         payload = json.dumps(event).encode("utf-8")
         encrypted = encrypt_payload(payload, self._encryption_key)
@@ -82,14 +94,20 @@ class BufferManager:
             (event_id, encrypted, now),
         )
         self._conn.commit()
+        self._write_count += 1
 
-        # Check buffer size
-        await self._enforce_size_limit()
+        # Check buffer size every 100 writes
+        if self._write_count % 100 == 0:
+            self._enforce_size_limit_sync()
 
         return event_id
 
-    async def read_pending(self, limit: int = 100) -> list[dict[str, Any]]:
-        """Read pending (not yet uploaded) events from the buffer."""
+    async def write_event(self, event: dict[str, Any]) -> str:
+        """Write an event to the buffer. Returns the event ID."""
+        return await asyncio.to_thread(self._db_write_event, event)
+
+    def _db_read_pending(self, limit: int) -> list[dict[str, Any]]:
+        """Synchronous DB read — called via asyncio.to_thread."""
         assert self._conn is not None
         cursor = self._conn.execute(
             "SELECT id, event_json_encrypted FROM events WHERE uploaded = 0 ORDER BY created_at LIMIT ?",
@@ -104,8 +122,12 @@ class BufferManager:
             results.append(event)
         return results
 
-    async def mark_uploaded(self, event_ids: list[str]) -> None:
-        """Mark events as successfully uploaded."""
+    async def read_pending(self, limit: int = 100) -> list[dict[str, Any]]:
+        """Read pending (not yet uploaded) events from the buffer."""
+        return await asyncio.to_thread(self._db_read_pending, limit)
+
+    def _db_mark_uploaded(self, event_ids: list[str]) -> None:
+        """Synchronous DB update — called via asyncio.to_thread."""
         if not event_ids:
             return
         assert self._conn is not None
@@ -116,30 +138,40 @@ class BufferManager:
         )
         self._conn.commit()
 
-    async def prune_uploaded(self) -> int:
-        """Delete uploaded events from the buffer. Returns count deleted."""
+    async def mark_uploaded(self, event_ids: list[str]) -> None:
+        """Mark events as successfully uploaded."""
+        await asyncio.to_thread(self._db_mark_uploaded, event_ids)
+
+    def _db_prune_uploaded(self) -> int:
+        """Synchronous DB delete — called via asyncio.to_thread."""
         assert self._conn is not None
         cursor = self._conn.execute("DELETE FROM events WHERE uploaded = 1")
         self._conn.commit()
         return cursor.rowcount
 
-    async def count_pending(self) -> int:
-        """Count pending events in the buffer."""
+    async def prune_uploaded(self) -> int:
+        """Delete uploaded events from the buffer. Returns count deleted."""
+        return await asyncio.to_thread(self._db_prune_uploaded)
+
+    def _db_count_pending(self) -> int:
+        """Synchronous DB count — called via asyncio.to_thread."""
         assert self._conn is not None
         cursor = self._conn.execute("SELECT COUNT(*) FROM events WHERE uploaded = 0")
         return cursor.fetchone()[0]
 
-    async def _enforce_size_limit(self) -> None:
+    async def count_pending(self) -> int:
+        """Count pending events in the buffer."""
+        return await asyncio.to_thread(self._db_count_pending)
+
+    def _enforce_size_limit_sync(self) -> None:
         """Prune oldest events if buffer exceeds size limit."""
         assert self._conn is not None
-        # Check file size
         try:
             size = os.path.getsize(self.db_path)
         except OSError:
             return
 
         if size > MAX_BUFFER_SIZE_BYTES:
-            # Delete oldest 10% of events
             total = self._conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
             to_delete = max(total // 10, 100)
             self._conn.execute(

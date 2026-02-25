@@ -13,7 +13,10 @@ _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("SSN", re.compile(r"\b\d{3}-\d{2}-\d{4}\b")),
     ("EMAIL", re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")),
     ("PHONE", re.compile(r"(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b")),
-    ("CREDIT_CARD", re.compile(r"\b(?:4\d{3}|5[1-5]\d{2}|6011)[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b")),
+    # Visa, MC, Discover, JCB (16-digit)
+    ("CREDIT_CARD", re.compile(r"\b(?:4\d{3}|5[1-5]\d{2}|6011|35\d{2})[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b")),
+    # AmEx (15-digit): 3[47]xx-xxxxxx-xxxxx
+    ("AMEX", re.compile(r"\b3[47]\d{2}[-\s]?\d{6}[-\s]?\d{5}\b")),
 ]
 
 REDACTION_MARKER = "[PII_REDACTED]"

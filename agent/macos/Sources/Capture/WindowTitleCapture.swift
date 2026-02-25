@@ -25,9 +25,14 @@ public struct L2PIIFilter: Sendable {
         pattern: #"(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b"#
     )
 
-    /// Credit card: 4 groups of 4 digits (Visa, MC, Discover)
+    /// Credit card: 4 groups of 4 digits (Visa, MC, Discover, JCB)
     private static let creditCard = try! NSRegularExpression(
-        pattern: #"\b(?:4\d{3}|5[1-5]\d{2}|6011)[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b"#
+        pattern: #"\b(?:4\d{3}|5[1-5]\d{2}|6011|35\d{2})[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b"#
+    )
+
+    /// AmEx: 15-digit (3[47]xx-xxxxxx-xxxxx)
+    private static let amex = try! NSRegularExpression(
+        pattern: #"\b3[47]\d{2}[-\s]?\d{6}[-\s]?\d{5}\b"#
     )
 
     private static let redactionMarker = "[PII_REDACTED]"
@@ -36,7 +41,7 @@ public struct L2PIIFilter: Sendable {
     public static func scrub(_ text: String) -> String {
         var result = text
 
-        let patterns = [ssnDashed, email, phone, creditCard]
+        let patterns = [ssnDashed, email, phone, creditCard, amex]
         for pattern in patterns {
             result = pattern.stringByReplacingMatches(
                 in: result,
@@ -51,7 +56,7 @@ public struct L2PIIFilter: Sendable {
     /// Returns true if the text contains any PII pattern.
     public static func containsPII(_ text: String) -> Bool {
         let range = NSRange(text.startIndex..., in: text)
-        let patterns = [ssnDashed, email, phone, creditCard]
+        let patterns = [ssnDashed, email, phone, creditCard, amex]
         return patterns.contains { $0.firstMatch(in: text, range: range) != nil }
     }
 }

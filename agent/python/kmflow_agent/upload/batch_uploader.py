@@ -32,11 +32,13 @@ class BatchUploader:
         self,
         buffer: BufferManager,
         config: ConfigManager,
+        http_client: httpx.AsyncClient,
         batch_size: int = 100,
         interval_seconds: int = 30,
     ) -> None:
         self.buffer = buffer
         self.config = config
+        self._client = http_client
         self.batch_size = batch_size
         self.interval_seconds = interval_seconds
         self._upload_count = 0
@@ -94,18 +96,16 @@ class BatchUploader:
 
         for attempt in range(MAX_RETRIES):
             try:
-                async with httpx.AsyncClient() as client:
-                    response = await client.post(
-                        f"{self.config.backend_url}/api/v1/taskmining/events",
-                        content=compressed,
-                        headers={
-                            "Content-Type": "application/json",
-                            "Content-Encoding": "gzip",
-                            "X-Batch-Id": batch_id,
-                            "X-Checksum": checksum,
-                        },
-                        timeout=30.0,
-                    )
+                response = await self._client.post(
+                    f"{self.config.backend_url}/api/v1/taskmining/events",
+                    content=compressed,
+                    headers={
+                        "Content-Type": "application/json",
+                        "Content-Encoding": "gzip",
+                        "X-Batch-Id": batch_id,
+                        "X-Checksum": checksum,
+                    },
+                )
                 if response.status_code in (200, 201, 202):
                     logger.info(
                         "Batch %s uploaded (%d events)", batch_id[:8], len(events)

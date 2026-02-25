@@ -39,15 +39,19 @@ class HealthReporter:
         self,
         backend_url: str,
         agent_id: str,
+        http_client: httpx.AsyncClient | None = None,
         heartbeat_interval: int = HEARTBEAT_INTERVAL_SECONDS,
     ) -> None:
         self.backend_url = backend_url
         self.agent_id = agent_id
+        self._client = http_client
         self.heartbeat_interval = heartbeat_interval
         self._start_time = time.time()
         self._throttle_active = False
         self._cpu_exceeded_since: float | None = None
         self._process = psutil.Process()
+        # Prime cpu_percent for non-blocking reads
+        self._process.cpu_percent(interval=None)
 
     @property
     def throttle_active(self) -> bool:
@@ -57,8 +61,9 @@ class HealthReporter:
         """Send periodic heartbeats until shutdown."""
         logger.info("Health reporter started (interval=%ds)", self.heartbeat_interval)
         while not shutdown_event.is_set():
-            await self._send_heartbeat()
-            self._check_cpu_threshold()
+            metrics = self.get_metrics()
+            await self._send_heartbeat(metrics)
+            self._check_cpu_threshold(metrics.cpu_percent)
             try:
                 await asyncio.wait_for(
                     shutdown_event.wait(), timeout=self.heartbeat_interval
@@ -70,7 +75,8 @@ class HealthReporter:
 
     def get_metrics(self, event_queue_size: int = 0) -> HealthMetrics:
         """Collect current health metrics."""
-        cpu = self._process.cpu_percent(interval=0.1)
+        # Non-blocking: returns % since last call
+        cpu = self._process.cpu_percent(interval=None)
         memory = self._process.memory_info().rss / (1024 * 1024)
         uptime = time.time() - self._start_time
         return HealthMetrics(
@@ -81,9 +87,8 @@ class HealthReporter:
             throttle_active=self._throttle_active,
         )
 
-    def _check_cpu_threshold(self) -> None:
+    def _check_cpu_threshold(self, cpu: float) -> None:
         """Check if CPU usage exceeds the 3% budget and enable throttle."""
-        cpu = self._process.cpu_percent(interval=0.1)
         now = time.time()
 
         if cpu > CPU_THRESHOLD_PERCENT:
@@ -102,16 +107,16 @@ class HealthReporter:
                 self._throttle_active = False
                 logger.info("CPU below threshold, disabling throttle")
 
-    async def _send_heartbeat(self) -> None:
+    async def _send_heartbeat(self, metrics: HealthMetrics) -> None:
         """Send heartbeat to the backend."""
+        if self._client is None:
+            return
         try:
-            metrics = self.get_metrics()
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{self.backend_url}/api/v1/taskmining/heartbeat",
-                    json={"agent_id": self.agent_id},
-                    timeout=10.0,
-                )
+            response = await self._client.post(
+                f"{self.backend_url}/api/v1/taskmining/heartbeat",
+                json={"agent_id": self.agent_id},
+                timeout=10.0,
+            )
             if response.status_code == 200:
                 data = response.json()
                 if data.get("status") == "revoked":

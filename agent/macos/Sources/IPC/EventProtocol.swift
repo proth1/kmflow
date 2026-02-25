@@ -91,6 +91,10 @@ public struct AnyCodable: Codable, Sendable {
             value = boolVal
         } else if let stringVal = try? container.decode(String.self) {
             value = stringVal
+        } else if let arrayVal = try? container.decode([AnyCodable].self) {
+            value = arrayVal
+        } else if let dictVal = try? container.decode([String: AnyCodable].self) {
+            value = dictVal
         } else if container.decodeNil() {
             value = NSNull()
         } else {
@@ -109,6 +113,10 @@ public struct AnyCodable: Codable, Sendable {
             try container.encode(boolVal)
         case let stringVal as String:
             try container.encode(stringVal)
+        case let arrayVal as [AnyCodable]:
+            try container.encode(arrayVal)
+        case let dictVal as [String: AnyCodable]:
+            try container.encode(dictVal)
         default:
             try container.encodeNil()
         }

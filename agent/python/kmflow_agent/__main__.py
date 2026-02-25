@@ -11,9 +11,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import signal
 import sys
 
+from kmflow_agent.auth import create_http_client, get_auth_token
 from kmflow_agent.buffer.manager import BufferManager
 from kmflow_agent.config.manager import ConfigManager
 from kmflow_agent.health.reporter import HealthReporter
@@ -39,20 +41,39 @@ async def main() -> None:
     for sig in (signal.SIGTERM, signal.SIGINT):
         loop.add_signal_handler(sig, handle_signal)
 
+    # Configuration from environment
+    backend_url = os.environ.get("KMFLOW_BACKEND_URL", "http://localhost:8000")
+    agent_id = os.environ.get("KMFLOW_AGENT_ID", "default")
+
+    if backend_url == "http://localhost:8000":
+        logger.warning("Using default backend URL — set KMFLOW_BACKEND_URL for production")
+
+    # Shared authenticated HTTP client
+    token = get_auth_token()
+    if not token:
+        logger.warning("No agent token found — HTTP requests will be unauthenticated")
+    http_client = create_http_client(token)
+
     # Initialize services
     buffer = BufferManager()
     config = ConfigManager(
-        backend_url="http://localhost:8000",
-        agent_id="default",
+        backend_url=backend_url,
+        agent_id=agent_id,
+        http_client=http_client,
     )
-    uploader = BatchUploader(buffer=buffer, config=config)
+    uploader = BatchUploader(
+        buffer=buffer,
+        config=config,
+        http_client=http_client,
+    )
     health = HealthReporter(
-        backend_url="http://localhost:8000",
-        agent_id="default",
+        backend_url=backend_url,
+        agent_id=agent_id,
+        http_client=http_client,
     )
     server = SocketServer(buffer=buffer)
 
-    logger.info("KMFlow Agent Python layer starting")
+    logger.info("KMFlow Agent Python layer starting (backend=%s, agent=%s)", backend_url, agent_id)
 
     # Run all services concurrently
     try:
@@ -65,6 +86,7 @@ async def main() -> None:
     except Exception:
         logger.exception("Service error")
     finally:
+        await http_client.aclose()
         await buffer.close()
         logger.info("KMFlow Agent Python layer stopped")
 
