@@ -1,0 +1,45 @@
+# Action classification rules for the task mining aggregation engine.
+# Rules are evaluated in order — first match wins.
+# Modify thresholds here without code changes.
+
+rules:
+  - name: file_operation
+    category: file_operation
+    confidence: 0.85
+    conditions:
+      file_operation_count_min: 3
+      file_operation_ratio_min: 0.15
+
+  - name: data_entry
+    category: data_entry
+    confidence: 0.85
+    conditions:
+      keyboard_event_count_min: 30
+      keyboard_ratio_min: 0.50
+
+  - name: navigation_url
+    category: navigation
+    confidence: 0.80
+    conditions:
+      url_navigation_count_min: 5
+
+  - name: navigation_scroll
+    category: navigation
+    confidence: 0.75
+    conditions:
+      scroll_count_min: 20
+      keyboard_event_count_max: 10
+
+  - name: communication
+    category: communication
+    confidence: 0.90
+    conditions:
+      app_in_communication_list: true
+
+  - name: review
+    category: review
+    confidence: 0.75
+    conditions:
+      scroll_count_min: 15
+      keyboard_event_count_max: 10
+      copy_paste_count_min: 2
