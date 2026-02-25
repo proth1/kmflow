@@ -88,7 +88,7 @@ _PATTERNS: list[PIIPattern] = [
     ),
     PIIPattern(
         pii_type=PIIType.PHONE,
-        pattern=re.compile(r"\b\+\d{1,3}[\s.-]?\d{4,14}\b"),
+        pattern=re.compile(r"(?<!\w)\+\d{1,3}[\s.-]?\d{4,14}\b"),
         description="International phone number",
         confidence=0.80,
     ),
@@ -96,8 +96,8 @@ _PATTERNS: list[PIIPattern] = [
     PIIPattern(
         pii_type=PIIType.ADDRESS,
         pattern=re.compile(
-            r"\b\d{1,5}\s+[A-Za-z]+(?:\s+[A-Za-z]+){0,3}\s+"
-            r"(?:St|Street|Ave|Avenue|Blvd|Boulevard|Dr|Drive|Ln|Lane|Rd|Road|Way|Ct|Court|Pl|Place)\.?\b",
+            r"\b\d{1,5}\s+(?:[A-Za-z]+\s+){0,4}"
+            r"(?:St|Street|Ave|Avenue|Blvd|Boulevard|Dr|Drive|Ln|Lane|Rd|Road|Way|Ct|Court|Pl|Place|Broadway|Parkway|Pkwy|Circle|Cir|Terrace|Ter)\.?\b",
             re.IGNORECASE,
         ),
         description="US street address",
@@ -119,14 +119,20 @@ _PATTERNS: list[PIIPattern] = [
     # -- Financial ------------------------------------------------------------
     PIIPattern(
         pii_type=PIIType.FINANCIAL,
-        pattern=re.compile(r"\b(?:account|acct)[\s#:]*\d{8,17}\b", re.IGNORECASE),
+        pattern=re.compile(r"\b(?:account|acct)[\s#:]*(?:number[\s#:]*|no[\s#:]*|num[\s#:]*)?\d{8,17}\b", re.IGNORECASE),
         description="Bank account number",
         confidence=0.85,
     ),
     PIIPattern(
         pii_type=PIIType.FINANCIAL,
         pattern=re.compile(r"\b\d{9}(?:\s?\d{0,4})?\b.*?(?:routing|ABA)\b", re.IGNORECASE),
-        description="Bank routing number with context",
+        description="Bank routing number with trailing context",
+        confidence=0.90,
+    ),
+    PIIPattern(
+        pii_type=PIIType.FINANCIAL,
+        pattern=re.compile(r"\b(?:routing|ABA)[\s#:]*(?:(?:number|no|num)[\s#:]*(?:is[\s]*)?)?\d{9}\b", re.IGNORECASE),
+        description="Bank routing number with leading context",
         confidence=0.90,
     ),
 ]

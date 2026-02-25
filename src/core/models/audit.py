@@ -73,6 +73,19 @@ class AuditAction(enum.StrEnum):
     PATTERN_DELETED = "pattern_deleted"
     PORTAL_UPLOAD = "portal_upload"
     BASELINE_CREATED = "baseline_created"
+    # -- Task mining: agent lifecycle --------------------------------------------
+    TASK_MINING_STARTED = "task_mining_started"
+    TASK_MINING_STOPPED = "task_mining_stopped"
+    AGENT_APPROVED = "agent_approved"
+    AGENT_REVOKED = "agent_revoked"
+    AGENT_CONSENT_GRANTED = "agent_consent_granted"
+    AGENT_CONSENT_REVOKED = "agent_consent_revoked"
+    CAPTURE_MODE_CHANGED = "capture_mode_changed"
+    # -- Task mining: PII --------------------------------------------------------
+    PII_DETECTED = "pii_detected"
+    PII_QUARANTINED = "pii_quarantined"
+    PII_QUARANTINE_RELEASED = "pii_quarantine_released"
+    PII_QUARANTINE_AUTO_DELETED = "pii_quarantine_auto_deleted"
 
 
 class AuditLog(Base):
