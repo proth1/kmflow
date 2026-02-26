@@ -19,7 +19,9 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
-from src.core.models import DataCatalogEntry, DataClassification, DataLayer, User
+from sqlalchemy import select
+
+from src.core.models import DataCatalogEntry, DataClassification, DataLayer, EvidenceItem, User
 from src.core.permissions import require_engagement_access, require_permission
 from src.datalake.backend import get_storage_backend
 from src.datalake.silver import SilverLayerWriter
@@ -531,11 +533,16 @@ async def get_governance_health(
     svc = DataCatalogService(session)
     entries = await svc.list_entries(engagement_id=engagement_id)
 
+    # Batch-fetch all evidence items for this engagement once (avoids N+1).
+    evidence_query = select(EvidenceItem).where(EvidenceItem.engagement_id == engagement_id)
+    evidence_result = await session.execute(evidence_query)
+    evidence_items: list[EvidenceItem] = list(evidence_result.scalars().all())
+
     entry_statuses: list[dict[str, Any]] = []
     passing_count = 0
 
     for entry in entries:
-        sla_result: SLAResult = await check_quality_sla(session, entry)
+        sla_result: SLAResult = await check_quality_sla(session, entry, evidence_items=evidence_items)
         if sla_result.passing:
             passing_count += 1
 

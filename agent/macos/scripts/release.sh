@@ -40,6 +40,11 @@ if [[ "$IDENTITY" == "-" ]]; then
     exit 1
 fi
 
+# Mark this as a release build so that downstream scripts (embed-python.sh,
+# notarize.sh, sign-all.sh) enforce stricter checks such as mandatory
+# SHA-256 tarball verification and notarization credentials.
+export KMFLOW_RELEASE_BUILD=1
+
 echo "=============================================="
 echo "KMFlow Agent Release — v${VERSION}"
 echo "=============================================="
