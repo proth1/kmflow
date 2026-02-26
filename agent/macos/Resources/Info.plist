@@ -31,9 +31,6 @@
     <key>NSAccessibilityUsageDescription</key>
     <string>KMFlow Agent needs Accessibility access to observe application switches, window titles, and keyboard/mouse activity for process mining analysis.</string>
 
-    <key>NSScreenCaptureUsageDescription</key>
-    <string>KMFlow Agent needs Screen Recording access for optional screenshot-based process analysis (Phase 2).</string>
-
     <!-- Login item support -->
     <key>SMAppServiceEnabled</key>
     <true/>

@@ -63,6 +63,7 @@ public final class StatusBarController {
         onPreferences: @escaping () -> Void,
         onTransparencyLog: @escaping () -> Void,
         onWhatsBeingCaptured: @escaping () -> Void,
+        onWithdrawConsent: @escaping () -> Void,
         onQuit: @escaping () -> Void
     ) -> NSMenu {
         let menu = NSMenu()
@@ -73,6 +74,7 @@ public final class StatusBarController {
             onPreferences: onPreferences,
             onTransparencyLog: onTransparencyLog,
             onWhatsBeingCaptured: onWhatsBeingCaptured,
+            onWithdrawConsent: onWithdrawConsent,
             onQuit: onQuit
         )
         self.menuDelegate = delegate
@@ -124,6 +126,18 @@ public final class StatusBarController {
 
         menu.addItem(NSMenuItem.separator())
 
+        // Withdraw Consent (GDPR Art. 7(3) — right to withdraw at any time)
+        if stateManager.state == .capturing || stateManager.state == .paused {
+            let withdrawItem = NSMenuItem(
+                title: "Withdraw Consent…",
+                action: #selector(delegate.withdrawConsent),
+                keyEquivalent: ""
+            )
+            withdrawItem.target = delegate
+            menu.addItem(withdrawItem)
+            menu.addItem(NSMenuItem.separator())
+        }
+
         // Quit
         let quitItem = NSMenuItem(title: "Quit KMFlow Agent", action: #selector(delegate.quit), keyEquivalent: "q")
         quitItem.target = delegate
@@ -139,6 +153,7 @@ final class MenuActionDelegate: NSObject {
     private let onPreferences: () -> Void
     private let onTransparencyLog: () -> Void
     private let onWhatsBeingCaptured: () -> Void
+    private let onWithdrawConsent: () -> Void
     private let onQuit: () -> Void
 
     init(
@@ -146,12 +161,14 @@ final class MenuActionDelegate: NSObject {
         onPreferences: @escaping () -> Void,
         onTransparencyLog: @escaping () -> Void,
         onWhatsBeingCaptured: @escaping () -> Void,
+        onWithdrawConsent: @escaping () -> Void,
         onQuit: @escaping () -> Void
     ) {
         self.onPauseResume = onPauseResume
         self.onPreferences = onPreferences
         self.onTransparencyLog = onTransparencyLog
         self.onWhatsBeingCaptured = onWhatsBeingCaptured
+        self.onWithdrawConsent = onWithdrawConsent
         self.onQuit = onQuit
     }
 
@@ -159,5 +176,6 @@ final class MenuActionDelegate: NSObject {
     @objc func preferences() { onPreferences() }
     @objc func transparencyLog() { onTransparencyLog() }
     @objc func whatsBeingCaptured() { onWhatsBeingCaptured() }
+    @objc func withdrawConsent() { onWithdrawConsent() }
     @objc func quit() { onQuit() }
 }
