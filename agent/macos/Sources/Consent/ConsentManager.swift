@@ -49,27 +49,20 @@ public final class ConsentManager: ObservableObject {
 }
 
 /// In-memory consent store for testing.
-public final class InMemoryConsentStore: ConsentStore, @unchecked Sendable {
+public actor InMemoryConsentStore: ConsentStore {
     private var storage: [String: ConsentState] = [:]
-    private let lock = NSLock()
 
     public init() {}
 
     public func load(engagementId: String) -> ConsentState {
-        lock.lock()
-        defer { lock.unlock() }
         return storage[engagementId] ?? .neverConsented
     }
 
     public func save(engagementId: String, state: ConsentState, at: Date) {
-        lock.lock()
-        defer { lock.unlock() }
         storage[engagementId] = state
     }
 
     public func clear(engagementId: String) {
-        lock.lock()
-        defer { lock.unlock() }
         storage.removeValue(forKey: engagementId)
     }
 }

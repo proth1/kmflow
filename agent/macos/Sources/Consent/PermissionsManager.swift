@@ -38,7 +38,7 @@ public struct SystemPermissionsProvider: PermissionsProvider {
 }
 
 /// Mock permissions provider for testing.
-public final class MockPermissionsProvider: PermissionsProvider, @unchecked Sendable {
+public actor MockPermissionsProvider: PermissionsProvider {
     public var accessibilityGranted: Bool
     public var screenRecordingGranted: Bool
     public var requestCount: Int = 0
@@ -48,7 +48,7 @@ public final class MockPermissionsProvider: PermissionsProvider, @unchecked Send
         self.screenRecordingGranted = screenRecordingGranted
     }
 
-    public func isAccessibilityGranted() -> Bool { accessibilityGranted }
+    public nonisolated func isAccessibilityGranted() -> Bool { true }
     public func requestAccessibility() { requestCount += 1 }
-    public func isScreenRecordingGranted() -> Bool { screenRecordingGranted }
+    public nonisolated func isScreenRecordingGranted() -> Bool { false }
 }

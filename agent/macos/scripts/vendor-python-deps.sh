@@ -148,6 +148,16 @@ install_packages() {
     #   --only-binary=:all: forbid sdist / compilation
     #   --no-compile       skip .pyc compilation (we strip it anyway, saves time)
     #   --upgrade          ensure we always get a fresh install (idempotent behavior)
+    #   --require-hashes   verify package integrity against hashes in requirements.txt
+    #                      (requires all packages and their deps to have hashes listed)
+    local hash_flag=""
+    if grep -q -- '--hash' "$REQUIREMENTS_FILE" 2>/dev/null; then
+        hash_flag="--require-hashes"
+        log "Hash verification enabled (requirements.txt contains --hash entries)"
+    else
+        log "WARNING: requirements.txt has no --hash entries. Pin versions and add hashes for supply chain security."
+    fi
+    # shellcheck disable=SC2086
     $PIP_CMD install \
         --target "$site_dir" \
         --python-version "$PYTHON_VERSION_TAG" \
@@ -156,6 +166,7 @@ install_packages() {
         --no-compile \
         --upgrade \
         --quiet \
+        $hash_flag \
         "${packages[@]}" \
         || die "pip install failed for: ${packages[*]}"
 }

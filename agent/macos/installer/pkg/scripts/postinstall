@@ -20,7 +20,11 @@ else
 fi
 
 CONSOLE_UID="$(id -u "$CONSOLE_USER" 2>/dev/null || echo "")"
-USER_HOME="$(dscl . -read "/Users/$CONSOLE_USER" NFSHomeDirectory 2>/dev/null | awk '{print $2}' || eval echo "~$CONSOLE_USER")"
+USER_HOME="$(dscl . -read "/Users/$CONSOLE_USER" NFSHomeDirectory 2>/dev/null | awk '{print $2}' || echo "")"
+if [[ -z "$USER_HOME" ]]; then
+    echo "WARNING: Could not determine home directory for $CONSOLE_USER via dscl." >&2
+    USER_HOME="/Users/$CONSOLE_USER"
+fi
 
 echo "  Console user: ${CONSOLE_USER:-unknown} (uid ${CONSOLE_UID:-unknown})"
 echo "  Home:         ${USER_HOME:-unknown}"
@@ -51,6 +55,15 @@ fi
 
 mkdir -p "$LAUNCH_AGENTS_DIR"
 cp "$PLIST_SRC" "$PLIST_DEST"
+
+# Rewrite the plist to use the console user's actual home directory instead
+# of the default /Users/Shared paths (which are world-writable and insecure).
+if [[ -n "$USER_HOME" ]]; then
+    /usr/libexec/PlistBuddy -c "Set :StandardOutPath ${USER_HOME}/Library/Logs/KMFlowAgent/agent.log" "$PLIST_DEST" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :StandardErrorPath ${USER_HOME}/Library/Logs/KMFlowAgent/agent-error.log" "$PLIST_DEST" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Set :EnvironmentVariables:HOME ${USER_HOME}" "$PLIST_DEST" 2>/dev/null || true
+    echo "  Rewrote plist paths to ${USER_HOME}/Library/Logs/KMFlowAgent/"
+fi
 
 # Ensure the plist is owned by the console user (installer runs as root)
 if [[ -n "$CONSOLE_USER" ]]; then

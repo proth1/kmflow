@@ -28,6 +28,18 @@ if [[ ! -f "$ENTITLEMENTS_PATH" ]]; then
     exit 1
 fi
 
+# Refuse ad-hoc signing ("-") for release builds. Ad-hoc signed binaries
+# cannot be notarized and will be rejected by Gatekeeper on other machines.
+if [[ "$IDENTITY" == "-" ]]; then
+    if [[ "${KMFLOW_RELEASE_BUILD:-0}" == "1" ]]; then
+        echo "ERROR: Ad-hoc signing identity ('-') is not permitted for release builds." >&2
+        echo "       Set KMFLOW_CODESIGN_IDENTITY to a valid Developer ID Application certificate." >&2
+        exit 1
+    else
+        echo "WARNING: Using ad-hoc signing identity ('-'). This is acceptable for local development only."
+    fi
+fi
+
 echo "=== KMFlow Agent Code Signing ==="
 echo "  App:          $APP_PATH"
 echo "  Identity:     $IDENTITY"
