@@ -4,18 +4,25 @@
 
 ## Current Focus
 
-**Audit Remediation** — Phase 0, Phase 1, and Phase 2 substantially COMPLETE.
+**Audit Remediation** — Phase 0, Phase 1, and Phase 2 COMPLETE.
 - Phase 0 (docs): All 5 items done (PRs #245, #251)
 - Phase 1 (critical security): All 9 items done (PRs #246, #247, #248, #251)
-- Phase 2 (HIGH findings): PRs 1-3 done (#249, #252, #255). All platform + most agent HIGHs resolved.
-- Deferred agent HIGHs (require dedicated implementation):
-  - E3: SQLite buffer AES-256-GCM encryption
-  - E3: IPC socket authentication (peer credential + shared secret)
-  - E3: Consent record HMAC signing
-  - E1: TCC REPLACE_TEAM_ID placeholder (build tooling)
+- Phase 2 (HIGH findings): All 4 PRs done (#249, #252, #255, #256). All platform + all agent HIGHs resolved.
+- Remaining deferred item:
+  - E1: TCC REPLACE_TEAM_ID placeholder (build tooling — requires actual Apple Team ID)
 
 ## Recently Completed
 
+- **PR #256 merged** — Audit Phase 2 PR 4: macOS Agent HIGH Security Hardening (v2026.02.072)
+  - AES-256-GCM buffer encryption: Keychain key provisioning + decryption in TransparencyLogController
+  - IPC socket: symlink detection + JSONSerialization-based auth handshake (fixed JSON injection in review)
+  - HMAC-SHA256 consent record signing with per-install Keychain key; tampered records rejected
+  - ConsentManager.onRevocation() handler pattern for cleanup wiring
+  - CaptureStateManager.onStateChange() callback for monitor lifecycle
+  - Content-level UI option disabled until L2+ PII filtering validated
+  - kSecAttrSynchronizable on all Keychain stores (no iCloud sync)
+  - Removed --deep from codesign, exposed codesign errors, isolated PYTHONPATH
+  - PR review: 1 HIGH fixed (JSON injection), 2 LOW fixed (iCloud sync, var→let)
 - **PR #255 merged** — Audit Phase 2 PR 3: Agent HIGH Security Hardening (v2026.02.071)
   - Hardened AgentLogger: all os_log interpolations now use `privacy: .private`
   - Added `kSecAttrAccessibleAfterFirstUnlock` + `kSecAttrSynchronizable: false` to Keychain writes

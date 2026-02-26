@@ -3,6 +3,17 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.072] - 2026-02-26
+### Security
+- AES-256-GCM buffer encryption with Keychain key provisioning and backward-compatible decryption (#254)
+- IPC socket symlink detection and JSONSerialization-based auth handshake (#254)
+- HMAC-SHA256 consent record signing with per-install Keychain key (#254)
+- Consent revocation handler pattern for wiring buffer/IPC/Keychain cleanup (#254)
+- kSecAttrSynchronizable on all Keychain stores to prevent iCloud sync (#254)
+- CaptureStateManager.onStateChange() callback for monitor lifecycle management (#254)
+- Disable content-level capture UI option until L2+ PII filtering validated (#254)
+- Remove --deep from codesign, expose codesign errors, isolate PYTHONPATH (#254)
+
 ## [2026.02.071] - 2026-02-26
 ### Security
 - Harden AgentLogger to use `privacy: .private` for all os_log interpolations (#255)
