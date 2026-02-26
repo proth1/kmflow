@@ -4,14 +4,25 @@
 
 ## Current Focus
 
-**Audit Remediation** — Phase 0 and Phase 1 COMPLETE. Phase 2 in progress.
+**Audit Remediation** — Phase 0, Phase 1, and Phase 2 substantially COMPLETE.
 - Phase 0 (docs): All 5 items done (PRs #245, #251)
 - Phase 1 (critical security): All 9 items done (PRs #246, #247, #248, #251)
-- Phase 2 (HIGH findings): PRs 1-2 done (#249, #252). All platform HIGHs resolved.
-- Remaining: ~9 agent HIGHs (E1/E2/E3/F3) — entitlements, logger privacy, config validation
+- Phase 2 (HIGH findings): PRs 1-3 done (#249, #252, #255). All platform + most agent HIGHs resolved.
+- Deferred agent HIGHs (require dedicated implementation):
+  - E3: SQLite buffer AES-256-GCM encryption
+  - E3: IPC socket authentication (peer credential + shared secret)
+  - E3: Consent record HMAC signing
+  - E1: TCC REPLACE_TEAM_ID placeholder (build tooling)
 
 ## Recently Completed
 
+- **PR #255 merged** — Audit Phase 2 PR 3: Agent HIGH Security Hardening (v2026.02.071)
+  - Hardened AgentLogger: all os_log interpolations now use `privacy: .private`
+  - Added `kSecAttrAccessibleAfterFirstUnlock` + `kSecAttrSynchronizable: false` to Keychain writes
+  - MDM config bounds clamping: screenshotInterval (5-3600), batchSize (1-10000), batchInterval (5-3600), idleTimeout (30-3600)
+  - HTTPS-only scheme validation for KMFLOW_BACKEND_URL in PythonProcessManager
+  - Removed unused `files.user-selected.read-write` entitlement
+  - PR review: 1 blocking (HTTP allowed → fixed to HTTPS-only), 2 advisory (publicError variant, direct os.Logger usage)
 - **PR #252 merged** — Audit Phase 2 PR 2: Missing FK Indexes (v2026.02.070)
   - Migration 029: 13 B-tree indexes on unindexed FK columns across 6 model modules
   - PR review: 1 MEDIUM fixed (removed non-FK lineage_id), 1 LOW fixed (naming suffix)

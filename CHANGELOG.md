@@ -3,6 +3,14 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.071] - 2026-02-26
+### Security
+- Harden AgentLogger to use `privacy: .private` for all os_log interpolations (#255)
+- Add `kSecAttrAccessibleAfterFirstUnlock` and `kSecAttrSynchronizable: false` to Keychain writes (#255)
+- Clamp MDM integer config values to safe bounds in AgentConfig (screenshotInterval, batchSize, batchInterval, idleTimeout) (#255)
+- Enforce HTTPS-only scheme validation for KMFLOW_BACKEND_URL in PythonProcessManager (#255)
+- Remove unused `files.user-selected.read-write` entitlement (no effect outside sandbox) (#255)
+
 ## [2026.02.070] - 2026-02-26
 ### Fixed
 - Add B-tree indexes on 13 unindexed ForeignKey columns for join/query performance (#252)
