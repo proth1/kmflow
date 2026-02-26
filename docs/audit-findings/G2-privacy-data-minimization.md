@@ -1,587 +1,431 @@
-# G2: Privacy & Data Minimization Audit
+# G2: Privacy & Data Minimization Re-Audit
 
 **Agent**: G2 (Privacy & Data Minimization Auditor)
-**Date**: 2026-02-25
+**Date**: 2026-02-26
+**Original Audit Date**: 2026-02-25
 **Scope**: KMFlow macOS Task Mining Agent -- PII protection, consent model, data minimization, transparency, regulatory compliance
 **Auditor Model**: claude-opus-4-6
+**Re-Audit Trigger**: Post-remediation review following PRs #245, #248, #255, #256, #258
 
 ---
 
-## Finding Summary
+## Remediation Summary
 
-| Severity | Count |
-|----------|-------|
-| CRITICAL | 3 |
-| HIGH | 7 |
-| MEDIUM | 8 |
-| LOW | 5 |
-| **Total** | **23** |
+| Original ID | Severity | Finding | Status | PR | Notes |
+|-------------|----------|---------|--------|----|-------|
+| PII-001 | CRITICAL | L1 Filter name misleading | **CLOSED** | #245, #248 | Renamed to `CaptureContextFilter`; moved to `PII` module; whitepaper updated to distinguish context blocking from PII scrubbing |
+| PII-002 | CRITICAL | "All data is encrypted" false claim in WelcomeView + whitepaper | **CLOSED** | #245 | WelcomeView line 72 now reads "Data is transmitted securely and PII is automatically redacted"; whitepaper Sec. 5 now explicitly states buffer is plaintext with encryption planned |
+| PII-003 | CRITICAL | L3/L4 claimed as implemented | **CLOSED** | #245 | Whitepaper Sec. 4 headers now read "NOT YET IMPLEMENTED"; DPA and PIA updated with disclaimers; data flow diagram annotated |
+| PII-004 | HIGH | Missing file path username detection | **CLOSED** | #248 | `L2PIIFilter` now includes `filePath` regex matching `/Users/{name}/` and `C:\Users\{name}\` patterns (lines 45-48) |
+| PII-005 | HIGH | Missing international PII patterns | **CLOSED** | #248 | Added IBAN (line 40-43), UK NINO (line 50-53); whitepaper pattern table reconciled with Swift code |
+| PII-006 | HIGH | Window title not truncated / excessive capture | **PARTIAL** | #248 | `maxTitleLength` added at 512 chars (line 93); truncation implemented (lines 108-109). However, 512 chars is still generous and window titles are captured even in `action_level` mode |
+| CONSENT-001 | HIGH | Consent not granular per data type | **OPEN** | -- | No change; all three checkboxes remain all-or-nothing |
+| CONSENT-002 | HIGH | Capture scope picker no-op | **CLOSED** | #256 | Scope picker disabled in UI (lines 63-68 of ConsentView); commented out "Content Level" option; picker set to `disabled(true)` |
+| CONSENT-003 | HIGH | No "Withdraw Consent" in menu bar | **PARTIAL** | #256 | `ConsentManager.onRevocation()` handler added (line 40); `revokeConsent()` calls handlers (lines 56-62). Menu bar still lacks an explicit "Withdraw Consent" item |
+| PII-007 | MEDIUM | Mouse coordinates in InputEvent | **CLOSED** | #255 | `InputEvent` enum no longer carries x/y coordinates (confirmed: lines 16-23 of InputMonitor.swift) |
+| PII-008 | MEDIUM | Idle detection timing reveals personal patterns | **OPEN** | -- | No change; `IdleDetector` still emits exact timestamps |
+| CONSENT-004 | MEDIUM | MDM pre-configures without employee knowledge | **OPEN** | -- | No change; onboarding does not display MDM-configured values |
+| DATA-001 | MEDIUM | Uninstall script incomplete | **PARTIAL** | #258 | Uninstall script updated with more artifact paths; still missing `~/Library/Preferences/com.kmflow.agent.plist` |
+| DATA-002 | MEDIUM | No backend deletion mechanism | **OPEN** | -- | No change |
+| DATA-003 | MEDIUM | No local retention limit by age | **OPEN** | -- | No change |
+| WHITEPAPER-001 | MEDIUM | Socket path discrepancy | **CLOSED** | #245 | Whitepaper Sec. 2 diagram now shows `~/Library/Application Support/KMFlowAgent/agent.sock` |
+| WHITEPAPER-002 | MEDIUM | Whitepaper uninstall paths wrong | **CLOSED** | #245 | Whitepaper Sec. 9 paths reconciled with actual code paths |
+| PII-009 | LOW | Private browsing detection brittle | **PARTIAL** | #248 | Arc and Edge added to `PrivateBrowsingDetector`; Brave and Vivaldi still missing |
+| PII-010 | LOW | BlocklistManager returns true for nil bundleId | **CLOSED** | #255 | Now returns `false` for nil bundleId (line 34 of BlocklistManager.swift) |
+| CONSENT-005 | LOW | Consent version hardcoded | **OPEN** | -- | Still hardcoded to "1.0" (line 120 of KeychainConsentStore.swift) |
+| DATA-004 | LOW | IPC plaintext over socket | **ACCEPTED** | -- | Whitepaper documents this as accepted risk; symlink check and auth handshake added (PR #255) |
+| TRANSPARENCY-001 | HIGH | Transparency log missing upload status | **OPEN** | -- | No change; log still reads from local buffer only, 200-event cap, no upload status |
+| TRANSPARENCY-002 | LOW | Log shows post-filter data only | **OPEN** | -- | No change |
+
+---
+
+## Updated Finding Summary
+
+| Severity | Original Count | Closed | Remaining |
+|----------|---------------|--------|-----------|
+| CRITICAL | 3 | 3 | **0** |
+| HIGH | 7 | 3 | **4** |
+| MEDIUM | 8 | 3 | **5** |
+| LOW | 5 | 2 | **3** |
+| **Total** | **23** | **11** | **12** |
+
+**New findings identified in re-audit**: 3
+
+| Severity | New | Carried | Total Open |
+|----------|-----|---------|------------|
+| CRITICAL | 0 | 0 | **0** |
+| HIGH | 1 | 3 | **4** |
+| MEDIUM | 2 | 5 | **7** |
+| LOW | 0 | 3 | **3** |
+| **Total** | **3** | **11** | **14** |
 
 ---
 
 ## CRITICAL Findings
 
-### [CRITICAL] PII-001: L1 Filter Contains No PII Regex -- Name is Misleading
+All three original CRITICAL findings have been remediated.
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/PII/L1Filter.swift:28-49`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
-**Evidence**:
-```swift
-public struct L1Filter: Sendable {
-    public static func isPasswordField(provider: AccessibilityProvider) -> Bool {
-        return provider.isSecureTextField()
-    }
-    public static func isBlockedApp(bundleId: String?, blocklist: Set<String>) -> Bool {
-        guard let bid = bundleId else { return false }
-        return blocklist.contains(bid)
-    }
-```
-**Description**: Despite being named "L1Filter" and residing in the `PII` module, this struct performs zero PII filtering. It only checks for password fields and blocked apps. The actual PII regex filtering (SSN, email, phone, credit card) is performed solely in `L2PIIFilter` within `WindowTitleCapture.swift`. The security whitepaper claims a "four-layer PII protection architecture" where "L1 and L2 operate on-device before data is written to local storage." While L1 does block certain contexts (password fields, private browsing, blocked apps), it is not a PII filter -- it is a context filter. This conflation could mislead CISOs during security reviews into believing two independent PII scrubbing layers exist on-device when only one (L2 regex) actually scrubs PII content from captured text.
-**Risk**: Enterprise security reviewers may approve deployment based on the claim of "four-layer PII protection" when in reality there is only one PII content filter on-device (L2 regex), one context filter (L1), and two backend layers (L3 ML + L4 human) that do not yet exist in code. Misrepresentation of security controls can lead to regulatory findings.
-**Recommendation**: Rename L1 to "CaptureContextFilter" or "CaptureGatekeeper" and update the whitepaper to clearly distinguish context-level blocking (L1) from content-level PII scrubbing (L2). Do not count L1 as a "PII protection layer" unless it actually inspects and redacts PII patterns.
+### [CRITICAL] PII-001: CLOSED
 
----
+**Original**: L1 Filter name misleading; conflated context blocking with PII scrubbing.
+**Remediation**: Renamed to `CaptureContextFilter` in `/Users/proth/repos/kmflow/agent/macos/Sources/PII/CaptureContextFilter.swift`. The whitepaper now distinguishes "L1 -- Capture Prevention" (context blocking) from "L2 -- Regex Scrubbing" (PII content filtering). The data flow diagram labels L1 as preventing capture rather than filtering PII content.
+**Verification**: CaptureContextFilter.swift lines 1-11 correctly describe the struct as a "context-blocking filter" that "determines WHETHER to capture, not WHAT to redact."
 
-### [CRITICAL] PII-002: No Encryption of Local SQLite Buffer -- Whitepaper Claim of AES-256-GCM is Not Implemented
+### [CRITICAL] PII-002: CLOSED
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/UI/TransparencyLogController.swift:109-113`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
-**Evidence**:
-```swift
-        // Load the buffer encryption key from Keychain (for future use when
-        // the Python layer encrypts individual columns).  We retrieve it here
-        // so the controller wires the full security contract even if decryption
-        // is a no-op for plaintext rows today.
-        _ = loadBufferKeyFromKeychain()
-```
-**Description**: The security whitepaper (KMF-SEC-001, Section 5) states: "The local buffer database (buffer.db) stores all captured events in an encrypted SQLite database" using "AES-256-GCM." However, the code comments in the Transparency Log Controller explicitly state that decryption "is a no-op for plaintext rows today." The buffer encryption key is loaded from Keychain but never used. The SQLite database is opened with standard `sqlite3_open_v2` with `SQLITE_OPEN_READONLY` -- no decryption, no SQLCipher, no column-level encryption. The `WelcomeView.swift` also tells users "All data is encrypted and PII is automatically redacted" (line 72), which is false for local data at rest.
-**Risk**: This is a material misrepresentation of security controls. If the device is compromised, stolen, or subject to forensic examination, captured activity data is stored in plaintext in `~/Library/Application Support/KMFlowAgent/buffer.db`. This contradicts claims made to CISOs and data protection authorities. Under GDPR Art. 32 and SOC 2 CC6.6, the organization may face regulatory action for failing to implement claimed encryption controls. The whitepaper is the basis for CISO sign-off -- false claims in it constitute a compliance risk.
-**Recommendation**: Either implement AES-256-GCM encryption (e.g., via SQLCipher or column-level CryptoKit encryption) before deployment, or immediately update the whitepaper, WelcomeView, and all compliance documentation to accurately state that local buffer encryption is planned for a future phase. Do not deploy with documentation that misrepresents the current security posture.
+**Original**: WelcomeView claimed "All data is encrypted"; whitepaper claimed AES-256-GCM was implemented.
+**Remediation**: WelcomeView line 72 now reads: "Data is transmitted securely and PII is automatically redacted" -- which is accurate (TLS in transit, L2 PII scrubbing). Whitepaper Sec. 5 heading now reads "AES-256-GCM (Planned -- Not Yet Implemented)" with a status box stating the buffer is plaintext. The "Data States Summary" table (Sec. 3) now reads "Plaintext SQLite (AES-256-GCM encryption planned)" for local storage.
+**Verification**: WelcomeView.swift line 72 confirmed; whitepaper Sec. 5 header and table confirmed at lines 228-242.
+
+### [CRITICAL] PII-003: CLOSED
+
+**Original**: L3 and L4 PII layers claimed as implemented in whitepaper, DPA, and PIA.
+**Remediation**: Whitepaper Sec. 4 subsections for L3 and L4 now carry bold "NOT YET IMPLEMENTED" headers (lines 212-222). The DPA Sec. 7.3 now includes the parenthetical "Additional layers (L3 ML-based NER and L4 human quarantine review) are planned for a future phase and are not yet implemented" (line 176). The PIA risk matrix R1 and mitigation table explicitly state L3/L4 are planned only (lines 195, 222-223).
+**Verification**: All three documents confirmed.
 
 ---
 
-### [CRITICAL] PII-003: L3 and L4 PII Protection Layers Do Not Exist in Code
+## HIGH Findings (4 Open)
 
-**File**: `/Users/proth/repos/kmflow/docs/security/task-mining-agent-security-whitepaper.md:214-221`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
-**Evidence**:
-```markdown
-### Layer 3 -- ML-Based NER Scan (Backend, Future Phase)
+### [HIGH] CONSENT-001: Consent Not Granular Per Data Type -- GDPR Non-Compliance (OPEN)
 
-After upload, an NLP named-entity recognition model scans event records for residual
-PII that evaded regex ... This layer is planned for Phase 3 of the platform.
-
-### Layer 4 -- Human Quarantine Review
-
-All uploaded records enter a quarantine queue before becoming visible to analytics.
-```
-**Description**: The whitepaper repeatedly claims a "four-layer PII protection architecture" as a headline security control. However, L3 is explicitly noted as "planned for Phase 3" and L4 (human quarantine review) has no backend implementation in the audited codebase. The DPA template (KMF-SEC-002) and PIA template (KMF-SEC-003) both reference the "four-layer" architecture as an implemented control. The data flow diagram in Section 3 presents L3 and L4 as active stages in the event processing pipeline without noting they are unimplemented. A CISO reviewing the whitepaper would reasonably conclude all four layers are operational.
-**Risk**: If PII leaks through L2 regex (which has known gaps -- see PII-004 through PII-006), there is currently no backend safety net. The "defense in depth" is actually "defense in one layer" for PII content scrubbing. CISOs and DPOs who approved deployment based on the four-layer claim may revoke approval upon learning only one content layer exists. This could constitute a misrepresentation under the DPA.
-**Recommendation**: Add a prominent disclaimer to the whitepaper Section 4 header clearly stating: "Layers 3 and 4 are not yet implemented and are planned for future phases. Current on-device PII protection relies on L1 context blocking and L2 regex scrubbing only." Update all references to "four-layer" in the DPA and PIA templates. Do not present unimplemented features as active controls in compliance documentation.
-
----
-
-## HIGH Findings
-
-### [HIGH] PII-004: L2 PII Filter Missing File Path Username Detection
-
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Capture/WindowTitleCapture.swift:12-54`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/UI/Onboarding/ConsentView.swift:74-93`
+**Status**: OPEN -- No remediation applied.
 **Evidence**:
 ```swift
-public struct L2PIIFilter: Sendable {
-    private static let ssnDashed = try! NSRegularExpression(
-        pattern: #"\b\d{3}-\d{2}-\d{4}\b"#
+    ConsentCheckbox(
+        isChecked: $state.consentAcknowledgedObservation,
+        label: "I understand that KMFlow will observe my application usage patterns"
     )
-    private static let email = try! NSRegularExpression(
-        pattern: #"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"#
+    ConsentCheckbox(
+        isChecked: $state.consentAcknowledgedInformed,
+        label: "I have been informed about data collection by my organization"
+    )
+    ConsentCheckbox(
+        isChecked: $state.consentAcknowledgedMonitoring,
+        label: "I consent to activity monitoring for the specified engagement"
     )
 ```
-**Description**: The L2 PII filter covers SSN (dashed only), email, US phone, credit card (Visa/MC/Discover/JCB), and AmEx. However, it does not filter file paths that contain usernames (e.g., `/Users/john.doe/Documents/Q4 Report.xlsx`), which are extremely common in macOS window titles for document-editing applications (TextEdit, Excel, Finder, Preview, etc.). The macOS username is often the employee's real name or a derivative of it (e.g., `jdoe`, `john.doe`, `jsmith`). Window titles in Finder, Terminal, and many applications display the full file path including `/Users/{username}/`.
-**Risk**: Employee names are personal data under GDPR. Every window title from Finder, Terminal, or any application showing file paths will leak the macOS username to the backend. This is the most common PII type in macOS window titles and is completely unfiltered.
-**Recommendation**: Add a regex pattern or explicit filter to redact the macOS home directory path segment. For example, replace `/Users/{any-word}/` with `/Users/[REDACTED]/` or use `NSHomeDirectory()` to dynamically detect and redact the current user's home path in all captured window titles.
+**Analysis**: The three consent checkboxes remain bundled acknowledgments. All must be checked to proceed (`canAdvance` at OnboardingState.swift line 115-117 requires `allConsentChecked`). Users cannot consent to app-switch monitoring while declining window title capture, or consent to activity counts while declining idle time tracking. The EDPB Guidelines on Consent (WP259 rev.01) require granularity when processing serves multiple purposes or involves distinct data categories.
+**Risk**: If consent is the legal basis (GDPR Art. 6(1)(a)), bundled consent is not "freely given" under Art. 7. This is mitigated when legitimate interest is the legal basis, but the consent flow is presented as if consent is being collected, which creates confusion about the legal basis.
+**Recommendation**: Either make consent granular (separate toggles for window title capture, input counts, idle tracking) or clearly label the checkboxes as "acknowledgments" rather than "consent" to avoid conflation with GDPR Art. 6(1)(a) consent.
 
 ---
 
-### [HIGH] PII-005: L2 PII Filter Missing International PII Patterns
+### [HIGH] CONSENT-003: No "Withdraw Consent" Button in Menu Bar (PARTIALLY REMEDIATED)
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Capture/WindowTitleCapture.swift:12-54`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/UI/StatusBarController.swift:61-133`
+**Status**: PARTIAL -- Backend handler wired; UI path still missing.
 **Evidence**:
 ```swift
-    /// SSN with dashes: 123-45-6789
-    private static let ssnDashed = try! NSRegularExpression(
-        pattern: #"\b\d{3}-\d{2}-\d{4}\b"#
-    )
-    /// US phone numbers: (555) 123-4567, 555-123-4567, +1-555-123-4567
-    private static let phone = try! NSRegularExpression(
-        pattern: #"(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b"#
-    )
+    // Menu items available:
+    // - "Pause Capture" / "Resume Capture"
+    // - "What's Being Captured"
+    // - "Transparency Log"
+    // - "Preferences..."
+    // - "Quit KMFlow Agent"
+    // NO "Withdraw Consent" or "Revoke Consent" item exists.
 ```
-**Description**: The Swift L2 filter only covers US-centric PII patterns: US SSN (dashed format only -- no undashed `123456789`), US phone numbers, and major US credit cards. The security whitepaper (Section 4) claims additional patterns including UK NI numbers, IP addresses, and dates of birth -- but these patterns are NOT present in the Swift code. The whitepaper pattern table includes 7 patterns; the Swift code implements only 5. For international deployments (DPA template supports EEA/UK), the following are missing from Swift: UK National Insurance Numbers (`AA123456C`), German Steuer-ID, French INSEE/NIR, international phone numbers (e.g., `+44 20 7946 0958`, `+91 98765 43210`), IBAN numbers, and IP addresses. The SSN pattern also misses the undashed format (`123456789`).
-**Risk**: The PIA template explicitly contemplates deployment in multiple countries ("Geographic scope: [COUNTRIES / SITES]"). If deployed on UK or EU workstations, local PII types will pass through L2 unfiltered. The whitepaper claims these patterns exist (UK NI number, IP address, DOB), creating a discrepancy between documented and actual controls.
-**Recommendation**: (1) Add the patterns documented in the whitepaper (UK NI, IP address, DOB) to the Swift L2PIIFilter. (2) Add patterns for IBAN, undashed SSN, and international phone number formats. (3) Consider making the PII pattern set configurable per engagement region. (4) Update the whitepaper to accurately reflect which patterns are implemented where (Swift vs. Python).
+**Progress**: `ConsentManager.onRevocation()` (line 40 of ConsentManager.swift) and `revokeConsent()` (lines 56-62) now correctly notify registered handlers, enabling cleanup on revocation. The `ConsentRevocationHandler` type alias (line 23) documents that implementors should "stop capture, delete local buffer, disconnect IPC."
+**Remaining Gap**: There is no UI path for the user to trigger `revokeConsent()`. The `buildMenu()` method in StatusBarController.swift does not include a "Withdraw Consent" menu item. The legal footer in ConsentView.swift line 102 still states "You can revoke consent at any time from the menu bar icon" -- which is false because no such menu item exists. "Quit" does not invoke `revokeConsent()`; it calls `stateManager.stopCapture()` (KMFlowAgentApp.swift line 90).
+**Risk**: GDPR Art. 7(3) requires withdrawal to be "as easy" as granting consent. Users were told withdrawal is available from the menu bar but it is not.
+**Recommendation**: Add a "Withdraw Consent" menu item to `buildMenu()` that calls `ConsentManager.revokeConsent()`. The item should be visible whenever the agent is in `.capturing` or `.paused` state. On selection: confirm with the user, invoke revocation handlers, delete the local buffer, and show a confirmation dialog.
 
 ---
 
-### [HIGH] PII-006: Window Titles Captured in Full -- Excessive Data Collection
-
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Capture/WindowTitleCapture.swift:65-91`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
-**Evidence**:
-```swift
-public struct WindowTitleCapture: Sendable {
-    public static let maxTitleLength = 512
-    public static func sanitize(
-        title: String?, bundleId: String?
-    ) -> String? {
-        guard var t = title else { return nil }
-        if PrivateBrowsingDetector.isPrivateBrowsing(bundleId: bundleId, windowTitle: t) {
-            return "[PRIVATE_BROWSING]"
-        }
-        if t.count > maxTitleLength {
-            t = String(t.prefix(maxTitleLength))
-        }
-        t = L2PIIFilter.scrub(t)
-        return t
-    }
-}
-```
-**Description**: Window titles are captured up to 512 characters with only L2 regex scrubbing applied. Window titles in common applications contain highly sensitive information that regex cannot catch: email subject lines in Outlook/Mail ("RE: Your HIV Test Results"), document names ("Jane_Doe_Performance_Review_2026.docx"), browser tab titles ("Bank of America - Account Summary"), Slack conversation titles ("DM: John Smith"), CRM record titles ("Contact: Jane Smith - Acme Corp"), and terminal command output. The L2 regex only catches structured PII patterns (SSN, email, phone, CC) -- it cannot detect names, medical terms, financial information, or business confidential content embedded in freeform window title text.
-**Risk**: Under GDPR Art. 5(1)(c) (data minimization), collecting full window titles is disproportionate to the stated purpose of "process mining." The PIA template states the purpose is "application usage patterns" and "transition sequences" -- for which the application name and window title are different things. Full window titles reveal the specific content employees are working on, far exceeding what is needed for process flow reconstruction. Special category data (health, trade union, political opinions) could be exposed via email subjects or document titles.
-**Recommendation**: (1) For "action_level" capture scope, do not capture window titles at all -- use only app name and bundle ID. (2) For "content_level," consider capturing only the application-specific document type or a hash of the title (for deduplication) rather than the full title. (3) At minimum, add a configurable title truncation limit (e.g., 50 characters) and expand the PII filter to include name detection. (4) Document in the PIA which specific window title contents are expected and why full titles are necessary.
-
----
-
-### [HIGH] CONSENT-001: Consent Not Granular Per Data Type -- GDPR Non-Compliance
-
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/UI/Onboarding/ConsentView.swift:70-90`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
-**Evidence**:
-```swift
-    private var consentCheckboxes: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Explicit Consent")
-                .font(.headline)
-            ConsentCheckbox(
-                isChecked: $state.consentAcknowledgedObservation,
-                label: "I understand that KMFlow will observe my application usage patterns"
-            )
-            ConsentCheckbox(
-                isChecked: $state.consentAcknowledgedInformed,
-                label: "I have been informed about data collection by my organization"
-            )
-            ConsentCheckbox(
-                isChecked: $state.consentAcknowledgedMonitoring,
-                label: "I consent to activity monitoring for the specified engagement"
-            )
-```
-**Description**: The consent model requires three checkboxes but they are all-or-nothing acknowledgments -- all three must be checked to proceed. The user cannot consent to app-switch monitoring while declining window title capture, or consent to activity counts while declining idle time tracking. Although the UI offers a "Capture Scope" picker (action_level vs. content_level), there is no evidence in the codebase that the selected scope actually changes capture behavior. The `captureScope` value from `OnboardingState` is stored in `KeychainConsentStore` (line 91: `captureScope: nil`) -- it is hardcoded to `nil` and never propagated to the actual capture layer.
-**Risk**: Under GDPR Art. 7, consent must be granular -- the data subject must be able to consent to individual purposes separately. The European Data Protection Board guidelines on consent (WP259 rev.01) explicitly state that bundled consent is not freely given. If consent is the legal basis for processing (rather than legitimate interest), this non-granular consent model may be invalid under GDPR, rendering all processing unlawful.
-**Recommendation**: (1) Make consent granular: separate checkboxes for app monitoring, window title capture, input counts, and idle tracking. (2) Wire the `captureScope` selection to the actual capture behavior so "action_level" genuinely limits capture to counts only (no window titles). (3) Fix the `KeychainConsentStore.save()` to actually persist the `captureScope` and `authorizedBy` values from the onboarding flow instead of hardcoding them to `nil`.
-
----
-
-### [HIGH] CONSENT-002: Capture Scope Selection Has No Effect on Actual Capture Behavior
-
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Consent/KeychainConsentStore.swift:86-93`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
-**Evidence**:
-```swift
-    public func save(engagementId: String, state: ConsentState, at date: Date) {
-        let record = ConsentRecord(
-            engagementId: engagementId,
-            state: state,
-            consentedAt: date,
-            authorizedBy: nil,
-            captureScope: nil,
-            consentVersion: "1.0"
-        )
-```
-**Description**: The onboarding wizard presents users with a "Capture Scope" picker offering "Activity Level (counts only)" versus "Content Level (with PII filtering)." This implies that selecting "Activity Level" would limit capture to aggregate counts without window titles. However: (1) `KeychainConsentStore.save()` hardcodes `captureScope: nil` and `authorizedBy: nil`, discarding the user's selection. (2) There is no code in the capture layer (`AppSwitchMonitor`, `InputMonitor`, `WindowTitleCapture`) that reads or enforces the capture scope. (3) The `AgentConfig.captureGranularity` property exists but is never connected to the onboarding flow. The user believes they are choosing a lower level of monitoring, but all data types are captured regardless.
-**Risk**: This is a deceptive practice. Users who select "Activity Level (counts only)" are told they are limiting data collection, but the system captures the same data as "Content Level." This undermines the validity of informed consent under GDPR Art. 7 and could constitute unfair processing under Art. 5(1)(a). If discovered during a regulatory audit or data subject access request, this would be a serious compliance finding.
-**Recommendation**: (1) Wire the `OnboardingState.captureScope` value through to the consent record (fix the `nil` hardcodes). (2) In the capture layer, check the persisted scope before capturing window titles. If `action_level`, suppress window title capture entirely and capture only app name, bundle ID, and aggregate counts. (3) Until this is fixed, remove the capture scope picker from the UI to avoid presenting a non-functional privacy control.
-
----
-
-### [HIGH] TRANSPARENCY-001: Transparency Log Cannot Show What Was Sent to Server
+### [HIGH] TRANSPARENCY-001: Transparency Log Cannot Show Upload Status (OPEN)
 
 **File**: `/Users/proth/repos/kmflow/agent/macos/Sources/UI/TransparencyLogView.swift:96-109`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
+**Status**: OPEN -- No remediation applied.
 **Evidence**:
 ```swift
     private var footer: some View {
         HStack {
             Image(systemName: "lock.shield")
-                .font(.caption)
-                .foregroundStyle(.secondary)
             Text("All data shown is local to this device. PII patterns have been redacted.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
             Spacer()
         }
     }
 ```
-**Description**: The Transparency Log reads from `buffer.db` and shows events "local to this device." There is no indication of which events have been uploaded to the backend versus which are still awaiting upload. There is no column for "upload status," no filter for "sent" vs. "pending," and no way for the user to verify what the server has received. The log also caps at 200 events (line 115: `.prefix(200)`) with no pagination or scrollback. Furthermore, the `TransparencyLogView` explicitly states it "deliberately offers no editing or deletion controls" (line 6 comment). The user cannot request deletion of specific events.
-**Risk**: Under GDPR Art. 15 (right of access), the data subject has the right to know what data has been transmitted to third parties. The transparency log only shows local data and does not distinguish local-only from uploaded events. Under GDPR Art. 17 (right to erasure), the user has no mechanism to request deletion of specific captured events either locally or on the backend. The 200-event cap means the log may not show all captured data, undermining the transparency promise.
-**Recommendation**: (1) Add an "uploaded" flag to events in buffer.db and display upload status in the log. (2) Remove the 200-event cap or add pagination so users can review all captured data. (3) Add a "Request Deletion" action per event or for a date range. (4) Add a "Data Sent Summary" showing total events uploaded, date range, and data volume sent to the backend.
+**Analysis**: The transparency log reads from `buffer.db` and displays up to 200 events (line 115) with no pagination. There is no "uploaded" vs. "pending" status column. The footer states data is "local to this device" but does not tell the user which events have been sent to the server. Under GDPR Art. 15, data subjects have the right to know what data has been transmitted to third parties.
+**Risk**: Users cannot verify what was sent to the backend. The 200-event cap may hide relevant data. No deletion controls exist.
+**Recommendation**: (1) Add an `uploaded_at` column or flag to events. (2) Display upload status per event row. (3) Add pagination or infinite scroll. (4) Consider a "Data Sent Summary" section showing total events uploaded, date range, and volume.
 
 ---
 
-### [HIGH] CONSENT-003: No "Withdraw Consent" Button in Menu Bar
+### [HIGH] NEW-001: HMAC Key Fallback to UUID Weakens Consent Tamper Detection
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/UI/StatusBarController.swift:61-133`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Consent/KeychainConsentStore.swift:239-242`
 **Evidence**:
 ```swift
-    public func buildMenu(
-        onPauseResume: @escaping () -> Void,
-        onPreferences: @escaping () -> Void,
-        onTransparencyLog: @escaping () -> Void,
-        onWhatsBeingCaptured: @escaping () -> Void,
-        onQuit: @escaping () -> Void
-    ) -> NSMenu {
-        // ...
-        // Pause/Resume
-        if stateManager.state == .capturing {
-            let pauseItem = NSMenuItem(title: "Pause Capture", ...)
-```
-**Description**: The ConsentView's legal footer states "You can revoke consent at any time from the menu bar icon" (line 99). However, the menu bar controller offers only: Pause/Resume, What's Being Captured, Transparency Log, Preferences, and Quit. There is no "Withdraw Consent" or "Revoke Consent" menu item. The `ConsentManager.revokeConsent()` method exists but is never wired to any UI element. "Pause" is not the same as consent withdrawal -- pausing is temporary and does not trigger consent revocation, data deletion, or agent deregistration. The WelcomeView also states consent can be revoked, but no UI path exists to do so.
-**Risk**: Under GDPR Art. 7(3), "It shall be as easy to withdraw as to give consent." Consent was given via a clear wizard flow with checkboxes. Withdrawing consent requires the user to... do what exactly? Quit the app? That does not invoke `revokeConsent()`. The absence of a withdrawal mechanism means consent is effectively irrevocable from the user's perspective, which is a GDPR violation.
-**Recommendation**: Add a "Withdraw Consent" menu item to the status bar menu. When selected, it should: (1) Call `ConsentManager.revokeConsent()`, (2) Immediately stop all capture, (3) Delete the local buffer, (4) Notify the backend of consent withdrawal, (5) Present confirmation to the user. The withdrawal path should be as prominent and easy as the original consent flow.
-
----
-
-## MEDIUM Findings
-
-### [MEDIUM] PII-007: Mouse Coordinates Captured in InputEvent but Privacy Impact Undocumented
-
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Capture/InputMonitor.swift:17-21`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
-**Evidence**:
-```swift
-public enum InputEvent: Sendable {
-    case keyDown(timestamp: Date)
-    case keyUp(timestamp: Date)
-    case mouseDown(button: MouseButton, x: Double, y: Double, timestamp: Date)
-    case mouseUp(button: MouseButton, x: Double, y: Double, timestamp: Date)
-    case mouseDrag(x: Double, y: Double, timestamp: Date)
-```
-**Description**: The `InputEvent` enum captures exact x,y screen coordinates for every mouse click and drag. While the `InputAggregator` currently only increments counts (and does not serialize coordinates to the IPC socket), the coordinates are present in the data model. If any future code change passes these events through to IPC before aggregation, pixel-level mouse tracking would be transmitted. Additionally, mouse coordinates combined with timestamps could theoretically reconstruct which UI elements were clicked, creating a detailed interaction record beyond "counts." The whitepaper and consent flow only disclose "mouse activity counts" -- not coordinates.
-**Risk**: If coordinates are ever transmitted (intentionally or via regression), they would constitute undisclosed data collection. Even if currently aggregated away, the data model captures more than disclosed.
-**Recommendation**: (1) If coordinates are not needed for process mining, remove the x/y parameters from `InputEvent` entirely. (2) If they are needed for future use, document them in the consent flow and PIA. (3) Add a static assert or unit test verifying that coordinates are never serialized to the IPC socket.
-
----
-
-### [MEDIUM] PII-008: Idle Detection Timing Reveals Personal Patterns
-
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Capture/IdleDetector.swift:14-41`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
-**Evidence**:
-```swift
-public final class IdleDetector: @unchecked Sendable {
-    private var lastActivityTime: Date
-    private var isIdle: Bool = false
-    private let timeoutSeconds: TimeInterval
-    public init(timeoutSeconds: TimeInterval = 300) {
-        self.timeoutSeconds = timeoutSeconds
-        self.lastActivityTime = Date()
-    }
-    public func recordActivity() -> IdleTransition? {
-        // ...
-        if isIdle {
-            isIdle = false
-            return .idleEnd
+    private func loadOrCreateHMACKey() -> Data {
+        if let existing = keychainLoad(account: hmacKeyAccount) {
+            return existing
         }
+        // Generate a 256-bit random key
+        var key = Data(count: 32)
+        let result = key.withUnsafeMutableBytes { ptr in
+            SecRandomCopyBytes(kSecRandomDefault, 32, ptr.baseAddress!)
+        }
+        if result != errSecSuccess {
+            // Fallback: use a UUID-based key (weaker but functional)
+            key = Data(UUID().uuidString.utf8)
+        }
+        keychainSave(account: hmacKeyAccount, data: key)
+        return key
+    }
 ```
-**Description**: The idle detector emits `idle_start` and `idle_end` events with timestamps. With a 5-minute idle timeout, the pattern of idle periods throughout the day reveals bathroom breaks, lunch timing, impromptu meetings, personal phone calls, and other non-work activities. The IPC `DesktopEventType` enum includes `.idleStart` and `.idleEnd` (lines 27-28 of EventProtocol.swift), and these events include timestamps at Date() precision. Over a multi-week engagement, this creates a behavioral fingerprint of the employee's daily routine patterns.
-**Risk**: While idle time is disclosed in the consent flow and summary view, the privacy implications of idle pattern analysis are not explained to data subjects. An employer could use idle patterns to identify "unproductive" employees, contrary to the stated purpose of process mining. This is a proportionality concern under GDPR Art. 5(1)(c) -- idle timing granularity may exceed what is necessary for process flow reconstruction.
-**Recommendation**: (1) Reduce idle event granularity -- emit idle duration aggregates (e.g., "15 minutes idle in past hour") rather than exact start/end timestamps. (2) Add idle time to the "What will NOT be captured" column if it is not essential for process mining, or explain its purpose in the consent flow. (3) Consider increasing the idle timeout to 15+ minutes to avoid capturing short breaks.
+**Description**: The HMAC signing key for consent record tamper detection falls back to `UUID().uuidString` (36 bytes of hex characters, approximately 122 bits of entropy) when `SecRandomCopyBytes` fails. While `SecRandomCopyBytes` failure is extremely rare (it requires a kernel entropy pool exhaustion), the fallback is weaker than the intended 256-bit key. More critically, the UUID-based key is predictable if the attacker knows the UUID generation time, as `UUID()` on Apple platforms uses UUIDv4 which relies on the same `SecRandomCopyBytes` that just failed -- meaning the fallback may also produce a weak key.
+**Risk**: If `SecRandomCopyBytes` fails and the UUID fallback produces a predictable key, an attacker with local access could forge consent records, making it appear that consent was granted when it was not. The HMAC is the only tamper-detection mechanism for consent records in the Keychain.
+**Recommendation**: If `SecRandomCopyBytes` fails, refuse to create the HMAC key and return an error state rather than falling back to a weaker key. A consent record without tamper protection is safer than one with a false sense of tamper protection. Log the `SecRandomCopyBytes` failure as a security event.
 
 ---
 
-### [MEDIUM] CONSENT-004: MDM Can Pre-Configure Engagement ID Without Employee Knowledge
+## MEDIUM Findings (7 Open)
+
+### [MEDIUM] PII-008: Idle Detection Timing Reveals Personal Patterns (OPEN)
+
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Capture/IdleDetector.swift:8-41`
+**Status**: OPEN -- No remediation applied.
+**Analysis**: `IdleDetector` emits `.idleStart` and `.idleEnd` transitions with `Date()` precision. With a 300-second (5-minute) default timeout, every bathroom break, personal phone call, or impromptu meeting is recorded with second-level precision. Over a multi-week engagement, this creates a behavioral fingerprint.
+**Risk**: Proportionality concern under GDPR Art. 5(1)(c). Idle patterns could be used for individual performance evaluation, contrary to the stated purpose.
+**Recommendation**: Reduce granularity to 15-minute bins, or emit idle durations rather than exact start/end timestamps.
+
+---
+
+### [MEDIUM] CONSENT-004: MDM Can Pre-Configure Engagement Without Employee Knowledge (OPEN)
 
 **File**: `/Users/proth/repos/kmflow/agent/macos/Sources/KMFlowAgent/KMFlowAgentApp.swift:62-70`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
-**Evidence**:
-```swift
-        // Detect MDM-configured engagement ID, fall back to UserDefaults or "default"
-        let engagementId: String
-        if let mdmDefaults = UserDefaults(suiteName: "com.kmflow.agent"),
-           let mdmEngagement = mdmDefaults.string(forKey: "EngagementID"),
-           !mdmEngagement.isEmpty {
-            engagementId = mdmEngagement
-        } else {
-            engagementId = UserDefaults.standard.string(forKey: "engagementId") ?? "default"
-        }
-```
-**Description**: The agent reads the engagement ID from MDM managed preferences first, falling back to UserDefaults. MDM profiles can also set `CapturePolicy`, `AppAllowlist`, `AppBlocklist`, `ScreenshotEnabled`, and other configuration values (per `AgentConfig.init?(fromMDMProfile:)`). An MDM admin could configure the agent with `CapturePolicy: content_level` and `ScreenshotEnabled: true` before the employee ever sees the consent screen. The employee's consent flow does not show them the MDM-configured values -- it shows a default scope picker that, as noted in CONSENT-002, has no effect anyway.
-**Risk**: Under GDPR, consent must be "freely given." If the employer can pre-configure the monitoring parameters via MDM, and the employee consent flow does not reflect these configurations, the consent is not fully informed. The MDM can also silently grant Accessibility TCC (whitepaper Section 6), meaning the agent could begin operating with employer-chosen settings without the employee understanding the actual data collection scope.
-**Recommendation**: (1) The onboarding wizard should display the MDM-configured values (especially `CapturePolicy` and `ScreenshotEnabled`) so the employee knows what they are consenting to. (2) If MDM sets `ScreenshotEnabled: true`, the consent flow must explicitly disclose this and require additional consent. (3) Consider preventing MDM from overriding employee-chosen scope to a more invasive level without re-consent.
+**Status**: OPEN -- No remediation applied.
+**Analysis**: `AgentConfig.init?(fromMDMProfile:)` reads `CapturePolicy`, `ScreenshotEnabled`, `AppAllowlist`, and other values from MDM managed preferences. The onboarding wizard does not display these values. An MDM admin could set `ScreenshotEnabled: true` without the employee knowing.
+**Risk**: Consent is not fully informed if the employee does not see the MDM-configured parameters.
+**Recommendation**: Display MDM-configured values in the consent flow, especially `ScreenshotEnabled` and `CapturePolicy`.
 
 ---
 
-### [MEDIUM] DATA-001: Uninstall Script Does Not Remove UserDefaults/Preferences Plist
+### [MEDIUM] DATA-001: Uninstall Script Missing UserDefaults Plist (PARTIALLY REMEDIATED)
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/installer/uninstall.sh:89-101`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
-**Evidence**:
-```bash
-# Step 4: Remove Application Support data
-APP_SUPPORT="${HOME}/Library/Application Support/KMFlowAgent"
-if [[ -d "$APP_SUPPORT" ]]; then
-    rm -rf "$APP_SUPPORT"
-    echo "  Removed: $APP_SUPPORT"
-else
-    echo "  Not found (already removed): $APP_SUPPORT"
-fi
-```
-**Description**: The uninstall script removes Application Support, Logs, LaunchAgent, Keychain items, and the .app bundle. However, it does not remove: (1) `~/Library/Preferences/com.kmflow.agent.plist` (UserDefaults for the standard suite), (2) `~/Library/Preferences/com.kmflow.agent.consent.plist` (if any), (3) `~/Library/Caches/com.kmflow.agent/` (if any cache directory exists), (4) `~/Library/HTTPStorages/com.kmflow.agent/` (URL session storage), (5) The macOS TCC database entry for Accessibility (acknowledged in whitepaper but not cleaned). The script also does not use secure deletion (e.g., `srm` or `shred`) -- it uses plain `rm -rf`.
-**Risk**: Data residues remain on the device after uninstall. The UserDefaults plist may contain the engagement ID, backend URL, and other configuration that reveals the employee was monitored. Under GDPR Art. 17 (right to erasure), all personal data should be deleted when the processing purpose has ended.
-**Recommendation**: (1) Add removal of `~/Library/Preferences/com.kmflow.agent.plist`. (2) Add removal of `~/Library/Caches/com.kmflow.agent/`. (3) Add removal of `~/Library/HTTPStorages/com.kmflow.agent/`. (4) Document that TCC entries require MDM profile removal.
+**File**: `/Users/proth/repos/kmflow/agent/macos/installer/uninstall.sh`
+**Status**: PARTIAL -- Script now removes Keychain items and shared data, but still omits:
+- `~/Library/Preferences/com.kmflow.agent.plist` (UserDefaults standard suite)
+- `~/Library/HTTPStorages/com.kmflow.agent/` (URL session storage)
+- `~/Library/Caches/com.kmflow.agent/` (if any cache exists)
+**Risk**: UserDefaults plist may contain engagement ID, backend URL, and other metadata revealing that the employee was monitored.
+**Recommendation**: Add removal of Preferences plist and HTTPStorages directory.
 
 ---
 
-### [MEDIUM] DATA-002: No Backend Data Deletion Mechanism Accessible to Users
+### [MEDIUM] DATA-002: No Backend Data Deletion Mechanism Accessible to Users (OPEN)
 
 **File**: `/Users/proth/repos/kmflow/agent/macos/Sources/UI/TransparencyLogView.swift:1-7`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
-**Evidence**:
-```swift
-/// Read-only SwiftUI view that shows recent captured events from the
-/// local SQLite buffer, with event-type filtering and PII redaction badges.
-///
-/// This view is the primary transparency surface for the end user.
-/// It deliberately offers no editing or deletion controls -- the capture
-/// buffer is managed solely by the Python layer.
-```
-**Description**: There is no mechanism in the agent for a user to request deletion of their data from the backend. The DPA template (Article 7.5) states the Processor must assist with data subject rights requests within 5 business days, but this is a manual process that requires the user to contact their employer, who then contacts the consulting firm. There is no in-app "Request My Data" or "Delete My Data" button. The agent does not even display contact information for data protection inquiries.
-**Risk**: GDPR Art. 17 (right to erasure) and CCPA (right to delete) require that data subjects can exercise their rights. While the DPA assigns this responsibility to the Controller, providing no technical mechanism increases friction to the point where the right becomes impractical to exercise.
-**Recommendation**: (1) Add a "Request Data Deletion" option in the menu bar or preferences. (2) This should send a deletion request event to the backend or provide the data protection contact email. (3) Display the engagement data protection contact in the "About" section.
+**Status**: OPEN -- No remediation applied.
+**Analysis**: The transparency log explicitly states "It deliberately offers no editing or deletion controls" (comment line 6). The DPA Article 7.5 assigns deletion to a manual process (5 business days), but no in-app mechanism exists. No data protection contact is displayed.
+**Risk**: GDPR Art. 17 right to erasure requires practical means of exercising the right.
+**Recommendation**: Add a "Request Data Deletion" option in the menu bar or transparency log footer.
 
 ---
 
-### [MEDIUM] DATA-003: No Local Data Retention Limit by Age
+### [MEDIUM] DATA-003: No Local Data Retention Limit by Age (OPEN)
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/UI/TransparencyLogController.swift:64-71`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/UI/TransparencyLogController.swift:67-73`
+**Status**: OPEN -- No remediation applied.
+**Analysis**: The whitepaper states a 100 MB FIFO cap, but there is no age-based retention limit in the Swift layer. If the Python process crashes or the device is offline for weeks, data accumulates on-device indefinitely within the size cap.
+**Risk**: GDPR Art. 5(1)(e) storage limitation principle violated if data persists locally beyond its useful life.
+**Recommendation**: Add a time-based retention limit (7 days) in the Swift capture layer.
+
+---
+
+### [MEDIUM] NEW-002: KeychainConsentStore HMAC Verification Failure Logged with Engagement ID
+
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Consent/KeychainConsentStore.swift:94`
 **Evidence**:
 ```swift
-    public init() {
-        let appSupport = FileManager.default.urls(
-            for: .applicationSupportDirectory, in: .userDomainMask
-        ).first!
-        databaseURL = appSupport
-            .appendingPathComponent("KMFlowAgent")
-            .appendingPathComponent("buffer.db")
+    guard signed.hmac == expectedHmac else {
+        // HMAC mismatch -- record may have been tampered with
+        fputs("[KeychainConsentStore] HMAC verification failed for engagement \(engagementId)\n", stderr)
+        return .neverConsented
     }
 ```
-**Description**: The whitepaper states a 100 MB FIFO cap on the local buffer, but there is no age-based retention limit in the Swift codebase. If the Python layer is not running (e.g., crashed, or the device is offline for weeks), captured data could accumulate on-device indefinitely within the 100 MB cap. There is no "delete events older than N days" mechanism visible in the audited code. The whitepaper claims "upload retry queue: Up to 7 days" but this is presumably in the Python layer.
-**Risk**: Under GDPR Art. 5(1)(e) (storage limitation), personal data should not be kept longer than necessary. Local data sitting for weeks without upload serves no process mining purpose and increases exposure risk.
-**Recommendation**: Add a time-based retention limit (e.g., 7 days) to the Swift capture layer. If the Python process has not consumed events within this period, the Swift layer should prune old events regardless of buffer size.
+**Description**: When HMAC verification fails (indicating potential consent record tampering), the engagement ID is written to stderr. While the `AgentLogger` wrapper correctly uses `privacy: .private` for all log levels (Logger.swift lines 13-27), this `fputs` call bypasses the logger entirely and writes the engagement ID to stderr in plaintext. The engagement ID could be considered organizational metadata that should not appear in system logs accessible to other processes.
+**Risk**: The engagement ID in stderr could be captured by system-level log aggregation tools or crash reporters, potentially revealing the engagement relationship to unintended parties. Low-to-medium severity because the engagement ID alone is not PII, but it links the device to a specific consulting engagement.
+**Recommendation**: Replace the `fputs` call with `AgentLogger` to ensure privacy annotations are applied consistently. Similarly, the `fputs` at line 180 (SecItemAdd failure) should use the logger.
 
 ---
 
-### [MEDIUM] WHITEPAPER-001: Whitepaper Claims Socket Path Does Not Match Code
+### [MEDIUM] NEW-003: TransparencyLogController Buffer Encryption Key Also Serves as Provisioning Endpoint
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/IPC/SocketClient.swift:10-13`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/UI/TransparencyLogController.swift:244-269`
 **Evidence**:
 ```swift
-    public static let defaultSocketPath: String = {
-        let home = NSHomeDirectory()
-        return "\(home)/Library/Application Support/KMFlowAgent/agent.sock"
-    }()
-```
-**Description**: The whitepaper (Section 2) states the Unix domain socket is at `/var/run/kmflow-capture.sock`. The actual code uses `~/Library/Application Support/KMFlowAgent/agent.sock`. The `/var/run/` path would require root permissions to create and would be world-readable by default. The actual path in user Application Support is more appropriate from a security standpoint (user-private, no root needed). However, the discrepancy means the whitepaper inaccurately describes the IPC channel location.
-**Risk**: A CISO reviewing the whitepaper may make security assessments based on the wrong socket path. The `/var/run/` path implies different permission model considerations than the user-private Application Support path.
-**Recommendation**: Update the whitepaper Section 2 architecture diagram to reflect the actual socket path: `~/Library/Application Support/KMFlowAgent/agent.sock`.
-
----
-
-### [MEDIUM] WHITEPAPER-002: Whitepaper Uninstall Paths Do Not Match Code
-
-**File**: `/Users/proth/repos/kmflow/docs/security/task-mining-agent-security-whitepaper.md:400-411`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
-**Evidence**:
-```markdown
-- The application bundle (`/Applications/KMFlow Task Mining.app`)
-- The LaunchAgent plist (`~/Library/LaunchAgents/com.kmflow.taskmining.plist`)
-- The Application Support directory (`~/Library/Application Support/KMFlow/`)
-- All Keychain items (`com.kmflow.taskmining.*`)
-- All log files (`~/Library/Logs/KMFlow/`)
-```
-**Description**: The whitepaper uses different naming conventions than the actual code: (1) App name: whitepaper says "KMFlow Task Mining.app", code says "KMFlow Agent.app". (2) LaunchAgent: whitepaper says "com.kmflow.taskmining.plist", code says "com.kmflow.agent.plist". (3) App Support: whitepaper says "KMFlow/", code says "KMFlowAgent/". (4) Keychain: whitepaper says "com.kmflow.taskmining.*", code says "com.kmflow.agent" and "com.kmflow.agent.consent". (5) Logs: whitepaper says "KMFlow/", code says "KMFlowAgent/".
-**Risk**: If a security team or incident responder follows the whitepaper to locate agent artifacts, they will look in the wrong locations. During a security incident or forensic investigation, this wastes critical time. Data may not be properly removed during manual uninstall procedures.
-**Recommendation**: Reconcile the whitepaper paths with the actual code paths. Use a single authoritative naming convention across all documentation and code.
-
----
-
-## LOW Findings
-
-### [LOW] PII-009: Private Browsing Detection is Browser-Specific and Brittle
-
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/PII/L1Filter.swift:54-90`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
-**Evidence**:
-```swift
-    public static func isPrivateBrowsing(
-        bundleId: String?, windowTitle: String?
-    ) -> Bool {
-        guard let title = windowTitle else { return false }
-        if bundleId == "com.apple.Safari" {
-            if title.contains("Private Browsing") { return true }
+    @discardableResult
+    public func provisionEncryptionKey() -> Data? {
+        // Don't overwrite an existing key
+        if let existing = loadBufferKeyFromKeychain() {
+            return existing
         }
-        if bundleId == "com.google.Chrome" {
-            if title.hasSuffix("- Incognito") { return true }
+        // Generate 256-bit random key
+        var keyData = Data(count: 32)
+        let result = keyData.withUnsafeMutableBytes { ptr in
+            SecRandomCopyBytes(kSecRandomDefault, 32, ptr.baseAddress!)
         }
-```
-**Description**: Private browsing detection relies on hardcoded bundle IDs and window title string matching. This approach has several gaps: (1) Brave Browser, Vivaldi, Opera, and other Chromium-based browsers are not covered. (2) Non-English localizations of browsers will show different private browsing strings (e.g., "Navigation privee" in French Safari). (3) Future browser versions may change their title format. (4) Users could use a browser not in this list for personal browsing.
-**Risk**: Personal browsing in unsupported browsers will be captured as if it were work activity. Low severity because the agent also has L2 PII scrubbing and the blocklist mechanism.
-**Recommendation**: (1) Add detection for Brave (`com.brave.Browser`), Vivaldi, Opera. (2) Consider a generic heuristic: any window title containing "private" or "incognito" (case-insensitive) across all browsers. (3) Document the limitations of private browsing detection in the PIA.
-
----
-
-### [LOW] PII-010: BlocklistManager Returns true (Capture Allowed) When bundleId is nil
-
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Config/BlocklistManager.swift:33-45`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
-**Evidence**:
-```swift
-    public func shouldCapture(bundleId: String?) -> Bool {
-        guard let bid = bundleId else { return true }
-        lock.lock()
-        defer { lock.unlock() }
-        if let allow = allowlist, !allow.isEmpty {
-            return allow.contains(bid)
-        }
-        return !blocklist.contains(bid)
+        guard result == errSecSuccess else { return nil }
+        // ... saves to Keychain
     }
 ```
-**Description**: When `bundleId` is nil (which can occur with certain macOS processes, accessibility prompts, or system UI elements), the blocklist manager defaults to allowing capture. A more privacy-protective default would be to block capture when the application cannot be identified.
-**Risk**: System dialogs, Spotlight, or other processes without bundle IDs may be captured when they should be excluded. Low risk because these typically have generic window titles.
-**Recommendation**: Default to `return false` when `bundleId` is nil, following the principle of "deny by default."
+**Description**: The `TransparencyLogController` -- a UI controller -- contains a `public` method `provisionEncryptionKey()` that generates and stores a 256-bit AES key in the Keychain. This is a security-sensitive operation (cryptographic key provisioning) exposed as a public API on a view controller. Any code that instantiates `TransparencyLogController` can call this method. The comment block at the top of the file states the controller opens a "read-only" SQLite connection, but it also provisions encryption keys, which is a write operation to the Keychain and a violation of the stated read-only contract.
+**Risk**: Key provisioning should be performed by a dedicated security module with controlled access, not by a UI controller that is instantiated whenever the transparency log window opens. If `provisionEncryptionKey()` is called multiple times by different code paths, the "don't overwrite" guard prevents duplication, but the architectural placement is inappropriate for a security-sensitive operation.
+**Recommendation**: Move `provisionEncryptionKey()` to a dedicated `BufferEncryptionManager` or the existing `KeychainHelper` module. The `TransparencyLogController` should only read the key, never provision it.
 
 ---
 
-### [LOW] CONSENT-005: Consent Version Hardcoded to "1.0" -- No Versioning Mechanism
+## LOW Findings (3 Open)
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Consent/KeychainConsentStore.swift:86-93`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
+### [LOW] PII-009: Private Browsing Detection Missing Brave and Vivaldi (PARTIALLY REMEDIATED)
+
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/PII/CaptureContextFilter.swift:56-92`
+**Status**: PARTIAL -- Arc (`company.thebrowser.Browser`) and Edge (`com.microsoft.edgemac`) added. Brave (`com.brave.Browser`), Vivaldi (`com.vivaldi.Vivaldi`), and Opera (`com.operasoftware.Opera`) still missing. Non-English localizations remain undetected.
+**Recommendation**: Add Brave, Vivaldi, and Opera. Consider a generic case-insensitive check for "private" or "incognito" in window titles across all browsers.
+
+---
+
+### [LOW] CONSENT-005: Consent Version Hardcoded to "1.0" (OPEN)
+
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Consent/KeychainConsentStore.swift:120`
 **Evidence**:
 ```swift
-        let record = ConsentRecord(
-            engagementId: engagementId,
-            state: state,
-            consentedAt: date,
-            authorizedBy: nil,
-            captureScope: nil,
-            consentVersion: "1.0"
-        )
+    let record = ConsentRecord(
+        engagementId: engagementId,
+        state: state,
+        consentedAt: date,
+        authorizedBy: nil,
+        captureScope: nil,
+        consentVersion: "1.0"
+    )
 ```
-**Description**: The consent version is hardcoded to "1.0". If the consent text changes (e.g., new data types are captured, scope changes), there is no mechanism to detect that the employee consented to an older version and prompt for re-consent. The `ConsentRecord` has a `consentVersion` field, but it is never compared against a current version to trigger re-consent flows.
-**Risk**: Under GDPR, if the processing materially changes, consent must be refreshed. Without version comparison, employees may be monitored under a consent given for a different scope.
-**Recommendation**: (1) Define a `CURRENT_CONSENT_VERSION` constant. (2) At launch, compare the stored version against the current version. (3) If mismatched, trigger the consent flow again.
+**Analysis**: `consentVersion` is still hardcoded to "1.0". Additionally, `authorizedBy` and `captureScope` are still hardcoded to `nil`, meaning the onboarding flow's "Authorized By" text field and scope selection are discarded when the consent record is persisted. While the scope picker was disabled in the UI (CONSENT-002 fix), the `authorizedBy` field is still collected in the UI but never stored.
+**Risk**: No mechanism to trigger re-consent when the consent text or data collection scope changes. The `authorizedBy` field collected from the user is silently discarded.
+**Recommendation**: (1) Define a `CURRENT_CONSENT_VERSION` constant. (2) Compare stored version at launch. (3) Pass `authorizedBy` from onboarding state through to the consent store.
 
 ---
 
-### [LOW] DATA-004: IPC Events Transmitted Over Unix Socket in Plaintext
+### [LOW] TRANSPARENCY-002: Transparency Log Shows Post-Filter Data Only (OPEN)
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/IPC/SocketClient.swift:66-83`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
-**Evidence**:
-```swift
-    public func send(_ event: CaptureEvent) throws {
-        if !isConnected {
-            try reconnect()
-        }
-        guard let fh = fileHandle else {
-            throw SocketError.notConnected
-        }
-        do {
-            var data = try encoder.encode(event)
-            data.append(0x0A) // newline
-            fh.write(data)
-        }
-```
-**Description**: Events are sent as plaintext JSON (ndjson) over the Unix domain socket from the Swift process to the Python process. The whitepaper acknowledges this is a localhost-only channel and relies on OS process isolation. While this is a reasonable design choice (encrypting a localhost socket adds overhead with limited benefit), the events contain post-L2-filtered but pre-encryption data. Any local process with the same user permissions could potentially read the socket.
-**Risk**: Low risk due to OS-level socket permissions (only the owning user can connect). However, if another application running under the same user account is compromised, it could listen on or connect to the socket.
-**Recommendation**: (1) Set strict file permissions (0600) on the socket file. (2) Consider using XPC instead of Unix domain sockets for better OS-level process isolation. (3) Document this as an accepted risk in the whitepaper.
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/UI/TransparencyLogView.swift`
+**Status**: OPEN -- No change. Users see `[PII_REDACTED]` tokens but cannot determine what was redacted or why.
+**Recommendation**: Add a "Redaction reason" annotation (e.g., "matched: email pattern") so users understand why data was redacted.
 
 ---
 
-### [LOW] TRANSPARENCY-002: Transparency Log Shows Post-Filter Data Only
+## Verified Positive Controls
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/UI/TransparencyLogController.swift:125-129`
-**Agent**: G2 (Privacy & Data Minimization Auditor)
-**Evidence**:
-```swift
-        let sql = """
-            SELECT id, timestamp, event_type, app_name, window_title, pii_redacted
-            FROM events
-            ORDER BY timestamp DESC
-            LIMIT ?;
-            """
-```
-**Description**: The transparency log reads from `buffer.db`, which contains post-L2-filtered data. If PII was redacted (shown by the `pii_redacted` flag and `PIIBadge`), the user cannot see what the original data was before redaction. This means the user cannot verify whether the PII filter is working correctly or over-aggressively. They see `[PII_REDACTED]` but cannot know if it was their SSN that was redacted or a false positive on a phone number in a project title.
-**Risk**: Limited ability for users to verify that the PII filter is operating correctly. The user must trust that `[PII_REDACTED]` was genuinely PII. Low risk because showing unfiltered data in the log would defeat the purpose of filtering.
-**Recommendation**: Consider adding a "Redaction reason" field (e.g., "matched: email pattern") so users can understand why data was redacted without seeing the original value.
+The following controls were verified as correctly implemented during this re-audit:
+
+| Control | File | Verification |
+|---------|------|-------------|
+| L2 PII regex scrubbing (8 patterns) | `WindowTitleCapture.swift:14-88` | SSN, email, phone, credit card, AmEx, IBAN, file paths, UK NINO all implemented with compiled regex and `assert` on compilation failure |
+| Window title truncation | `WindowTitleCapture.swift:93,108-109` | `maxTitleLength = 512`; titles truncated before L2 scrub |
+| Private browsing suppression | `CaptureContextFilter.swift:56-92` | Safari, Chrome, Firefox, Arc, Edge covered |
+| Password field blocking | `CaptureContextFilter.swift:32-34` | `isSecureTextField()` check on `AccessibilityProvider` |
+| Password manager blocklist | `CaptureContextFilter.swift:43-51` | 1Password (both IDs), LastPass, Bitwarden, Dashlane, Keychain Access |
+| Nil bundleId blocked | `BlocklistManager.swift:34` | `guard let bid = bundleId else { return false }` -- deny by default |
+| Logger privacy annotations | `Logger.swift:13-27` | All four log levels use `privacy: .private` |
+| Input events count-only | `InputMonitor.swift:16-23` | No x/y coordinates; only timestamps and button type |
+| Consent revocation handler | `ConsentManager.swift:40-42,56-62` | `onRevocation()` registration; `revokeConsent()` iterates handlers |
+| Consent HMAC tamper detection | `KeychainConsentStore.swift:89-96,213-227` | HMAC-SHA256 with per-install 256-bit Keychain key |
+| IPC symlink protection | `SocketClient.swift:41-49` | `lstat` check rejects symlinked socket paths |
+| IPC auth handshake | `SocketClient.swift:84-96` | Shared secret sent as JSON to prevent injection |
+| Capture state gating | `CaptureStateManager.swift:96-98` | `isCapturePermitted` enforces per-event consent check |
+| Keychain sync disabled | `KeychainConsentStore.swift:174` | `kSecAttrSynchronizable: kCFBooleanFalse` prevents iCloud sync |
+| MDM config value clamping | `AgentConfig.swift:59-78` | All numeric MDM values clamped to safe ranges |
+| SQLite read-only for transparency | `TransparencyLogController.swift:118` | `SQLITE_OPEN_READONLY` flag prevents corruption |
+| Whitepaper accuracy (post-remediation) | `task-mining-agent-security-whitepaper.md` | L3/L4 marked "NOT YET IMPLEMENTED"; encryption marked "Planned"; socket path corrected; paths reconciled |
+| DPA accuracy (post-remediation) | `task-mining-agent-dpa-template.md:174-177` | Disclaimers on L3/L4 and encryption status |
+| PIA accuracy (post-remediation) | `task-mining-agent-pia-template.md:195,222-224` | Risk matrix and mitigation table updated |
 
 ---
 
-## Regulatory Compliance Gap Summary
+## Regulatory Compliance Gap Summary (Updated)
 
 ### GDPR Compliance Status
 
-| Article | Requirement | Status | Finding(s) |
-|---------|------------|--------|------------|
-| Art. 5(1)(a) | Lawfulness, fairness, transparency | PARTIAL | CONSENT-002 (deceptive scope picker) |
-| Art. 5(1)(c) | Data minimization | PARTIAL | PII-006 (full window titles excessive), PII-007 (mouse coordinates) |
-| Art. 5(1)(e) | Storage limitation | PARTIAL | DATA-003 (no age-based local retention) |
-| Art. 7 | Conditions for consent | NON-COMPLIANT | CONSENT-001 (not granular), CONSENT-003 (no withdrawal mechanism) |
-| Art. 13-14 | Transparency | PARTIAL | TRANSPARENCY-001 (no upload status), PII-001 (misleading layer count) |
-| Art. 17 | Right to erasure | NON-COMPLIANT | DATA-002 (no deletion mechanism), TRANSPARENCY-001 (no deletion controls) |
-| Art. 25 | Data protection by design | PARTIAL | CONSENT-002 (scope picker non-functional), PII-002 (no encryption) |
-| Art. 32 | Security of processing | NON-COMPLIANT | PII-002 (local encryption not implemented despite claims) |
-| Art. 35 | DPIA | COMPLIANT | PIA template provided (KMF-SEC-003) |
+| Article | Requirement | Status (Original) | Status (Re-Audit) | Open Finding(s) |
+|---------|------------|-------------------|--------------------|-----------------|
+| Art. 5(1)(a) | Lawfulness, fairness, transparency | PARTIAL | **IMPROVED** | CONSENT-002 closed (scope picker disabled). CONSENT-003 still partial (no withdrawal UI). |
+| Art. 5(1)(c) | Data minimization | PARTIAL | **IMPROVED** | PII-007 closed (no coordinates). PII-006 partial (512-char titles still captured in action_level). |
+| Art. 5(1)(e) | Storage limitation | PARTIAL | **PARTIAL** | DATA-003 open (no age-based retention). |
+| Art. 7 | Conditions for consent | NON-COMPLIANT | **PARTIAL** | CONSENT-001 open (not granular). CONSENT-003 partial (revocation handler exists but no UI). |
+| Art. 13-14 | Transparency | PARTIAL | **IMPROVED** | PII-001 closed. TRANSPARENCY-001 open (no upload status). |
+| Art. 17 | Right to erasure | NON-COMPLIANT | **NON-COMPLIANT** | DATA-002 open (no deletion mechanism). |
+| Art. 25 | Data protection by design | PARTIAL | **IMPROVED** | PII-002 closed (accurate documentation). CONSENT-002 closed. |
+| Art. 32 | Security of processing | NON-COMPLIANT | **IMPROVED** | Documentation now accurately reflects plaintext buffer status. Encryption still not implemented but no longer falsely claimed. Compliance gap shifts from "misrepresentation" to "planned control." |
+| Art. 35 | DPIA | COMPLIANT | **COMPLIANT** | PIA template accurate post-remediation. |
 
-### CCPA/CPRA Compliance Status
+### Whitepaper vs. Reality Discrepancies (Updated)
 
-| Right | Status | Finding(s) |
-|-------|--------|------------|
-| Right to know | PARTIAL | TRANSPARENCY-001 (incomplete transparency log) |
-| Right to delete | NON-COMPLIANT | DATA-002 (no deletion mechanism) |
-| Right to opt-out | PARTIAL | CONSENT-003 (no withdrawal mechanism) |
-
-### Whitepaper vs. Reality Discrepancies
-
-| Whitepaper Claim | Reality | Finding |
-|-----------------|---------|---------|
-| "Four-layer PII protection" | Only L1 (context) + L2 (regex) implemented | PII-001, PII-003 |
-| "AES-256-GCM encrypted SQLite buffer" | Buffer is plaintext; encryption is "no-op" | PII-002 |
-| "No keystroke logging" | Correct -- InputMonitor captures counts only | Verified |
-| "User-controlled pause" | Pause exists; consent withdrawal does not | CONSENT-003 |
-| "Transparency log shows all captured data" | Shows last 200 events; no upload status | TRANSPARENCY-001 |
-| "On-device encryption" | Not implemented; claimed as current | PII-002 |
-| Socket path "/var/run/kmflow-capture.sock" | Actual: ~/Library/.../agent.sock | WHITEPAPER-001 |
-| App name "KMFlow Task Mining.app" | Actual: "KMFlow Agent.app" | WHITEPAPER-002 |
-| L2 patterns include UK NI, IP, DOB | Swift L2 only has SSN, email, phone, CC, AmEx | PII-005 |
+| Whitepaper Claim | Reality | Status |
+|-----------------|---------|--------|
+| "Two-layer on-device PII architecture (L1+L2)" | L1 context blocking + L2 regex scrubbing -- accurately described | **ACCURATE** |
+| "L3 ML NER and L4 human review planned" | Not implemented; clearly marked as planned | **ACCURATE** |
+| "AES-256-GCM planned, currently plaintext" | Buffer is plaintext; accurately stated | **ACCURATE** |
+| "TLS 1.3 in transit" | Correct | **ACCURATE** |
+| "No keystroke logging" | Correct -- InputMonitor captures counts only | **ACCURATE** |
+| "User-controlled pause" | Pause exists via menu bar | **ACCURATE** |
+| "Consent withdrawal via menu bar" | ConsentView footer claims this; menu bar lacks the item | **INACCURATE** |
+| "Transparency log shows captured data" | Shows last 200 events; no upload status | **PARTIAL** |
+| Socket path | `~/Library/Application Support/KMFlowAgent/agent.sock` | **ACCURATE** |
+| App/path naming | Reconciled to "KMFlow Agent" / "KMFlowAgent" | **ACCURATE** |
+| L2 patterns | SSN, email, phone, CC, AmEx, IBAN, file paths, UK NINO | **ACCURATE** |
 
 ---
 
-## Recommendations Priority Matrix
+## Recommendations Priority Matrix (Updated)
 
-| Priority | Finding | Effort | Impact |
-|----------|---------|--------|--------|
-| P0 (Block deployment) | PII-002: Implement local encryption or correct whitepaper | High | Eliminates material misrepresentation |
-| P0 (Block deployment) | PII-003: Add disclaimer for unimplemented L3/L4 layers | Low | Corrects compliance documentation |
-| P0 (Block deployment) | CONSENT-003: Add consent withdrawal mechanism | Medium | GDPR Art. 7(3) compliance |
-| P1 (Before production) | CONSENT-002: Wire capture scope to actual behavior | Medium | Eliminates deceptive control |
-| P1 (Before production) | PII-004: Add file path username filtering | Low | Prevents most common PII leak |
-| P1 (Before production) | CONSENT-001: Make consent granular | Medium | GDPR consent validity |
-| P1 (Before production) | PII-006: Limit window title capture for action_level | Medium | Data minimization compliance |
-| P2 (Near-term) | PII-005: Add international PII patterns | Medium | International deployment readiness |
-| P2 (Near-term) | TRANSPARENCY-001: Add upload status to log | Medium | GDPR Art. 15 compliance |
-| P2 (Near-term) | DATA-002: Add deletion request mechanism | Medium | GDPR Art. 17 compliance |
-| P3 (Backlog) | All remaining MEDIUM and LOW findings | Various | Defense in depth |
+| Priority | Finding | Effort | Impact | Status |
+|----------|---------|--------|--------|--------|
+| ~~P0~~ | ~~PII-002: Correct whitepaper claims~~ | ~~Low~~ | ~~Eliminates misrepresentation~~ | **DONE** |
+| ~~P0~~ | ~~PII-003: Add L3/L4 disclaimers~~ | ~~Low~~ | ~~Corrects compliance docs~~ | **DONE** |
+| P0 (Block deployment) | CONSENT-003: Add consent withdrawal UI in menu bar | Medium | GDPR Art. 7(3) compliance | **IN PROGRESS** -- handler wired, UI missing |
+| P1 (Before production) | CONSENT-001: Make consent granular or relabel as acknowledgment | Medium | GDPR consent validity | OPEN |
+| P1 (Before production) | TRANSPARENCY-001: Add upload status to transparency log | Medium | GDPR Art. 15 compliance | OPEN |
+| P1 (Before production) | DATA-002: Add deletion request mechanism | Medium | GDPR Art. 17 compliance | OPEN |
+| P1 (Before production) | NEW-001: Remove HMAC UUID fallback | Low | Prevents weak tamper detection | NEW |
+| P2 (Near-term) | PII-006: Suppress window titles in action_level mode | Medium | Data minimization | PARTIAL |
+| P2 (Near-term) | CONSENT-004: Display MDM config in consent flow | Medium | Informed consent | OPEN |
+| P2 (Near-term) | DATA-003: Add age-based local retention | Low | Storage limitation compliance | OPEN |
+| P2 (Near-term) | NEW-002: Route fputs through AgentLogger | Low | Consistent privacy logging | NEW |
+| P2 (Near-term) | NEW-003: Move key provisioning out of UI controller | Medium | Architectural separation | NEW |
+| P3 (Backlog) | PII-008, PII-009, CONSENT-005, TRANSPARENCY-002, DATA-001 | Various | Defense in depth | OPEN |
+
+---
+
+## Security Score
+
+| Category | Score (Original) | Score (Re-Audit) | Max |
+|----------|-----------------|-------------------|-----|
+| PII Protection (L1+L2) | 5/10 | **8/10** | 10 |
+| Encryption at Rest | 1/10 | **2/10** (documentation now accurate; encryption still absent) | 10 |
+| Encryption in Transit | 8/10 | **8/10** | 10 |
+| Consent Model | 3/10 | **5/10** | 10 |
+| Transparency | 4/10 | **5/10** | 10 |
+| Data Minimization | 4/10 | **6/10** | 10 |
+| Documentation Accuracy | 2/10 | **9/10** | 10 |
+| Uninstall / Data Cleanup | 5/10 | **6/10** | 10 |
+| **Overall** | **32/80 (40%)** | **49/80 (61%)** | 80 |
+
+---
+
+## Executive Summary
+
+The Phase 1-3 remediation effort addressed all three CRITICAL findings and approximately half of the total findings. The most significant improvements are:
+
+1. **Documentation accuracy is now strong.** The whitepaper, DPA, and PIA no longer misrepresent unimplemented controls as active. This was the highest-risk issue in the original audit and it is fully resolved.
+
+2. **PII filtering coverage expanded materially.** L2 now covers 8 pattern types (up from 5), including IBAN, file paths, and UK NINO. Window titles are truncated. Mouse coordinates removed from input events.
+
+3. **Consent revocation infrastructure is in place** but the user-facing path is incomplete. The `onRevocation()` handler pattern is well-designed and the revocation logic is correct, but no menu item triggers it.
+
+4. **Logger privacy annotations are consistently applied** across the `AgentLogger` wrapper. The remaining gap is two `fputs` calls in `KeychainConsentStore` that bypass the logger.
+
+The remaining deployment-blocking issue is **CONSENT-003**: the absence of a consent withdrawal UI path. The ConsentView footer promises withdrawal from the menu bar, but no such menu item exists. This is a GDPR Art. 7(3) compliance gap that should be closed before any deployment where consent is the legal basis.
+
+The four HIGH findings and seven MEDIUM findings represent genuine but non-critical gaps. They should be addressed before production deployment but do not represent material misrepresentations (which was the core issue in the original audit).

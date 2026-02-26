@@ -1,523 +1,485 @@
-# E3: Keychain & Encryption Audit — KMFlow macOS Task Mining Agent
+# E3: Keychain & Encryption Re-Audit — KMFlow macOS Task Mining Agent
 
 **Auditor**: E3 (Keychain & Encryption Auditor)
-**Date**: 2026-02-25
-**Scope**: All Swift source files in `agent/macos/Sources/`, entitlements, and installer scripts
-**Status**: COMPLETE
+**Original Audit Date**: 2026-02-25
+**Re-Audit Date**: 2026-02-26
+**Scope**: Swift source files in `agent/macos/Sources/` — Keychain, IPC, consent, encryption, integrity
+**Remediation PRs Reviewed**: #248, #255, #256
+**Status**: RE-AUDIT COMPLETE
+
+---
 
 ## Executive Summary
 
-The KMFlow macOS Task Mining Agent handles employee behavioral data (application usage, window titles, input patterns) and stores consent tokens in the macOS Keychain. This audit evaluates the cryptographic controls, Keychain configuration, IPC channel security, and data lifecycle management.
+The Phase 1-3 remediation (PRs #248, #255, #256) addressed the two CRITICAL findings and four of the five HIGH findings from the original audit. The SQLite capture buffer now has AES-256-GCM column-level encryption with per-row nonces. The IPC socket validates against symlink attacks and performs a shared-secret authentication handshake. Consent records are HMAC-SHA256 signed with a per-install key auto-generated from `SecRandomCopyBytes`. The `KeychainHelper` now sets `kSecAttrAccessibleAfterFirstUnlock` and `kSecAttrSynchronizable: kCFBooleanFalse`. The `AgentLogger` defaults to `privacy: .private`. The consent revocation handler mechanism is in place. The false encryption claim in WelcomeView has been corrected. The unused entitlement was removed. The `IntegrityChecker` now supports HMAC-SHA256 manifest signature verification and periodic re-verification.
 
-**The agent's trust model has significant gaps.** While the Keychain is used for consent storage (good), the primary data channel -- the SQLite capture buffer where all behavioral data resides -- has **no encryption implemented**. The code contains scaffolding for future encryption but currently reads and writes plaintext. The IPC channel between Swift and Python has no authentication or encryption. The `KeychainHelper` utility (used for general secrets) is missing the `kSecAttrAccessible` attribute entirely, defaulting to an overly permissive accessibility level. Consent tokens are stored as unsigned JSON, making forgery trivial for any process with Keychain access.
-
-## Finding Summary
-
-| Severity | Count |
-|----------|-------|
-| CRITICAL | 2     |
-| HIGH     | 5     |
-| MEDIUM   | 5     |
-| LOW      | 3     |
-| **Total** | **15** |
+**The agent's security posture has materially improved.** The two CRITICAL findings are resolved. Four of five HIGH findings are fully resolved; one (sandbox rationale) remains partially addressed. Five MEDIUM and three LOW findings from the original audit are either resolved or have been downgraded. New residual findings have been identified during the re-audit, all at MEDIUM or LOW severity.
 
 ---
 
-## CRITICAL Findings
+## Finding Disposition Summary
 
-### [CRITICAL] DATA-AT-REST-001: SQLite Capture Buffer Stored in Plaintext
+| ID | Original Severity | Original Title | Status | Notes |
+|----|:-:|---|:-:|---|
+| DATA-AT-REST-001 | CRITICAL | SQLite buffer stored in plaintext | **RESOLVED** | AES-256-GCM encryption implemented in TransparencyLogController (PR #256) |
+| IPC-001 | CRITICAL | Unix socket no auth/encryption | **RESOLVED** | Symlink check + auth handshake in SocketClient (PR #256) |
+| KEYCHAIN-001 | HIGH | KeychainHelper missing kSecAttrAccessible | **RESOLVED** | `kSecAttrAccessibleAfterFirstUnlock` added (PR #255) |
+| CONSENT-001 | HIGH | Consent token unsigned | **RESOLVED** | HMAC-SHA256 signing via `SignedConsentRecord` (PR #256) |
+| CONSENT-002 | HIGH | No data cleanup on consent revocation | **RESOLVED** | `onRevocation` handler mechanism added to `ConsentManager` (PR #256) |
+| SANDBOX-001 | HIGH | App Sandbox disabled, no rationale | **PARTIALLY RESOLVED** | Unused entitlement removed; ADR still needed |
+| LOGGING-001 | HIGH | AgentLogger marks all messages as .public | **RESOLVED** | `AgentLogger` now uses `privacy: .private` (PR #255) |
+| KEYCHAIN-002 | MEDIUM | AfterFirstUnlock allows background access | **ACCEPTED RISK** | Intentional design for background agent; documented |
+| KEYCHAIN-003 | MEDIUM | kSecAttrSynchronizable not set | **RESOLVED** | Explicitly set to `kCFBooleanFalse` across all three Keychain sites (PRs #255, #256) |
+| INTEGRITY-001 | MEDIUM | Integrity check only at startup | **RESOLVED** | Periodic checking added via `IntegrityChecker` instance API (PR #256) |
+| INTEGRITY-002 | MEDIUM | IntegrityChecker does not verify manifest | **RESOLVED** | HMAC-SHA256 signature verification via `integrity.sig` (PR #256) |
+| CONSENT-003 | MEDIUM | Consent checked only at startup | **PARTIALLY RESOLVED** | `onRevocation` handler exists but `ConsentManager` not stored as AppDelegate property; no runtime subscription wired |
+| KEYCHAIN-004 | LOW | Keychain error logged to stderr | **OPEN** | Still using `fputs` to stderr in `KeychainConsentStore` |
+| KEY-LIFECYCLE-001 | LOW | No key rotation mechanism | **OPEN** | Still no rotation for buffer encryption key or HMAC key |
+| ENTITLEMENT-001 | LOW | Unused entitlement | **RESOLVED** | `com.apple.security.files.user-selected.read-write` removed |
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/UI/TransparencyLogController.swift:109-113`
-**Agent**: E3 (Keychain & Encryption Auditor)
-**Evidence**:
+---
+
+## Resolved Findings — Verification Details
+
+### [RESOLVED] DATA-AT-REST-001: SQLite Capture Buffer Encryption
+
+**Original Severity**: CRITICAL
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/UI/TransparencyLogController.swift`
+
+**Verification**: The `TransparencyLogController` now implements full AES-256-GCM decryption. The `decryptIfNeeded()` method (lines 277-319) correctly:
+- Extracts 12-byte nonce, ciphertext, and 16-byte authentication tag from base64-encoded column values
+- Uses `CCCryptorGCMOneshotDecrypt` with the Keychain-stored 256-bit key
+- Falls back to plaintext for backward compatibility with pre-encryption rows
+- Validates minimum ciphertext length (28 bytes) before attempting decryption
+
+The `provisionEncryptionKey()` method (lines 245-269) generates a 256-bit key using `SecRandomCopyBytes` and stores it in the Keychain with `kSecAttrAccessibleAfterFirstUnlock` and `kSecAttrSynchronizable: kCFBooleanFalse`.
+
+The WelcomeView (line 72) now reads "Data is transmitted securely and PII is automatically redacted" — the false "All data is encrypted" claim has been corrected.
+
+**Residual**: See NEW-001 (backward compatibility plaintext fallback).
+
+---
+
+### [RESOLVED] IPC-001: Unix Domain Socket Authentication
+
+**Original Severity**: CRITICAL
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/IPC/SocketClient.swift`
+
+**Verification**: The `connect()` method (lines 41-98) now implements:
+1. **Symlink detection** (lines 44-49): Uses `lstat()` to check `S_IFLNK` before connecting, throwing `SocketError.connectionFailed` on detection
+2. **Auth handshake** (lines 86-96): Sends a JSON `{"auth": token}` message using `JSONSerialization` (preventing JSON injection) followed by a newline delimiter
+
+The `authToken` parameter is accepted at init and forwarded during connection. The use of `JSONSerialization.data(withJSONObject:)` rather than string interpolation prevents injection via malformed tokens.
+
+**Residual**: See NEW-002 (no server-side response validation).
+
+---
+
+### [RESOLVED] KEYCHAIN-001: kSecAttrAccessible Added to KeychainHelper
+
+**Original Severity**: HIGH
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Utilities/KeychainHelper.swift`
+
+**Verification**: Line 20 now includes `kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock`. Line 21 includes `kSecAttrSynchronizable as String: kCFBooleanFalse!`. All three Keychain access sites (`KeychainHelper`, `KeychainConsentStore`, `TransparencyLogController`) are now consistent.
+
+---
+
+### [RESOLVED] CONSENT-001: HMAC-SHA256 Consent Token Signing
+
+**Original Severity**: HIGH
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Consent/KeychainConsentStore.swift`
+
+**Verification**: The `SignedConsentRecord` wrapper (lines 49-53) pairs each `ConsentRecord` with a hex-encoded HMAC-SHA256 signature. The `save()` method (lines 113-127) computes the HMAC before storage. The `load()` method (lines 83-107) verifies the HMAC and returns `.neverConsented` on mismatch (tamper detection). The HMAC key is 256-bit, generated via `SecRandomCopyBytes`, and stored in the Keychain under the same service namespace.
+
+The encoder uses `.sortedKeys` output formatting (line 149), ensuring canonical JSON for deterministic HMAC computation.
+
+**Residual**: See NEW-003 (legacy unsigned record migration bypass) and NEW-004 (UUID fallback key).
+
+---
+
+### [RESOLVED] CONSENT-002: Consent Revocation Handler
+
+**Original Severity**: HIGH
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Consent/ConsentManager.swift`
+
+**Verification**: The `ConsentManager` now has:
+- `ConsentRevocationHandler` type alias (line 23) as `@MainActor (String) -> Void`
+- `onRevocation(_:)` registration method (line 40)
+- `revokeConsent()` (lines 56-62) iterates all registered handlers after persisting the revoked state
+
+The handlers are invoked with the `engagementId` so cleanup actions can be engagement-scoped.
+
+**Residual**: See CONSENT-003 update below — handlers exist but are not wired in `KMFlowAgentApp`.
+
+---
+
+### [RESOLVED] LOGGING-001: AgentLogger Now Uses privacy: .private
+
+**Original Severity**: HIGH
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Utilities/Logger.swift`
+
+**Verification**: All four log level methods (info, debug, warning, error) at lines 13-27 now use `privacy: .private`. This is the Apple-recommended default that redacts interpolated values in log output.
+
+**Residual**: See NEW-005 (`IntegrityChecker` and `PythonProcessManager` still use direct `os.Logger` with `.public`).
+
+---
+
+### [RESOLVED] KEYCHAIN-003: kSecAttrSynchronizable Explicitly Disabled
+
+**Original Severity**: MEDIUM
+**Verification**: All three Keychain write sites now explicitly include `kSecAttrSynchronizable: kCFBooleanFalse`:
+- `KeychainHelper.swift` line 21
+- `KeychainConsentStore.swift` line 174
+- `TransparencyLogController.swift` line 264
+
+---
+
+### [RESOLVED] INTEGRITY-001 & INTEGRITY-002: Periodic Checks and Manifest Signature
+
+**Original Severity**: MEDIUM (both)
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/KMFlowAgent/IntegrityChecker.swift`
+
+**Verification**:
+- **Periodic checking** (lines 96-120): `startPeriodicChecks()` runs a detached `Task` that re-verifies at configurable intervals (default 300 seconds / 5 minutes). The `ViolationHandler` callback enables the app delegate to react to runtime tampering.
+- **Manifest signature** (lines 147-165, 217-246): `verify()` now looks for an `integrity.sig` file containing an HMAC-SHA256 of the manifest, verifies it using CryptoKit's `HMAC<SHA256>.isValidAuthenticationCode` (constant-time comparison), and fails the check on mismatch.
+
+**Residual**: See NEW-006 (manifest signature verification is gracefully skipped when `.sig` file is missing).
+
+---
+
+### [RESOLVED] ENTITLEMENT-001: Unused Entitlement Removed
+
+**Original Severity**: LOW
+**File**: `/Users/proth/repos/kmflow/agent/macos/Resources/KMFlowAgent.entitlements`
+
+**Verification**: The `com.apple.security.files.user-selected.read-write` entitlement has been removed. The entitlements file now contains only hardened runtime flags, network client, and sandbox-disabled.
+
+---
+
+## Open & Partially Resolved Findings
+
+### [PARTIALLY RESOLVED] SANDBOX-001: App Sandbox Disabled — ADR Still Needed
+
+**Original Severity**: HIGH | **Current Severity**: MEDIUM (downgraded — unused entitlement removed)
+**File**: `/Users/proth/repos/kmflow/agent/macos/Resources/KMFlowAgent.entitlements:19-20`
+
+**Current State**: The unused `files.user-selected.read-write` entitlement was removed (good). The entitlements file now has a comment (line 17) noting the sandbox is disabled. However, there is no formal Architecture Decision Record documenting:
+- Why the sandbox is disabled (CGEventTap requires it)
+- What compensating controls exist (hardened runtime, directory permissions, integrity checking)
+- What the residual risk is
+
+**Recommendation**: Create an ADR in `docs/adrs/` documenting the sandbox-disabled decision and compensating controls.
+
+---
+
+### [PARTIALLY RESOLVED] CONSENT-003: Consent Not Enforced at Runtime
+
+**Original Severity**: MEDIUM | **Current Severity**: MEDIUM (unchanged)
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/KMFlowAgent/KMFlowAgentApp.swift:72`
+
+**Current State**: The `ConsentManager` is still created as a local variable in `applicationDidFinishLaunching` (line 72) rather than stored as a property on `AppDelegate`. No `onRevocation` handler is registered. No Combine subscription observes `ConsentManager.$state`. The revocation handler infrastructure exists in `ConsentManager` but is not wired to the app lifecycle.
+
+**Evidence** (current code):
 ```swift
-        // Load the buffer encryption key from Keychain (for future use when
-        // the Python layer encrypts individual columns).  We retrieve it here
-        // so the controller wires the full security contract even if decryption
-        // is a no-op for plaintext rows today.
-        _ = loadBufferKeyFromKeychain()
-```
-**Description**: The comments in TransparencyLogController explicitly state that encryption is "a no-op for plaintext rows today." The SQLite database at `~/Library/Application Support/KMFlowAgent/buffer.db` stores all captured behavioral data -- application names, window titles, timestamps, input patterns -- in cleartext. The `loadBufferKeyFromKeychain()` method retrieves a key but never uses it for decryption. The SQL query at line 125 reads raw columns directly with no decryption step.
+// Line 72 — local variable, not stored as property
+let consentManager = ConsentManager(engagementId: engagementId, store: consentStore)
 
-Additionally, the onboarding wizard at `WelcomeView.swift:72` tells employees:
-```swift
-                text: "All data is encrypted and PII is automatically redacted"
+if consentManager.state == .neverConsented {
+    // ...
+} else if !consentManager.captureAllowed {
+    // ...
+} else {
+    startPythonSubprocess()
+}
 ```
-This claim is false for data at rest. Employees are being told their data is encrypted when it is not.
 
-**Risk**: Any process running as the same user can open and read the SQLite database. This includes malware, other employee-installed applications, or anyone with physical access to the machine. The false encryption claim in the onboarding UI creates a trust violation with employees who consented under the belief their data was encrypted. This could create legal liability under GDPR, CCPA, and similar privacy regulations where consent must be informed.
+The `ConsentManager` goes out of scope after this block, meaning:
+- No runtime consent enforcement occurs after startup
+- The `onRevocation` handler mechanism cannot be utilized
+- If consent is revoked via another process writing to the Keychain, the agent continues capturing
 
 **Recommendation**:
-1. Implement AES-256-GCM column-level encryption using CryptoKit `AES.GCM.SealedBox` before any production deployment.
-2. Store the symmetric key in Keychain with `kSecAttrAccessControl` biometric protection.
-3. Correct the WelcomeView claim to accurately reflect current encryption status, or implement encryption before shipping.
-4. Use per-row nonces (provided automatically by `AES.GCM.seal()`).
+1. Store `ConsentManager` as a property on `AppDelegate`
+2. Register an `onRevocation` handler that calls `pythonManager.stop()` and deletes `buffer.db`
+3. Subscribe to `ConsentManager.$state` via Combine to react to changes
 
 ---
 
-### [CRITICAL] IPC-001: Unix Domain Socket Has No Authentication or Encryption
+### [OPEN] KEYCHAIN-004: Keychain Error Logged to stderr
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/IPC/SocketClient.swift:10-13, 29-63`
-**Agent**: E3 (Keychain & Encryption Auditor)
-**Evidence**:
+**Original Severity**: LOW | **Current Severity**: LOW (unchanged)
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Consent/KeychainConsentStore.swift:178-181`
+
+**Current State**: Still uses `fputs` to stderr. The `AgentLogger` is available but importing the `Utilities` module would add a dependency to the `Consent` target, which the code comments explicitly note is designed for zero-dependency footprint.
+
 ```swift
-    public static let defaultSocketPath: String = {
-        let home = NSHomeDirectory()
-        return "\(home)/Library/Application Support/KMFlowAgent/agent.sock"
-    }()
+fputs("[KeychainConsentStore] SecItemAdd failed: \(status)\n", stderr)
 ```
-```swift
-    public func connect() throws {
-        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
-        guard fd >= 0 else {
-            throw SocketError.connectionFailed("Failed to create socket: \(errno)")
-        }
-        // ... direct connect with no authentication handshake ...
-```
-**Description**: The Unix domain socket used to transmit all captured behavioral events from Swift to Python has three compounding security weaknesses:
 
-1. **No authentication**: Any process running as the same user can connect to the socket and either inject fabricated events or eavesdrop. There is no challenge-response, shared secret, or peer credential check (`SO_PEERCRED` / `LOCAL_PEERCRED`).
-
-2. **No encryption**: Data flows as plaintext ndjson over the socket. Window titles, application names, and all event data are readable by any local process that connects.
-
-3. **No pre-existence check**: The `connect()` method does not verify whether the socket file already exists before connecting, nor does the server-side (Python) validate socket ownership. This opens a symlink attack vector where an attacker replaces `agent.sock` with a symlink to a controlled socket, intercepting all behavioral data.
-
-**Risk**: A malicious or compromised process running as the same user could: (a) passively sniff all employee activity data, (b) inject fake events to manipulate process mining results, or (c) perform a symlink race to redirect the data stream. While the `postinstall` script sets the Application Support directory to `0700`, this only protects against other users, not same-user processes.
-
-**Recommendation**:
-1. Verify peer credentials using `getsockopt(fd, SOL_LOCAL, LOCAL_PEERCRED)` to confirm the connecting/connected process is the expected KMFlow binary.
-2. Check for pre-existing socket files before binding (server-side) and validate the socket file is not a symlink before connecting (client-side).
-3. Implement a shared-secret handshake using a Keychain-stored token exchanged at connection time.
-4. Consider TLS over the Unix socket for defense-in-depth if content-level capture is enabled.
+**Recommendation**: Accept as-is given the zero-dependency design, or import `os` directly (it is a system framework, not an external dependency) for structured logging.
 
 ---
 
-## HIGH Findings
+### [OPEN] KEY-LIFECYCLE-001: No Key Rotation Mechanism
 
-### [HIGH] KEYCHAIN-001: KeychainHelper Missing kSecAttrAccessible — Defaults to kSecAttrAccessibleWhenUnlocked
+**Original Severity**: LOW | **Current Severity**: LOW (unchanged)
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/UI/TransparencyLogController.swift:57`
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Consent/KeychainConsentStore.swift:70`
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Utilities/KeychainHelper.swift:14-29`
-**Agent**: E3 (Keychain & Encryption Auditor)
-**Evidence**:
-```swift
-    public func save(key: String, data: Data) throws {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key,
-            kSecValueData as String: data,
-        ]
-        // Delete existing item first
-        SecItemDelete(query as CFDictionary)
+**Current State**: Both the buffer encryption key (`buffer_encryption_key`) and the HMAC signing key (`consent.hmac_key`) are stored under fixed account names with no versioning or rotation mechanism. `provisionEncryptionKey()` (TransparencyLogController line 247) explicitly does not overwrite an existing key.
 
-        let status = SecItemAdd(query as CFDictionary, nil)
-```
-**Description**: Unlike `KeychainConsentStore` which explicitly sets `kSecAttrAccessibleAfterFirstUnlock`, the general-purpose `KeychainHelper` does not set any `kSecAttrAccessible` attribute. When omitted, macOS defaults to `kSecAttrAccessibleWhenUnlocked`. However, the inconsistency between the two Keychain implementations is a design defect -- the buffer encryption key (stored via the `com.kmflow.agent` service used by `KeychainHelper`) and consent records (stored via `com.kmflow.agent.consent`) have different protection levels. Neither implementation uses `kSecAttrAccessControl` with biometric or password protection, meaning any process running as the user can read all Keychain items without user interaction.
-
-**Risk**: The buffer encryption key (when eventually implemented) and any other agent secrets stored via `KeychainHelper` can be read by any process running as the current user without requiring user authentication. Malware or a compromised application could silently extract the encryption key and decrypt the capture buffer.
-
-**Recommendation**:
-1. Add `kSecAttrAccessible: kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly` for maximum protection.
-2. Add `kSecAttrAccessControl` with `SecAccessControlCreateWithFlags` using `.userPresence` or `.biometryCurrentSet` to require biometric/password confirmation for key access.
-3. Standardize accessibility settings across both `KeychainHelper` and `KeychainConsentStore`.
+**Recommendation**: Design key rotation for a future release. Low urgency for an agent that runs per-engagement with finite lifetime.
 
 ---
 
-### [HIGH] CONSENT-001: Consent Token Is Unsigned — Forgery by Any Local Process
+## New Findings from Re-Audit
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Consent/KeychainConsentStore.swift:85-96`
-**Agent**: E3 (Keychain & Encryption Auditor)
+### [MEDIUM] NEW-001: Backward Compatibility Plaintext Fallback Weakens Encryption Guarantee
+
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/UI/TransparencyLogController.swift:277-283, 317-318`
+**Severity**: MEDIUM
+
 **Evidence**:
 ```swift
-    public func save(engagementId: String, state: ConsentState, at date: Date) {
-        let record = ConsentRecord(
-            engagementId: engagementId,
-            state: state,
-            consentedAt: date,
-            authorizedBy: nil,
-            captureScope: nil,
-            consentVersion: "1.0"
-        )
-        guard let data = try? jsonEncoder().encode(record) else { return }
-        keychainSave(account: accountKey(for: engagementId), data: data)
+private func decryptIfNeeded(_ value: String, key: Data?) -> String {
+    guard let key = key,
+          let cipherData = Data(base64Encoded: value),
+          cipherData.count > 28
+    else {
+        return value // plaintext or no key — return as-is
     }
+    // ... decryption ...
+    // Line 317-318:
+    // Decryption failed — likely plaintext data from before encryption was enabled
+    return value
+}
 ```
-**Description**: Consent records are stored as plain JSON in the Keychain. There is no HMAC signature, no cryptographic binding to the device or user identity, and no integrity verification on load. The `authorizedBy` field is always set to `nil` even though the onboarding wizard collects this information. The consent version is hardcoded to `"1.0"`. Any process with Keychain access to the `com.kmflow.agent.consent` service can write a forged consent record to make it appear that consent was granted, or revert a revocation.
 
-**Risk**: An administrator or malicious script could forge a consent record to enable monitoring without the employee's actual consent. Conversely, an employee could forge a revocation to stop monitoring while appearing to have revoked consent legitimately. Without cryptographic integrity (e.g., HMAC over the record contents with a server-held key), the consent audit trail is untrustworthy.
+**Description**: The `decryptIfNeeded` method silently falls back to returning the raw value whenever decryption fails or the value is not valid base64. This is intended for backward compatibility with pre-encryption data, but it means an attacker who gains write access to the SQLite database can insert plaintext rows that will be displayed without any tamper indication. The method cannot distinguish between "legitimate pre-encryption data" and "attacker-injected plaintext."
+
+Additionally, if the encryption key is missing from the Keychain (line 115 returns nil), all rows are returned as plaintext without any warning to the user or log entry.
+
+**Risk**: The backward compatibility path undermines the encryption guarantee. An attacker who can write to `buffer.db` can inject plaintext rows that bypass decryption entirely. The transparency log would display them as normal events with no visual indicator that they were not encrypted.
 
 **Recommendation**:
-1. Sign consent records with an HMAC using a key derived from the backend server (provisioned during onboarding).
-2. Include the `authorizedBy` field from the onboarding wizard in the stored record.
-3. Verify the HMAC on every `load()` call; treat tampered records as `neverConsented`.
-4. Consider a server-side consent attestation where the backend countersigns the consent record.
+1. After a migration period, remove the plaintext fallback and treat decryption failures as errors (skip the row or display "[decryption failed]").
+2. Add a column or flag to the SQLite schema indicating whether a row is encrypted, rather than inferring from base64 validity.
+3. Log a warning when `loadBufferKeyFromKeychain()` returns nil after the agent has been running for more than one session.
 
 ---
 
-### [HIGH] CONSENT-002: No Data Cleanup on Consent Revocation
+### [MEDIUM] NEW-002: IPC Auth Handshake Is Fire-and-Forget — No Server Response Validation
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Consent/ConsentManager.swift:39-43`
-**Agent**: E3 (Keychain & Encryption Auditor)
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/IPC/SocketClient.swift:86-96`
+**Severity**: MEDIUM
+
 **Evidence**:
 ```swift
-    /// Revoke consent. Capture must stop immediately.
-    public func revokeConsent() {
-        state = .revoked
-        store.save(engagementId: engagementId, state: .revoked, at: Date())
+if let token = authToken, let fh = fileHandle {
+    let authDict: [String: String] = ["auth": token]
+    guard let jsonData = try? JSONSerialization.data(withJSONObject: authDict),
+          let authData = String(data: jsonData, encoding: .utf8)?.appending("\n").data(using: .utf8)
+    else {
+        close(fd)
+        fileHandle = nil
+        throw SocketError.connectionFailed("Failed to encode auth token")
     }
+    fh.write(authData)
+}
+isConnected = true
 ```
-**Description**: When consent is revoked, `ConsentManager.revokeConsent()` only updates the consent state in the Keychain. It does not:
-- Delete or securely wipe the SQLite capture buffer (`buffer.db`)
-- Remove the buffer encryption key from Keychain
-- Close the IPC socket connection
-- Terminate the Python subprocess
-- Clean up temporary files in Application Support
 
-The `KMFlowAgentApp.swift` does not observe consent state changes after startup -- it checks consent once during `applicationDidFinishLaunching` and never re-checks. There is no reactive mechanism to stop capture when consent is revoked at runtime.
+**Description**: The client sends the auth token but never reads a response from the server to confirm the handshake succeeded. The `isConnected` flag is set to `true` immediately after writing the token. If the server rejects the token (wrong secret, expired, etc.), the client will believe it is authenticated and proceed to send event data. The server may silently drop this data, or worse, the data may be queued in the kernel socket buffer and eventually discarded.
 
-**Risk**: After an employee revokes consent, all previously captured behavioral data remains on disk in plaintext. The agent may continue capturing data because there is no runtime consent enforcement. This violates the GDPR "right to erasure" and the trust promise made during onboarding ("You can revoke consent at any time from the menu bar icon").
+**Risk**: A misconfigured auth token would not produce any client-side error. Events could be silently lost. The agent would report "connected" status to the user while data is being dropped.
 
 **Recommendation**:
-1. Implement `revokeConsent()` to trigger immediate data deletion: remove `buffer.db`, purge Keychain encryption keys, close socket, terminate Python subprocess.
-2. Add a Combine subscription in `KMFlowAgentApp` to observe `ConsentManager.state` changes and react in real-time.
-3. Implement secure file deletion (overwrite before unlink) for the SQLite database.
-4. Provide the employee with confirmation that all local data has been destroyed.
+1. Read a response line from the server after sending the auth token (e.g., `{"status": "ok"}` or `{"status": "rejected"}`).
+2. Only set `isConnected = true` after receiving a success response.
+3. Throw `SocketError.connectionFailed("Authentication rejected")` on failure.
 
 ---
 
-### [HIGH] SANDBOX-001: App Sandbox Disabled — No Process-Level Isolation
+### [MEDIUM] NEW-003: Legacy Unsigned Consent Record Migration Bypasses HMAC Verification
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Resources/KMFlowAgent.entitlements:24-25`
-**Agent**: E3 (Keychain & Encryption Auditor)
-**Evidence**:
-```xml
-    <key>com.apple.security.app-sandbox</key>
-    <false/>
-```
-**Description**: The App Sandbox is explicitly disabled. While this is understandable given the agent's need for CGEventTap (Accessibility API) and broad system observation, it means there is no OS-level containment for the agent process. Combined with the absence of data-at-rest encryption and the unauthenticated IPC channel, this significantly expands the attack surface.
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Consent/KeychainConsentStore.swift:99-106`
+**Severity**: MEDIUM
 
-The hardened runtime protections are correctly configured (JIT disabled, unsigned executable memory disabled, library validation enabled), which provides some mitigation. However, without sandboxing, the agent has unrestricted filesystem access, and any vulnerability in the agent or its Python subprocess could be exploited to access arbitrary user data.
-
-**Risk**: The unsandboxed agent runs with full user privileges. A vulnerability in the Python layer (which processes untrusted event data) could be leveraged for arbitrary file access or code execution with the user's full permissions. The `com.apple.security.files.user-selected.read-write` entitlement is also granted but serves no purpose without App Sandbox -- it is only meaningful in sandboxed apps.
-
-**Recommendation**:
-1. Document the security rationale for disabling the sandbox in an Architecture Decision Record.
-2. Remove the unused `com.apple.security.files.user-selected.read-write` entitlement (it has no effect outside sandbox).
-3. Implement mandatory code signing verification for the Python subprocess (the `IntegrityChecker` helps but only checks at startup).
-4. Consider running the Python subprocess in a more restricted sandbox profile using `sandbox-exec` or a custom sandbox profile.
-
----
-
-### [HIGH] LOGGING-001: AgentLogger Marks All Log Messages as privacy: .public
-
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Utilities/Logger.swift:13-27`
-**Agent**: E3 (Keychain & Encryption Auditor)
 **Evidence**:
 ```swift
-    public func info(_ message: String) {
-        logger.info("\(message, privacy: .public)")
+} catch {
+    // Try loading legacy unsigned records for migration
+    do {
+        let record = try jsonDecoder().decode(ConsentRecord.self, from: data)
+        return record.state
+    } catch {
+        return .neverConsented
     }
-
-    public func debug(_ message: String) {
-        logger.debug("\(message, privacy: .public)")
-    }
-
-    public func warning(_ message: String) {
-        logger.warning("\(message, privacy: .public)")
-    }
-
-    public func error(_ message: String) {
-        logger.error("\(message, privacy: .public)")
-    }
+}
 ```
-**Description**: The `AgentLogger` wrapper marks every single log message as `privacy: .public` across all log levels (info, debug, warning, error). Apple's Unified Logging system (os_log) redacts interpolated values by default precisely to prevent sensitive data from appearing in system logs. By overriding this to `.public` on every message, any caller who passes sensitive data (window titles, engagement IDs, user names, error details containing PII) will have that data written in cleartext to the system log.
 
-The system log is readable by:
-- Any process using the `log` command or Console.app
-- MDM solutions that collect diagnostic logs
-- Apple's sysdiagnose bundles submitted for crash reports
+**Description**: When the outer `SignedConsentRecord` decode or HMAC verification fails, the code falls back to trying to decode the data as an unsigned `ConsentRecord`. This migration path is necessary for upgrading from pre-HMAC installations, but it creates a permanent bypass: an attacker who writes a plain `ConsentRecord` JSON blob to the Keychain (without an HMAC wrapper) will have it accepted without any integrity verification.
 
-This pattern is also used directly in `PythonProcessManager.swift` and `IntegrityChecker.swift` where file paths and process IDs are logged with `privacy: .public`.
+The fallback is not time-bounded (no "only accept legacy records created before version X" check) and produces no log warning when a legacy record is loaded.
 
-**Risk**: Sensitive employee behavioral data (window titles containing document names, email subjects, URLs) could end up in the macOS Unified Log, persisting long after the agent is uninstalled. Log collection by MDM or diagnostic tools could expose this data to parties outside the agreed data-processing scope.
+**Risk**: The HMAC integrity check can be trivially bypassed by writing consent records in the legacy unsigned format. This undermines the tamper detection that HMAC signing was intended to provide.
 
 **Recommendation**:
-1. Change the default `AgentLogger` to use `privacy: .private` (Apple's default).
-2. Only use `privacy: .public` for values that are explicitly non-sensitive (error codes, counts, boolean states).
-3. Create separate logging methods: `logPublic()` and `logSensitive()` to force callers to make an explicit privacy decision.
-4. Audit all direct `os.Logger` usage in `PythonProcessManager.swift` and `IntegrityChecker.swift` for over-sharing.
+1. Log a warning when a legacy unsigned record is loaded: `fputs("[KeychainConsentStore] WARNING: Loading unsigned legacy consent record for \(engagementId)\n", stderr)`
+2. Immediately re-sign and re-save the record with an HMAC after successful legacy load (one-time migration).
+3. Set a deadline (e.g., version 2026.04) after which legacy unsigned records are rejected.
 
 ---
 
-## MEDIUM Findings
+### [LOW] NEW-004: HMAC Key Fallback Uses UUID — Weak Entropy
 
-### [MEDIUM] KEYCHAIN-002: kSecAttrAccessibleAfterFirstUnlock Allows Background Access Without User Authentication
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Consent/KeychainConsentStore.swift:239-241`
+**Severity**: LOW
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Consent/KeychainConsentStore.swift:138-141`
-**Agent**: E3 (Keychain & Encryption Auditor)
 **Evidence**:
 ```swift
-            kSecAttrAccessible as String:   kSecAttrAccessibleAfterFirstUnlock,
+if result != errSecSuccess {
+    // Fallback: use a UUID-based key (weaker but functional)
+    key = Data(UUID().uuidString.utf8)
+}
 ```
-**Description**: The `kSecAttrAccessibleAfterFirstUnlock` accessibility level means Keychain items are available to any process after the first unlock of the device, even when the screen is locked. While this is a reasonable choice for a background agent that needs to check consent state, it offers less protection than `kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly`. The consent records contain engagement IDs and consent decisions -- sensitive organizational data that should have the strongest available protection.
 
-**Risk**: If the Mac is locked but has been unlocked at least once since boot, a process could still read consent records. This is a minor weakness given macOS Keychain's existing per-application access controls, but for enterprise monitoring data, defense-in-depth suggests a stronger setting.
+**Description**: If `SecRandomCopyBytes` fails (which should be exceedingly rare on macOS), the HMAC key falls back to a UUID string. A UUID v4 has 122 bits of entropy, but the UTF-8 encoding of its string representation (`"XXXXXXXX-XXXX-4XXX-YXXX-XXXXXXXXXXXX"`) is 36 bytes of ASCII with a constrained character set. This is weaker than the intended 256-bit random key and has a predictable format that could assist brute-force attacks on the HMAC.
 
-**Recommendation**: For the consent records (which are only needed when the agent is actively running and the user is active), consider `kSecAttrAccessibleWhenUnlocked` combined with `kSecAttrAccessControl` requiring user presence.
+**Risk**: Very low probability of occurrence (SecRandomCopyBytes failure on macOS is essentially theoretical). If triggered, the HMAC key would be weaker than intended but still provide some tamper detection.
+
+**Recommendation**: If `SecRandomCopyBytes` fails, consider failing hard rather than falling back to a weak key. A system where the CSPRNG is broken has larger problems.
 
 ---
 
-### [MEDIUM] KEYCHAIN-003: kSecAttrSynchronizable Not Explicitly Disabled
+### [LOW] NEW-005: IntegrityChecker and PythonProcessManager Use Direct os.Logger with privacy: .public
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Consent/KeychainConsentStore.swift:133-142`
-**Agent**: E3 (Keychain & Encryption Auditor)
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/KMFlowAgent/IntegrityChecker.swift` (multiple lines)
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/KMFlowAgent/PythonProcessManager.swift` (multiple lines)
+**Severity**: LOW
+
+**Description**: While the `AgentLogger` wrapper was fixed to use `privacy: .private`, the `IntegrityChecker` and `PythonProcessManager` use `os.Logger` directly and still mark interpolated values as `privacy: .public`. The exposed values include:
+- File paths (IntegrityChecker lines 143, 182, 190)
+- Error descriptions (IntegrityChecker line 172, PythonProcessManager line 117)
+- Process IDs (PythonProcessManager lines 123, 143, 159)
+- Restart counts and exit codes (PythonProcessManager lines 180, 187, 199)
+
+These values are generally non-sensitive (file paths, PIDs, counts), but the error descriptions could contain unexpected content.
+
+**Risk**: Low. The values logged are mostly operational metadata rather than employee behavioral data. File paths within the app bundle are not sensitive. PIDs and exit codes are routine operational data.
+
+**Recommendation**: Consider migrating `IntegrityChecker` and `PythonProcessManager` to use `AgentLogger` for consistency, or mark only error description strings as `.private` while keeping numeric values as `.public`.
+
+---
+
+### [LOW] NEW-006: Manifest Signature Verification Gracefully Skipped When .sig Missing
+
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/KMFlowAgent/IntegrityChecker.swift:163-164`
+**Severity**: LOW
+
 **Evidence**:
 ```swift
-        let addQuery: [String: Any] = [
-            kSecClass as String:            kSecClassGenericPassword,
-            kSecAttrService as String:      service,
-            kSecAttrAccount as String:      account,
-            kSecValueData as String:        data,
-            kSecAttrAccessible as String:   kSecAttrAccessibleAfterFirstUnlock,
-        ]
+} else {
+    log.warning("integrity.sig not found — HMAC verification skipped")
+}
 ```
-**Description**: Neither `KeychainConsentStore` nor `KeychainHelper` explicitly sets `kSecAttrSynchronizable` to `false`. While the default is `false` (items do not sync to iCloud Keychain), security-sensitive applications should explicitly disable it to prevent future macOS behavior changes or accidental enablement from causing consent tokens or encryption keys to sync to iCloud. This is especially important for enterprise monitoring data that must remain device-local per CISO requirements.
 
-The same issue applies to `KeychainHelper.swift:14-28` and `TransparencyLogController.swift:221-227`.
+**Description**: When `integrity.sig` does not exist, the integrity checker logs a warning but proceeds with the file-level SHA-256 verification only. This means a build that ships without a signature file has no manifest-level integrity protection. An attacker who can modify files in the bundle could replace both `integrity.json` and the Python files with matching hashes.
 
-**Risk**: If Apple changes the default behavior, or if a future code change accidentally adds `kSecAttrSynchronizable: true`, consent records and encryption keys would sync to iCloud, potentially violating data residency requirements and enterprise security policies.
+The code comments (lines 149-155) acknowledge this explicitly: "This protects against accidental corruption and naive file replacement, NOT against a sophisticated attacker who can regenerate both files. Full tamper protection relies on macOS code signing."
 
-**Recommendation**: Explicitly set `kSecAttrSynchronizable: kCFBooleanFalse` in all Keychain queries across `KeychainConsentStore`, `KeychainHelper`, and `TransparencyLogController`.
+**Risk**: Low, given that macOS code signing and notarization are the primary tamper protection mechanisms. The HMAC is a defense-in-depth layer.
 
----
-
-### [MEDIUM] INTEGRITY-001: Integrity Check Only Runs at Startup — Not Periodic
-
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/KMFlowAgent/KMFlowAgentApp.swift:44-57`
-**Agent**: E3 (Keychain & Encryption Auditor)
-**Evidence**:
-```swift
-        // Verify Python bundle integrity before launching
-        if let resourcesURL = Bundle.main.resourceURL?.appendingPathComponent("python") {
-            let integrityResult = IntegrityChecker.verify(bundleResourcesPath: resourcesURL)
-            switch integrityResult {
-            case .passed:
-                break
-            case .failed(let violations):
-                NSLog("KMFlowAgent: Python integrity check failed: \(violations)")
-                stateManager.setError("Integrity check failed — Python bundle may have been tampered with")
-                statusBarController.updateIcon()
-                return
-            case .manifestMissing:
-                NSLog("KMFlowAgent: Python integrity manifest not found (development mode)")
-            }
-        }
-```
-**Description**: The SHA-256 integrity verification of the Python bundle only runs once during `applicationDidFinishLaunching`. After startup, if the Python files are modified (e.g., by a post-exploitation tool replacing a Python module), the agent will continue executing the tampered code for the entire runtime of the process.
-
-Additionally, when the manifest is missing (`.manifestMissing` case), the agent logs it as "development mode" and **continues execution**. This means a production build shipped without an integrity manifest would silently skip all integrity verification.
-
-**Risk**: An attacker who gains write access to the app bundle after launch (or who removes `integrity.json`) can modify the Python intelligence layer to exfiltrate behavioral data, disable PII filtering, or inject false events without triggering any integrity alerts.
-
-**Recommendation**:
-1. Run integrity checks periodically (e.g., every 5 minutes) while the agent is running.
-2. Treat `.manifestMissing` as a failure in release builds (use `#if DEBUG` to allow development bypass).
-3. Verify the integrity manifest itself is signed (e.g., embed the manifest hash in the Swift binary at build time).
-4. Consider using `SIGINFO` or `SIGUSR1` to trigger on-demand integrity checks.
+**Recommendation**: In release/production builds, consider treating a missing `.sig` file the same as a signature mismatch. Development builds can skip via a `#if DEBUG` gate.
 
 ---
 
-### [MEDIUM] INTEGRITY-002: IntegrityChecker Does Not Verify Its Own Manifest Integrity
+## Positive Observations (Updated)
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/KMFlowAgent/IntegrityChecker.swift:56-72`
-**Agent**: E3 (Keychain & Encryption Auditor)
-**Evidence**:
-```swift
-    public static func verify(bundleResourcesPath: URL) -> IntegrityResult {
-        let manifestURL = bundleResourcesPath.appendingPathComponent("integrity.json")
+The following security-positive patterns were confirmed or newly identified in this re-audit:
 
-        guard let manifestData = try? Data(contentsOf: manifestURL) else {
-            log.error("integrity.json not found at \(manifestURL.path, privacy: .public)")
-            return .manifestMissing
-        }
+1. **AES-256-GCM with per-row nonces**: The `decryptIfNeeded` method correctly handles the nonce-ciphertext-tag format produced by Python's `cryptography` library. Per-row nonces are inherent in the design since each encrypted value has its own 12-byte nonce prefix.
 
-        let manifest: ManifestPayload
-        do {
-            manifest = try JSONDecoder().decode(ManifestPayload.self, from: manifestData)
-        } catch {
-            log.error("Failed to decode integrity.json: \(error.localizedDescription, privacy: .public)")
-            return .manifestMissing
-        }
-```
-**Description**: The `integrity.json` manifest is the root of trust for verifying Python file integrity, but the manifest itself is not authenticated. An attacker who can modify files in the bundle can simply replace both the Python files AND the manifest with matching hashes. There is no signature verification (e.g., code signing, embedded hash in the Swift binary, or GPG signature check) on the manifest itself.
+2. **Deterministic HMAC via sorted-keys JSON**: The `JSONEncoder` in `KeychainConsentStore` uses `.sortedKeys` (line 149), ensuring that the same `ConsentRecord` always produces the same JSON byte sequence. This eliminates the class of bugs where key ordering differences cause HMAC verification failures.
 
-**Risk**: The integrity check provides TOCTOU (time-of-check-time-of-use) protection only against naive modifications. A sophisticated attacker will simply regenerate the manifest after modifying Python files.
+3. **HMAC key generated from SecRandomCopyBytes**: The 256-bit HMAC key (line 235) uses Apple's CSPRNG, and the key itself is stored in the Keychain with the same `kSecAttrAccessibleAfterFirstUnlock` + `kSecAttrSynchronizable: false` protections as other secrets.
 
-**Recommendation**:
-1. Embed the expected SHA-256 hash of `integrity.json` as a compile-time constant in the Swift binary.
-2. Alternatively, sign `integrity.json` with a GPG key or X.509 certificate and verify the signature in `IntegrityChecker`.
-3. Rely on macOS code signing as the primary integrity mechanism and use the manifest as a secondary check.
+4. **JSON injection prevention in IPC auth**: The `SocketClient` uses `JSONSerialization.data(withJSONObject:)` (line 88) rather than string interpolation to construct the auth message, preventing an attacker from crafting a token that breaks out of the JSON structure.
+
+5. **Consistent Keychain attributes**: All three Keychain write sites (`KeychainHelper`, `KeychainConsentStore`, `TransparencyLogController.provisionEncryptionKey`) now use identical `kSecAttrAccessibleAfterFirstUnlock` and `kSecAttrSynchronizable: kCFBooleanFalse` settings.
+
+6. **Backend URL validation**: The `PythonProcessManager` (lines 87-94) validates that `KMFLOW_BACKEND_URL` uses the `https` scheme and has a host before forwarding to the Python subprocess. This prevents data exfiltration via a rogue MDM configuration profile.
+
+7. **Hardened runtime correctly configured**: JIT disabled, unsigned executable memory disabled, library validation enabled. These protections are critical given that the app sandbox is disabled.
+
+8. **Sendable and actor isolation**: `SocketClient` is an `actor`, `KeychainConsentStore` is `Sendable`, `ConsentManager` is `@MainActor`-isolated. Swift concurrency safety is properly applied.
+
+9. **HMAC verification uses constant-time comparison**: The `IntegrityChecker` uses CryptoKit's `HMAC<SHA256>.isValidAuthenticationCode` (line 241), which performs constant-time comparison to prevent timing side-channel attacks.
+
+10. **Periodic integrity checking**: The `IntegrityChecker` instance API supports configurable-interval background verification with a violation handler callback, addressing the original concern that integrity was only verified at startup.
 
 ---
 
-### [MEDIUM] CONSENT-003: Consent Checked Only at Startup — Not Enforced Per-Event
+## Risk Assessment (Updated)
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/KMFlowAgent/KMFlowAgentApp.swift:59-84`
-**Agent**: E3 (Keychain & Encryption Auditor)
-**Evidence**:
-```swift
-        let consentManager = ConsentManager(engagementId: engagementId, store: consentStore)
+| Category | Original Score | Current Score | Delta | Notes |
+|----------|:---:|:---:|:---:|---|
+| Keychain Configuration | 5/10 | **8/10** | +3 | Consistent attributes across all sites; no `kSecAttrAccessControl` biometric |
+| Data-at-Rest Encryption | 1/10 | **7/10** | +6 | AES-256-GCM implemented; plaintext fallback weakens guarantee |
+| IPC Channel Security | 2/10 | **7/10** | +5 | Symlink check + auth handshake; no response validation |
+| Consent Integrity | 3/10 | **7/10** | +4 | HMAC-signed; legacy bypass open; runtime enforcement incomplete |
+| Integrity Verification | 6/10 | **8/10** | +2 | HMAC signature + periodic checks; .sig optional |
+| Secret Handling in Logs | 4/10 | **7/10** | +3 | AgentLogger fixed; 2 modules still use direct os.Logger |
+| Key Lifecycle | 2/10 | **4/10** | +2 | Keys generated properly; no rotation mechanism |
+| Process Isolation | 5/10 | **6/10** | +1 | Unused entitlement removed; ADR still needed |
 
-        if consentManager.state == .neverConsented {
-            onboardingWindow = OnboardingWindow()
-            onboardingWindow?.show()
-            stateManager.requireConsent()
-        } else if !consentManager.captureAllowed {
-            stateManager.requireConsent()
-        } else {
-            // Consent granted — start Python subprocess
-            startPythonSubprocess()
-        }
-```
-**Description**: Consent state is loaded from the Keychain once during app launch and is not re-verified before each capture event. The `ConsentManager` instance is created as a local variable in `applicationDidFinishLaunching` and is not stored as a property or passed to the capture pipeline. The `CaptureStateManager` has a `consentRequired` state but no mechanism to transition back to it after the Python subprocess is already running.
+**Overall Security Score: 6.8 / 10** (up from 3.5 / 10)
 
-The `AppSwitchMonitor` checks the blocklist per-event but does not check consent state. The `SocketClient.send()` method transmits events without any consent gate.
-
-**Risk**: If consent is revoked while the agent is running (e.g., through another process writing to the Keychain, or a future UI that calls `revokeConsent()`), the agent will continue capturing and transmitting behavioral data until it is restarted. This violates the principle that consent revocation must take immediate effect.
-
-**Recommendation**:
-1. Store `ConsentManager` as a property of `AppDelegate` and pass it to the capture pipeline.
-2. Check `consentManager.captureAllowed` before every `SocketClient.send()` call.
-3. Subscribe to `ConsentManager.$state` using Combine and stop the Python subprocess immediately when consent changes to `.revoked`.
+The 3.3-point improvement reflects the closure of both CRITICAL findings and most HIGH findings. The remaining gap to 8+ is driven by the plaintext fallback path, incomplete runtime consent enforcement, and the absence of key rotation and biometric-protected Keychain access controls.
 
 ---
 
-## LOW Findings
+## Current Finding Summary
 
-### [LOW] KEYCHAIN-004: Keychain Error Logged to stderr With No Structured Handling
+| Severity | Count | Change from Original |
+|----------|:-----:|:--------------------:|
+| CRITICAL | 0     | -2 (both resolved)   |
+| HIGH     | 0     | -5 (all resolved or downgraded) |
+| MEDIUM   | 5     | +0 net (2 original open, 3 new) |
+| LOW      | 5     | +2 net (2 original open, 3 new) |
+| **Total** | **10** | **-5** |
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Consent/KeychainConsentStore.swift:144-148`
-**Agent**: E3 (Keychain & Encryption Auditor)
-**Evidence**:
-```swift
-        let status = SecItemAdd(addQuery as CFDictionary, nil)
-        if status != errSecSuccess {
-            // Non-fatal: consent will fall back to neverConsented on next load.
-            // os_log is not available here without importing os; use stderr.
-            fputs("[KeychainConsentStore] SecItemAdd failed: \(status)\n", stderr)
-        }
-```
-**Description**: Keychain save failures are written to stderr using `fputs`, bypassing the structured Unified Logging system. The comment says os_log is not available because importing `os` would add a dependency, but the `OSStatus` error code is printed without any additional context (which Keychain item, what engagement). This makes debugging Keychain permission issues in production deployments difficult. More importantly, a silent failure to save consent means the agent might believe consent was stored when it was not.
+### Open Findings by Severity
 
-**Risk**: A Keychain write failure could silently cause consent to revert to `neverConsented` on next load, which would block legitimate capture. In the opposite direction, if a revocation write fails, the old "consented" state would persist. The lack of structured logging makes it difficult for IT administrators to diagnose the issue.
-
-**Recommendation**:
-1. Import `os` and use structured logging (even if it adds a small dependency).
-2. Return a `Result<Void, Error>` from `save()` so callers can react to failures.
-3. Log the account name (not the data) for debugging context.
-
----
-
-### [LOW] KEY-LIFECYCLE-001: No Key Rotation Mechanism
-
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/UI/TransparencyLogController.swift:54`
-**Agent**: E3 (Keychain & Encryption Auditor)
-**Evidence**:
-```swift
-    private let bufferEncryptionKeyKeychainKey = "buffer_encryption_key"
-```
-**Description**: The buffer encryption key (when eventually implemented) is stored under a fixed Keychain account name with no versioning or rotation mechanism. There is no code to generate a new key, re-encrypt data with the new key, or expire old keys. Key rotation is a standard cryptographic hygiene practice, especially for long-running agents that may operate for months.
-
-**Risk**: Without key rotation, a compromised key remains valid indefinitely. If the key is leaked or the Keychain is backed up and restored, all historical and future data can be decrypted.
-
-**Recommendation**:
-1. Design key rotation into the encryption implementation from the start.
-2. Use versioned key names (e.g., `buffer_encryption_key_v1`, `buffer_encryption_key_v2`).
-3. Store the key version alongside each encrypted row so old data can be decrypted during a transition period.
-4. Trigger rotation on engagement change or after a configurable time period.
+| ID | Severity | Title | Priority |
+|----|:--------:|-------|:--------:|
+| SANDBOX-001 | MEDIUM | App Sandbox disabled — ADR needed | Short-term |
+| CONSENT-003 | MEDIUM | Consent not enforced at runtime | Short-term |
+| NEW-001 | MEDIUM | Plaintext fallback weakens encryption | Medium-term |
+| NEW-002 | MEDIUM | IPC auth handshake fire-and-forget | Medium-term |
+| NEW-003 | MEDIUM | Legacy unsigned consent record bypass | Short-term |
+| KEYCHAIN-004 | LOW | Keychain error logged to stderr | Long-term |
+| KEY-LIFECYCLE-001 | LOW | No key rotation mechanism | Long-term |
+| NEW-004 | LOW | HMAC key UUID fallback — weak entropy | Long-term |
+| NEW-005 | LOW | Direct os.Logger with privacy: .public | Long-term |
+| NEW-006 | LOW | Manifest signature skipped when .sig missing | Medium-term |
 
 ---
 
-### [LOW] ENTITLEMENT-001: Unused Entitlement Present
+## Priority Remediation Roadmap (Updated)
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Resources/KMFlowAgent.entitlements:22-23`
-**Agent**: E3 (Keychain & Encryption Auditor)
-**Evidence**:
-```xml
-    <key>com.apple.security.files.user-selected.read-write</key>
-    <true/>
-```
-**Description**: The `com.apple.security.files.user-selected.read-write` entitlement grants access to files the user has explicitly selected (e.g., via Open/Save panels). This entitlement only has meaning within the App Sandbox (`com.apple.security.app-sandbox: true`). Since the sandbox is disabled (line 25), this entitlement has no effect and should be removed to minimize the entitlement surface.
-
-**Risk**: Minimal direct risk since the entitlement is non-functional. However, unnecessary entitlements clutter the security review and may confuse auditors or Apple's notarization review.
-
-**Recommendation**: Remove the `com.apple.security.files.user-selected.read-write` entitlement since it serves no purpose with sandbox disabled.
-
----
-
-## Positive Observations
-
-The following security-positive patterns were identified:
-
-1. **Hardened Runtime correctly configured**: JIT, unsigned executable memory, and library validation are all correctly restricted in the entitlements file.
-
-2. **Consent-first architecture**: The agent requires explicit consent before starting the Python subprocess and will not capture data in the `neverConsented` or `revoked` states (at startup).
-
-3. **L1/L2 PII filtering**: A two-layer PII filtering approach (L1 blocks password fields and password managers at the capture level; L2 scrubs SSN, email, phone, credit card patterns from window titles) is well-structured.
-
-4. **Private browsing detection**: The agent correctly suppresses window titles from Safari Private Browsing, Chrome Incognito, Firefox Private Browsing, Arc Incognito, and Edge InPrivate modes.
-
-5. **Python integrity verification**: SHA-256 manifest verification of the Python bundle at startup is a good defense-in-depth measure, despite the weaknesses noted above.
-
-6. **Application Support directory permissions**: The postinstall script correctly creates `~/Library/Application Support/KMFlowAgent/` with `0700` permissions, restricting access to the owning user.
-
-7. **Keychain service namespacing**: Using separate services (`com.kmflow.agent` and `com.kmflow.agent.consent`) for different types of secrets is good practice that enables independent auditing and targeted cleanup.
-
-8. **Comprehensive uninstaller**: The `uninstall.sh` script correctly removes all artifacts including Keychain items for both service names, Application Support data, logs, and the LaunchAgent plist.
-
-9. **Sendable conformance**: Proper use of Swift's `Sendable` protocol and actor isolation for thread safety.
-
----
-
-## Risk Assessment
-
-| Category | Score (1-10) | Notes |
-|----------|:---:|-------|
-| Keychain Configuration | 5/10 | Good use for consent; missing access controls, inconsistent attributes |
-| Data-at-Rest Encryption | 1/10 | Not implemented despite claims to the contrary |
-| IPC Channel Security | 2/10 | No auth, no encryption, no symlink protection |
-| Consent Integrity | 3/10 | Unsigned tokens, no runtime enforcement, no data cleanup |
-| Integrity Verification | 6/10 | Good startup check but bypassable and non-periodic |
-| Secret Handling in Logs | 4/10 | All messages marked public; no redaction discipline |
-| Key Lifecycle | 2/10 | No rotation, no generation, encryption not implemented |
-| Process Isolation | 5/10 | Hardened runtime good; sandbox disabled with justification |
-
-**Overall Security Score: 3.5 / 10**
-
-The agent has a solid architectural foundation (consent-first, PII filtering, integrity checking) but the implementation has critical gaps in data protection that must be closed before production deployment. The two CRITICAL findings (plaintext data storage and unauthenticated IPC) represent fundamental violations of the privacy promises made to employees during onboarding.
-
----
-
-## Priority Remediation Roadmap
-
-### Immediate (Before Any Production Deployment)
-1. Implement AES-256-GCM encryption for the SQLite capture buffer [CRITICAL DATA-AT-REST-001]
-2. Add authentication and pre-existence checks to the IPC socket [CRITICAL IPC-001]
-3. Fix the false "All data is encrypted" claim in WelcomeView [CRITICAL DATA-AT-REST-001]
-
-### Short-Term (Within 2 Weeks)
-4. Add `kSecAttrAccessControl` with biometric protection to `KeychainHelper` [HIGH KEYCHAIN-001]
-5. Sign consent records with HMAC [HIGH CONSENT-001]
-6. Implement data cleanup on consent revocation [HIGH CONSENT-002]
-7. Fix `AgentLogger` to use `privacy: .private` by default [HIGH LOGGING-001]
+### Short-Term (Next Sprint)
+1. **Wire ConsentManager to AppDelegate** — store as property, register `onRevocation` handler, subscribe to `$state` [CONSENT-003]
+2. **Re-sign legacy consent records on load** — one-time migration to close the unsigned bypass [NEW-003]
+3. **Create ADR for sandbox-disabled decision** [SANDBOX-001]
 
 ### Medium-Term (Within 1 Month)
-8. Add runtime consent enforcement per-event [MEDIUM CONSENT-003]
-9. Make integrity checks periodic and fail-closed in release builds [MEDIUM INTEGRITY-001, INTEGRITY-002]
-10. Explicitly disable iCloud sync on all Keychain items [MEDIUM KEYCHAIN-003]
-11. Document sandbox-disabled rationale in ADR [HIGH SANDBOX-001]
+4. **Add server response validation to IPC auth handshake** [NEW-002]
+5. **Add encrypted/plaintext flag to SQLite schema** and remove plaintext fallback after migration [NEW-001]
+6. **Require integrity.sig in release builds** via `#if DEBUG` gate [NEW-006]
 
-### Long-Term
-12. Implement key rotation mechanism [LOW KEY-LIFECYCLE-001]
-13. Clean up unused entitlements [LOW ENTITLEMENT-001]
-14. Migrate Keychain error logging to structured os_log [LOW KEYCHAIN-004]
+### Long-Term (Backlog)
+7. **Design key rotation** for buffer encryption key and HMAC key [KEY-LIFECYCLE-001]
+8. **Migrate IntegrityChecker and PythonProcessManager to AgentLogger** [NEW-005]
+9. **Consider kSecAttrAccessControl with biometric protection** for high-value keys [KEYCHAIN-004 context]
+10. **Fail hard on SecRandomCopyBytes failure** rather than UUID fallback [NEW-004]

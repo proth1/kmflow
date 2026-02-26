@@ -1,367 +1,320 @@
-# E1: Entitlements & TCC Audit Report
+# E1: Entitlements & TCC Re-Audit Report
 
-**Agent**: E1 (Entitlements & TCC Auditor)
-**Date**: 2026-02-25
+**Agent**: E1 (Entitlements & TCC Re-Auditor)
+**Date**: 2026-02-26
 **Scope**: macOS Task Mining Agent entitlements, TCC profiles, Hardened Runtime, Info.plist, signing scripts
 **Auditor Model**: Claude Opus 4.6
+**Audit Type**: Post-remediation re-audit (Phases 1-3 remediation in PRs #248, #251, #255, #256, #258)
 
 ---
 
-## Finding Summary
+## Summary: Previous vs. Current Findings
 
-| Severity | Count |
-|----------|-------|
-| CRITICAL | 1     |
-| HIGH     | 3     |
-| MEDIUM   | 5     |
-| LOW      | 3     |
-| **Total** | **12** |
+| Severity | Previous (2026-02-25) | Current (2026-02-26) | Change |
+|----------|:---------------------:|:--------------------:|:------:|
+| CRITICAL | 1 | 0 | -1 (RESOLVED) |
+| HIGH | 3 | 0 | -3 (RESOLVED / DOWNGRADED) |
+| MEDIUM | 5 | 3 | -2 (2 RESOLVED, 1 DOWNGRADED to LOW, 2 OPEN) |
+| LOW | 3 | 3 | 0 (1 RESOLVED, 1 DOWNGRADED from MEDIUM, 1 NEW) |
+| **Total** | **12** | **6** | **-6** |
 
----
+### Disposition of All 12 Original Findings
 
-## CRITICAL Findings
-
-### [CRITICAL] ENTITLEMENT-001: Apple Events Entitlement Granted Without Any Code Usage
-
-**File**: `/Users/proth/repos/kmflow/agent/macos/Resources/KMFlowAgent.entitlements:14-15`
-**Agent**: E1 (Entitlements & TCC Auditor)
-**Evidence**:
-```xml
-    <!-- Accessibility API access (CGEventTap, AXUIElement) -->
-    <key>com.apple.security.automation.apple-events</key>
-    <true/>
-```
-**Description**: The `com.apple.security.automation.apple-events` entitlement is set to `true`, granting this monitoring agent the ability to send Apple Events to other applications and control them via AppleScript/OSA. A comprehensive search of all 29 Swift source files under `Sources/` found zero usage of `NSAppleEventDescriptor`, `NSAppleScript`, `osascript`, or any Apple Events API. There is also no `NSAppleEventsUsageDescription` key in `Info.plist`, which means if the entitlement were exercised macOS would show a blank-reason dialog to the user. The comment in the entitlements file ("Accessibility API access") is misleading -- Accessibility APIs (`AXUIElement`, `CGEventTap`) do not require the Apple Events entitlement; they require TCC Accessibility authorization, which is handled separately via the PPPC profile. This entitlement is entirely unnecessary and represents an over-privileged surface.
-
-**Risk**: The `automation.apple-events` entitlement allows a compromised agent to programmatically control any application on the system -- opening files, sending keystrokes, executing shell commands via `do shell script`, and exfiltrating data from other apps. For a workplace monitoring agent deployed to regulated enterprise endpoints, this is an unacceptable escalation path. An attacker who gains code execution within the agent process could use Apple Events to read email, open browser tabs, access password managers, or exfiltrate documents -- all without any additional permission prompts (the entitlement pre-authorizes the capability). This is especially dangerous combined with the lack of App Sandbox (see ENTITLEMENT-004).
-
-**Recommendation**: Remove the entitlement entirely. Set `com.apple.security.automation.apple-events` to `<false/>` or delete the key. Accessibility API access (AXUIElement, CGEventTap, AXIsProcessTrusted) does not depend on this entitlement.
+| ID | Original Severity | Finding | Status | Notes |
+|----|:-----------------:|---------|:------:|-------|
+| ENTITLEMENT-001 | CRITICAL | Apple Events entitlement unused | RESOLVED | Removed in PR #248 |
+| ENTITLEMENT-002 | HIGH | files.user-selected.read-write without sandbox | RESOLVED | Removed in PR #255; comment documents rationale |
+| ENTITLEMENT-003 | HIGH | Hardened Runtime missing in build script | RESOLVED | `--options runtime` added to all codesign invocations in PR #251 |
+| TCC-001 | HIGH | REPLACE_TEAM_ID placeholder in CodeRequirement | PARTIALLY_RESOLVED | customize-profiles.sh added in PR #258; see MEDIUM finding below |
+| ENTITLEMENT-004 | MEDIUM | App Sandbox disabled without ADR | RESOLVED | ADR 001 created in PR #258 |
+| TCC-002 | MEDIUM | ScreenCapture pre-authorized for unimplemented feature | RESOLVED | Removed from TCC profile; clear comment marks it as Phase 2 |
+| SIGNING-001 | MEDIUM | Inconsistent Hardened Runtime between scripts | RESOLVED | Both scripts now use `--options runtime`; `--deep` removed from sign-all.sh |
+| KEYCHAIN-001 | MEDIUM | KeychainHelper missing kSecAttrAccessible | RESOLVED | Now sets `kSecAttrAccessibleAfterFirstUnlock` and `kSecAttrSynchronizable` |
+| LOGGING-001 | MEDIUM | All logger messages privacy: .public | PARTIALLY_RESOLVED | AgentLogger fixed; IntegrityChecker and PythonProcessManager still use .public |
+| PLIST-001 | LOW | NSScreenCaptureUsageDescription for unimplemented feature | OPEN | Still present in Info.plist |
+| PLATFORM-001 | LOW | Platform version alignment | RESOLVED | Positive finding; still correct |
+| CONFIG-001 | LOW | Placeholder engagement ID | RESOLVED | By-design template placeholder; customize-profiles.sh covers deployment |
 
 ---
 
-## HIGH Findings
+## Current Risk Score
 
-### [HIGH] ENTITLEMENT-002: File Access Entitlement Without Sandbox Provides Unrestricted Filesystem Access
+**Overall Entitlement & TCC Security Score: 8.5 / 10** (up from 6.5/10)
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Resources/KMFlowAgent.entitlements:22-25`
-**Agent**: E1 (Entitlements & TCC Auditor)
-**Evidence**:
-```xml
-    <!-- File access for local SQLite buffer -->
-    <key>com.apple.security.files.user-selected.read-write</key>
-    <true/>
-    <key>com.apple.security.app-sandbox</key>
-    <false/>
-```
-**Description**: The `com.apple.security.files.user-selected.read-write` entitlement is declared but is functionally meaningless because the App Sandbox is disabled (`com.apple.security.app-sandbox` is `false`). When sandboxing is off, the process already has full filesystem access inherited from the user's POSIX permissions. The `user-selected.read-write` entitlement only extends Powerbox-mediated file access within a sandboxed environment. Including it without sandbox creates a misleading security posture -- it looks like file access is scoped, but it is not.
-
-The actual file access patterns in code are narrow and well-defined:
-- SQLite buffer at `~/Library/Application Support/KMFlowAgent/buffer.db` (TransparencyLogController.swift:70)
-- Unix domain socket at `~/Library/Application Support/KMFlowAgent/agent.sock` (SocketClient.swift:12)
-- Bundle resources read at `Bundle.main.resourceURL` (IntegrityChecker.swift, PythonProcessManager.swift)
-
-**Risk**: Without sandbox, any code execution vulnerability in the agent or the embedded Python layer has unrestricted filesystem access -- reading SSH keys, browser profiles, Keychain database files, and any other user-accessible files on disk. The `files.user-selected.read-write` entitlement provides no mitigation when sandbox is off.
-
-**Recommendation**: Either (a) remove the `user-selected.read-write` entitlement since it has no effect without sandbox, or (b) enable App Sandbox and scope file access to the specific directories needed (Application Support, bundle resources). If sandboxing is infeasible due to CGEventTap/AXUIElement requirements (which currently cannot run in sandbox on macOS), document this explicitly and remove the misleading entitlement. See also ENTITLEMENT-004.
+The CRITICAL and all HIGH findings have been resolved. The remaining issues are MEDIUM and LOW severity items that do not block deployment but should be addressed before general availability. The entitlements file is now minimal (network.client only, sandbox explicitly off with documented ADR), the TCC profile is scoped to Accessibility only, and all signing scripts consistently apply Hardened Runtime.
 
 ---
 
-### [HIGH] ENTITLEMENT-003: Build Script Does Not Enable Hardened Runtime Flag
+## Remaining Findings (6)
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/scripts/build-app-bundle.sh:336-341`
-**Agent**: E1 (Entitlements & TCC Auditor)
-**Evidence**:
-```bash
-# 4. Sign the Swift binary with entitlements
-codesign \
-    --force \
-    --sign "$CODESIGN_IDENTITY" \
-    --timestamp \
-    --entitlements "${RESOURCES}/KMFlowAgent.entitlements" \
-    "${MACOS_BUNDLE}/${SWIFT_BINARY_NAME}"
-```
-**Description**: The `build-app-bundle.sh` script performs codesigning of both the Swift binary (lines 336-341) and the bundle (lines 344-350) but neither invocation includes `--options runtime`, which is the flag that enables Hardened Runtime. In contrast, the standalone `sign-all.sh` script correctly includes `--options runtime` at line 77. This means builds produced by `build-app-bundle.sh` (the primary build pipeline) will NOT have Hardened Runtime enabled, while re-signing with `sign-all.sh` would enable it. This inconsistency creates two problems: (1) the primary build artifact lacks Hardened Runtime protections, and (2) the entitlements file's Hardened Runtime declarations (lines 6-11, disabling JIT, unsigned memory, and library validation) are inert without the runtime flag.
-
-**Risk**: Without Hardened Runtime: (a) the binary cannot be notarized by Apple, blocking enterprise deployment via standard channels; (b) DYLD environment variable injection attacks become possible; (c) code injection via `DYLD_INSERT_LIBRARIES` is not blocked; (d) the explicit disablement of JIT, unsigned memory, and library validation in the entitlements file has no effect. For a monitoring agent handling sensitive employee activity data, this leaves the process unprotected against the most common macOS code injection techniques.
-
-**Recommendation**: Add `--options runtime` to both codesign invocations in `build-app-bundle.sh`:
-```bash
-codesign \
-    --force \
-    --sign "$CODESIGN_IDENTITY" \
-    --options runtime \
-    --timestamp \
-    --entitlements "${RESOURCES}/KMFlowAgent.entitlements" \
-    "${MACOS_BUNDLE}/${SWIFT_BINARY_NAME}"
-```
-Apply the same fix to the bundle-level signing at line 344-350.
-
----
-
-### [HIGH] TCC-001: TCC Profile Contains Placeholder CodeRequirement That Would Fail Validation
+### [MEDIUM] TCC-001-R: TCC CodeRequirement Placeholder Remains in Source Template
 
 **File**: `/Users/proth/repos/kmflow/agent/macos/installer/profiles/com.kmflow.agent.tcc.mobileconfig:107`
-**Agent**: E1 (Entitlements & TCC Auditor)
+**Agent**: E1 (Entitlements & TCC Re-Auditor)
+**Status**: PARTIALLY_RESOLVED
 **Evidence**:
 ```xml
 <key>CodeRequirement</key>
 <string>identifier "com.kmflow.agent" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] and certificate leaf[field.1.2.840.113635.100.6.1.13] and certificate leaf[subject.OU] = "REPLACE_TEAM_ID"</string>
 ```
-**Description**: Both the Accessibility (line 107) and ScreenCapture (line 140) CodeRequirement strings contain the literal placeholder `REPLACE_TEAM_ID` instead of an actual Apple Developer Team ID. If this profile is deployed to production MDM without replacing this placeholder, the CodeRequirement will never match the signed binary, and TCC pre-authorization will silently fail. Users would be prompted for manual Accessibility approval -- defeating the purpose of the MDM-managed PPPC profile.
+**Description**: The `customize-profiles.sh` script (added in PR #258) correctly validates the Team ID format (10-character alphanumeric) and performs string substitution across all `.mobileconfig` files. This is a significant improvement -- there is now a documented, validated path from template to deployment-ready profile. However, two gaps remain: (1) there is no CI gate that prevents the raw template from being deployed to MDM without running `customize-profiles.sh`, and (2) the customized profiles are written to a `customized/` subdirectory that is not committed to source control, so the deployment-ready profile exists only as a local artifact with no version-controlled audit trail.
 
-While the file header contains a comment (lines 97-105) instructing replacement, there is no build-time or CI validation to prevent deployment with the placeholder intact. For a profile that is `PayloadRemovalDisallowed: true` (line 53), deploying a broken profile requires MDM intervention to remove and redeploy.
+**Risk**: An MDM administrator could deploy the raw template from source control rather than the customized output, resulting in silent TCC authorization failure. The probability is reduced by the clear REPLACE_TEAM_ID placeholder and the script's documentation, but enterprise deployments with automated MDM pipelines remain at risk.
 
-**Risk**: Silent failure of enterprise permission pre-authorization. Employees would see unexpected permission prompts, and in supervised MDM environments where users cannot grant TCC permissions themselves, the agent would simply not work. This would result in a failed enterprise deployment. Additionally, if the team ID were replaced incorrectly, TCC would pre-authorize a different application -- potentially one controlled by an attacker with the wrong team ID.
-
-**Recommendation**: (1) Add a CI validation step that checks for `REPLACE_TEAM_ID` and fails the build if found in release artifacts. (2) Consider parameterizing the team ID as a build variable rather than embedding a placeholder in source control. (3) Add a `verify-profiles.sh` script that validates CodeRequirement strings match the actual signing identity before MDM deployment.
+**Recommendation**: (1) Add a CI check (e.g., `grep -r REPLACE_TEAM_ID installer/profiles/customized/` that fails the build if the customized output still contains placeholders). (2) Consider adding a `--verify` flag to `customize-profiles.sh` that checks the output directory for remaining placeholders. (3) Document the profile customization step in the deployment runbook with a verification checklist.
 
 ---
 
-## MEDIUM Findings
+### [MEDIUM] LOGGING-001-R: IntegrityChecker and PythonProcessManager Still Use privacy: .public
 
-### [MEDIUM] ENTITLEMENT-004: App Sandbox Explicitly Disabled -- Enterprise Risk Accepted Without Documentation
-
-**File**: `/Users/proth/repos/kmflow/agent/macos/Resources/KMFlowAgent.entitlements:24-25`
-**Agent**: E1 (Entitlements & TCC Auditor)
-**Evidence**:
-```xml
-    <key>com.apple.security.app-sandbox</key>
-    <false/>
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/KMFlowAgent/IntegrityChecker.swift:143,172,182,190,197,200`
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/KMFlowAgent/PythonProcessManager.swift:67,117,123,143,159,180,187,199`
+**Agent**: E1 (Entitlements & TCC Re-Auditor)
+**Status**: PARTIALLY_RESOLVED
+**Evidence from IntegrityChecker.swift**:
+```swift
+log.error("integrity.json not found at \(manifestURL.path, privacy: .public)")
+log.error("Integrity violation — digest mismatch: \(relativePath, privacy: .public) expected=\(expectedHex, privacy: .public) actual=\(actualHex, privacy: .public)")
 ```
-**Description**: The App Sandbox is explicitly disabled. For this particular agent, this is likely a necessary technical decision -- `CGEventTap` and `AXUIElement` APIs required for input monitoring and window title capture are not available to sandboxed apps on macOS. However, the decision to disable sandbox carries significant security implications that are not documented anywhere in the codebase or entitlements file.
+**Evidence from PythonProcessManager.swift**:
+```swift
+log.error("kmflow-python shim not found at \(shimURL.path, privacy: .public)")
+log.error("Failed to launch Python subprocess: \(error.localizedDescription, privacy: .public)")
+log.info("Python subprocess started with PID \(proc.processIdentifier, privacy: .public)")
+```
+**Description**: The `AgentLogger` wrapper (used by most of the codebase) was correctly updated to use `privacy: .private` in all methods (PR #256). However, `IntegrityChecker.swift` and `PythonProcessManager.swift` use `os.Logger` directly (bypassing `AgentLogger`) and retain 14 occurrences of `privacy: .public`. The data logged includes file paths (which may contain usernames in `~/Library/...` paths), error descriptions, and process identifiers.
 
-The agent accesses: Keychain (consent/secrets), filesystem (SQLite buffer), network (backend communication), process creation (Python subprocess), and low-level input APIs. Without sandbox, all of these capabilities are unrestricted.
+The current content being logged (file paths, PIDs, hash digests) is relatively low-risk. File paths could leak the macOS username (`/Users/jsmith/...`) which is PII under GDPR. Error descriptions from the system could theoretically contain sensitive context.
 
-**Risk**: An unsandboxed monitoring agent running with Accessibility permissions is one of the highest-privilege user-space processes on macOS. Any code execution vulnerability (in the Swift layer, the embedded Python layer, or vendored Python dependencies) grants the attacker the full privileges of the running user plus Accessibility control of the entire GUI. Enterprise CISOs will flag this during security review.
+**Risk**: System logs on macOS are readable by any admin user and are included in sysdiagnose archives. Leaking the local username via file paths in system-wide logs is a minor GDPR concern. The risk is lower than the original finding because the most dangerous call sites (in the capture layer) now use the private `AgentLogger`.
 
-**Recommendation**: Document the sandbox exclusion in an Architecture Decision Record (ADR) explaining: (1) why sandbox is incompatible with the required Accessibility APIs, (2) what compensating controls exist (integrity checking, PII filtering, blocklist, consent management), and (3) the residual risk accepted. Include this ADR reference in the entitlements file comment. Investigate whether macOS 15+ Sequoia has expanded sandbox compatibility for Accessibility APIs.
+**Recommendation**: Migrate `IntegrityChecker` and `PythonProcessManager` to use `AgentLogger` instead of `os.Logger` directly. If direct `os.Logger` usage is preferred for these modules (e.g., for subsystem separation), change all interpolations to `privacy: .private` and selectively mark only safe values (PID integers, file counts) as `.public`.
 
 ---
 
-### [MEDIUM] TCC-002: Screen Capture TCC Authorization Pre-Approved for Unimplemented Feature
+### [MEDIUM] INTEGRITY-001: HMAC Key Co-located With Signature Provides Limited Tamper Protection
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/installer/profiles/com.kmflow.agent.tcc.mobileconfig:130-151`
-**Agent**: E1 (Entitlements & TCC Auditor)
-**Evidence**:
-```xml
-<key>ScreenCapture</key>
-<array>
-    <dict>
-        <key>Identifier</key>
-        <string>com.kmflow.agent</string>
-        ...
-        <key>Allowed</key>
-        <true/>
-        ...
-        <key>Comment</key>
-        <string>KMFlow Agent optionally captures screenshots when content_level capture policy is enabled. Disable this block if action_level policy is used.</string>
-    </dict>
-</array>
-```
-**Description**: The TCC profile pre-authorizes Screen Capture (`ScreenCapture` service, line 130) with `Allowed: true`. However, a comprehensive search of all Swift source files found zero usage of screen capture APIs (`SCStream`, `SCShareableContent`, `CGWindowListCreateImage`, `CGImage` capture, or any screenshot functionality). The `Info.plist` declares `NSScreenCaptureUsageDescription` referencing "Phase 2" (line 35), and `PermissionsView.swift` (line 150) explicitly states it is "optional and only needed for screenshot analysis (Phase 2)". The `AgentConfig` has `screenshotEnabled: Bool` defaulting to `false`, but there is no implementation behind this flag.
-
-The only usage of `CGWindowListCopyWindowInfo` is in `PermissionsManager.swift:35` as a permission-detection heuristic, not actual screen capture.
-
-**Risk**: Pre-authorizing Screen Capture via MDM PPPC means the TCC database will silently grant this capability without user consent. If the agent is compromised before the feature is actually implemented, an attacker could add screen capture code (especially through the unsandboxed Python subprocess) and capture screenshots without any user-visible permission prompt. This violates the principle of least privilege -- pre-authorizing capabilities before they are needed.
-
-**Recommendation**: Remove the ScreenCapture block from the TCC profile. The profile's own comment says "Comment out this block if screen capture is not needed." Add the ScreenCapture authorization in a future profile version when the Phase 2 feature is actually implemented. Also remove `NSScreenCaptureUsageDescription` from `Info.plist` until the feature exists.
-
----
-
-### [MEDIUM] SIGNING-001: Inconsistent Hardened Runtime Between Build and Re-signing Scripts
-
-**File**: `/Users/proth/repos/kmflow/agent/macos/scripts/sign-all.sh:73-80` vs `/Users/proth/repos/kmflow/agent/macos/scripts/build-app-bundle.sh:336-350`
-**Agent**: E1 (Entitlements & TCC Auditor)
-**Evidence from sign-all.sh**:
-```bash
-codesign \
-    --deep \
-    --force \
-    --sign "$IDENTITY" \
-    --options runtime \
-    --entitlements "$ENTITLEMENTS_PATH" \
-    --timestamp \
-    "$APP_PATH"
-```
+**File**: `/Users/proth/repos/kmflow/agent/macos/scripts/build-app-bundle.sh:308-324`
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/KMFlowAgent/IntegrityChecker.swift:147-165`
+**Agent**: E1 (Entitlements & TCC Re-Auditor)
+**Status**: NEW
 **Evidence from build-app-bundle.sh**:
-```bash
-codesign \
-    --force \
-    --deep \
-    --sign "$CODESIGN_IDENTITY" \
-    --timestamp \
-    --entitlements "${RESOURCES}/KMFlowAgent.entitlements" \
-    "$APP_BUNDLE"
+```python
+# Compute HMAC-SHA256 signature with a per-build random key.
+# The key is embedded in the signature file alongside the HMAC.
+hmac_key = secrets.token_bytes(32)
+sig = hmac.new(hmac_key, manifest_json.encode(), hashlib.sha256).hexdigest()
+sig_payload = {
+    "hmac_sha256": sig,
+    "key_hex": hmac_key.hex(),
+    "manifest_sha256": hashlib.sha256(manifest_json.encode()).hexdigest(),
+}
 ```
-**Description**: The `sign-all.sh` script includes `--options runtime` (line 77), enabling Hardened Runtime. The `build-app-bundle.sh` script does NOT include this flag in either of its two codesign invocations (lines 336-341 for the binary, lines 344-350 for the bundle). This means:
-- Fresh builds (`build-app-bundle.sh`) lack Hardened Runtime
-- Re-signed builds (`sign-all.sh`) have Hardened Runtime
-
-The build script also uses `--deep` on line 346 (signing the bundle), which Apple deprecates for production builds because it re-signs nested code items that may already have correct signatures, potentially introducing mismatches.
-
-**Risk**: If the standard build pipeline is `build-app-bundle.sh`, production artifacts will lack Hardened Runtime. Developers might assume the build is protected because the entitlements file explicitly disables dangerous capabilities (JIT, unsigned memory, library validation), but those declarations are only enforced when Hardened Runtime is active. This creates a false sense of security.
-
-**Recommendation**: Standardize on a single signing approach. Add `--options runtime` to `build-app-bundle.sh`. Consider removing the `--deep` flag from the bundle-level sign and instead signing each component individually (which the script already does in steps 1-4), relying on `--deep` only for verification.
-
----
-
-### [MEDIUM] KEYCHAIN-001: KeychainHelper Does Not Set kSecAttrAccessible Protection Class
-
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Utilities/KeychainHelper.swift:15-20`
-**Agent**: E1 (Entitlements & TCC Auditor)
-**Evidence**:
+**Evidence from IntegrityChecker.swift**:
 ```swift
-    public func save(key: String, data: Data) throws {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key,
-            kSecValueData as String: data,
-        ]
+// Threat model: the HMAC key is co-located with the signature inside
+// the code-signed bundle. This protects against accidental corruption
+// and naive file replacement, NOT against a sophisticated attacker who
+// can regenerate both files.
 ```
-**Description**: The `KeychainHelper` utility (used for general agent secrets) does not set `kSecAttrAccessible` when saving Keychain items. Without this attribute, the system defaults to `kSecAttrAccessibleWhenUnlocked`, which is reasonable but inconsistent with the `KeychainConsentStore` implementation that explicitly sets `kSecAttrAccessibleAfterFirstUnlock` (line 141 in `KeychainConsentStore.swift`). This inconsistency means: (a) general agent secrets are only accessible when the device is unlocked, while consent records persist after first unlock, and (b) the security posture of Keychain items depends on which storage path is used, creating unpredictable behavior.
+**Description**: The integrity manifest HMAC signature stores the HMAC key alongside the HMAC value in `integrity.sig`. An attacker who can write to the bundle's Resources directory can trivially regenerate both the manifest and its signature. The code comments correctly acknowledge this limitation (lines 148-155 of IntegrityChecker.swift), and full tamper protection is delegated to macOS code signing. This is a sound design for a code-signed bundle.
 
-**Risk**: If the agent needs to operate during a user session where the screensaver is active (device locked), secrets stored via `KeychainHelper` would be inaccessible while consent records via `KeychainConsentStore` would still work. This could cause silent failures. The lack of explicit accessibility class also means the default could change with OS updates. For enterprise deployments, having undocumented Keychain behavior creates audit concerns.
+However, the `IntegrityChecker.verify()` method logs a warning and continues if `integrity.sig` is missing (line 163-164: "HMAC verification skipped"). This means an attacker could delete the `.sig` file and modify the manifest, and the checker would only log a warning rather than treating the missing signature as a failure. The HMAC check is effectively opt-out.
 
-**Recommendation**: Add `kSecAttrAccessibleAfterFirstUnlock` to `KeychainHelper.save()` for consistency with `KeychainConsentStore`, or document the intentional difference. Standardize on one Keychain protection class across the codebase.
+**Risk**: In scenarios where code signing is not enforced (development builds, CI pipelines, or if Gatekeeper is bypassed), the integrity check provides the primary tamper detection. Allowing the HMAC verification to be skipped by deleting one file weakens this defense-in-depth layer.
+
+**Recommendation**: Treat a missing `integrity.sig` as a verification failure when the build is a release build (e.g., check for a `KMFLOW_RELEASE_BUILD` environment variable or a build configuration flag embedded in Info.plist). In development builds, the warning-and-continue behavior is acceptable. Alternatively, fail closed: if `integrity.sig` is expected to exist (as it is generated by the build script), its absence should be treated as an integrity violation.
 
 ---
 
-### [MEDIUM] LOGGING-001: All Logger Messages Use privacy: .public, Risking PII in System Logs
-
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Utilities/Logger.swift:14-26`
-**Agent**: E1 (Entitlements & TCC Auditor)
-**Evidence**:
-```swift
-    public func info(_ message: String) {
-        logger.info("\(message, privacy: .public)")
-    }
-    public func debug(_ message: String) {
-        logger.debug("\(message, privacy: .public)")
-    }
-    public func warning(_ message: String) {
-        logger.warning("\(message, privacy: .public)")
-    }
-    public func error(_ message: String) {
-        logger.error("\(message, privacy: .public)")
-    }
-```
-**Description**: The `AgentLogger` wrapper marks ALL log message content as `privacy: .public`, which means every log message is visible in cleartext in `Console.app`, `log stream`, sysdiagnose bundles, and crash reports -- even on non-development devices. The same pattern appears in `PythonProcessManager.swift` and `IntegrityChecker.swift`. While the agent currently logs operational messages (PID numbers, file paths, integrity violations), any future code that logs window titles, application names, engagement IDs, or user names through this logger would expose that data in system logs accessible to any admin on the machine.
-
-**Risk**: System logs on macOS are readable by any admin user and are included in sysdiagnose archives that may be shared with Apple or IT support. If a developer inadvertently logs captured event data (window titles, app names) through `AgentLogger`, PII from the monitored employee would leak into system-wide logs, violating the data minimization guarantees the agent promises. For regulated enterprises (GDPR, HIPAA), this could constitute a compliance violation.
-
-**Recommendation**: Change the default privacy level to `.private` (which redacts in production logs but shows in debug builds). Provide a separate `publicInfo()` method for messages that are explicitly safe for system logs (e.g., version strings, startup confirmations). Audit all existing log call sites to ensure no sensitive data is logged.
-
----
-
-## LOW Findings
-
-### [LOW] PLIST-001: NSScreenCaptureUsageDescription Present for Unimplemented Feature
+### [LOW] PLIST-001-R: NSScreenCaptureUsageDescription Still Present for Unimplemented Feature
 
 **File**: `/Users/proth/repos/kmflow/agent/macos/Resources/Info.plist:34-35`
-**Agent**: E1 (Entitlements & TCC Auditor)
+**Agent**: E1 (Entitlements & TCC Re-Auditor)
+**Status**: OPEN
 **Evidence**:
 ```xml
-    <key>NSScreenCaptureUsageDescription</key>
-    <string>KMFlow Agent needs Screen Recording access for optional screenshot-based process analysis (Phase 2).</string>
+<key>NSScreenCaptureUsageDescription</key>
+<string>KMFlow Agent needs Screen Recording access for optional screenshot-based process analysis (Phase 2).</string>
 ```
-**Description**: `Info.plist` declares a usage description for Screen Recording, but no screen capture code exists in the current codebase. While this is not a vulnerability per se, it means macOS may present a "KMFlow Agent would like to record the contents of your screen" dialog if certain APIs are invoked (even the permission-check heuristic in `PermissionsManager.swift` could trigger this on some macOS versions). The description referencing "Phase 2" in a production plist is confusing for end users.
+**Description**: The ScreenCapture TCC authorization was correctly removed from the PPPC profile (TCC-002 RESOLVED). However, the `NSScreenCaptureUsageDescription` key remains in `Info.plist`. While this does not grant any permission by itself, it means macOS may still present a "KMFlow Agent would like to record the contents of your screen" dialog if certain APIs are invoked. The text references "Phase 2" -- an internal milestone label that should not appear in user-facing strings.
 
-**Risk**: User confusion. Employees seeing a screen recording permission prompt for an agent that does not actually capture screenshots may distrust the tool or refuse to grant the real (Accessibility) permission.
+The `EventProtocol.swift` still defines `case screenCapture = "screen_capture"` (line 25) and `TransparencyLogView.swift` still has a display case for it (line 239). These are enum definitions for a future feature and do not trigger any permission prompts on their own.
 
-**Recommendation**: Remove `NSScreenCaptureUsageDescription` until the screen capture feature is implemented. Update the usage description text to remove internal phase references before any production deployment.
+**Risk**: Low. The description alone does not grant permission. However, on some macOS versions, the PermissionsManager's screen recording check heuristic could trigger the prompt. Users seeing an unexpected screen recording dialog for a "Phase 2" feature would understandably distrust the agent.
+
+**Recommendation**: Remove `NSScreenCaptureUsageDescription` from `Info.plist` until the screen capture feature is implemented. If kept for forward-compatibility, at minimum change the text to remove the "Phase 2" internal reference and write a user-appropriate description.
 
 ---
 
-### [LOW] PLATFORM-001: Platform Version Alignment Is Correct
+### [LOW] TCC-003: TCC Profile Header Comment Still References Screen Capture
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Package.swift:9` and `/Users/proth/repos/kmflow/agent/macos/Resources/Info.plist:27-28`
-**Agent**: E1 (Entitlements & TCC Auditor)
-**Evidence from Package.swift**:
+**File**: `/Users/proth/repos/kmflow/agent/macos/installer/profiles/com.kmflow.agent.tcc.mobileconfig:8`
+**Agent**: E1 (Entitlements & TCC Re-Auditor)
+**Status**: NEW
+**Evidence**:
+```xml
+<!--
+  com.kmflow.agent.tcc.mobileconfig — TCC/PPPC Configuration Profile
+  ...
+  This profile pre-authorises the KMFlow Agent for Accessibility and
+  (optionally) Screen Capture access via MDM-pushed Privacy Preferences
+  Policy Control (PPPC).
+-->
+```
+**Description**: The XML header comment on line 8 still states the profile authorizes "Accessibility and (optionally) Screen Capture access." The ScreenCapture block was correctly removed from the profile payload (the body now only contains Accessibility), but the header comment was not updated to reflect this. This is a documentation inconsistency that could confuse MDM administrators reviewing the profile.
+
+**Risk**: Low. This is a comment-only issue with no functional impact. An MDM administrator reading the header might expect to find a ScreenCapture block and wonder if it was accidentally removed.
+
+**Recommendation**: Update the header comment to read: "This profile pre-authorises the KMFlow Agent for Accessibility access via MDM-pushed Privacy Preferences Policy Control (PPPC)." Remove the Screen Capture reference.
+
+---
+
+### [LOW] CONFIG-002: Sequential Placeholder PayloadUUIDs in MDM Profiles
+
+**File**: `/Users/proth/repos/kmflow/agent/macos/installer/profiles/com.kmflow.agent.tcc.mobileconfig:49,78`
+**File**: `/Users/proth/repos/kmflow/agent/macos/installer/profiles/com.kmflow.agent.mobileconfig:40,70`
+**Agent**: E1 (Entitlements & TCC Re-Auditor)
+**Status**: OPEN
+**Evidence from tcc.mobileconfig**:
+```xml
+<key>PayloadUUID</key>
+<string>C3D4E5F6-A7B8-9012-CDEF-123456789012</string>
+...
+<key>PayloadUUID</key>
+<string>D4E5F6A7-B8C9-0123-DEFA-234567890123</string>
+```
+**Evidence from com.kmflow.agent.mobileconfig**:
+```xml
+<key>PayloadUUID</key>
+<string>A1B2C3D4-E5F6-7890-ABCD-EF1234567890</string>
+...
+<key>PayloadUUID</key>
+<string>B2C3D4E5-F6A7-8901-BCDE-F12345678901</string>
+```
+**Description**: All four PayloadUUID values across both profiles use visually sequential hex patterns (A1B2C3D4, B2C3D4E5, C3D4E5F6, D4E5F6A7). While these are syntactically valid UUIDs, they are not RFC 4122 compliant (no version/variant bits set) and their sequential pattern makes it obvious they are placeholders. If two different organizations deploy profiles with these same UUIDs, MDM systems may treat them as the same profile, causing conflicts.
+
+The `customize-profiles.sh` script replaces `REPLACE_TEAM_ID` and `REPLACE_ORG_NAME` but does not regenerate PayloadUUIDs. Each deployment should have unique UUIDs.
+
+**Risk**: Low. PayloadUUID collisions between different organizations would cause MDM profile management confusion but no direct security impact. Within a single organization deploying to multiple engagement groups, reusing UUIDs could cause profile update conflicts.
+
+**Recommendation**: Add UUID regeneration to `customize-profiles.sh` using `uuidgen` for each PayloadUUID. Alternatively, document that MDM administrators must regenerate UUIDs before deployment.
+
+---
+
+## Resolved Findings Detail
+
+### [RESOLVED] ENTITLEMENT-001: Apple Events Entitlement (was CRITICAL)
+
+**Resolved in**: PR #248
+**Evidence**: The `com.apple.security.automation.apple-events` key has been completely removed from `KMFlowAgent.entitlements`. The entitlements file now contains only:
+- `com.apple.security.cs.allow-jit` = false
+- `com.apple.security.cs.allow-unsigned-executable-memory` = false
+- `com.apple.security.cs.disable-library-validation` = false
+- `com.apple.security.network.client` = true
+- `com.apple.security.app-sandbox` = false
+
+This is a minimal, correct entitlement set for a Hardened Runtime monitoring agent that requires network access and cannot run in sandbox.
+
+### [RESOLVED] ENTITLEMENT-002: files.user-selected.read-write (was HIGH)
+
+**Resolved in**: PR #255
+**Evidence**: The entitlement has been removed. A descriptive comment replaces it:
+```xml
+<!-- App Sandbox is disabled; files.user-selected.read-write entitlement
+     removed because it has no effect outside the sandbox. -->
+```
+
+### [RESOLVED] ENTITLEMENT-003: Hardened Runtime Missing in Build Script (was HIGH)
+
+**Resolved in**: PR #251
+**Evidence**: All codesign invocations in `build-app-bundle.sh` now include `--options runtime`:
+- Line 344-346: dylib/so signing includes `--options runtime`
+- Line 351: Python binary signing includes `--options runtime`
+- Line 361-366: Swift binary signing includes `--options runtime`
+- Line 370-376: Bundle signing includes `--options runtime`
+
+The `--deep` flag has also been removed from the bundle-level signing. Components are signed individually (inside-out), and the bundle is signed as a whole without re-traversing nested code. This matches Apple's recommended practice.
+
+### [RESOLVED] ENTITLEMENT-004: App Sandbox Disabled Without ADR (was MEDIUM)
+
+**Resolved in**: PR #258
+**Evidence**: ADR 001 (`agent/macos/docs/adr/001-sandbox-disabled.md`) provides a thorough architectural decision record documenting:
+- Why sandbox is incompatible (AXUIElement, CGEventTap, Unix socket IPC, Python.framework)
+- Compensating controls (Hardened Runtime, notarization, entitlement minimization, TCC enforcement)
+- Alternatives considered (temporary exceptions, split architecture)
+- Distribution implications (no App Store, Developer ID + notarization path)
+
+### [RESOLVED] TCC-002: ScreenCapture Pre-Authorized (was MEDIUM)
+
+**Resolved in**: PR #258 (or related)
+**Evidence**: The ScreenCapture block has been completely removed from `com.kmflow.agent.tcc.mobileconfig`. Lines 125-130 now contain only a comment explaining the removal and referencing a future separate profile for Phase 2.
+
+### [RESOLVED] SIGNING-001: Inconsistent Hardened Runtime Between Scripts (was MEDIUM)
+
+**Resolved in**: PR #251
+**Evidence**: Both `build-app-bundle.sh` and `sign-all.sh` now consistently use `--options runtime` in all codesign invocations. The `sign-all.sh` script no longer uses `--deep` -- it signs nested binaries individually (deepest-first) then signs the bundle, matching the pattern in `build-app-bundle.sh`.
+
+### [RESOLVED] KEYCHAIN-001: Missing kSecAttrAccessible (was MEDIUM)
+
+**Resolved in**: PR #256
+**Evidence**: `KeychainHelper.save()` now sets both protection attributes:
 ```swift
-    platforms: [
-        .macOS(.v13),
-    ],
+kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+kSecAttrSynchronizable as String: kCFBooleanFalse!,
 ```
-**Evidence from Info.plist**:
-```xml
-    <key>LSMinimumSystemVersion</key>
-    <string>13.0</string>
-```
-**Description**: The minimum macOS version is consistent between `Package.swift` (`.macOS(.v13)`) and `Info.plist` (`LSMinimumSystemVersion: 13.0`). macOS 13 Ventura is a reasonable minimum for an agent using modern Swift concurrency, SwiftUI, and Accessibility APIs. No finding to report here -- this is a verification of correct alignment.
-
-**Risk**: None -- this check passes.
-
-**Recommendation**: No action needed. When raising the minimum version, update both files simultaneously.
+This matches the `KeychainConsentStore` implementation, establishing a consistent Keychain protection posture across the codebase.
 
 ---
 
-### [LOW] PLIST-002: LSUIElement Correctly Configured as Menu Bar Agent
+## Positive Security Observations (Unchanged or Improved)
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Resources/Info.plist:23-24`
-**Agent**: E1 (Entitlements & TCC Auditor)
-**Evidence**:
-```xml
-    <key>LSUIElement</key>
-    <true/>
-```
-**Description**: The app is correctly configured as an LSUIElement (no Dock icon, no menu bar entry from AppKit's perspective). This is the expected behavior for a background monitoring agent that operates from the system menu bar. The StatusBarController creates an NSStatusItem independently. This is correct and expected.
+1. **Minimal entitlement surface**: Only `network.client` is actively granted. All Hardened Runtime dangerous capabilities explicitly disabled (JIT, unsigned memory, library validation all false).
 
-**Risk**: None -- this is a positive finding.
+2. **TCC profile scoped to Accessibility only**: ScreenCapture removed. StaticCode=false provides runtime re-validation of binary signatures.
 
-**Recommendation**: No action needed.
+3. **Consistent Hardened Runtime**: All codesign invocations across both build and re-signing scripts include `--options runtime`.
 
----
+4. **No `--deep` flag**: Components are signed individually in inside-out order, then the bundle is signed as a whole. This prevents the masking of individual signing failures that `--deep` can cause.
 
-### [LOW] CONFIG-001: MDM Configuration Profile Uses Placeholder Engagement ID
+5. **Release build guard**: `release.sh` and `sign-all.sh` both refuse ad-hoc signing (`-`) for release builds.
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/installer/profiles/com.kmflow.agent.mobileconfig:87`
-**Agent**: E1 (Entitlements & TCC Auditor)
-**Evidence**:
-```xml
-            <key>EngagementID</key>
-            <string>eng-REPLACE-ME</string>
-```
-**Description**: The MDM configuration profile contains a placeholder engagement ID (`eng-REPLACE-ME`). While this is expected for a template file in source control, there is no build-time or deployment-time validation to prevent pushing this template directly to MDM without customization. If deployed as-is, all agents would report to engagement "eng-REPLACE-ME", contaminating data.
+6. **Consent records HMAC-signed**: `KeychainConsentStore` now implements HMAC-SHA256 signing of consent records with a per-install random key, preventing local consent forgery.
 
-**Risk**: Low severity because the value is obviously a placeholder and MDM administrators would typically customize profiles before deployment. However, automated deployment pipelines could push the template without review.
+7. **Profile customization tooling**: `customize-profiles.sh` validates Team ID format (10-character alphanumeric regex) and processes all templates in a single pass.
 
-**Recommendation**: Add a CI check or deployment script that validates placeholder values are replaced before MDM deployment. Consider using MDM variable substitution (e.g., Jamf's `$PROFILE_IDENTIFIER` syntax) instead of static placeholders.
+8. **ADR documentation**: The sandbox-disabled decision is formally documented with context, consequences, and alternatives considered.
+
+9. **Privacy-default logging**: `AgentLogger` now uses `privacy: .private` for all log levels, preventing PII leakage through the primary logging path.
+
+10. **Periodic integrity checking**: `IntegrityChecker` supports configurable-interval background re-verification (default 5 minutes), not just startup-only checks.
+
+11. **Python environment isolation**: `python-launcher.sh` explicitly sets `PYTHONPATH` to bundle-internal paths only, sets `PYTHONNOUSERSITE=1`, and does not inherit the caller's `PYTHONPATH`.
+
+12. **PrivacyInfo.xcprivacy properly declared**: Privacy manifest correctly documents Product Interaction data collection and Required Reason API usage.
 
 ---
 
-## Positive Security Observations
+## Risk Assessment
 
-The following aspects of the entitlements and TCC configuration are well-implemented:
+| Category | Score | Notes |
+|----------|:-----:|-------|
+| Entitlement minimization | 9/10 | Only network.client granted; all dangerous HR flags disabled |
+| TCC profile correctness | 8/10 | Accessibility-only; placeholder remains in template (mitigated by customize-profiles.sh) |
+| Hardened Runtime | 10/10 | Consistent across all signing paths; verified by verify-signing.sh |
+| Keychain security | 9/10 | Consistent protection class, sync disabled, HMAC-signed consent |
+| Logging hygiene | 7/10 | Primary logger fixed; 2 modules still use .public |
+| Build pipeline security | 8/10 | Release guard, individual signing, integrity manifest; HMAC skip-on-missing is a gap |
+| Documentation | 9/10 | ADR for sandbox, clear profile comments, script documentation |
 
-1. **Hardened Runtime dangerous capabilities explicitly disabled**: The entitlements file sets `allow-jit`, `allow-unsigned-executable-memory`, and `disable-library-validation` all to `<false/>` (lines 6-11). These are the correct restrictive values.
+**Overall: 8.5 / 10**
 
-2. **Network entitlement correctly scoped**: Only `com.apple.security.network.client` is declared (outbound only). No `network.server` entitlement exists. The Unix domain socket IPC uses POSIX socket APIs that do not require a server entitlement since both endpoints are local processes owned by the same user.
+The agent's entitlement and TCC posture has improved significantly. The remaining findings are low-to-medium severity and primarily concern defense-in-depth improvements rather than exploitable vulnerabilities. No finding blocks deployment to a supervised MDM environment, provided the `customize-profiles.sh` workflow is followed before pushing profiles.
 
-3. **TCC StaticCode set to false**: Both Accessibility and ScreenCapture TCC entries set `StaticCode: false` (lines 117-118, 145-146), which means macOS re-validates the binary's code signature on each access. This is the more secure option -- it detects binary tampering at runtime rather than only at profile installation time.
-
-4. **TCC PayloadRemovalDisallowed**: The TCC profile cannot be removed by the user (line 53), which is correct for enterprise-managed permission profiles.
-
-5. **Accessibility usage description is honest and specific**: The `NSAccessibilityUsageDescription` (Info.plist line 32) clearly states what the agent does with Accessibility access, including the specific data types observed.
-
-6. **PrivacyInfo.xcprivacy properly declared**: The privacy manifest correctly declares Product Interaction data collection, non-tracking status, and Required Reason API usage for File Timestamps and UserDefaults.
-
-7. **Python integrity checking at startup**: The `IntegrityChecker` verifies SHA-256 hashes of all Python files before the Python subprocess launches, providing defense-in-depth against tampering with the unsandboxed Python layer.
-
-8. **Consent-gated capture**: No capture occurs until explicit consent is granted through the onboarding wizard and persisted to the Keychain.
-
----
-
-## Risk Score
-
-**Overall Entitlement & TCC Security Score: 6.5 / 10**
-
-The architecture shows strong security thinking (integrity checking, consent management, PII filtering, honest usage descriptions), but the CRITICAL finding of an unnecessary Apple Events entitlement and the HIGH finding of missing Hardened Runtime in the primary build pipeline significantly weaken the security posture. Resolving the CRITICAL and HIGH findings would raise this score to approximately 8.5/10.
-
-**Priority remediation order**:
-1. Remove `com.apple.security.automation.apple-events` entitlement (CRITICAL)
-2. Add `--options runtime` to `build-app-bundle.sh` (HIGH)
-3. Replace TCC CodeRequirement placeholder with CI validation (HIGH)
-4. Remove ScreenCapture from TCC profile and NSScreenCaptureUsageDescription from Info.plist (MEDIUM)
-5. Remove misleading `files.user-selected.read-write` entitlement (HIGH)
-6. Standardize Keychain protection class and logger privacy levels (MEDIUM)
+**Priority remediation order for remaining items**:
+1. Migrate IntegrityChecker and PythonProcessManager to use `AgentLogger` or switch to `privacy: .private` (MEDIUM)
+2. Harden integrity.sig missing-file handling for release builds (MEDIUM)
+3. Add CI validation for customize-profiles.sh output (MEDIUM)
+4. Remove NSScreenCaptureUsageDescription from Info.plist (LOW)
+5. Update TCC profile header comment (LOW)
+6. Add UUID regeneration to customize-profiles.sh (LOW)

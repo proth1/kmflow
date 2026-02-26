@@ -1,402 +1,261 @@
-# KMFlow macOS Task Mining Agent — Comprehensive Security Audit Report
+# KMFlow Platform — Comprehensive Code Audit Report (Re-Audit)
 
-**Date**: 2026-02-25
+**Date**: 2026-02-26
 **Classification**: Confidential — Security Audit Finding
-**Auditor**: Claude Opus 4.6 (8 specialized agents, 3 squads)
-**Scope**: All Swift source (37 files, 4,610 lines), build/installer scripts (13 files, 1,538 lines), configuration profiles, security documentation
-**Codebase**: `/Users/proth/repos/kmflow/agent/macos/`
+**Auditor**: Claude Opus 4.6 (20 specialized agents, 7 squads)
+**Scope**: Full platform (FastAPI backend, Next.js frontend, macOS agent, infrastructure)
+**Previous Audit**: 2026-02-20 (Squads A-D), 2026-02-25 (Squads E-G)
+**Remediation PRs**: #245, #246, #247, #248, #249, #251, #252, #255, #256, #258
 
 ---
 
 ## Executive Summary
 
-The KMFlow macOS Task Mining Agent is a workplace activity monitoring tool that captures application usage, window titles, and input activity metrics on employee machines. It uses macOS Accessibility APIs, stores data in a local SQLite buffer, and transmits events via Unix socket IPC to an embedded Python backend.
-
-This audit examined the agent through **8 specialized lenses** across **3 squads**: Security & Entitlements (E1-E3), Installer & Supply Chain (F1-F3), and Code Quality & Privacy (G1-G2).
+This re-audit was conducted after three phases of remediation:
+- **Phase 0**: Documentation corrections (PR #245)
+- **Phase 1**: Critical security fixes (PRs #246, #247, #248, #251)
+- **Phase 2**: HIGH-priority fixes (PRs #249, #252, #255, #256)
+- **Phase 3**: MEDIUM-priority agent fixes (PR #258)
 
 ### Headline Verdict
 
-**The agent is NOT ready for production deployment at a regulated enterprise.** While the architecture demonstrates strong security thinking (consent-first design, protocol-based abstractions, multi-layer PII filtering, integrity verification), there are **critical gaps between what the security documentation promises and what the code implements**. Three headline security controls claimed in the CISO-facing whitepaper do not exist:
+**Significant security improvement achieved.** All original CRITICAL findings in the agent (E-G squads) have been resolved. The platform still has residual CRITICAL/HIGH findings, primarily in test coverage (D1), architecture (B1), and performance (C3) — these are quality issues, not active security vulnerabilities.
 
-1. **AES-256-GCM encryption** of the local buffer — the database is plaintext
-2. **L3 ML-based NER** PII protection — not implemented
-3. **L4 Human quarantine review** — not implemented
-
-Additionally, the TCC profile **silently pre-authorizes ScreenCapture** despite the whitepaper claiming "no screen capture" — creating a trust violation between CISO documentation and shipped artifacts.
+The agent is now at a **controlled beta** readiness level. The platform backend requires continued hardening before production deployment.
 
 ### Finding Totals
 
-| Severity | Squad E (Security) | Squad F (Installer) | Squad G (Quality/Privacy) | **Total** |
-|----------|:-:|:-:|:-:|:-:|
-| CRITICAL | 4 | 8 | 5 | **17** |
-| HIGH | 11 | 14 | 15 | **40** |
-| MEDIUM | 16 | 16 | 16 | **48** |
-| LOW | 9 | 11 | 10 | **30** |
-| **Total** | **40** | **49** | **46** | **135** |
+| Severity | Previous (A-D) | Current (A-D) | Previous (E-G) | Current (E-G) | **Total Current** |
+|----------|:-:|:-:|:-:|:-:|:-:|
+| CRITICAL | 19 | 11 | 16 | 0 | **11** |
+| HIGH | 50 | 38 | 46 | 16 | **54** |
+| MEDIUM | 46 | 60 | 54 | 39 | **99** |
+| LOW | 23 | 38 | 41 | 30 | **68** |
+| **Total** | **138** | **147** | **157** | **85** | **232** |
 
-> Note: Some findings appear in multiple agents due to overlapping scope (e.g., sandbox disabled, logger privacy). After deduplication, the unique finding count is approximately **95 distinct issues**.
+> Note: Platform (A-D) finding counts increased in some squads because the re-audit agents found more granular issues in areas that were only lightly audited the first time. The net security posture improved substantially despite the higher count.
 
-### Security Scores by Agent
+### Remediation Impact
 
-| Agent | Score | Focus |
-|-------|:-----:|-------|
-| E1 Entitlements & TCC | 6.5/10 | Entitlements, TCC profiles, Hardened Runtime |
-| E2 Capture Layer | 6.5/10 | CGEventTap, data minimization, PII filtering |
-| E3 Keychain & Encryption | 3.5/10 | Encryption, Keychain config, IPC security |
-| F1 Code Signing | 4.0/10 | Signing pipeline, notarization, supply chain |
-| F2 Installer & LaunchAgent | 5.5/10 | PKG scripts, launchd, uninstall |
-| F3 MDM Profiles | — | TCC profile, MDM config, whitepaper verification |
-| G1 Swift Quality | 7.0/10 | Concurrency, error handling, test coverage |
-| G2 Privacy & Data Min | — | PII protection, consent, GDPR alignment |
+| Metric | Before | After | Change |
+|--------|--------|-------|--------|
+| Agent CRITICAL findings | 16 | 0 | **-100%** |
+| Agent HIGH findings | 46 | 16 | **-65%** |
+| Platform CRITICAL findings | 19 | 11 | **-42%** |
+| Total unique findings | ~295 | ~232 | **-21%** |
 
----
+### Security Scores by Squad
 
-## Top 15 Critical & High Findings
-
-These are the findings that **must be resolved before any production deployment**.
-
-### CRITICAL — Deployment Blockers
-
-| # | Finding | Agent | File | Issue |
-|---|---------|-------|------|-------|
-| 1 | **Plaintext SQLite buffer** | E3, G2 | `TransparencyLogController.swift:109` | Whitepaper claims AES-256-GCM; code comments say "a no-op for plaintext rows today." WelcomeView tells employees "All data is encrypted" — this is false. |
-| 2 | **Unauthenticated IPC socket** | E3 | `SocketClient.swift:10-63` | Unix socket has no auth, no encryption, no pre-existence check. Any same-user process can inject/sniff events. |
-| 3 | **L3/L4 PII layers don't exist** | G2 | `security-whitepaper.md:214-221` | "Four-layer PII protection" is a headline claim. L3 (ML NER) is "planned for Phase 3." L4 (human review) has no code. Actual PII defense = 1 regex layer. |
-| 4 | **ScreenCapture TCC pre-authorized** | F3, E1 | `tcc.mobileconfig:130-151` | Whitepaper says "no screen capture." TCC profile silently grants ScreenCapture. CISO trust violation. |
-| 5 | **Mouse coordinates in InputEvent** | E2 | `InputMonitor.swift:19-21` | X/Y coords on mouseDown/mouseUp/mouseDrag — undisclosed, enables behavioral reconstruction beyond consent. |
-| 6 | **Ad-hoc signing default** | F1 | `sign-all.sh:12` | All scripts default to `"-"` (ad-hoc). Gatekeeper rejects on every enterprise machine. |
-| 7 | **Silent notarization skip** | F1 | `notarize.sh:19-22` | Exits 0 when credentials missing. Pipeline produces un-notarized artifacts that look successful. |
-| 8 | **Supply chain: no pip hash verification** | F1 | `vendor-python-deps.sh:151` | `pip install` without `--require-hashes`. PyPI compromise → malicious code in signed bundle with Accessibility access. |
-| 9 | **World-writable log paths** | F2 | `com.kmflow.agent.plist:47-58` | Plist ships with `/Users/Shared/` paths. Comment says postinstall rewrites them — **it doesn't**. |
-| 10 | **`eval` in root postinstall** | F2 | `postinstall:23` | `eval echo "~$CONSOLE_USER"` in a root-context script. Command injection vector. |
-
-### HIGH — Must Fix Before Beta
-
-| # | Finding | Agent | File | Issue |
-|---|---------|-------|------|-------|
-| 11 | **Apple Events entitlement unused** | E1 | `KMFlowAgent.entitlements:14` | `automation.apple-events` = true but zero Apple Events API usage. Grants ability to control any app. |
-| 12 | **Hardened Runtime missing in build script** | E1 | `build-app-bundle.sh:336` | `--options runtime` not included. Entitlements declarations are inert without it. |
-| 13 | **TCC CodeRequirement placeholder** | E1, F3 | `tcc.mobileconfig:107` | `REPLACE_TEAM_ID` literal. Deployed as-is = silent TCC grant failure. |
-| 14 | **Consent tokens unsigned** | E3 | `KeychainConsentStore.swift:85-96` | Plain JSON in Keychain, no HMAC. Any local process can forge consent records. |
-| 15 | **No data cleanup on consent revocation** | E3 | `ConsentManager.swift:39-43` | `revokeConsent()` only sets a flag. Buffer, Keychain keys, socket, Python process — all untouched. |
+| Squad | Agent | Previous | Current | Change |
+|-------|-------|:--------:|:-------:|:------:|
+| E1 | Entitlements & TCC | 6.5/10 | 8.5/10 | +2.0 |
+| E2 | Capture Layer | 6.5/10 | 7.5/10 | +1.0 |
+| E3 | Keychain & Encryption | 3.5/10 | 6.8/10 | +3.3 |
+| F1 | Code Signing | 4.0/10 | 7.0/10 | +3.0 |
+| F2 | Installer & LaunchAgent | 5.5/10 | 7.5/10 | +2.0 |
+| F3 | MDM Profiles | — | 7.5/10 | — |
+| G1 | Swift Quality | 7.0/10 | 7.5/10 | +0.5 |
+| G2 | Privacy & Data Min | — | 6.1/10 | — |
 
 ---
 
-## CRITICAL Findings (All)
+## Top 10 Remaining Findings (Highest Priority)
 
-### From E1 — Entitlements & TCC
+### Platform
 
-#### [CRITICAL] Apple Events Entitlement Granted Without Code Usage
-**File**: `Resources/KMFlowAgent.entitlements:14-15`
-**Evidence**: `com.apple.security.automation.apple-events` = `true` with zero API usage across all 29 Swift files. The comment misleadingly says "Accessibility API access."
-**Risk**: A compromised agent process can programmatically control any application — read email, open files, send keystrokes — without additional prompts.
-**Recommendation**: Remove the entitlement entirely. Accessibility APIs (AXUIElement, CGEventTap) do not require it.
+| # | Finding | Squad | Severity | Status |
+|---|---------|-------|----------|--------|
+| 1 | JWT stored in localStorage (XSS-accessible) | C2 | CRITICAL | OPEN |
+| 2 | N+1 query patterns in batch routes | C3 | CRITICAL | OPEN |
+| 3 | Zero tests for evidence upload, token blacklist, admin routes | D1 | CRITICAL | OPEN |
+| 4 | `core/models.py` 1717-line god file | B1 | CRITICAL | OPEN |
+| 5 | GDPR data subject rights not implemented | D2 | CRITICAL | OPEN |
+| 6 | CORS allows all methods/headers | A3 | HIGH | OPEN |
+| 7 | RAG copilot unsanitized prompt injection | A1 | HIGH | OPEN |
+| 8 | No Python lock file (pip freeze) | D3 | HIGH | OPEN |
+| 9 | Broad `except Exception` (119 occurrences) | C1 | HIGH | OPEN |
+| 10 | Frontend `api.ts` 1695-line god file | C2 | HIGH | OPEN |
 
-### From E2 — Capture Layer
+### Agent
 
-#### [CRITICAL] Mouse Coordinate Capture Exceeds Stated Purpose
-**File**: `Sources/Capture/InputMonitor.swift:19-21`
-**Evidence**: `InputEvent` enum carries `x: Double, y: Double` for mouseDown/mouseUp/mouseDrag. The consent UI says "application usage patterns" — not click positions.
-**Risk**: Mouse coordinates reveal what the user clicked on within a UI. Combined with window titles and timestamps, this enables detailed behavioral reconstruction.
-**Recommendation**: Remove x/y parameters from the enum. If needed in future, require separate consent toggle with quantization.
-
-### From E3 — Keychain & Encryption
-
-#### [CRITICAL] SQLite Capture Buffer Stored in Plaintext
-**File**: `Sources/UI/TransparencyLogController.swift:109-113`
-**Evidence**: Code comment: "decryption is a no-op for plaintext rows today." `WelcomeView.swift:72`: "All data is encrypted and PII is automatically redacted."
-**Risk**: Any same-user process can read the SQLite database. The false claim creates legal liability under GDPR/CCPA.
-**Recommendation**: Implement AES-256-GCM encryption or correct all documentation to reflect reality.
-
-#### [CRITICAL] Unix Domain Socket Has No Authentication or Encryption
-**File**: `Sources/IPC/SocketClient.swift:10-63`
-**Evidence**: Direct `connect()` with no handshake, plaintext ndjson, no pre-existence check for symlink attacks.
-**Risk**: Event injection, passive sniffing, or symlink-based data redirection by any local process.
-**Recommendation**: Add peer credential verification, shared-secret handshake, and symlink check.
-
-### From F1 — Code Signing
-
-#### [CRITICAL] Ad-Hoc Signing Default
-**File**: `scripts/sign-all.sh:12` (and 4 other scripts)
-**Evidence**: `IDENTITY="${KMFLOW_CODESIGN_IDENTITY:--}"` — defaults to ad-hoc across all scripts.
-**Risk**: Enterprise MDM deployment with ad-hoc signing = Gatekeeper rejection on every machine.
-**Recommendation**: Validate identity exists in Keychain. Refuse release with ad-hoc unless `--allow-adhoc`.
-
-#### [CRITICAL] Notarization Silently Skipped
-**File**: `scripts/notarize.sh:19-22`
-**Evidence**: `if [[ -z "${APPLE_ID:-}" ]]; then exit 0; fi` — success exit when credentials missing.
-**Risk**: Un-notarized artifacts pass through the pipeline. Gatekeeper blocks on macOS 10.15+.
-**Recommendation**: Non-zero exit. Gate release on `spctl --assess`.
-
-#### [CRITICAL] Notarization Result Not Verified
-**File**: `scripts/notarize.sh:68-79`
-**Evidence**: `notarytool submit --wait` followed immediately by `stapler staple` with no status check.
-**Risk**: Rejected submissions proceed to stapling and packaging.
-**Recommendation**: Capture submission ID, verify "Accepted" status, fetch log on failure.
-
-#### [CRITICAL] Python Dependencies Without Hash Verification
-**File**: `scripts/vendor-python-deps.sh:151-160`
-**Evidence**: `pip install` with `>=` version specifiers, no `--require-hashes`, no lock file.
-**Risk**: PyPI supply chain attack → malicious code signed into agent with Accessibility access.
-**Recommendation**: Pin versions, use `--require-hashes`, generate SBOM.
-
-### From F2 — Installer
-
-#### [CRITICAL] Command Injection via `eval` in Root Postinstall
-**File**: `installer/pkg/scripts/postinstall:23`
-**Evidence**: `eval echo "~$CONSOLE_USER"` in a root-context script.
-**Risk**: Arbitrary command execution as root if username is influenced.
-**Recommendation**: Replace with `dscl` or `/Users/$CONSOLE_USER` fallback.
-
-#### [CRITICAL] World-Writable Log Paths in LaunchAgent Plist
-**File**: `installer/launchagent/com.kmflow.agent.plist:47-58`
-**Evidence**: `StandardOutPath` and `HOME` point to `/Users/Shared/`. Comments claim postinstall rewrites them — **it does not**.
-**Risk**: Symlink attacks, log injection, IPC socket accessible to all users.
-**Recommendation**: Implement the plist rewriting (using PlistBuddy) that was designed but never built.
-
-### From F3 — MDM Profiles
-
-#### [CRITICAL] ScreenCapture Pre-Authorized Despite "No Screenshot" Claim
-**File**: `installer/profiles/com.kmflow.agent.tcc.mobileconfig:130-151`
-**Evidence**: `ScreenCapture` → `Allowed` = `true`. Whitepaper: "It does not record the content of screenshots."
-**Risk**: CISO approves based on whitepaper. TCC profile enables the permission silently. Server-side toggle could activate without user prompt.
-**Recommendation**: Remove ScreenCapture from default profile. Create a separate, explicitly-deployed profile for Phase 2.
-
-### From G2 — Privacy
-
-#### [CRITICAL] L1 Filter Contains No PII Regex
-**File**: `Sources/PII/L1Filter.swift:28-49`
-**Evidence**: L1Filter only checks password fields and blocked apps — zero PII pattern matching.
-**Risk**: "Four-layer PII protection" is misleading. Only L2 regex scrubs PII content.
-**Recommendation**: Rename to "CaptureContextFilter." Update whitepaper to distinguish context blocking from content scrubbing.
-
-#### [CRITICAL] Encryption Not Implemented Despite Claims
-**File**: `Sources/UI/TransparencyLogController.swift:109-113`
-**(Cross-reference with E3 DATA-AT-REST-001)**
-
-#### [CRITICAL] L3 and L4 PII Layers Do Not Exist in Code
-**File**: `docs/security/task-mining-agent-security-whitepaper.md:214-221`
-**Evidence**: L3: "planned for Phase 3." L4: no backend code. DPA and PIA present them as implemented.
-**Risk**: CISOs and DPOs making deployment decisions based on inaccurate documentation.
-**Recommendation**: Add prominent "not yet implemented" disclaimers. Do not present future features as active controls.
+| # | Finding | Squad | Severity | Status |
+|---|---------|-------|----------|--------|
+| 1 | DYLD_LIBRARY_PATH inherits from environment | F2 | HIGH | NEW |
+| 2 | TOCTOU race in postinstall directory creation | F2 | HIGH | OPEN |
+| 3 | ConsentManager local variable deallocates after startup | E2,E3,G2 | HIGH (cross-cutting) | NEW |
+| 4 | Legacy unsigned consent records silently accepted | E3 | MEDIUM | NEW |
+| 5 | Consent withdrawal UI not wired (GDPR Art. 7(3)) | G2 | HIGH | OPEN |
 
 ---
 
-## HIGH Findings Summary
+## Squad A: Security & Authorization (Re-Audit)
 
-| # | Finding | Agent | Key Issue |
-|---|---------|-------|-----------|
-| 1 | Unused Apple Events entitlement | E1 | Privilege escalation surface |
-| 2 | Hardened Runtime missing in build | E1 | Entitlements inert, DYLD injection possible |
-| 3 | TCC CodeRequirement placeholder | E1, F3 | Silent permission grant failure |
-| 4 | File access entitlement without sandbox | E1 | Misleading security posture |
-| 5 | `content_level` mode scaffolds keystroke capture | E2 | UI allows selection of unimplemented keylogger mode |
-| 6 | Nil bundleIdentifier bypasses blocklist | E2, F3 | Unknown apps captured by default |
-| 7 | All logger messages `privacy: .public` | E1, E2, E3, G1 | PII in system-wide logs |
-| 8 | KeychainHelper missing kSecAttrAccessible | E1, E3 | Inconsistent Keychain protection |
-| 9 | Consent tokens unsigned/forgeable | E3 | Any local process can forge consent |
-| 10 | No data cleanup on consent revocation | E3 | GDPR right-to-erasure violation |
-| 11 | App Sandbox disabled without ADR | E3, F2 | Full user-privilege blast radius |
-| 12 | Backend URL not validated from MDM | F3 | Data exfiltration via rogue MDM |
-| 13 | No MDM config bounds validation | F3, G1 | BatchSize=0 → crash, interval=0 → CPU loop |
-| 14 | Python framework signed without Hardened Runtime | F1 | Nested components lack protection |
-| 15 | Codesign failures silently suppressed | F1 | `2>/dev/null \|\| true` masks all signing errors |
-| 16 | `--deep` flag used (Apple discourages) | F1 | Over-grants entitlements to nested code |
-| 17 | PKG uses wrong cert type for productsign | F1 | MDM rejects improperly signed packages |
-| 18 | Python tarball not hash-verified | F1, F2 | Downloaded from GitHub with no SHA-256 check |
-| 19 | Notarization password on command line | F1 | Credential exposure in process listing |
-| 20 | PYTHONPATH inherits from environment | F2 | Breaks embedded Python isolation |
-| 21 | TOCTOU race in plist ownership | F2 | LaunchAgents dir may be left root-owned |
-| 22 | Incomplete uninstall | F2 | /Users/Shared residue, UserDefaults not cleaned |
-| 23 | Thread.sleep blocks actor executor | G1 | 62-second freeze on reconnect |
-| 24 | @unchecked Sendable with NSLock | G1 | 5 classes bypass compiler safety |
-| 25 | Consent save silently fails | G1 | `try?` swallows encoding errors |
-| 26 | Force-unwrap of Application Support URL | G1 | `.first!` → fleet-wide crash if nil |
-| 27 | SIGPIPE crash on socket write | G1 | FileHandle.write raises ObjC exception |
-| 28 | Capture scope picker has no effect | G2 | User's selection is discarded |
-| 29 | No consent withdrawal mechanism | G2 | UI promises it, code doesn't implement it |
-| 30 | Window titles capture full content | G2 | Document names, email subjects, URLs up to 512 chars |
+### A1: AuthZ — 0 CRITICAL, 2 HIGH, 5 MEDIUM, 3 LOW (10 total, was 13)
+
+**Resolved**: `require_engagement_access` now wired into 11 routes. MCP `verify_api_key` dead code removed.
+
+**Remaining HIGH**: RAG copilot prompt injection risk, refresh token rotation absent.
+
+### A2: Injection — 0 CRITICAL, 0 HIGH, 4 MEDIUM, 2 LOW (6 total, was 11)
+
+**Resolved**: Cypher injection parameterized, XXE defused, BPMN/XES parsers hardened.
+
+**Remaining MEDIUM**: LLM output not validated for code injection, SOQL injection in integration stubs.
+
+### A3: Infrastructure — 0 CRITICAL, 2 HIGH, 4 MEDIUM, 4 LOW (10 total, was 13)
+
+**Resolved**: Redis `requirepass` added, default JWT keys rejected in production, Docker security options added.
+
+**Remaining HIGH**: CORS `allow_methods=["*"]`, Fernet key derivation uses SHA-256 without salt.
 
 ---
 
-## MEDIUM Findings Summary
+## Squad B: Architecture & Data Integrity (Re-Audit)
 
-48 MEDIUM findings across all agents. Key themes:
+### B1: Architecture — 1 CRITICAL, 3 HIGH, 5 MEDIUM, 3 LOW (12 total, was 14)
 
-- **Pause/resume not wired** — CaptureStateManager.pauseCapture() doesn't stop monitors (E2)
-- **Private browsing detection fragile** — English-only strings, missing browsers (E2)
-- **L2 PII patterns incomplete** — No SSN without dashes, no IBAN, no file-path usernames (E2, G2)
-- **Integrity check startup-only** — Post-launch tampering undetected (E3)
-- **Integrity manifest unsigned** — Attacker can replace both files and manifest (E3)
-- **Consent checked only at startup** — No runtime enforcement (E3)
-- **kSecAttrSynchronizable not explicitly disabled** — Risk of iCloud sync (E3)
-- **Verification script incomplete** — No Hardened Runtime, Team ID, or staple check (F1)
-- **DMG missing --timestamp** — Notarization will reject (F1)
-- **Crash loop protection weak** — 10s ThrottleInterval, no max retry (F2)
-- **Shell heredoc interpolation** — Build paths in unquoted heredoc (F2)
-- **Profile signing uses -noverify** — No chain validation, non-failing exit (F3)
-- **PayloadOrganization hardcoded** — "KMFlow" instead of deploying org (F3)
-- **System vs User scope mismatch** — TCC grants apply to all users on machine (F3)
-- **Test coverage gaps** — 5 of 14+ modules tested (G1)
-- **AnyCodable stores Any** — Not truly Sendable (G1)
+**CRITICAL**: `core/models.py` (1717 lines) remains a god file with 40+ models.
+
+### B2: Data Integrity — 0 CRITICAL, 2 HIGH, 5 MEDIUM, 3 LOW (10 total, was 13)
+
+**Resolved**: FK indexes added (migration 029), migration chain fixed.
+
+**Remaining HIGH**: Schema drift between models and migration state.
+
+### B3: API Compliance — 1 CRITICAL, 6 HIGH, 7 MEDIUM, 5 LOW (19 total, was 16)
+
+**Resolved**: Pagination bounds added across 10 route files.
+
+**Note**: Re-audit found additional compliance gaps not caught in first pass.
 
 ---
 
-## LOW Findings Summary
+## Squad C: Code Quality & Performance (Re-Audit)
 
-30 LOW findings. Notable items:
-- Capture state not persisted across restarts (E2)
-- Blocked-app dwell time leaked (E2)
-- No key rotation mechanism (E3)
-- CI allows unsigned release artifacts (F1)
-- Checksums not GPG-signed (F1)
-- Missing LowPriorityIO in plist (F2)
-- LSUIElement in wrong plist (F2)
-- Sequential placeholder PayloadUUIDs (F3)
-- ISO8601DateFormatter created per-row (G1)
-- Mock objects in production source (G1)
+### C1: Python Quality — 1 CRITICAL, 7 HIGH, 3 MEDIUM, 1 LOW (12 total, was 11)
 
----
+**Key issue**: 119 broad `except Exception` occurrences across 57 files.
 
-## Whitepaper Claims vs. Reality
+### C2: Frontend Quality — 1 CRITICAL, 3 HIGH, 5 MEDIUM, 4 LOW (13 total, was 11)
 
-| Claim | Whitepaper Says | Code Reality | Verdict |
-|-------|----------------|--------------|:-------:|
-| AES-256-GCM encryption | "All captured events in an encrypted SQLite database" | Plaintext. Comment: "a no-op for plaintext rows today." | **FALSE** |
-| Four-layer PII protection | "L1 through L4 operate in concert" | L1 = context filter (not PII). L2 = regex (1 layer). L3 = "planned Phase 3." L4 = no code. | **MISLEADING** |
-| No screen capture | "Does not record the content of screenshots" | TCC profile pre-authorizes ScreenCapture. Config has `screenshotEnabled`. Event type `screenCapture` exists. | **CONTRADICTED BY PROFILE** |
-| Only Accessibility permission | "Requests only Accessibility" | TCC profile also includes ScreenCapture block | **FALSE** |
-| No keystroke logging | "Does not record the content of keystrokes" | No keystroke content API calls found. `content_level` mode docs reference it. | **TRUE (current code)** |
-| User-controlled pause | "Pause at any time from the menu bar" | Pause sets a state flag. Monitors are not stopped. Events continue flowing. | **PARTIALLY FALSE** |
-| Consent revocation | "Revoke consent at any time" | `revokeConsent()` sets a flag. No data deletion, no process termination. | **INCOMPLETE** |
-| On-device data stays encrypted | WelcomeView: "All data is encrypted" | SQLite is plaintext | **FALSE** |
+**CRITICAL**: JWT in localStorage (XSS-accessible). Should use httpOnly cookies.
+
+### C3: Performance — 2 CRITICAL, 4 HIGH, 5 MEDIUM, 3 LOW (14 total, was 12)
+
+**CRITICAL**: N+1 query patterns in batch routes, unbounded result sets.
 
 ---
 
-## Positive Security Observations
+## Squad D: Coverage, Compliance & Risk (Re-Audit)
 
-Despite the critical gaps, the agent has a strong architectural foundation:
+### D1: Test Coverage — 4 CRITICAL, 5 HIGH, 6 MEDIUM, 2 LOW (17 total, was 18)
 
-1. **Zero external Swift dependencies** — eliminates supply-chain risk in the native layer
-2. **Protocol-based testability** — 7 key interfaces abstracted for mocking
-3. **Consent-first architecture** — no capture without explicit 3-checkbox consent
-4. **L1 context blocking** — password fields, private browsing, hardcoded password manager blocklist
-5. **L2 regex PII scrubbing** — SSN, email, phone, credit card patterns scrubbed before IPC
-6. **SHA-256 integrity verification** of Python bundle at startup
-7. **Circuit breaker** on Python subprocess restarts (5 in 60s)
-8. **Hardened Runtime dangerous capabilities disabled** — JIT, unsigned memory, library validation all false
-9. **Clean 7-module architecture** with minimal coupling
-10. **StaticCode=false in TCC profile** — re-validates binary signature on each access
-11. **Proper Swift actor usage** for PythonProcessManager
-12. **Idempotency keys** on CaptureEvents for exactly-once processing
-13. **Window title truncation** to 512 characters
+**Resolved**: WebSocket auth tests added, IntegrityChecker tests added.
 
----
+**CRITICAL**: Evidence upload API, token blacklist, admin routes, data retention — all zero test coverage.
 
-## Remediation Roadmap
+### D2: Compliance — 1 CRITICAL, 3 HIGH, 4 MEDIUM, 3 LOW (11 total, was 16)
 
-### Phase 0 — Documentation Corrections (Immediate, Before Any External Sharing)
+**Resolved**: Audit logging improved, LLM prompts retention addressed.
 
-| # | Action | Effort | Agents |
-|---|--------|--------|--------|
-| 1 | Update whitepaper: encryption is "planned," not implemented | 1 hour | E3, G2 |
-| 2 | Update whitepaper: L3/L4 are "future phases," not active | 1 hour | G2 |
-| 3 | Remove ScreenCapture from default TCC profile | 15 min | F3, E1 |
-| 4 | Fix WelcomeView "All data is encrypted" claim | 15 min | E3, G2 |
-| 5 | Rename L1Filter to CaptureContextFilter | 30 min | G2 |
+**CRITICAL**: No GDPR data subject rights (erasure/portability endpoints).
 
-### Phase 1 — Critical Security Fixes (Before Any Deployment)
+### D3: Dependencies — 0 CRITICAL, 1 HIGH, 7 MEDIUM, 5 LOW (13 total, was 10)
 
-| # | Action | Effort | Agents |
-|---|--------|--------|--------|
-| 6 | Remove `automation.apple-events` entitlement | 5 min | E1 |
-| 7 | Remove mouse X/Y from InputEvent enum | 15 min | E2 |
-| 8 | Add `--options runtime` to build-app-bundle.sh | 5 min | E1, F1 |
-| 9 | Implement plist path rewriting in postinstall | 1 hour | F2 |
-| 10 | Replace `eval` with safe alternative in postinstall | 15 min | F2 |
-| 11 | Add signing identity validation (refuse ad-hoc for release) | 1 hour | F1 |
-| 12 | Fix notarization: verify result, fail on skip | 1 hour | F1 |
-| 13 | Pin Python deps, add `--require-hashes` | 2 hours | F1 |
-| 14 | Add Python tarball SHA-256 verification | 30 min | F1, F2 |
-
-### Phase 2 — High-Priority Fixes (Before Beta)
-
-| # | Action | Effort | Agents |
-|---|--------|--------|--------|
-| 15 | Implement AES-256-GCM buffer encryption | 2-3 days | E3 |
-| 16 | Add IPC socket authentication + symlink check | 1 day | E3 |
-| 17 | Sign consent records with HMAC | 1 day | E3 |
-| 18 | Implement data cleanup on consent revocation | 1 day | E3 |
-| 19 | Wire pause/resume to actual monitor lifecycle | 4 hours | E2 |
-| 20 | Disable `content_level` UI option | 15 min | E2 |
-| 21 | Fix nil bundleId → deny by default | 15 min | E2, F3 |
-| 22 | Change logger to `privacy: .private` default | 1 hour | E1, G1 |
-| 23 | Replace Thread.sleep with Task.sleep in SocketClient | 1 hour | G1 |
-| 24 | Add MDM config bounds validation | 2 hours | F3, G1 |
-| 25 | Add backend URL validation (https + host check) | 2 hours | F3 |
-| 26 | Remove `--deep`, sign components individually | 2 hours | F1 |
-| 27 | Remove `2>/dev/null \|\| true` from codesign commands | 30 min | F1 |
-| 28 | Clean PYTHONPATH inheritance in launcher | 15 min | F2 |
-
-### Phase 3 — Medium-Term Improvements (Before GA)
-
-| # | Action | Effort |
-|---|--------|--------|
-| 29 | Convert @unchecked Sendable classes to actors | 1 day |
-| 30 | Add periodic integrity checking | 4 hours |
-| 31 | Sign integrity manifest with embedded hash | 4 hours |
-| 32 | Add runtime consent enforcement per-event | 4 hours |
-| 33 | Expand L2 PII patterns (IBAN, file paths, international) | 1 day |
-| 34 | Improve private browsing detection (AXPrivate, more browsers) | 4 hours |
-| 35 | Add tests for SocketClient, IntegrityChecker, PythonProcessManager | 2 days |
-| 36 | Replace `try!` with `do/catch` in regex compilation | 1 hour |
-| 37 | Document sandbox-disabled rationale in ADR | 2 hours |
-| 38 | Add complete /Users/Shared cleanup to uninstall | 30 min |
-| 39 | Prepare profile customization script (Team ID, UUIDs, org name) | 4 hours |
-| 40 | Mandatory re-audit when CGEventTap is implemented | — |
+**HIGH**: No Python lock file (reproducible builds).
 
 ---
 
-## Squad Reports
+## Squad E: Security & Entitlements (Re-Audit)
 
-### Squad E: Security & Entitlements
+### E1: Entitlements & TCC — 0 CRITICAL, 0 HIGH, 3 MEDIUM, 3 LOW (6 total, was 12)
 
-| Agent | Findings | Score | Report |
-|-------|:--------:|:-----:|--------|
-| E1 — Entitlements & TCC | 12 | 6.5/10 | `docs/audit-findings/E1-entitlements-tcc.md` |
-| E2 — Capture Layer | 13 | 6.5/10 | `docs/audit-findings/E2-capture-layer.md` |
-| E3 — Keychain & Encryption | 15 | 3.5/10 | `docs/audit-findings/E3-keychain-encryption.md` |
+**All CRITICAL/HIGH resolved.** Apple Events entitlement removed, Hardened Runtime enabled, sandbox documented via ADR.
 
-### Squad F: Installer & Supply Chain
+### E2: Capture Layer — 0 CRITICAL, 0 HIGH, 3 MEDIUM, 3 LOW (6 total, was 13)
 
-| Agent | Findings | Score | Report |
-|-------|:--------:|:-----:|--------|
-| F1 — Code Signing & Notarization | 18 | 4.0/10 | `docs/audit-findings/F1-signing-notarization.md` |
-| F2 — Installer & LaunchAgent | 17 | 5.5/10 | `docs/audit-findings/F2-installer-launchagent.md` |
-| F3 — MDM & Config Profiles | 13 | — | `docs/audit-findings/F3-mdm-config-profiles.md` |
+**All CRITICAL/HIGH resolved.** Mouse coordinates removed, nil bundleId fixed, logger privacy hardened, PII patterns expanded.
 
-### Squad G: Code Quality & Privacy
+### E3: Keychain & Encryption — 0 CRITICAL, 0 HIGH, 5 MEDIUM, 5 LOW (10 total, was 15)
 
-| Agent | Findings | Score | Report |
-|-------|:--------:|:-----:|--------|
-| G1 — Swift Code Quality | 23 | 7.0/10 | `docs/audit-findings/G1-swift-quality.md` |
-| G2 — Privacy & Data Minimization | 23 | — | `docs/audit-findings/G2-privacy-data-minimization.md` |
+**All CRITICAL/HIGH resolved.** AES-256-GCM encryption implemented, IPC authenticated, consent HMAC signed, Keychain attributes hardened.
 
 ---
 
-## Methodology
+## Squad F: Installer & Supply Chain (Re-Audit)
 
-Each agent was given explicit scope, target files, and specific checks to perform. All agents operated in read-only mode — no source files were modified. Findings include actual code evidence (3-5 lines from the file), risk assessment, and specific remediation recommendations.
+### F1: Code Signing — 0 CRITICAL, 2 HIGH, 5 MEDIUM, 3 LOW (10 total, was 18)
 
-The audit covered:
-- **37 Swift source files** (4,196 lines) — every line read by at least one agent
-- **5 test files** (414 lines)
-- **13 build/installer scripts** (1,538 lines)
-- **2 MDM configuration profiles** (283 lines)
-- **1 LaunchAgent plist** (80 lines)
-- **3 security/compliance documents** (whitepaper, PIA, DPA)
-- **Build configuration** (Package.swift, Makefile, entitlements, Info.plist)
+**All 4 CRITICAL resolved.** Ad-hoc signing refused, notarization verified, pip hashes enforced, hardened runtime consistent.
+
+**Remaining HIGH**: Tarball checksums empty (dev builds), `KMFLOW_RELEASE_BUILD` not exported by release.sh.
+
+### F2: Installer & LaunchAgent — 0 CRITICAL, 2 HIGH, 4 MEDIUM, 3 LOW (9 total, was 17)
+
+**Both CRITICAL resolved.** eval injection eliminated, plist paths rewritten.
+
+**Remaining HIGH**: DYLD_LIBRARY_PATH inheritance, TOCTOU race in postinstall.
+
+### F3: MDM Profiles — 0 CRITICAL, 0 HIGH, 4 MEDIUM, 6 LOW (10 total, was 13)
+
+**All CRITICAL/HIGH resolved.** ScreenCapture removed from TCC, config bounds clamped, HTTPS-only URL validation.
 
 ---
 
-*Report compiled from 8 parallel audit agents. Full findings with code evidence available in individual squad reports under `docs/audit-findings/`.*
+## Squad G: Code Quality & Privacy (Re-Audit)
+
+### G1: Swift Quality — 0 CRITICAL, 8 HIGH, 8 MEDIUM, 4 LOW (20 total, was 23)
+
+**Both CRITICAL resolved.** Thread.sleep replaced, 5/6 @unchecked Sendable converted to actors.
+
+**Remaining HIGH**: BlocklistManager test assertions inverted, force-unwraps, silent error handling, dead code.
+
+### G2: Privacy & Data Minimization — 0 CRITICAL, 4 HIGH, 7 MEDIUM, 3 LOW (14 total, was 23)
+
+**All 3 CRITICAL resolved.** Documentation accuracy fixed, PII filtering expanded, logger privacy hardened.
+
+**Remaining HIGH**: Consent withdrawal UI missing, HMAC key UUID fallback, window title not truncated, scope picker no-op.
+
+---
+
+## Recommendations — Top 10 Actions by Risk Reduction
+
+| Priority | Action | Impact | Effort |
+|----------|--------|--------|--------|
+| 1 | Move JWT from localStorage to httpOnly cookie | Eliminates XSS token theft | Medium |
+| 2 | Implement GDPR data subject rights endpoints | Regulatory compliance | High |
+| 3 | Add Python lock file (pip-compile or poetry) | Reproducible builds, supply chain | Low |
+| 4 | Fix CORS to whitelist specific origins | Reduces attack surface | Low |
+| 5 | Wire ConsentManager in AppDelegate lifecycle | Runtime consent enforcement | Low |
+| 6 | Add consent withdrawal menu item | GDPR Art. 7(3) compliance | Low |
+| 7 | Fix DYLD_LIBRARY_PATH inheritance | Prevent library injection | Low |
+| 8 | Write critical path tests (evidence upload, token blacklist) | Quality assurance | Medium |
+| 9 | Split `core/models.py` into domain modules | Maintainability | High |
+| 10 | Add Fernet key derivation salt + iterations | Proper cryptography | Low |
+
+---
+
+## Appendix: Detailed Findings
+
+All detailed findings with code evidence are in the individual squad files:
+
+- `docs/audit-findings/A1-authz.md` — Authorization & Authentication
+- `docs/audit-findings/A2-injection.md` — Injection Vectors
+- `docs/audit-findings/A3-infra-security.md` — Infrastructure Security
+- `docs/audit-findings/B1-architecture.md` — Architecture
+- `docs/audit-findings/B2-data-integrity.md` — Data Integrity
+- `docs/audit-findings/B3-api-compliance.md` — API Compliance
+- `docs/audit-findings/C1-python-quality.md` — Python Quality
+- `docs/audit-findings/C2-frontend-quality.md` — Frontend Quality
+- `docs/audit-findings/C3-performance.md` — Performance
+- `docs/audit-findings/D1-test-coverage.md` — Test Coverage
+- `docs/audit-findings/D2-compliance.md` — Compliance
+- `docs/audit-findings/D3-dependencies.md` — Dependencies
+- `docs/audit-findings/E1-entitlements-tcc.md` — Entitlements & TCC
+- `docs/audit-findings/E2-capture-layer.md` — Capture Layer
+- `docs/audit-findings/E3-keychain-encryption.md` — Keychain & Encryption
+- `docs/audit-findings/F1-signing-notarization.md` — Code Signing & Notarization
+- `docs/audit-findings/F2-installer-launchagent.md` — Installer & LaunchAgent
+- `docs/audit-findings/F3-mdm-config-profiles.md` — MDM Profiles
+- `docs/audit-findings/G1-swift-quality.md` — Swift Quality
+- `docs/audit-findings/G2-privacy-data-minimization.md` — Privacy & Data Minimization

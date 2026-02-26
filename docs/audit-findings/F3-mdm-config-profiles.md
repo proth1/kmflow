@@ -1,157 +1,239 @@
-# F3: MDM & Configuration Profile Audit
+# F3: MDM & Configuration Profile Re-Audit
 
 **Agent**: F3 (MDM & Configuration Profile Auditor)
-**Date**: 2026-02-25
+**Date**: 2026-02-26 (Re-audit)
+**Original Audit Date**: 2026-02-25
 **Scope**: MDM configuration profiles, TCC/PPPC profile, profile signing, config injection surface, blocklist security, enterprise MDM compatibility, whitepaper claim verification
-**Classification**: Confidential — Security Audit Finding
+**Classification**: Confidential -- Security Audit Finding
 
 ---
 
-## Finding Summary
+## Re-Audit Context
+
+The original F3 audit (2026-02-25) identified 13 findings (1 CRITICAL, 3 HIGH, 5 MEDIUM, 4 LOW). Remediation was performed across PRs #245, #248, #255, and #258. This re-audit verifies each finding's current status and identifies any new or residual issues.
+
+---
+
+## Finding Summary (Post-Remediation)
+
+| ID | Original Severity | Finding | Status | Current Severity |
+|----|:-:|------|--------|:-:|
+| TCC-001 | CRITICAL | ScreenCapture TCC pre-authorized | **FIXED** | -- |
+| CFG-001 | HIGH | No bounds validation on MDM config values | **FIXED** | -- |
+| CFG-002 | HIGH | Backend URL not validated (data exfil risk) | **FIXED** | -- |
+| TCC-002 | HIGH | REPLACE_TEAM_ID placeholder unusable | **PARTIALLY FIXED** | MEDIUM |
+| SIGN-001 | MEDIUM | Profile verification uses -noverify | **OPEN** | MEDIUM |
+| PROF-001 | MEDIUM | PayloadOrganization hardcoded | **PARTIALLY FIXED** | LOW |
+| PROF-002 | MEDIUM | No ConsentText in config profile | **OPEN** | MEDIUM |
+| SCOPE-001 | MEDIUM | TCC System scope vs User config scope | **OPEN** (Accepted Risk) | LOW |
+| BLK-001 | MEDIUM | Null bundleId bypasses blocklist | **SPLIT** -- see below | -- |
+| BLK-001a | -- | BlocklistManager: nil bundleId | **FIXED** | -- |
+| BLK-001b | -- | CaptureContextFilter.isBlockedApp: nil bundleId | **OPEN** | MEDIUM |
+| PROF-003 | LOW | Sequential placeholder PayloadUUIDs | **OPEN** | LOW |
+| PROF-004 | LOW | PayloadRemovalDisallowed=false, no detection | **OPEN** | LOW |
+| SIGN-002 | LOW | No passphrase support for signing key | **OPEN** | LOW |
+| COMPAT-001 | LOW | Allowed key vs Authorization key | **OPEN** (Accepted Risk) | LOW |
+| **NEW** CUST-001 | -- | customize-profiles.sh org-name substitution is a no-op | **NEW** | MEDIUM |
+
+### Post-Remediation Totals
 
 | Severity | Count |
-|----------|-------|
-| CRITICAL | 1 |
-| HIGH     | 3 |
-| MEDIUM   | 5 |
-| LOW      | 4 |
-| **Total** | **13** |
+|----------|:-----:|
+| CRITICAL | 0 |
+| HIGH | 0 |
+| MEDIUM | 4 |
+| LOW | 6 |
+| **Open Total** | **10** |
+| Fixed | 4 |
+| Accepted Risk | 2 |
 
 ---
 
-## Findings
+## Verified FIXED Findings
 
-### [CRITICAL] TCC-001: ScreenCapture TCC Pre-Authorized Despite "No Screenshot" Claim
+### [FIXED] TCC-001: ScreenCapture TCC Pre-Authorized (was CRITICAL)
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/installer/profiles/com.kmflow.agent.tcc.mobileconfig:130-151`
-**Agent**: F3 (MDM & Configuration Profile Auditor)
+**Remediation PR**: #245
+**Verification**: The ScreenCapture block has been removed from `com.kmflow.agent.tcc.mobileconfig`. Lines 125-130 now contain a clear comment stating that screen capture is NOT enabled by default and that a separate profile (`com.kmflow.agent.screencapture.mobileconfig`) must be deployed if content_level capture is approved.
+
+**File**: `/Users/proth/repos/kmflow/agent/macos/installer/profiles/com.kmflow.agent.tcc.mobileconfig:125-130`
 **Evidence**:
 ```xml
-<key>ScreenCapture</key>
-<array>
-    <dict>
-        <key>Identifier</key>
-        <string>com.kmflow.agent</string>
-        ...
-        <key>Allowed</key>
-        <true/>
-        ...
-        <key>Comment</key>
-        <string>KMFlow Agent optionally captures screenshots when content_level capture policy is enabled. Disable this block if action_level policy is used.</string>
-    </dict>
-</array>
+<!-- ScreenCapture — REMOVED from default profile.           -->
+<!-- Screen capture is NOT enabled by default. If needed     -->
+<!-- for Phase 2 content_level capture, deploy a separate    -->
+<!-- profile: com.kmflow.agent.screencapture.mobileconfig   -->
 ```
-**Description**: The TCC/PPPC profile ships with ScreenCapture pre-authorized (`Allowed = true`) by default. The security whitepaper (KMF-SEC-001, Section 1) explicitly states: "It does **not** record the content of keystrokes, the content of screenshots, clipboard data, files accessed, or communications content." Section 6 states Screen Recording is "Optional (Phase 2)" and "Disabled by default." The PIA template (KMF-SEC-003, Section 2.2) lists "Screenshots (pixel content)" under "Data NOT Collected" with the explanation "Screen Recording permission not requested in Phase 1; excluded by default."
 
-However, the shipped TCC profile silently grants ScreenCapture permission to the agent binary without any user prompt. A CISO reviewing the whitepaper would conclude that screen capture is architecturally impossible in Phase 1. The profile contradicts this by pre-authorizing the very permission that makes it possible. The comment says to "comment out this block" for action_level policy, but the default profile includes it active. An MDM admin deploying the profile as-shipped will silently grant screen capture.
-
-**Risk**: A CISO approves deployment based on the whitepaper's claim of no screen capture. The MDM profile silently enables the permission. If `screenshotEnabled` is later toggled via server config or MDM, the agent can begin capturing screenshots without any user-visible prompt — because the TCC grant was already silently applied. This is a trust violation between the security documentation and the shipped artifact. Regulatory exposure under GDPR Article 35(3)(b) if screen capture begins without a DPIA update.
-
-**Recommendation**: Remove the ScreenCapture block from the default TCC profile entirely. Create a separate, clearly-named profile (`com.kmflow.agent.tcc.screencapture.mobileconfig`) that MDM admins must explicitly deploy as a second profile when content_level capture is approved. This makes the permission grant a deliberate, auditable MDM action rather than a silent default.
+**Verdict**: The TCC profile now grants only Accessibility -- consistent with the whitepaper's "only Accessibility" claim. The trust gap between documentation and shipped artifact is closed. **FIXED.**
 
 ---
 
-### [HIGH] CFG-001: No Input Validation on MDM-Configurable Values in AgentConfig
+### [FIXED] CFG-001: No Input Validation on MDM-Configurable Values (was HIGH)
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Config/AgentConfig.swift:48-68`
-**Agent**: F3 (MDM & Configuration Profile Auditor)
+**Remediation PR**: #255
+**Verification**: `AgentConfig.swift` now applies `Self.clamp()` bounds validation to all four integer MDM-configurable values.
+
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Config/AgentConfig.swift:59-78`
 **Evidence**:
 ```swift
-public init?(fromMDMProfile suiteName: String = "com.kmflow.agent") {
-    guard let defaults = UserDefaults(suiteName: suiteName) else { return nil }
-
-    let policyString = defaults.string(forKey: "CapturePolicy") ?? "action_level"
-    self.captureGranularity = CaptureGranularity(rawValue: policyString) ?? .actionLevel
-    self.appAllowlist = defaults.stringArray(forKey: "AppAllowlist")
-    self.appBlocklist = defaults.stringArray(forKey: "AppBlocklist")
-    ...
-    self.screenshotIntervalSeconds = defaults.object(forKey: "ScreenshotIntervalSeconds") != nil
-        ? defaults.integer(forKey: "ScreenshotIntervalSeconds") : 30
-    self.batchSize = defaults.object(forKey: "BatchSize") != nil
-        ? defaults.integer(forKey: "BatchSize") : 1000
+self.screenshotIntervalSeconds = Self.clamp(
+    defaults.object(forKey: "ScreenshotIntervalSeconds") != nil
+        ? defaults.integer(forKey: "ScreenshotIntervalSeconds") : 30,
+    min: 5, max: 3600
+)
+self.batchSize = Self.clamp(
+    defaults.object(forKey: "BatchSize") != nil
+        ? defaults.integer(forKey: "BatchSize") : 1000,
+    min: 1, max: 10000
+)
+self.batchIntervalSeconds = Self.clamp(
+    defaults.object(forKey: "BatchIntervalSeconds") != nil
+        ? defaults.integer(forKey: "BatchIntervalSeconds") : 30,
+    min: 5, max: 3600
+)
+self.idleTimeoutSeconds = Self.clamp(
+    defaults.object(forKey: "IdleTimeoutSeconds") != nil
+        ? defaults.integer(forKey: "IdleTimeoutSeconds") : 300,
+    min: 30, max: 3600
+)
 ```
-**Description**: All MDM-configurable integer values (`screenshotIntervalSeconds`, `batchSize`, `batchIntervalSeconds`, `idleTimeoutSeconds`) are read from UserDefaults without any bounds validation. There are no minimum or maximum checks. A rogue or misconfigured MDM profile could set:
-- `ScreenshotIntervalSeconds` to `1` (one screenshot per second, extreme resource consumption and privacy violation)
-- `BatchSize` to `0` (potential division-by-zero or infinite loop in batch assembler)
-- `BatchSize` to `999999999` (memory exhaustion)
-- `IdleTimeoutSeconds` to `0` (never idle, constant monitoring)
-- `BatchIntervalSeconds` to `0` (immediate continuous upload, network flooding)
 
-No string validation exists for `AppBlocklist` or `AppAllowlist` entries. A crafted MDM profile could inject path-traversal strings or other malformed bundle identifiers into these arrays, which are later used in Set lookups.
-
-**Risk**: A compromised or misconfigured MDM server could push an aggressive capture configuration that exhausts device resources, floods the network, or violates the proportionality claims in the PIA. A batch size of 0 could cause runtime crashes.
-
-**Recommendation**: Add bounds validation to all integer MDM configuration values:
+The `clamp` helper is defined at line 83-85:
 ```swift
-self.screenshotIntervalSeconds = max(10, min(300, defaults.integer(forKey: "ScreenshotIntervalSeconds")))
-self.batchSize = max(100, min(10000, defaults.integer(forKey: "BatchSize")))
-self.batchIntervalSeconds = max(10, min(300, defaults.integer(forKey: "BatchIntervalSeconds")))
-self.idleTimeoutSeconds = max(60, min(3600, defaults.integer(forKey: "IdleTimeoutSeconds")))
-```
-Document the valid ranges in the mobileconfig profile comments and in the security whitepaper.
-
----
-
-### [HIGH] CFG-002: Backend URL Not Validated in MDM Config Path — Data Exfiltration Risk
-
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/KMFlowAgent/PythonProcessManager.swift:81-87`
-**Agent**: F3 (MDM & Configuration Profile Auditor)
-**Evidence**:
-```swift
-let defaults = UserDefaults.standard
-if let agentId = defaults.string(forKey: "KMFLOW_AGENT_ID"), !agentId.isEmpty {
-    environment["KMFLOW_AGENT_ID"] = agentId
+private static func clamp(_ value: Int, min: Int, max: Int) -> Int {
+    Swift.max(min, Swift.min(value, max))
 }
+```
+
+**Assessment of bounds**:
+- `screenshotIntervalSeconds`: min 5, max 3600 -- reasonable. Min of 5 seconds prevents extreme resource consumption. Could argue min should be 10 for privacy proportionality, but 5 is acceptable.
+- `batchSize`: min 1, max 10000 -- fixes the division-by-zero / memory exhaustion risk. Min of 1 is safe (no zero).
+- `batchIntervalSeconds`: min 5, max 3600 -- prevents continuous upload flooding.
+- `idleTimeoutSeconds`: min 30, max 3600 -- prevents "never idle" configuration.
+
+**Verdict**: All integer values are bounds-clamped. The original risk of resource exhaustion, division-by-zero, and network flooding via misconfigured MDM values is mitigated. **FIXED.**
+
+---
+
+### [FIXED] CFG-002: Backend URL Not Validated -- Data Exfiltration Risk (was HIGH)
+
+**Remediation PR**: #255
+**Verification**: `PythonProcessManager.swift` now validates the backend URL before passing it to the Python subprocess.
+
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/KMFlowAgent/PythonProcessManager.swift:85-94`
+**Evidence**:
+```swift
 if let backendURL = defaults.string(forKey: "KMFLOW_BACKEND_URL"), !backendURL.isEmpty {
-    environment["KMFLOW_BACKEND_URL"] = backendURL
+    // Validate URL scheme to prevent data exfiltration via rogue MDM config
+    if let url = URL(string: backendURL),
+       let scheme = url.scheme?.lowercased(),
+       scheme == "https",
+       url.host != nil {
+        environment["KMFLOW_BACKEND_URL"] = backendURL
+    } else {
+        log.error("Invalid KMFLOW_BACKEND_URL — must be a valid https:// URL with a host")
+    }
 }
 ```
-**Description**: The backend URL is read from UserDefaults and passed directly to the Python subprocess as an environment variable without any validation of the URL scheme, host, or format. The onboarding wizard's `ConnectionView` performs a health check on the user-entered URL, but the MDM path bypasses this entirely. When an MDM profile sets `BackendURL`, the value flows through `UserDefaults(suiteName: "com.kmflow.agent")` and ultimately to the Python process as `KMFLOW_BACKEND_URL`. There is no check that:
-- The scheme is `https://` (an `http://` URL would send captured data unencrypted)
-- The host is a legitimate KMFlow backend (a rogue MDM admin could redirect to `https://evil.attacker.com`)
-- The value is a well-formed URL at all (a string like `; rm -rf /` would be passed as an environment variable)
 
-Additionally, AgentConfig.swift does not read or validate the BackendURL at all — the `BackendURL` key in the mobileconfig is consumed by PythonProcessManager via a different UserDefaults path (`UserDefaults.standard` with key `KMFLOW_BACKEND_URL`), creating a confusing dual-path configuration architecture.
+**Assessment**:
+- HTTPS scheme enforced -- `http://` URLs are rejected, preventing cleartext data transmission.
+- URL structure validated -- malformed strings (e.g., `; rm -rf /`) are rejected by `URL(string:)` + host check.
+- Error logged when validation fails -- provides diagnostic visibility.
 
-**Risk**: A rogue MDM administrator (or an attacker who has compromised the MDM server) can redirect all captured activity data to an attacker-controlled server by pushing a profile with a modified `BackendURL`. The data would include PII-scrubbed window titles, application names, and activity patterns — all sent to an unauthorized endpoint. If `http://` is used, data is transmitted in cleartext.
+**Residual observation (informational, not a finding)**: There is no domain allow-list or certificate pinning. A rogue MDM admin could still redirect to `https://evil.attacker.com`. However, this requires MDM server compromise -- which represents a different threat model (a compromised MDM can do far worse than redirect a URL). The HTTPS enforcement is the appropriate Phase 1 control. Domain pinning or mTLS (noted as future in ConnectionView) would strengthen this in Phase 2.
 
-**Recommendation**:
-1. Add URL validation that enforces `https://` scheme, checks against an allow-list of known KMFlow API domains, or at minimum validates URL structure.
-2. Add certificate pinning or at least hostname verification against a compiled-in allow-list for Phase 1.
-3. Log a security event when the backend URL changes via MDM.
-4. Consolidate the backend URL config path so it flows through a single validated code path.
+**Verdict**: The data exfiltration risk from plaintext HTTP and malformed URLs is closed. The HTTPS enforcement is correctly implemented. **FIXED.**
 
 ---
 
-### [HIGH] TCC-002: CodeRequirement Contains Placeholder "REPLACE_TEAM_ID" — Profile Unusable as Shipped
+### [FIXED] BLK-001a: Null BundleId Bypasses BlocklistManager (was part of MEDIUM BLK-001)
+
+**Remediation PR**: Not identified in PR list; present in current codebase.
+**Verification**: `BlocklistManager.shouldCapture` now returns `false` for nil bundle identifiers.
+
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Config/BlocklistManager.swift:33-34`
+**Evidence**:
+```swift
+public func shouldCapture(bundleId: String?) -> Bool {
+    guard let bid = bundleId else { return false }
+```
+
+**Verdict**: The `BlocklistManager` actor correctly blocks processes with unknown bundle identifiers. The least-privilege default is applied. **FIXED.** However, `CaptureContextFilter.isBlockedApp` remains unfixed -- see BLK-001b below.
+
+---
+
+## Open Findings (Carried Forward or Residual)
+
+### [MEDIUM] TCC-002: REPLACE_TEAM_ID Placeholder (was HIGH, downgraded)
+
+**Original Severity**: HIGH
+**Current Severity**: MEDIUM (downgraded because customize-profiles.sh partially mitigates)
+**Remediation PR**: #258 (customize-profiles.sh created)
 
 **File**: `/Users/proth/repos/kmflow/agent/macos/installer/profiles/com.kmflow.agent.tcc.mobileconfig:107`
-**Agent**: F3 (MDM & Configuration Profile Auditor)
 **Evidence**:
 ```xml
 <key>CodeRequirement</key>
 <string>identifier "com.kmflow.agent" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] and certificate leaf[field.1.2.840.113635.100.6.1.13] and certificate leaf[subject.OU] = "REPLACE_TEAM_ID"</string>
 ```
-**Description**: Both the Accessibility and ScreenCapture CodeRequirement strings contain `REPLACE_TEAM_ID` as a placeholder. This placeholder must be replaced with the actual Apple Developer Team ID before deployment. If deployed as-is, the TCC grant will not match the signed binary (because no binary will have an OU of "REPLACE_TEAM_ID"), and the profile will silently fail to grant permissions. This is not a security vulnerability per se, but it creates a deployment failure mode where MDM admins may:
-1. Deploy the profile as-is and wonder why permissions are not granted
-2. Remove the CodeRequirement entirely to "fix" the problem, creating a security vulnerability where ANY binary named `com.kmflow.agent` would receive Accessibility access
-3. Weaken the CodeRequirement to match only the identifier without the certificate check
 
-The file comments at line 100-104 explain the need to replace this, but the comment is buried inside XML and easy to miss during deployment.
+**Remediation assessment**: `customize-profiles.sh` (PR #258) addresses this by providing a script that replaces `REPLACE_TEAM_ID` with the actual Apple Developer Team ID. The script includes robust validation:
+- Team ID is required (`--team-id` flag)
+- Format validation: must be a 10-character alphanumeric string matching `^[A-Z0-9]{10}$`
+- Template discovery and bulk replacement
 
-**Risk**: Profile deployment failure leads to support escalation or, worse, MDM admins weakening CodeRequirement to work around the issue. A weakened CodeRequirement could allow a malicious binary with the same bundle ID to receive Accessibility permissions.
+**Why downgraded to MEDIUM**: The existence of `customize-profiles.sh` provides a documented, validated substitution path. An MDM admin who follows the documented workflow will get a correctly customized profile. The risk of deploying an un-substituted profile is reduced (though not eliminated -- the templates are still directly deployable without running the script).
 
-**Recommendation**:
-1. Add a prominent `<!-- DEPLOYMENT REQUIRED: Replace REPLACE_TEAM_ID ... -->` comment at the top of the file, not just inline.
-2. Add a validation step to the deployment documentation that checks the CodeRequirement is not a placeholder.
-3. Consider providing a `prepare-profiles.sh` script that takes the Team ID as an argument and performs the substitution, preventing partial-placeholder deployments.
+**Remaining gaps**:
+1. No runtime validation that `REPLACE_TEAM_ID` has been substituted. The script does not verify its own output for residual placeholders.
+2. No prominent warning at the top of the TCC profile file. The placeholder instruction is still buried at line 100-104 inside XML comments.
+3. The script does not regenerate PayloadUUID values (see PROF-003).
+
+**Recommendation**: Add a post-substitution verification step to `customize-profiles.sh`:
+```bash
+if grep -q "REPLACE_" "$OUTPUT_FILE"; then
+    echo "ERROR: Residual placeholders found in $OUTPUT_FILE" >&2
+    exit 1
+fi
+```
+
+---
+
+### [MEDIUM] BLK-001b: CaptureContextFilter.isBlockedApp Returns false for nil BundleId
+
+**Original Finding**: Part of BLK-001
+**Current Severity**: MEDIUM
+
+**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/PII/CaptureContextFilter.swift:37-39`
+**Evidence**:
+```swift
+public static func isBlockedApp(bundleId: String?, blocklist: Set<String>) -> Bool {
+    guard let bid = bundleId else { return false }
+    return blocklist.contains(bid)
+}
+```
+
+**Description**: While `BlocklistManager.shouldCapture` was fixed to return `false` for nil bundle IDs (BLK-001a), the static method `CaptureContextFilter.isBlockedApp` still returns `false` (not blocked) when `bundleId` is nil. This method is a separate code path from BlocklistManager.
+
+**Mitigating factor**: The primary capture path (`AppSwitchMonitor`) calls `BlocklistManager.shouldCapture`, which IS fixed. `CaptureContextFilter.isBlockedApp` appears to be the older static implementation. A search of the codebase shows it is not called in the active capture path -- `AppSwitchMonitor.swift:69` uses `blocklistManager.shouldCapture`, not `CaptureContextFilter.isBlockedApp`. However, the static method exists as a public API and could be called by future code or tests without the nil-safe behavior.
+
+**Risk**: Low-to-medium. The active capture path is protected by the fixed `BlocklistManager`. The static method is a latent inconsistency that could cause a regression if used in new code.
+
+**Recommendation**: Align `CaptureContextFilter.isBlockedApp` with `BlocklistManager.shouldCapture`:
+```swift
+guard let bid = bundleId else { return true }  // nil bundleId = blocked
+```
 
 ---
 
 ### [MEDIUM] SIGN-001: Profile Verification Uses -noverify Flag
 
+**Status**: OPEN (no remediation attempted)
+**Current Severity**: MEDIUM
+
 **File**: `/Users/proth/repos/kmflow/agent/macos/installer/profiles/sign-profile.sh:123`
-**Agent**: F3 (MDM & Configuration Profile Auditor)
 **Evidence**:
 ```bash
 if openssl smime -verify -inform der -noverify -in "$SIGNED_PROFILE" -out /dev/null 2>&1; then
@@ -160,287 +242,198 @@ else
     echo "  WARNING: openssl smime -verify returned non-zero." >&2
     echo "           This may be expected if the cert is not in the system trust store." >&2
 ```
-**Description**: The post-signing verification step uses the `-noverify` flag, which skips certificate chain validation. This means the verification only checks that the CMS structure is syntactically valid — it does not verify that the signing certificate is trusted, not expired, or not revoked. Furthermore, when verification fails, the script does not exit with a non-zero status code. It merely prints a warning to stderr and continues to the "Profile Signing Complete" success message. A CI/CD pipeline would see exit code 0 (success) even when the profile signature is invalid.
 
-**Risk**: An expired, revoked, or untrusted signing certificate could produce a signed profile that passes the script's verification but is rejected by macOS on installation, or worse, displays an "Unsigned" or "Unverified" identity to the user in System Settings. The non-failing exit code means automated pipelines will not catch the issue.
+**Description**: Unchanged from original audit. The `-noverify` flag skips certificate chain validation. The verification only checks CMS structure -- not certificate trust, expiry, or revocation. When verification fails, the script does not exit with a non-zero status code. It prints a warning and proceeds to the "Profile Signing Complete" success message. A CI/CD pipeline would see exit code 0 regardless of signature validity.
 
-**Recommendation**:
-1. Remove the `-noverify` flag and instead provide the CA certificate chain via `-CAfile` for proper chain validation.
-2. If the signing certificate may not be in the system trust store, add a separate verification path that validates the chain explicitly.
-3. Exit with a non-zero status code on verification failure:
-```bash
-if ! openssl smime -verify -inform der -CAfile "$CHAIN" -in "$SIGNED_PROFILE" -out /dev/null 2>&1; then
-    echo "ERROR: Profile signature verification failed." >&2
-    exit 2
-fi
-```
+**Risk**: An expired, revoked, or untrusted signing certificate produces a signed profile that passes this script's verification. Automated pipelines will not catch the issue.
+
+**Recommendation**: Unchanged from original audit. Remove `-noverify`, validate chain via `-CAfile`, and exit non-zero on failure.
 
 ---
 
-### [MEDIUM] PROF-001: PayloadOrganization Hardcoded to "KMFlow" in Both Profiles
+### [MEDIUM] PROF-002: No ConsentText Dictionary in Config Profile
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/installer/profiles/com.kmflow.agent.mobileconfig:29-30`
-**Agent**: F3 (MDM & Configuration Profile Auditor)
+**Status**: OPEN (no remediation attempted)
+**Current Severity**: MEDIUM
+
+**File**: `/Users/proth/repos/kmflow/agent/macos/installer/profiles/com.kmflow.agent.mobileconfig` (entire file)
+
+**Description**: Unchanged from original audit. The application configuration profile (which supports manual installation per its header comment at line 8-9) does not include a `ConsentText` dictionary. Users who manually install the profile receive no privacy explanation at installation time.
+
+**Risk**: Missed opportunity for GDPR transparency evidence at the moment of profile installation.
+
+**Recommendation**: Unchanged from original audit. Add a `ConsentText` dictionary with at minimum an English-language explanation.
+
+---
+
+### [MEDIUM] CUST-001: customize-profiles.sh --org-name Substitution Is a No-Op (NEW)
+
+**Severity**: MEDIUM
+**Status**: NEW finding discovered during re-audit
+
+**File**: `/Users/proth/repos/kmflow/agent/macos/installer/profiles/customize-profiles.sh:100`
 **Evidence**:
+```bash
+CONTENT="${CONTENT//REPLACE_ORG_NAME/$ORG_NAME}"
+```
+
+**Description**: The `customize-profiles.sh` script (introduced in PR #258) accepts a `--org-name` argument and performs a string substitution of `REPLACE_ORG_NAME` in the template profiles. However, **neither mobileconfig template contains the token `REPLACE_ORG_NAME`**. Both profiles have `PayloadOrganization` hardcoded to `KMFlow`:
+
+`com.kmflow.agent.mobileconfig:29-30`:
 ```xml
 <key>PayloadOrganization</key>
 <string>KMFlow</string>
 ```
-**Description**: Both the application configuration profile (line 29) and the TCC profile (line 39) have `PayloadOrganization` hardcoded to `KMFlow`. In enterprise MDM deployments, the `PayloadOrganization` field is displayed to end users in System Settings > Profiles. The user sees "KMFlow" rather than their own employer's name (e.g., "Acme Corporation IT"). This creates a confusing user experience and may cause security-conscious employees to question or refuse the profile installation because they do not recognize "KMFlow" as their employer's IT department.
 
-**Risk**: Employee confusion during deployment. Potential support escalation. In organizations with strict profile naming policies, the profile may be rejected by IT governance review. Minor trust issue — employees expect profiles from their employer, not from a vendor they may not have heard of.
-
-**Recommendation**: Change `PayloadOrganization` to a placeholder like `[DEPLOYING_ORGANIZATION]` with a comment instructing the MDM admin to replace it, or provide the `prepare-profiles.sh` script mentioned in TCC-002 that substitutes this value along with the Team ID.
-
----
-
-### [MEDIUM] PROF-002: No ConsentText Dictionary in Either Profile
-
-**File**: `/Users/proth/repos/kmflow/agent/macos/installer/profiles/com.kmflow.agent.mobileconfig` (entire file)
-**Agent**: F3 (MDM & Configuration Profile Auditor)
-**Evidence**:
+`com.kmflow.agent.tcc.mobileconfig:39-40`:
 ```xml
-<!-- No ConsentText key present in either profile -->
+<key>PayloadOrganization</key>
+<string>KMFlow</string>
 ```
-**Description**: Neither profile includes a `ConsentText` dictionary. Apple Configuration Profiles support a `ConsentText` key at the top-level profile dict, which displays a consent message to the user before profile installation. For the application config profile (which has `PayloadRemovalDisallowed = false` and can be installed manually via `open com.kmflow.agent.mobileconfig`), this is a missed opportunity to present a privacy notice at the moment of installation. While the TCC profile is MDM-only (no user installation prompt), the application config profile explicitly supports manual installation (per the file's header comment at line 8-9).
 
-**Risk**: Users who manually install the profile receive no privacy explanation at the installation moment. For GDPR compliance (transparency principle, Art. 12), presenting a consent text at profile installation strengthens the evidence of informed consent.
+The substitution line in the script (`CONTENT="${CONTENT//REPLACE_ORG_NAME/$ORG_NAME}"`) matches zero occurrences and is a silent no-op. An MDM admin running `customize-profiles.sh --team-id ABCDE12345 --org-name "Acme Corporation"` would receive profiles that still display "KMFlow" as the organization in System Settings.
 
-**Recommendation**: Add a `ConsentText` dictionary to the application configuration profile with at minimum an English-language explanation of what the profile configures:
-```xml
-<key>ConsentText</key>
-<dict>
-    <key>default</key>
-    <string>This profile configures the KMFlow Task Mining Agent on your device. It will set the backend server URL, engagement identifier, and data capture policy. By installing this profile, you acknowledge that desktop activity monitoring will be active during the engagement period.</string>
-</dict>
-```
+**Risk**: MDM admins who use the customization script with `--org-name` believe the organization name has been customized. In reality, the profiles still show "KMFlow" to end users. This creates employee confusion and potential support escalation, as described in the original PROF-001 finding. The customization script gives a false sense of completeness.
+
+**Recommendation**: Replace the hardcoded `KMFlow` in `PayloadOrganization` with `REPLACE_ORG_NAME` in both mobileconfig templates so the substitution actually works. Alternatively, change the default value in the templates to `REPLACE_ORG_NAME` and make `--org-name` a required argument (or default to "KMFlow" as the script already does).
 
 ---
 
-### [MEDIUM] SCOPE-001: TCC Profile Uses PayloadScope "System" but App Config Uses "User" — Scope Mismatch
+### [LOW] PROF-001: PayloadOrganization Hardcoded (was MEDIUM, downgraded)
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/installer/profiles/com.kmflow.agent.tcc.mobileconfig:55-56` and `/Users/proth/repos/kmflow/agent/macos/installer/profiles/com.kmflow.agent.mobileconfig:47-48`
-**Agent**: F3 (MDM & Configuration Profile Auditor)
-**Evidence**:
-```xml
-<!-- TCC profile -->
-<key>PayloadScope</key>
-<string>System</string>
+**Original Severity**: MEDIUM
+**Current Severity**: LOW (downgraded due to customize-profiles.sh intent, but see CUST-001)
+**Status**: PARTIALLY FIXED (script infrastructure exists but substitution is broken)
 
-<!-- App config profile -->
-<key>PayloadScope</key>
-<string>User</string>
-```
-**Description**: The TCC/PPPC profile uses `PayloadScope = System` while the application configuration profile uses `PayloadScope = User`. The System scope for the TCC profile is technically correct (PPPC payloads must be System-scoped to be effective), but the documentation and whitepaper (Section 6) state the agent "runs as a LaunchAgent" (user-scoped). The System-scoped TCC profile means the Accessibility and ScreenCapture grants apply to ALL users on the machine, not just the user who has the agent installed. On shared workstations, this means the agent binary could run under any user account and receive Accessibility access.
+**Description**: The `customize-profiles.sh` script was created to address this (PR #258), demonstrating intent to make PayloadOrganization customizable. The `--org-name` flag and substitution logic exist. However, the templates were not updated to use the `REPLACE_ORG_NAME` token, making the fix incomplete. See CUST-001 for the specific bug.
 
-**Risk**: On multi-user macOS machines (e.g., shared lab workstations, training environments), the TCC grant applies system-wide. If the agent binary is accessible to other users, they could exploit the pre-authorized Accessibility permission. This is a minor risk in typical single-user consultant laptop deployments but could be significant in shared environments.
-
-**Recommendation**: Document in the deployment guide that the TCC profile grants system-wide permissions and that on multi-user machines, the agent binary should be installed per-user rather than in `/Applications/`. Consider whether the deployment architecture should enforce single-user installation on shared machines.
+Downgraded from MEDIUM to LOW because the fix infrastructure is in place -- only the template token is missing.
 
 ---
 
-### [MEDIUM] BLK-001: Null BundleId Bypasses Blocklist Check
+### [LOW] SCOPE-001: TCC System Scope vs User Config Scope
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/Sources/Config/BlocklistManager.swift:33-34`
-**Agent**: F3 (MDM & Configuration Profile Auditor)
-**Evidence**:
-```swift
-public func shouldCapture(bundleId: String?) -> Bool {
-    guard let bid = bundleId else { return true }
-    lock.lock()
-    defer { lock.unlock() }
-```
-**Description**: When `bundleId` is `nil`, `shouldCapture` returns `true` (allow capture). Some macOS processes (particularly background daemons, XPC services, or processes launched from Terminal) may not have a bundle identifier. The function defaults to capturing data from these unidentified processes. This is a permissive default that contradicts the least-privilege principle — unidentifiable processes should be treated as potentially sensitive and blocked by default.
+**Status**: OPEN (Accepted Risk)
+**Current Severity**: LOW
 
-Additionally, the L1Filter at `/Users/proth/repos/kmflow/agent/macos/Sources/PII/L1Filter.swift:36` has the same pattern:
-```swift
-public static func isBlockedApp(bundleId: String?, blocklist: Set<String>) -> Bool {
-    guard let bid = bundleId else { return false }
-```
-A `nil` bundle ID causes `isBlockedApp` to return `false` (not blocked), allowing capture.
+**Description**: Unchanged from original audit. The TCC profile uses `PayloadScope = System` (required for PPPC) while the app config uses `PayloadScope = User`. On multi-user machines, the TCC grant applies system-wide.
 
-**Risk**: Processes without bundle identifiers bypass all blocklist filtering. If a sensitive application (e.g., a custom internal tool, a CLI-based password manager) runs without a bundle ID, its activity would be captured despite potentially being sensitive.
-
-**Recommendation**: Change the default behavior for `nil` bundle IDs to deny capture:
-```swift
-guard let bid = bundleId else { return false }  // Unknown apps are not captured
-```
-Or add a configurable policy (`captureUnidentifiedApps: Bool`) that defaults to `false`.
+**Assessment**: This is an inherent limitation of Apple's PPPC mechanism. TCC profiles MUST be System-scoped to function. The risk is limited to shared workstation environments, which are uncommon for task mining deployments. Accepted as a known limitation.
 
 ---
 
-### [LOW] PROF-003: PayloadUUID Values Are Sequential Placeholders — Not Cryptographically Random
+### [LOW] PROF-003: Sequential Placeholder PayloadUUIDs
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/installer/profiles/com.kmflow.agent.mobileconfig:40` and `com.kmflow.agent.tcc.mobileconfig:49,78`
-**Agent**: F3 (MDM & Configuration Profile Auditor)
-**Evidence**:
-```xml
-<!-- mobileconfig profile -->
-<string>A1B2C3D4-E5F6-7890-ABCD-EF1234567890</string>
-<!-- mobileconfig payload -->
-<string>B2C3D4E5-F6A7-8901-BCDE-F12345678901</string>
-<!-- tcc profile -->
-<string>C3D4E5F6-A7B8-9012-CDEF-123456789012</string>
-<!-- tcc payload -->
-<string>D4E5F6A7-B8C9-0123-DEFA-234567890123</string>
-```
-**Description**: All four PayloadUUID values across both profiles are clearly sequential placeholders (A1B2C3D4, B2C3D4E5, C3D4E5F6, D4E5F6A7) rather than cryptographically random UUIDs. While the Apple documentation does not strictly require random UUIDs, the `PayloadUUID` is used by MDM systems to track profile identity. Sequential/predictable UUIDs are a code smell and could cause profile collision issues if multiple KMFlow deployments are managed by the same MDM server without re-generating UUIDs per engagement.
+**Status**: OPEN (no remediation attempted)
+**Current Severity**: LOW
 
-The mobileconfig header comment at line 38 says "regenerate for each new engagement" but this instruction is easily missed. The TCC profile has no such instruction.
+**File**: Both mobileconfig profiles
+**Evidence**: PayloadUUID values remain sequential placeholders: `A1B2C3D4-...`, `B2C3D4E5-...`, `C3D4E5F6-...`, `D4E5F6A7-...`
 
-**Risk**: Low. If two engagements use the same PayloadUUIDs, MDM systems may overwrite one profile with the other, causing configuration cross-contamination between engagements.
+**Description**: Unchanged. The `customize-profiles.sh` script does NOT regenerate UUIDs. No `uuidgen` call exists in the script. Multi-engagement deployments through the same MDM server risk UUID collisions.
 
-**Recommendation**: Add a `prepare-profiles.sh` script that generates fresh UUIDs (`uuidgen`) for all PayloadUUID fields before deployment. Add the same "regenerate" instruction to the TCC profile header.
-
----
-
-### [LOW] PROF-004: Application Config Profile PayloadRemovalDisallowed Is False — Profile Can Be Silently Removed
-
-**File**: `/Users/proth/repos/kmflow/agent/macos/installer/profiles/com.kmflow.agent.mobileconfig:43-44`
-**Agent**: F3 (MDM & Configuration Profile Auditor)
-**Evidence**:
-```xml
-<!-- Remove profile when MDM un-enrolls the device -->
-<key>PayloadRemovalDisallowed</key>
-<false/>
-```
-**Description**: The application configuration profile allows user removal (`PayloadRemovalDisallowed = false`). When removed, the `UserDefaults(suiteName: "com.kmflow.agent")` managed preferences are deleted by macOS. However, there is no code in the agent that detects profile removal and reacts appropriately. A search for profile removal detection, KVO on UserDefaults, or any change observation mechanism found no results. The agent does not observe changes to its managed preferences domain.
-
-The whitepaper (Section 7) describes a heartbeat-based state machine for lifecycle management, but this applies to server-side revocation. There is no mention of what happens when the local MDM profile is removed while the agent is running. The agent would continue running with its last-known configuration (cached in memory) until the next heartbeat cycle, and even then, the heartbeat updates server-side state — it does not re-read local MDM preferences.
-
-**Risk**: A user removes the MDM configuration profile. The agent continues running with stale configuration (including the last-known backend URL and engagement ID). The agent has no mechanism to detect this state change and fall back to safe defaults or halt capture.
-
-**Recommendation**: Add KVO (Key-Value Observing) on the `com.kmflow.agent` UserDefaults suite to detect when managed preferences are removed. On removal, the agent should either halt capture and require re-onboarding, or fall back to safe defaults and notify the backend via the next heartbeat.
-
----
-
-### [LOW] SIGN-002: No Passphrase Protection Option for Private Key
-
-**File**: `/Users/proth/repos/kmflow/agent/macos/installer/profiles/sign-profile.sh:96-105`
-**Agent**: F3 (MDM & Configuration Profile Auditor)
-**Evidence**:
+**Recommendation**: Add UUID regeneration to `customize-profiles.sh`:
 ```bash
-OPENSSL_ARGS=(
-    smime
-    -sign
-    -signer  "$CERT"
-    -inkey   "$KEY"
-    -outform der
-    -nodetach           # embed the content in the signature (required for profiles)
-    -in      "$PROFILE_PATH"
-    -out     "$SIGNED_PROFILE"
-)
+for uuid_placeholder in A1B2C3D4-E5F6-7890-ABCD-EF1234567890 B2C3D4E5-F6A7-8901-BCDE-F12345678901 \
+                         C3D4E5F6-A7B8-9012-CDEF-123456789012 D4E5F6A7-B8C9-0123-DEFA-234567890123; do
+    CONTENT="${CONTENT//$uuid_placeholder/$(uuidgen)}"
+done
 ```
-**Description**: The signing script does not support passphrase-protected private keys. The `openssl smime -sign` command accepts `-passin` for encrypted private keys, but this option is not included. The script assumes the private key file is unencrypted on disk. Additionally, the script prints the path to the private key in its summary output (line 88: `echo "  Key:     $KEY"`), which in CI/CD logs could expose the key file location.
-
-**Risk**: Low. If the signing key is stored unencrypted on a CI/CD server, anyone with access to that server can sign arbitrary profiles. The key path being logged is a minor information disclosure.
-
-**Recommendation**: Add `-passin` support (e.g., `PASSPHRASE` env var) for encrypted keys. Mask the key path in log output or replace it with a redacted placeholder.
 
 ---
 
-### [LOW] COMPAT-001: TCC Profile Uses `Allowed` Key Instead of `Authorization` — Modern macOS Compatibility Note
+### [LOW] PROF-004: PayloadRemovalDisallowed=false, No Detection
 
-**File**: `/Users/proth/repos/kmflow/agent/macos/installer/profiles/com.kmflow.agent.tcc.mobileconfig:110-111`
-**Agent**: F3 (MDM & Configuration Profile Auditor)
-**Evidence**:
-```xml
-<key>Allowed</key>
-<true/>
-```
-**Description**: The TCC profile uses the `Allowed` boolean key (true/false) rather than the `Authorization` string key (`Allow`/`Deny`/`AllowStandardUserToSetSystemService`). The `Allowed` boolean key is the older style supported since macOS 10.14 Mojave. Apple introduced the `Authorization` string key in macOS 11 Big Sur, which provides the additional option `AllowStandardUserToSetSystemService` — this value grants the user the ability to approve or deny the permission themselves, rather than silently granting it. Using `AllowStandardUserToSetSystemService` would be more transparent and align with the whitepaper's claim of "transparent to the employee" (Section 1).
+**Status**: OPEN (no remediation attempted)
+**Current Severity**: LOW
 
-Both key formats work on current macOS versions. Jamf Pro, Intune, Kandji, Mosyle, and Fleet all support both formats. No vendor-specific keys are present in the profiles, making them portable across MDM solutions.
-
-**Risk**: Low. The `Allowed = true` format silently grants permissions without user awareness. Using `Authorization = AllowStandardUserToSetSystemService` for Accessibility would give users a prompt they can approve — strengthening the transparency claim and GDPR consent evidence.
-
-**Recommendation**: For deployments where user transparency is prioritized over silent deployment, consider switching to:
-```xml
-<key>Authorization</key>
-<string>AllowStandardUserToSetSystemService</string>
-```
-Document the trade-off in the deployment guide: silent grant (current) vs. user-prompted grant (more transparent).
+**Description**: Unchanged from original audit. The config profile allows user removal, but the agent has no KVO or change detection on the managed preferences domain. The agent continues running with stale configuration after profile removal.
 
 ---
 
-## Whitepaper Claims Verification
+### [LOW] SIGN-002: No Passphrase Support for Signing Key
+
+**Status**: OPEN (no remediation attempted)
+**Current Severity**: LOW
+
+**File**: `/Users/proth/repos/kmflow/agent/macos/installer/profiles/sign-profile.sh:88,96-105`
+**Description**: Unchanged. No `-passin` support for encrypted keys. Key path printed in log output.
+
+---
+
+### [LOW] COMPAT-001: Allowed Key vs Authorization Key
+
+**Status**: OPEN (Accepted Risk)
+**Current Severity**: LOW
+
+**Description**: The TCC profile uses the `Allowed` boolean key rather than the modern `Authorization` string key. Both work on all supported macOS versions. The `Allowed = true` format silently grants without user awareness. Using `Authorization = AllowStandardUserToSetSystemService` would be more transparent but changes the deployment UX. Accepted as a design decision -- silent grant is appropriate for supervised MDM deployments.
+
+---
+
+## Whitepaper Claims Verification (Updated)
 
 ### Claim 1: "No Screen Capture" (Sections 1, 6)
 
+| Claim | Whitepaper Text | Actual State (Post-Remediation) | Verdict |
+|-------|----------------|------|---------|
+| No screenshots | "It does **not** record the content of screenshots" (Sec. 1) | ScreenCapture REMOVED from TCC profile. `screenshotEnabled` defaults to `false` in code. | **MATCH** |
+| Screen Recording optional | "Screen Recording: Optional (Phase 2)" (Sec. 6) | Separate profile required for ScreenCapture. Not included in default deployment. | **MATCH** |
+| Disabled by default | "Disabled by default" (Sec. 6) | `screenshotEnabled: Bool = false` in code. No TCC pre-authorization. | **MATCH** |
+
+**Status change**: All three ScreenCapture claims now match the shipped artifacts. The trust gap is closed.
+
+### Claim 2: "Only Accessibility" (Section 6)
+
 | Claim | Whitepaper Text | Actual State | Verdict |
-|-------|----------------|--------------|---------|
-| No screenshots | "It does **not** record the content of screenshots" (Sec. 1) | TCC profile ships with ScreenCapture pre-authorized; `AgentConfig.swift` has `screenshotEnabled` property; `EventProtocol.swift` has `screenCapture` event type | **MISMATCH** - See TCC-001 |
-| Screen Recording optional | "Screen Recording: Optional (Phase 2)" (Sec. 6) | ScreenCapture is pre-authorized in the default TCC profile | **MISMATCH** - Profile enables what documentation says is Phase 2 |
-| Disabled by default | "Disabled by default" (Sec. 6) | `screenshotEnabled: Bool = false` in code defaults | **PARTIAL MATCH** - Code default is false, but TCC permission is pre-authorized |
+|-------|----------------|------|---------|
+| Only Accessibility | "Agent requests only Accessibility" (Sec. 1) | TCC profile grants only Accessibility. | **MATCH** |
+| No Full Disk Access | "Not required and not requested" | No SystemPolicyAllFiles in TCC profile | **MATCH** |
+| No Contacts/Calendar/Camera/Mic | "Not requested. Not used." | Not present in TCC profile | **MATCH** |
 
-### Claim 2: "AES-256-GCM Encryption" (Section 5)
+**Status change**: The "Only Accessibility" claim now fully matches. Previous mismatch (ScreenCapture was present) is resolved.
+
+### Claim 3: "AES-256-GCM Encryption" (Section 5)
 
 | Claim | Whitepaper Text | Actual State | Verdict |
-|-------|----------------|--------------|---------|
-| AES-256-GCM at rest | "Algorithm: AES-256-GCM" (Sec. 5) | CryptoKit imported in KMFlowAgentApp.swift; encryption implementation not in audited files (not in scope of F3 audit) | **UNVERIFIABLE** from F3 scope — defer to other audit agents |
+|-------|----------------|------|---------|
+| AES-256-GCM at rest | "Algorithm: AES-256-GCM" (Sec. 5) | Out of F3 scope -- defer to E3 agent | **UNVERIFIABLE** from F3 scope |
 
-### Claim 3: "4-Layer PII Protection" (Section 4)
+### Claim 4: "4-Layer PII Protection" (Section 4)
 
 | Layer | Claimed | Evidence | Verdict |
 |-------|---------|----------|---------|
-| L1: Capture Prevention | Password field, secure input, blocklist, private browsing | L1Filter.swift, PrivateBrowsingDetector.swift, BlocklistManager.swift | **MATCH** |
-| L2: Regex Scrubbing | SSN, email, phone, CC, NI, IP, DOB patterns | Not in F3 audit scope (PII module) | **UNVERIFIABLE** from F3 scope |
-| L3: ML NER | Backend NER scan | Described as "future phase" / "planned for Phase 3" | **NOT IMPLEMENTED** (documented as future) |
-| L4: Human Review | Quarantine queue | Backend feature, not in agent code | **UNVERIFIABLE** from F3 scope |
-
-### Claim 4: "Least Privilege — Only Accessibility" (Section 6)
-
-| Claim | Whitepaper Text | Actual State | Verdict |
-|-------|----------------|--------------|---------|
-| Only Accessibility | "Agent requests only the macOS permissions required for its function (Accessibility)" (Sec. 1) | TCC profile also pre-authorizes ScreenCapture | **MISMATCH** - See TCC-001 |
-| No Full Disk Access | "Full Disk Access is not required and not requested" | No SystemPolicyAllFiles in TCC profile | **MATCH** |
-| No Contacts/Calendar/Camera/Mic | "Not requested. Not used." | Not present in TCC profile | **MATCH** |
+| L1: Capture Prevention | Blocklist, password fields, private browsing | `BlocklistManager.swift` (fixed nil handling), `CaptureContextFilter.swift`, `PrivateBrowsingDetector` | **MATCH** (with BLK-001b caveat) |
+| L2: Regex Scrubbing | SSN, email, phone, CC patterns | Out of F3 scope | **UNVERIFIABLE** from F3 scope |
+| L3: ML NER | Backend NER | Out of F3 scope (documented as future) | **NOT IMPLEMENTED** |
+| L4: Human Review | Quarantine queue | Out of F3 scope | **NOT IMPLEMENTED** |
 
 ---
 
-## Enterprise MDM Compatibility Assessment
+## Enterprise MDM Compatibility Assessment (Unchanged)
 
 | MDM Solution | Compatible? | Notes |
-|--------------|-------------|-------|
+|--------------|:-:|-------|
 | Jamf Pro | Yes | Standard PPPC payload format; no vendor-specific keys |
-| Microsoft Intune | Yes | Intune supports custom mobileconfig upload; standard payload types |
+| Microsoft Intune | Yes | Standard mobileconfig upload; standard payload types |
 | Kandji | Yes | Standard Configuration/PPPC payloads |
-| Mosyle | Yes | Standard payloads; referenced in TCC profile header comment |
-| Fleet (osquery) | Partial | Fleet deploys profiles via Apple MDM protocol; compatible, but Fleet's PPPC UI may not parse the `Allowed` key natively |
-
-No vendor-specific payload keys, custom identifiers, or proprietary extensions were found in either profile. The profiles are portable across all major macOS MDM solutions.
+| Mosyle | Yes | Standard payloads; referenced in TCC profile header |
+| Fleet (osquery) | Partial | Compatible via Apple MDM protocol; Fleet PPPC UI may not parse `Allowed` key natively |
 
 ---
 
-## Profile Structure Compliance Summary
+## Risk Assessment (Updated)
 
-| Check | App Config Profile | TCC Profile |
-|-------|-------------------|-------------|
-| PayloadType correct | Yes (`Configuration` / `com.kmflow.agent`) | Yes (`Configuration` / `com.apple.TCC.configuration-profile-policy`) |
-| PayloadUUID unique within profile | Yes (A1B2... and B2C3...) | Yes (C3D4... and D4E5...) |
-| PayloadUUID unique across profiles | Yes (all four values are distinct) | Yes |
-| PayloadUUID cryptographically random | No (sequential placeholders) | No (sequential placeholders) |
-| PayloadScope appropriate | Yes (`User` for managed prefs) | Yes (`System` required for PPPC) |
-| PayloadRemovalDisallowed documented | Yes (false, with comment) | Yes (true, appropriate for PPPC) |
-| PayloadOrganization correct | No (hardcoded to "KMFlow") | No (hardcoded to "KMFlow") |
-| ConsentText present | No | No (N/A for MDM-only profile) |
-| CodeRequirement has all 3 checks | Yes (identifier + anchor + cert OU) | Yes (same) |
-| IdentifierType = bundleID | Yes | Yes |
-| StaticCode = false | Yes (re-validates on each use) | Yes |
+**Overall MDM Profile Security Posture**: LOW-MEDIUM RISK (improved from MEDIUM RISK)
 
----
+The critical finding (TCC-001) has been fully remediated. All three HIGH findings have been addressed: two fully fixed (CFG-001, CFG-002) and one substantially mitigated (TCC-002, downgraded to MEDIUM). The trust gap between the security whitepaper and shipped TCC profile is closed.
 
-## Risk Assessment
+Remaining issues are operational (no ConsentText, placeholder UUIDs, broken org-name substitution, sign-profile verification gap) rather than security-critical. None represent immediate data exfiltration, privilege escalation, or compliance violation risks.
 
-**Overall MDM Profile Security Posture**: MEDIUM RISK
+**Remediation progress**: 4 of 13 original findings fully fixed. 1 new finding discovered (CUST-001). 10 findings remain open at MEDIUM or LOW severity with no CRITICAL or HIGH findings outstanding.
 
-The profiles are structurally well-designed and follow Apple's PPPC specification correctly. The CodeRequirement strings include all three recommended checks (identifier, anchor, certificate OU). The profile separation between application configuration and TCC permissions is appropriate. Enterprise MDM compatibility is strong.
-
-However, the critical finding (TCC-001) represents a significant trust gap between what the security documentation tells the CISO and what the shipped profile actually enables. This is the kind of discrepancy that erodes trust during a security review and can block deployment approval. The lack of input validation on MDM-configurable values (CFG-001, CFG-002) creates a real attack surface for compromised MDM servers.
-
-**Priority remediation order**:
-1. TCC-001 (CRITICAL) — Remove ScreenCapture from default TCC profile
-2. CFG-002 (HIGH) — Add backend URL validation
-3. CFG-001 (HIGH) — Add bounds checking on all integer config values
-4. TCC-002 (HIGH) — Address placeholder CodeRequirement deployment risk
-5. Remaining MEDIUM and LOW findings in severity order
+**Priority for next remediation cycle**:
+1. CUST-001 (MEDIUM) -- Fix REPLACE_ORG_NAME token in templates (trivial fix, unblocks the entire customize-profiles workflow)
+2. BLK-001b (MEDIUM) -- Align CaptureContextFilter.isBlockedApp with BlocklistManager behavior
+3. SIGN-001 (MEDIUM) -- Remove -noverify from sign-profile.sh verification
+4. PROF-002 (MEDIUM) -- Add ConsentText to config profile
+5. PROF-003 (LOW) -- Add UUID regeneration to customize-profiles.sh
