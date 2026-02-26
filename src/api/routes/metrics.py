@@ -24,7 +24,7 @@ from src.core.models import (
     SuccessMetric,
     User,
 )
-from src.core.permissions import require_permission
+from src.core.permissions import require_engagement_access, require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -223,6 +223,7 @@ async def list_readings(
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """List metric readings for an engagement."""
     query = select(MetricReading).where(MetricReading.engagement_id == engagement_id)
@@ -248,6 +249,7 @@ async def get_metric_summary(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Get aggregate metric summary for an engagement.
 

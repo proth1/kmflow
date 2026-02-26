@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
 from src.core.models import User
-from src.core.permissions import require_permission
+from src.core.permissions import require_engagement_access, require_permission
 from src.core.reports import ReportEngine
 
 logger = logging.getLogger(__name__)
@@ -73,6 +73,7 @@ async def get_engagement_summary(
     format: str = "json",
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> Any:
     """Generate engagement summary report.
 
@@ -92,6 +93,7 @@ async def get_gap_report(
     format: str = "json",
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> Any:
     """Generate gap analysis report.
 
@@ -111,6 +113,7 @@ async def get_governance_report(
     format: str = "json",
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> Any:
     """Generate governance overlay report.
 
@@ -130,6 +133,7 @@ async def get_executive_summary(
     format: str = "html",
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> Any:
     """Generate a combined executive summary combining all 3 report types.
 

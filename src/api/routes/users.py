@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.deps import get_session
 from src.core.auth import get_current_user, hash_password
 from src.core.models import AuditAction, AuditLog, Engagement, EngagementMember, User, UserRole
-from src.core.permissions import has_permission, has_role_level
+from src.core.permissions import has_permission, has_role_level, require_engagement_access
 
 logger = logging.getLogger(__name__)
 
@@ -244,6 +244,7 @@ async def add_engagement_member(
     payload: MemberCreate,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> EngagementMember:
     """Add a member to an engagement (engagement lead+ or admin)."""
     if not has_permission(current_user, "team:manage") and not has_role_level(current_user, UserRole.PLATFORM_ADMIN):
@@ -311,6 +312,7 @@ async def remove_engagement_member(
     user_id: UUID,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> None:
     """Remove a member from an engagement (engagement lead+ or admin)."""
     if not has_permission(current_user, "team:manage") and not has_role_level(current_user, UserRole.PLATFORM_ADMIN):
@@ -350,6 +352,7 @@ async def list_engagement_members(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> list[EngagementMember]:
     """List all members of an engagement."""
     # Verify engagement exists

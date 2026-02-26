@@ -126,24 +126,6 @@ async def revoke_api_key(db: AsyncSession, key_id: str) -> bool:
     return True
 
 
-def verify_api_key(api_key: str) -> dict[str, Any] | None:
-    """Synchronous API key verification (backward-compatible).
-
-    This is a simplified sync version for the MCP server middleware
-    that cannot await. It verifies the key format but skips DB lookup.
-    For full DB-backed validation, use validate_api_key() with a session.
-
-    In production, the MCP server should be updated to use the async version.
-    """
-    if "." not in api_key:
-        return None
-    key_id, _raw = api_key.split(".", 1)
-    if not key_id.startswith("kmflow_"):
-        return None
-    # Return basic client info — full validation happens in the async path
-    return {"key_id": key_id, "client_name": "mcp_client"}
-
-
 async def list_api_keys(
     db: AsyncSession,
     user_id: uuid.UUID,

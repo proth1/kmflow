@@ -9,27 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.mcp.auth import generate_api_key, revoke_api_key, validate_api_key, verify_api_key
-
-
-class TestMCPAuthSync:
-    """Test suite for synchronous MCP verify_api_key (backward compat)."""
-
-    def test_verify_api_key_valid_format(self) -> None:
-        """verify_api_key with kmflow_ prefix should return client info."""
-        client_info = verify_api_key("kmflow_abc123.some_secret")
-        assert client_info is not None
-        assert client_info["key_id"] == "kmflow_abc123"
-
-    def test_verify_api_key_invalid_prefix(self) -> None:
-        """verify_api_key without kmflow_ prefix should return None."""
-        client_info = verify_api_key("notkmflow_abc.secret")
-        assert client_info is None
-
-    def test_verify_api_key_without_dot(self) -> None:
-        """verify_api_key with key without dot should return None."""
-        client_info = verify_api_key("invalid_key_without_dot")
-        assert client_info is None
+from src.mcp.auth import generate_api_key, revoke_api_key, validate_api_key
 
 
 @pytest.mark.asyncio
