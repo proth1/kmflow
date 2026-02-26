@@ -260,6 +260,8 @@ public final class TransparencyLogController: ObservableObject {
             kSecAttrAccount as String:    bufferEncryptionKeyKeychainKey,
             kSecValueData as String:      keyData,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+            // Prevent iCloud Keychain sync — encryption key must stay device-local.
+            kSecAttrSynchronizable as String: kCFBooleanFalse as Any,
         ]
         let status = SecItemAdd(addQuery as CFDictionary, nil)
         guard status == errSecSuccess else { return nil }
