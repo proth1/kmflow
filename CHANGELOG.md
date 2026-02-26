@@ -3,6 +3,14 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.066] - 2026-02-26
+### Security
+- Harden RateLimitMiddleware: periodic pruning of expired entries to prevent memory exhaustion (#243)
+- Stop trusting X-Forwarded-For header for client IP to prevent rate limit bypass (#243)
+
+### Added
+- 3 new tests for rate limiter pruning and X-Forwarded-For rejection (#243)
+
 ## [2026.02.065] - 2026-02-25
 ### Security
 - Wire require_engagement_access into 11 route handlers for multi-tenancy enforcement (#242)

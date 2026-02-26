@@ -1,7 +1,7 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.065
-**Last Updated**: 2026-02-25
+**Version**: 2026.02.066
+**Last Updated**: 2026-02-26
 
 ## Quick Stats
 
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.066 | 2026-02-26 | Audit Phase 1 PR 2: rate limiter hardening — pruning, X-Forwarded-For rejection (#243) |
 | 2026.02.065 | 2026-02-25 | Audit Phase 1 PR 1: engagement access control, MCP auth cleanup, PIA R8 fix (#242) |
 | 2026.02.064 | 2026-02-25 | Audit Phase 0: fix false security claims in whitepaper, DPA, PIA, TCC profile, WelcomeView (#241) |
 | 2026.02.063 | 2026-02-25 | CISO-ready agent installer: app bundle, code signing, Keychain hardening, onboarding wizard, DMG/PKG/MDM |

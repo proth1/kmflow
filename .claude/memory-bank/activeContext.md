@@ -1,15 +1,19 @@
 # Active Context
 
-**Last Updated**: 2026-02-25
+**Last Updated**: 2026-02-26
 
 ## Current Focus
 
 **Audit Remediation Phase 1** — Critical Security Fixes (Epic #238)
-- Story #243: Platform Quality (data integrity, tests, compliance) — next PR
-- Story #244: Agent Security (entitlements, encryption, signing, installer)
+- Story #244: Agent Security (entitlements, encryption, signing, installer) — next PR
 
 ## Recently Completed
 
+- **PR #247 merged** — Audit Phase 1 PR 2: Platform Quality (v2026.02.066)
+  - Hardened RateLimitMiddleware: periodic pruning of expired entries
+  - Stopped trusting X-Forwarded-For header for client IP
+  - 3 new tests for pruning and X-Forwarded-For rejection
+  - Note: 11 of 13 Story #243 tasks were already fixed in prior releases; CRITICAL slowapi finding was false positive
 - **PR #246 merged** — Audit Phase 1 PR 1: Platform Security (v2026.02.065)
   - Wired require_engagement_access into 11 routes across 5 files
   - Removed dead verify_api_key sync stub from MCP auth
