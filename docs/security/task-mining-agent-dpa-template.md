@@ -171,9 +171,9 @@ The Processor shall implement and maintain the technical and organizational meas
 
 Minimum security measures include:
 
-- AES-256-GCM encryption of data at rest on endpoint devices
+- AES-256-GCM encryption of data at rest on endpoint devices (planned — not yet implemented; see Whitepaper Sec. 5 for current status)
 - TLS 1.3 encryption for all data in transit
-- Four-layer PII protection architecture (L1 capture prevention, L2 regex scrubbing, L3 ML NER, L4 human review)
+- Two-layer on-device PII protection architecture (L1 capture context prevention, L2 regex scrubbing). Additional layers (L3 ML-based NER and L4 human quarantine review) are planned for a future phase and are not yet implemented.
 - macOS Keychain storage of encryption keys and credentials
 - Server-side agent revocation capability with maximum 5-minute latency
 - Signed and notarized software distribution
@@ -251,8 +251,8 @@ The Controller is responsible for notifying the relevant supervisory authority w
 
 Due to the Agent's security architecture, the following factors limit the impact of breach scenarios:
 
-- **Device loss or theft**: Local buffer is AES-256-GCM encrypted; key in macOS Keychain is inaccessible without device credentials; agent can be remotely revoked.
-- **Backend breach**: Event records contain only PII-scrubbed data (L2 regex applied before storage). Residual PII risk is limited to patterns not covered by the L2 regex, subject to L4 human review mitigation.
+- **Device loss or theft**: Local buffer is currently plaintext SQLite (AES-256-GCM encryption planned); data is PII-scrubbed by L2 regex; agent can be remotely revoked; 100 MB FIFO cap limits exposure.
+- **Backend breach**: Event records contain only PII-scrubbed data (L2 regex applied before storage). Residual PII risk is limited to patterns not covered by the L2 regex. Note: L3 ML-based NER and L4 human quarantine review are planned for a future phase but are not yet active mitigations.
 - **Agent compromise**: Python integrity manifest verification prevents tampered binaries from operating; tamper events are logged to the backend.
 
 ---

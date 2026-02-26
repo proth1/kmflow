@@ -9,7 +9,7 @@ public final class BlocklistManager: @unchecked Sendable {
     private let lock = NSLock()
 
     public init(config: AgentConfig? = nil) {
-        var blocked = L1Filter.hardcodedBlocklist
+        var blocked = CaptureContextFilter.hardcodedBlocklist
         if let configBlocked = config?.appBlocklist {
             blocked.formUnion(configBlocked)
         }
@@ -21,7 +21,7 @@ public final class BlocklistManager: @unchecked Sendable {
     public func update(config: AgentConfig) {
         lock.lock()
         defer { lock.unlock() }
-        var blocked = L1Filter.hardcodedBlocklist
+        var blocked = CaptureContextFilter.hardcodedBlocklist
         if let configBlocked = config.appBlocklist {
             blocked.formUnion(configBlocked)
         }

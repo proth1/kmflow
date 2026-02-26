@@ -1,7 +1,7 @@
 """Layer 2 PII filter: regex-based scrubbing before events enter local storage.
 
 Patterns are synchronized with src/taskmining/pii/patterns.py on the backend
-and agent/macos/Sources/PII/L1Filter.swift on the Swift side.
+and agent/macos/Sources/PII/CaptureContextFilter.swift on the Swift side.
 """
 
 from __future__ import annotations
