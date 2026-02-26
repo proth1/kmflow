@@ -101,5 +101,10 @@ let package = Package(
             dependencies: ["Config", "PII"],
             path: "Tests/ConfigTests"
         ),
+        .testTarget(
+            name: "IntegrityTests",
+            dependencies: ["KMFlowAgent"],
+            path: "Tests/IntegrityTests"
+        ),
     ]
 )
