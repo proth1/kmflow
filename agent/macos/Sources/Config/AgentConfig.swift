@@ -74,7 +74,7 @@ public struct AgentConfig: Codable, Sendable {
         self.idleTimeoutSeconds = Self.clamp(
             defaults.object(forKey: "IdleTimeoutSeconds") != nil
                 ? defaults.integer(forKey: "IdleTimeoutSeconds") : 300,
-            min: 30, max: 86400
+            min: 30, max: 3600
         )
         self.piiPatternsVersion = defaults.string(forKey: "PiiPatternsVersion") ?? "1.0"
     }

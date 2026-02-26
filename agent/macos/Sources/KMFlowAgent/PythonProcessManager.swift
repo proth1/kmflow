@@ -86,11 +86,11 @@ public actor PythonProcessManager {
             // Validate URL scheme to prevent data exfiltration via rogue MDM config
             if let url = URL(string: backendURL),
                let scheme = url.scheme?.lowercased(),
-               scheme == "https" || scheme == "http",
+               scheme == "https",
                url.host != nil {
                 environment["KMFLOW_BACKEND_URL"] = backendURL
             } else {
-                log.error("Invalid KMFLOW_BACKEND_URL — must be a valid http(s) URL with a host")
+                log.error("Invalid KMFLOW_BACKEND_URL — must be a valid https:// URL with a host")
             }
         }
 

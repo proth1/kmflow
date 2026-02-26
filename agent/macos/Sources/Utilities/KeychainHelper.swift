@@ -18,6 +18,7 @@ public struct KeychainHelper: Sendable {
             kSecAttrAccount as String: key,
             kSecValueData as String: data,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+            kSecAttrSynchronizable as String: kCFBooleanFalse!,
         ]
 
         // Delete existing item first
