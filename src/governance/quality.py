@@ -59,12 +59,14 @@ class SLAResult:
 async def check_quality_sla(
     session: AsyncSession,
     catalog_entry: DataCatalogEntry,
+    evidence_items: list[EvidenceItem] | None = None,
 ) -> SLAResult:
     """Check quality SLA compliance for a data catalog entry.
 
-    Retrieves all EvidenceItem records associated with the catalog entry's
-    engagement (or platform-wide if no engagement is scoped) and compares
-    their quality_score values against the thresholds in ``quality_sla``.
+    Compares evidence item quality scores against the thresholds in
+    ``quality_sla``.  When called in a loop (e.g. governance health
+    dashboard), callers should pre-fetch evidence items once and pass
+    them via *evidence_items* to avoid N+1 queries.
 
     The ``quality_sla`` dict on the catalog entry may contain:
     - ``min_score``: minimum acceptable average quality score (0.0-1.0)
@@ -74,6 +76,9 @@ async def check_quality_sla(
     Args:
         session: Async database session.
         catalog_entry: The DataCatalogEntry to check.
+        evidence_items: Optional pre-fetched evidence items scoped to
+            the catalog entry's engagement.  When ``None``, the function
+            queries the database (suitable for single-entry calls).
 
     Returns:
         SLAResult with passing status and any violations.
@@ -89,13 +94,15 @@ async def check_quality_sla(
             evidence_count=0,
         )
 
-    # Fetch evidence items in scope
-    query = select(EvidenceItem)
-    if catalog_entry.engagement_id is not None:
-        query = query.where(EvidenceItem.engagement_id == catalog_entry.engagement_id)
-
-    result = await session.execute(query)
-    items: list[EvidenceItem] = list(result.scalars().all())
+    # Use pre-fetched items if provided; otherwise query the DB.
+    if evidence_items is not None:
+        items = evidence_items
+    else:
+        query = select(EvidenceItem)
+        if catalog_entry.engagement_id is not None:
+            query = query.where(EvidenceItem.engagement_id == catalog_entry.engagement_id)
+        result = await session.execute(query)
+        items = list(result.scalars().all())
     evidence_count = len(items)
 
     if evidence_count == 0:

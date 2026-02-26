@@ -23,6 +23,7 @@ from src.core.models import (
     AlertSeverity,
     AlertStatus,
     DataCatalogEntry,
+    EvidenceItem,
     MonitoringAlert,
     MonitoringJob,
     MonitoringSourceType,
@@ -132,10 +133,15 @@ async def check_and_alert_sla_breaches(
     # Get or create the sentinel monitoring job
     governance_job = await _get_or_create_governance_job(session, eng_uuid)
 
+    # Batch-fetch all evidence items for the engagement once (avoids N+1).
+    evidence_query = select(EvidenceItem).where(EvidenceItem.engagement_id == eng_uuid)
+    evidence_result = await session.execute(evidence_query)
+    evidence_items: list[EvidenceItem] = list(evidence_result.scalars().all())
+
     created_alerts: list[dict[str, Any]] = []
 
     for entry in entries:
-        sla_result: SLAResult = await check_quality_sla(session, entry)
+        sla_result: SLAResult = await check_quality_sla(session, entry, evidence_items=evidence_items)
 
         if sla_result.passing:
             logger.debug(

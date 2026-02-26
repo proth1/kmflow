@@ -870,6 +870,8 @@ class TestGetGovernanceHealth:
         entry.quality_sla = None
         entry.engagement_id = uuid.uuid4()
 
+        # 1st call: list_entries query, 2nd call: batch evidence fetch,
+        # 3rd call: individual SLA check (if needed — no SLA here so skipped)
         list_result = MagicMock()
         list_result.scalars.return_value.all.return_value = [entry]
         evidence_result = MagicMock()
@@ -920,6 +922,7 @@ class TestGetGovernanceHealth:
         entry.quality_sla = {"min_score": 0.9}
         entry.engagement_id = uuid.uuid4()
 
+        # 1st call: list_entries, 2nd call: batch evidence fetch
         list_result = MagicMock()
         list_result.scalars.return_value.all.return_value = [entry]
         evidence_result = MagicMock()

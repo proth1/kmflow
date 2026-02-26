@@ -28,27 +28,21 @@ PBS_RELEASE="20241016"
 CACHE_DIR="${HOME}/.cache/kmflow-python"
 CODESIGN_IDENTITY="${KMFLOW_CODESIGN_IDENTITY:--}"
 
-# python-build-standalone download base URL
-PBS_BASE_URL="https://github.com/indygreg/python-build-standalone/releases/download/${PBS_RELEASE}"
+# python-build-standalone download base URL (repo moved from indygreg to astral-sh)
+PBS_BASE_URL="https://github.com/astral-sh/python-build-standalone/releases/download/${PBS_RELEASE}"
 
 # ---------------------------------------------------------------------------
 # Known SHA-256 checksums for python-build-standalone tarballs.
 # Update these when changing PBS_RELEASE or PYTHON_VERSION.
 # Obtain checksums from the SHA256SUMS file published with each release:
-#   https://github.com/indygreg/python-build-standalone/releases/download/${PBS_RELEASE}/SHA256SUMS
+#   https://github.com/astral-sh/python-build-standalone/releases/download/${PBS_RELEASE}/SHA256SUMS
 # ---------------------------------------------------------------------------
 declare -A PBS_CHECKSUMS=(
-    # Placeholder hashes — MUST be replaced with real values from the release
-    # SHA256SUMS file before any production build. The build will fail if these
-    # do not match the downloaded tarball.
-    #
-    # To populate:
-    #   1. Download the tarball manually or via this script (first run will fail verification)
-    #   2. Run: shasum -a 256 ~/.cache/kmflow-python/<tarball>
-    #   3. Paste the hash below for the matching architecture
-    #   4. Re-run the build to verify
-    ["aarch64"]=""
-    ["x86_64"]=""
+    # SHA-256 hashes from the official release:
+    # https://github.com/astral-sh/python-build-standalone/releases/download/20241016/SHA256SUMS
+    # Verified against: cpython-3.12.7+20241016-{arch}-apple-darwin-install_only.tar.gz
+    ["aarch64"]="4c18852bf9c1a11b56f21bcf0df1946f7e98ee43e9e4c0c5374b2b3765cf9508"
+    ["x86_64"]="60c5271e7edc3c2ab47440b7abf4ed50fbc693880b474f74f05768f5b657045a"
 )
 
 # ---------------------------------------------------------------------------
@@ -121,7 +115,7 @@ resolve_download_url() {
     local pattern="cpython-${PYTHON_VERSION}.*${PBS_RELEASE}-${pbs_arch}-apple-darwin-install_only.tar.gz"
 
     log "Querying GitHub release ${PBS_RELEASE} for pattern: ${pattern}"
-    local api_url="https://api.github.com/repos/indygreg/python-build-standalone/releases/tags/${PBS_RELEASE}"
+    local api_url="https://api.github.com/repos/astral-sh/python-build-standalone/releases/tags/${PBS_RELEASE}"
     local asset_url
     asset_url=$(curl -fsSL "$api_url" \
         | python3 -c "

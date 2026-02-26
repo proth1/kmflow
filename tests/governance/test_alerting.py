@@ -103,12 +103,18 @@ def _make_session(
     job_result = MagicMock()
     job_result.scalar_one_or_none.return_value = _make_monitoring_job(uuid.uuid4()) if job_exists else None
 
+    # Batch evidence fetch (returns empty list)
+    evidence_result = MagicMock()
+    evidence_result.scalars.return_value.all.return_value = []
+
     # Alert dedup lookup
     alert_result = MagicMock()
     alert_result.scalar_one_or_none.return_value = MagicMock() if alert_exists else None
 
-    # Provide enough side_effects
-    session.execute = AsyncMock(side_effect=[entries_result, job_result] + [alert_result] * max(len(entries), 1) * 5)
+    # Provide enough side_effects: entries → job → evidence → [alert_dedup]*
+    session.execute = AsyncMock(
+        side_effect=[entries_result, job_result, evidence_result] + [alert_result] * max(len(entries), 1) * 5
+    )
     return session
 
 
@@ -264,11 +270,13 @@ class TestCheckAndAlertSlaBReaches:
             evidence_count=5,
         )
 
-        # Session needs enough side_effects for two alert dedup queries
+        # Session needs enough side_effects for: entries → job → evidence → alert dedup × 2
         entries_result = MagicMock()
         entries_result.scalars.return_value.all.return_value = [entry]
         job_result = MagicMock()
         job_result.scalar_one_or_none.return_value = _make_monitoring_job(eng_uuid)
+        evidence_result = MagicMock()
+        evidence_result.scalars.return_value.all.return_value = []
         no_alert = MagicMock()
         no_alert.scalar_one_or_none.return_value = None
 
@@ -276,7 +284,7 @@ class TestCheckAndAlertSlaBReaches:
         session.add = MagicMock()
         session.flush = AsyncMock()
         session.commit = AsyncMock()
-        session.execute = AsyncMock(side_effect=[entries_result, job_result, no_alert, no_alert])
+        session.execute = AsyncMock(side_effect=[entries_result, job_result, evidence_result, no_alert, no_alert])
 
         with patch(
             "src.governance.alerting.check_quality_sla",
@@ -298,12 +306,15 @@ class TestCheckAndAlertSlaBReaches:
         # No existing job
         job_result = MagicMock()
         job_result.scalar_one_or_none.return_value = None
+        # Batch evidence fetch
+        evidence_result = MagicMock()
+        evidence_result.scalars.return_value.all.return_value = []
 
         session = AsyncMock()
         session.add = MagicMock()
         session.flush = AsyncMock()
         session.commit = AsyncMock()
-        session.execute = AsyncMock(side_effect=[entries_result, job_result])
+        session.execute = AsyncMock(side_effect=[entries_result, job_result, evidence_result])
 
         passing_result = _make_passing_sla_result(entry.id)
 
@@ -334,6 +345,8 @@ class TestCheckAndAlertSlaBReaches:
         entries_result.scalars.return_value.all.return_value = [passing_entry, failing_entry]
         job_result = MagicMock()
         job_result.scalar_one_or_none.return_value = _make_monitoring_job(eng_uuid)
+        evidence_result = MagicMock()
+        evidence_result.scalars.return_value.all.return_value = []
         no_alert = MagicMock()
         no_alert.scalar_one_or_none.return_value = None
 
@@ -341,7 +354,7 @@ class TestCheckAndAlertSlaBReaches:
         session.add = MagicMock()
         session.flush = AsyncMock()
         session.commit = AsyncMock()
-        session.execute = AsyncMock(side_effect=[entries_result, job_result, no_alert, no_alert])
+        session.execute = AsyncMock(side_effect=[entries_result, job_result, evidence_result, no_alert, no_alert])
 
         with patch(
             "src.governance.alerting.check_quality_sla",
