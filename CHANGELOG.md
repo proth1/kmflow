@@ -3,6 +3,12 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.065] - 2026-02-25
+### Security
+- Wire require_engagement_access into 11 route handlers for multi-tenancy enforcement (#242)
+- Remove dead verify_api_key sync stub from MCP auth module (#242)
+- Fix PIA R8 false encryption claim (#242)
+
 ## [2026.02.064] - 2026-02-25
 ### Security
 - Audit Phase 0: Fix false security claims in whitepaper, DPA, PIA templates (#241)

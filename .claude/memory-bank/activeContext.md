@@ -5,12 +5,17 @@
 ## Current Focus
 
 **Audit Remediation Phase 1** — Critical Security Fixes (Epic #238)
-- Story #242: Platform Security (auth, injection, infra) — next PR
-- Story #243: Platform Quality (data integrity, tests, compliance)
+- Story #243: Platform Quality (data integrity, tests, compliance) — next PR
 - Story #244: Agent Security (entitlements, encryption, signing, installer)
 
 ## Recently Completed
 
+- **PR #246 merged** — Audit Phase 1 PR 1: Platform Security (v2026.02.065)
+  - Wired require_engagement_access into 11 routes across 5 files
+  - Removed dead verify_api_key sync stub from MCP auth
+  - Fixed PIA R8 false encryption claim
+  - Updated test mocks for engagement access dependency
+  - Note: Routes with body-only engagement_id need follow-up
 - **PR #245 merged** — Audit Phase 0: Documentation Corrections (v2026.02.064)
   - Fixed false encryption, PII layer, socket path, uninstall path claims in whitepaper
   - Corrected DPA template, PIA template with "planned" disclaimers
