@@ -81,10 +81,13 @@ public actor SocketClient {
 
         fileHandle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
 
-        // Perform auth handshake if token is configured
+        // Perform auth handshake if token is configured.
+        // Use JSONSerialization to avoid JSON injection via malformed tokens.
         if let token = authToken, let fh = fileHandle {
-            let authMsg = "{\"auth\":\"\(token)\"}\n"
-            guard let authData = authMsg.data(using: .utf8) else {
+            let authDict: [String: String] = ["auth": token]
+            guard let jsonData = try? JSONSerialization.data(withJSONObject: authDict),
+                  var authData = String(data: jsonData, encoding: .utf8)?.appending("\n").data(using: .utf8)
+            else {
                 close(fd)
                 fileHandle = nil
                 throw SocketError.connectionFailed("Failed to encode auth token")
