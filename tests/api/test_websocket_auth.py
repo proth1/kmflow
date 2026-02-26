@@ -42,11 +42,12 @@ def _make_token(payload: dict, secret: str = _SECRET, algorithm: str = _ALGORITH
     return jwt.encode(payload, secret, algorithm=algorithm)
 
 
-def _make_valid_access_token() -> str:
+def _make_valid_access_token(role: str = "platform_admin") -> str:
     """Create a valid, non-expired access token."""
     payload = {
         "sub": str(uuid.uuid4()),
         "type": "access",
+        "role": role,
         "exp": datetime.now(UTC) + timedelta(minutes=30),
     }
     return _make_token(payload)
@@ -117,6 +118,60 @@ class TestWebSocketValidToken:
             client = TestClient(app)
             with client.websocket_connect(f"/ws/monitoring/eng-123?token={token}") as ws:
                 # Connection accepted — send a ping to verify it's live
+                ws.send_text("ping")
+                data = ws.receive_text()
+                assert data == "pong"
+
+
+# ---------------------------------------------------------------------------
+# Engagement membership
+# ---------------------------------------------------------------------------
+
+
+class TestWebSocketEngagementMembership:
+    """WebSocket endpoint rejects non-members of the engagement."""
+
+    def test_non_member_closes_with_1008(self) -> None:
+        """A valid token for a non-admin user who is not an engagement member is rejected."""
+        token = _make_valid_access_token(role="process_analyst")
+        redis_mock = AsyncMock()
+        redis_mock.get = AsyncMock(return_value=None)
+
+        app = _make_app(redis_mock)
+
+        # Mock db_session_factory to return a session with no membership result
+        mock_session = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        mock_session.execute = AsyncMock(return_value=mock_result)
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=None)
+        app.state.db_session_factory = MagicMock(return_value=mock_session)
+
+        with patch("src.api.routes.websocket.get_settings", return_value=_make_settings()):
+            client = TestClient(app)
+            with pytest.raises(WebSocketDisconnect) as exc_info:
+                with client.websocket_connect(f"/ws/monitoring/eng-123?token={token}") as ws:
+                    ws.receive_text()
+            assert exc_info.value.code == 1008
+
+    def test_admin_bypasses_membership_check(self) -> None:
+        """A platform admin should bypass the engagement membership check."""
+        token = _make_valid_access_token(role="platform_admin")
+        redis_mock = AsyncMock()
+        redis_mock.get = AsyncMock(return_value=None)
+        pubsub_mock = AsyncMock()
+        pubsub_mock.subscribe = AsyncMock()
+        pubsub_mock.unsubscribe = AsyncMock()
+        pubsub_mock.close = AsyncMock()
+        pubsub_mock.get_message = AsyncMock(return_value=None)
+        redis_mock.pubsub = MagicMock(return_value=pubsub_mock)
+
+        app = _make_app(redis_mock)
+
+        with patch("src.api.routes.websocket.get_settings", return_value=_make_settings()):
+            client = TestClient(app)
+            with client.websocket_connect(f"/ws/monitoring/eng-123?token={token}") as ws:
                 ws.send_text("ping")
                 data = ws.receive_text()
                 assert data == "pong"

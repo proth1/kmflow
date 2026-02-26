@@ -17,6 +17,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
+from src.core.audit import log_audit
 from src.core.models import (
     AuditAction,
     AuditLog,
@@ -111,24 +112,6 @@ class DashboardResponse(BaseModel):
 # -- Helpers ------------------------------------------------------------------
 
 
-async def _log_audit(
-    session: AsyncSession,
-    engagement_id: UUID,
-    action: AuditAction,
-    actor: str = "system",
-    details: str | None = None,
-) -> AuditLog:
-    """Create an audit log entry for an engagement mutation."""
-    audit = AuditLog(
-        engagement_id=engagement_id,
-        action=action,
-        actor=actor,
-        details=details,
-    )
-    session.add(audit)
-    return audit
-
-
 async def _get_engagement_or_404(session: AsyncSession, engagement_id: UUID) -> Engagement:
     """Fetch an engagement by ID or raise 404."""
     result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
@@ -162,7 +145,7 @@ async def create_engagement(
     session.add(engagement)
     await session.flush()
 
-    await _log_audit(
+    await log_audit(
         session,
         engagement.id,
         AuditAction.ENGAGEMENT_CREATED,
@@ -259,7 +242,7 @@ async def update_engagement(
         setattr(engagement, field_name, value)
 
     if changed_fields:
-        await _log_audit(
+        await log_audit(
             session,
             engagement.id,
             AuditAction.ENGAGEMENT_UPDATED,
@@ -283,7 +266,7 @@ async def archive_engagement(
 
     previous_status = engagement.status
     engagement.status = EngagementStatus.ARCHIVED
-    await _log_audit(
+    await log_audit(
         session,
         engagement.id,
         AuditAction.ENGAGEMENT_ARCHIVED,
