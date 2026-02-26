@@ -4,15 +4,25 @@
 
 ## Current Focus
 
-**Audit Remediation** — Phase 0, Phase 1, and Phase 2 COMPLETE.
+**Audit Remediation** — Phase 0, Phase 1, Phase 2, and Phase 3 ALL COMPLETE.
 - Phase 0 (docs): All 5 items done (PRs #245, #251)
 - Phase 1 (critical security): All 9 items done (PRs #246, #247, #248, #251)
-- Phase 2 (HIGH findings): All 4 PRs done (#249, #252, #255, #256). All platform + all agent HIGHs resolved.
+- Phase 2 (HIGH findings): All 4 PRs done (#249, #252, #255, #256)
+- Phase 3 (MEDIUM improvements): All 12 items done (#258) — 3 were already done, 1 N/A addressed
 - Remaining deferred item:
-  - E1: TCC REPLACE_TEAM_ID placeholder (build tooling — requires actual Apple Team ID)
+  - E1: TCC REPLACE_TEAM_ID → use `customize-profiles.sh --team-id` (requires actual Apple Team ID)
 
 ## Recently Completed
 
+- **PR #258 merged** — Audit Phase 3: macOS Agent MEDIUM-Priority Improvements (v2026.02.073)
+  - Periodic integrity re-verification (5-min timer) with violation callback
+  - HMAC-SHA256 signed integrity manifest with per-build key; build script fixes format mismatch
+  - Per-event consent guard (CaptureStateManager.isCapturePermitted)
+  - Expanded L2 PII: +IBAN, file paths, UK NINO (8 patterns, was 5); try! → lazy try?
+  - 20 new tests: 8 IntegrityChecker + 12 L2PIIFilter
+  - ADR 001: sandbox-disabled rationale; profile customization script
+  - Uninstall: /Users/Shared cleanup; step numbering fix
+  - PR review: 1 HIGH (HMAC threat model doc) + 4 MEDIUM (tests, assertions, format mismatch) all fixed
 - **PR #256 merged** — Audit Phase 2 PR 4: macOS Agent HIGH Security Hardening (v2026.02.072)
   - AES-256-GCM buffer encryption: Keychain key provisioning + decryption in TransparencyLogController
   - IPC socket: symlink detection + JSONSerialization-based auth handshake (fixed JSON injection in review)

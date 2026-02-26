@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.072
+**Version**: 2026.02.073
 **Last Updated**: 2026-02-26
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.073 | 2026-02-26 | Audit Phase 3: periodic integrity, HMAC manifest, expanded PII, per-event consent, tests, ADR, profile customization (#257) |
 | 2026.02.072 | 2026-02-26 | Audit Phase 2 PR 4: AES-256-GCM encryption, IPC auth, HMAC consent, iCloud sync prevention, codesign cleanup (#254) |
 | 2026.02.071 | 2026-02-26 | Audit Phase 2 PR 3: agent HIGH security hardening — logger privacy, Keychain ACL, MDM bounds, HTTPS-only URL (#255) |
 | 2026.02.070 | 2026-02-26 | Audit Phase 2 PR 2: add 13 missing FK indexes (migration 029) (#252) |

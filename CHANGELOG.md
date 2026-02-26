@@ -3,6 +3,20 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.073] - 2026-02-26
+### Security
+- Periodic integrity re-verification with configurable timer and violation callback (#257)
+- HMAC-SHA256 signed integrity manifest with per-build random key (#257)
+- Per-event consent guard via CaptureStateManager.isCapturePermitted (#257)
+- Expanded L2 PII patterns: IBAN, file paths, UK National Insurance Number (#257)
+- Replaced try! with lazy try? closures in regex compilation (#257)
+### Added
+- IntegrityChecker tests: 8 cases (verify, SHA-256, HMAC valid/tampered, periodic) (#257)
+- L2PIIFilter tests: 12 cases covering all 8 patterns plus negatives (#257)
+- ADR 001: sandbox-disabled rationale documentation (#257)
+- Profile customization script for Team ID and org name replacement (#257)
+- /Users/Shared cleanup in uninstall script (#257)
+
 ## [2026.02.072] - 2026-02-26
 ### Security
 - AES-256-GCM buffer encryption with Keychain key provisioning and backward-compatible decryption (#254)
