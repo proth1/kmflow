@@ -4,13 +4,14 @@
 
 ## Current Focus
 
-**Audit Remediation** — Phase 0, Phase 1, Phase 2, and Phase 3 ALL COMPLETE.
+**Audit Remediation** — Phases 0-3 COMPLETE. Re-audit COMPLETE.
 - Phase 0 (docs): All 5 items done (PRs #245, #251)
 - Phase 1 (critical security): All 9 items done (PRs #246, #247, #248, #251)
 - Phase 2 (HIGH findings): All 4 PRs done (#249, #252, #255, #256)
-- Phase 3 (MEDIUM improvements): All 12 items done (#258) — 3 were already done, 1 N/A addressed
-- Remaining deferred item:
-  - E1: TCC REPLACE_TEAM_ID → use `customize-profiles.sh --team-id` (requires actual Apple Team ID)
+- Phase 3 (MEDIUM improvements): All 12 items done (#258)
+- Re-audit: All 20 agents re-run, comprehensive report compiled
+- **Result**: Agent CRITICALs 16→0, Agent HIGHs 46→16, Platform CRITICALs 19→11
+- Remaining: 11 platform CRITICAL (quality/test gaps, not active vulns), 54 HIGH total
 
 ## Recently Completed
 
