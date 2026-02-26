@@ -3,6 +3,21 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.067] - 2026-02-26
+### Security
+- Remove unused Apple Events entitlement from macOS agent (least privilege) (#244)
+- Remove mouse x/y coordinates from InputEvent enum (GDPR data minimization) (#244)
+- Block apps with nil bundleId by default (least privilege) (#244)
+- Refuse ad-hoc signing for release builds (#244)
+- Verify notarization result is "Accepted" before stapling; fail when credentials missing in release mode (#244)
+- Add --require-hashes support for pip supply chain integrity (#244)
+- Remove eval command injection in postinstall script (#244)
+- Rewrite plist log paths from /Users/Shared to user home via PlistBuddy (#244)
+
+### Changed
+- Replace Thread.sleep with Task.sleep in SocketClient.reconnect() (#244)
+- Convert 5 @unchecked Sendable classes to Swift actors for compiler-verified thread safety (#244)
+
 ## [2026.02.066] - 2026-02-26
 ### Security
 - Harden RateLimitMiddleware: periodic pruning of expired entries to prevent memory exhaustion (#243)

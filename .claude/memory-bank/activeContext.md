@@ -4,11 +4,17 @@
 
 ## Current Focus
 
-**Audit Remediation Phase 1** — Critical Security Fixes (Epic #238)
-- Story #244: Agent Security (entitlements, encryption, signing, installer) — next PR
+**Audit Remediation Phase 1 COMPLETE** — All 3 PRs merged (Epic #238)
+- Next: Phase 2 (HIGH findings) or re-run `/code-audit` to verify
 
 ## Recently Completed
 
+- **PR #248 merged** — Audit Phase 1 PR 3: Agent Security (v2026.02.067)
+  - Removed Apple Events entitlement, mouse x/y coordinates, nil bundleId bypass
+  - Fixed signing (refuse ad-hoc for release), notarization (verify Accepted status), pip hashes
+  - Removed eval injection in postinstall, rewrote plist log paths via PlistBuddy
+  - Replaced Thread.sleep with Task.sleep, converted 5 @unchecked Sendable to actors
+  - AES-256-GCM encryption and IPC auth documented as planned (E3-CRITICAL follow-up)
 - **PR #247 merged** — Audit Phase 1 PR 2: Platform Quality (v2026.02.066)
   - Hardened RateLimitMiddleware: periodic pruning of expired entries
   - Stopped trusting X-Forwarded-For header for client IP
