@@ -5,7 +5,7 @@
 **Auditor**: Claude Opus 4.6 (20 specialized agents, 7 squads)
 **Scope**: Full platform (FastAPI backend, Next.js frontend, macOS agent, infrastructure)
 **Previous Audit**: 2026-02-20 (Squads A-D), 2026-02-25 (Squads E-G)
-**Remediation PRs**: #245, #246, #247, #248, #249, #251, #252, #255, #256, #258, #260
+**Remediation PRs**: #245, #246, #247, #248, #249, #251, #252, #255, #256, #258, #260, #262
 
 ---
 
@@ -17,10 +17,11 @@ This re-audit was conducted after four phases of remediation:
 - **Phase 2**: HIGH-priority fixes (PRs #249, #252, #255, #256)
 - **Phase 3**: MEDIUM-priority agent fixes (PR #258)
 - **Phase 4**: Consent lifecycle & remaining fixes (PR #260)
+- **Phase 5**: N+1 query fix, release script hardening, tarball checksums (PR #262)
 
 ### Headline Verdict
 
-**All original CRITICAL and HIGH security findings are resolved.** The remaining findings are code quality improvements (broad exception handling, N+1 query optimization) and MEDIUM/LOW hardening items. No active security vulnerabilities remain.
+**All original CRITICAL and HIGH findings are resolved (security AND code quality).** The only remaining verified open finding is 119 broad `except Exception` occurrences (MEDIUM). No active security vulnerabilities remain.
 
 The agent is at **beta readiness**. The platform backend is at **controlled deployment readiness** with quality improvements recommended before GA.
 
@@ -70,8 +71,13 @@ The agent is at **beta readiness**. The platform backend is at **controlled depl
 
 | # | Finding | Squad | Severity | Status |
 |---|---------|-------|----------|--------|
-| 1 | N+1 query in `governance.py:537` (SLA check in loop) | C3 | HIGH | OPEN |
-| 2 | Broad `except Exception` (119 occurrences across 57 files) | C1 | MEDIUM | OPEN |
+| 1 | Broad `except Exception` (119 occurrences across 57 files) | C1 | MEDIUM | OPEN |
+
+### Platform (Resolved in PR #262)
+
+| # | Finding | Originally | **Status** |
+|---|---------|:----------:|:-:|
+| 1 | N+1 query in `governance.py:537` (SLA check in loop) | HIGH | **RESOLVED** — batch evidence fetch in PR #262 |
 
 ### Platform (Previously Reported as Open — Actually RESOLVED)
 
@@ -86,13 +92,18 @@ The agent is at **beta readiness**. The platform backend is at **controlled depl
 | 7 | No Python lock file | D3 | HIGH | **RESOLVED** — `requirements.lock` exists |
 | 8 | Frontend `api.ts` god file | C2 | HIGH | **RESOLVED** — 7-line barrel, 18 domain modules |
 
-### Agent (Verified Open After PR #260)
+### Agent (Verified Open After PR #262)
 
 | # | Finding | Squad | Severity | Status |
 |---|---------|-------|----------|--------|
 | 1 | Consent lifecycle tests missing | G1 | MEDIUM | OPEN (follow-up) |
-| 2 | `KMFLOW_RELEASE_BUILD` not exported by `release.sh` | F1 | MEDIUM | OPEN |
-| 3 | Tarball SHA-256 checksums empty in `embed-python.sh` | F1,F2 | MEDIUM | OPEN |
+
+### Agent (Resolved in PR #262)
+
+| # | Finding | Originally | **Status** |
+|---|---------|:----------:|:-:|
+| 1 | `KMFLOW_RELEASE_BUILD` not exported by `release.sh` | MEDIUM | **RESOLVED** — `export KMFLOW_RELEASE_BUILD=1` added |
+| 2 | Tarball SHA-256 checksums empty in `embed-python.sh` | MEDIUM | **RESOLVED** — real hashes from official SHA256SUMS |
 
 ### Agent (Resolved in PR #260)
 

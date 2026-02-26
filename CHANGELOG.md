@@ -3,6 +3,14 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.075] - 2026-02-26
+### Fixed
+- Fix N+1 query in governance SLA health dashboard and alerting — batch-fetch evidence items once per engagement (#261)
+### Security
+- Export KMFLOW_RELEASE_BUILD=1 in release.sh so downstream scripts enforce strict checks (#261)
+- Populate real SHA-256 checksums for pinned python-build-standalone tarballs (#261)
+- Update python-build-standalone URLs from indygreg to astral-sh after repo transfer (#261)
+
 ## [2026.02.074] - 2026-02-26
 ### Security
 - Promote consentManager to AppDelegate property (prevents deallocation) (#259)

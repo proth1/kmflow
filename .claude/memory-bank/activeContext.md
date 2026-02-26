@@ -10,12 +10,21 @@
 - Phase 2 (HIGH findings): PRs #249, #252, #255, #256
 - Phase 3 (MEDIUM improvements): PR #258
 - Phase 4 (consent lifecycle): PR #260
+- Phase 5 (final MEDIUM): PR #262
 - Re-audit: All 20 agents + manual verification
-- **Result**: 0 CRITICAL, 0 HIGH security vulnerabilities remain
-- Remaining: 1 HIGH code quality (N+1 query), 1 MEDIUM (broad exceptions), MEDIUM agent items
+- **Result**: 0 CRITICAL, 0 HIGH vulnerabilities remain (security AND code quality)
+- Remaining: 1 MEDIUM (broad exceptions — 119 occurrences)
 
 ## Recently Completed
 
+- **PR #262 merged** — Audit Phase 5: Final MEDIUM Remediation (v2026.02.075)
+  - Fixed N+1 query in governance SLA health dashboard and alerting
+  - `check_quality_sla()` now accepts optional pre-fetched `evidence_items`
+  - Both `get_governance_health` and `check_and_alert_sla_breaches` batch-fetch evidence once
+  - Export `KMFLOW_RELEASE_BUILD=1` in `release.sh` for downstream strict checks
+  - Populated real SHA-256 checksums for python-build-standalone tarballs (aarch64 + x86_64)
+  - Updated URLs from `indygreg` to `astral-sh` after repo transfer
+  - PR review: APPROVE with 1 LOW (import ordering — fixed)
 - **PR #258 merged** — Audit Phase 3: macOS Agent MEDIUM-Priority Improvements (v2026.02.073)
   - Periodic integrity re-verification (5-min timer) with violation callback
   - HMAC-SHA256 signed integrity manifest with per-build key; build script fixes format mismatch
