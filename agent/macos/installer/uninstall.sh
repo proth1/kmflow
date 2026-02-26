@@ -133,7 +133,7 @@ fi
 # Step 7: Remove Keychain items
 # ---------------------------------------------------------------------------
 echo ""
-echo "--- Step 6: Removing Keychain items ---"
+echo "--- Step 7: Removing Keychain items ---"
 
 # Remove all generic password items for the agent service name
 for SERVICE in "com.kmflow.agent" "com.kmflow.agent.consent"; do

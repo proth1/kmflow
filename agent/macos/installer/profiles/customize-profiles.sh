@@ -95,8 +95,6 @@ for TEMPLATE in "${TEMPLATES[@]}"; do
 
     echo "  Processing: ${FILENAME}"
 
-    # Generate fresh UUIDs for PayloadUUID fields to avoid conflicts
-    # when deploying to different organizations.
     CONTENT="$(cat "$TEMPLATE")"
     CONTENT="${CONTENT//REPLACE_TEAM_ID/$TEAM_ID}"
     CONTENT="${CONTENT//REPLACE_ORG_NAME/$ORG_NAME}"

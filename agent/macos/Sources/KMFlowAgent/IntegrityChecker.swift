@@ -144,7 +144,15 @@ public final class IntegrityChecker: @unchecked Sendable {
             return .manifestMissing
         }
 
-        // Verify HMAC signature if integrity.sig exists (defense-in-depth).
+        // Verify HMAC signature if integrity.sig exists.
+        //
+        // Threat model: the HMAC key is co-located with the signature inside
+        // the code-signed bundle. This protects against accidental corruption
+        // and naive file replacement, NOT against a sophisticated attacker who
+        // can regenerate both files. Full tamper protection relies on macOS
+        // code signing (Hardened Runtime + notarization). The HMAC is a
+        // defense-in-depth layer for environments where codesign verification
+        // may not run (e.g. development builds, CI).
         let sigURL = bundleResourcesPath.appendingPathComponent("integrity.sig")
         if let sigData = try? Data(contentsOf: sigURL) {
             if !verifyManifestSignature(manifestData: manifestData, signatureData: sigData) {
@@ -152,6 +160,8 @@ public final class IntegrityChecker: @unchecked Sendable {
                 return .failed(violations: ["integrity.json (HMAC mismatch)"])
             }
             log.info("Integrity manifest HMAC verified")
+        } else {
+            log.warning("integrity.sig not found — HMAC verification skipped")
         }
 
         // Decode manifest.

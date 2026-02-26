@@ -7,8 +7,10 @@
 import Foundation
 import PII
 
-/// L2 PII patterns for Swift-side scrubbing. These MUST match the patterns
-/// in src/taskmining/pii/patterns.py to ensure consistent filtering.
+/// L2 PII patterns for Swift-side scrubbing. These are a superset of the
+/// patterns in src/taskmining/pii/patterns.py — the Swift side includes
+/// window-title-specific patterns (IBAN, file paths, UK NINO) that the
+/// Python L3 layer does not yet cover.
 public struct L2PIIFilter: Sendable {
     /// SSN with dashes: 123-45-6789
     private static let ssnDashed: NSRegularExpression? = {
@@ -54,7 +56,13 @@ public struct L2PIIFilter: Sendable {
 
     /// All compiled patterns. nil entries are excluded (indicates a regex compilation failure).
     private static let allPatterns: [NSRegularExpression] = {
-        [ssnDashed, email, phone, creditCard, amex, iban, filePath, ukNino].compactMap { $0 }
+        let optionals = [ssnDashed, email, phone, creditCard, amex, iban, filePath, ukNino]
+        let compiled = optionals.compactMap { $0 }
+        // In debug builds, assert all patterns compiled successfully.
+        // A nil pattern means a regex syntax error that silently degrades PII filtering.
+        assert(compiled.count == optionals.count,
+               "L2PIIFilter: \(optionals.count - compiled.count) regex pattern(s) failed to compile")
+        return compiled
     }()
 
     /// Scrub PII from a string, replacing matches with redaction markers.

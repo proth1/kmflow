@@ -299,9 +299,9 @@ for path in sorted(python_dir.rglob("*")):
         sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
         manifest[rel] = sha256
 
-# Write the manifest
+# Write the manifest wrapped in {"files": {...}} for ManifestPayload decoding.
 output = pathlib.Path("${INTEGRITY_FILE}")
-manifest_json = json.dumps(manifest, indent=2, sort_keys=True) + "\n"
+manifest_json = json.dumps({"files": manifest}, indent=2, sort_keys=True) + "\n"
 output.write_text(manifest_json)
 print(f"[build-app] Integrity manifest: {len(manifest)} files hashed -> {output}")
 

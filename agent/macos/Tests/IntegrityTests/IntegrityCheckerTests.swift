@@ -17,10 +17,38 @@ final class IntegrityCheckerTests: XCTestCase {
         try? FileManager.default.removeItem(at: tempDir)
     }
 
+    // MARK: - Helper: write manifest + signature
+
+    /// Write a valid manifest and HMAC signature for the given file entries.
+    private func writeManifestAndSignature(files: [String: String]) throws {
+        let manifest = ["files": files]
+        let manifestJSON = try JSONSerialization.data(
+            withJSONObject: manifest,
+            options: [.sortedKeys, .prettyPrinted]
+        )
+        let manifestString = String(data: manifestJSON, encoding: .utf8)! + "\n"
+        let manifestData = Data(manifestString.utf8)
+        try manifestData.write(to: tempDir.appendingPathComponent("integrity.json"))
+
+        // Generate HMAC signature matching the build script's format.
+        let hmacKey = SymmetricKey(size: .bits256)
+        let hmac = HMAC<SHA256>.authenticationCode(for: manifestData, using: hmacKey)
+        let hmacHex = hmac.map { String(format: "%02x", $0) }.joined()
+        let sha256 = SHA256.hash(data: manifestData).map { String(format: "%02x", $0) }.joined()
+        let keyHex = hmacKey.withUnsafeBytes { Data($0).map { String(format: "%02x", $0) }.joined() }
+
+        let sigPayload: [String: String] = [
+            "hmac_sha256": hmacHex,
+            "key_hex": keyHex,
+            "manifest_sha256": sha256,
+        ]
+        let sigData = try JSONSerialization.data(withJSONObject: sigPayload, options: .prettyPrinted)
+        try sigData.write(to: tempDir.appendingPathComponent("integrity.sig"))
+    }
+
     // MARK: - verify()
 
     func testVerifyPassed() throws {
-        // Create a test file and matching manifest.
         let fileContent = "hello, world\n"
         let filePath = tempDir.appendingPathComponent("test.py")
         try fileContent.write(to: filePath, atomically: true, encoding: .utf8)
@@ -38,7 +66,6 @@ final class IntegrityCheckerTests: XCTestCase {
         let filePath = tempDir.appendingPathComponent("test.py")
         try "real content".write(to: filePath, atomically: true, encoding: .utf8)
 
-        // Write manifest with a wrong hash.
         let manifest: [String: [String: String]] = ["files": ["test.py": "0000000000000000000000000000000000000000000000000000000000000000"]]
         let manifestData = try JSONEncoder().encode(manifest)
         try manifestData.write(to: tempDir.appendingPathComponent("integrity.json"))
@@ -52,7 +79,6 @@ final class IntegrityCheckerTests: XCTestCase {
     }
 
     func testVerifyFailedMissingFile() throws {
-        // Manifest references a file that doesn't exist.
         let manifest: [String: [String: String]] = ["files": ["missing.py": "abc123"]]
         let manifestData = try JSONEncoder().encode(manifest)
         try manifestData.write(to: tempDir.appendingPathComponent("integrity.json"))
@@ -66,9 +92,47 @@ final class IntegrityCheckerTests: XCTestCase {
     }
 
     func testVerifyManifestMissing() {
-        // No integrity.json in tempDir.
         let result = IntegrityChecker.verify(bundleResourcesPath: tempDir)
         XCTAssertEqual(result, .manifestMissing)
+    }
+
+    // MARK: - HMAC signature verification
+
+    func testVerifyWithValidHMACSignature() throws {
+        let fileContent = "module code\n"
+        let filePath = tempDir.appendingPathComponent("module.py")
+        try fileContent.write(to: filePath, atomically: true, encoding: .utf8)
+
+        let hash = IntegrityChecker.sha256Hex(data: Data(fileContent.utf8))
+        try writeManifestAndSignature(files: ["module.py": hash])
+
+        let result = IntegrityChecker.verify(bundleResourcesPath: tempDir)
+        XCTAssertEqual(result, .passed)
+    }
+
+    func testVerifyWithTamperedHMACSignature() throws {
+        let fileContent = "module code\n"
+        let filePath = tempDir.appendingPathComponent("module.py")
+        try fileContent.write(to: filePath, atomically: true, encoding: .utf8)
+
+        let hash = IntegrityChecker.sha256Hex(data: Data(fileContent.utf8))
+        try writeManifestAndSignature(files: ["module.py": hash])
+
+        // Tamper: overwrite integrity.sig with a wrong HMAC.
+        let badSig: [String: String] = [
+            "hmac_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+            "key_hex": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "manifest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        ]
+        let badSigData = try JSONSerialization.data(withJSONObject: badSig)
+        try badSigData.write(to: tempDir.appendingPathComponent("integrity.sig"))
+
+        let result = IntegrityChecker.verify(bundleResourcesPath: tempDir)
+        if case .failed(let violations) = result {
+            XCTAssertTrue(violations.contains("integrity.json (HMAC mismatch)"))
+        } else {
+            XCTFail("Expected .failed for tampered HMAC, got \(result)")
+        }
     }
 
     // MARK: - sha256Hex()
@@ -76,14 +140,12 @@ final class IntegrityCheckerTests: XCTestCase {
     func testSHA256Hex() {
         let data = Data("test".utf8)
         let hex = IntegrityChecker.sha256Hex(data: data)
-        // Known SHA-256 of "test"
         XCTAssertEqual(hex, "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08")
     }
 
     // MARK: - Periodic checks
 
     func testStartAndStopPeriodicChecks() async throws {
-        // Create a valid manifest so periodic checks pass.
         let fileContent = "data"
         let filePath = tempDir.appendingPathComponent("module.py")
         try fileContent.write(to: filePath, atomically: true, encoding: .utf8)
@@ -95,18 +157,15 @@ final class IntegrityCheckerTests: XCTestCase {
 
         let checker = IntegrityChecker(
             bundleResourcesPath: tempDir,
-            checkInterval: 0.1 // very short for testing
+            checkInterval: 0.1
         )
 
         checker.startPeriodicChecks()
-        // Starting again should be a no-op (no crash).
-        checker.startPeriodicChecks()
+        checker.startPeriodicChecks() // double-start should be no-op
 
-        // Let one cycle run.
-        try await Task.sleep(nanoseconds: 300_000_000) // 300ms
+        try await Task.sleep(nanoseconds: 300_000_000)
 
         checker.stopPeriodicChecks()
-        // Stopping again should be a no-op.
-        checker.stopPeriodicChecks()
+        checker.stopPeriodicChecks() // double-stop should be no-op
     }
 }
