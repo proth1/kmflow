@@ -18,16 +18,27 @@ public protocol ConsentStore: Sendable {
     func clear(engagementId: String)
 }
 
+/// Closure invoked when consent is revoked so resources can be cleaned up.
+/// Implementors should: stop capture, delete local buffer, disconnect IPC.
+public typealias ConsentRevocationHandler = @MainActor (String) -> Void
+
 @MainActor
 public final class ConsentManager: ObservableObject {
     @Published public private(set) var state: ConsentState
     private let engagementId: String
     private let store: ConsentStore
+    private var revocationHandlers: [ConsentRevocationHandler] = []
 
     public init(engagementId: String, store: ConsentStore) {
         self.engagementId = engagementId
         self.store = store
         self.state = store.load(engagementId: engagementId)
+    }
+
+    /// Register a handler invoked when consent is revoked.
+    /// Use this to wire cleanup actions (stop capture, delete buffer, disconnect IPC).
+    public func onRevocation(_ handler: @escaping ConsentRevocationHandler) {
+        revocationHandlers.append(handler)
     }
 
     /// Grant consent for capture.
@@ -36,10 +47,18 @@ public final class ConsentManager: ObservableObject {
         store.save(engagementId: engagementId, state: .consented, at: Date())
     }
 
-    /// Revoke consent. Capture must stop immediately.
+    /// Revoke consent. Capture stops immediately and local data is cleaned up.
+    ///
+    /// Notifies all registered revocation handlers to:
+    /// - Stop all event monitors and disconnect IPC
+    /// - Delete the local SQLite event buffer
+    /// - Remove engagement-specific Keychain entries
     public func revokeConsent() {
         state = .revoked
         store.save(engagementId: engagementId, state: .revoked, at: Date())
+        for handler in revocationHandlers {
+            handler(engagementId)
+        }
     }
 
     /// Check if capture is allowed.

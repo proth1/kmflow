@@ -84,7 +84,9 @@ export PYTHONHOME="${PYTHON_HOME}"
 #   - site-packages/ (vendored deps) is importable
 # The site-packages path is included explicitly because PYTHONHOME alone
 # configures the stdlib path, not our vendored extras directory.
-export PYTHONPATH="${RESOURCES_DIR}/python:${RESOURCES_DIR}/python/site-packages${PYTHONPATH:+:${PYTHONPATH}}"
+# Do NOT inherit the caller's PYTHONPATH — it may contain incompatible packages
+# or inject untrusted code into the embedded interpreter.
+export PYTHONPATH="${RESOURCES_DIR}/python:${RESOURCES_DIR}/python/site-packages"
 
 # Prevent the embedded interpreter from picking up user-level site-packages
 # from ~/.local or system locations (avoids version conflicts on developer machines).

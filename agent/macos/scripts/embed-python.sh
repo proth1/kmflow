@@ -373,15 +373,15 @@ codesign_framework() {
     # Sign all dylibs and .so files first, then the binary, then the framework.
     # --options runtime enables Hardened Runtime (required for notarization).
     # --timestamp is required for notarization (Apple rejects untimestamped signatures).
+    # Signing errors must be visible — do NOT suppress stderr.
     find "${fw_root}" \( -name "*.so" -o -name "*.dylib" \) -print0 \
-        | xargs -0 -P4 codesign --force --sign "$CODESIGN_IDENTITY" --options runtime --timestamp 2>/dev/null || true
+        | xargs -0 -P4 codesign --force --sign "$CODESIGN_IDENTITY" --options runtime --timestamp
 
     codesign --force --sign "$CODESIGN_IDENTITY" --options runtime --timestamp \
-        "${fw_root}/Versions/${PYTHON_VERSION}/bin/python${PYTHON_VERSION}" \
-        2>/dev/null || true
+        "${fw_root}/Versions/${PYTHON_VERSION}/bin/python${PYTHON_VERSION}"
 
     # Sign the framework bundle itself
-    codesign --force --sign "$CODESIGN_IDENTITY" --options runtime --timestamp "$fw_root" 2>/dev/null || true
+    codesign --force --sign "$CODESIGN_IDENTITY" --options runtime --timestamp "$fw_root"
 }
 
 # ---------------------------------------------------------------------------

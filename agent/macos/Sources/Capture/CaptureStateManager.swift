@@ -15,6 +15,9 @@ public enum CaptureState: String, Sendable {
     case engagementExpired
 }
 
+/// Closure invoked when capture state changes, allowing monitors to start/stop.
+public typealias CaptureStateChangeHandler = @MainActor (CaptureState, CaptureState) -> Void
+
 @MainActor
 public final class CaptureStateManager: ObservableObject {
     @Published public private(set) var state: CaptureState = .idle
@@ -24,46 +27,64 @@ public final class CaptureStateManager: ObservableObject {
 
     private var sequenceCounter: UInt64 = 0
 
+    /// Registered handlers notified on every state transition.
+    /// Monitors register here to actually stop/start their event taps.
+    private var stateChangeHandlers: [CaptureStateChangeHandler] = []
+
     public init() {}
+
+    /// Register a handler that is called on every state transition.
+    /// Use this to wire monitor start/stop to the state machine.
+    public func onStateChange(_ handler: @escaping CaptureStateChangeHandler) {
+        stateChangeHandlers.append(handler)
+    }
+
+    private func transition(to newState: CaptureState) {
+        let oldState = state
+        state = newState
+        for handler in stateChangeHandlers {
+            handler(oldState, newState)
+        }
+    }
 
     /// Transition to capturing state. Requires consent to have been given.
     public func startCapture() {
         guard state == .idle || state == .paused else { return }
-        state = .capturing
+        transition(to: .capturing)
         errorMessage = nil
     }
 
-    /// Pause capture (user-initiated).
+    /// Pause capture (user-initiated). Monitors are notified to stop event taps.
     public func pauseCapture() {
         guard state == .capturing else { return }
-        state = .paused
+        transition(to: .paused)
     }
 
-    /// Resume capture from paused state.
+    /// Resume capture from paused state. Monitors are notified to restart.
     public func resumeCapture() {
         guard state == .paused else { return }
-        state = .capturing
+        transition(to: .capturing)
         errorMessage = nil
     }
 
     /// Stop capture and return to idle.
     public func stopCapture() {
-        state = .idle
+        transition(to: .idle)
     }
 
     /// Mark consent as required (first launch or revoked).
     public func requireConsent() {
-        state = .consentRequired
+        transition(to: .consentRequired)
     }
 
     /// Mark engagement as expired (auto-disable).
     public func expireEngagement() {
-        state = .engagementExpired
+        transition(to: .engagementExpired)
     }
 
     /// Set error state with message.
     public func setError(_ message: String) {
-        state = .error
+        transition(to: .error)
         errorMessage = message
     }
 
