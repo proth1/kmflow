@@ -286,9 +286,16 @@ class TestAddEngagementMember:
         lead = _make_lead()
         analyst = _make_analyst()
         engagement = _make_engagement()
+        lead_membership = EngagementMember(
+            id=uuid.uuid4(),
+            engagement_id=engagement.id,
+            user_id=lead.id,
+            role_in_engagement="lead",
+        )
 
         mock_db_session.execute.side_effect = [
             _mock_scalar_result(lead),  # get_current_user
+            _mock_scalar_result(lead_membership),  # require_engagement_access membership check
             _mock_scalar_result(engagement),  # engagement exists
             _mock_scalar_result(analyst),  # user exists
             _mock_scalar_result(None),  # no existing membership
@@ -323,6 +330,12 @@ class TestAddEngagementMember:
         lead = _make_lead()
         analyst = _make_analyst()
         engagement = _make_engagement()
+        lead_membership = EngagementMember(
+            id=uuid.uuid4(),
+            engagement_id=engagement.id,
+            user_id=lead.id,
+            role_in_engagement="lead",
+        )
         existing_member = EngagementMember(
             id=uuid.uuid4(),
             engagement_id=engagement.id,
@@ -332,6 +345,7 @@ class TestAddEngagementMember:
 
         mock_db_session.execute.side_effect = [
             _mock_scalar_result(lead),  # get_current_user
+            _mock_scalar_result(lead_membership),  # require_engagement_access membership check
             _mock_scalar_result(engagement),  # engagement exists
             _mock_scalar_result(analyst),  # user exists
             _mock_scalar_result(existing_member),  # already a member
@@ -354,6 +368,12 @@ class TestRemoveEngagementMember:
         lead = _make_lead()
         analyst = _make_analyst()
         engagement = _make_engagement()
+        lead_membership = EngagementMember(
+            id=uuid.uuid4(),
+            engagement_id=engagement.id,
+            user_id=lead.id,
+            role_in_engagement="lead",
+        )
         member = EngagementMember(
             id=uuid.uuid4(),
             engagement_id=engagement.id,
@@ -363,6 +383,7 @@ class TestRemoveEngagementMember:
 
         mock_db_session.execute.side_effect = [
             _mock_scalar_result(lead),  # get_current_user
+            _mock_scalar_result(lead_membership),  # require_engagement_access membership check
             _mock_scalar_result(member),  # membership found
         ]
         mock_db_session.delete = AsyncMock()
@@ -377,8 +398,15 @@ class TestRemoveEngagementMember:
     async def test_remove_nonexistent_member_returns_404(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Should return 404 when membership doesn't exist."""
         lead = _make_lead()
+        lead_membership = EngagementMember(
+            id=uuid.uuid4(),
+            engagement_id=uuid.uuid4(),
+            user_id=lead.id,
+            role_in_engagement="lead",
+        )
         mock_db_session.execute.side_effect = [
             _mock_scalar_result(lead),  # get_current_user
+            _mock_scalar_result(lead_membership),  # require_engagement_access membership check
             _mock_scalar_result(None),  # membership not found
         ]
 

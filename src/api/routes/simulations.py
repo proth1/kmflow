@@ -54,7 +54,7 @@ from src.core.models import (
     SuggestionDisposition,
     User,
 )
-from src.core.permissions import require_permission
+from src.core.permissions import require_engagement_access, require_permission
 from src.simulation.service import (
     assumption_to_response,
     get_scenario_or_404,
@@ -962,6 +962,7 @@ async def rank_scenarios(
     w_governance: float = Query(default=0.20, ge=0.0, le=1.0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Rank all scenarios for an engagement by composite score."""
     from src.simulation.ranking import rank_scenarios as compute_ranking
