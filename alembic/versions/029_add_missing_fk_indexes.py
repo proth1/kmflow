@@ -1,6 +1,6 @@
 """Add missing indexes on ForeignKey columns for query performance.
 
-14 FK columns across 6 model files lacked B-tree indexes, causing
+13 FK columns across 6 model files lacked B-tree indexes, causing
 potential full table scans during joins and filtered queries.
 
 Revision ID: 029
@@ -20,8 +20,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 # (index_name, table_name, column_name)
 _INDEXES = [
-    # evidence.py
-    ("ix_evidence_items_lineage_id", "evidence_items", "lineage_id"),
+    # evidence.py (lineage_id excluded: bare UUID, no FK constraint)
     ("ix_evidence_items_duplicate_of_id", "evidence_items", "duplicate_of_id"),
     ("ix_evidence_lineage_parent_version_id", "evidence_lineage", "parent_version_id"),
     # engagement.py
@@ -36,7 +35,7 @@ _INDEXES = [
     # governance.py
     ("ix_policies_source_evidence_id", "policies", "source_evidence_id"),
     # simulation.py
-    ("ix_simulation_scenarios_process_model_id_2", "simulation_scenarios", "process_model_id"),
+    ("ix_simulation_scenarios_process_model_id", "simulation_scenarios", "process_model_id"),
     ("ix_epistemic_actions_shelf_request_id", "epistemic_actions", "shelf_request_id"),
     ("ix_financial_assumptions_source_evidence_id", "financial_assumptions", "source_evidence_id"),
     ("ix_alternative_suggestions_created_by", "alternative_suggestions", "created_by"),
