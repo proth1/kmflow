@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -262,8 +262,8 @@ async def create_monitoring_job(
 async def list_monitoring_jobs(
     engagement_id: UUID | None = None,
     status_filter: MonitoringStatus | None = None,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("monitoring:read")),
 ) -> dict[str, Any]:
@@ -443,8 +443,8 @@ async def create_baseline(
 @router.get("/baselines", response_model=BaselineList)
 async def list_baselines(
     engagement_id: UUID | None = None,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("monitoring:read")),
 ) -> dict[str, Any]:
@@ -484,8 +484,8 @@ async def list_deviations(
     engagement_id: UUID | None = None,
     job_id: UUID | None = None,
     category: DeviationCategory | None = None,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("monitoring:read")),
 ) -> dict[str, Any]:
@@ -533,8 +533,8 @@ async def list_alerts(
     engagement_id: UUID | None = None,
     status_filter: AlertStatus | None = None,
     severity: AlertSeverity | None = None,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("monitoring:read")),
 ) -> dict[str, Any]:

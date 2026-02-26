@@ -11,7 +11,7 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -199,8 +199,8 @@ async def create_policy(
 @router.get("/policies", response_model=PolicyList)
 async def list_policies(
     engagement_id: UUID,
-    limit: int = 20,
-    offset: int = 0,
+    limit: int = Query(default=20, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     policy_type: PolicyType | None = None,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
@@ -267,8 +267,8 @@ async def create_control(
 @router.get("/controls", response_model=ControlList)
 async def list_controls(
     engagement_id: UUID,
-    limit: int = 20,
-    offset: int = 0,
+    limit: int = Query(default=20, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
@@ -328,8 +328,8 @@ async def create_regulation(
 @router.get("/regulations", response_model=RegulationList)
 async def list_regulations(
     engagement_id: UUID,
-    limit: int = 20,
-    offset: int = 0,
+    limit: int = Query(default=20, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:

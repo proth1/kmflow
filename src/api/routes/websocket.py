@@ -13,10 +13,11 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request, WebSocket, WebSocketDisconnect
+from sqlalchemy import select
 
 from src.core.auth import decode_token, get_current_user, is_token_blacklisted
 from src.core.config import get_settings
-from src.core.models import User
+from src.core.models import EngagementMember, User, UserRole
 from src.core.redis import CHANNEL_ALERTS, CHANNEL_DEVIATIONS, CHANNEL_MONITORING
 
 logger = logging.getLogger(__name__)
@@ -72,6 +73,42 @@ class ConnectionManager:
 
 
 manager = ConnectionManager()
+
+
+async def _check_engagement_membership(
+    websocket: WebSocket,
+    engagement_id: str,
+    user_id: str,
+    user_role: UserRole,
+) -> bool:
+    """Check if the user is a member of the engagement.
+
+    Platform admins bypass the check.  Returns True if access is granted,
+    False if the WebSocket should be closed.
+    """
+    if user_role == UserRole.PLATFORM_ADMIN:
+        return True
+
+    try:
+        session_factory = websocket.app.state.db_session_factory
+        async with session_factory() as session:
+            result = await session.execute(
+                select(EngagementMember).where(
+                    EngagementMember.engagement_id == engagement_id,
+                    EngagementMember.user_id == user_id,
+                )
+            )
+            member = result.scalar_one_or_none()
+
+        if member is None:
+            await websocket.close(code=1008, reason="Not a member of this engagement")
+            return False
+    except Exception:
+        logger.warning("Engagement membership check failed for WebSocket — failing closed")
+        await websocket.close(code=1008, reason="Authorization check failed")
+        return False
+
+    return True
 
 
 async def _redis_subscriber(
@@ -147,6 +184,16 @@ async def monitoring_websocket(
     except Exception:
         logger.warning("Token blacklist check failed for WebSocket — failing closed")
         await websocket.close(code=1008, reason="Authentication check failed")
+        return
+
+    # Verify engagement membership
+    user_id = payload.get("sub", "")
+    user_role_str = payload.get("role", "")
+    try:
+        user_role = UserRole(user_role_str)
+    except ValueError:
+        user_role = UserRole.CLIENT_VIEWER  # Fail to least privilege
+    if not await _check_engagement_membership(websocket, engagement_id, user_id, user_role):
         return
 
     # Check connection limit
@@ -234,6 +281,16 @@ async def alerts_websocket(
     except Exception:
         logger.warning("Token blacklist check failed for WebSocket — failing closed")
         await websocket.close(code=1008, reason="Authentication check failed")
+        return
+
+    # Verify engagement membership
+    user_id = payload.get("sub", "")
+    user_role_str = payload.get("role", "")
+    try:
+        user_role = UserRole(user_role_str)
+    except ValueError:
+        user_role = UserRole.CLIENT_VIEWER
+    if not await _check_engagement_membership(websocket, engagement_id, user_id, user_role):
         return
 
     # Check connection limit

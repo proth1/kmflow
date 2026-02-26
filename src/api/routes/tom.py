@@ -11,7 +11,7 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,17 +23,36 @@ from src.core.models import (
     Benchmark,
     BestPractice,
     Engagement,
+    EngagementMember,
     GapAnalysisResult,
     TargetOperatingModel,
     TOMDimension,
     TOMGapType,
     User,
+    UserRole,
 )
 from src.core.permissions import require_engagement_access, require_permission
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/tom", tags=["tom"])
+
+
+async def _check_engagement_member(session: AsyncSession, user: User, engagement_id: UUID) -> None:
+    """Verify user is a member of the engagement. Platform admins bypass."""
+    if user.role == UserRole.PLATFORM_ADMIN:
+        return
+    result = await session.execute(
+        select(EngagementMember).where(
+            EngagementMember.engagement_id == engagement_id,
+            EngagementMember.user_id == user.id,
+        )
+    )
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this engagement",
+        )
 
 
 # -- Request/Response Schemas ------------------------------------------------
@@ -177,6 +196,7 @@ async def create_tom(
     user: User = Depends(require_permission("engagement:update")),
 ) -> TargetOperatingModel:
     """Create a new target operating model."""
+    await _check_engagement_member(session, user, payload.engagement_id)
     eng_result = await session.execute(select(Engagement).where(Engagement.id == payload.engagement_id))
     if not eng_result.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found")
@@ -197,12 +217,13 @@ async def create_tom(
 @router.get("/models", response_model=TOMList)
 async def list_toms(
     engagement_id: UUID,
-    limit: int = 20,
-    offset: int = 0,
+    limit: int = Query(default=20, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """List target operating models for an engagement."""
+    await _check_engagement_member(session, user, engagement_id)
     query = select(TargetOperatingModel).where(TargetOperatingModel.engagement_id == engagement_id)
     count_query = (
         select(func.count())
@@ -263,6 +284,7 @@ async def create_gap(
     user: User = Depends(require_permission("engagement:update")),
 ) -> GapAnalysisResult:
     """Create a gap analysis result."""
+    await _check_engagement_member(session, user, payload.engagement_id)
     eng_result = await session.execute(select(Engagement).where(Engagement.id == payload.engagement_id))
     if not eng_result.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found")
@@ -294,12 +316,13 @@ async def list_gaps(
     engagement_id: UUID,
     tom_id: UUID | None = None,
     dimension: TOMDimension | None = None,
-    limit: int = 20,
-    offset: int = 0,
+    limit: int = Query(default=20, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """List gap analysis results for an engagement."""
+    await _check_engagement_member(session, user, engagement_id)
     query = select(GapAnalysisResult).where(GapAnalysisResult.engagement_id == engagement_id)
     count_query = (
         select(func.count()).select_from(GapAnalysisResult).where(GapAnalysisResult.engagement_id == engagement_id)
@@ -361,8 +384,8 @@ async def create_best_practice(
 async def list_best_practices(
     industry: str | None = None,
     dimension: TOMDimension | None = None,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
@@ -434,8 +457,8 @@ async def create_benchmark(
 @router.get("/benchmarks", response_model=BenchmarkList)
 async def list_benchmarks(
     industry: str | None = None,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:

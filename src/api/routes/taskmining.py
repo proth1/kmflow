@@ -22,7 +22,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -233,8 +233,8 @@ async def approve_agent(
 async def list_agents(
     engagement_id: UUID | None = None,
     status_filter: AgentStatus | None = None,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
@@ -433,8 +433,8 @@ async def agent_heartbeat(
 async def list_sessions(
     engagement_id: UUID | None = None,
     agent_id: UUID | None = None,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
@@ -470,8 +470,8 @@ async def list_actions(
     engagement_id: UUID | None = None,
     session_id: UUID | None = None,
     category: str | None = None,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
@@ -509,8 +509,8 @@ async def list_actions(
 async def list_quarantine(
     engagement_id: UUID | None = None,
     status_filter: QuarantineStatus | None = None,
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(require_permission("taskmining:admin")),
 ) -> dict[str, Any]:
