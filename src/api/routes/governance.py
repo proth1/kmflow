@@ -16,11 +16,10 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
-from sqlalchemy import select
-
 from src.core.models import DataCatalogEntry, DataClassification, DataLayer, EvidenceItem, User
 from src.core.permissions import require_engagement_access, require_permission
 from src.datalake.backend import get_storage_backend
