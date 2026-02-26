@@ -86,11 +86,21 @@ class _RateLimitEntry:
     window_start: float = 0.0
 
 
+# Maximum number of tracked client IPs before pruning stale entries.
+_MAX_TRACKED_CLIENTS = 50_000
+# How often (in requests) to run the pruning sweep.
+_PRUNE_INTERVAL = 1000
+
+
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Simple in-memory per-IP rate limiter.
 
     Limits each client IP to `max_requests` within `window_seconds`.
     Returns 429 Too Many Requests when the limit is exceeded.
+
+    Note: This is per-process only.  In multi-worker deployments the
+    effective limit is ``workers * max_requests``.  For production
+    multi-worker deployments, replace with Redis-backed rate limiting.
     """
 
     def __init__(
@@ -103,17 +113,38 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.max_requests = max_requests
         self.window_seconds = window_seconds
         self._clients: dict[str, _RateLimitEntry] = defaultdict(_RateLimitEntry)
+        self._request_counter: int = 0
 
     def _get_client_ip(self, request: Request) -> str:
-        """Extract client IP, preferring X-Forwarded-For if present."""
-        forwarded = request.headers.get("x-forwarded-for")
-        if forwarded:
-            return forwarded.split(",")[0].strip()
+        """Extract client IP from the ASGI connection.
+
+        Only ``request.client.host`` is used.  ``X-Forwarded-For`` is NOT
+        trusted because an attacker can spoof the header to bypass rate
+        limits.  In production, configure the reverse proxy (nginx / ALB)
+        to set the real IP via ASGI ``client`` instead.
+        """
         return request.client.host if request.client else "unknown"
+
+    def _prune_stale(self, now: float) -> None:
+        """Remove expired client entries to prevent unbounded memory growth."""
+        stale = [
+            ip
+            for ip, entry in self._clients.items()
+            if now - entry.window_start >= self.window_seconds
+        ]
+        for ip in stale:
+            del self._clients[ip]
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         client_ip = self._get_client_ip(request)
         now = time.monotonic()
+
+        # Periodic pruning to bound memory usage
+        self._request_counter += 1
+        if self._request_counter >= _PRUNE_INTERVAL or len(self._clients) > _MAX_TRACKED_CLIENTS:
+            self._prune_stale(now)
+            self._request_counter = 0
+
         entry = self._clients[client_ip]
 
         # Reset window if expired
