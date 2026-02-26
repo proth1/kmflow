@@ -170,6 +170,8 @@ public struct KeychainConsentStore: ConsentStore, Sendable {
             // readable during background processing after the device is
             // unlocked at least once.
             kSecAttrAccessible as String:   kSecAttrAccessibleAfterFirstUnlock,
+            // Prevent iCloud Keychain sync — security-sensitive keys must stay device-local.
+            kSecAttrSynchronizable as String: kCFBooleanFalse as Any,
         ]
         let status = SecItemAdd(addQuery as CFDictionary, nil)
         if status != errSecSuccess {

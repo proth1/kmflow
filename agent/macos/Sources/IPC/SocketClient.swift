@@ -86,7 +86,7 @@ public actor SocketClient {
         if let token = authToken, let fh = fileHandle {
             let authDict: [String: String] = ["auth": token]
             guard let jsonData = try? JSONSerialization.data(withJSONObject: authDict),
-                  var authData = String(data: jsonData, encoding: .utf8)?.appending("\n").data(using: .utf8)
+                  let authData = String(data: jsonData, encoding: .utf8)?.appending("\n").data(using: .utf8)
             else {
                 close(fd)
                 fileHandle = nil
