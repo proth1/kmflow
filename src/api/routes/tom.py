@@ -249,6 +249,7 @@ async def get_tom(
     tom = result.scalar_one_or_none()
     if not tom:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"TOM {tom_id} not found")
+    await _check_engagement_member(session, user, tom.engagement_id)
     return tom
 
 
@@ -264,6 +265,7 @@ async def update_tom(
     tom = result.scalar_one_or_none()
     if not tom:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"TOM {tom_id} not found")
+    await _check_engagement_member(session, user, tom.engagement_id)
 
     update_data = payload.model_dump(exclude_unset=True)
     for field_name, value in update_data.items():
