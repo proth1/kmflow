@@ -3347,6 +3347,688 @@ confidence = (
       </div>
     </section>
 
+    <!-- Slide 38a: Desktop Task Mining — The Evidence Gap -->
+    <section id="slide-38a" class="slide slide-dark">
+      <div class="section-header">
+        <span class="badge badge-blue">Agent Technology</span>
+        <h2>Desktop Task Mining: The Evidence Gap</h2>
+        <p>Documents describe what <em>should</em> happen. Desktop capture records what <em>does</em> happen.</p>
+      </div>
+      <div class="cards-grid" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="card">
+          <h3>Invisible Workarounds</h3>
+          <p>Experienced staff bypass documented procedures with efficient shortcuts. These are never captured in process documentation or system logs.</p>
+          <ul class="feature-list" style="margin-top: 0.75rem;">
+            <li>Copy-paste between unsanctioned apps</li>
+            <li>Manual calculations outside the ERP</li>
+            <li>Shadow IT tools adopted by teams</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Undocumented Decision Logic</h3>
+          <p>Critical decisions happen in spreadsheets, emails, and chat windows &mdash; never reaching the audit trail or documented procedures.</p>
+          <ul class="feature-list" style="margin-top: 0.75rem;">
+            <li>Tribal knowledge held by individuals</li>
+            <li>Exception handling known only by veterans</li>
+            <li>Informal approval chains</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Actual Task Sequences</h3>
+          <p>The real order of operations differs from SOPs. Idle time, handoff delays, and rework loops are invisible without desktop observation.</p>
+          <ul class="feature-list" style="margin-top: 0.75rem;">
+            <li>Application switching patterns</li>
+            <li>Idle periods between handoffs</li>
+            <li>Rework loops and correction rates</li>
+          </ul>
+        </div>
+      </div>
+      <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 8px; margin-top: 1rem; text-align: center;">
+        <strong>$2B market (2025) &rarr; $10B (2033)</strong> at 25% CAGR &mdash; yet no existing tool integrates with a knowledge graph or is built for consulting delivery
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 38a</span>
+      </div>
+    </section>
+
+    <!-- Slide 38b: Our Solution — First-Party macOS Agent -->
+    <section id="slide-38b" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Agent Technology</span>
+        <h2>Our Solution: First-Party macOS Agent</h2>
+        <p>A lightweight, privacy-first desktop agent that observes actual work patterns and feeds evidence directly into the knowledge graph</p>
+      </div>
+      <div class="two-col">
+        <div>
+          <h3>Key Capabilities</h3>
+          <ul class="feature-list">
+            <li><strong>Native Swift + Python</strong> &mdash; 1,335 LOC Swift for OS-level capture, Python intelligence layer for PII filtering and aggregation</li>
+            <li><strong>Mandatory 4-layer PII architecture</strong> &mdash; not configurable off; defense-in-depth from capture to storage</li>
+            <li><strong>0.9 source reliability</strong> &mdash; highest confidence tier in the platform (observed ground truth)</li>
+            <li><strong>Consulting-native deployment</strong> &mdash; engagement mode with auto-disable at end date; enterprise MDM mode for persistent monitoring</li>
+            <li><strong>&lt;3% CPU, &lt;150MB RAM</strong> &mdash; invisible to users during normal work</li>
+            <li><strong>Menu bar presence</strong> &mdash; visible icon, pause/resume, transparent consent</li>
+          </ul>
+        </div>
+        <div>
+          <div style="background: var(--kmflow-blue); color: white; padding: 1.5rem; border-radius: 12px;">
+            <h3 style="color: white; margin-bottom: 1rem;">Architecture at a Glance</h3>
+            <div style="font-family: monospace; font-size: 0.8rem; line-height: 1.8;">
+              <div style="background: rgba(255,255,255,0.15); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.25rem;">Swift &mdash; CGEventTap, AXUIElement, NSWorkspace</div>
+              <div style="text-align: center;">&darr; Unix Domain Socket (ndjson)</div>
+              <div style="background: rgba(255,255,255,0.15); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.25rem;">Python &mdash; PII Filter, Aggregator, SQLite Buffer</div>
+              <div style="text-align: center;">&darr; HTTPS / mTLS</div>
+              <div style="background: rgba(255,255,255,0.15); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.25rem;">FastAPI &mdash; Event Ingestion, Config Push</div>
+              <div style="text-align: center;">&darr; Redis Stream</div>
+              <div style="background: rgba(255,255,255,0.15); padding: 0.5rem; border-radius: 4px;">Worker &mdash; L3 PII, Action Assembly, Neo4j Write</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 38b</span>
+      </div>
+    </section>
+
+    <!-- Slide 38c: Agent Architecture -->
+    <section id="slide-38c" class="slide slide-gray">
+      <div class="section-header">
+        <span class="badge badge-blue">Agent Technology</span>
+        <h2>Agent Architecture</h2>
+        <p>Hybrid Swift + Python application with 8 internal modules and zero external dependencies</p>
+      </div>
+      <div style="background: var(--kmflow-white); padding: 2rem; border-radius: 12px; font-family: monospace; font-size: 0.85rem;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div>
+            <div style="background: #e8f5e9; padding: 1rem; border-radius: 6px; margin-bottom: 0.5rem; border-left: 4px solid #4CAF50;">
+              <strong>SWIFT LAYER (macOS Native)</strong><br>
+              <span style="font-size: 0.8rem;">CGEventTap &mdash; keyboard/mouse at system level<br>
+              AXUIElement &mdash; UI element inspection, password field detection<br>
+              NSWorkspace &mdash; app lifecycle, file events<br>
+              ScreenCaptureKit &mdash; window-level screenshots (Phase 2)</span>
+            </div>
+            <div style="text-align: center; margin: 0.5rem 0;">&darr; Unix Domain Socket (~/Library/Application Support/KMFlowAgent/agent.sock)</div>
+            <div style="background: #e3f2fd; padding: 1rem; border-radius: 6px; border-left: 4px solid #2196F3;">
+              <strong>PYTHON INTELLIGENCE LAYER</strong><br>
+              <span style="font-size: 0.8rem;">L2 PII Filter Engine &mdash; regex scrubbing (SSN, CC, email, phone)<br>
+              Action Aggregator &mdash; groups events into semantic task units<br>
+              SQLite Buffer &mdash; WAL mode, 100K event offline capacity<br>
+              Batch Uploader &mdash; HTTPS/mTLS, 30s interval, 500/batch</span>
+            </div>
+          </div>
+          <div>
+            <div style="background: var(--kmflow-light-gray); padding: 1rem; border-radius: 6px; margin-bottom: 0.5rem;">
+              <strong>SWIFT MODULES</strong><br>
+              <span style="font-size: 0.8rem;">
+              <strong>Capture:</strong> AppSwitchMonitor, InputMonitor, WindowTitleCapture, IdleDetector, CaptureStateManager (6-state FSM)<br>
+              <strong>IPC:</strong> SocketClient (actor), EventProtocol (18 types), IPCMessage (ndjson envelope)<br>
+              <strong>PII:</strong> L1Filter (password fields, blocklist, private browsing)<br>
+              <strong>Config:</strong> AgentConfig (server-pushed), BlocklistManager (thread-safe)<br>
+              <strong>Consent:</strong> ConsentManager (per-engagement), PermissionsManager (Accessibility, Screen Recording)<br>
+              <strong>UI:</strong> StatusBarController (NSStatusItem, 5 icon states)</span>
+            </div>
+            <div style="background: var(--kmflow-light-gray); padding: 1rem; border-radius: 6px;">
+              <strong>THREAD SAFETY MODEL</strong><br>
+              <span style="font-size: 0.8rem;">
+              @MainActor: CaptureStateManager, ConsentManager, StatusBarController<br>
+              NSLock: InputAggregator, IdleDetector, BlocklistManager<br>
+              Swift Actor: SocketClient<br>
+              Zero external dependencies &mdash; pure stdlib + Foundation + AppKit</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 38c</span>
+      </div>
+    </section>
+
+    <!-- Slide 38d: Event Taxonomy -->
+    <section id="slide-38d" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Agent Technology</span>
+        <h2>Event Taxonomy</h2>
+        <p>18 event types covering the full spectrum of desktop activity &mdash; from app switches to idle detection</p>
+      </div>
+      <div class="cards-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="card">
+          <h3>Application</h3>
+          <ul class="feature-list" style="font-size: 0.85rem;">
+            <li><code>APP_SWITCH</code> &mdash; focus change + dwell time</li>
+            <li><code>WINDOW_FOCUS</code> &mdash; window title + role</li>
+            <li><code>FILE_OPEN</code> / <code>FILE_SAVE</code></li>
+            <li><code>URL_NAVIGATION</code> &mdash; domain only</li>
+            <li><code>TAB_SWITCH</code> &mdash; browser tabs</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Input</h3>
+          <ul class="feature-list" style="font-size: 0.85rem;">
+            <li><code>KEYBOARD_ACTION</code> &mdash; char count, duration, correction rate</li>
+            <li><code>KEYBOARD_SHORTCUT</code> &mdash; Cmd+C, Ctrl+Z, etc.</li>
+            <li><code>COPY_PASTE</code> &mdash; operation type + content type</li>
+            <li><code>MOUSE_CLICK</code> / <code>DOUBLE_CLICK</code></li>
+            <li><code>MOUSE_DRAG</code> / <code>SCROLL</code></li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>UI Inspection</h3>
+          <ul class="feature-list" style="font-size: 0.85rem;">
+            <li><code>UI_ELEMENT_INTERACTION</code> &mdash; AXUIElement role + description</li>
+            <li><code>SCREEN_CAPTURE</code> &mdash; periodic screenshots (Phase 2)</li>
+          </ul>
+          <p style="font-size: 0.8rem; color: var(--kmflow-medium-gray); margin-top: 0.5rem;">Password fields (<code>AXSecureTextField</code>) are never captured regardless of mode</p>
+        </div>
+        <div class="card">
+          <h3>Temporal</h3>
+          <ul class="feature-list" style="font-size: 0.85rem;">
+            <li><code>IDLE_START</code> &mdash; no events for 5 min (configurable)</li>
+            <li><code>IDLE_END</code> &mdash; activity resumes + idle duration</li>
+          </ul>
+          <p style="font-size: 0.8rem; color: var(--kmflow-medium-gray); margin-top: 0.5rem;">Nanosecond-precision timestamps. Sequence numbers for ordering. Idempotency keys for deduplication.</p>
+        </div>
+      </div>
+      <div style="background: var(--kmflow-blue); color: white; padding: 1rem; border-radius: 8px; margin-top: 1rem; display: flex; gap: 2rem; justify-content: center; font-size: 0.9rem;">
+        <span><strong>URL capture:</strong> domain + hashed path only &mdash; no query params</span>
+        <span><strong>File events:</strong> extension + size only &mdash; no file names or paths</span>
+        <span><strong>All events:</strong> common envelope with agent_id, session_id, sequence_number</span>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 38d</span>
+      </div>
+    </section>
+
+    <!-- Slide 38e: PII Defense in Depth -->
+    <section id="slide-38e" class="slide slide-dark">
+      <div class="section-header">
+        <span class="badge badge-blue">Agent Technology</span>
+        <h2>PII Defense in Depth</h2>
+        <p>Four mandatory layers &mdash; not configurable off. Each layer catches what prior layers missed.</p>
+      </div>
+      <div style="background: rgba(255,255,255,0.1); padding: 2rem; border-radius: 12px; max-width: 900px; margin: 0 auto;">
+        <div style="background: #1B5E20; color: white; padding: 1.25rem; border-radius: 8px; margin-bottom: 0.75rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div><strong style="font-size: 1.1rem;">L1: Capture Prevention</strong><br><span style="font-size: 0.85rem;">Swift / On-Device &mdash; events are <em>never generated</em></span></div>
+            <div style="font-size: 0.8rem; text-align: right; opacity: 0.9;">Password fields (AXSecureTextField)<br>Blocked apps (7 hardcoded + server list)<br>Private browsing (5 browsers)<br>Screen lock / screensaver</div>
+          </div>
+        </div>
+        <div style="text-align: center; color: rgba(255,255,255,0.5); font-size: 1.5rem;">&darr;</div>
+        <div style="background: #2196F3; color: white; padding: 1.25rem; border-radius: 8px; margin-bottom: 0.75rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div><strong style="font-size: 1.1rem;">L2: At-Source Filtering</strong><br><span style="font-size: 0.85rem;">Python / On-Device &mdash; scrubbed before SQLite buffer</span></div>
+            <div style="font-size: 0.8rem; text-align: right; opacity: 0.9;">Regex: SSN, credit card (Luhn), email<br>Phone, DOB, IP address, passport<br>Screenshot OCR + bounding-box redaction<br>&gt;99% recall, &gt;95% precision target</div>
+          </div>
+        </div>
+        <div style="text-align: center; color: rgba(255,255,255,0.5); font-size: 1.5rem;">&darr; HTTPS/mTLS &darr;</div>
+        <div style="background: #F57C00; color: white; padding: 1.25rem; border-radius: 8px; margin-bottom: 0.75rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div><strong style="font-size: 1.1rem;">L3: Server-Side Processing</strong><br><span style="font-size: 0.85rem;">FastAPI + Worker &mdash; quarantined if flagged</span></div>
+            <div style="font-size: 0.8rem; text-align: right; opacity: 0.9;">spaCy NER (PERSON, ORG, GPE, DATE)<br>Claude LLM ambiguous PII classification<br>24-hour TTL auto-delete quarantine<br>Immutable audit trail per quarantine event</div>
+          </div>
+        </div>
+        <div style="text-align: center; color: rgba(255,255,255,0.5); font-size: 1.5rem;">&darr;</div>
+        <div style="background: #7B1FA2; color: white; padding: 1.25rem; border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div><strong style="font-size: 1.1rem;">L4: Data Management</strong><br><span style="font-size: 0.85rem;">Retention + Erasure &mdash; audit trail</span></div>
+            <div style="font-size: 0.8rem; text-align: right; opacity: 0.9;">Raw events: 90-day retention (configurable)<br>GDPR erasure within 30 days of request<br>AES-256 at rest, TLS 1.3 in transit<br>7-year audit log retention (compliance hold)</div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 38e</span>
+      </div>
+    </section>
+
+    <!-- Slide 38f: Keystroke Capture Modes -->
+    <section id="slide-38f" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Agent Technology</span>
+        <h2>Keystroke Capture Modes</h2>
+        <p>Two modes serve different evidence needs &mdash; action-level is the safe default; content-level is opt-in with full PII stack active</p>
+      </div>
+      <div class="two-col">
+        <div style="border: 2px solid #4CAF50; border-radius: 12px; padding: 1.5rem;">
+          <h3 style="color: #4CAF50;">Action-Level (Default)</h3>
+          <p style="margin-bottom: 1rem;">Records metadata about keyboard activity &mdash; not the actual characters typed.</p>
+          <div style="background: var(--kmflow-light-gray); padding: 1rem; border-radius: 6px; font-family: monospace; font-size: 0.8rem; margin-bottom: 1rem;">
+            "char_count": 47,<br>
+            "duration_ms": 12300,<br>
+            "backspace_count": 3,<br>
+            "special_key_count": 2,<br>
+            "content_level": false
+          </div>
+          <ul class="feature-list">
+            <li>Captures behavioral patterns (typing speed, correction rate)</li>
+            <li>Zero PII risk from keystroke content</li>
+            <li>Sufficient for process discovery in most engagements</li>
+            <li>Keyboard shortcuts always captured (process signals)</li>
+          </ul>
+        </div>
+        <div style="border: 2px solid #F57C00; border-radius: 12px; padding: 1.5rem;">
+          <h3 style="color: #F57C00;">Content-Level (Opt-In)</h3>
+          <p style="margin-bottom: 1rem;">Records actual characters typed &mdash; requires explicit engagement-level configuration.</p>
+          <div style="background: var(--kmflow-light-gray); padding: 1rem; border-radius: 6px; font-family: monospace; font-size: 0.8rem; margin-bottom: 1rem;">
+            "content": "John Smith, SSN [SSN_REDACTED]",<br>
+            "char_count": 47,<br>
+            "duration_ms": 12300,<br>
+            "content_level": true
+          </div>
+          <ul class="feature-list">
+            <li>Richer evidence: form field sequences, specific values</li>
+            <li>All 4 PII layers active (L1 password fields still blocked)</li>
+            <li>Requires explicit <code>keystroke_mode: content</code> config</li>
+            <li>Requires signed data processing agreement</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 38f</span>
+      </div>
+    </section>
+
+    <!-- Slide 38g: Desktop-to-Evidence Data Flow -->
+    <section id="slide-38g" class="slide slide-gray">
+      <div class="section-header">
+        <span class="badge badge-blue">Agent Technology</span>
+        <h2>Desktop-to-Evidence Data Flow</h2>
+        <p>From raw desktop activity to knowledge graph evidence in a single pipeline</p>
+      </div>
+      <div style="background: var(--kmflow-white); padding: 2rem; border-radius: 12px;">
+        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; text-align: center; font-size: 0.8rem;">
+          <div>
+            <div style="background: #e8f5e9; padding: 1rem; border-radius: 8px; min-height: 120px;">
+              <strong>1. Capture</strong><br><br>
+              Raw desktop events<br>
+              CGEventTap, AXUIElement,<br>NSWorkspace
+            </div>
+            <div style="margin-top: 0.25rem; color: #4CAF50; font-weight: 600;">L1 Filter</div>
+          </div>
+          <div>
+            <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; min-height: 120px;">
+              <strong>2. Filter + Buffer</strong><br><br>
+              L2 regex scrubbing<br>
+              Action aggregation<br>
+              SQLite WAL buffer
+            </div>
+            <div style="margin-top: 0.25rem; color: #2196F3; font-weight: 600;">L2 Filter</div>
+          </div>
+          <div>
+            <div style="background: #fff3e0; padding: 1rem; border-radius: 8px; min-height: 120px;">
+              <strong>3. Upload</strong><br><br>
+              Batch HTTPS/mTLS<br>
+              500 events / 30s<br>
+              Checksum + dedup
+            </div>
+            <div style="margin-top: 0.25rem; color: #F57C00; font-weight: 600;">mTLS Transport</div>
+          </div>
+          <div>
+            <div style="background: #fce4ec; padding: 1rem; border-radius: 8px; min-height: 120px;">
+              <strong>4. Server Process</strong><br><br>
+              Redis Stream ingest<br>
+              spaCy NER + LLM scan<br>
+              PII quarantine (24h TTL)
+            </div>
+            <div style="margin-top: 0.25rem; color: #E91E63; font-weight: 600;">L3 Filter</div>
+          </div>
+          <div>
+            <div style="background: #ede7f6; padding: 1rem; border-radius: 8px; min-height: 120px;">
+              <strong>5. Materialize</strong><br><br>
+              PostgreSQL persist<br>
+              Neo4j graph write<br>
+              EvidenceItem (0.9 weight)
+            </div>
+            <div style="margin-top: 0.25rem; color: #7B1FA2; font-weight: 600;">L4 Retention</div>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-top: 1.5rem; padding: 0 1rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+            <span style="background: #e8f5e9; padding: 0.25rem 0.75rem; border-radius: 4px;">On-Device (Swift)</span>
+            <span>&rarr;</span>
+            <span style="background: #e3f2fd; padding: 0.25rem 0.75rem; border-radius: 4px;">On-Device (Python)</span>
+            <span>&rarr;</span>
+            <span style="background: #fff3e0; padding: 0.25rem 0.75rem; border-radius: 4px;">Network</span>
+            <span>&rarr;</span>
+            <span style="background: #fce4ec; padding: 0.25rem 0.75rem; border-radius: 4px;">Server (FastAPI + Worker)</span>
+            <span>&rarr;</span>
+            <span style="background: #ede7f6; padding: 0.25rem 0.75rem; border-radius: 4px;">Data Layer</span>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 38g</span>
+      </div>
+    </section>
+
+    <!-- Slide 38h: Deployment Models -->
+    <section id="slide-38h" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Agent Technology</span>
+        <h2>Deployment Models</h2>
+        <p>Two deployment modes for different engagement contexts &mdash; mode switching requires re-registration</p>
+      </div>
+      <div class="two-col">
+        <div style="border: 2px solid var(--kmflow-blue); border-radius: 12px; padding: 1.5rem;">
+          <h3 style="color: var(--kmflow-blue);">Engagement Mode (Temporary)</h3>
+          <p style="font-size: 0.9rem; margin-bottom: 1rem;">Consulting engagements with a defined discovery phase</p>
+          <div class="table-container" style="margin-bottom: 1rem;">
+            <table style="font-size: 0.8rem;">
+              <tbody>
+                <tr><td><strong>Deployment</strong></td><td>Manual .dmg install; IT-assisted or self-service</td></tr>
+                <tr><td><strong>Config</strong></td><td>Backend-provided JWT with engagement ID + end date</td></tr>
+                <tr><td><strong>Auto-disable</strong></td><td>Ceases capture at engagement end date</td></tr>
+                <tr><td><strong>Consent</strong></td><td>User-visible dialog at first launch; acceptance required</td></tr>
+                <tr><td><strong>Uninstall</strong></td><td>Self-service via agent preferences</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="background: var(--kmflow-light-gray); padding: 0.75rem; border-radius: 6px; font-size: 0.85rem;">
+            Best for: bounded discovery phases with defined scope and end date
+          </div>
+        </div>
+        <div style="border: 2px solid #7B1FA2; border-radius: 12px; padding: 1.5rem;">
+          <h3 style="color: #7B1FA2;">Enterprise Mode (Persistent)</h3>
+          <p style="font-size: 0.9rem; margin-bottom: 1rem;">Ongoing process intelligence as a persistent capability</p>
+          <div class="table-container" style="margin-bottom: 1rem;">
+            <table style="font-size: 0.8rem;">
+              <tbody>
+                <tr><td><strong>Deployment</strong></td><td>MDM push via Jamf Pro or Microsoft Intune</td></tr>
+                <tr><td><strong>Config</strong></td><td>MDM configuration profile with cert + settings</td></tr>
+                <tr><td><strong>Persistence</strong></td><td>Runs continuously; config updates via MDM</td></tr>
+                <tr><td><strong>Consent</strong></td><td>Corporate policy disclosure; individual content-level opt-out</td></tr>
+                <tr><td><strong>Sessions</strong></td><td>Aligned to business hours or login/logout</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="background: var(--kmflow-light-gray); padding: 0.75rem; border-radius: 6px; font-size: 0.85rem;">
+            Best for: clients embedding process intelligence into ongoing operations
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 38h</span>
+      </div>
+    </section>
+
+    <!-- Slide 38i: Knowledge Graph Extensions -->
+    <section id="slide-38i" class="slide slide-gray">
+      <div class="section-header">
+        <span class="badge badge-blue">Agent Technology</span>
+        <h2>Knowledge Graph Extensions</h2>
+        <p>Task mining adds two new node types and three new relationship types to the Neo4j schema</p>
+      </div>
+      <div class="two-col">
+        <div>
+          <div style="background: var(--kmflow-white); padding: 1.5rem; border-radius: 12px; font-family: monospace; font-size: 0.8rem;">
+            <div style="margin-bottom: 1rem;">
+              <strong style="color: var(--kmflow-blue);">// New Node Types</strong><br><br>
+              (<span style="color: #4CAF50;">:Application</span> {<br>
+              &nbsp;&nbsp;bundle_id, display_name,<br>
+              &nbsp;&nbsp;category, first_observed,<br>
+              &nbsp;&nbsp;engagement_id<br>
+              })<br><br>
+              (<span style="color: #F57C00;">:UserAction</span> {<br>
+              &nbsp;&nbsp;id, session_id, action_type,<br>
+              &nbsp;&nbsp;app_bundle_id, element_role,<br>
+              &nbsp;&nbsp;duration_ms, timestamp,<br>
+              &nbsp;&nbsp;engagement_id<br>
+              })
+            </div>
+            <div>
+              <strong style="color: var(--kmflow-blue);">// New Relationships</strong><br><br>
+              (<span style="color: #F57C00;">:UserAction</span>)-[<span style="color: #E91E63;">:PERFORMED_IN</span>]-&gt;(<span style="color: #4CAF50;">:Application</span>)<br><br>
+              (<span style="color: #F57C00;">:UserAction</span>)-[<span style="color: #E91E63;">:PRECEDED_BY</span>]-&gt;(<span style="color: #F57C00;">:UserAction</span>)<br><br>
+              (<span style="color: #F57C00;">:UserAction</span>)-[<span style="color: #E91E63;">:MAPS_TO</span>]-&gt;(<span style="color: #2196F3;">:Activity</span>)
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3>How It Connects</h3>
+          <ul class="feature-list">
+            <li><strong>PERFORMED_IN</strong> &mdash; links each observed action to the application where it occurred, with duration metadata</li>
+            <li><strong>PRECEDED_BY</strong> &mdash; chains sequential actions within a session, revealing actual task sequences with gap timing and same-app flags</li>
+            <li><strong>MAPS_TO</strong> &mdash; links observed actions to KMFlow process model activities (Phase 3), with assembly confidence scores</li>
+          </ul>
+          <h3 style="margin-top: 1.5rem;">Evidence Integration</h3>
+          <ul class="feature-list">
+            <li>Category: <code>KM4Work</code> (evidence taxonomy category 7)</li>
+            <li>Source weight: <strong>0.9</strong> (highest confidence tier)</li>
+            <li>Triangulates with documents, interviews, and system data</li>
+            <li>Feeds POV generator for confidence score uplift</li>
+            <li>Enables process variant detection via graph queries</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 38i</span>
+      </div>
+    </section>
+
+    <!-- Slide 38j: Admin — Agent Management -->
+    <section id="slide-38j" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Agent Technology</span>
+        <h2>Admin: Agent Management</h2>
+        <p>Register, monitor, and manage desktop agents across engagements</p>
+      </div>
+      <div class="two-col">
+        <div>
+          <h3>Capabilities</h3>
+          <ul class="feature-list">
+            <li><strong>Agent registry</strong> &mdash; view all registered agents with hostname, OS version, agent version, and deployment mode</li>
+            <li><strong>Status tracking</strong> &mdash; active, paused, expired, or revoked status per agent</li>
+            <li><strong>Heartbeat monitoring</strong> &mdash; last heartbeat timestamp, buffer depth, connectivity health</li>
+            <li><strong>Engagement filtering</strong> &mdash; filter agents by engagement ID for scoped views</li>
+            <li><strong>Certificate management</strong> &mdash; mTLS cert thumbprint and rotation tracking</li>
+            <li><strong>Bulk operations</strong> &mdash; pause, resume, or revoke agents across an engagement</li>
+          </ul>
+        </div>
+        <div class="screenshot-frame">
+          <div class="screenshot-frame-chrome">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div class="url-bar">localhost:3000/admin/task-mining/agents</div>
+          </div>
+          <img src="screenshots/tm-agents.png" alt="Task Mining Agent Management" loading="lazy">
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 38j</span>
+      </div>
+    </section>
+
+    <!-- Slide 38k: Admin — Capture Policy & PII Quarantine -->
+    <section id="slide-38k" class="slide slide-gray">
+      <div class="section-header">
+        <span class="badge badge-blue">Agent Technology</span>
+        <h2>Admin: Capture Policy &amp; PII Quarantine</h2>
+        <p>Configure what is captured per engagement and review PII-flagged events</p>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+        <div>
+          <h3 style="margin-bottom: 0.75rem;">Capture Policy</h3>
+          <div class="screenshot-frame" style="margin-bottom: 1rem;">
+            <div class="screenshot-frame-chrome">
+              <div class="dots"><span></span><span></span><span></span></div>
+              <div class="url-bar">localhost:3000/admin/task-mining/policy</div>
+            </div>
+            <img src="screenshots/tm-policy.png" alt="Capture Policy Configuration" loading="lazy">
+          </div>
+          <ul class="feature-list" style="font-size: 0.85rem;">
+            <li>App allowlist / blocklist per engagement</li>
+            <li>Keystroke mode: action vs. content</li>
+            <li>Idle timeout and batch interval configuration</li>
+          </ul>
+        </div>
+        <div>
+          <h3 style="margin-bottom: 0.75rem;">PII Quarantine Review</h3>
+          <div class="screenshot-frame" style="margin-bottom: 1rem;">
+            <div class="screenshot-frame-chrome">
+              <div class="dots"><span></span><span></span><span></span></div>
+              <div class="url-bar">localhost:3000/admin/task-mining/quarantine</div>
+            </div>
+            <img src="screenshots/tm-quarantine.png" alt="PII Quarantine Review Queue" loading="lazy">
+          </div>
+          <ul class="feature-list" style="font-size: 0.85rem;">
+            <li>L3-flagged events with detection method</li>
+            <li>24-hour TTL with auto-delete</li>
+            <li>Filter by expiry status: all, expiring soon, expired</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 38k</span>
+      </div>
+    </section>
+
+    <!-- Slide 38l: Competitive Differentiation -->
+    <section id="slide-38l" class="slide slide-dark">
+      <div class="section-header">
+        <span class="badge badge-blue">Agent Technology</span>
+        <h2>Competitive Differentiation</h2>
+        <p>The only task mining agent purpose-built for consulting delivery with native knowledge graph integration</p>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align: left;">Capability</th>
+              <th>KMFlow Agent</th>
+              <th>Soroco Scout</th>
+              <th>Celonis</th>
+              <th>UiPath</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Knowledge graph integration</td><td style="text-align: center; color: #4CAF50; font-weight: 700;">Yes</td><td style="text-align: center; color: #F44336;">No</td><td style="text-align: center; color: #F44336;">No</td><td style="text-align: center; color: #F44336;">No</td></tr>
+            <tr><td>Evidence triangulation</td><td style="text-align: center; color: #4CAF50; font-weight: 700;">Yes</td><td style="text-align: center; color: #F44336;">No</td><td style="text-align: center; color: #F44336;">No</td><td style="text-align: center; color: #F44336;">No</td></tr>
+            <tr><td>LCD confidence scoring</td><td style="text-align: center; color: #4CAF50; font-weight: 700;">Yes</td><td style="text-align: center; color: #F44336;">No</td><td style="text-align: center; color: #F44336;">No</td><td style="text-align: center; color: #F44336;">No</td></tr>
+            <tr><td>Mandatory 4-layer PII</td><td style="text-align: center; color: #4CAF50; font-weight: 700;">Yes</td><td style="text-align: center; color: #FFC107;">Config</td><td style="text-align: center; color: #FFC107;">Config</td><td style="text-align: center; color: #FFC107;">Config</td></tr>
+            <tr><td>Engagement auto-disable</td><td style="text-align: center; color: #4CAF50; font-weight: 700;">Yes</td><td style="text-align: center; color: #F44336;">No</td><td style="text-align: center; color: #F44336;">No</td><td style="text-align: center; color: #F44336;">No</td></tr>
+            <tr><td>On-device PII filtering</td><td style="text-align: center; color: #4CAF50; font-weight: 700;">Yes</td><td style="text-align: center; color: #FFC107;">Partial</td><td style="text-align: center; color: #FFC107;">Partial</td><td style="text-align: center; color: #FFC107;">Partial</td></tr>
+            <tr><td>First-party data (no vendor lock-in)</td><td style="text-align: center; color: #4CAF50; font-weight: 700;">Yes</td><td style="text-align: center; color: #F44336;">No</td><td style="text-align: center; color: #F44336;">No</td><td style="text-align: center; color: #F44336;">No</td></tr>
+            <tr><td>Consulting delivery workflow</td><td style="text-align: center; color: #4CAF50; font-weight: 700;">Yes</td><td style="text-align: center; color: #F44336;">No</td><td style="text-align: center; color: #F44336;">No</td><td style="text-align: center; color: #F44336;">No</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1.5rem;">
+        <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 8px; text-align: center;">
+          <div style="font-size: 0.85rem; opacity: 0.7;">KMFlow Agent</div>
+          <div style="font-size: 1.3rem; font-weight: 700; color: #4CAF50;">Platform subscription</div>
+          <div style="font-size: 0.8rem; opacity: 0.7;">Full data portability</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 8px; text-align: center;">
+          <div style="font-size: 0.85rem; opacity: 0.7;">Soroco Scout</div>
+          <div style="font-size: 1.3rem; font-weight: 700; color: #F44336;">$25,000+/engagement</div>
+          <div style="font-size: 0.8rem; opacity: 0.7;">Vendor platform lock-in</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 8px; text-align: center;">
+          <div style="font-size: 0.85rem; opacity: 0.7;">Celonis / UiPath</div>
+          <div style="font-size: 1.3rem; font-weight: 700; color: #FFC107;">Enterprise license</div>
+          <div style="font-size: 0.8rem; opacity: 0.7;">Limited data portability</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 38l</span>
+      </div>
+    </section>
+
+    <!-- Slide 38m: Phased Delivery Roadmap -->
+    <section id="slide-38m" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Agent Technology</span>
+        <h2>Phased Delivery Roadmap</h2>
+        <p>Four phases from MVP desktop observation to autonomous process intelligence</p>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+        <div style="border-top: 4px solid #4CAF50; background: var(--kmflow-light-gray); padding: 1.25rem; border-radius: 0 0 12px 12px;">
+          <h3 style="color: #4CAF50; font-size: 1rem;">Phase 1 &mdash; MVP</h3>
+          <p style="font-size: 0.75rem; color: var(--kmflow-medium-gray); margin-bottom: 0.75rem;">Q2 2026</p>
+          <ul class="feature-list" style="font-size: 0.8rem;">
+            <li>Core Swift event capture (7 event types)</li>
+            <li>L1 + L2 PII filtering</li>
+            <li>SQLite buffer + batch upload</li>
+            <li>Agent registration + heartbeat APIs</li>
+            <li>Redis Stream integration</li>
+            <li>Evidence materialization (KM4Work)</li>
+            <li>Admin dashboard</li>
+            <li>Engagement mode (auto-disable)</li>
+          </ul>
+          <div style="background: #e8f5e9; padding: 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-top: 0.75rem;">
+            <strong>Gate:</strong> Full capture cycle with zero PII leakage
+          </div>
+        </div>
+        <div style="border-top: 4px solid #2196F3; background: var(--kmflow-light-gray); padding: 1.25rem; border-radius: 0 0 12px 12px;">
+          <h3 style="color: #2196F3; font-size: 1rem;">Phase 2 &mdash; Intelligence</h3>
+          <p style="font-size: 0.75rem; color: var(--kmflow-medium-gray); margin-bottom: 0.75rem;">Q3 2026</p>
+          <ul class="feature-list" style="font-size: 0.8rem;">
+            <li>Full 18-event taxonomy</li>
+            <li>AXUIElement inspection</li>
+            <li>Screenshot capture + OCR redaction</li>
+            <li>L3 PII (spaCy NER + Claude LLM)</li>
+            <li>ML task segmentation</li>
+            <li>Knowledge graph writes</li>
+            <li>Content-level keystroke (opt-in)</li>
+            <li>Enterprise MDM (.pkg)</li>
+          </ul>
+        </div>
+        <div style="border-top: 4px solid #F57C00; background: var(--kmflow-light-gray); padding: 1.25rem; border-radius: 0 0 12px 12px;">
+          <h3 style="color: #F57C00; font-size: 1rem;">Phase 3 &mdash; Scale</h3>
+          <p style="font-size: 0.75rem; color: var(--kmflow-medium-gray); margin-bottom: 0.75rem;">Q4 2026</p>
+          <ul class="feature-list" style="font-size: 0.8rem;">
+            <li>Process assembly (UserAction &rarr; Activity)</li>
+            <li>Process variant detection</li>
+            <li>Graph-based task mining queries</li>
+            <li>Windows agent (Win32 + WH_KEYBOARD_LL)</li>
+            <li>Deviation detection vs. POV models</li>
+            <li>Cross-agent session analysis</li>
+            <li>Scenario Engine integration</li>
+          </ul>
+        </div>
+        <div style="border-top: 4px solid #7B1FA2; background: var(--kmflow-light-gray); padding: 1.25rem; border-radius: 0 0 12px 12px;">
+          <h3 style="color: #7B1FA2; font-size: 1rem;">Phase 4 &mdash; Autonomous</h3>
+          <p style="font-size: 0.75rem; color: var(--kmflow-medium-gray); margin-bottom: 0.75rem;">2027</p>
+          <ul class="feature-list" style="font-size: 0.8rem;">
+            <li>Audio capture + ASR transcription</li>
+            <li>AI agent monitoring (API calls, tool invocations)</li>
+            <li>Automated SOP generation from observations</li>
+            <li>Predictive assistance (alert before exception)</li>
+            <li>Cross-engagement pattern library</li>
+          </ul>
+          <div style="background: #f3e5f5; padding: 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-top: 0.75rem;">
+            <strong>Target:</strong> &gt;50% Soroco displacement
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 38m</span>
+      </div>
+    </section>
+
     <!-- Slide 39: Knowledge Graph Schema -->
     <section id="slide-39" class="slide slide-dark">
       <div class="section-header">
@@ -6374,6 +7056,7 @@ confidence = (
         slides: [
           { name: "System Architecture", id: "slide-37" },
           { name: "Tech Stack", id: "slide-38" },
+          { name: "Task Mining Agent", id: "slide-38a" },
           { name: "Knowledge Graph", id: "slide-39" },
           { name: "Loan Origination Graph Demo", id: "slide-40" },
           { name: "Core Entities (PostgreSQL)", id: "slide-41" },
