@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.069
+**Version**: 2026.02.070
 **Last Updated**: 2026-02-26
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.070 | 2026-02-26 | Audit Phase 2 PR 2: add 13 missing FK indexes (migration 029) (#252) |
 | 2026.02.069 | 2026-02-26 | Audit Phase 1: macOS agent build pipeline hardening — Hardened Runtime, dep pinning, SHA-256 verification (#250) |
 | 2026.02.068 | 2026-02-26 | Audit Phase 2 PR 1: platform auth/API hardening — pagination bounds, WS membership, TOM access (#239) |
 | 2026.02.067 | 2026-02-26 | Audit Phase 1 PR 3: agent security — entitlements, signing, installer, Swift actors (#244) |

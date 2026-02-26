@@ -7,10 +7,14 @@
 **Audit Remediation** — Phase 0 and Phase 1 COMPLETE. Phase 2 in progress.
 - Phase 0 (docs): All 5 items done (PRs #245, #251)
 - Phase 1 (critical security): All 9 items done (PRs #246, #247, #248, #251)
-- Phase 2 (HIGH findings): PR 1 done (#249), remaining: FK indexes, GDPR, security events
+- Phase 2 (HIGH findings): PRs 1-2 done (#249, #252). All platform HIGHs resolved.
+- Remaining: ~9 agent HIGHs (E1/E2/E3/F3) — entitlements, logger privacy, config validation
 
 ## Recently Completed
 
+- **PR #252 merged** — Audit Phase 2 PR 2: Missing FK Indexes (v2026.02.070)
+  - Migration 029: 13 B-tree indexes on unindexed FK columns across 6 model modules
+  - PR review: 1 MEDIUM fixed (removed non-FK lineage_id), 1 LOW fixed (naming suffix)
 - **PR #251 merged** — Audit Phase 1: macOS Agent Build Pipeline Hardening (v2026.02.069)
   - Added --options runtime to all codesign invocations across embed-python.sh, build-app-bundle.sh, sign-all.sh
   - Refused ad-hoc signing in release.sh (defense-in-depth)

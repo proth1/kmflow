@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.070] - 2026-02-26
+### Fixed
+- Add B-tree indexes on 13 unindexed ForeignKey columns for join/query performance (#252)
+
 ## [2026.02.069] - 2026-02-26
 ### Security
 - Add --options runtime (Hardened Runtime) to all codesign invocations across build pipeline (#250)
