@@ -83,7 +83,15 @@ public actor PythonProcessManager {
             environment["KMFLOW_AGENT_ID"] = agentId
         }
         if let backendURL = defaults.string(forKey: "KMFLOW_BACKEND_URL"), !backendURL.isEmpty {
-            environment["KMFLOW_BACKEND_URL"] = backendURL
+            // Validate URL scheme to prevent data exfiltration via rogue MDM config
+            if let url = URL(string: backendURL),
+               let scheme = url.scheme?.lowercased(),
+               scheme == "https" || scheme == "http",
+               url.host != nil {
+                environment["KMFLOW_BACKEND_URL"] = backendURL
+            } else {
+                log.error("Invalid KMFLOW_BACKEND_URL — must be a valid http(s) URL with a host")
+            }
         }
 
         let proc = Process()
