@@ -16,9 +16,9 @@ public protocol InputEventSource: AnyObject {
 public enum InputEvent: Sendable {
     case keyDown(timestamp: Date)
     case keyUp(timestamp: Date)
-    case mouseDown(button: MouseButton, x: Double, y: Double, timestamp: Date)
-    case mouseUp(button: MouseButton, x: Double, y: Double, timestamp: Date)
-    case mouseDrag(x: Double, y: Double, timestamp: Date)
+    case mouseDown(button: MouseButton, timestamp: Date)
+    case mouseUp(button: MouseButton, timestamp: Date)
+    case mouseDrag(timestamp: Date)
     case scroll(deltaX: Double, deltaY: Double, timestamp: Date)
 }
 
@@ -29,8 +29,10 @@ public enum MouseButton: String, Codable, Sendable {
 }
 
 /// Aggregates raw input events into semantic keyboard/mouse action counts.
-public final class InputAggregator: @unchecked Sendable {
-    private let lock = NSLock()
+///
+/// Uses a Swift `actor` for compiler-verified thread safety instead of
+/// manual NSLock synchronization.
+public actor InputAggregator {
     private var keyCount: Int = 0
     private var backspaceCount: Int = 0
     private var specialKeyCount: Int = 0
@@ -43,51 +45,37 @@ public final class InputAggregator: @unchecked Sendable {
 
     /// Record a key press.
     public func recordKeyDown() {
-        lock.lock()
-        defer { lock.unlock() }
         if typingStarted == nil { typingStarted = Date() }
         keyCount += 1
     }
 
     /// Record a backspace press.
     public func recordBackspace() {
-        lock.lock()
-        defer { lock.unlock() }
         backspaceCount += 1
     }
 
     /// Record a special key (function keys, arrows, etc.).
     public func recordSpecialKey() {
-        lock.lock()
-        defer { lock.unlock() }
         specialKeyCount += 1
     }
 
     /// Record a mouse click.
     public func recordClick() {
-        lock.lock()
-        defer { lock.unlock() }
         clickCount += 1
     }
 
     /// Record a scroll action.
     public func recordScroll() {
-        lock.lock()
-        defer { lock.unlock() }
         scrollCount += 1
     }
 
     /// Record a mouse drag.
     public func recordDrag() {
-        lock.lock()
-        defer { lock.unlock() }
         dragCount += 1
     }
 
     /// Flush and return the current aggregated counts, resetting them.
     public func flush() -> AggregatedInput {
-        lock.lock()
-        defer { lock.unlock() }
         let durationMs: UInt64
         if let start = typingStarted {
             durationMs = UInt64(Date().timeIntervalSince(start) * 1000)

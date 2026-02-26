@@ -10,10 +10,6 @@
     <key>com.apple.security.cs.disable-library-validation</key>
     <false/>
 
-    <!-- Accessibility API access (CGEventTap, AXUIElement) -->
-    <key>com.apple.security.automation.apple-events</key>
-    <true/>
-
     <!-- Network access for backend communication -->
     <key>com.apple.security.network.client</key>
     <true/>

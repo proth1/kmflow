@@ -1,10 +1,12 @@
 /// Controller that reads captured events from the local SQLite buffer
 /// and publishes them for display in `TransparencyLogView`.
 ///
-/// The buffer is written by the Python intelligence layer and encrypted
-/// with a symmetric key stored in the macOS Keychain.  This controller
-/// opens a **read-only** SQLite connection so it cannot corrupt the live
-/// capture buffer.
+/// **Security note**: The buffer is currently stored as plaintext SQLite.
+/// AES-256-GCM encryption using a key from the macOS Keychain is planned
+/// but not yet implemented.  See audit finding E3-CRITICAL.
+///
+/// This controller opens a **read-only** SQLite connection so it cannot
+/// corrupt the live capture buffer.
 
 import Foundation
 import Security
@@ -106,10 +108,9 @@ public final class TransparencyLogController: ObservableObject {
             return
         }
 
-        // Load the buffer encryption key from Keychain (for future use when
-        // the Python layer encrypts individual columns).  We retrieve it here
-        // so the controller wires the full security contract even if decryption
-        // is a no-op for plaintext rows today.
+        // TODO(E3-CRITICAL): When AES-256-GCM encryption is implemented in
+        // the Python layer, decrypt data using the Keychain key here.
+        // Until then, data is read as plaintext.
         _ = loadBufferKeyFromKeychain()
 
         var db: OpaquePointer?

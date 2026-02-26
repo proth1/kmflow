@@ -1,7 +1,12 @@
 /// Unix domain socket client for sending events to the Python intelligence layer.
 ///
 /// Events are serialized as newline-delimited JSON (ndjson) over a
-/// user-private Unix domain socket.
+/// user-private Unix domain socket (0600 permissions).
+///
+/// **Security note**: The socket currently has no authentication beyond
+/// filesystem permissions.  Peer credential verification and a shared
+/// secret handshake are planned but not yet implemented.
+/// See audit finding E3-CRITICAL.
 
 import Foundation
 
@@ -63,9 +68,9 @@ public actor SocketClient {
     }
 
     /// Send a capture event, reconnecting if needed.
-    public func send(_ event: CaptureEvent) throws {
+    public func send(_ event: CaptureEvent) async throws {
         if !isConnected {
-            try reconnect()
+            try await reconnect()
         }
         guard let fh = fileHandle else {
             throw SocketError.notConnected
@@ -83,14 +88,14 @@ public actor SocketClient {
     }
 
     /// Attempt reconnection with exponential backoff.
-    private func reconnect() throws {
+    private func reconnect() async throws {
         for attempt in 0..<maxReconnectAttempts {
             do {
                 try connect()
                 return
             } catch {
-                let delay = baseReconnectDelay * pow(2.0, Double(attempt))
-                Thread.sleep(forTimeInterval: min(delay, 30.0))
+                let delay = min(baseReconnectDelay * pow(2.0, Double(attempt)), 30.0)
+                try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
             }
         }
         throw SocketError.connectionFailed("Failed after \(maxReconnectAttempts) reconnect attempts")

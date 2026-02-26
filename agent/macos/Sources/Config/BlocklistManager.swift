@@ -3,10 +3,9 @@
 import Foundation
 import PII
 
-public final class BlocklistManager: @unchecked Sendable {
+public actor BlocklistManager {
     private var blocklist: Set<String>
     private var allowlist: Set<String>?
-    private let lock = NSLock()
 
     public init(config: AgentConfig? = nil) {
         var blocked = CaptureContextFilter.hardcodedBlocklist
@@ -19,8 +18,6 @@ public final class BlocklistManager: @unchecked Sendable {
 
     /// Update blocklist/allowlist from new server config.
     public func update(config: AgentConfig) {
-        lock.lock()
-        defer { lock.unlock() }
         var blocked = CaptureContextFilter.hardcodedBlocklist
         if let configBlocked = config.appBlocklist {
             blocked.formUnion(configBlocked)
@@ -30,10 +27,11 @@ public final class BlocklistManager: @unchecked Sendable {
     }
 
     /// Returns true if the bundle ID should be captured (not blocked).
+    ///
+    /// Apps with a nil bundle identifier are blocked by default (least
+    /// privilege) to prevent unidentified processes from being captured.
     public func shouldCapture(bundleId: String?) -> Bool {
-        guard let bid = bundleId else { return true }
-        lock.lock()
-        defer { lock.unlock() }
+        guard let bid = bundleId else { return false }
 
         // If allowlist is set, only allow listed apps
         if let allow = allowlist, !allow.isEmpty {

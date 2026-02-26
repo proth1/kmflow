@@ -14,10 +14,15 @@ set -euo pipefail
 APP_PATH="${1:?Usage: notarize.sh <APP_PATH>}"
 
 # ---------------------------------------------------------------------------
-# Guard: skip if APPLE_ID not set (local / CI without notarization credentials)
+# Guard: require APPLE_ID for release builds, skip only for dev builds
 # ---------------------------------------------------------------------------
 if [[ -z "${APPLE_ID:-}" ]]; then
-    echo "Skipping notarization: APPLE_ID not set"
+    if [[ "${KMFLOW_RELEASE_BUILD:-0}" == "1" ]]; then
+        echo "ERROR: APPLE_ID not set but KMFLOW_RELEASE_BUILD=1." >&2
+        echo "       Notarization is mandatory for release builds." >&2
+        exit 1
+    fi
+    echo "Skipping notarization: APPLE_ID not set (dev build)"
     exit 0
 fi
 
@@ -65,11 +70,32 @@ echo ""
 # ---------------------------------------------------------------------------
 echo "--- Step 2: Submitting to Apple Notary Service ---"
 echo "  (This may take several minutes...)"
-xcrun notarytool submit "$ZIP_PATH" \
+SUBMIT_OUTPUT="$(xcrun notarytool submit "$ZIP_PATH" \
     --apple-id  "$APPLE_ID" \
     --team-id   "$TEAM_ID" \
     --password  "$APP_PASSWORD" \
-    --wait
+    --wait 2>&1)"
+echo "$SUBMIT_OUTPUT"
+
+# Extract the submission ID and verify the status is "Accepted"
+SUBMISSION_ID="$(echo "$SUBMIT_OUTPUT" | grep -m1 'id:' | awk '{print $2}')"
+if [[ -z "$SUBMISSION_ID" ]]; then
+    echo "ERROR: Could not extract submission ID from notarytool output." >&2
+    exit 1
+fi
+
+NOTARY_STATUS="$(echo "$SUBMIT_OUTPUT" | grep -m1 'status:' | awk '{print $2}')"
+if [[ "$NOTARY_STATUS" != "Accepted" ]]; then
+    echo "ERROR: Notarization was NOT accepted (status: ${NOTARY_STATUS:-unknown})." >&2
+    echo "       Fetching detailed log for submission $SUBMISSION_ID..." >&2
+    xcrun notarytool log "$SUBMISSION_ID" \
+        --apple-id "$APPLE_ID" \
+        --team-id "$TEAM_ID" \
+        --password "$APP_PASSWORD" \
+        2>&1 || true
+    exit 1
+fi
+echo "  Notarization accepted (submission: $SUBMISSION_ID)."
 echo ""
 
 # ---------------------------------------------------------------------------
