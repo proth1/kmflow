@@ -227,17 +227,22 @@ public final class IntegrityChecker: @unchecked Sendable {
             return false
         }
 
-        // HMAC-SHA256 verification using CryptoKit.
+        // HMAC-SHA256 verification using CryptoKit (constant-time comparison).
         guard let keyData = Data(hexString: sig.key_hex) else {
             log.error("Invalid HMAC key hex in integrity.sig")
             return false
         }
+        guard let claimedHMACData = Data(hexString: sig.hmac_sha256) else {
+            log.error("Invalid HMAC hex in integrity.sig")
+            return false
+        }
 
         let key = SymmetricKey(data: keyData)
-        let expectedHMAC = HMAC<SHA256>.authenticationCode(for: manifestData, using: key)
-        let expectedHex = expectedHMAC.map { String(format: "%02x", $0) }.joined()
-
-        return expectedHex == sig.hmac_sha256
+        return HMAC<SHA256>.isValidAuthenticationCode(
+            claimedHMACData,
+            authenticating: manifestData,
+            using: key
+        )
     }
 }
 
