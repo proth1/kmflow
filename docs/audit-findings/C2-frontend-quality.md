@@ -2,282 +2,370 @@
 
 **Auditor**: C2 (Frontend Quality Auditor)
 **Scope**: `frontend/src/` — React component patterns, error boundaries, accessibility, token storage security, state management
-**Date**: 2026-02-20
+**Date**: 2026-02-26
+**Prior Audit**: 2026-02-20 (findings superseded by this report)
 
 ## Summary
 
 | Severity | Count |
 |----------|-------|
-| CRITICAL | 1 |
-| HIGH     | 4 |
-| MEDIUM   | 4 |
-| LOW      | 3 |
-| **Total** | **12** |
+| CRITICAL | 1     |
+| HIGH     | 3     |
+| MEDIUM   | 5     |
+| LOW      | 4     |
+| **Total** | **13** |
+
+---
+
+## Improvements Since Prior Audit (2026-02-20)
+
+The following findings from the prior audit have been resolved:
+
+- **ErrorBoundary now exists and is applied**: `ErrorBoundary` wraps `AppShell` in the root layout.
+- **`api.ts` god file split**: The monolithic 1,694-line `api.ts` has been split into domain modules under `frontend/src/lib/api/`. The old path now re-exports via a barrel.
+- **`AnnotationPanel` auth fixed**: Now uses `apiGet`, `apiPost`, `apiDelete` from the shared API client consistently.
+- **Simulations page refactored**: Extracted into 8 child tab components under `app/simulations/components/`. The page coordinator is now 517 lines.
+- **`EvidenceUploader` stale closure fixed**: Index tracking now uses a functional `setUploads` updater that reads `prev.length` from the actual current state.
 
 ---
 
 ## Critical Issues
 
-### [CRITICAL] SECURITY: JWT Token Stored in localStorage (XSS-Accessible)
+### [CRITICAL] SECURITY: JWT Token Read from `localStorage` in `EvidenceUploader`
 
-**File**: `frontend/src/lib/api.ts:22`
+**File**: `frontend/src/components/EvidenceUploader.tsx:107`
 **Agent**: C2 (Frontend Quality Auditor)
 **Evidence**:
 ```typescript
-function getAuthToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("kmflow_token");
-}
+// Mirror the auth strategy from api.ts: cookie via credentials + optional
+// legacy localStorage token for backward compatibility.
+const token = typeof window !== "undefined" ? localStorage.getItem("kmflow_token") : null;
+const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 ```
-**Description**: The JWT auth token is stored in `localStorage` which is readable by any JavaScript executing in the browser context. This is a textbook XSS attack vector. Any successful XSS injection — from a third-party dependency, from BPMN XML rendering, or from annotation content — would allow an attacker to exfiltrate the token and impersonate the user.
-**Risk**: Token theft via XSS leads to full account takeover. Given this platform handles confidential consulting engagement data, the blast radius is significant.
-**Recommendation**: Migrate to `HttpOnly` cookies set by the server. The browser cannot read `HttpOnly` cookies via JavaScript, eliminating the theft surface. Alternatively use a short-lived in-memory token with a silent refresh flow backed by a secure cookie.
+**Description**: This is the last surviving reference to `localStorage` for token retrieval. The comment describes it as a "legacy" backward-compat path, but backward compatibility with an insecure pattern means the insecure path remains active for any client that has a token stored there. The shared API client (`lib/api/client.ts`) correctly uses only `credentials: "include"` (HttpOnly cookies) with no localStorage read. `EvidenceUploader` diverges from this by reading localStorage, perpetuating the XSS-accessible token surface. The test file at `frontend/src/__tests__/api.test.ts:40` also still sets `kmflow_token` in localStorage, confirming the legacy path is still exercised.
+**Risk**: If any XSS vector exists (third-party dependency compromise, injected content), an attacker can read `kmflow_token` from localStorage and impersonate the user. HttpOnly cookies cannot be read by JavaScript; localStorage cannot provide this protection.
+**Recommendation**: Remove the localStorage read entirely. The component already sends `credentials: "include"` on line 124, which transmits the HttpOnly cookie automatically. The `Authorization` header branch is dead code for browser sessions. Update `api.test.ts:40` to remove the `localStorage.setItem("kmflow_token", ...)` setup.
 
 ---
 
 ## High Severity Issues
 
-### [HIGH] ARCHITECTURE: No React Error Boundaries Anywhere in the Application
+### [HIGH] ARCHITECTURE: Single `ErrorBoundary` at Root — No Per-Route or Per-Feature Boundaries
 
-**File**: `frontend/src/app/layout.tsx:14`
+**File**: `frontend/src/app/layout.tsx:24`
 **Agent**: C2 (Frontend Quality Auditor)
 **Evidence**:
 ```typescript
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <AppShell>{children}</AppShell>
+<ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+  <ErrorBoundary>
+    <AppShell>{children}</AppShell>
+  </ErrorBoundary>
+</ThemeProvider>
 ```
-**Description**: No `ErrorBoundary` component exists anywhere under `frontend/src/`. A render-time exception in any component (e.g., a null deref when API data has an unexpected shape, or an error in the `bpmn-js` or `cytoscape` dynamic import path) will tear down the entire React tree and show a blank white page with no user-friendly message. The `AppShell` wraps all content but provides no error boundary protection.
-**Risk**: Any unhandled render exception causes a complete application crash with no recovery path. Users lose all in-progress work.
-**Recommendation**: Add at minimum one `ErrorBoundary` at the root layout level wrapping `AppShell`, and ideally per-page boundaries around the main page content. Next.js App Router also supports `error.tsx` files per route segment as a simpler alternative.
-
----
-
-### [HIGH] CODE QUALITY: God File — `api.ts` is 1,694 Lines and Growing
-
-**File**: `frontend/src/lib/api.ts:1-1694`
-**Agent**: C2 (Frontend Quality Auditor)
-**Evidence**:
-```typescript
-/**
- * TODO: Split into domain modules when this file exceeds 1500 lines.
- * Suggested modules: api/evidence.ts, api/governance.ts, api/monitoring.ts,
- * api/reports.ts, api/admin.ts
- */
-```
-**Description**: `api.ts` is already 194 lines past its own self-declared splitting threshold (1,500 lines). It contains types and API functions across 12+ domains: dashboard, evidence, TOM, roadmap, monitoring, patterns, simulation, portal, graph, auth, governance, integrations, shelf-requests, metrics, annotations, and lineage. This is a textbook god file.
-**Risk**: Merge conflicts are likely as multiple features touch this file simultaneously. Finding specific types or functions requires scanning the entire file. Bundle splitting cannot be applied — all API code is shipped in a single chunk even if only a subset is used.
-**Recommendation**: Split along the domain boundaries already identified in the TODO comment. Each domain module (`api/evidence.ts`, `api/governance.ts`, etc.) should export its own types and functions.
-
----
-
-### [HIGH] SECURITY: `AnnotationPanel` Makes Unauthenticated API Calls
-
-**File**: `frontend/src/components/AnnotationPanel.tsx:48-57`
-**Agent**: C2 (Frontend Quality Auditor)
-**Evidence**:
-```typescript
-const res = await fetch(
-  `${API_BASE}/api/v1/annotations/?${params.toString()}`,
-);
-if (res.ok) {
-  const data = await res.json();
-  setAnnotations(data.items || []);
-}
-```
-**Description**: `AnnotationPanel` uses raw `fetch` without any `Authorization` header, while the rest of the application uses `authHeaders()` via `apiGet`/`apiPost`. This means annotation reads and writes go unauthenticated. The DELETE call on line 101 also omits auth headers. This is inconsistent with the application's auth model and leaves annotation endpoints as potential IDOR targets.
-**Risk**: Annotations may be readable/deletable by unauthenticated users, or across tenants if the backend relies on the token for scoping.
-**Recommendation**: Replace the raw `fetch` calls in `AnnotationPanel` with `apiGet`, `apiPost`, and `apiDelete` from `lib/api.ts` which apply `authHeaders()` consistently.
+**Description**: A single `ErrorBoundary` wraps the entire application. While this prevents a total white screen, any render error in any page tears down the entire application UI — including the navigation sidebar — leaving users stranded with no way to navigate to another page. High-risk components that consume external data or use third-party renderers (`BPMNViewer`, `GraphExplorer`) have no dedicated boundaries. A crash in `BPMNViewer` while viewing a process model replaces the entire page (not just the diagram) with the error fallback.
+**Risk**: Any render-time exception in any leaf component causes a full application teardown with no graceful degradation. Users cannot recover without a hard reload.
+**Recommendation**: Add `ErrorBoundary` wrappers around high-risk leaf components: `BPMNViewer`, `GraphExplorer`, and `AnnotationPanel`. Additionally, use Next.js App Router `error.tsx` files at the route segment level (e.g., `app/simulations/error.tsx`) to scope recovery to individual pages rather than the whole app.
 
 ---
 
 ### [HIGH] TYPE SAFETY: Pervasive `any` Types in Third-Party Integration Components
 
-**File**: `frontend/src/components/BPMNViewer.tsx:48,76,77,81,84,144,145`
+**File**: `frontend/src/components/BPMNViewer.tsx:48,76,81,82,84,144,145`
 **File**: `frontend/src/components/GraphExplorer.tsx:44,91,120,125,153`
 **Agent**: C2 (Frontend Quality Auditor)
 **Evidence**:
 ```typescript
-// BPMNViewer.tsx
+// BPMNViewer.tsx:48
 const viewerRef = useRef<any>(null);
+// BPMNViewer.tsx:76,81-84
 const canvas = viewer.get("canvas") as any;
 const overlays = viewer.get("overlays") as any;
 const elementRegistry = viewer.get("elementRegistry") as any;
 elementRegistry.forEach((element: any) => {
-  eventBus.on("element.click", (event: any) => {
-
-// GraphExplorer.tsx
+// GraphExplorer.tsx:44,91,120,125,153
 const cyRef = useRef<any>(null);
 "background-color": (ele: any) => NODE_COLORS[ele.data("type")] ?? "#9ca3af",
 cy.on("tap", "node", (event: any) => {
 cy.nodes().filter((n: any) => {
 ```
-**Description**: Both the BPMN viewer and graph explorer use `any` types for library-provided objects. While `bpmn-js` and `cytoscape` have community TypeScript definitions available (`@types/bpmn-js`, `cytoscape` ships its own types), the code bypasses type safety entirely. This also affects the `useRef<any>` instances that could mask null deref issues.
-**Risk**: Type errors in element access or event handling are caught only at runtime. Refactoring is dangerous because the compiler offers no guidance.
-**Recommendation**: Install `@types/bpmn-js` if available, or define minimal local interface types for the specific APIs used (`canvas`, `overlays`, `eventBus`, `elementRegistry`). For `cytoscape`, use its built-in types (`Core`, `NodeCollection`, `EventObject`).
+**Description**: Both `BPMNViewer` and `GraphExplorer` use `any` types for all library-provided objects and event parameters. The `cytoscape` library ships its own TypeScript declarations (`Core`, `NodeSingular`, `EventObject`, etc.). The `bpmn-js` community typings (`@types/bpmn-js`) are available on npm. Using `any` disables all compiler checking on these interactions.
+**Risk**: Runtime errors from incorrect property access or method calls on library objects are not caught at compile time. Refactoring these components is risky because TypeScript cannot validate changes. The `useRef<any>` in particular can mask null-dereference bugs since `any` suppresses the `null` check that `useRef<BpmnViewer | null>` would enforce.
+**Recommendation**: Install or declare minimal interface types for the specific bpmn-js and cytoscape APIs in use. At minimum, define local interfaces for the subset of the API this code uses:
+```typescript
+interface BpmnCanvas { zoom(value: string): void; }
+interface BpmnOverlays { add(elementId: string, type: string, overlay: object): void; }
+```
+For cytoscape, replace `any` with the library's exported `Core`, `NodeSingular`, and `EventObject` types.
+
+---
+
+### [HIGH] MISSING CLEANUP: `useMonitoringData` Hooks Have No AbortController
+
+**File**: `frontend/src/hooks/useMonitoringData.ts:51-67,76-92,101-119`
+**Agent**: C2 (Frontend Quality Auditor)
+**Evidence**:
+```typescript
+export function useMonitoringStats(engagementId: string) {
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await apiGet<MonitoringStats>(`/api/v1/monitoring/stats/${engagementId}`);
+      setStats(data);
+    } catch {
+      setStats(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [engagementId]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+  // No cleanup — no AbortController, no cancelled flag
+```
+**Description**: All three hooks in `useMonitoringData.ts` (`useMonitoringStats`, `useMonitoringJobs`, `useMonitoringAlerts`) fire async API calls via `useEffect` without any mechanism to cancel in-flight requests on unmount. When a component using these hooks unmounts while a fetch is in flight (e.g., fast navigation away), the `setStats`/`setJobs`/`setAlerts` calls will still execute and attempt to update state on an unmounted component. The rest of the codebase uses `AbortController` consistently for this purpose (`useDataLoader`, `useEngagementData`, direct `useEffect` calls in most pages).
+**Risk**: State updates on unmounted components produce React warnings in development and can cause memory leaks or subtle state corruption in production if the component remounts before the old fetch settles. In monitoring contexts where these hooks may be polled, the leak accumulates.
+**Recommendation**: Apply the same `AbortController` pattern used throughout the rest of the codebase:
+```typescript
+useEffect(() => {
+  const controller = new AbortController();
+  refresh(controller.signal);
+  return () => controller.abort();
+}, [engagementId]);
+```
+Pass `signal` through to `apiGet` calls.
 
 ---
 
 ## Medium Severity Issues
 
-### [MEDIUM] ACCESSIBILITY: Interactive Buttons Missing `aria-label` in Several Components
+### [MEDIUM] ACCESSIBILITY: Form Inputs Without Labels in `FinancialTab`
 
-**File**: `frontend/src/components/GraphExplorer.tsx:224-229`
-**Agent**: C2 (Frontend Quality Auditor)
-**Evidence**:
-```typescript
-<button
-  onClick={() => setSelectedNode(null)}
-  className="text-gray-400 hover:text-gray-600"
->
-  x
-</button>
-```
-**Description**: The node detail panel close button in `GraphExplorer` uses the text "x" with no `aria-label`. Screen readers will announce this as "x button" which is not descriptive. Similarly, the `SidebarContent` section toggle buttons in `AppShell.tsx` have no `aria-label` or `aria-expanded` attribute to communicate their state to assistive technology.
-**Risk**: Screen reader users cannot effectively operate the graph explorer or understand sidebar section state.
-**Recommendation**: Add `aria-label="Close node details"` to the close button. Add `aria-expanded={!isSectionCollapsed}` and a descriptive `aria-label` to the sidebar section toggle buttons.
-
----
-
-### [MEDIUM] ACCESSIBILITY: Simulation Page Form Inputs Missing Labels
-
-**File**: `frontend/src/app/simulations/page.tsx:499-503`
+**File**: `frontend/src/app/simulations/components/FinancialTab.tsx:116-162`
 **Agent**: C2 (Frontend Quality Auditor)
 **Evidence**:
 ```typescript
 <input
   type="text"
-  placeholder="Scenario name"
-  value={newName}
-  onChange={(e) => setNewName(e.target.value)}
-  className="border rounded px-3 py-1.5 text-sm w-full"
+  placeholder="Name"
+  value={newAssumption.name}
+  onChange={(e) => onNewAssumptionChange({ ...newAssumption, name: e.target.value })}
+  className="border rounded px-3 py-1.5 text-sm"
 />
+<select
+  value={newAssumption.assumption_type}
+  onChange={(e) => onNewAssumptionChange({ ... })}
+  className="border rounded px-3 py-1.5 text-sm"
+>
 ```
-**Description**: The scenario creation form inputs (name, description) and the financial assumption form inputs (name, value, unit) in `simulations/page.tsx` use placeholder text as the only label. Placeholders disappear when the user types, leaving the input unlabeled mid-form. The assumption form inputs on lines 1080-1103 also lack associated `<label>` elements or `aria-label` attributes.
-**Risk**: Screen reader users and users relying on visible persistent labels cannot identify form fields once input begins.
-**Recommendation**: Add `<label htmlFor="...">` elements for each form input, or use `aria-label` attributes. Several other selects in the same component already use `<label htmlFor="...">` correctly (e.g., `baseline-select`, `coverage-select`) — the pattern just needs to be applied consistently.
+**Description**: The financial assumption creation form in `FinancialTab` has five inputs (Name, Assumption Type, Value, Unit, and Confidence range) with no `<label>` elements or `aria-label` attributes. Placeholders are used as the only label mechanism. Once the user begins typing in a field, the placeholder disappears and the input has no programmatic label. The `Confidence` label at line 164 is a bare `<label>` with no `htmlFor`, making it unassociated.
+**Risk**: Screen reader users cannot identify what each field expects. The unassociated label means assistive technology announces the range input without context.
+**Recommendation**: Add `aria-label` to each input in the assumption form, or restructure as `<label htmlFor="...">`/`<input id="...">` pairs. The `<label className="text-sm">Confidence:</label>` at line 164 must gain an `htmlFor` referencing the range input's `id`.
 
 ---
 
-### [MEDIUM] PATTERN: Simulations Page Violates Single Responsibility — 1,247-Line God Component
+### [MEDIUM] ACCESSIBILITY: Icon-Only Delete Button in `FinancialTab` Has No Label
 
-**File**: `frontend/src/app/simulations/page.tsx:1-1247`
+**File**: `frontend/src/app/simulations/components/FinancialTab.tsx:228-233`
 **Agent**: C2 (Frontend Quality Auditor)
 **Evidence**:
 ```typescript
-// State slice count (partial):
-const [scenarios, setScenarios] = useState<ScenarioData[]>([]);
-const [comparisonData, setComparisonData] = useState<ScenarioComparisonData | null>(null);
-const [coverageData, setCoverageData] = useState<ScenarioCoverageData | null>(null);
-const [epistemicPlan, setEpistemicPlan] = useState<EpistemicPlanData | null>(null);
-const [suggestions, setSuggestions] = useState<AlternativeSuggestionData[]>([]);
-const [assumptions, setAssumptions] = useState<FinancialAssumptionData[]>([]);
-const [rankingData, setRankingData] = useState<ScenarioRankingData | null>(null);
-// ... 20+ more state variables
+<Button
+  size="sm"
+  variant="ghost"
+  onClick={() => onDeleteAssumption(a.id)}
+>
+  <Trash2 className="h-3 w-3 text-muted-foreground" />
+</Button>
 ```
-**Description**: `SimulationsPage` manages 8 separate feature domains (scenarios, results, comparison, coverage, epistemic planning, suggestions, financial modeling, ranking) in a single 1,247-line component with 20+ independent state variables and 10+ async handler functions. Each tab section is a separate feature that could be its own component with its own data fetching.
-**Risk**: Extremely difficult to test, debug, or modify any single feature without risk of inadvertently breaking another. State interactions between independent features create subtle bugs. Bundle cannot be code-split.
-**Recommendation**: Extract each tab into its own component (e.g., `ScenarioList`, `ScenarioComparison`, `EvidenceCoverageTab`, `EpistemicPlanTab`, `SuggestionsTab`, `FinancialTab`, `RankingTab`) with co-located state and data fetching.
+**Description**: The delete button for financial assumptions renders only an icon with no text content, `aria-label`, or `title`. Screen readers will announce this as "button" with no indication of what it deletes. This is in a table row that contains the assumption name, but the button is not associated with that context for assistive technology.
+**Risk**: Screen reader users cannot distinguish which assumption a delete button targets, making the assumptions table unusable with assistive technology.
+**Recommendation**: Add `aria-label={`Delete assumption ${a.name}`}` to the Button component.
 
 ---
 
-### [MEDIUM] PATTERN: `EvidenceUploader` Has Stale Closure Bug in `uploadFile` Index Tracking
+### [MEDIUM] CONFORMANCE PAGE: Raw `fetch` Bypasses Shared Auth Client
 
-**File**: `frontend/src/components/EvidenceUploader.tsx:81-83`
+**File**: `frontend/src/app/conformance/page.tsx:62-70,82-89,114`
 **Agent**: C2 (Frontend Quality Auditor)
 **Evidence**:
 ```typescript
-newUploads.forEach((upload, idx) => {
-  const uploadIdx = uploads.length + idx;
-  uploadFile(upload.file, uploadIdx);
-});
+const loadReferenceModels = async () => {
+  try {
+    const response = await fetch(
+      `${API_BASE}/api/v1/conformance/reference-models`
+    );
+    if (!response.ok) throw new Error("Failed to load reference models");
+    const data = await response.json();
+    setReferenceModels(data);
+  } catch (err) {
 ```
-**Description**: `uploadFile` uses a positional index (`uploadIdx`) computed at call time from `uploads.length`. However `uploads` is captured from the outer scope via closure, and `setUploads` is asynchronous — by the time `uploadFile` runs its `setUploads` calls, additional state updates may have shifted the array. If multiple files are added rapidly or re-rendered between add and upload, `uploadIdx` may reference the wrong upload entry.
-**Risk**: Progress updates and status changes may be applied to the wrong file in the uploads list, showing incorrect state.
-**Recommendation**: Use a stable identity (e.g., a UUID or `crypto.randomUUID()`) for each upload entry rather than a positional index, and key all state updates on that ID.
+**Description**: `conformance/page.tsx` uses raw `fetch` calls for all three API interactions (list reference models, upload reference model, run conformance check). None of these calls include `credentials: "include"`, meaning the HttpOnly auth cookie is not sent. The page also defines its own `API_BASE` constant (`process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"`) instead of importing `API_BASE_URL` from `lib/api/client.ts`. This means auth, error handling format, and base URL resolution diverge from every other page in the application.
+**Risk**: All three conformance API endpoints are called without authentication — any API request will fail with 401 on a secured backend. The divergence also makes the page invisible to future auth migrations.
+**Recommendation**: Replace raw `fetch` calls with `apiGet` and `apiPost` from `@/lib/api`. Remove the local `API_BASE` constant.
+
+---
+
+### [MEDIUM] PORTAL UPLOAD PAGE: Inline Styles Instead of Tailwind
+
+**File**: `frontend/src/app/portal/[engagementId]/upload/page.tsx:17-36`
+**Agent**: C2 (Frontend Quality Auditor)
+**Evidence**:
+```typescript
+return (
+  <main
+    style={{
+      maxWidth: "800px",
+      margin: "0 auto",
+      padding: "32px 24px",
+    }}
+  >
+    <div style={{ marginBottom: "32px" }}>
+      <h1
+        style={{
+          fontSize: "24px",
+          fontWeight: 700,
+          margin: "0 0 4px 0",
+          color: "#111827",
+        }}
+      >
+```
+**Description**: The portal upload page uses inline `style={{}}` objects with hardcoded pixel values and color hex codes for all layout and typography. The rest of the application uses Tailwind utility classes consistently. This page stands out as inconsistent — it hardcodes `#111827` directly while other pages use `text-[hsl(var(--foreground))]` or standard Tailwind text classes that respond to dark mode.
+**Risk**: This page will not respond to the application's dark mode theme because hardcoded hex colors are not CSS variable-aware. It also bypasses any future design-token changes.
+**Recommendation**: Replace all inline style objects with equivalent Tailwind classes. E.g., `style={{ maxWidth: "800px", margin: "0 auto", padding: "32px 24px" }}` becomes `className="max-w-3xl mx-auto px-6 py-8"`.
+
+---
+
+### [MEDIUM] SILENT ERROR HANDLING: `useMonitoringData` Swallows All Errors Without Logging
+
+**File**: `frontend/src/hooks/useMonitoringData.ts:57-60,83-85,108-111`
+**Agent**: C2 (Frontend Quality Auditor)
+**Evidence**:
+```typescript
+const refresh = useCallback(async () => {
+  setLoading(true);
+  try {
+    const data = await apiGet<MonitoringStats>(`/api/v1/monitoring/stats/${engagementId}`);
+    setStats(data);
+  } catch {
+    setStats(null);   // Error silently swallowed
+  } finally {
+    setLoading(false);
+  }
+}, [engagementId]);
+```
+**Description**: All three monitoring hooks catch every exception and respond by setting state to `null` or `[]` without any error surface to the UI or logging. The `catch` block receives no parameter at all (bare `catch {}`). Consumers of these hooks receive `loading: false` and `stats: null` but have no way to distinguish "no data yet" from "API failure." Monitoring pages will silently show empty dashboards on backend errors.
+**Risk**: Operational errors (network partition, backend crash, auth expiry) on the monitoring pages are invisible to users. They see empty charts and tables with no indication that data failed to load. Debugging is also impaired because errors are not logged.
+**Recommendation**: At minimum, return an `error` field from each hook (matching the pattern in `useDataLoader` and `useEngagementData`) and log the error:
+```typescript
+} catch (err) {
+  console.error("Failed to load monitoring stats:", err);
+  setStats(null);
+  setError(err instanceof Error ? err.message : "Failed to load monitoring stats");
+}
+```
 
 ---
 
 ## Low Severity Issues
 
-### [LOW] CODE STYLE: TODO Comment in Production Code
+### [LOW] REACTIVITY: `conformance/page.tsx` Has Missing `useEffect` Dependency
 
-**File**: `frontend/src/lib/api.ts:7-9`
-**Agent**: C2 (Frontend Quality Auditor)
-**Evidence**:
-```typescript
- * TODO: Split into domain modules when this file exceeds 1500 lines.
- * Suggested modules: api/evidence.ts, api/governance.ts, api/monitoring.ts,
- * api/reports.ts, api/admin.ts
-```
-**Description**: A TODO comment describing a known architectural improvement is committed to production code and the threshold has already been passed (file is 1,694 lines). TODO comments in shipped code represent deferred work with no enforcement mechanism.
-**Risk**: The comment will continue to be silently ignored. The file will grow further.
-**Recommendation**: Convert this to a tracked GitHub issue and remove the TODO comment. The split is now overdue.
-
----
-
-### [LOW] CODE STYLE: Inline Styles Mixed With Tailwind — `BPMNViewer` and `GraphExplorer`
-
-**File**: `frontend/src/components/BPMNViewer.tsx:98-107,120-133,182-225`
-**File**: `frontend/src/components/GraphExplorer.tsx:204`
-**Agent**: C2 (Frontend Quality Auditor)
-**Evidence**:
-```typescript
-html: `<div style="
-  background: ${color};
-  color: white;
-  padding: 1px 6px;
-  border-radius: 8px;
-  ...
-">${pct}%</div>`,
-```
-**Description**: `BPMNViewer` injects inline style strings into BPMN overlay HTML, and the error/loading states use the `style={{}}` prop directly rather than Tailwind classes. `GraphExplorer` also mixes `style={{}}` inline for type-filter button active colors. While the overlay case is unavoidable (bpmn-js renders HTML strings), the component-level uses are inconsistent with the rest of the codebase.
-**Risk**: Inconsistent styling approach makes the codebase harder to theme or audit for style compliance.
-**Recommendation**: For component-level styling use Tailwind classes consistently. For the BPMN overlay HTML strings (which are injected into the bpmn-js canvas), inline styles are acceptable and should be documented as intentional.
-
----
-
-### [LOW] ACCESSIBILITY: `useDataLoader` Initial Load Silences Errors Unexpectedly
-
-**File**: `frontend/src/hooks/useDataLoader.ts:61-64`
+**File**: `frontend/src/app/conformance/page.tsx:58-60`
 **Agent**: C2 (Frontend Quality Auditor)
 **Evidence**:
 ```typescript
 useEffect(() => {
-  const silent = isInitialLoad.current;
-  isInitialLoad.current = false;
-  loadData(silent);
+  loadReferenceModels();
+}, []);
 ```
-**Description**: On the initial load of any component using `useDataLoader`, errors are silently swallowed (`silent = true`). If the initial API call fails (e.g., network error, 500, auth failure), the component renders with `loading: false`, `data: null`, `error: null` — showing no content and no error message. Users see a blank panel with no indication of what happened.
-**Risk**: Silent failures on initial load are invisible to users. They cannot distinguish "no data" from "failed to load" which may cause them to take incorrect follow-up actions.
-**Recommendation**: Remove the silent-on-initial-load behavior, or at minimum surface a non-disruptive error state (e.g., an inline warning) even on the first load failure.
+**Description**: `loadReferenceModels` is declared as a regular `async` function (not wrapped in `useCallback`) but is not included in the `useEffect` dependency array. While this runs correctly on mount, if `loadReferenceModels` were ever refactored to close over a prop or state, the stale closure would silently use stale values. ESLint's `react-hooks/exhaustive-deps` rule would flag this.
+**Risk**: Low immediate risk given the function currently has no external dependencies, but establishes a pattern that could cause bugs if the function is extended.
+**Recommendation**: Either wrap `loadReferenceModels` in `useCallback` with a proper dependency array, or inline the fetch call directly in the `useEffect` body.
+
+---
+
+### [LOW] HARDCODED ENGAGEMENT IDs IN NAVIGATION
+
+**File**: `frontend/src/components/shell/AppShell.tsx:64,71,73,80`
+**Agent**: C2 (Frontend Quality Auditor)
+**Evidence**:
+```typescript
+{ label: "Knowledge Graph", href: "/graph/1db9aa11-c73b-5867-82a3-864dd695cf23", icon: Network },
+{ label: "TOM Alignment", href: "/tom/1db9aa11-c73b-5867-82a3-864dd695cf23", icon: Target },
+{ label: "Visualize", href: "/visualize/1db9aa11-c73b-5867-82a3-864dd695cf23", icon: Eye },
+{ label: "Roadmap", href: "/roadmap/1db9aa11-c73b-5867-82a3-864dd695cf23", icon: Map },
+```
+**Description**: Four navigation items in `AppShell` have the engagement UUID `1db9aa11-c73b-5867-82a3-864dd695cf23` hardcoded directly in the href. This appears to be a development fixture/demo engagement ID embedded in the production navigation. The sidebar will route all users who click these links to the same engagement regardless of which engagement they are working on.
+**Risk**: Multi-engagement or multi-tenant usage is broken for these four features via the sidebar. Users cannot navigate to their actual engagement from the global navigation. This also reveals an internal engagement UUID in the client-rendered HTML.
+**Recommendation**: The sidebar should navigate to an engagement selector or use a dynamic current engagement ID from application state (e.g., via a context or URL-aware routing). Remove the hardcoded UUIDs.
+
+---
+
+### [LOW] INLINE STYLES FOR DYNAMIC VALUES — Pattern Is Acceptable But Inconsistent
+
+**File**: `frontend/src/components/BPMNViewer.tsx:98-107`
+**File**: `frontend/src/app/graph/[engagementId]/page.tsx:82`
+**Agent**: C2 (Frontend Quality Auditor)
+**Evidence**:
+```typescript
+// BPMNViewer.tsx — unavoidable (bpmn-js HTML string injection):
+html: `<div style="background: ${color}; color: white; padding: 1px 6px; ...">`,
+
+// graph page — avoidable:
+<div style={{ height: "calc(100vh - 250px)" }}>
+```
+**Description**: There are two distinct patterns here. The inline styles in `BPMNViewer` for overlay HTML strings are unavoidable — bpmn-js accepts raw HTML strings and there is no way to use Tailwind classes in that context. However, the `style={{ height: "calc(100vh - 250px)" }}` on the graph page wrapping div is a straightforward case that could use a CSS variable or a `min-h-[calc(100vh-250px)]` Tailwind arbitrary value.
+**Risk**: Low. The BPMN overlay case is intentional. The graph page case is a minor consistency issue.
+**Recommendation**: For the graph page, use `className="h-[calc(100vh-250px)]"` to stay consistent with Tailwind. Add a code comment in `BPMNViewer` marking the inline style strings as intentional (unavoidable due to bpmn-js API constraint).
+
+---
+
+### [LOW] MISSING `aria-label` ON ICON-ONLY SIDEBAR COLLAPSE TOGGLE
+
+**File**: `frontend/src/components/shell/AppShell.tsx:255-265`
+**Agent**: C2 (Frontend Quality Auditor)
+**Evidence**:
+```typescript
+<button
+  onClick={() => setSidebarCollapsed((v) => !v)}
+  className="rounded-md p-1.5 hover:bg-white/10 transition-colors"
+  aria-label="Toggle sidebar"
+>
+  {sidebarCollapsed ? (
+    <ChevronRight className="h-4 w-4" />
+  ) : (
+    <ChevronLeft className="h-4 w-4" />
+  )}
+</button>
+```
+**Description**: The sidebar collapse toggle has `aria-label="Toggle sidebar"` but does not communicate its current state (`aria-expanded` or `aria-pressed`). Screen readers cannot determine whether the sidebar is currently expanded or collapsed from this button alone. The label "Toggle sidebar" also does not indicate what will happen on activation (expand or collapse).
+**Risk**: Screen reader users cannot determine the current sidebar state from the toggle button, making it harder to use keyboard navigation effectively.
+**Recommendation**: Add `aria-expanded={!sidebarCollapsed}` and update the `aria-label` to reflect the action: `aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}`.
 
 ---
 
 ## Positive Highlights
 
-1. **Proper AbortController usage**: Both `useDataLoader` and `useEngagementData` correctly use `AbortController` with cleanup in `useEffect` return functions, preventing state updates on unmounted components.
+1. **`ErrorBoundary` implemented correctly**: Uses `getDerivedStateFromError` and `componentDidCatch`, provides a functional "Try again" button with proper `aria-label`, and supports a custom `fallback` prop.
 
-2. **WebSocket lifecycle management**: `useWebSocket` correctly cleans up the WebSocket, clears reconnect timers, and sets retry count to max on unmount to prevent reconnection after unmount.
+2. **API domain split completed**: The prior god-file `api.ts` is now a re-export barrel. Domain modules (`monitoring.ts`, `taskmining.ts`, `simulations.ts`, etc.) are under `lib/api/` with clear separation. Backward compatibility is maintained via the barrel.
 
-3. **Input validation in `EvidenceUploader`**: Client-side file type and size validation is implemented before upload, with clear user-facing error messages.
+3. **`AbortController` used correctly across most hooks**: `useDataLoader`, `useEngagementData`, and the majority of direct `useEffect` data fetches use `AbortController` with cleanup, preventing state updates on unmounted components.
 
-4. **Consistent error handling in API utilities**: `apiGet`, `apiPost`, `apiPut`, `apiPatch`, and `apiDelete` all follow the same error handling pattern with proper fallback parsing.
+4. **WebSocket lifecycle well-managed**: `useWebSocket` and the inline WebSocket in `TaskMiningDashboard` both clear reconnect timers and close sockets on unmount. Exponential backoff is implemented correctly.
 
-5. **Accessibility in `EvidenceUploader`**: The drop zone correctly uses `role="button"`, `aria-label`, keyboard event handling (`Enter`/`Space`), `tabIndex`, and the progress bar uses `role="progressbar"` with `aria-valuenow/min/max`.
+5. **No `dangerouslySetInnerHTML`**: Zero XSS-via-React-props vectors found across all 40+ source files.
 
-6. **Type safety in API layer**: The API layer uses TypeScript generics (`apiGet<T>`, `apiPost<T>`) and specific interface types throughout, avoiding `any` in the shared API utilities.
+6. **No `console.log` in production code**: All source files are clean of debug logging.
 
-7. **No `dangerouslySetInnerHTML` usage**: No XSS-via-React-props vectors found in any component.
+7. **Keyboard accessibility in `GapTable`**: Sortable column headers use `role="button"`, `tabIndex={0}`, `aria-label` with sort direction, and `onKeyDown` handlers for Enter/Space — a correctly implemented accessible sort pattern.
 
-8. **No `console.log` in production code**: Debug logging is absent from all source files, keeping production output clean.
+8. **Strong accessibility in `EvidenceUploader`**: Drop zone uses `role="button"`, `aria-label`, `tabIndex`, Enter/Space key handling, and the progress bar correctly uses `role="progressbar"` with `aria-valuenow/min/max`.
+
+9. **Proper TypeScript in API layer**: All API functions use generic type parameters (`apiGet<T>`, `apiPost<T>`) and define explicit interfaces for all request/response shapes. No `any` in the shared API utilities.
+
+10. **Defensive deletion in `AnnotationPanel`**: The delete handler uses optimistic UI update (`setAnnotations` filter) and catches errors without crashing the component.
 
 ---
 
@@ -285,9 +373,9 @@ useEffect(() => {
 
 | Criterion | Status | Details |
 |-----------|--------|---------|
-| NO TODO COMMENTS | FAIL | 1 TODO found in `api.ts:7` |
-| NO PLACEHOLDERS | PASS | No stub implementations found |
-| NO HARDCODED SECRETS | PASS | No credentials found; only env-var references |
-| PROPER ERROR HANDLING | PARTIAL | `useDataLoader` silences initial load errors; `AnnotationPanel` silences fetch errors entirely |
-| NO `any` TYPES | FAIL | 8 `any` usages in `BPMNViewer.tsx` and `GraphExplorer.tsx` |
-| ERROR BOUNDARIES | FAIL | Zero `ErrorBoundary` components in entire frontend |
+| NO TODO COMMENTS | PASS | No TODO comments found in current source files |
+| NO PLACEHOLDERS | PARTIAL | `upload/page.tsx:43` has an empty `onUploadComplete` callback with comment "Could trigger a toast notification" — stub behavior |
+| NO HARDCODED SECRETS | PARTIAL | No credentials; hardcoded engagement UUID in AppShell navigation is a data exposure concern |
+| PROPER ERROR HANDLING | FAIL | `useMonitoringData.ts` silently swallows all errors in three hooks; `conformance/page.tsx` is missing `credentials: "include"` making auth fail silently |
+| NO `any` TYPES | FAIL | 13 `any` usages across `BPMNViewer.tsx` (8) and `GraphExplorer.tsx` (5) |
+| ERROR BOUNDARIES | PARTIAL | One root boundary exists; no per-route or per-component boundaries around high-risk renderers |

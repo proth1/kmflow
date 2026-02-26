@@ -1,231 +1,118 @@
-# A3: Infrastructure Security Audit Findings
+# A3: Infrastructure Security Audit Findings (Re-Audit)
 
 **Auditor**: A3 (Infrastructure Security Auditor)
-**Date**: 2026-02-20
+**Date**: 2026-02-26
 **Scope**: Docker configuration, Cloudflare worker, Redis/Neo4j authentication, secrets management, CORS, encryption
+**Type**: Re-audit after Phase 0-2 remediation
 
-## Summary
+## Remediation Status from Original Audit (2026-02-20)
+
+| Original Finding | Status | Notes |
+|---|---|---|
+| SECRETS-001: Redis no auth | **REMEDIATED** | `--requirepass` added to dev compose; `${REDIS_PASSWORD:?}` enforced in prod overlay |
+| SECRETS-002: Default secrets accepted in prod | **REMEDIATED** | `reject_default_secrets_in_production` model_validator added to config.py |
+| CORS-001: Wildcard methods/headers | **REMEDIATED** | Explicit method and header lists now in main.py |
+| DOCKER-001: Hardcoded Camunda/MinIO creds | **PARTIALLY REMEDIATED** | Camunda/MinIO now use `${VAR:-default}` pattern in dev compose, but Postgres root still hardcoded |
+| DOCKER-002: Backend runs as root | **REMEDIATED** | Multi-stage Dockerfile with `appuser` non-root user |
+| HEADERS-001: Missing HSTS/CSP | **REMEDIATED** | HSTS (non-debug only), CSP, and Permissions-Policy headers added |
+| CRYPTO-001: Weak SHA-256 KDF | **REMEDIATED** | Replaced with PBKDF2 (600,000 iterations) |
+| WORKER-001: Reflected XSS | **NOT REMEDIATED** | Error parameter still rendered unescaped |
+| RATELIMIT-001: Unbounded memory | **REMEDIATED** | Periodic pruning and max-tracked-clients cap added |
+| DOCKER-003: OpenAPI exposed unconditionally | **REMEDIATED** | Conditional on `settings.debug` |
+| DOCKER-004: Source code mounts without :ro | **NOT REMEDIATED** | Still read-write in dev compose |
+| DOCKER-005: No container security options | **REMEDIATED** | `no-new-privileges` and `cap_drop: ALL` added to all services |
+| NETWORK-001: CIB7 no auth | **NOT REMEDIATED** | Still unauthenticated |
+| NETWORK-002: All ports mapped to host | **PARTIALLY REMEDIATED** | Prod overlay sets `ports: []` for postgres, neo4j, redis; CIB7/MinIO/Mailpit still exposed |
+
+## Summary (Current State)
 
 | Severity | Count |
 |----------|-------|
-| CRITICAL | 2     |
-| HIGH     | 4     |
-| MEDIUM   | 5     |
-| LOW      | 3     |
-| **Total**| **14**|
-
----
-
-## CRITICAL Findings
-
-### [CRITICAL] SECRETS-001: Redis Deployed Without Authentication
-
-**File**: `docker-compose.yml:57-75`
-**Agent**: A3 (Infra Security Auditor)
-**Evidence**:
-```yaml
-  redis:
-    image: redis:7.4-alpine
-    container_name: kmflow-redis
-    ports:
-      - "${REDIS_PORT:-6380}:6379"
-```
-**Description**: The Redis container is started with no `requirepass` configuration in both the development `docker-compose.yml` and the production `docker-compose.prod.yml`. The prod override (`docker-compose.prod.yml:46-47`) adds `--maxmemory` and `--maxmemory-policy` flags but still omits `--requirepass`. The Redis URL in `src/core/redis.py:41-44` uses `redis://host:port/0` with no password component.
-**Risk**: Any process on the Docker network (or on the host via the mapped port 6380) can read/write/flush Redis data without credentials. An attacker gaining access to any container could exfiltrate cached session data, manipulate monitoring streams, or flush all data causing denial of service.
-**Recommendation**: Add `--requirepass ${REDIS_PASSWORD}` to the Redis command in both compose files. Update `redis_url` in config to include the password: `redis://:${REDIS_PASSWORD}@host:port/0`. Use `${REDIS_PASSWORD:?Set REDIS_PASSWORD}` in the prod override to enforce it.
-
----
-
-### [CRITICAL] SECRETS-002: Insecure Default JWT and Encryption Keys Accepted in Production
-
-**File**: `src/core/config.py:61-67`
-**Agent**: A3 (Infra Security Auditor)
-**Evidence**:
-```python
-jwt_secret_key: str = "dev-secret-key-change-in-production"
-jwt_secret_keys: str = ""  # Comma-separated list for key rotation
-jwt_algorithm: str = "HS256"
-jwt_access_token_expire_minutes: int = 30
-jwt_refresh_token_expire_minutes: int = 10080  # 7 days
-auth_dev_mode: bool = True  # Allow local dev tokens
-encryption_key: str = "dev-encryption-key-change-in-production"
-```
-**Description**: The `jwt_secret_key` and `encryption_key` have hardcoded development defaults. There is no `model_validator` or startup check that rejects these defaults when `app_env == "production"`. If the environment variable is not set, the application silently runs with a publicly known secret key. Additionally, `auth_dev_mode` defaults to `True`, which could bypass authentication in production if not explicitly overridden.
-**Risk**: Token forgery -- any attacker who reads this source code can forge valid JWTs. Encrypted data can be decrypted by anyone with access to the default key. The `auth_dev_mode` flag could allow unauthenticated access.
-**Recommendation**: Add a `model_validator` that raises a `ValueError` at startup when `app_env == "production"` and any of these conditions are true: `jwt_secret_key` contains "dev-", `encryption_key` contains "dev-", or `auth_dev_mode` is `True`. Use `SecretStr` for `jwt_secret_key` and `encryption_key` to prevent accidental logging.
+| CRITICAL | 0     |
+| HIGH     | 2     |
+| MEDIUM   | 4     |
+| LOW      | 4     |
+| **Total**| **10**|
 
 ---
 
 ## HIGH Findings
 
-### [HIGH] CORS-001: Overly Permissive CORS Methods and Headers
+### [HIGH] DOCKER-001: Hardcoded Credentials in Docker Init Script and Compose Defaults
 
-**File**: `src/api/main.py:162-168`
-**Agent**: A3 (Infra Security Auditor)
+**File**: `docker/init-scripts/00-create-databases.sql:6-7`
+**Agent**: A3 (Infrastructure Security Auditor)
 **Evidence**:
-```python
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+```sql
+-- Create users with dedicated passwords
+CREATE USER kmflow WITH PASSWORD 'kmflow_dev_password';
+CREATE USER camunda WITH PASSWORD 'camunda_dev';
 ```
-**Description**: While `allow_origins` is properly restricted to a configured list, `allow_methods=["*"]` and `allow_headers=["*"]` allow all HTTP methods (including TRACE, PATCH, DELETE, OPTIONS) and all custom headers from any allowed origin. Combined with `allow_credentials=True`, this creates an expanded attack surface for cross-origin requests.
-**Risk**: A compromised or malicious page on an allowed origin can make arbitrary HTTP method calls with any headers, potentially exploiting TRACE for credential theft or making unexpected DELETE/PATCH calls. The wildcard headers allow forwarding of custom auth headers cross-origin.
-**Recommendation**: Restrict `allow_methods` to only those used by the API: `["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]`. Restrict `allow_headers` to specific required headers: `["Authorization", "Content-Type", "X-Request-ID", "Accept"]`.
+**Description**: The PostgreSQL initialization script contains hardcoded plaintext passwords for both the `kmflow` and `camunda` database users. This script is mounted into the container via `docker-compose.yml:16` (`./docker/init-scripts:/docker-entrypoint-initdb.d`). Additionally, the top-level `docker-compose.yml:12` still hardcodes the PostgreSQL superuser password as `POSTGRES_PASSWORD: postgres_dev` rather than using environment variable substitution. The production overlay (`docker-compose.prod.yml:19`) points to a different init script path (`./scripts/init-db.sql:ro`), but the dev init script with hardcoded credentials is committed to version control.
+**Risk**: Anyone with repository read access knows valid database credentials. If the dev compose is used outside a strictly local context (e.g., a staging environment), these credentials provide immediate database access. The init script runs only on first container startup, but the credentials persist in the database.
+**Recommendation**: Replace hardcoded passwords in `00-create-databases.sql` with environment variable references using psql `\set` or shell variable expansion in the entrypoint. Use `${POSTGRES_PASSWORD:-postgres_dev}` substitution pattern in `docker-compose.yml:12` as already done for Neo4j and Redis. Create a separate production init script that reads credentials from environment variables.
 
 ---
 
-### [HIGH] DOCKER-001: Hardcoded Credentials in Docker Compose
+### [HIGH] WORKER-001: Reflected XSS in Cloudflare Worker Login Page (Unresolved)
 
-**File**: `docker-compose.yml:12, 85, 110-111, 136`
-**Agent**: A3 (Infra Security Auditor)
+**File**: `infrastructure/cloudflare-workers/presentation-auth/src/index.ts:628`
+**Agent**: A3 (Infrastructure Security Auditor)
 **Evidence**:
-```yaml
-# PostgreSQL
-POSTGRES_PASSWORD: postgres_dev
-
-# CIB7 Camunda
-DB_USERNAME: camunda
-DB_PASSWORD: camunda_dev
-
-# MinIO
-MINIO_ROOT_USER: kmflow-dev
-MINIO_ROOT_PASSWORD: kmflow-dev-secret
+```typescript
+${error ? `<div class="error">${error}</div>` : ''}
 ```
-**Description**: Several services have credentials hardcoded directly in the compose file rather than using environment variable substitution with `${VAR:-default}` syntax. Notably, the PostgreSQL root user (`postgres_dev`), the Camunda database credentials (`camunda/camunda_dev`), and MinIO credentials (`kmflow-dev/kmflow-dev-secret`) are hardcoded strings. The MinIO init container also hardcodes the same credentials on line 136. These credentials are committed to version control.
-**Risk**: Credentials in version control are visible to all repository contributors. If the dev compose file is accidentally used for a deployment, these known credentials provide immediate access. The Camunda credentials are not environment-variable-overridable.
-**Recommendation**: Use `${VAR:?Set VAR}` pattern for all credentials. Move MinIO and Camunda credentials to environment variable substitution like PostgreSQL and Neo4j already use. Add a `.env.example` entry for each. Never commit actual credentials.
-
----
-
-### [HIGH] DOCKER-002: Backend Container Runs as Root
-
-**File**: `Dockerfile.backend:1-21`
-**Agent**: A3 (Infra Security Auditor)
-**Evidence**:
-```dockerfile
-FROM python:3.12-slim AS base
-WORKDIR /app
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc libpq-dev curl && \
-    rm -rf /var/lib/apt/lists/*
-COPY pyproject.toml ./
-COPY src/ ./src/
-...
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+And the source of the `error` variable at line 469:
+```typescript
+const error = url.searchParams.get('error') || '';
 ```
-**Description**: The Dockerfile has no `USER` directive and no creation of a non-root user. The application runs as root inside the container. Additionally, `--reload` is in the production CMD (the dev compose file uses volume mounts, but the Dockerfile CMD itself includes `--reload`), and the `gcc` compiler is left installed in the final image.
-**Risk**: Container escape vulnerabilities are significantly more dangerous when the containerized process runs as root. An attacker exploiting an application vulnerability gains root access within the container, making privilege escalation and host escape easier. The `--reload` flag watches file changes and is unnecessary in production, adding attack surface.
-**Recommendation**: Add a non-root user: `RUN adduser --disabled-password --no-create-home appuser` and `USER appuser`. Use a multi-stage build to exclude `gcc` from the final image. Remove `--reload` from the Dockerfile CMD (the dev compose can override CMD).
-
----
-
-### [HIGH] HEADERS-001: Missing HSTS and Content-Security-Policy Headers
-
-**File**: `src/api/middleware/security.py:52-63`
-**Agent**: A3 (Infra Security Auditor)
-**Evidence**:
-```python
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        response = await call_next(request)
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Cache-Control"] = "no-store"
-        response.headers["X-API-Version"] = API_VERSION
-        return response
+And the `pendingEmail` interpolation at line 647:
+```typescript
+<span class="email">${pendingEmail}</span>
 ```
-**Description**: The security headers middleware is missing `Strict-Transport-Security` (HSTS), `Content-Security-Policy` (CSP), and `Permissions-Policy` headers. Without HSTS, browsers will not enforce HTTPS, making the application vulnerable to SSL stripping attacks. Without CSP, there is no browser-enforced protection against XSS via script injection.
-**Risk**: Without HSTS, MITM attackers can downgrade HTTPS connections to HTTP. Without CSP, any XSS vulnerability in the frontend has unrestricted access to execute arbitrary scripts, make network requests, and exfiltrate data.
-**Recommendation**: Add `Strict-Transport-Security: max-age=31536000; includeSubDomains` when not in development mode. Add a restrictive `Content-Security-Policy` header. Add `Permissions-Policy` to disable unused browser features (camera, microphone, geolocation, etc.).
+**Description**: This finding was identified in the original audit and remains unresolved. The `error` parameter is read directly from the URL query string and interpolated into HTML without any escaping. An attacker can craft a malicious URL such as `https://kmflow.agentic-innovations.com/auth/login?error=<img src=x onerror=alert(document.cookie)>` to execute arbitrary JavaScript. The `pendingEmail` value (line 647) originates from the `PENDING_EMAIL` cookie which is set server-side via `encodeURIComponent`, but the `email` parameter in `renderUnauthorizedPage` (line 188) is also rendered without escaping: `<span class="email">${email}</span>`.
+**Risk**: Reflected XSS on the authentication page allows an attacker to execute JavaScript in the user's browser session. This could be used to intercept OTP codes as they are entered, redirect users to phishing pages, or exfiltrate session data. Although session cookies are HttpOnly (preventing direct cookie theft via `document.cookie`), the attacker can still manipulate the DOM to capture form inputs including the OTP code.
+**Recommendation**: Create an `escapeHtml()` utility function and apply it to all dynamically interpolated values:
+```typescript
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+}
+```
+Apply to: `error` (line 628), `pendingEmail` (line 647), `email` (line 188), and `redirect` in form hidden inputs.
 
 ---
 
 ## MEDIUM Findings
 
-### [MEDIUM] CRYPTO-001: Weak Key Derivation Using Raw SHA-256
+### [MEDIUM] SECRETS-003: Sensitive Config Fields Not Using SecretStr
 
-**File**: `src/core/encryption.py:22-29`
-**Agent**: A3 (Infra Security Auditor)
+**File**: `src/core/config.py:42-69`
+**Agent**: A3 (Infrastructure Security Auditor)
 **Evidence**:
 ```python
-def _derive_fernet_key(secret: str) -> bytes:
-    """Derive a valid Fernet key from an arbitrary secret string."""
-    try:
-        Fernet(secret.encode())
-        return secret.encode()
-    except (ValueError, Exception):
-        derived = hashlib.sha256(secret.encode()).digest()
-        return base64.urlsafe_b64encode(derived)
+postgres_password: str = "kmflow_dev_password"
+neo4j_password: str = "neo4j_dev_password"
+jwt_secret_key: str = "dev-secret-key-change-in-production"
+encryption_key: str = "dev-encryption-key-change-in-production"
 ```
-**Description**: When the input secret is not already a valid Fernet key (which is the common case with human-readable secrets like `dev-encryption-key-change-in-production`), the function falls back to a single SHA-256 hash with no salt and no iterations. This is not a proper key derivation function.
-**Risk**: A single-pass SHA-256 without salt is vulnerable to rainbow table and dictionary attacks. If the encryption key has low entropy (e.g., a memorable passphrase), the derived Fernet key can be brute-forced significantly faster than if PBKDF2 or scrypt were used.
-**Recommendation**: Replace with a proper KDF such as PBKDF2 with at least 600,000 iterations: `hashlib.pbkdf2_hmac('sha256', secret.encode(), salt, iterations=600_000)`. Use a fixed application-level salt stored alongside the configuration (not a secret, but prevents rainbow tables).
-
----
-
-### [MEDIUM] WORKER-001: Reflected XSS in Cloudflare Worker Login Page
-
-**File**: `infrastructure/cloudflare-workers/presentation-auth/src/index.ts:628`
-**Agent**: A3 (Infra Security Auditor)
-**Evidence**:
-```typescript
-${error ? `<div class="error">${error}</div>` : ''}
-```
-**Description**: The `error` parameter is read from the URL query string (`url.searchParams.get('error')`) on line 469 and rendered directly into HTML on line 628 without escaping. An attacker can craft a URL like `/auth/login?error=<script>alert(1)</script>` to inject arbitrary HTML/JavaScript.
-The same issue affects `pendingEmail` (line 647) which comes from a cookie value, and `email` in the unauthorized page (line 188). While `pendingEmail` is set server-side via cookie, the `error` parameter is directly attacker-controlled via URL.
-**Risk**: Reflected XSS allows an attacker to execute JavaScript in the context of the authentication page. This could be used to steal OTP codes, redirect users to phishing pages, or exfiltrate session cookies (though HttpOnly mitigates cookie theft).
-**Recommendation**: HTML-encode all dynamic values before rendering into HTML. Create an `escapeHtml()` function that encodes `<`, `>`, `&`, `"`, and `'` characters. Apply it to `error`, `email`, `pendingEmail`, and `redirect` values.
-
----
-
-### [MEDIUM] RATELIMIT-001: In-Memory Rate Limiter Unbounded Growth
-
-**File**: `src/api/middleware/security.py:79-128`
-**Agent**: A3 (Infra Security Auditor)
-**Evidence**:
+Compare with the Databricks token which correctly uses `SecretStr` (line 124):
 ```python
-class RateLimitMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, max_requests=100, window_seconds=60):
-        super().__init__(app)
-        self._clients: dict[str, _RateLimitEntry] = defaultdict(_RateLimitEntry)
+databricks_token: SecretStr = SecretStr("")
 ```
-**Description**: The rate limiter stores client entries in an unbounded `defaultdict`. Old entries are never pruned -- the window is only reset for the same IP when it makes a new request after the window expires. An attacker can send requests from many different IPs (or spoof `X-Forwarded-For` headers) to grow this dictionary indefinitely until the process runs out of memory.
-**Risk**: Memory exhaustion denial of service. Each unique IP or spoofed `X-Forwarded-For` value creates a permanent entry in the dictionary. Additionally, `X-Forwarded-For` is trusted without validation, allowing rate limit bypass by rotating the header value.
-**Recommendation**: Add periodic cleanup of expired entries (e.g., via a background task or LRU eviction). Cap the dictionary size. For production, use Redis-based rate limiting instead of in-memory. Do not trust `X-Forwarded-For` without validating it comes from a trusted proxy.
+**Description**: Database passwords, the JWT signing key, and the encryption key are stored as plain `str` types in the Settings model. Pydantic's `SecretStr` type prevents these values from appearing in string representations, `repr()` output, JSON serialization, and log messages. The `databricks_token` field already demonstrates the correct pattern. Without `SecretStr`, calling `settings.dict()`, printing settings in debug output, or including settings in error traces will expose these secrets in plaintext.
+**Risk**: Accidental exposure of secrets in application logs, debug output, or error traces. If a developer logs the settings object (e.g., `logger.debug("Settings: %s", settings)`), all passwords and keys are written to the log in cleartext.
+**Recommendation**: Change `postgres_password`, `neo4j_password`, `jwt_secret_key`, and `encryption_key` fields to `SecretStr` type. Update all code that reads these values to call `.get_secret_value()`. This matches the existing pattern used for `databricks_token`.
 
 ---
 
-### [MEDIUM] DOCKER-003: OpenAPI Documentation Exposed Unconditionally
+### [MEDIUM] DOCKER-004: Source Code Volume Mounts Without Read-Only Flag (Unresolved)
 
-**File**: `src/api/main.py:155-156`
-**Agent**: A3 (Infra Security Auditor)
-**Evidence**:
-```python
-app = FastAPI(
-    title=settings.app_name,
-    description="AI-powered Process Intelligence platform",
-    version=API_VERSION,
-    docs_url="/docs",
-    redoc_url="/redoc",
-    lifespan=lifespan,
-)
-```
-**Description**: The Swagger UI (`/docs`) and ReDoc (`/redoc`) endpoints are enabled regardless of the environment. In production, these endpoints expose the complete API schema including all endpoint paths, parameters, request/response models, and authentication requirements. This is an information disclosure that assists reconnaissance.
-**Risk**: Attackers can enumerate all API endpoints, understand parameter validation rules, and identify potential attack surfaces without any authentication. The OpenAPI schema may also reveal internal implementation details.
-**Recommendation**: Conditionally disable docs in production: `docs_url="/docs" if settings.debug else None` and `redoc_url="/redoc" if settings.debug else None`.
-
----
-
-### [MEDIUM] DOCKER-004: Source Code Volume Mounts in Dev Compose
-
-**File**: `docker-compose.yml:187-189`
-**Agent**: A3 (Infra Security Auditor)
+**File**: `docker-compose.yml:208-210`
+**Agent**: A3 (Infrastructure Security Auditor)
 **Evidence**:
 ```yaml
     volumes:
@@ -233,86 +120,196 @@ app = FastAPI(
       - ./alembic:/app/alembic
       - ./alembic.ini:/app/alembic.ini
 ```
-**Description**: The development compose file mounts host source code directories into the backend container with read-write access. While the production override sets `volumes: []`, if the dev compose is mistakenly used in a deployment context, the container has write access to the host filesystem's source code. Combined with the root user issue (DOCKER-002), a container compromise would allow modification of source code on the host.
-**Risk**: A compromised container could modify source code on the host, potentially introducing backdoors that persist across container restarts. The production compose override addresses this, but the default compose file is insecure.
-**Recommendation**: Add `:ro` (read-only) to volume mounts in the dev compose: `./src:/app/src:ro`. Ensure the prod override continues to strip volumes.
+**Description**: This finding was identified in the original audit and remains unresolved. The development compose file mounts host source code directories into the backend container with default read-write access. While the production overlay (`docker-compose.prod.yml:94`) correctly sets `volumes: []`, a container compromise in the development environment could modify source code on the host filesystem. The frontend container has the same pattern (lines 249-250): `./frontend/src:/app/src` and `./frontend/public:/app/public`.
+**Risk**: A compromised development container could inject backdoors into source code that persist across container restarts and could be unknowingly committed to version control.
+**Recommendation**: Append `:ro` to all source code volume mounts: `./src:/app/src:ro`. If hot-reload requires write access (e.g., for `__pycache__`), add a separate tmpfs mount for cache directories.
+
+---
+
+### [MEDIUM] CRYPTO-002: PBKDF2 Uses Fixed Application-Level Salt
+
+**File**: `src/core/encryption.py:29-34`
+**Agent**: A3 (Infrastructure Security Auditor)
+**Evidence**:
+```python
+        derived = hashlib.pbkdf2_hmac(
+            'sha256',
+            secret.encode(),
+            b'kmflow-fernet-key-derivation-v1',  # Fixed application-level salt
+            iterations=600_000,
+        )
+        return base64.urlsafe_b64encode(derived)
+```
+**Description**: The PBKDF2 key derivation function uses a fixed, publicly visible salt that is identical for all deployments. While PBKDF2 with 600,000 iterations is a significant improvement over the previous raw SHA-256 (which was remediated from the original audit), the fixed salt means that two deployments using the same encryption key will derive identical Fernet keys. The salt is committed to source code and is therefore not secret.
+**Risk**: If an attacker obtains the derived key from one deployment, they can use it to decrypt data in any other deployment that uses the same input secret. The fixed salt also means that precomputed tables specific to this application could be built once and reused. However, the 600,000 iterations of PBKDF2 make brute-force expensive regardless, so this is a moderate risk.
+**Recommendation**: Consider deriving a per-deployment salt from a combination of a deployment-specific identifier (e.g., a random value generated at first deployment and stored alongside the encryption key). Alternatively, accept the fixed salt as a reasonable trade-off given that the encryption key itself should be high-entropy in production (enforced by the `reject_default_secrets_in_production` validator).
+
+---
+
+### [MEDIUM] NETWORK-003: Neo4j and PostgreSQL Use Unencrypted Connections
+
+**File**: `src/core/config.py:48` and `src/core/neo4j.py:28-31`
+**Agent**: A3 (Infrastructure Security Auditor)
+**Evidence**:
+```python
+# config.py:48
+neo4j_uri: str = "bolt://localhost:7687"
+
+# neo4j.py:28-31
+driver = AsyncGraphDatabase.driver(
+    settings.neo4j_uri,
+    auth=(settings.neo4j_user, settings.neo4j_password),
+)
+```
+And for PostgreSQL (`config.py:196`):
+```python
+self.database_url = (
+    f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
+    f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+)
+```
+**Description**: Both the Neo4j connection (`bolt://`) and PostgreSQL connection (`postgresql+asyncpg://`) use unencrypted transport protocols. The encrypted alternatives are `bolt+s://` (or `bolt+ssc://` for self-signed) for Neo4j and `postgresql+asyncpg://...?ssl=require` for PostgreSQL. Within a Docker bridge network on the same host, unencrypted connections are acceptable for development. In production deployments where services may span hosts or networks, credentials are transmitted in plaintext.
+**Risk**: Credentials and query data transmitted between the application and databases can be intercepted via network sniffing if any network segment is compromised. In a container environment on the same host, the Docker bridge network provides some isolation, but in multi-host or cloud deployments, this is a real risk.
+**Recommendation**: For production deployments, enforce TLS on database connections. Use `bolt+s://` for Neo4j and add `?ssl=require` (or `sslmode=require`) to the PostgreSQL connection string. Configure the database containers with TLS certificates. In `docker-compose.prod.yml`, override the connection URIs to use encrypted variants.
 
 ---
 
 ## LOW Findings
 
-### [LOW] DOCKER-005: No Docker Container Security Options
+### [LOW] NETWORK-001: CIB7 Camunda Engine Has No Authentication (Unresolved)
 
-**File**: `docker-compose.yml` (entire file)
-**Agent**: A3 (Infra Security Auditor)
-**Evidence**: No `security_opt`, `read_only`, `cap_drop`, or `no-new-privileges` directives found in any service definition.
-**Description**: None of the containers have security hardening options enabled. Missing configurations include: `security_opt: [no-new-privileges:true]` to prevent privilege escalation, `cap_drop: [ALL]` to drop all Linux capabilities, `read_only: true` for filesystem immutability, and `tmpfs` mounts for writable directories.
-**Risk**: Containers retain default Linux capabilities (including potentially dangerous ones like `NET_RAW`, `SYS_CHROOT`). A container compromise has more room for privilege escalation.
-**Recommendation**: Add to each service: `security_opt: [no-new-privileges:true]`, `cap_drop: [ALL]`, then `cap_add` only the specific capabilities needed. Consider `read_only: true` with explicit `tmpfs` for temp directories.
-
----
-
-### [LOW] NETWORK-001: CIB7 Camunda Engine Has No Authentication
-
-**File**: `src/integrations/camunda.py:20-36`
-**Agent**: A3 (Infra Security Auditor)
-**Evidence**:
-```python
-class CamundaClient:
-    def __init__(self, base_url: str, timeout: float = 30.0) -> None:
-        self.base_url = base_url.rstrip("/")
-        self.timeout = timeout
-
-    async def _request(self, method, path, *, json=None, files=None, params=None):
-        url = f"{self.base_url}{path}"
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            response = await client.request(method, url, json=json, files=files, params=params)
-```
-**Description**: The CamundaClient makes HTTP requests to the CIB7 engine REST API with no authentication headers. The CIB7 container (port 8081 on host) exposes the engine REST API. While this is on the internal Docker network, the port is also mapped to the host, making it accessible on localhost:8081 without any credentials.
-**Risk**: Any process on the host or Docker network can interact with the BPMN engine -- deploying processes, starting instances, completing tasks. This is lower risk because it is typically only exposed locally in development.
-**Recommendation**: Configure CIB7 with basic auth or filter auth and pass credentials from the KMFlow backend. In production, do not expose the CIB7 port to the host.
-
----
-
-### [LOW] NETWORK-002: All Service Ports Mapped to Host
-
-**File**: `docker-compose.yml:14,41-42,65,88,113-114,149-150,185,222`
-**Agent**: A3 (Infra Security Auditor)
+**File**: `docker-compose.yml:93` and CamundaClient usage
+**Agent**: A3 (Infrastructure Security Auditor)
 **Evidence**:
 ```yaml
-postgres:   "${POSTGRES_PORT:-5433}:5432"
-neo4j:      "7475:7474" / "7688:7687"
-redis:      "${REDIS_PORT:-6380}:6379"
-cib7:       "${CIB7_PORT:-8081}:8080"
-minio:      "${MINIO_PORT:-9002}:9000" / "${MINIO_CONSOLE_PORT:-9003}:9001"
-mailpit:    "${SMTP_PORT:-1026}:1025" / "${MAILPIT_UI_PORT:-8026}:8025"
-backend:    "${BACKEND_PORT:-8002}:8000"
-frontend:   "3002:3000"
+    ports:
+      - "${CIB7_PORT:-8081}:8080"
 ```
-**Description**: Every service in the development compose file maps its ports to the host. In a development context this is convenient, but the production override does not remove these port mappings. Services like PostgreSQL, Neo4j, Redis, and MinIO should only be accessible via the internal Docker network in production.
-**Risk**: In production, exposed database ports allow direct access to data stores, bypassing the application's authentication and authorization layer. Combined with weak or absent credentials (SECRETS-001, DOCKER-001), this is especially dangerous.
-**Recommendation**: In `docker-compose.prod.yml`, explicitly remove port mappings for internal services: set `ports: []` for postgres, neo4j, redis, cib7, minio, and mailpit. Only expose the backend and frontend ports behind a reverse proxy.
+And from `src/api/main.py:114-115`:
+```python
+cib7_url = os.environ.get("CIB7_URL", "http://localhost:8080/engine-rest")
+camunda_client = CamundaClient(cib7_url)
+```
+**Description**: This finding was identified in the original audit and remains unresolved. The CIB7 Camunda engine REST API is accessible without any authentication. The port is mapped to the host in the development compose file. The `CamundaClient` makes HTTP requests with no authentication headers. While the production overlay does not explicitly close this port (it is not listed in `docker-compose.prod.yml`), the `security_opt` and `cap_drop` hardening from the dev compose apply.
+**Risk**: Any process on the host (development) or Docker network can interact with the BPMN engine, deploying processes, starting workflow instances, or completing tasks. This is lower risk because CIB7 is primarily used internally by the KMFlow backend.
+**Recommendation**: Add CIB7 to the production overlay with `ports: []`. Configure CIB7 basic authentication or restrict access via network policies. Pass credentials from the KMFlow backend.
+
+---
+
+### [LOW] NETWORK-002: MinIO and Mailpit Ports Still Exposed in Production Overlay
+
+**File**: `docker-compose.prod.yml` (absence of MinIO/Mailpit overrides)
+**Agent**: A3 (Infrastructure Security Auditor)
+**Evidence**:
+The production overlay (`docker-compose.prod.yml`) sets `ports: []` for postgres, neo4j, and redis, but does not override port mappings for:
+```yaml
+# docker-compose.yml:121-123
+  minio:
+    ports:
+      - "${MINIO_PORT:-9002}:9000"
+      - "${MINIO_CONSOLE_PORT:-9003}:9001"
+```
+```yaml
+# docker-compose.yml:165-167
+  mailpit:
+    ports:
+      - "${SMTP_PORT:-1026}:1025"
+      - "${MAILPIT_UI_PORT:-8026}:8025"
+```
+**Description**: The production overlay successfully removes host port mappings for PostgreSQL, Neo4j, and Redis (remediation from the original audit). However, MinIO (object storage with root credentials) and Mailpit (development email server) still have ports mapped to the host. MinIO exposes both the API (port 9000) and the console UI (port 9001). Mailpit should not be present in production at all.
+**Risk**: MinIO console access on port 9003 provides a web UI that could be accessed with the default credentials if they are not overridden. Mailpit is a development tool that should not exist in production -- it captures all outbound email, meaning production emails would be silently swallowed rather than delivered.
+**Recommendation**: Add MinIO to the production overlay with `ports: []`. Remove or exclude the Mailpit service entirely from production composition (either via the overlay or by using Docker Compose profiles). Configure a real SMTP server for production email delivery.
+
+---
+
+### [LOW] WORKER-002: Descope Project ID Exposed in Source Code
+
+**File**: `infrastructure/cloudflare-workers/presentation-auth/wrangler.toml:13`
+**Agent**: A3 (Infrastructure Security Auditor)
+**Evidence**:
+```toml
+[vars]
+DESCOPE_PROJECT_ID = "P39ERvEl6A8ec0DKtrKBvzM4Ue5V"
+PAGES_URL = "https://kmflow-presentation.pages.dev"
+WORKER_DOMAIN = "https://kmflow.agentic-innovations.com"
+```
+And hardcoded in the JWKS URL at `src/index.ts:290`:
+```typescript
+const DESCOPE_JWKS_URL = 'https://api.descope.com/P39ERvEl6A8ec0DKtrKBvzM4Ue5V/.well-known/jwks.json';
+```
+**Description**: The Descope project ID is hardcoded in both the `wrangler.toml` configuration and directly in the TypeScript source code. While Descope project IDs are designed to be semi-public (they appear in JWKS URLs and are needed for client-side SDKs), embedding them in committed source code makes it trivial for anyone to identify the authentication provider and project, enabling targeted attacks against the Descope account (e.g., brute-forcing OTPs if rate limiting is not configured in Descope, or social engineering Descope support).
+**Risk**: Low direct risk since Descope project IDs are not secret credentials. However, unnecessary information disclosure assists reconnaissance. The JWKS URL at line 290 should derive from the environment variable rather than being hardcoded.
+**Recommendation**: Derive the JWKS URL from the `DESCOPE_PROJECT_ID` environment variable rather than hardcoding it: `const DESCOPE_JWKS_URL = \`https://api.descope.com/${env.DESCOPE_PROJECT_ID}/.well-known/jwks.json\``. This also makes the worker more portable across Descope projects.
+
+---
+
+### [LOW] CONFIG-001: Redis URL Built Without Password When REDIS_URL Not Set
+
+**File**: `src/core/config.py:199-200`
+**Agent**: A3 (Infrastructure Security Auditor)
+**Evidence**:
+```python
+        if not self.redis_url:
+            self.redis_url = f"redis://{self.redis_host}:{self.redis_port}/0"
+```
+**Description**: When `REDIS_URL` is not explicitly set as an environment variable, the `build_derived_urls` model validator constructs the Redis URL without a password component. The dev `.env` file does set `REDIS_URL=redis://:dev_redis_password@localhost:6380/0`, and the Docker backend environment also sets it. However, if someone runs the backend outside Docker without the `.env` file (or with a partial `.env`), the derived URL will omit the password, causing a silent authentication failure or connection to an unauthenticated Redis instance.
+**Risk**: Low -- this only affects local development scenarios where `.env` is incomplete. The production overlay enforces `REDIS_PASSWORD` via `${REDIS_PASSWORD:?}`. However, the inconsistency between the `redis_url` construction (no password) and the `database_url` construction (includes password) is a design asymmetry that could cause confusion.
+**Recommendation**: Include the Redis password in the derived URL when `redis_password` is available. Add a `redis_password` field to the Settings model, or detect the `REDIS_PASSWORD` environment variable during URL construction: `f"redis://:{self.redis_password}@{self.redis_host}:{self.redis_port}/0"` when a password is set.
 
 ---
 
 ## Security Posture Assessment
 
-**Overall Risk Level**: HIGH
+**Overall Risk Level**: MEDIUM (improved from HIGH)
 
-The infrastructure has several significant security gaps that need to be addressed before production deployment:
+### Improvements Since Original Audit
 
-1. **Secrets management** is the most critical area -- Redis has no authentication, and the application accepts known default secrets in production without validation.
-2. **Container security** is minimal -- no non-root users, no capability restrictions, no filesystem read-only constraints.
-3. **Network exposure** is overly broad -- all ports are mapped to the host and the production overlay does not restrict this.
-4. **The Cloudflare worker** has a reflected XSS vulnerability in the login page error handling.
-5. **Encryption** uses a weak key derivation function that could be brute-forced if the input secret has low entropy.
+Significant remediation work has been completed since the 2026-02-20 audit:
 
-**Positive findings**:
-- `.env` files are properly gitignored
-- Production compose uses `${VAR:?}` syntax for PostgreSQL and Neo4j credentials (but not for all services)
-- CORS origins are configurable and not wildcarded
-- Session cookies in the Cloudflare worker use `HttpOnly`, `Secure`, and `SameSite=Lax`
-- Rate limiting middleware exists (though the implementation needs hardening)
-- Security headers middleware exists (though missing HSTS and CSP)
-- Audit logging middleware is present
-- Request ID middleware provides traceability
+1. **Redis authentication**: Now enforced in both dev (`--requirepass` with env var default) and prod (`${REDIS_PASSWORD:?}` required).
+2. **Secret validation at startup**: The `reject_default_secrets_in_production` model validator blocks startup with default dev keys outside the development environment.
+3. **CORS tightened**: Explicit method and header lists replace wildcards.
+4. **Container hardening**: All services now have `security_opt: [no-new-privileges:true]` and `cap_drop: [ALL]` in the dev compose. Production overlay adds resource limits and log rotation.
+5. **Dockerfile security**: Multi-stage build, non-root `appuser`, no compiler in runtime image, `--reload` removed from CMD.
+6. **Security headers**: HSTS (conditional on non-debug), CSP, Permissions-Policy, and Cache-Control headers now present.
+7. **Encryption KDF**: Upgraded from single-pass SHA-256 to PBKDF2 with 600,000 iterations.
+8. **Rate limiter**: Periodic pruning with `_PRUNE_INTERVAL` and `_MAX_TRACKED_CLIENTS` cap prevents unbounded memory growth. `X-Forwarded-For` is correctly not trusted.
+9. **OpenAPI docs**: Conditionally disabled when `settings.debug` is False.
+
+### Remaining Risks
+
+1. **Reflected XSS on the authentication worker** (HIGH) is the most significant remaining issue. This is a live production vulnerability on `kmflow.agentic-innovations.com`.
+2. **Hardcoded credentials in the PostgreSQL init script** (HIGH) are committed to version control.
+3. **Unencrypted database connections** (MEDIUM) are acceptable for single-host Docker deployments but must be addressed before multi-host production.
+4. **Config fields should use SecretStr** (MEDIUM) to prevent accidental logging of secrets.
+
+### Positive Findings
+
+- `.env` files are properly listed in `.gitignore` (line 26)
+- `.dockerignore` does not exist, but the multi-stage Dockerfile minimizes what is copied
+- Token blacklisting uses Redis with fail-closed behavior (returns True when Redis is unavailable)
+- HttpOnly cookies with `SameSite=Strict` for refresh tokens and `SameSite=Lax` for access tokens
+- Cookie `Secure` flag defaults to `True` in config (line 78), only disabled in local dev `.env`
+- Refresh cookie is path-restricted to `/api/v1/auth/refresh`
+- Auth rate limiting on login (5/minute) and refresh (10/minute) via slowapi
+- Audit logging middleware captures all mutating requests with user identity
+- Database isolation: cross-database access revoked in init script (lines 40-44)
+- `auth_dev_mode` defaults to `False` in config (line 68), only enabled via explicit env var
+- Token type checking prevents refresh tokens from being used as access tokens
+- Subprocess usage in `video_parser.py` uses `create_subprocess_exec` (not `shell=True`) with hardcoded command arguments -- no injection risk
+- No pickle, unsafe YAML, or eval usage found in the codebase
+- No `dangerouslySetInnerHTML` usage in the frontend React components
+
+### Security Score
+
+| Category | Score | Max | Notes |
+|----------|-------|-----|-------|
+| Secrets Management | 7 | 10 | Strong validation at startup; init script and SecretStr gaps remain |
+| Container Security | 8 | 10 | Good hardening; dev volume mounts still read-write |
+| Network Security | 6 | 10 | Prod overlay good for core services; CIB7/MinIO/Mailpit gaps |
+| Authentication | 9 | 10 | Comprehensive: JWT rotation, blacklisting, fail-closed, cookie security |
+| Encryption | 8 | 10 | PBKDF2 KDF with 600k iterations; fixed salt is a minor issue |
+| CORS/Headers | 9 | 10 | Explicit origins, methods, headers; full security header suite |
+| Input Validation | 7 | 10 | Good parameterized queries; XSS in CF worker unresolved |
+| Audit/Logging | 9 | 10 | Comprehensive audit middleware; no sensitive data in logs |
+| **Overall** | **7.9** | **10** | |

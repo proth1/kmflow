@@ -1,7 +1,7 @@
 # D1: Test Coverage Audit Findings
 
 **Agent**: D1 (Test Coverage Auditor)
-**Date**: 2026-02-20
+**Date**: 2026-02-26
 **Scope**: Test coverage gaps, mock quality, missing integration tests, edge case coverage
 
 ---
@@ -10,223 +10,185 @@
 
 **PIPELINE STATUS: CRITICAL — BLOCKED**
 
-The KMFlow backend test suite has a **67.1% file coverage ratio** (98 test files covering 146 source modules). While the test count of 1,475 individual test functions is substantial, significant coverage gaps exist in security-critical paths, infrastructure modules, and the frontend. The evidence upload API endpoint — the primary data ingestion path — has **zero API-level tests** for its actual HTTP upload flow. Multiple monitoring subsystem modules have no tests at all.
+The KMFlow backend test suite reports **84% overall line coverage** across 7,765 statements. However, this headline figure masks severe gaps in security-critical and infrastructure modules. Eight source files have 0% coverage, the monitoring subsystem runs at 61.8%, and several complete functional areas (evidence deduplication, audit logging, per-user rate limiting) have no tests at all. The frontend has 99 source files with only 13 unit test files covering components.
 
 | Metric | Value |
 |--------|-------|
-| Source files (non-init) | 146 |
-| Test files | 98 |
-| File coverage ratio | 67.1% |
-| Total test functions | 1,475 |
-| Source modules with no tests | 65 |
-| HTTP status code assertions | 278 |
-| Frontend component unit tests | 5 (covering 65 source components) |
+| Overall backend line coverage | 84.0% (6,521 / 7,765 statements) |
+| Backend test files | 132 |
+| Backend source files (non-init) | 181 |
+| Frontend source files | 99 |
+| Frontend unit test files | 13 |
+| Files with 0% coverage | 8 confirmed zero-coverage modules |
+| Minimum threshold (CLAUDE.md) | 80% line coverage |
+| Threshold met | YES (84% > 80%) — but critical path gaps remain |
+
+**Threshold Note**: The 84% aggregate clears the 80% floor set in CLAUDE.md. However, the coverage threshold gates in the SDLC (`coverage_above_80`) do not substitute for the critical path coverage deficits identified below. This report recommends BLOCKING the pipeline until the CRITICAL-severity paths are addressed, because several zero-coverage modules are on the security and data-integrity critical path.
 
 ---
 
-## Coverage Map
+## Coverage Breakdown by Module
 
-### Modules WITH Tests
+| Module | Coverage | Statements | Missing | Status |
+|--------|----------|------------|---------|--------|
+| `src/simulation` | 100.0% | 148 | 0 | EXCELLENT |
+| `src/tom` | 97.6% | 206 | 5 | EXCELLENT |
+| `src/patterns` | 96.2% | 78 | 3 | EXCELLENT |
+| `src/semantic` | 95.2% | 687 | 33 | EXCELLENT |
+| `src/integrations` | 93.5% | 216 | 14 | GOOD |
+| `src/pov` | 88.1% | 486 | 58 | GOOD |
+| `src/rag` | 87.8% | 156 | 19 | GOOD |
+| `src/conformance` | 87.7% | 187 | 23 | GOOD |
+| `src/core` | 86.9% | 1,256 | 165 | GOOD |
+| `src/api` | 84.9% | 2,995 | 453 | WARNING |
+| `src/evidence` | 67.4% | 724 | 236 | CRITICAL |
+| `src/mcp` | 66.2% | 231 | 78 | CRITICAL |
+| `src/monitoring` | 61.8% | 327 | 125 | CRITICAL |
+| `src/agents` | 52.9% | 68 | 32 | CRITICAL |
 
-| Module | Test File | Assessment |
-|--------|-----------|------------|
-| `src/core/auth.py` | `tests/core/test_auth.py` | Good — JWT creation, expiry, wrong key tested |
-| `src/core/permissions.py` | `tests/core/test_permissions.py` | Good — role hierarchy, RBAC matrix tested |
-| `src/core/security.py` | `tests/core/test_security.py` | Good — engagement-level isolation tested |
-| `src/core/encryption.py` | `tests/core/test_encryption.py` | Good — roundtrip, invalid input tested |
-| `src/core/models.py` | `tests/core/test_models.py` | Adequate — schema structure tests |
-| `src/api/routes/auth.py` | `tests/api/test_auth_routes.py` | Good — login, refresh, logout with blacklist |
-| `src/api/routes/evidence.py` | `tests/api/test_evidence.py` | PARTIAL — upload endpoint has NO tests |
-| `src/api/routes/engagements.py` | `tests/api/test_engagements.py` | Good — CRUD, filters tested |
-| `src/api/routes/users.py` | `tests/api/test_users.py` | Good — RBAC create/update/delete tested |
-| `src/api/middleware/security.py` | `tests/api/test_security_middleware.py` | Good — headers, rate limiting tested |
-| `src/monitoring/alerting.py` | `tests/monitoring/test_monitoring.py` | Adequate — severity, dedup tested |
-| `src/monitoring/baseline.py` | `tests/monitoring/test_monitoring.py` | Adequate — snapshot, comparison tested |
-| `src/monitoring/scheduler.py` | `tests/monitoring/test_monitoring.py` | Adequate — cron parsing tested |
-| `src/simulation/engine.py` | `tests/simulation/test_simulation.py` | Good — all simulation types tested |
-| `src/evidence/pipeline.py` | `tests/evidence/test_pipeline.py` | Partial — hash/storage tested; intelligence pipeline mocked |
-| `src/mcp/auth.py` | `tests/mcp/test_mcp.py` | Adequate — key gen, validate tested |
+### Files with 0% Coverage (Critical)
 
-### Modules WITHOUT Tests (65 modules)
+| File | Statements Missing | Risk Level |
+|------|--------------------|------------|
+| `src/monitoring/worker.py` | 47 | HIGH |
+| `src/monitoring/detector.py` | 27 | HIGH |
+| `src/monitoring/notification.py` | 15 | HIGH |
+| `src/monitoring/collector.py` | 24 | HIGH |
+| `src/monitoring/events.py` | 11 | MEDIUM |
+| `src/core/audit.py` | 28 | HIGH |
+| `src/evidence/dedup.py` | 24 | MEDIUM |
+| `src/agents/recommender.py` | 32 | MEDIUM |
 
-#### Security/Infrastructure Critical (HIGH RISK)
-| Module | Risk |
-|--------|------|
-| `src/api/middleware/audit.py` | Audit trail logic completely untested |
-| `src/core/retention.py` | Data deletion policy completely untested |
-| `src/core/rate_limiter.py` | Per-user copilot rate limiter untested |
-| `src/core/database.py` | DB session factory untested |
-| `src/api/deps.py` | Session dependency untested |
-| `src/api/routes/admin.py` | Admin-only retention cleanup route untested |
-| `src/api/routes/websocket.py` | WebSocket auth + connection limit untested |
+### Source Files with No Test File At All
 
-#### Monitoring Subsystem (Partial Coverage Only)
-| Module | Risk |
-|--------|------|
-| `src/monitoring/worker.py` | Redis stream consumer untested |
-| `src/monitoring/collector.py` | Data collection untested |
-| `src/monitoring/detector.py` | Deviation detection untested |
-| `src/monitoring/events.py` | Event publishing untested |
-| `src/monitoring/notification.py` | Alert notification untested |
+The following source files have neither a direct test file nor significant indirect coverage via integration paths:
 
-#### Evidence Parsers (Majority Untested)
-| Module | Risk |
-|--------|------|
-| `src/evidence/parsers/audio_parser.py` | Untested |
-| `src/evidence/parsers/communication_parser.py` | Untested |
-| `src/evidence/parsers/document_parser.py` | Untested |
-| `src/evidence/parsers/factory.py` | Parser factory untested |
-| `src/evidence/parsers/image_parser.py` | Untested |
-| `src/evidence/parsers/job_aids_parser.py` | Untested |
-| `src/evidence/parsers/km4work_parser.py` | Untested |
-| `src/evidence/parsers/regulatory_parser.py` | Untested |
-| `src/evidence/parsers/structured_data_parser.py` | Untested |
-| `src/evidence/parsers/video_parser.py` | Untested |
-| `src/evidence/dedup.py` | Deduplication logic untested |
-
-#### Integration Connectors (Entirely Untested)
-| Module | Risk |
-|--------|------|
-| `src/integrations/camunda.py` | Untested |
-| `src/integrations/celonis.py` | Untested |
-| `src/integrations/salesforce.py` | Untested |
-| `src/integrations/sap.py` | Untested |
-| `src/integrations/servicenow.py` | Untested |
-| `src/integrations/soroco.py` | Untested |
-| `src/integrations/field_mapping.py` | Untested |
-
-#### Simulation Subsystem (Partial)
-| Module | Risk |
-|--------|------|
-| `src/simulation/scenarios.py` | `validate_scenario` is partially tested via test_simulation.py |
-| `src/simulation/engine.py` | `run_simulation` is tested |
-| `src/simulation/impact.py` | `calculate_cascading_impact` is tested |
-| `src/simulation/suggester.py` | Untested |
-
-#### MCP (Partial)
-| Module | Risk |
-|--------|------|
-| `src/mcp/server.py` | Server routing untested |
-| `src/mcp/tools.py` | Tool implementations untested |
-| `src/mcp/schemas.py` | Schemas untested |
-
-#### RAG (Partial)
-| Module | Risk |
-|--------|------|
-| `src/rag/copilot.py` | Copilot orchestration untested |
-| `src/rag/embeddings.py` | Embedding generation untested |
-| `src/rag/retrieval.py` | Partially tested |
-
-#### Semantic Bridges (Entirely Untested)
-| Module | Risk |
-|--------|------|
-| `src/semantic/bridges/communication_deviation.py` | Untested |
-| `src/semantic/bridges/evidence_policy.py` | Untested |
-| `src/semantic/bridges/process_evidence.py` | Untested |
-| `src/semantic/bridges/process_tom.py` | Untested |
-| `src/semantic/ontology/loader.py` | Untested |
-| `src/semantic/ontology/validate.py` | Untested |
+- `src/api/middleware/audit.py` — Audit trail middleware
+- `src/core/rate_limiter.py` — Per-user Redis rate limiter
+- `src/core/database.py` — DB session factory (47.4% covered)
+- `src/core/neo4j.py` — Neo4j helper (33.3% covered)
+- `src/core/redis.py` — Redis stream helpers (38.0% covered)
+- `src/governance/migration_cli.py` — CLI entry point
+- `src/simulation/service.py` — Scenario serialization
+- `src/simulation/suggester.py` — LLM scenario suggester
+- `src/simulation/coverage.py` — Evidence coverage classifier
+- `src/simulation/epistemic.py` — Uncertainty quantification
+- `src/simulation/financial.py` — Financial modeling
+- `src/simulation/ranking.py` — Scenario ranking
 
 ---
 
 ## Findings
 
-### [CRITICAL] COVERAGE: Evidence Upload API — Zero HTTP-Level Tests
+### [CRITICAL] COVERAGE: Monitoring Worker — Zero Coverage on 47 Statements
 
-**File**: `src/api/routes/evidence.py:129`
+**File**: `src/monitoring/worker.py`
 **Agent**: D1 (Test Coverage Auditor)
 **Evidence**:
 ```python
-@router.post("/upload", response_model=UploadResponse, status_code=status.HTTP_201_CREATED)
-async def upload_evidence(
+async def process_task(task_data: dict[str, Any]) -> dict[str, Any]:
+    task_type = task_data.get("task_type", "unknown")
+    if task_type == "collect":
+        from src.monitoring.collector import collect_evidence
+        return await collect_evidence(...)
+    elif task_type == "detect":
+        return {"status": "detection_completed", "deviations_found": 0}
+    elif task_type == "alert":
+        return {"status": "alert_processed"}
+```
+**Description**: The monitoring worker module (`worker.py`) has 0% line coverage across 47 executable statements. This includes `submit_monitoring_task`, `process_task` (the dispatch router), and `run_worker` (the Redis stream consumer loop). The same zero-coverage status applies to `collector.py` (24 missing), `detector.py` (27 missing), `notification.py` (15 missing), and `events.py` (11 missing). The `test_monitoring.py` file covers only config, baseline, scheduler, comparator, and alerting — the five modules that process already-collected data. The entire data collection and delivery pipeline is untested.
+
+**Risk**: Silent failures in the monitoring pipeline — dropped Redis stream tasks, failed evidence collection, or undelivered alerts — will not be caught by CI. A regression in task routing logic would go undetected until a monitoring job silently fails in deployment.
+
+**Recommendation**: Add tests for `process_task` dispatch routing (collect, detect, alert, unknown), `submit_monitoring_task` stream publishing, and `notify_deviation`/`notify_alert` publishing paths using mocked Redis. The `run_worker` loop can be tested with a pre-populated mock stream and a fast shutdown event.
+
+---
+
+### [CRITICAL] COVERAGE: Core Audit Logging — Zero Coverage
+
+**File**: `src/core/audit.py`
+**Agent**: D1 (Test Coverage Auditor)
+**Evidence**:
+```python
+async def log_audit_event_async(
+    method: str,
+    path: str,
+    user_id: str,
+    status_code: int,
+    engagement_id: str | None = None,
+    duration_ms: float = 0.0,
+    session: AsyncSession | None = None,
+) -> None:
+    """Persist an HTTP audit event for compliance.
+    Always writes a structured log record for SIEM ingestion.
+    When a database session is provided, also persists the event to
+    the http_audit_events table."""
+```
+**Description**: `src/core/audit.py` has 0% line coverage across 28 statements. This module is responsible for structured audit logging of all HTTP mutating operations (POST/PUT/PATCH/DELETE) for SIEM ingestion and the `http_audit_events` database table. No tests verify that: (1) audit records are created with correct fields, (2) anonymous requests are recorded correctly, (3) the structured log format is correct, or (4) the session-conditional persistence path works.
+
+**Risk**: Compliance violations: if audit logging silently fails or produces malformed records, the platform's audit trail requirement is unmet without any CI warning.
+
+**Recommendation**: Add `tests/core/test_audit.py` covering: record creation with all fields, anonymous actor fallback, `session=None` path (log-only), and `session` provided path (DB persist). Use mocked `AsyncSession`.
+
+---
+
+### [CRITICAL] COVERAGE: Evidence Deduplication — Zero Coverage
+
+**File**: `src/evidence/dedup.py`
+**Agent**: D1 (Test Coverage Auditor)
+**Evidence**:
+```python
+async def find_duplicates_by_hash(
+    session: AsyncSession,
+    content_hash: str,
+    engagement_id: uuid.UUID,
+    exclude_id: uuid.UUID | None = None,
+) -> list[EvidenceItem]:
+    query = select(EvidenceItem).where(
+        EvidenceItem.engagement_id == engagement_id,
+        EvidenceItem.content_hash == content_hash,
+    )
+```
+**Description**: `src/evidence/dedup.py` has 0% coverage across 24 statements. The module provides three functions — `find_duplicates_by_hash`, `check_is_duplicate`, and `get_duplicate_groups` — that the evidence upload pipeline calls to detect duplicate submissions. None are tested. The `exclude_id` path in `find_duplicates_by_hash` and the grouping logic in `get_duplicate_groups` are entirely unvalidated.
+
+**Risk**: Duplicate detection logic failures could allow the same evidence file to be ingested multiple times, creating data integrity issues and inflating evidence counts. Alternatively, a bug could incorrectly flag non-duplicate files.
+
+**Recommendation**: Add `tests/evidence/test_dedup.py` covering: hash match found, hash not found, `exclude_id` exclusion logic, and `get_duplicate_groups` grouping of multiple duplicates.
+
+---
+
+### [CRITICAL] COVERAGE: Auth `get_current_user` — 20.5% of Function Untested
+
+**File**: `src/core/auth.py` (lines 289-377)
+**Agent**: D1 (Test Coverage Auditor)
+**Evidence**:
+```python
+async def get_current_user(
     request: Request,
-    file: UploadFile = File(...),
-    engagement_id: UUID = Form(...),
-    category: EvidenceCategory | None = Form(None),
-    metadata: str | None = Form(None),
-    ...
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    settings: Settings = Depends(get_settings),
+) -> User:
+    # Auth source priority:
+    # 1. Authorization: Bearer <token> header
+    # 2. kmflow_access HttpOnly cookie
+    if credentials is not None:
+        token = credentials.credentials
+    else:
+        token = request.cookies.get(ACCESS_COOKIE_NAME)  # line 313
+    if token is None:
+        raise HTTPException(...)                           # line 316
 ```
-**Description**: The `POST /api/v1/evidence/upload` endpoint is the primary data ingestion path for the entire platform. The test file `tests/api/test_evidence.py` covers `GET`, `validate`, and `batch_validate` endpoints but contains **zero tests** for the upload endpoint. The comment in the test file says "Tests cover: upload, get, list..." — upload is listed but absent. There are no multipart/form-data POST tests anywhere in the API test suite for this route.
+**Description**: Coverage analysis shows lines 208, 217, 226-227, 239, 246 are uncovered in `auth.py`. These correspond to the `set_auth_cookies` / `clear_auth_cookies` helper functions (lines 194-274) and the cookie-based token extraction path in `get_current_user` (line 313). The `test_auth_cookies.py` file exists but the cookie authentication fallback path — when no Bearer header is present but `kmflow_access` cookie is set — has no integration test exercising the full flow from cookie to authenticated user. The `set_auth_cookies` and `clear_auth_cookies` functions also have no tests verifying cookie attributes (httponly, secure, samesite, path, max_age).
 
-**Risk**: The most-used API endpoint for evidence ingestion — including file size validation, MIME type detection, deduplication, and fragment extraction — runs completely untested at the HTTP layer. Regressions in authentication, permission checking, or file handling for this endpoint will not be caught by CI.
+**Risk**: The HttpOnly cookie auth path (Issue #156) is a browser-facing security feature. Untested cookie security attributes (especially `samesite` and `path` on the refresh cookie) could silently regress, creating CSRF exposure.
 
-**Recommendation**: Add `TestUploadEvidence` class covering: (1) successful upload with multipart form, (2) empty file rejection (400), (3) invalid JSON metadata rejection (400), (4) missing engagement_id (422), (5) unauthorized upload (403).
+**Recommendation**: Add tests in `test_auth_cookies.py` verifying: (1) `set_auth_cookies` sets correct `httponly=True`, `samesite="strict"` on refresh cookie with path restriction, (2) `clear_auth_cookies` zeroes max_age, (3) `get_current_user` succeeds with only a valid `kmflow_access` cookie (no Bearer header).
 
 ---
 
-### [CRITICAL] COVERAGE: Token Blacklist Functions — No Unit Tests
+### [HIGH] COVERAGE: WebSocket Endpoint — 80.8% of Code Untested
 
-**File**: `src/core/auth.py:149`
-**Agent**: D1 (Test Coverage Auditor)
-**Evidence**:
-```python
-async def is_token_blacklisted(request: Request, token: str) -> bool:
-    """Check if a token has been blacklisted in Redis."""
-    ...
-    result = await redis.get(f"token:blacklist:{token}")
-
-async def blacklist_token(request: Request, token: str, expires_in: int = 1800) -> None:
-    """Add a token to the blacklist in Redis."""
-    await redis.setex(f"token:blacklist:{token}", expires_in, "1")
-```
-**Description**: The `is_token_blacklisted` and `blacklist_token` functions are never directly tested. The logout test (`test_auth_routes.py:232`) only verifies that Redis `setex` was called once, but does not test: (1) that a blacklisted token is rejected on subsequent requests, (2) the Redis-unavailable fallback path (`failing closed` behavior), or (3) the blacklist key format/TTL correctness.
-
-**Risk**: If the blacklist check is bypassed or the Redis fallback behaves incorrectly, revoked tokens remain usable — a direct authentication bypass vulnerability.
-
-**Recommendation**: Add unit tests for `is_token_blacklisted` with: Redis returning "1" (blocked), Redis returning None (not blocked), Redis raising exception (fail-closed). Add integration test verifying that a logged-out token is rejected on a subsequent authenticated request.
-
----
-
-### [CRITICAL] COVERAGE: Admin Routes — Entirely Untested
-
-**File**: `src/api/routes/admin.py:25`
-**Agent**: D1 (Test Coverage Auditor)
-**Evidence**:
-```python
-@router.post("/retention-cleanup")
-async def run_retention_cleanup(
-    user: User = Depends(require_role(UserRole.PLATFORM_ADMIN)),
-    ...
-    dry_run: bool = Query(default=True),
-    x_confirm_action: str | None = Header(default=None),
-) -> dict[str, Any]:
-```
-**Description**: The admin routes (`/api/v1/admin/retention-cleanup`, `/api/v1/admin/rotate-encryption-key`) are entirely untested. These routes perform destructive operations: bulk archiving of engagement data and encryption key rotation. There are no tests verifying: (1) that non-admin users receive 403, (2) that the confirmation header requirement is enforced, (3) that dry_run vs. live execution behaves differently.
-
-**Risk**: Admin-only destructive operations could be inadvertently called without confirmation, or could be called by non-admin users if the `require_role` dependency is misconfigured.
-
-**Recommendation**: Add `tests/api/test_admin_routes.py` covering: RBAC enforcement (non-admin 403), dry-run mode response, missing confirmation header enforcement, and successful execution flow.
-
----
-
-### [CRITICAL] COVERAGE: Data Retention Logic — Untested
-
-**File**: `src/core/retention.py:20`
-**Agent**: D1 (Test Coverage Auditor)
-**Evidence**:
-```python
-async def find_expired_engagements(session: AsyncSession) -> list[Engagement]:
-    """Find engagements that have exceeded their retention period."""
-    ...
-    for eng in engagements:
-        cutoff = eng.created_at.replace(tzinfo=UTC) + timedelta(days=eng.retention_days or 0)
-        if now > cutoff:
-            expired.append(eng)
-
-async def cleanup_expired_engagements(session: AsyncSession) -> int:
-    """Archive expired engagements and cascade-delete their evidence."""
-```
-**Description**: The data retention enforcement functions have zero tests. The cutoff calculation (`created_at + retention_days`) and filtering logic are untested. Edge cases such as: engagements with `retention_days=0`, engagements in ACTIVE status being exempt, and timezone handling in `created_at.replace(tzinfo=UTC)` are not verified.
-
-**Risk**: Incorrect retention logic could archive active engagements prematurely, or fail to archive expired ones — a GDPR compliance risk.
-
-**Recommendation**: Add `tests/core/test_retention.py` covering: expired engagement detection, non-expired exclusion, status-based filtering (ACTIVE skipped), and the cleanup archiving path.
-
----
-
-### [HIGH] COVERAGE: WebSocket Authentication — Untested
-
-**File**: `src/api/routes/websocket.py:105`
+**File**: `src/api/routes/websocket.py`
 **Agent**: D1 (Test Coverage Auditor)
 **Evidence**:
 ```python
@@ -239,51 +201,65 @@ async def monitoring_websocket(
     if not token:
         await websocket.close(code=1008, reason="Missing authentication token")
         return
-    try:
-        settings = get_settings()
-        decode_token(token, settings)
-    except Exception as e:
-        await websocket.close(code=1008, reason="Invalid or expired token")
-        return
-    # Check connection limit
+    ...
     current_count = manager.get_connection_count(engagement_id)
     if current_count >= settings.ws_max_connections_per_engagement:
         await websocket.close(code=1008, reason=...)
 ```
-**Description**: The WebSocket endpoints `/ws/monitoring/{engagement_id}` and `/ws/alerts/{engagement_id}` have zero tests. Authentication (missing token, invalid token, expired token), connection limit enforcement, Redis pub/sub message forwarding, heartbeat behavior, and disconnect cleanup are all untested. The `ConnectionManager` class itself is also untested.
+**Description**: `src/api/routes/websocket.py` has 19.2% coverage with 122 statements unexercised. The existing `test_websocket_auth.py` tests use `TestClient` with `with client.websocket_connect(...)` for the auth token checks, but the Redis pub/sub forwarding loop, the heartbeat mechanism, the `ConnectionManager.broadcast()` method, and the `alerts` WebSocket endpoint are all untested. The `ConnectionManager` class itself (connect, disconnect, broadcast, cleanup of dead connections) has no dedicated unit tests.
 
-**Risk**: WebSocket authentication bypass could allow unauthenticated clients to receive real-time security alerts and monitoring data.
+**Risk**: Real-time alert delivery could silently fail. Dead connection cleanup bugs could cause memory leaks under sustained usage. The broadcast method silently swallows exceptions from dead websockets — if this exception handling is wrong, a single failed connection could terminate delivery to all other connections.
 
-**Recommendation**: Add `tests/api/test_websocket.py` testing the `ConnectionManager` class directly, plus WebSocket endpoint tests for: no token → close 1008, invalid token → close 1008, connection limit exceeded → close 1008.
+**Recommendation**: Add unit tests for `ConnectionManager` (connect, disconnect, broadcast with one dead socket), and expand WebSocket tests to cover the pub/sub message forwarding and heartbeat paths using mocked Redis pub/sub.
 
 ---
 
-### [HIGH] COVERAGE: Audit Logging Middleware — Untested
+### [HIGH] COVERAGE: MCP Server and Tools — 41.8% Untested
 
-**File**: `src/api/middleware/audit.py:20`
+**File**: `src/mcp/server.py`, `src/mcp/tools.py`
 **Agent**: D1 (Test Coverage Auditor)
 **Evidence**:
 ```python
-class AuditLoggingMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next: ...) -> Response:
-        if request.method not in MUTATING_METHODS:
-            return await call_next(request)
-        ...
-        logger.info("AUDIT method=%s path=%s user=%s ...", ...)
-        response.headers["X-Audit-Logged"] = "true"
-        return response
+# src/mcp/server.py: 58.2% covered (59 missing statements)
+@router.get("/mcp/tools", response_model=ToolsListResponse)
+async def list_tools(
+    api_key_data: dict = Depends(require_mcp_api_key),
+) -> ToolsListResponse:
+    """List available MCP tools."""
+    from src.mcp.tools import TOOL_REGISTRY
+    return ToolsListResponse(tools=list(TOOL_REGISTRY.values()))
 ```
-**Description**: The `AuditLoggingMiddleware` is included in the application stack but has no tests. The middleware is responsible for logging all mutating (POST/PUT/PATCH/DELETE) operations — a compliance requirement. No test verifies: (1) that the `X-Audit-Logged` header is set on mutating requests, (2) that GET requests are skipped, (3) that engagement_id is extracted from paths correctly, or (4) that anonymous requests are recorded correctly.
+**Description**: `src/mcp/server.py` has 58.2% coverage with 59 missing statements. `src/mcp/tools.py` is not tracked in the coverage run at all, indicating it is never imported during the test suite. The MCP `list_api_keys` function in `src/mcp/auth.py` (lines 129-162) is also uncovered — only `generate_api_key`, `validate_api_key`, and `revoke_api_key` have tests.
 
-**Risk**: Audit trail compliance could silently fail if the middleware is misconfigured or produces incorrect audit records.
+**Risk**: MCP tools expose platform data to external LLM agents. Untested tool implementations could return incorrect engagement data or fail silently, causing hallucination or data leakage in downstream LLM workflows.
 
-**Recommendation**: Add tests for audit middleware verifying header presence on POST/PUT/DELETE, absence on GET, and engagement_id path extraction logic.
+**Recommendation**: Add tests for `list_api_keys` (active-only filter, include_inactive flag), MCP tool execution paths via `/mcp/tools/call`, and verify the `TOOL_REGISTRY` entries are callable and return correct response shapes.
+
+---
+
+### [HIGH] COVERAGE: Evidence Module — 32.6% of Module Untested
+
+**File**: `src/evidence/parsers/` (9 of 17 parser files have no dedicated test)
+**Agent**: D1 (Test Coverage Auditor)
+**Evidence**:
+```python
+# src/evidence/parsers/document_parser.py: 29.7% coverage
+# No test files exist for:
+# bpmn_parser.py, communication_parser.py, document_parser.py,
+# image_parser.py, job_aids_parser.py, km4work_parser.py,
+# regulatory_parser.py, structured_data_parser.py, factory.py
+```
+**Description**: The evidence module has 67.4% overall coverage with 236 missing statements. Nine evidence parsers have no dedicated test files. The `document_parser.py` (29.7% covered) handles PDF, Word, and spreadsheet files — the most common evidence type in consulting engagements. The `factory.py` (which routes files to the correct parser) has no tests. The `dedup.py` is at 0%. While `test_extended_parsers.py` and `test_parsers.py` provide some indirect coverage, the full parser behavior for complex inputs (malformed XML in BPMN, corrupted PDFs, large CSV files) is untested.
+
+**Risk**: Evidence parser failures for common file types will not be caught before deployment. A malformed BPMN file or a large spreadsheet could cause unhandled exceptions in the pipeline.
+
+**Recommendation**: Add tests for `BpmnParser` with valid and invalid BPMN XML, `DocumentParser` with a minimal PDF mock, `factory.py` classify_by_extension for all 17 supported extensions, and `dedup.py` hash matching logic.
 
 ---
 
 ### [HIGH] COVERAGE: Per-User Rate Limiter — Untested
 
-**File**: `src/core/rate_limiter.py:20`
+**File**: `src/core/rate_limiter.py`
 **Agent**: D1 (Test Coverage Auditor)
 **Evidence**:
 ```python
@@ -295,181 +271,161 @@ async def copilot_rate_limit(
     Uses Redis sorted sets with timestamps as scores for sliding window.
     Falls back to allowing the request if Redis is unavailable.
     """
+    redis_client = getattr(request.app.state, "redis_client", None)
+    if not redis_client:
+        return user  # fail-open when Redis unavailable
 ```
-**Description**: The copilot rate limiter uses a Redis sliding window. No tests verify: (1) that requests beyond the limit are rejected with 429, (2) that the Redis-unavailable fallback allows requests (the stated fail-open behavior), (3) that different users have independent limits, or (4) that the sliding window correctly expires old entries.
+**Description**: `src/core/rate_limiter.py` has no tests. The copilot rate limiter uses a Redis sliding window sorted set — a stateful mechanism that requires specific test scenarios. The fail-open fallback (when Redis is unavailable) is undocumented from a testing perspective. The `test_rate_limiter.py` file tests only the in-memory LLM rate limiter in `simulations.py` — a different module entirely.
 
-**Risk**: Rate limiting failure could allow unlimited LLM API calls per user, incurring unbounded cost.
+**Risk**: Unbounded LLM API calls could occur if the rate limiter regresses. The fail-open vs. fail-closed behavior on Redis unavailability affects security posture (fail-open is correct here for availability but needs to be explicit).
 
-**Recommendation**: Add `tests/core/test_rate_limiter.py` covering: under-limit allowed, over-limit rejected (429), Redis unavailable fallback (allow), per-user isolation.
+**Recommendation**: Add `tests/core/test_rate_limiter.py` with mocked Redis pipeline: under-limit request allowed, over-limit raises 429, Redis unavailable returns user (fail-open), per-user key isolation.
 
 ---
 
-### [HIGH] COVERAGE: Monitoring Worker and Event Pipeline — Untested
+### [MEDIUM] COVERAGE: Agents Module — 52.9% Coverage
 
-**File**: `src/monitoring/worker.py`
+**File**: `src/agents/recommender.py`
 **Agent**: D1 (Test Coverage Auditor)
 **Evidence**:
 ```python
-async def process_task(task_data: dict[str, Any]) -> dict[str, Any]:
-    task_type = task_data.get("task_type", "unknown")
-    if task_type == "collect":
-        from src.monitoring.collector import collect_evidence
-        return await collect_evidence(...)
+# src/agents/recommender.py: 0% coverage (32 missing statements)
+# The agent recommender is only tested indirectly via the graph tests
 ```
-**Description**: Eight monitoring subsystem modules have no tests: `worker.py`, `collector.py`, `detector.py`, `events.py`, `notification.py`. The `test_monitoring.py` file covers only `config.py`, `baseline.py`, `scheduler.py`, `comparator.py`, and `alerting.py`. The worker dispatch loop, event publishing, and notification delivery paths are completely untested.
+**Description**: `src/agents/recommender.py` has 0% coverage across 32 statements. The agents module overall is at 52.9% (36/68 statements). The recommender generates actionable recommendations from gap analysis results — a core output of the platform. No tests verify recommendation generation, prioritization logic, or the recommendation data structure.
 
-**Risk**: Silent failures in the monitoring pipeline would not be caught in CI. Monitoring workers could silently drop tasks or fail to deliver alerts.
+**Risk**: Recommendation quality issues (wrong priority, missing recommendations, invalid output structure) are not caught by CI.
 
-**Recommendation**: Add tests for `submit_monitoring_task`, `process_task` dispatch routing, and notification delivery pathways with mocked Redis streams.
+**Recommendation**: Add `tests/agents/test_recommender.py` with basic unit tests for recommendation generation from mock gap data, priority scoring, and empty input handling.
 
 ---
 
-### [HIGH] MOCK_QUALITY: Evidence Upload Intelligence Pipeline — Over-Mocked
+### [MEDIUM] COVERAGE: Simulation Service and Suggester — Not in Coverage Run
 
-**File**: `tests/evidence/test_pipeline_integration.py:7`
+**File**: `src/simulation/service.py`, `src/simulation/suggester.py`, `src/simulation/coverage.py`
 **Agent**: D1 (Test Coverage Auditor)
 **Evidence**:
 ```python
-from unittest.mock import AsyncMock, MagicMock, patch
+# src/simulation/suggester.py — uses Claude API for LLM suggestions
+import anthropic
 
+def _sanitize_text(text: str, max_len: int) -> str:
+    """Strip control characters and truncate to max_len."""
+```
+**Description**: Five simulation files (`service.py`, `suggester.py`, `coverage.py`, `epistemic.py`, `financial.py`, `ranking.py`) are not tracked in the coverage run at all — they are never imported during the test suite. The coverage.json shows only 4 simulation files tracked (engine, impact, scenarios, `__init__`). The LLM suggester (`suggester.py`) calls the Anthropic API and performs input sanitization — the sanitization logic is untested. The financial modeling (`financial.py`) and epistemic uncertainty (`epistemic.py`) modules perform numerical calculations that should have unit tests.
+
+**Risk**: The simulation suggestion feature and financial calculations run completely untested. The `_sanitize_text` function in `suggester.py` that removes control characters before sending to the LLM is untested, which could allow prompt injection via control characters.
+
+**Recommendation**: Add tests for `_sanitize_text` input sanitization in `suggester.py`, financial calculation functions in `financial.py`, evidence coverage classification thresholds in `coverage.py`, and the `scenario_to_response` serializer in `service.py`.
+
+---
+
+### [MEDIUM] TEST_QUALITY: Over-Mocking in Pipeline Integration Tests
+
+**File**: `tests/evidence/test_pipeline_integration.py`
+**Agent**: D1 (Test Coverage Auditor)
+**Evidence**:
+```python
 async def test_builds_nodes_from_entity_metadata(self) -> None:
-    """Should create graph nodes from fragment entity metadata."""
-    ...
     frag = MagicMock(spec=EvidenceFragment)
     frag.content = content
     frag.metadata_json = None
+    frag.id = uuid.uuid4()
+    frag.evidence_id = uuid.uuid4()
+    # Neo4j driver, session, everything is mocked
+    mock_driver = AsyncMock()
+    with patch("src.semantic.builder.AsyncGraphDatabase") as mock_db:
+        ...
 ```
-**Description**: The intelligence pipeline integration tests mock `EvidenceFragment` objects with `MagicMock(spec=EvidenceFragment)` and wire in mocked Neo4j drivers. While this is appropriate for unit isolation, the critical path of `ingest_evidence` → `extract_fragment_entities` → `build_fragment_graph` → `run_semantic_bridges` is never tested end-to-end with real objects flowing through. The session is always mocked, meaning database interaction patterns (flush order, refresh behavior) are not validated.
+**Description**: The evidence pipeline integration tests mock `EvidenceFragment` with `MagicMock(spec=EvidenceFragment)` and wire in mocked Neo4j drivers and database sessions. While appropriate for unit isolation, these tests do not exercise the actual data flow through multiple pipeline stages. The critical path of `ingest_evidence` → `extract_entities` → `build_fragment_graph` → `run_semantic_bridges` is never tested end-to-end with real domain objects flowing through. Database flush ordering, SQLAlchemy lazy-loading, and Neo4j transaction boundaries are not validated.
 
-**Risk**: Structural integration bugs between the pipeline stages will not be caught in CI.
+**Risk**: Structural integration bugs between pipeline stages will not be caught by the mocked unit tests. A real integration bug (e.g., flushing session before foreign key constraint satisfies) would only surface in deployment.
 
-**Recommendation**: Add at least one integration test that instantiates `EvidenceItem` and `EvidenceFragment` directly (without MagicMock) and runs the full pipeline with only the Neo4j driver mocked.
+**Recommendation**: Add at least one semi-integration test that instantiates real `EvidenceItem` and `EvidenceFragment` objects (not MagicMock) and runs the full pipeline with only Neo4j mocked. This validates ORM interaction patterns without requiring a live database.
 
 ---
 
-### [HIGH] COVERAGE: Frontend Components — Critically Undertested
+### [MEDIUM] TEST_QUALITY: Trivial `assert is not None` Assertions
 
-**File**: `frontend/src/` (65 source files)
-**Agent**: D1 (Test Coverage Auditor)
-**Evidence**:
-```
-frontend/src/__tests__/useDataLoader.test.ts     (1 hook)
-frontend/src/__tests__/api.test.ts               (API client)
-frontend/src/hooks/__tests__/useDebouncedValue.test.ts  (1 hook)
-frontend/src/lib/__tests__/api.test.ts           (API lib)
-frontend/src/lib/__tests__/validation.test.ts    (validation)
-```
-**Description**: The frontend has 65 TypeScript/TSX source files but only 5 unit test files. All React page components (`dashboard/page.tsx`, `evidence/page.tsx`, `admin/page.tsx`, `portal/[engagementId]/page.tsx`, etc.) have zero unit tests. There are E2E Playwright specs that provide some coverage, but these require a running server and are not part of the standard CI unit test suite.
-
-**Risk**: React component regressions (broken state management, missing error boundaries, incorrect RBAC UI enforcement) go undetected.
-
-**Recommendation**: Add React Testing Library unit tests for at minimum: evidence upload component, dashboard engagement list, auth login flow, and admin page (verifying it does not render for non-admins).
-
----
-
-### [MEDIUM] COVERAGE: Semantic Bridges — Entirely Untested
-
-**File**: `src/semantic/bridges/` (4 modules)
-**Agent**: D1 (Test Coverage Auditor)
-**Evidence**:
-```
-src/semantic/bridges/communication_deviation.py  — 0 tests
-src/semantic/bridges/evidence_policy.py          — 0 tests
-src/semantic/bridges/process_evidence.py         — 0 tests
-src/semantic/bridges/process_tom.py              — 0 tests
-```
-**Description**: The four semantic bridge modules that connect evidence to process models, policies, and TOM alignment have zero tests. These are the core intelligence components that produce the platform's primary analytical outputs.
-
-**Risk**: Incorrect bridge logic silently produces wrong process intelligence recommendations.
-
-**Recommendation**: Add tests for each bridge covering: basic relationship creation, empty input handling, and type validation.
-
----
-
-### [MEDIUM] COVERAGE: Integration Connectors — Entirely Untested
-
-**File**: `src/integrations/` (7 connector modules)
-**Agent**: D1 (Test Coverage Auditor)
-**Evidence**:
-```
-src/integrations/camunda.py     — 0 tests
-src/integrations/celonis.py     — 0 tests
-src/integrations/salesforce.py  — 0 tests
-src/integrations/sap.py         — 0 tests
-src/integrations/servicenow.py  — 0 tests
-src/integrations/soroco.py      — 0 tests
-src/integrations/field_mapping.py — 0 tests
-```
-**Description**: While external connector integration tests are expected to require external service mocks, none of the connectors have even basic unit tests for: field mapping, error handling, authentication flow, or response parsing.
-
-**Risk**: Connector bugs go undetected until deployed against real external systems.
-
-**Recommendation**: Add unit tests for each connector mocking the HTTP client. At minimum test: successful connection, auth error handling, and field mapping correctness.
-
----
-
-### [MEDIUM] TEST_QUALITY: Trivial Assertions in Critical Tests
-
-**File**: `tests/pov/test_generator.py:76`
+**File**: `tests/pov/test_generator.py`, `tests/simulation/test_simulation.py`
 **Agent**: D1 (Test Coverage Auditor)
 **Evidence**:
 ```python
+# tests/pov/test_generator.py
 assert result.process_model is not None
 assert result.process_model.bpmn_xml is not None
 assert model.metadata_json is not None
 assert model.generated_at is not None
+
+# tests/simulation/test_simulation.py
+assert result is not None
+assert "metrics" in result
 ```
-**Description**: Multiple test files use `assert X is not None` as their primary assertion. While not universally wrong, in several cases these tests could assert the actual content type, format, or value range of the result. The POV generator tests confirm that a `process_model` exists but do not verify that the BPMN XML is valid, contains expected elements, or follows correct structure.
+**Description**: Multiple test files use `assert X is not None` as their primary assertion for complex output objects. In the POV generator tests, the BPMN XML content is never validated — an empty string `""` or a minimal `<bpmn:definitions/>` would both pass. In simulation tests, the presence of a `"metrics"` key is checked but the actual metric values, types, or ranges are not asserted.
 
-**Risk**: Tests pass even when the actual output is malformed (e.g., empty BPMN string is not None but is invalid).
+**Risk**: Tests pass even when output is structurally malformed. The POV generator could produce invalid BPMN and CI would not catch it.
 
-**Recommendation**: Replace `assert X is not None` assertions with meaningful content checks where the output structure is known.
+**Recommendation**: Replace `assert X is not None` with content-aware assertions: for BPMN XML, assert `bpmn_xml.startswith("<bpmn:definitions")` or parse with lxml. For metrics, assert expected keys exist with expected numeric ranges.
 
 ---
 
-### [MEDIUM] COVERAGE: MCP Server and Tools — Untested
+### [MEDIUM] COVERAGE: Frontend Components — 13 Test Files for 99 Source Files
 
-**File**: `src/mcp/server.py`, `src/mcp/tools.py`
+**File**: `frontend/src/` (99 source files)
 **Agent**: D1 (Test Coverage Auditor)
 **Evidence**:
 ```
-src/mcp/server.py   — 0 tests
-src/mcp/tools.py    — 0 tests
-src/mcp/schemas.py  — 0 tests
-```
-**Description**: The MCP (Model Context Protocol) server and tool implementations have no tests, only `src/mcp/auth.py` has coverage. The MCP tools expose platform capabilities to external LLM agents — untested tool implementations could return incorrect data or fail silently.
+frontend/__tests__/ (13 files total):
+  AppShell.test.tsx, BPMNViewer.test.tsx, ErrorBoundary.test.tsx,
+  EvidenceHeatmap.test.tsx, EvidenceUploader.test.tsx, GraphExplorer.test.tsx,
+  HealthStatus.test.tsx, Sidebar.test.tsx, SuggestionCard.test.tsx,
+  api.test.ts, api-extended.test.ts, taskmining-api.test.ts,
+  taskmining-pages.test.tsx
 
-**Risk**: MCP tool regressions would not be caught in CI, potentially exposing incorrect data to LLM consumers.
+Missing unit tests for (sample):
+  AnnotationPanel.tsx, ConfidenceBadge.tsx, GapTable.tsx,
+  KPICard.tsx, RegulatoryOverlay.tsx, RoadmapTimeline.tsx,
+  TOMDimensionCard.tsx, PageLayout.tsx, Legend.tsx
+  + 31 page.tsx files with zero tests
+```
+**Description**: The frontend has 99 source TypeScript/TSX files but only 13 unit test files. Nine business logic components have no tests: `AnnotationPanel`, `ConfidenceBadge`, `GapTable`, `KPICard`, `RegulatoryOverlay`, `RoadmapTimeline`, `TOMDimensionCard`, `PageLayout`, `Legend`. All 31 Next.js page components have zero unit tests. The Playwright E2E specs (25 files) provide page-load validation but not component behavior testing.
+
+**Risk**: React component regressions in RBAC-gated UI elements (e.g., `AnnotationPanel` should only render for authorized roles), data formatting in `GapTable`, or confidence score display in `ConfidenceBadge` will not be caught by CI.
+
+**Recommendation**: Add React Testing Library tests for at minimum: `GapTable` (renders correct columns, handles empty data), `ConfidenceBadge` (color thresholds), `RegulatoryOverlay` (correct regulation labels), and the portal upload page (disabled state without engagement ID).
 
 ---
 
-### [LOW] E2E: Playwright E2E Tests Are Superficial
+### [LOW] COVERAGE: E2E Tests Are Structural Rather Than Behavioral
 
-**File**: `frontend/e2e/evidence.spec.ts`
+**File**: `frontend/e2e/evidence.spec.ts`, `frontend/e2e/admin.spec.ts`
 **Agent**: D1 (Test Coverage Auditor)
 **Evidence**:
 ```typescript
 test("evidence page loads with heading", async ({ page }) => {
   await page.goto("/evidence");
-  await expect(page.getByRole("heading", { name: "Evidence Upload" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Evidence Upload" })
+  ).toBeVisible();
 });
-
 test("upload area is disabled without engagement ID", async ({ page }) => {
   await page.goto("/evidence");
-  await expect(page.getByText("Enter a valid engagement ID above...")).toBeVisible();
+  await expect(
+    page.getByText("Enter a valid engagement ID above to enable file uploads")
+  ).toBeVisible();
 });
 ```
-**Description**: The Playwright E2E specs primarily test that pages load and contain expected UI elements, but do not test complete user journeys (upload a file, verify it appears in the list). They do not test error states, authentication flows, or cross-page workflows. The auth/login E2E flow is absent.
+**Description**: The 25 Playwright E2E spec files primarily test that pages load and contain expected headings or UI elements. They do not test complete user journeys: authentication → upload file → verify in list, or admin login → execute retention cleanup → verify result. The login flow E2E is absent. No E2E test sends an actual HTTP request to the backend.
 
-**Risk**: E2E tests provide false confidence — they pass even if the core functionality is broken.
+**Risk**: E2E tests provide a false confidence floor — they pass even if the core workflows are broken, as long as the page renders its static heading.
 
-**Recommendation**: Add flow-based E2E tests: (1) login → upload evidence → verify in list, (2) admin creates user → new user logs in, (3) evidence upload fails with correct error message for invalid file type.
+**Recommendation**: Add flow-based E2E tests: (1) user logs in via `/api/v1/auth/token` and accesses an authenticated page, (2) evidence upload with a real file via the uploader component, (3) admin page shows 403 UI for non-admin credentials.
 
 ---
 
-### [LOW] CONFIG: No Coverage Thresholds Enforced in CI
+### [LOW] CONFIG: No Coverage Threshold Enforced in CI
 
-**File**: `pyproject.toml`
+**File**: `/Users/proth/repos/kmflow/pyproject.toml`
 **Agent**: D1 (Test Coverage Auditor)
 **Evidence**:
 ```toml
@@ -477,31 +433,35 @@ test("upload area is disabled without engagement ID", async ({ page }) => {
 testpaths = ["tests"]
 asyncio_mode = "auto"
 addopts = "-v --tb=short"
+# No --cov-fail-under threshold configured
 ```
-**Description**: The pytest configuration has no `--cov-fail-under` threshold. Coverage is measured manually but not enforced in the CI pipeline. This means coverage regressions are silent.
+**Description**: The pytest configuration has no `--cov-fail-under` threshold. Coverage is measured and reported but not gated. A developer can merge a PR that drops coverage from 84% to 60% without any CI failure. The SDLC quality gate `coverage_above_80` requires manual verification rather than automated enforcement.
 
-**Risk**: Developers can merge PRs that reduce coverage below any threshold without CI failure.
+**Risk**: Coverage regressions are silent. Future development could erode coverage incrementally below the 80% threshold without triggering CI failure.
 
-**Recommendation**: Add `--cov=src --cov-fail-under=80 --cov-report=term-missing` to `addopts` in `pyproject.toml`. Target 90% as the mandatory gate.
+**Recommendation**: Add `--cov=src --cov-fail-under=82 --cov-report=term-missing` to `addopts`. Set an initial threshold of 82% (2% above current) to prevent regression while allowing the existing gaps to be addressed iteratively.
 
 ---
 
-## Critical Untested Paths Summary
+## Risk Assessment
 
-| Path | Criticality | Status |
-|------|-------------|--------|
-| Evidence upload API endpoint (`POST /api/v1/evidence/upload`) | CRITICAL | No tests |
-| Token blacklist check after logout | CRITICAL | No unit tests |
-| Admin routes (retention-cleanup, rotate-key) | CRITICAL | No tests |
-| Data retention cleanup logic | CRITICAL | No tests |
-| WebSocket authentication | HIGH | No tests |
-| Audit logging middleware | HIGH | No tests |
-| Per-user rate limiter | HIGH | No tests |
-| Monitoring worker/event pipeline | HIGH | No tests |
-| Semantic bridges (4 modules) | MEDIUM | No tests |
-| Integration connectors (7 modules) | MEDIUM | No tests |
-| MCP server and tools | MEDIUM | No tests |
-| Frontend React components (60+ pages) | HIGH | No unit tests |
+| Finding | Severity | Risk if Left Unaddressed |
+|---------|----------|--------------------------|
+| Monitoring worker/collector/detector: 0% | CRITICAL | Silent monitoring pipeline failures; missed alerts |
+| Core audit logging: 0% | CRITICAL | Undetected audit trail corruption; compliance failure |
+| Evidence deduplication: 0% | CRITICAL | Duplicate evidence ingest; data integrity issues |
+| Auth cookie helpers untested | CRITICAL | CSRF exposure from misconfigured samesite/path attributes |
+| WebSocket: 80.8% untested | HIGH | Auth bypass, memory leak from dead connections |
+| MCP server/tools: 41.8% untested | HIGH | Incorrect data to LLM agents; silent tool failures |
+| Evidence parsers: 9 of 17 untested | HIGH | Parser failures on common file types in production |
+| Per-user rate limiter: untested | HIGH | Unbounded LLM API cost from rate limit regression |
+| Agents recommender: 0% | MEDIUM | Wrong recommendations without CI detection |
+| Simulation suggester (LLM): 0% | MEDIUM | Prompt injection via unsanitized input |
+| Frontend components: 13/99 tested | MEDIUM | UI regressions in RBAC-gated components |
+| Over-mocked integration tests | MEDIUM | Integration bugs hidden by mock seams |
+| Trivial assertions | MEDIUM | Malformed outputs pass CI |
+| E2E tests superficial | LOW | False confidence in user journey coverage |
+| No CI coverage threshold | LOW | Silent coverage regression |
 
 ---
 
@@ -510,20 +470,17 @@ addopts = "-v --tb=short"
 | Severity | Count |
 |----------|-------|
 | CRITICAL | 4 |
-| HIGH | 6 |
-| MEDIUM | 4 |
+| HIGH | 5 |
+| MEDIUM | 6 |
 | LOW | 2 |
-| **Total** | **16** |
+| **Total** | **17** |
 
 ---
 
-## Coverage Rating
+## Overall Coverage Assessment
 
-**Overall**: WARNING — 67.1% file coverage ratio
+**Overall line coverage**: 84.0% — above the 80% CLAUDE.md threshold.
 
-- The file coverage ratio of 67.1% is below the CLAUDE.md stated threshold of 80%.
-- Structural coverage is skewed: well-tested modules (auth, permissions, encryption) create a false impression of breadth.
-- 65 source modules have zero corresponding test files.
-- The most critical data ingestion endpoint has no HTTP-layer tests.
+**Pipeline Status**: BLOCKED — The 84% aggregate obscures zero-coverage in the security audit trail module (`src/core/audit.py`) and the monitoring delivery pipeline (5 modules at 0%). These are not low-risk infrastructure modules; they are compliance and alerting critical paths. The recommendation is to block merge until the four CRITICAL findings are addressed.
 
-**PIPELINE STATUS: BLOCKED** — Coverage is below the 80% gate specified in CLAUDE.md (`coverage_above_80`). The missing test coverage for the evidence upload endpoint and admin routes represents a blocking gap.
+**PIPELINE STATUS: BLOCKED**

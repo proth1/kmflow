@@ -1,308 +1,327 @@
-# B2: Data Integrity Audit Findings
+# B2: Data Integrity Audit Findings (Re-Audit)
 
 **Agent**: B2 (Data Integrity Auditor)
 **Scope**: Database schema design, FK constraints, cascade deletes, migration chain integrity, Neo4j graph model, pgvector usage
-**Date**: 2026-02-20
+**Date**: 2026-02-26
+**Previous Audit**: 2026-02-20 (13 findings)
 
-## Summary
+## Remediation Status from Previous Audit
+
+| Previous Finding | Severity | Status |
+|-----------------|----------|--------|
+| MIGRATION-CHAIN: 005/006 branch | CRITICAL | **FIXED** -- 006 now has `down_revision = "005"` |
+| FK-MISSING-ONDELETE: 4 FKs | CRITICAL | **FIXED** -- Migration 020 added ondelete to all 4 |
+| SCHEMA-MISMATCH: LargeBinary vs Vector(768) | HIGH | **FIXED** -- Migration 021 converted column type |
+| NEO4J-INJECTION: Property key injection | HIGH | **FIXED** -- `_validate_property_keys()` regex added |
+| ORPHAN-RISK: Engagement cascades | HIGH | Partially addressed -- see B2-ORM-004 below |
+| MIGRATION-018-ONDELETE: created_by FK | HIGH | **FIXED** -- Migration 020 added SET NULL |
+| MODEL-MIGRATION-DRIFT: ondelete mismatch | MEDIUM | **FIXED** -- Model now matches migration |
+| NULLABLE-OVERUSE: 119 nullable columns | MEDIUM | Open -- no change |
+| INDEX-MISSING: FK columns without indexes | MEDIUM | **FIXED** -- Migrations 022 and 029 added indexes |
+| MISSING-UNIQUE: BestPractice/Benchmark | MEDIUM | **FIXED** -- Migration 022 added unique constraints |
+| ALEMBIC-HARDCODED-CREDS | LOW | **FIXED** -- Password changed to `changeme`, env var note added |
+| PGVECTOR-DIMENSION: Hardcoded 768 | LOW | Open -- informational, no code change |
+| NEO4J-READ-TRANSACTION: session.run() | LOW | **FIXED** -- Now uses `execute_read()` |
+
+**Resolved**: 10 of 13 findings
+**Open/Residual**: 3 (1 partially addressed, 2 accepted risk)
+
+---
+
+## Summary (Re-Audit)
 
 | Severity | Count |
 |----------|-------|
-| CRITICAL | 2     |
-| HIGH     | 4     |
-| MEDIUM   | 4     |
+| CRITICAL | 0     |
+| HIGH     | 2     |
+| MEDIUM   | 5     |
 | LOW      | 3     |
-| **Total** | **13** |
-
----
-
-## CRITICAL Findings
-
-### [CRITICAL] MIGRATION-CHAIN: Migration 005 and 006 both descend from 004 — branched revision chain
-
-**File**: `alembic/versions/005_create_security_tables.py:17` and `alembic/versions/006_create_pov_tables.py:19`
-**Agent**: B2 (Data Integrity Auditor)
-**Evidence**:
-```python
-# 005_create_security_tables.py
-down_revision: Union[str, None] = "004"
-
-# 006_create_pov_tables.py
-down_revision: Union[str, None] = "004"
-```
-**Description**: Both migration 005 and 006 declare `down_revision = "004"`, creating a branched migration tree. Alembic supports multi-head migrations, but running `alembic upgrade head` with two heads will fail unless the user explicitly merges them or specifies which head. The remaining chain (007 -> 006, 008 -> 007, etc.) proceeds linearly from 006, leaving 005 as an orphaned branch that may or may not have been applied.
-**Risk**: Running `alembic upgrade head` on a fresh database will fail with "Multiple head revisions" error. If 005 was applied before 006 (which depends only on 004, not 005), the `users` and `engagement_members` tables may exist or not depending on run order. Migration 007 (regulatory tables) depends on 006 but NOT 005, so the `users` table could be missing when later migrations reference it (e.g., 011 creates `mcp_api_keys` with FK to `users`).
-**Recommendation**: Create a merge migration that declares `down_revision = ("005", "006")` or fix 006 to have `down_revision = "005"` so the chain is linear: 004 -> 005 -> 006 -> 007 -> ...
-
----
-
-### [CRITICAL] FK-MISSING-ONDELETE: Four ForeignKey definitions lack ondelete behavior
-
-**File**: `src/core/models.py:930-931, 948, 1484`
-**Agent**: B2 (Data Integrity Auditor)
-**Evidence**:
-```python
-# Line 930 — MetricReading.metric_id
-metric_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("success_metrics.id"), nullable=False)
-
-# Line 931 — MetricReading.engagement_id
-engagement_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("engagements.id"), nullable=False)
-
-# Line 948 — Annotation.engagement_id
-engagement_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("engagements.id"), nullable=False)
-
-# Line 1484 — AlternativeSuggestion.created_by
-created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-```
-**Description**: These four ForeignKey columns lack `ondelete=` specification. The default PostgreSQL behavior is `NO ACTION` (or `RESTRICT`), which will prevent parent row deletion entirely. For `MetricReading` and `Annotation`, deleting an engagement will fail with a FK violation. For `AlternativeSuggestion.created_by`, deleting a user will fail.
-**Risk**: Engagement deletion (a core business operation for GDPR compliance and data retention) will fail silently at the database level if any metric readings or annotations exist for that engagement. The ORM-level `cascade="all, delete-orphan"` on the Engagement model does NOT cover these tables because there are no corresponding relationship() definitions on Engagement for MetricReading, Annotation, or AlternativeSuggestion.
-**Recommendation**: Add `ondelete="CASCADE"` to all four FK definitions. Also add corresponding `relationship()` with `cascade="all, delete-orphan"` on the Engagement model for MetricReading and Annotation, and on the User model for AlternativeSuggestion (or use `ondelete="SET NULL"` if the record should survive user deletion).
+| **Total** | **10** |
 
 ---
 
 ## HIGH Findings
 
-### [HIGH] SCHEMA-MISMATCH: Migration 010 stores embedding as LargeBinary but model uses Vector(768)
+### [HIGH] B2-NEO4J-001: Neo4j graph data not cleaned when PostgreSQL engagement is deleted
 
-**File**: `alembic/versions/010_create_patterns_simulation_tables.py:52` vs `src/core/models.py:1258`
+**File**: `src/core/retention.py:57-109` and `src/api/routes/engagements.py:257-277`
 **Agent**: B2 (Data Integrity Auditor)
 **Evidence**:
 ```python
-# Migration 010 — pattern_library_entries table
-sa.Column("embedding", sa.LargeBinary(), nullable=True),  # pgvector would be better
-
-# ORM model — PatternLibraryEntry
-embedding: Mapped[list[float] | None] = mapped_column(Vector(768), nullable=True)
+# src/core/retention.py:57-64
+async def cleanup_expired_engagements(session: AsyncSession) -> int:
+    """Delete evidence data for expired engagements and archive the engagement record.
+    For each expired engagement:
+    1. Delete evidence fragments (FK child of evidence_items).
+    2. Delete evidence items.
+    3. Delete engagement-scoped audit logs.
+    4. Mark engagement as ARCHIVED (engagement record kept for reference).
+    """
 ```
-**Description**: The migration creates the `embedding` column on `pattern_library_entries` as `LargeBinary`, but the ORM model declares it as `Vector(768)` (pgvector). These are incompatible column types. Attempting to use the ORM to store or query embeddings on this table will either fail or produce corrupt data, depending on whether a subsequent migration altered the column type (none found).
-**Risk**: Pattern similarity search on `pattern_library_entries` is broken. Any attempt to use cosine distance operators (`<=>`) on a `LargeBinary` column will raise a PostgreSQL error.
-**Recommendation**: Create a new migration that uses `ALTER COLUMN ... TYPE vector(768) USING embedding::vector(768)` to convert the column, or add an HNSW index like the one on `evidence_fragments`.
+**Description**: When an engagement is deleted or its data is cleaned up via the retention process, all PostgreSQL tables are cascaded properly via `ondelete="CASCADE"`. However, the engagement's knowledge graph nodes and relationships in Neo4j are never cleaned up. The `KnowledgeGraphService` in `src/semantic/graph.py` has no `delete_engagement_subgraph()` method. All Neo4j nodes carry an `engagement_id` property, so they become orphaned references to a deleted PostgreSQL engagement.
+**Risk**: Neo4j accumulates orphaned graph data indefinitely. This violates data minimization requirements for GDPR compliance (engagement retention policy cleanup explicitly deletes PostgreSQL data but forgets Neo4j). Stale graph data for deleted engagements could surface in cross-engagement search results or graph traversals if an engagement_id filter is not strictly applied.
+**Recommendation**: Add a `delete_engagement_subgraph(engagement_id)` method to `KnowledgeGraphService` that executes `MATCH (n {engagement_id: $eid}) DETACH DELETE n`. Call it from `cleanup_expired_engagements()` and from the engagement archive/delete route before committing PostgreSQL changes.
 
 ---
 
-### [HIGH] NEO4J-INJECTION: Dynamic property keys in Cypher queries allow property injection
+### [HIGH] B2-MODEL-002: ConsentRecord model-migration type mismatch for consent_type column
 
-**File**: `src/semantic/graph.py:175-176`
+**File**: `src/taskmining/consent.py:69` vs `alembic/versions/028_create_consent_records_table.py:37`
 **Agent**: B2 (Data Integrity Auditor)
 **Evidence**:
 ```python
-set_clauses = ", ".join(f"n.{k} = ${k}" for k in props)
-query = f"CREATE (n:{label}) SET {set_clauses} RETURN n.id AS id"
+# src/taskmining/consent.py:69 (ORM model)
+consent_type: Mapped[ConsentType] = mapped_column(Enum(ConsentType), nullable=False)
+
+# alembic/versions/028_create_consent_records_table.py:37 (migration)
+sa.Column("consent_type", sa.String(50), nullable=False),
 ```
-**Description**: While the `label` is validated against `VALID_NODE_LABELS` (good), and values are passed as parameters (good), the property **keys** from the `props` dict are interpolated directly into the Cypher query string as `n.{k}`. If a caller passes a property key containing Cypher syntax (e.g., `"id} DETACH DELETE n //"`), it would be injected into the query. The same pattern appears at lines 232 and 284.
-**Risk**: If any upstream code passes user-controlled property keys to `create_node()`, `find_nodes()`, or `create_relationship()`, an attacker could inject arbitrary Cypher. Currently the `properties` dict comes from internal service code which reduces exploitability, but the service API has no validation on property key names.
-**Recommendation**: Add a property key validation function that restricts keys to `^[a-zA-Z_][a-zA-Z0-9_]*$` (valid Cypher identifiers). Apply it before building the SET clause.
-
----
-
-### [HIGH] ORPHAN-RISK: ProcessModel has no cascade relationship from Engagement for 6+ dependent tables
-
-**File**: `src/core/models.py:502-503`
-**Agent**: B2 (Data Integrity Auditor)
-**Evidence**:
-```python
-# ProcessModel — has relationship to Engagement but no back_populates cascade
-engagement: Mapped[Engagement] = relationship("Engagement")
-
-# Engagement model only cascades: evidence_items, audit_logs, shelf_data_requests
-evidence_items: Mapped[list[EvidenceItem]] = relationship(
-    "EvidenceItem", back_populates="engagement", cascade="all, delete-orphan"
-)
-```
-**Description**: The `Engagement` model defines `cascade="all, delete-orphan"` relationships for only 3 tables: `evidence_items`, `audit_logs`, and `shelf_data_requests`. However, 15+ additional tables have `ForeignKey("engagements.id", ondelete="CASCADE")` including `process_models`, `policies`, `controls`, `regulations`, `target_operating_models`, `monitoring_jobs`, `monitoring_alerts`, `simulation_scenarios`, etc. The database-level `ondelete="CASCADE"` will handle deletion at the PostgreSQL level, but ORM-level operations like `session.delete(engagement)` will not cascade to these child tables because no SQLAlchemy relationship with `cascade="all, delete-orphan"` exists. This creates a dual-path deletion model where behavior depends on whether deletion happens at the ORM or SQL level.
-**Risk**: If code uses `session.delete(engagement)` instead of a raw SQL DELETE, PostgreSQL will still cascade (via FK constraint), but SQLAlchemy's identity map may retain stale references to deleted children, causing `DetachedInstanceError` or `StaleDataError` on subsequent access.
-**Recommendation**: Either (a) add `cascade="all, delete-orphan"` relationships on the Engagement model for all child tables, or (b) document that engagement deletion must always use raw SQL / `session.execute(delete(...))` rather than `session.delete()`.
-
----
-
-### [HIGH] MIGRATION-MISSING-ONDELETE: Migration 018 creates alternative_suggestions.created_by FK without ondelete
-
-**File**: `alembic/versions/018_add_phase4_models.py:101-106`
-**Agent**: B2 (Data Integrity Auditor)
-**Evidence**:
-```python
-sa.Column(
-    "created_by",
-    UUID(as_uuid=True),
-    sa.ForeignKey("users.id"),
-    nullable=False,
-),
-```
-**Description**: The migration for `alternative_suggestions.created_by` references `users.id` without any `ondelete` clause. The ORM model also has `ForeignKey("users.id")` without `ondelete`. This means deleting a user who has created suggestions will fail with a FK constraint violation at the database level.
-**Risk**: User deactivation/deletion workflows will break if the user has created any alternative suggestions. Unlike other FK references that use `ondelete="CASCADE"` or `ondelete="SET NULL"`, this is a hard block.
-**Recommendation**: Add `ondelete="SET NULL"` (and make the column nullable) or `ondelete="CASCADE"` depending on whether suggestion records should be preserved after user deletion.
+**Description**: The ORM model defines `consent_type` as `Enum(ConsentType)`, which creates a PostgreSQL ENUM type (e.g., `consenttype`). However, the migration creates it as `sa.String(50)`, which is a plain VARCHAR. These are fundamentally different column types. When `alembic upgrade` runs, it creates a VARCHAR column. When the ORM inserts a row, SQLAlchemy will attempt to write an enum value into a VARCHAR column. While this may work silently (PostgreSQL will accept the string), an `alembic autogenerate` will detect a type mismatch and propose a migration to change String to Enum, indicating the schema is inconsistent.
+**Risk**: Running `alembic check` or `alembic revision --autogenerate` will always detect drift. If the column is ever properly converted to Enum, existing string values may fail the type migration if they don't match enum members. Additionally, no CHECK constraint exists on the VARCHAR column to enforce valid values at the database level, so any arbitrary string up to 50 characters can be stored.
+**Recommendation**: Either (a) change the migration to use `sa.Enum(ConsentType, values_callable=...)` to match the model, or (b) change the model to use `mapped_column(String(50))` to match the migration. The Enum approach is preferred for type safety at the database level.
 
 ---
 
 ## MEDIUM Findings
 
-### [MEDIUM] MIGRATION-MISSING-ONDELETE-MISMATCH: Migration 014 adds ondelete to metric_readings but ORM model lacks it
+### [MEDIUM] B2-ORPHAN-003: JSON array columns store FK references without referential integrity
 
-**File**: `alembic/versions/014_add_phase8_tables.py:63-69` vs `src/core/models.py:930-931`
+**File**: `src/core/models/governance.py:88`, `src/core/models/pov.py:124,150`, `src/core/models/monitoring.py:287`
 **Agent**: B2 (Data Integrity Auditor)
 **Evidence**:
 ```python
-# Migration 014 — metric_readings correctly has ondelete="CASCADE"
-sa.ForeignKey("success_metrics.id", ondelete="CASCADE"),
-sa.ForeignKey("engagements.id", ondelete="CASCADE"),
+# src/core/models/governance.py:88
+linked_policy_ids: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
 
-# ORM model — MetricReading lacks ondelete
-metric_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("success_metrics.id"), nullable=False)
-engagement_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("engagements.id"), nullable=False)
+# src/core/models/pov.py:124
+evidence_ids: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
+
+# src/core/models/monitoring.py:287
+deviation_ids: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
 ```
-**Description**: The migration correctly specifies `ondelete="CASCADE"` for both FK columns, so the database behavior is correct. However, the ORM model definition lacks `ondelete`. This is a model-vs-migration drift. If someone regenerates migrations from the ORM model (autogenerate), the ondelete clause would be lost.
-**Risk**: Medium — the database is currently correct, but model drift could cause future migration issues.
-**Recommendation**: Update the ORM model to match the migration: add `ondelete="CASCADE"` to both FK definitions.
+**Description**: Four columns across three model files store lists of UUID references as JSON arrays instead of using proper junction tables with foreign key constraints. `Control.linked_policy_ids` references `policies.id`, `ProcessElement.evidence_ids` and `Contradiction.evidence_ids` reference `evidence_items.id`, and `MonitoringAlert.deviation_ids` references `process_deviations.id`. None of these references are enforced by the database. When a referenced record is deleted (via CASCADE on the parent engagement), the JSON arrays silently retain stale UUIDs.
+**Risk**: Application code that resolves these UUID arrays will either (a) get empty results for deleted records, silently losing data, or (b) raise 404/null errors if it expects the referenced records to exist. The stale UUIDs can never be cleaned up without scanning every row that contains JSON arrays.
+**Recommendation**: For each JSON array column, create a proper junction table (e.g., `control_policies`, `element_evidence`, `alert_deviations`) with foreign keys and appropriate `ondelete` behavior. If the JSON approach is intentional (for denormalization performance), document the trade-off and add a cleanup job that scrubs stale IDs.
 
 ---
 
-### [MEDIUM] NULLABLE-OVERUSE: 119 nullable=True columns across ~40 models
+### [MEDIUM] B2-ORM-004: Engagement model lacks ORM cascade for 15+ child tables
 
-**File**: `src/core/models.py` (throughout)
+**File**: `src/core/models/engagement.py:77-85`
 **Agent**: B2 (Data Integrity Auditor)
 **Evidence**:
 ```python
-# Examples of columns that may warrant NOT NULL
-description: Mapped[str | None] = mapped_column(Text, nullable=True)       # Engagement
-metadata_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)    # Many tables
-config_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)      # IntegrationConnection
-```
-**Description**: The models contain 119 `nullable=True` column definitions. While many are legitimately optional (file_path, source_date, metadata_json), some represent a permissive schema that could allow incomplete records. Key examples: `Engagement.description` (every engagement should have a description), `IntegrationConnection.config_json` (a connection without config is useless), and widespread nullable JSON columns that default to empty dicts but accept NULL.
-**Risk**: Application code must handle both NULL and empty values for JSON columns, increasing complexity. NULL JSON columns cannot use JSON operators without COALESCE, which is easy to forget.
-**Recommendation**: Audit nullable columns and set `server_default="'{}'"` for JSON columns that default to `list` or `dict` in the ORM, converting them to NOT NULL with an empty JSON default.
-
----
-
-### [MEDIUM] INDEX-MISSING: Several frequently queried FK columns lack indexes
-
-**File**: `src/core/models.py`
-**Agent**: B2 (Data Integrity Auditor)
-**Evidence**:
-```python
-# EvidenceFragment.evidence_id — no index defined (line 346-349)
-evidence_id: Mapped[uuid.UUID] = mapped_column(
-    UUID(as_uuid=True),
-    ForeignKey("evidence_items.id", ondelete="CASCADE"),
-    nullable=False,
+# src/core/models/engagement.py:77-85 -- only 3 ORM cascades defined
+evidence_items: Mapped[list["EvidenceItem"]] = relationship(
+    "EvidenceItem", back_populates="engagement", cascade="all, delete-orphan"
 )
-# No index on evidence_fragments.evidence_id in model or migration 001
+audit_logs: Mapped[list["AuditLog"]] = relationship(
+    "AuditLog", back_populates="engagement", passive_deletes=True
+)
+shelf_data_requests: Mapped[list["ShelfDataRequest"]] = relationship(
+    "ShelfDataRequest", back_populates="engagement", cascade="all, delete-orphan"
+)
 ```
-**Description**: The `evidence_fragments.evidence_id` column has a ForeignKey but no explicit index. This column is used in joins for pgvector similarity search (`JOIN evidence_items ei ON ef.evidence_id = ei.id` in `embeddings.py:141`). While PostgreSQL creates indexes for primary keys and unique constraints, it does NOT automatically index FK columns. Other missing FK indexes: `evidence_items.duplicate_of_id`, `conformance_results.pov_model_id`, `evidence_lineage.parent_version_id`.
-**Risk**: Full table scans on evidence_fragments when joining to evidence_items during similarity search. With large fragment tables, this will cause significant performance degradation.
-**Recommendation**: Add explicit B-tree indexes on `evidence_fragments.evidence_id`, `evidence_items.duplicate_of_id`, `conformance_results.pov_model_id`, and `evidence_lineage.parent_version_id`.
+**Description**: The Engagement model defines ORM-level `cascade="all, delete-orphan"` for only 3 of its 18+ child tables (evidence_items, audit_logs, shelf_data_requests). All other child tables (process_models, policies, controls, regulations, target_operating_models, gap_analysis_results, monitoring_jobs, monitoring_alerts, process_deviations, simulation_scenarios, conformance_results, etc.) rely solely on PostgreSQL `ondelete="CASCADE"` without ORM cascade. This creates a dual-path deletion model.
+**Risk**: If `session.delete(engagement)` is used instead of `session.execute(delete(Engagement).where(...))`, SQLAlchemy's unit of work will cascade to the 3 configured relationships but leave the other 15+ child tables to PostgreSQL's database-level cascade. This works but the ORM identity map may contain stale references to the database-cascaded children, potentially causing `DetachedInstanceError` on subsequent access within the same session. The `retention.py` cleanup correctly uses raw SQL deletes, but other code paths (e.g., the archive endpoint) could encounter this.
+**Recommendation**: Add `passive_deletes=True` to the remaining child relationships on Engagement (matching the pattern used for audit_logs). This tells SQLAlchemy to let the database handle cascade deletes without loading children into the session. Alternatively, document that engagement deletion must always use `session.execute(delete(...))`.
 
 ---
 
-### [MEDIUM] MISSING-UNIQUE: BestPractice and Benchmark tables lack uniqueness constraints
+### [MEDIUM] B2-CHECK-005: No database-level CHECK constraints on score/confidence columns
 
-**File**: `src/core/models.py:853-886`
+**File**: `src/core/models/evidence.py:97-100`, `src/core/models/pov.py:74,118-119`
 **Agent**: B2 (Data Integrity Auditor)
 **Evidence**:
 ```python
-class BestPractice(Base):
-    __tablename__ = "best_practices"
-    # No unique constraint — same domain+industry+description can be inserted multiple times
+# src/core/models/evidence.py:97-100
+completeness_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+reliability_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+freshness_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+consistency_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
 
-class Benchmark(Base):
-    __tablename__ = "benchmarks"
-    # No unique constraint — same metric_name+industry can be inserted multiple times
+# src/core/models/pov.py:74,118-119
+confidence_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+triangulation_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
 ```
-**Description**: The `best_practices` table has no unique constraint on `(domain, industry, description)` or any natural key. The `benchmarks` table has no unique constraint on `(metric_name, industry)`. These are reference data tables that should prevent duplicate entries. Similarly, `SuccessMetric` has no unique constraint on `(name, category)`.
-**Risk**: Duplicate reference data can silently accumulate, leading to incorrect benchmark comparisons and inflated best practice lists. No deduplication protection at the database level.
-**Recommendation**: Add `UniqueConstraint("metric_name", "industry", name="uq_benchmark_metric_industry")` to Benchmark and `UniqueConstraint("name", "category", name="uq_success_metric_name_category")` to SuccessMetric.
+**Description**: The platform uses numerous 0.0-1.0 score/confidence columns across EvidenceItem (4 quality scores), ProcessModel (confidence_score), ProcessElement (confidence_score, triangulation_score), GapAnalysisResult (severity, confidence), and others. None of these columns have PostgreSQL CHECK constraints to enforce the valid range. The `quality_score` property computes an average assuming values are in [0.0, 1.0], but the database does not enforce this.
+**Risk**: A bug in any service that writes scores (evidence quality scoring, LCD algorithm, gap analysis engine) could write values outside [0.0, 1.0] (e.g., negative scores, scores > 1.0), silently corrupting derived metrics like quality_score averages and priority_score products.
+**Recommendation**: Add CHECK constraints via a new migration: `ALTER TABLE evidence_items ADD CONSTRAINT chk_completeness_score CHECK (completeness_score >= 0 AND completeness_score <= 1)`. Apply the same pattern to all score/confidence columns.
+
+---
+
+### [MEDIUM] B2-ACTOR-006: Actor/author reference columns use plain strings instead of FK to users
+
+**File**: `src/core/models/monitoring.py:130,289`, `src/core/models/audit.py:102`, `src/core/models/pattern.py:71`, `src/core/models/taskmining.py:152,304`
+**Agent**: B2 (Data Integrity Auditor)
+**Evidence**:
+```python
+# src/core/models/monitoring.py:130
+author_id: Mapped[str] = mapped_column(String(255), nullable=False)
+
+# src/core/models/audit.py:102
+actor: Mapped[str] = mapped_column(String(255), nullable=False, default="system")
+
+# src/core/models/pattern.py:71
+granted_by: Mapped[str] = mapped_column(String(255), nullable=False)
+
+# src/core/models/taskmining.py:152
+approved_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+```
+**Description**: Six columns across four model files store user references as plain `String(255)` instead of `ForeignKey("users.id")`. These include `Annotation.author_id`, `AuditLog.actor`, `PatternAccessRule.granted_by`, `MonitoringAlert.acknowledged_by`, `TaskMiningAgent.approved_by`, and `PIIQuarantine.reviewed_by`. These columns accept any string value with no referential integrity to the `users` table.
+**Risk**: If user identifiers change format (e.g., from email to UUID), these columns cannot be automatically migrated. Queries that join to the users table must use string matching instead of FK joins, which is slower and error-prone. Additionally, there is no database-level protection against storing invalid user references.
+**Recommendation**: For new code, use `ForeignKey("users.id", ondelete="SET NULL")` for actor/author columns. For existing data, plan a migration that resolves string values to user UUIDs. If the columns intentionally accept non-user actors (e.g., "system", "scheduler"), document this explicitly and consider a discriminator column.
+
+---
+
+### [MEDIUM] B2-INDEX-007: Missing HNSW index on pattern_library_entries.embedding after type fix
+
+**File**: `alembic/versions/021_fix_pattern_embedding_type.py`
+**Agent**: B2 (Data Integrity Auditor)
+**Evidence**:
+```python
+# alembic/versions/021_fix_pattern_embedding_type.py:19-27
+def upgrade() -> None:
+    # Convert LargeBinary to Vector(768)
+    op.alter_column(
+        "pattern_library_entries",
+        "embedding",
+        type_=Vector(768),
+        postgresql_using="embedding::vector(768)",
+        existing_nullable=True,
+    )
+    # No HNSW index created after type conversion
+```
+**Description**: Migration 021 correctly converted the `pattern_library_entries.embedding` column from `LargeBinary` to `Vector(768)`. However, unlike the `evidence_fragments` table (which has an HNSW index created in migration 001), no HNSW index was created on `pattern_library_entries.embedding`. The `evidence_fragments` table correctly has: `CREATE INDEX ... USING hnsw (embedding vector_cosine_ops)`, but the pattern library table lacks an equivalent index.
+**Risk**: Cosine similarity searches on the pattern library will perform sequential scans instead of using approximate nearest neighbor search. With a growing pattern library, this will become increasingly slow.
+**Recommendation**: Create a new migration that adds: `CREATE INDEX ix_pattern_library_entries_embedding ON pattern_library_entries USING hnsw (embedding vector_cosine_ops)`.
 
 ---
 
 ## LOW Findings
 
-### [LOW] ALEMBIC-HARDCODED-CREDS: alembic.ini contains plaintext database credentials
+### [LOW] B2-NULLABLE-008: JSON columns default to list/dict in ORM but accept NULL in database
 
-**File**: `alembic.ini:6`
-**Agent**: B2 (Data Integrity Auditor)
-**Evidence**:
-```ini
-sqlalchemy.url = postgresql+asyncpg://kmflow:kmflow_dev_password@localhost:5432/kmflow
-```
-**Description**: The alembic.ini file contains a hardcoded database URL with username `kmflow` and password `kmflow_dev_password`. While this is clearly a development credential, this file is checked into version control and the password pattern could be reused in production.
-**Risk**: Low for development, but the file should use environment variable interpolation to prevent credential leakage.
-**Recommendation**: Use `sqlalchemy.url = %(DATABASE_URL)s` with env var interpolation via `alembic/env.py`, or use `config.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"])` in env.py.
-
----
-
-### [LOW] PGVECTOR-DIMENSION: Embedding dimension is consistent at 768 across all usage points
-
-**File**: `src/core/models.py:353, 1258`, `src/rag/embeddings.py:19`, `alembic/versions/001_enable_pgvector_and_create_core_tables.py:116`
+**File**: `src/core/models/engagement.py:66`, `src/core/models/pov.py:124`, `src/core/models/monitoring.py:287`
 **Agent**: B2 (Data Integrity Auditor)
 **Evidence**:
 ```python
-# models.py:353 — EvidenceFragment
+# src/core/models/engagement.py:66
+team: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
+
+# src/core/models/pov.py:124
+evidence_ids: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
+
+# src/core/models/monitoring.py:287
+deviation_ids: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
+```
+**Description**: Multiple JSON columns specify `default=list` (or `default=dict`) at the ORM level but are `nullable=True` at the database level with no `server_default`. This means ORM-created rows get `[]`, but rows inserted by raw SQL, migrations, or external tools get `NULL`. Application code must handle both `None` and `[]` for the same semantic concept of "empty list," adding defensive checks throughout.
+**Risk**: Inconsistency between ORM-created and SQL-created rows. Code like `len(control.linked_policy_ids)` will raise `TypeError` on NULL rows. PostgreSQL JSON operators (`->`, `->>`, `jsonb_array_length`) return NULL on NULL input, not 0.
+**Recommendation**: Add `server_default="'[]'"` (for list columns) or `server_default="'{}'"` (for dict columns) to these JSON columns to ensure the database always provides a non-NULL default. Then change `nullable=True` to `nullable=False`.
+
+---
+
+### [LOW] B2-DIMENSION-009: Embedding dimension 768 hardcoded in 4 separate locations
+
+**File**: `src/core/models/evidence.py:165`, `src/core/models/pattern.py:42`, `src/rag/embeddings.py:19`, `alembic/versions/001_enable_pgvector_and_create_core_tables.py:116`
+**Agent**: B2 (Data Integrity Auditor)
+**Evidence**:
+```python
+# src/core/models/evidence.py:165
 embedding: Mapped[list[float] | None] = mapped_column(Vector(768), nullable=True)
 
-# models.py:1258 — PatternLibraryEntry
+# src/core/models/pattern.py:42
 embedding: Mapped[list[float] | None] = mapped_column(Vector(768), nullable=True)
 
-# rag/embeddings.py:19
+# src/rag/embeddings.py:19
 EMBEDDING_DIMENSION = 768
-
-# Migration 001 — evidence_fragments
-sa.Column("embedding", Vector(768), nullable=True),
 ```
-**Description**: The dimension 768 is hardcoded in 4 separate locations. While currently consistent, this is a maintenance risk if the embedding model changes (e.g., to a 1536-dimension model). The RAG service uses a constant `EMBEDDING_DIMENSION = 768`, but the ORM models and migrations use literal `768`.
-**Risk**: Low — if the embedding dimension changes, updates in multiple files could be missed, causing silent dimension mismatches that corrupt similarity search.
-**Recommendation**: Consider referencing `EMBEDDING_DIMENSION` from a single config location in the ORM models, and documenting the dimension choice.
+**Description**: The embedding dimension 768 is specified as a literal in the two ORM model files and in the migration, and as a named constant in `src/rag/embeddings.py`. The `EMBEDDING_DIMENSION` constant exists but is not used by the model definitions. If the embedding model changes (e.g., to 1536-dimension), four files must be updated simultaneously.
+**Risk**: Low -- the dimension is stable for the current `all-mpnet-base-v2` model. But a model upgrade that changes dimensions requires coordinated updates across models, migrations, and the service layer.
+**Recommendation**: Reference `EMBEDDING_DIMENSION` from the model definitions instead of literal 768, and document the dimension choice in the PRD or architecture docs.
 
 ---
 
-### [LOW] NEO4J-READ-TRANSACTION: Read queries use session.run() instead of execute_read()
+### [LOW] B2-SUCCESSMETRIC-010: SuccessMetric table is not engagement-scoped
 
-**File**: `src/semantic/graph.py:112-115`
+**File**: `src/core/models/monitoring.py:78-95`
 **Agent**: B2 (Data Integrity Auditor)
 **Evidence**:
 ```python
-async def _run_query(self, query: str, parameters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
-    async with self._driver.session() as session:
-        result = await session.run(query, parameters or {})
-        records = await result.data()
-        return records
+# src/core/models/monitoring.py:78-95
+class SuccessMetric(Base):
+    __tablename__ = "success_metrics"
+    __table_args__ = (UniqueConstraint("name", "category", name="uq_success_metric_name_category"),)
+    
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    unit: Mapped[str] = mapped_column(String(100), nullable=False)
+    target_value: Mapped[float] = mapped_column(Float, nullable=False)
+    # No engagement_id column
 ```
-**Description**: Read queries use `session.run()` directly instead of `session.execute_read()`. The write path correctly uses `session.execute_write()` (line 140), but the read path does not use the corresponding read transaction function. In a Neo4j cluster, `execute_read()` routes reads to replica nodes and provides automatic retry on transient errors.
-**Risk**: In a clustered Neo4j deployment, all reads go to the leader node instead of being distributed to replicas. No automatic retry on transient failures for read queries.
-**Recommendation**: Refactor `_run_query` to use `session.execute_read()` for consistency with the write path.
+**Description**: The `SuccessMetric` table defines global metric definitions (name, unit, target_value, category) without an `engagement_id` column. This is intentionally a shared reference table -- metric definitions are reused across engagements, and `MetricReading` links specific readings to both a metric and an engagement. However, this design means that if different engagements need different target values for the same metric (e.g., "Average Cycle Time" with different targets per engagement), it is not possible without creating duplicate metric definitions.
+**Risk**: Low -- the design is intentional and `MetricReading` properly scopes readings to engagements. However, the unique constraint `(name, category)` prevents engagement-specific metric targets.
+**Recommendation**: Document the design decision that `SuccessMetric` is a shared catalog. If engagement-specific targets are needed in the future, consider adding a `MetricTarget` junction table with `(metric_id, engagement_id, target_value)`.
 
 ---
 
-## Architecture Notes (No Finding — Informational)
+## Architecture Notes (Informational)
 
-### Migration Chain Summary
+### Migration Chain (029 migrations)
 ```
-001 (core tables)
-  └─ 002 (team field)
-       └─ 003 (audit_logs)
-            └─ 004 (evidence fields, shelf requests)
-                 ├─ 005 (users, engagement_members)  ← BRANCH HEAD 1
-                 └─ 006 (POV tables)                 ← BRANCH HEAD 2
-                      └─ 007 → 008 → 009 → 010 → 011 → 012 → 013 → 014 → 015 → 016 → 017 → 018 → 019
+001 -> 002 -> 003 -> 004 -> 005 -> 006 -> 007 -> 008 -> 009 -> 010
+  -> 011 -> 012 -> 013 -> 014 -> 015 -> 016 -> 017 -> 018 -> 019
+  -> 020 -> 021 -> 022 -> 023 -> 024 -> 025 -> 026 -> 027 -> 028 -> 029
 ```
+Chain is fully linear with no branches or gaps. All `down_revision` values correctly point to the previous migration.
 
-### FK Cascade Coverage (47 total FK definitions)
-- **With ondelete="CASCADE"**: 33 (70%)
-- **With ondelete="SET NULL"**: 10 (21%)
-- **Without ondelete (default RESTRICT)**: 4 (9%) — all flagged above
+### FK Cascade Coverage (61 total FK definitions across all models including consent.py)
+
+| ondelete Policy | Count | Percentage |
+|----------------|-------|------------|
+| CASCADE | 43 | 70% |
+| SET NULL | 16 | 26% |
+| Missing (RESTRICT) | 0 | 0% |
+| No FK (String ref) | 2 | 3% (lineage_id, engagement_id on HttpAuditEvent) |
+
+All ForeignKey definitions now have explicit `ondelete` policies. The two exceptions are:
+- `EvidenceItem.lineage_id`: bare UUID, no FK constraint (by design -- lineage record may not exist yet)
+- `HttpAuditEvent.engagement_id`: String(36), intentionally not a FK (audit events must survive engagement deletion)
 
 ### ORM Cascade Coverage
-- **Engagement children with ORM cascade**: 3 of 18+ child tables
-- **Other parents with ORM cascade**: ProcessModel (3), ShelfDataRequest (1), User (1), TargetOperatingModel (1), SimulationScenario (1)
+
+| Parent Model | ORM cascade configured | Child tables with DB-only cascade |
+|-------------|----------------------|----------------------------------|
+| Engagement | 3 (evidence_items, audit_logs, shelf_data_requests) | 15+ tables (policies, controls, regulations, TOMs, monitoring, simulation, conformance, task mining, etc.) |
+| User | 2 (engagement_memberships, consents) | 1 (mcp_api_keys) |
+| ProcessModel | 3 (elements, contradictions, evidence_gaps) | 0 |
+| SimulationScenario | 1 (modifications) | 3 (results, epistemic_actions, suggestions) |
+| SuccessMetric | 1 (readings) | 0 |
+| TaskMiningAgent | 1 (sessions) | 1 (consent_records) |
 
 ### Neo4j Security Posture
-- Label validation: GOOD (checked against VALID_NODE_LABELS)
-- Relationship type validation: GOOD (checked against VALID_RELATIONSHIP_TYPES)
-- Value parameterization: GOOD (all values passed as $parameters)
-- Property key sanitization: MISSING (keys interpolated into Cypher)
-- Write transactions: GOOD (uses execute_write)
-- Read transactions: SUBOPTIMAL (uses session.run instead of execute_read)
+- Label validation: GOOD -- checked against ontology-loaded `VALID_NODE_LABELS`
+- Relationship type validation: GOOD -- checked against `VALID_RELATIONSHIP_TYPES`
+- Value parameterization: GOOD -- all values passed as `$parameters`
+- Property key sanitization: GOOD -- `_validate_property_keys()` with regex `^[a-zA-Z_][a-zA-Z0-9_]*$`
+- Write transactions: GOOD -- uses `execute_write()`
+- Read transactions: GOOD -- now uses `execute_read()` (fixed since previous audit)
+- Graph data cleanup on engagement deletion: MISSING -- see B2-NEO4J-001
 
 ### pgvector Consistency
-- Dimension: 768 everywhere (consistent)
-- HNSW index: exists on evidence_fragments.embedding (good)
-- HNSW index: MISSING on pattern_library_entries.embedding (column type wrong anyway)
-- Cosine distance operator: correctly used in embeddings.py search queries
+- Dimension: 768 everywhere (consistent across models, migrations, and service)
+- HNSW index on `evidence_fragments.embedding`: Present (good)
+- HNSW index on `pattern_library_entries.embedding`: MISSING (column type fixed, but index never added)
+- Cosine distance operator: correctly used in `embeddings.py` search queries
+
+### Data Integrity Posture Score
+
+| Category | Score | Notes |
+|----------|-------|-------|
+| FK Constraints | 9/10 | All FKs have ondelete; JSON array refs lack integrity |
+| Migration Chain | 10/10 | Linear, no gaps, no branches |
+| Index Coverage | 8/10 | Missing HNSW on patterns; all FK indexes present |
+| ORM-Migration Alignment | 8/10 | consent_records type mismatch |
+| Neo4j Integrity | 7/10 | No graph cleanup on engagement deletion |
+| Data Validation | 6/10 | No CHECK constraints on scores/confidence |
+| **Overall** | **8.0/10** | Significant improvement from previous audit |
