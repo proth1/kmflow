@@ -25,6 +25,7 @@ echo "  - KMFlow Agent.app from /Applications"
 echo "  - LaunchAgent: ~/Library/LaunchAgents/com.kmflow.agent.plist"
 echo "  - Application Support: ~/Library/Application Support/KMFlowAgent/"
 echo "  - Logs: ~/Library/Logs/KMFlowAgent/"
+echo "  - Shared data: /Users/Shared/KMFlowAgent/"
 echo "  - Keychain items for com.kmflow.agent and com.kmflow.agent.consent"
 echo ""
 
@@ -115,10 +116,24 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Step 6: Remove Keychain items
+# Step 6: Remove shared data directory
 # ---------------------------------------------------------------------------
 echo ""
-echo "--- Step 6: Removing Keychain items ---"
+echo "--- Step 6: Removing shared data ---"
+
+SHARED_DIR="/Users/Shared/KMFlowAgent"
+if [[ -d "$SHARED_DIR" ]]; then
+    rm -rf "$SHARED_DIR"
+    echo "  Removed: $SHARED_DIR"
+else
+    echo "  Not found (already removed): $SHARED_DIR"
+fi
+
+# ---------------------------------------------------------------------------
+# Step 7: Remove Keychain items
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Step 7: Removing Keychain items ---"
 
 # Remove all generic password items for the agent service name
 for SERVICE in "com.kmflow.agent" "com.kmflow.agent.consent"; do

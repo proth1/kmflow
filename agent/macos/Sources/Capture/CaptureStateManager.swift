@@ -88,6 +88,15 @@ public final class CaptureStateManager: ObservableObject {
         errorMessage = message
     }
 
+    /// Returns `true` if the current state permits event capture.
+    ///
+    /// Monitors should call this before emitting each event to enforce
+    /// per-event consent checking (defense-in-depth — even if the monitor
+    /// was started correctly, consent could be revoked between events).
+    public var isCapturePermitted: Bool {
+        state == .capturing
+    }
+
     /// Record that an event was emitted.
     public func recordEvent() {
         eventCount += 1

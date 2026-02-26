@@ -285,24 +285,47 @@ step "Step 9/9: Generating Python integrity manifest..."
 
 INTEGRITY_FILE="${PYTHON_RESOURCES}/integrity.json"
 
+INTEGRITY_SIG_FILE="${PYTHON_RESOURCES}/integrity.sig"
+
 python3 - <<PYEOF
-import hashlib, json, os, pathlib, sys
+import hashlib, hmac, json, os, pathlib, secrets, sys
 
 python_dir = pathlib.Path("${PYTHON_RESOURCES}")
 manifest = {}
 
 for path in sorted(python_dir.rglob("*")):
-    if path.is_file() and path.name != "integrity.json":
+    if path.is_file() and path.name not in ("integrity.json", "integrity.sig"):
         rel = str(path.relative_to(python_dir))
         sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
         manifest[rel] = sha256
 
+# Write the manifest wrapped in {"files": {...}} for ManifestPayload decoding.
 output = pathlib.Path("${INTEGRITY_FILE}")
-output.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+manifest_json = json.dumps({"files": manifest}, indent=2, sort_keys=True) + "\n"
+output.write_text(manifest_json)
 print(f"[build-app] Integrity manifest: {len(manifest)} files hashed -> {output}")
+
+# Compute HMAC-SHA256 signature with a per-build random key.
+# The key is embedded in the signature file alongside the HMAC.
+# Since the entire bundle is code-signed, tampering with either file
+# breaks the codesign seal. The HMAC adds defense-in-depth for cases
+# where integrity verification runs independently of codesign.
+hmac_key = secrets.token_bytes(32)
+sig = hmac.new(hmac_key, manifest_json.encode(), hashlib.sha256).hexdigest()
+
+sig_payload = {
+    "hmac_sha256": sig,
+    "key_hex": hmac_key.hex(),
+    "manifest_sha256": hashlib.sha256(manifest_json.encode()).hexdigest(),
+}
+
+sig_output = pathlib.Path("${INTEGRITY_SIG_FILE}")
+sig_output.write_text(json.dumps(sig_payload, indent=2) + "\n")
+print(f"[build-app] Integrity signature written -> {sig_output}")
 PYEOF
 
 log "Integrity manifest written: ${INTEGRITY_FILE}"
+log "Integrity signature written: ${INTEGRITY_SIG_FILE}"
 
 # ---------------------------------------------------------------------------
 # Codesign the bundle
