@@ -32,6 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusBarController: StatusBarController!
     private var blocklistManager: BlocklistManager!
     private var pythonManager: PythonProcessManager!
+    private var consentManager: ConsentManager!
     private var onboardingWindow: OnboardingWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -69,7 +70,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             engagementId = UserDefaults.standard.string(forKey: "engagementId") ?? "default"
         }
 
-        let consentManager = ConsentManager(engagementId: engagementId, store: consentStore)
+        consentManager = ConsentManager(engagementId: engagementId, store: consentStore)
+
+        // Wire consent revocation handler — stops capture and disconnects IPC
+        consentManager.onRevocation { [weak self] _ in
+            guard let self else { return }
+            self.stateManager.stopCapture()
+            if let manager = self.pythonManager {
+                Task { await manager.stop() }
+            }
+            self.stateManager.requireConsent()
+            self.statusBarController.updateIcon()
+        }
+
+        // Wire state change handler — update menu bar icon on transitions
+        stateManager.onStateChange { [weak self] _, _ in
+            self?.statusBarController.updateIcon()
+        }
 
         if consentManager.state == .neverConsented {
             // Show first-run onboarding wizard

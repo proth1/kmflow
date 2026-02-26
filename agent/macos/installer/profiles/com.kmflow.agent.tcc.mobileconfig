@@ -4,10 +4,9 @@
   com.kmflow.agent.tcc.mobileconfig — TCC/PPPC Configuration Profile
   Payload type: com.apple.TCC.configuration-profile-policy
 
-  This profile pre-authorises the KMFlow Agent for Accessibility and
-  (optionally) Screen Capture access via MDM-pushed Privacy Preferences
-  Policy Control (PPPC).  When deployed by MDM, users will NOT be prompted
-  to manually grant these permissions.
+  This profile pre-authorises the KMFlow Agent for Accessibility access
+  via MDM-pushed Privacy Preferences Policy Control (PPPC).  When deployed
+  by MDM, users will NOT be prompted to manually grant this permission.
 
   Requirements:
     - Must be deployed via a supervised MDM solution (Jamf, Mosyle, etc.)

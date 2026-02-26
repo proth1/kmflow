@@ -96,13 +96,11 @@ public struct KeychainConsentStore: ConsentStore, Sendable {
             }
             return signed.record.state
         } catch {
-            // Try loading legacy unsigned records for migration
-            do {
-                let record = try jsonDecoder().decode(ConsentRecord.self, from: data)
-                return record.state
-            } catch {
-                return .neverConsented
-            }
+            // Legacy unsigned records are rejected — users must re-consent.
+            // This closes the tamper detection bypass where an attacker could
+            // write a plain ConsentRecord JSON blob without HMAC.
+            fputs("[KeychainConsentStore] Unsigned consent record rejected for engagement \(engagementId) — re-consent required\n", stderr)
+            return .neverConsented
         }
     }
 
@@ -237,7 +235,9 @@ public struct KeychainConsentStore: ConsentStore, Sendable {
             SecRandomCopyBytes(kSecRandomDefault, 32, ptr.baseAddress!)
         }
         if result != errSecSuccess {
-            // Fallback: use a UUID-based key (weaker but functional)
+            // Fallback: UUID-based key is weaker than SecRandomCopyBytes but
+            // still provides basic tamper detection. Log the degradation.
+            fputs("[KeychainConsentStore] WARNING: SecRandomCopyBytes failed (\(result)); falling back to UUID-based HMAC key\n", stderr)
             key = Data(UUID().uuidString.utf8)
         }
         keychainSave(account: hmacKeyAccount, data: key)
