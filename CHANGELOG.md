@@ -3,6 +3,18 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.074] - 2026-02-26
+### Security
+- Promote consentManager to AppDelegate property (prevents deallocation) (#259)
+- Wire ConsentManager.onRevocation handler for runtime consent enforcement (#259)
+- Add "Withdraw Consent…" menu item for GDPR Art. 7(3) compliance (#259)
+- Reject legacy unsigned consent records (closes HMAC tamper bypass) (#259)
+- Remove NSScreenCaptureUsageDescription from Info.plist (#259)
+### Fixed
+- Fix inverted BlocklistManager test assertion (nil bundleId returns false) (#259)
+- Add async/await to BlocklistManager tests for actor compliance (#259)
+- Remove stale ScreenCapture reference from TCC profile header (#259)
+
 ## [2026.02.073] - 2026-02-26
 ### Security
 - Periodic integrity re-verification with configurable timer and violation callback (#257)
