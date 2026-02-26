@@ -4,13 +4,19 @@
 
 ## Current Focus
 
-**Audit Remediation Phase 2 IN PROGRESS** — PR 1 merged, continuing with remaining HIGHs
-- PR 1 done (auth/API hardening): pagination, WebSocket membership, TOM access, log_audit dedup
-- Remaining: missing FK indexes migration, GDPR data subject rights, security events table
-- Most platform HIGHs already resolved (15/17 per Explore agent triage)
+**Audit Remediation** — Phase 0 and Phase 1 COMPLETE. Phase 2 in progress.
+- Phase 0 (docs): All 5 items done (PRs #245, #251)
+- Phase 1 (critical security): All 9 items done (PRs #246, #247, #248, #251)
+- Phase 2 (HIGH findings): PR 1 done (#249), remaining: FK indexes, GDPR, security events
 
 ## Recently Completed
 
+- **PR #251 merged** — Audit Phase 1: macOS Agent Build Pipeline Hardening (v2026.02.069)
+  - Added --options runtime to all codesign invocations across embed-python.sh, build-app-bundle.sh, sign-all.sh
+  - Refused ad-hoc signing in release.sh (defense-in-depth)
+  - Pinned all 11 Python packages (4 direct + 7 transitive) with == and SHA-256 hashes
+  - Added SHA-256 verification for python-build-standalone tarball downloads
+  - PR review: 1 CRITICAL + 1 HIGH fixed (missing --options runtime in embed-python.sh and sign-all.sh)
 - **PR #249 merged** — Audit Phase 2 PR 1: Platform Auth & API Hardening (v2026.02.068)
   - Pagination bounds on 22 limit/offset params across 10 route files (ge/le validators)
   - WebSocket engagement membership verification for monitoring + alerts endpoints

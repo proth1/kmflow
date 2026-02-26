@@ -3,6 +3,13 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.069] - 2026-02-26
+### Security
+- Add --options runtime (Hardened Runtime) to all codesign invocations across build pipeline (#250)
+- Refuse ad-hoc signing in release.sh (defense-in-depth) (#250)
+- Pin all Python dependencies with exact versions and SHA-256 hashes for supply chain integrity (#250)
+- Add SHA-256 verification for python-build-standalone tarball downloads (#250)
+
 ## [2026.02.068] - 2026-02-26
 ### Security
 - Add WebSocket engagement membership verification for monitoring and alerts endpoints (#239)
