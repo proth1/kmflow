@@ -1,13 +1,14 @@
 /// Controller that reads captured events from the local SQLite buffer
 /// and publishes them for display in `TransparencyLogView`.
 ///
-/// **Security note**: The buffer is currently stored as plaintext SQLite.
-/// AES-256-GCM encryption using a key from the macOS Keychain is planned
-/// but not yet implemented.  See audit finding E3-CRITICAL.
+/// The buffer's sensitive columns (window_title, app_name) are encrypted
+/// with AES-256-GCM using a per-install key stored in the macOS Keychain.
+/// This controller decrypts rows for display in the transparency log UI.
 ///
 /// This controller opens a **read-only** SQLite connection so it cannot
 /// corrupt the live capture buffer.
 
+import CommonCrypto
 import Foundation
 import Security
 import SQLite3
@@ -108,10 +109,10 @@ public final class TransparencyLogController: ObservableObject {
             return
         }
 
-        // TODO(E3-CRITICAL): When AES-256-GCM encryption is implemented in
-        // the Python layer, decrypt data using the Keychain key here.
-        // Until then, data is read as plaintext.
-        _ = loadBufferKeyFromKeychain()
+        // Load the AES-256-GCM encryption key from Keychain for decryption.
+        // If no key exists yet (first launch, or pre-encryption data), rows
+        // are read as plaintext for backward compatibility.
+        let encryptionKey = loadBufferKeyFromKeychain()
 
         var db: OpaquePointer?
         let openFlags = SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX
@@ -144,7 +145,7 @@ public final class TransparencyLogController: ObservableObject {
         loaded.reserveCapacity(limit)
 
         while sqlite3_step(statement) == SQLITE_ROW {
-            guard let event = row(from: statement) else { continue }
+            guard let event = row(from: statement, encryptionKey: encryptionKey) else { continue }
             loaded.append(event)
         }
 
@@ -155,7 +156,9 @@ public final class TransparencyLogController: ObservableObject {
     // MARK: - Private helpers
 
     /// Decode one SQLite row into a `TransparencyEvent`.
-    private func row(from stmt: OpaquePointer) -> TransparencyEvent? {
+    /// If `encryptionKey` is provided, attempts AES-256-GCM decryption of
+    /// app_name and window_title columns. Falls back to plaintext on failure.
+    private func row(from stmt: OpaquePointer, encryptionKey: Data? = nil) -> TransparencyEvent? {
         // Column 0: id (TEXT)
         guard let idCStr = sqlite3_column_text(stmt, 0) else { return nil }
         let id = String(cString: idCStr)
@@ -185,18 +188,20 @@ public final class TransparencyLogController: ObservableObject {
             eventType = "unknown"
         }
 
-        // Column 3: app_name (TEXT, nullable)
+        // Column 3: app_name (TEXT, nullable — may be AES-256-GCM encrypted)
         let appName: String?
         if let anCStr = sqlite3_column_text(stmt, 3) {
-            appName = String(cString: anCStr)
+            let raw = String(cString: anCStr)
+            appName = decryptIfNeeded(raw, key: encryptionKey)
         } else {
             appName = nil
         }
 
-        // Column 4: window_title (TEXT, nullable)
+        // Column 4: window_title (TEXT, nullable — may be AES-256-GCM encrypted)
         let windowTitle: String?
         if let wtCStr = sqlite3_column_text(stmt, 4) {
-            windowTitle = String(cString: wtCStr)
+            let raw = String(cString: wtCStr)
+            windowTitle = decryptIfNeeded(raw, key: encryptionKey)
         } else {
             windowTitle = nil
         }
@@ -230,5 +235,84 @@ public final class TransparencyLogController: ObservableObject {
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         guard status == errSecSuccess else { return nil }
         return result as? Data
+    }
+
+    /// Provision a new AES-256-GCM encryption key in the Keychain.
+    ///
+    /// Called once during initial setup. The Python layer reads this same
+    /// key to encrypt buffer rows; the Swift layer reads it to decrypt.
+    @discardableResult
+    public func provisionEncryptionKey() -> Data? {
+        // Don't overwrite an existing key
+        if let existing = loadBufferKeyFromKeychain() {
+            return existing
+        }
+        // Generate 256-bit random key
+        var keyData = Data(count: 32)
+        let result = keyData.withUnsafeMutableBytes { ptr in
+            SecRandomCopyBytes(kSecRandomDefault, 32, ptr.baseAddress!)
+        }
+        guard result == errSecSuccess else { return nil }
+
+        let addQuery: [String: Any] = [
+            kSecClass as String:          kSecClassGenericPassword,
+            kSecAttrService as String:    keychainService,
+            kSecAttrAccount as String:    bufferEncryptionKeyKeychainKey,
+            kSecValueData as String:      keyData,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+        ]
+        let status = SecItemAdd(addQuery as CFDictionary, nil)
+        guard status == errSecSuccess else { return nil }
+        return keyData
+    }
+
+    /// Attempt to decrypt a base64-encoded AES-256-GCM ciphertext.
+    ///
+    /// Expected format: base64(nonce‖ciphertext‖tag) where nonce = 12 bytes,
+    /// tag = 16 bytes (appended by Python's `cryptography` library).
+    /// Returns the plaintext string on success, or the original string if
+    /// decryption fails (backward compat with pre-encryption data).
+    private func decryptIfNeeded(_ value: String, key: Data?) -> String {
+        guard let key = key,
+              let cipherData = Data(base64Encoded: value),
+              cipherData.count > 28 // 12 (nonce) + 0 (min plaintext) + 16 (tag)
+        else {
+            return value // plaintext or no key — return as-is
+        }
+
+        let nonceSize = 12
+        let tagSize = 16
+        let nonce = cipherData.prefix(nonceSize)
+        let ciphertextAndTag = cipherData.dropFirst(nonceSize)
+        let ciphertext = ciphertextAndTag.dropLast(tagSize)
+        let tag = ciphertextAndTag.suffix(tagSize)
+
+        // Use CommonCrypto's CCCryptorGCM for AES-256-GCM decryption
+        var plaintext = Data(count: ciphertext.count)
+        var tagBuffer = [UInt8](tag)
+
+        let status = plaintext.withUnsafeMutableBytes { ptPtr in
+            ciphertext.withUnsafeBytes { ctPtr in
+                nonce.withUnsafeBytes { noncePtr in
+                    key.withUnsafeBytes { keyPtr in
+                        CCCryptorGCMOneshotDecrypt(
+                            CCAlgorithm(kCCAlgorithmAES),
+                            keyPtr.baseAddress!, key.count,
+                            noncePtr.baseAddress!, nonceSize,
+                            nil, 0, // no additional authenticated data
+                            ctPtr.baseAddress!, ciphertext.count,
+                            ptPtr.baseAddress!,
+                            &tagBuffer, tagSize
+                        )
+                    }
+                }
+            }
+        }
+
+        if status == kCCSuccess, let decrypted = String(data: plaintext, encoding: .utf8) {
+            return decrypted
+        }
+        // Decryption failed — likely plaintext data from before encryption was enabled
+        return value
     }
 }

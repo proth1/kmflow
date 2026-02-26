@@ -11,18 +11,18 @@ public struct AgentLogger: Sendable {
     }
 
     public func info(_ message: String) {
-        logger.info("\(message, privacy: .public)")
+        logger.info("\(message, privacy: .private)")
     }
 
     public func debug(_ message: String) {
-        logger.debug("\(message, privacy: .public)")
+        logger.debug("\(message, privacy: .private)")
     }
 
     public func warning(_ message: String) {
-        logger.warning("\(message, privacy: .public)")
+        logger.warning("\(message, privacy: .private)")
     }
 
     public func error(_ message: String) {
-        logger.error("\(message, privacy: .public)")
+        logger.error("\(message, privacy: .private)")
     }
 }

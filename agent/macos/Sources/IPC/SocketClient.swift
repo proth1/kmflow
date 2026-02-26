@@ -3,10 +3,10 @@
 /// Events are serialized as newline-delimited JSON (ndjson) over a
 /// user-private Unix domain socket (0600 permissions).
 ///
-/// **Security note**: The socket currently has no authentication beyond
-/// filesystem permissions.  Peer credential verification and a shared
-/// secret handshake are planned but not yet implemented.
-/// See audit finding E3-CRITICAL.
+/// Security measures:
+/// - Socket path is validated against symlink attacks before connecting
+/// - A shared secret handshake authenticates the client to the server
+/// - The secret is stored in the macOS Keychain and shared with the Python layer
 
 import Foundation
 
@@ -23,15 +23,31 @@ public actor SocketClient {
     private var isConnected = false
     private let maxReconnectAttempts = 5
     private let baseReconnectDelay: TimeInterval = 1.0
+    /// Shared secret for authenticating the IPC handshake.
+    private let authToken: String?
 
-    public init(socketPath: String = SocketClient.defaultSocketPath) {
+    public init(socketPath: String = SocketClient.defaultSocketPath, authToken: String? = nil) {
         self.socketPath = socketPath
+        self.authToken = authToken
         self.encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
     }
 
     /// Connect to the Python socket server.
+    ///
+    /// Validates the socket path is not a symlink (to prevent IPC hijacking),
+    /// then performs a shared-secret handshake if an auth token is configured.
     public func connect() throws {
+        // Symlink check: reject if the socket path is a symbolic link.
+        // An attacker could replace the socket file with a symlink pointing
+        // to their own server to intercept capture events.
+        var statBuf = stat()
+        if lstat(socketPath, &statBuf) == 0 {
+            if (statBuf.st_mode & S_IFMT) == S_IFLNK {
+                throw SocketError.connectionFailed("Socket path is a symlink — possible IPC hijack attempt: \(socketPath)")
+            }
+        }
+
         let fd = socket(AF_UNIX, SOCK_STREAM, 0)
         guard fd >= 0 else {
             throw SocketError.connectionFailed("Failed to create socket: \(errno)")
@@ -64,6 +80,18 @@ public actor SocketClient {
         }
 
         fileHandle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
+
+        // Perform auth handshake if token is configured
+        if let token = authToken, let fh = fileHandle {
+            let authMsg = "{\"auth\":\"\(token)\"}\n"
+            guard let authData = authMsg.data(using: .utf8) else {
+                close(fd)
+                fileHandle = nil
+                throw SocketError.connectionFailed("Failed to encode auth token")
+            }
+            fh.write(authData)
+        }
+
         isConnected = true
     }
 

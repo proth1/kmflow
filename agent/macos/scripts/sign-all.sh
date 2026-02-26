@@ -83,8 +83,9 @@ echo ""
 echo "--- Step 2: Signing .app bundle ---"
 echo "  Signing: $APP_PATH"
 
+# Components are signed individually in Step 1 — no --deep needed.
+# --deep re-signs nested components and can mask individual signing failures.
 codesign \
-    --deep \
     --force \
     --sign "$IDENTITY" \
     --options runtime \

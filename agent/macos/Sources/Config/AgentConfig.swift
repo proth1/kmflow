@@ -56,15 +56,32 @@ public struct AgentConfig: Codable, Sendable {
         self.urlDomainOnly = defaults.object(forKey: "UrlDomainOnly") != nil
             ? defaults.bool(forKey: "UrlDomainOnly") : true
         self.screenshotEnabled = defaults.bool(forKey: "ScreenshotEnabled")
-        self.screenshotIntervalSeconds = defaults.object(forKey: "ScreenshotIntervalSeconds") != nil
-            ? defaults.integer(forKey: "ScreenshotIntervalSeconds") : 30
-        self.batchSize = defaults.object(forKey: "BatchSize") != nil
-            ? defaults.integer(forKey: "BatchSize") : 1000
-        self.batchIntervalSeconds = defaults.object(forKey: "BatchIntervalSeconds") != nil
-            ? defaults.integer(forKey: "BatchIntervalSeconds") : 30
-        self.idleTimeoutSeconds = defaults.object(forKey: "IdleTimeoutSeconds") != nil
-            ? defaults.integer(forKey: "IdleTimeoutSeconds") : 300
+        self.screenshotIntervalSeconds = Self.clamp(
+            defaults.object(forKey: "ScreenshotIntervalSeconds") != nil
+                ? defaults.integer(forKey: "ScreenshotIntervalSeconds") : 30,
+            min: 5, max: 3600
+        )
+        self.batchSize = Self.clamp(
+            defaults.object(forKey: "BatchSize") != nil
+                ? defaults.integer(forKey: "BatchSize") : 1000,
+            min: 1, max: 10000
+        )
+        self.batchIntervalSeconds = Self.clamp(
+            defaults.object(forKey: "BatchIntervalSeconds") != nil
+                ? defaults.integer(forKey: "BatchIntervalSeconds") : 30,
+            min: 5, max: 3600
+        )
+        self.idleTimeoutSeconds = Self.clamp(
+            defaults.object(forKey: "IdleTimeoutSeconds") != nil
+                ? defaults.integer(forKey: "IdleTimeoutSeconds") : 300,
+            min: 30, max: 3600
+        )
         self.piiPatternsVersion = defaults.string(forKey: "PiiPatternsVersion") ?? "1.0"
+    }
+
+    /// Clamp an integer to a safe range to prevent misconfigured MDM values.
+    private static func clamp(_ value: Int, min: Int, max: Int) -> Int {
+        Swift.max(min, Swift.min(value, max))
     }
 
     enum CodingKeys: String, CodingKey {

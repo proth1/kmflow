@@ -14,9 +14,8 @@
     <key>com.apple.security.network.client</key>
     <true/>
 
-    <!-- File access for local SQLite buffer -->
-    <key>com.apple.security.files.user-selected.read-write</key>
-    <true/>
+    <!-- App Sandbox is disabled; files.user-selected.read-write entitlement
+         removed because it has no effect outside the sandbox. -->
     <key>com.apple.security.app-sandbox</key>
     <false/>
 </dict>

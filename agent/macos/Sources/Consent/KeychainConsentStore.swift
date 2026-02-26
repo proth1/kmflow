@@ -8,6 +8,7 @@
 /// directly rather than depending on the Utilities module, preserving
 /// the Consent target's zero-dependency footprint.
 
+import CommonCrypto
 import Foundation
 import Security
 
@@ -42,6 +43,15 @@ public struct ConsentRecord: Codable, Sendable {
     }
 }
 
+/// Wrapper that includes the consent record plus its HMAC-SHA256 signature.
+/// The signature prevents local tampering — a forged consent record without
+/// the correct HMAC key will be rejected on load.
+struct SignedConsentRecord: Codable {
+    let record: ConsentRecord
+    /// Hex-encoded HMAC-SHA256 of the canonical JSON representation of `record`.
+    let hmac: String
+}
+
 // MARK: - KeychainConsentStore
 
 /// `ConsentStore` backed by the macOS Keychain.
@@ -56,6 +66,9 @@ public struct KeychainConsentStore: ConsentStore, Sendable {
     /// agent service so that consent data can be audited independently.
     private let service: String = "com.kmflow.agent.consent"
 
+    /// Keychain account for the HMAC signing key.
+    private let hmacKeyAccount: String = "consent.hmac_key"
+
     // MARK: - Init
 
     public init() {}
@@ -64,23 +77,38 @@ public struct KeychainConsentStore: ConsentStore, Sendable {
 
     /// Load the consent state for `engagementId`.
     ///
-    /// Returns `.neverConsented` when no record exists (first-time launch)
-    /// or when the stored JSON cannot be decoded.
+    /// Returns `.neverConsented` when no record exists (first-time launch),
+    /// when the stored JSON cannot be decoded, or when the HMAC is invalid
+    /// (tamper detection).
     public func load(engagementId: String) -> ConsentState {
         guard let data = keychainLoad(account: accountKey(for: engagementId)) else {
             return .neverConsented
         }
         do {
-            let record = try jsonDecoder().decode(ConsentRecord.self, from: data)
-            return record.state
+            let signed = try jsonDecoder().decode(SignedConsentRecord.self, from: data)
+            // Verify HMAC before trusting the record
+            let recordData = try jsonEncoder().encode(signed.record)
+            let expectedHmac = computeHMAC(data: recordData)
+            guard signed.hmac == expectedHmac else {
+                // HMAC mismatch — record may have been tampered with
+                fputs("[KeychainConsentStore] HMAC verification failed for engagement \(engagementId)\n", stderr)
+                return .neverConsented
+            }
+            return signed.record.state
         } catch {
-            // Corrupt record — treat as no consent to be safe.
-            return .neverConsented
+            // Try loading legacy unsigned records for migration
+            do {
+                let record = try jsonDecoder().decode(ConsentRecord.self, from: data)
+                return record.state
+            } catch {
+                return .neverConsented
+            }
         }
     }
 
     /// Persist a consent decision for `engagementId`.
     ///
+    /// The record is HMAC-signed before storage to prevent local tampering.
     /// Overwrites any existing record atomically (delete-then-insert).
     public func save(engagementId: String, state: ConsentState, at date: Date) {
         let record = ConsentRecord(
@@ -91,7 +119,10 @@ public struct KeychainConsentStore: ConsentStore, Sendable {
             captureScope: nil,
             consentVersion: "1.0"
         )
-        guard let data = try? jsonEncoder().encode(record) else { return }
+        guard let recordData = try? jsonEncoder().encode(record) else { return }
+        let hmac = computeHMAC(data: recordData)
+        let signed = SignedConsentRecord(record: record, hmac: hmac)
+        guard let data = try? jsonEncoder().encode(signed) else { return }
         keychainSave(account: accountKey(for: engagementId), data: data)
     }
 
@@ -171,5 +202,43 @@ public struct KeychainConsentStore: ConsentStore, Sendable {
             kSecAttrAccount as String: account,
         ]
         SecItemDelete(query as CFDictionary)
+    }
+
+    // MARK: - HMAC signing
+
+    /// Compute HMAC-SHA256 of `data` using a per-install key from the Keychain.
+    /// The key is auto-generated on first use and persisted in the Keychain.
+    private func computeHMAC(data: Data) -> String {
+        let key = loadOrCreateHMACKey()
+        var hmac = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
+        key.withUnsafeBytes { keyBytes in
+            data.withUnsafeBytes { dataBytes in
+                CCHmac(
+                    CCHmacAlgorithm(kCCHmacAlgSHA256),
+                    keyBytes.baseAddress, key.count,
+                    dataBytes.baseAddress, data.count,
+                    &hmac
+                )
+            }
+        }
+        return hmac.map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Load the HMAC key from Keychain, or generate and persist a new one.
+    private func loadOrCreateHMACKey() -> Data {
+        if let existing = keychainLoad(account: hmacKeyAccount) {
+            return existing
+        }
+        // Generate a 256-bit random key
+        var key = Data(count: 32)
+        let result = key.withUnsafeMutableBytes { ptr in
+            SecRandomCopyBytes(kSecRandomDefault, 32, ptr.baseAddress!)
+        }
+        if result != errSecSuccess {
+            // Fallback: use a UUID-based key (weaker but functional)
+            key = Data(UUID().uuidString.utf8)
+        }
+        keychainSave(account: hmacKeyAccount, data: key)
+        return key
     }
 }

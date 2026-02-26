@@ -58,11 +58,14 @@ public struct ConsentView: View {
                 Picker("Capture Scope", selection: $state.captureScope) {
                     Text("Activity Level (counts only)")
                         .tag("action_level")
-                    Text("Content Level (with PII filtering)")
-                        .tag("content_level")
+                    // Content Level is disabled until L2+ PII filtering is fully
+                    // validated.  See audit finding E2-HIGH.
+                    // Text("Content Level (with PII filtering)")
+                    //     .tag("content_level")
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
+                .disabled(true)
             }
         }
     }
