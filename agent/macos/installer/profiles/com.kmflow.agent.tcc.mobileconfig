@@ -31,7 +31,7 @@
     <string>KMFlow Agent — Privacy Permissions (TCC/PPPC)</string>
 
     <key>PayloadDescription</key>
-    <string>Pre-authorises the KMFlow Task Mining Agent for Accessibility and Screen Capture access required for process intelligence capture.</string>
+    <string>Pre-authorises the KMFlow Task Mining Agent for Accessibility access required for process intelligence capture.</string>
 
     <key>PayloadIdentifier</key>
     <string>com.kmflow.agent.tcc</string>
@@ -123,32 +123,11 @@
                 </array>
 
                 <!-- ------------------------------------------------------ -->
-                <!-- ScreenCapture (optional — enable if content_level       -->
-                <!-- capture policy requires screenshot-based evidence)      -->
-                <!-- Comment out this block if screen capture is not needed. -->
+                <!-- ScreenCapture — REMOVED from default profile.           -->
+                <!-- Screen capture is NOT enabled by default. If needed     -->
+                <!-- for Phase 2 content_level capture, deploy a separate    -->
+                <!-- profile: com.kmflow.agent.screencapture.mobileconfig   -->
                 <!-- ------------------------------------------------------ -->
-                <key>ScreenCapture</key>
-                <array>
-                    <dict>
-                        <key>Identifier</key>
-                        <string>com.kmflow.agent</string>
-
-                        <key>IdentifierType</key>
-                        <string>bundleID</string>
-
-                        <key>CodeRequirement</key>
-                        <string>identifier "com.kmflow.agent" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] and certificate leaf[field.1.2.840.113635.100.6.1.13] and certificate leaf[subject.OU] = "REPLACE_TEAM_ID"</string>
-
-                        <key>Allowed</key>
-                        <true/>
-
-                        <key>StaticCode</key>
-                        <false/>
-
-                        <key>Comment</key>
-                        <string>KMFlow Agent optionally captures screenshots when content_level capture policy is enabled. Disable this block if action_level policy is used.</string>
-                    </dict>
-                </array>
 
             </dict>
             <!-- end Services -->

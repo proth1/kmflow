@@ -1,11 +1,13 @@
-/// Layer 1 PII filter: capture prevention at the Swift level.
+/// Layer 1 capture context filter: prevents capture in sensitive contexts.
 ///
-/// L1 runs BEFORE events are generated. It prevents capture of:
+/// CaptureContextFilter runs BEFORE events are generated. It prevents capture of:
 /// - Password fields (AXSecureTextField)
 /// - Apps on the blocklist
 /// - Private browsing windows
 ///
-/// This is the first line of defense — if L1 blocks it, no event is emitted.
+/// This is a context-blocking filter (not a PII content filter).
+/// It determines WHETHER to capture, not WHAT to redact.
+/// PII content redaction is handled by L2PIIFilter.
 
 import Foundation
 
@@ -23,9 +25,9 @@ public protocol RunningAppProvider: Sendable {
     var localizedName: String? { get }
 }
 
-// MARK: - L1 Filter
+// MARK: - Capture Context Filter
 
-public struct L1Filter: Sendable {
+public struct CaptureContextFilter: Sendable {
     /// Returns true if the current focused element is a password field.
     public static func isPasswordField(provider: AccessibilityProvider) -> Bool {
         return provider.isSecureTextField()

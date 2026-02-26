@@ -2,36 +2,36 @@ import Capture
 import PII
 import XCTest
 
-final class L1FilterTests: XCTestCase {
+final class CaptureContextFilterTests: XCTestCase {
     func testBlockedAppDetection() {
-        XCTAssertTrue(L1Filter.isBlockedApp(
+        XCTAssertTrue(CaptureContextFilter.isBlockedApp(
             bundleId: "com.1password.1password",
-            blocklist: L1Filter.hardcodedBlocklist
+            blocklist: CaptureContextFilter.hardcodedBlocklist
         ))
-        XCTAssertTrue(L1Filter.isBlockedApp(
+        XCTAssertTrue(CaptureContextFilter.isBlockedApp(
             bundleId: "com.bitwarden.desktop",
-            blocklist: L1Filter.hardcodedBlocklist
+            blocklist: CaptureContextFilter.hardcodedBlocklist
         ))
     }
 
     func testAllowedApp() {
-        XCTAssertFalse(L1Filter.isBlockedApp(
+        XCTAssertFalse(CaptureContextFilter.isBlockedApp(
             bundleId: "com.microsoft.Excel",
-            blocklist: L1Filter.hardcodedBlocklist
+            blocklist: CaptureContextFilter.hardcodedBlocklist
         ))
     }
 
     func testNilBundleIdNotBlocked() {
-        XCTAssertFalse(L1Filter.isBlockedApp(
+        XCTAssertFalse(CaptureContextFilter.isBlockedApp(
             bundleId: nil,
-            blocklist: L1Filter.hardcodedBlocklist
+            blocklist: CaptureContextFilter.hardcodedBlocklist
         ))
     }
 
     func testCustomBlocklist() {
-        var custom = L1Filter.hardcodedBlocklist
+        var custom = CaptureContextFilter.hardcodedBlocklist
         custom.insert("com.custom.app")
-        XCTAssertTrue(L1Filter.isBlockedApp(bundleId: "com.custom.app", blocklist: custom))
+        XCTAssertTrue(CaptureContextFilter.isBlockedApp(bundleId: "com.custom.app", blocklist: custom))
     }
 
     // MARK: - Private Browsing Detection

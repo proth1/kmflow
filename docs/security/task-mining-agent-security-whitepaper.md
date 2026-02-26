@@ -42,8 +42,8 @@ The agent is designed with a defense-in-depth security model and was purpose-bui
 
 ### Key Security Controls
 
-- **PII protection**: Four-layer architecture prevents raw PII from leaving the endpoint. Two layers (L1 and L2) operate on-device before data is written to local storage.
-- **Encryption at rest**: Local buffer database encrypted with AES-256-GCM; encryption key stored in macOS Keychain, never on disk in plaintext.
+- **PII protection**: Two-layer on-device architecture prevents raw PII from leaving the endpoint. L1 (capture prevention) and L2 (regex scrubbing) operate on-device before data is written to local storage. Additional layers (L3 ML-based NER and L4 human quarantine review) are planned for a future phase and are not yet implemented.
+- **Encryption at rest** *(planned)*: Local buffer database encryption with AES-256-GCM is planned; the current implementation stores data in plaintext SQLite. The encryption key infrastructure (macOS Keychain storage) is in place but not yet wired to the buffer.
 - **Encryption in transit**: All backend communication uses TLS 1.3; mutual TLS (mTLS) is planned for the next phase.
 - **Least privilege**: Agent requests only the macOS permissions required for its function (Accessibility). Full Disk Access, admin rights, and kernel extensions are not required and not requested.
 - **Server-side control**: The agent polls a configuration endpoint at every heartbeat (default 5-minute interval). Revocation, configuration changes, and forced pause take effect within one heartbeat cycle.
@@ -75,13 +75,14 @@ The agent uses a two-layer design to separate OS-level capture (which requires e
 │  │  Entitlements: Accessibility, Network (localhost only)      │    │
 │  └──────────────────────────┬───────────────────────────────────┘   │
 │                              │ Unix domain socket (ndjson)            │
-│                              │ /var/run/kmflow-capture.sock          │
+│                              │ ~/Library/Application Support/        │
+│                              │   KMFlowAgent/agent.sock              │
 │  ┌──────────────────────────▼───────────────────────────────────┐   │
 │  │  Layer 2: Python Intelligence Process (com.kmflow.taskmining) │   │
 │  │                                                               │   │
 │  │  • IPC consumer (socket listener)                            │   │
 │  │  • L2 PII regex scrubbing                                    │   │
-│  │  • AES-256-GCM encrypted SQLite buffer (buffer.db)           │   │
+│  │  • SQLite buffer (buffer.db) — encryption planned             │   │
 │  │  • Batch assembler + gzip compressor                         │   │
 │  │  • Upload manager (TLS 1.3, exponential backoff retry)       │   │
 │  │  • Heartbeat poller (config pull + revocation check)         │   │
@@ -99,8 +100,8 @@ The agent uses a two-layer design to separate OS-level capture (which requires e
 │  POST /api/v1/taskmining/heartbeat → Config + revocation signals      │
 │  GET  /api/v1/taskmining/config/{agent_id} → Agent configuration      │
 │                                                                        │
-│  L3: ML-based NER residual PII scan (backend, pre-analytics)          │
-│  L4: Human quarantine review before data reaches analytics layer      │
+│  L3: ML-based NER residual PII scan (planned — not yet implemented)   │
+│  L4: Human quarantine review (planned — not yet implemented)          │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -128,17 +129,14 @@ The following describes the complete lifecycle of a single captured event.
       │  (event type: app_switch | window_title | activity_counts)
       │  (format: ndjson line, unencrypted, localhost-only socket)
       ▼
-[Unix Domain Socket: /var/run/kmflow-capture.sock]
+[Unix Domain Socket: ~/Library/Application Support/KMFlowAgent/agent.sock]
       │
       ▼
 [L2 Filter — Python]  ←─── regex scrubbing: SSN, email, phone, credit card
       │                     replaces matches with [PII_REDACTED]
       │
       ▼
-[AES-256-GCM Encryption]  ←── key from macOS Keychain
-      │
-      ▼
-[buffer.db — Encrypted SQLite]  (DATA AT REST — ENCRYPTED)
+[buffer.db — SQLite]  (DATA AT REST — encryption planned, currently plaintext)
       │  (100 MB FIFO cap; oldest batches pruned when cap reached)
       │
       ▼
@@ -169,7 +167,7 @@ The following describes the complete lifecycle of a single captured event.
 |-------|----------|------------|
 | Capture buffer (pre-filter) | Swift process memory | Process isolation; never written to disk |
 | IPC channel | Unix domain socket (localhost) | OS-enforced; no external network access |
-| Local storage | `~/Library/Application Support/KMFlow/buffer.db` | AES-256-GCM |
+| Local storage | `~/Library/Application Support/KMFlowAgent/buffer.db` | Plaintext SQLite (AES-256-GCM encryption planned) |
 | In transit | HTTPS (TLS 1.3) to backend | TLS 1.3; mTLS Phase 2 |
 | Quarantine (backend) | Backend database | Access-controlled; not visible to analytics |
 | Analytics | Backend data warehouse | Role-based access, engagement-scoped |
@@ -178,7 +176,7 @@ The following describes the complete lifecycle of a single captured event.
 
 ## 4. PII Protection Architecture
 
-The agent implements a four-layer PII protection model. The first two layers operate on-device; the third and fourth operate on the backend.
+The agent implements a two-layer on-device PII protection model (L1 and L2). Two additional backend layers (L3 and L4) are planned for a future phase and are **not yet implemented**.
 
 ### Layer 1 — Capture Prevention (Swift)
 
@@ -211,38 +209,44 @@ The following patterns are applied. Each match is replaced with the token `[PII_
 
 These patterns are applied to all string fields in every captured event (window titles, application names). Numeric event counts (keyboard/mouse counts) are not subject to regex scrubbing as they are aggregate integers, not strings.
 
-### Layer 3 — ML-Based NER Scan (Backend, Future Phase)
+### Layer 3 — ML-Based NER Scan (Backend) — *NOT YET IMPLEMENTED*
 
-After upload, an NLP named-entity recognition model scans event records for residual PII that evaded regex (e.g., names embedded in window titles, non-standard formats). Flagged records are routed to the quarantine queue and not admitted to analytics. This layer is planned for Phase 3 of the platform.
+> **Status**: Planned for Phase 3. No code exists for this layer today.
 
-### Layer 4 — Human Quarantine Review
+After upload, an NLP named-entity recognition model will scan event records for residual PII that evaded regex (e.g., names embedded in window titles, non-standard formats). Flagged records will be routed to a quarantine queue and not admitted to analytics. This layer is planned for a future phase of the platform and is not yet implemented.
 
-All uploaded records enter a quarantine queue before becoming visible to analytics. A trained data steward reviews flagged records (from L3) and a statistical sample of non-flagged records. Records are approved, redacted, or deleted. Only approved records advance to the analytics layer.
+### Layer 4 — Human Quarantine Review — *NOT YET IMPLEMENTED*
+
+> **Status**: Planned for a future phase. No backend code or review interface exists today.
+
+In the planned design, all uploaded records will enter a quarantine queue before becoming visible to analytics. A trained data steward will review flagged records (from L3) and a statistical sample of non-flagged records. Records will be approved, redacted, or deleted. Only approved records will advance to the analytics layer.
 
 ---
 
 ## 5. Encryption
 
-### Data at Rest — AES-256-GCM
+### Data at Rest — AES-256-GCM *(Planned — Not Yet Implemented)*
 
-The local buffer database (`buffer.db`) stores all captured events in an encrypted SQLite database.
+> **Status**: The local buffer database (`buffer.db`) currently stores captured events in **plaintext SQLite**. AES-256-GCM encryption is the planned target architecture. The Keychain infrastructure described below is in place for consent records but is not yet wired to the buffer encryption.
 
-| Parameter | Value |
-|-----------|-------|
-| Algorithm | AES-256-GCM |
-| Key length | 256 bits (32 bytes) |
-| Nonce | 12 bytes, randomly generated per write operation |
-| Authentication tag | 128 bits (16 bytes) |
-| Key storage | macOS Keychain (kSecClassGenericPassword, `com.kmflow.taskmining`, access group `com.kmflow`) |
-| Key derivation | 256-bit random key generated at first agent registration; never derived from password |
-| Key rotation | Supported via server-side configuration push; triggers local re-encryption of buffer |
+The planned encryption parameters are:
 
-The Keychain item is protected with `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`, meaning:
+| Parameter | Planned Value | Current Status |
+|-----------|-------|----------------|
+| Algorithm | AES-256-GCM | **Not implemented** — buffer is plaintext |
+| Key length | 256 bits (32 bytes) | Key generation code exists but is not used for buffer encryption |
+| Nonce | 12 bytes, randomly generated per write operation | Not implemented |
+| Authentication tag | 128 bits (16 bytes) | Not implemented |
+| Key storage | macOS Keychain (kSecClassGenericPassword, `com.kmflow.taskmining`, access group `com.kmflow`) | Keychain helper exists and is used for consent records |
+| Key derivation | 256-bit random key generated at first agent registration; never derived from password | Not implemented |
+| Key rotation | Supported via server-side configuration push; triggers local re-encryption of buffer | Not implemented |
 
-- The key is available after the first unlock following a reboot.
-- The key is **not** available when the device is locked (screen lock).
-- The key is **not** exportable from the device — it cannot be copied to another machine.
-- Physical access to the disk without the device's Keychain unlock credentials does not expose the key.
+Once implemented, the Keychain item will be protected with `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`, meaning:
+
+- The key will be available after the first unlock following a reboot.
+- The key will **not** be available when the device is locked (screen lock).
+- The key will **not** be exportable from the device — it cannot be copied to another machine.
+- Physical access to the disk without the device's Keychain unlock credentials will not expose the key.
 
 ### Data in Transit — TLS 1.3
 
@@ -282,7 +286,7 @@ The agent requests the minimum macOS permissions required for its stated functio
 The Swift capture process runs **without** App Sandbox. Justification:
 
 - CGEventTap requires `com.apple.security.temporary-exception.mach-lookup.global-name` or must run unsandboxed; Apple does not permit this entitlement in sandboxed apps distributed outside the Mac App Store for system monitoring use cases.
-- AXUIElement requires `com.apple.security.automation.apple-events` and sandbox exceptions that are not granted to sandboxed apps in an MDM-managed enterprise context.
+- AXUIElement requires sandbox exceptions that are not granted to sandboxed apps in an MDM-managed enterprise context.
 - The agent is distributed via signed PKG/DMG for enterprise deployment, not through the Mac App Store.
 
 The absence of sandbox is mitigated by: hardened runtime enforcement, no network access in the Swift process, separation from the Python process, and MDM-managed TCC profiles that explicitly enumerate the permissions granted.
@@ -400,13 +404,13 @@ Backend retention is configurable per engagement in the KMFlow console. Default 
 
 The PKG uninstaller and the agent's self-uninstall path remove:
 
-- The application bundle (`/Applications/KMFlow Task Mining.app`)
-- The LaunchAgent plist (`~/Library/LaunchAgents/com.kmflow.taskmining.plist`)
-- The Application Support directory (`~/Library/Application Support/KMFlow/`)
-- The encrypted buffer database
-- All Keychain items (`com.kmflow.taskmining.*`)
-- The Unix domain socket file
-- All log files (`~/Library/Logs/KMFlow/`)
+- The application bundle (`/Applications/KMFlow Agent.app`)
+- The LaunchAgent plist (`~/Library/LaunchAgents/com.kmflow.agent.plist`)
+- The Application Support directory (`~/Library/Application Support/KMFlowAgent/`)
+- The buffer database
+- All Keychain items (`com.kmflow.agent.*`)
+- The Unix domain socket file (`~/Library/Application Support/KMFlowAgent/agent.sock`)
+- All log files (`~/Library/Logs/KMFlowAgent/`)
 
 After uninstall, no KMFlow artifacts remain on the device. The macOS TCC database entry for Accessibility remains (managed by MDM); the MDM profile removal removes the TCC grant.
 
@@ -439,12 +443,12 @@ After uninstall, no KMFlow artifacts remain on the device. The macOS TCC databas
 #### Scenario 4: L2 Regex Filter Bypass (PII Leaks to Backend)
 
 - **Risk**: A novel PII format not covered by L2 regex reaches the backend.
-- **Mitigation**: L3 ML-based NER scan (future) catches residual PII. L4 human review catches patterns missed by L3. Backend quarantine queue ensures no leakage to analytics before review.
-- **Response**: Update L2 regex patterns, redeploy agent via signed update PKG, purge affected backend records.
+- **Current mitigation**: L2 regex scrubbing is the only active defense. L3 (ML NER) and L4 (human review) are planned but not yet implemented, so residual PII that bypasses L2 will reach the backend unfiltered.
+- **Response**: Update L2 regex patterns, redeploy agent via signed update PKG, purge affected backend records. Implementing L3 and L4 is a priority for a future phase.
 
 ### No Raw PII on Device
 
-After L2 scrubbing, the encrypted buffer contains only redacted event records. Even if an attacker decrypts the buffer (which requires the Keychain key, which requires device unlock), they will find `[PII_REDACTED]` tokens, not actual PII. Raw PII exists only in Swift process memory during the brief L1 filtering window and is never written to any persistent storage.
+After L2 scrubbing, the buffer contains only redacted event records with `[PII_REDACTED]` tokens in place of matched PII patterns. Note: the buffer is currently stored in plaintext SQLite (encryption is planned), so any same-user process can read it. Raw PII exists only in Swift process memory during the brief L1 filtering window and is never written to any persistent storage. PII patterns not covered by L2 regex (e.g., names, non-standard formats) will persist in the buffer until L3 ML-based filtering is implemented.
 
 ---
 
@@ -455,7 +459,7 @@ After L2 scrubbing, the encrypted buffer contains only redacted event records. E
 | Control | Reference | Implementation |
 |---------|-----------|---------------|
 | CC6.1 — Logical and physical access controls | Sec. 6, 7 | Agent operates under named user account only; no admin access; MDM TCC controls; server-side revocation within 5 minutes |
-| CC6.6 — Encryption of data at rest and in transit | Sec. 5 | AES-256-GCM at rest; TLS 1.3 in transit; keys in macOS Keychain |
+| CC6.6 — Encryption of data at rest and in transit | Sec. 5 | TLS 1.3 in transit; AES-256-GCM at rest planned (currently plaintext); keys in macOS Keychain |
 | CC7.1 — System monitoring | Sec. 7 | Heartbeat every 5 minutes with state verification; tamper detection via integrity manifest; backend access logging |
 | CC7.2 — Incident response | Sec. 10 | Documented compromise scenarios with mitigations; remote revocation capability; 5-minute maximum response latency for active agents |
 | CC9.2 — Vendor risk management | Sec. 8 | Vendored dependencies (no runtime downloads); Apple notarization; Developer ID signing on all artifacts |
@@ -465,7 +469,7 @@ After L2 scrubbing, the encrypted buffer contains only redacted event records. E
 | Control | Annex Reference | Implementation |
 |---------|----------------|---------------|
 | Asset management | A.8 | Data inventory (Sec. 3); retention and deletion policy (Sec. 9); engagement-scoped data partitioning |
-| Cryptography | A.10 | AES-256-GCM; TLS 1.3; Keychain key storage; key rotation support (Sec. 5) |
+| Cryptography | A.10 | TLS 1.3 in transit; AES-256-GCM at rest planned (Sec. 5); Keychain key storage |
 | Communications security | A.13 | TLS 1.3 minimum; mTLS Phase 2; no unencrypted transmission path |
 | Compliance | A.18 | GDPR DPIA (PIA template, KMF-SEC-003); DPA with data controller (DPA template, KMF-SEC-002); consent records in Keychain and backend |
 | Operations security | A.12 | Immutable audit log; integrity manifest; signed artifacts; no runtime code downloads |
@@ -475,10 +479,10 @@ After L2 scrubbing, the encrypted buffer contains only redacted event records. E
 
 | Article | Requirement | Implementation |
 |---------|------------|---------------|
-| Art. 25 — Data protection by design and by default | Minimize data collection; protect by default | Four-layer PII architecture; L1 capture prevention; capture disabled for sensitive contexts by default; Screen Recording opt-in only |
+| Art. 25 — Data protection by design and by default | Minimize data collection; protect by default | Two-layer on-device PII architecture (L1 capture prevention, L2 regex scrubbing); L3/L4 planned; capture disabled for sensitive contexts by default; Screen Recording opt-in only |
 | Art. 28 — Processor obligations | Written agreement; processor compliance | DPA template (KMF-SEC-002) addresses all Art. 28 requirements; sub-processor listed |
 | Art. 30 — Records of processing activities | Maintain processing records | Data inventory (Sec. 3); DPA template includes ROPA entry template |
-| Art. 32 — Security of processing | Appropriate technical measures | AES-256-GCM; TLS 1.3; access control; incident response plan (Sec. 10) |
+| Art. 32 — Security of processing | Appropriate technical measures | TLS 1.3; AES-256-GCM planned; access control; incident response plan (Sec. 10) |
 | Art. 35 — Data Protection Impact Assessment | DPIA for high-risk processing | PIA template (KMF-SEC-003) provided; employee monitoring is a high-risk processing activity under Art. 35(3)(b) |
 
 ---

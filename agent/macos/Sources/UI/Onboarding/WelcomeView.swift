@@ -69,7 +69,7 @@ public struct WelcomeView: View {
             )
             FeatureBullet(
                 symbol: "lock.shield.fill",
-                text: "All data is encrypted and PII is automatically redacted"
+                text: "Data is transmitted securely and PII is automatically redacted"
             )
         }
         .padding(.horizontal, 8)
