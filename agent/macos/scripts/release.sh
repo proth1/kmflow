@@ -27,6 +27,19 @@ for arg in "$@"; do
     esac
 done
 
+# ---------------------------------------------------------------------------
+# Guard: refuse ad-hoc signing for release builds
+# Ad-hoc signed binaries cannot be notarized and will be rejected by
+# Gatekeeper on other machines. This is defense-in-depth; sign-all.sh
+# also enforces this check.
+# ---------------------------------------------------------------------------
+if [[ "$IDENTITY" == "-" ]]; then
+    echo "ERROR: Ad-hoc signing identity ('-') is not permitted for release builds." >&2
+    echo "       Set KMFLOW_CODESIGN_IDENTITY to a valid Developer ID Application certificate." >&2
+    echo "       Example: export KMFLOW_CODESIGN_IDENTITY='Developer ID Application: YourOrg (TEAMID)'" >&2
+    exit 1
+fi
+
 echo "=============================================="
 echo "KMFlow Agent Release — v${VERSION}"
 echo "=============================================="
