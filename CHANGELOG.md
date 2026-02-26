@@ -3,6 +3,19 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.063] - 2026-02-25
+### Added
+- CISO-ready macOS Task Mining Agent installer: app bundle with embedded Python.framework, code signing, notarization, privacy manifest
+- Security hardening: buffer key and JWT token moved to macOS Keychain, mTLS client cert support, SHA-256 Python integrity manifest
+- KeychainConsentStore replacing InMemoryConsentStore for persistent consent across restarts
+- 5-step SwiftUI onboarding wizard (welcome, consent, permissions, connection, summary)
+- Transparency log UI for real-time capture event visibility from menu bar
+- DMG installer (create-dmg) and signed PKG installer with LaunchAgent for enterprise deployment
+- MDM configuration profiles (managed preferences + TCC/PPPC) for Jamf/Intune/Mosyle
+- Complete uninstall script removing all artifacts including Keychain items
+- GitHub Actions release pipeline triggered by agent/v* tags
+- CISO security whitepaper, DPA template, and PIA template for deployment approval
+
 ## [2026.02.062] - 2026-02-25
 ### Added
 - ML task segmentation pipeline: feature extraction, gradient boosting classifier, hybrid classification, sequence mining (#231)

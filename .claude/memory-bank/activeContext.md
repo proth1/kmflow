@@ -4,10 +4,17 @@
 
 ## Current Focus
 
-No active work item. All 8 Task Mining epics complete.
+No active work item.
 
 ## Recently Completed
 
+- **Committed to main** — CISO-ready macOS Agent Installer (v2026.02.063)
+  - App bundle with embedded Python.framework, code signing, notarization pipeline
+  - Security hardening: Keychain for secrets, mTLS, SHA-256 integrity manifest
+  - SwiftUI onboarding wizard, transparency log, MDM profiles
+  - DMG + PKG installers, LaunchAgent, uninstall script
+  - GitHub Actions release pipeline (agent/v* tags)
+  - Security whitepaper, DPA template, PIA template for CISO review
 - **PR #236 merged** — ML Task Segmentation (Epic 8) (v2026.02.062)
   - Feature extraction (30-dim vectors), gradient boosting classifier, hybrid ML+rules, sequence mining
   - Shared app_categories module extracted to deduplicate graph_ingest + ML features
@@ -37,6 +44,3 @@ No active work item. All 8 Task Mining epics complete.
 - All 8 task mining epics (1-8) complete
 - Phase 1 MVP + Phase 2 ML + Phase 3 graph integration implemented
 
----
-> SESSION END WARNING (2026-02-25T22:36:50Z): activeContext.md was NOT updated during this session.
-> Branch: main, Uncommitted: 31
