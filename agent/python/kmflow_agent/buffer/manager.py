@@ -55,21 +55,88 @@ class BufferManager:
         self._ensure_db()
 
     def _default_key(self) -> bytes:
-        """Get encryption key from env or generate and persist a random key."""
+        """Get encryption key from env, Keychain, or generate and store in Keychain.
+
+        Priority: env var > Keychain > generate new key → Keychain.
+        Legacy .buffer_key files are migrated to Keychain on first access.
+        """
+        import base64
+        import subprocess
+
         env_key = os.environ.get("KMFLOW_BUFFER_KEY")
         if env_key:
             return env_key.encode("utf-8")[:32].ljust(32, b"\0")
 
-        # Generate a random key on first run and persist it
+        keychain_service = "com.kmflow.agent"
+        keychain_account = "buffer_encryption_key"
+
+        # Try macOS Keychain
+        try:
+            result = subprocess.run(
+                [
+                    "security", "find-generic-password",
+                    "-s", keychain_service,
+                    "-a", keychain_account,
+                    "-w",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                return base64.b64decode(result.stdout.strip())[:32]
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            pass
+
+        # Migrate legacy .buffer_key file to Keychain
         key_path = Path(self.db_path).parent / ".buffer_key"
         if key_path.exists():
-            return key_path.read_bytes()[:32]
+            key = key_path.read_bytes()[:32]
+            encoded = base64.b64encode(key).decode("ascii")
+            try:
+                subprocess.run(
+                    ["security", "delete-generic-password", "-s", keychain_service, "-a", keychain_account],
+                    capture_output=True, timeout=5,
+                )
+                subprocess.run(
+                    [
+                        "security", "add-generic-password",
+                        "-s", keychain_service,
+                        "-a", keychain_account,
+                        "-w", encoded,
+                        "-U",
+                    ],
+                    capture_output=True, timeout=5,
+                )
+                key_path.unlink(missing_ok=True)
+                logger.info("Migrated buffer encryption key from file to Keychain")
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                logger.warning("Could not migrate key to Keychain, using file")
+            return key
 
-        key_path.parent.mkdir(parents=True, exist_ok=True)
+        # Generate a new key and store in Keychain
         key = os.urandom(32)
-        key_path.write_bytes(key)
-        os.chmod(key_path, 0o600)
-        logger.info("Generated new buffer encryption key at %s", key_path)
+        encoded = base64.b64encode(key).decode("ascii")
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
+        try:
+            subprocess.run(
+                [
+                    "security", "add-generic-password",
+                    "-s", keychain_service,
+                    "-a", keychain_account,
+                    "-w", encoded,
+                    "-U",
+                ],
+                capture_output=True,
+                timeout=5,
+            )
+            logger.info("Generated new buffer encryption key in Keychain")
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            # Fallback: write to file if Keychain unavailable (e.g., CI)
+            key_path.parent.mkdir(parents=True, exist_ok=True)
+            key_path.write_bytes(key)
+            os.chmod(key_path, 0o600)
+            logger.warning("Keychain unavailable, stored buffer key in file: %s", key_path)
         return key
 
     def _ensure_db(self) -> None:

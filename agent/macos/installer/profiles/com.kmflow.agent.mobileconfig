@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.kmflow.agent.mobileconfig — KMFlow Agent Application Configuration Profile
+  Payload type: com.kmflow.agent (custom managed preferences domain)
+
+  Deploy via MDM to push backend URL, engagement ID, and capture policy to
+  managed devices without requiring manual configuration.  Install directly
+  on unmanaged devices with: open com.kmflow.agent.mobileconfig
+
+  NOTE: Sign this profile before non-MDM distribution using sign-profile.sh.
+-->
+<plist version="1.0">
+<dict>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Profile metadata                                                     -->
+    <!-- ------------------------------------------------------------------ -->
+
+    <key>PayloadDisplayName</key>
+    <string>KMFlow Task Mining Agent Configuration</string>
+
+    <key>PayloadDescription</key>
+    <string>Configures the KMFlow Task Mining Agent with the backend endpoint, engagement identifier, and data capture policy for this deployment.</string>
+
+    <key>PayloadIdentifier</key>
+    <string>com.kmflow.agent.config</string>
+
+    <key>PayloadOrganization</key>
+    <string>KMFlow</string>
+
+    <key>PayloadType</key>
+    <string>Configuration</string>
+
+    <key>PayloadVersion</key>
+    <integer>1</integer>
+
+    <!-- Unique UUID for this profile — regenerate for each new engagement  -->
+    <key>PayloadUUID</key>
+    <string>A1B2C3D4-E5F6-7890-ABCD-EF1234567890</string>
+
+    <!-- Remove profile when MDM un-enrolls the device                      -->
+    <key>PayloadRemovalDisallowed</key>
+    <false/>
+
+    <!-- Target scope: user (LaunchAgent runs per-user, not system-wide)     -->
+    <key>PayloadScope</key>
+    <string>User</string>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Payload content — managed preferences for com.kmflow.agent          -->
+    <!-- ------------------------------------------------------------------ -->
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+
+            <key>PayloadType</key>
+            <string>com.kmflow.agent</string>
+
+            <key>PayloadVersion</key>
+            <integer>1</integer>
+
+            <key>PayloadIdentifier</key>
+            <string>com.kmflow.agent.prefs</string>
+
+            <key>PayloadDisplayName</key>
+            <string>KMFlow Agent Preferences</string>
+
+            <key>PayloadUUID</key>
+            <string>B2C3D4E5-F6A7-8901-BCDE-F12345678901</string>
+
+            <!-- ----------------------------------------------------------
+              BackendURL (string)
+              Full HTTPS URL of the KMFlow API gateway.
+              Example: https://api.kmflow.ai
+            ------------------------------------------------------------ -->
+            <key>BackendURL</key>
+            <string>https://api.kmflow.ai</string>
+
+            <!-- ----------------------------------------------------------
+              EngagementID (string)
+              Unique identifier for this consulting engagement.
+              Obtained from the KMFlow console when the engagement is created.
+              Example: eng-2026-acme-001
+            ------------------------------------------------------------ -->
+            <key>EngagementID</key>
+            <string>eng-REPLACE-ME</string>
+
+            <!-- ----------------------------------------------------------
+              CapturePolicy (string)
+              Controls the granularity of UI event capture.
+              Values:
+                action_level   — captures application name, window title,
+                                 and interaction type only (default, lower risk)
+                content_level  — also captures text field content where
+                                 Accessibility permits (higher-fidelity, review
+                                 with privacy officer before enabling)
+            ------------------------------------------------------------ -->
+            <key>CapturePolicy</key>
+            <string>action_level</string>
+
+            <!-- ----------------------------------------------------------
+              AppBlocklist (array of strings)
+              Bundle identifiers of applications the agent must NEVER capture.
+              Common additions: password managers, HR apps, personal email.
+              Example entries shown below — replace or extend as needed.
+            ------------------------------------------------------------ -->
+            <key>AppBlocklist</key>
+            <array>
+                <string>com.agilebits.onepassword7</string>
+                <string>com.agilebits.onepassword-osx-helper</string>
+                <string>com.lastpass.LastPass</string>
+                <string>com.apple.keychainaccess</string>
+                <string>com.apple.systempreferences</string>
+            </array>
+
+        </dict>
+    </array>
+
+</dict>
+</plist>

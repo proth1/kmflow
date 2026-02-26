@@ -4,10 +4,19 @@
 SCHEME = KMFlowAgent
 BUNDLE_ID = com.kmflow.agent
 MIN_MACOS = 13.0
+VERSION ?= $(shell date +%Y.%m.%j)
+BUILD_DIR ?= ./build
+APP_NAME = KMFlow Agent
+APP_BUNDLE = $(BUILD_DIR)/$(APP_NAME).app
+IDENTITY ?= $(or $(KMFLOW_CODESIGN_IDENTITY),-)
+SCRIPTS_DIR = scripts
 
-.PHONY: build test lint clean sign notarize package-dmg package-pkg resolve
+.PHONY: build test lint clean sign notarize verify package-dmg package-pkg resolve \
+        app-bundle release
 
+# ──────────────────────────────────────────────────────
 # Development targets (SPM-based)
+# ──────────────────────────────────────────────────────
 
 resolve:
 	swift package resolve
@@ -30,24 +39,64 @@ lint:
 
 clean:
 	swift package clean
-	rm -rf .build DerivedData
+	rm -rf .build DerivedData $(BUILD_DIR)
 
-# Production targets (require Xcode + developer certificates)
+# ──────────────────────────────────────────────────────
+# App bundle (M1: compile + embed Python + vendor deps)
+# ──────────────────────────────────────────────────────
 
-sign:
-	@echo "Code signing requires Xcode and a valid Developer ID certificate."
-	@echo "Run: codesign --deep --force --verify --verbose --sign 'Developer ID Application: YOUR_TEAM' .build/release/KMFlowAgent"
+app-bundle:
+	@echo "==> Building app bundle..."
+	KMFLOW_CODESIGN_IDENTITY="$(IDENTITY)" \
+		bash $(SCRIPTS_DIR)/build-app-bundle.sh --output "$(BUILD_DIR)"
 
-notarize:
-	@echo "Notarization requires Xcode and Apple Developer credentials."
-	@echo "1. Create ZIP: ditto -c -k --keepParent .build/release/KMFlowAgent.app KMFlowAgent.zip"
-	@echo "2. Submit: xcrun notarytool submit KMFlowAgent.zip --apple-id YOUR_ID --team-id YOUR_TEAM"
-	@echo "3. Staple: xcrun stapler staple .build/release/KMFlowAgent.app"
+# ──────────────────────────────────────────────────────
+# Code signing (M2)
+# ──────────────────────────────────────────────────────
 
-package-dmg:
-	@echo "DMG packaging requires create-dmg: brew install create-dmg"
-	@echo "create-dmg --volname 'KMFlow Agent' --app-drop-link 450 218 KMFlowAgent.dmg .build/release/KMFlowAgent.app"
+sign: app-bundle
+	@echo "==> Signing app bundle..."
+	KMFLOW_CODESIGN_IDENTITY="$(IDENTITY)" \
+		bash $(SCRIPTS_DIR)/sign-all.sh "$(APP_BUNDLE)"
 
-package-pkg:
-	@echo "PKG packaging for MDM deployment:"
-	@echo "pkgbuild --root .build/release/KMFlowAgent.app --identifier $(BUNDLE_ID) --version 1.0.0 --install-location /Applications KMFlowAgent.pkg"
+# ──────────────────────────────────────────────────────
+# Notarization (M2)
+# ──────────────────────────────────────────────────────
+
+notarize: sign
+	@echo "==> Notarizing app bundle..."
+	bash $(SCRIPTS_DIR)/notarize.sh "$(APP_BUNDLE)"
+
+# ──────────────────────────────────────────────────────
+# Verification (M2)
+# ──────────────────────────────────────────────────────
+
+verify:
+	@echo "==> Verifying code signing..."
+	bash $(SCRIPTS_DIR)/verify-signing.sh "$(APP_BUNDLE)"
+
+# ──────────────────────────────────────────────────────
+# DMG packaging (M5)
+# ──────────────────────────────────────────────────────
+
+package-dmg: sign
+	@echo "==> Building DMG installer..."
+	KMFLOW_CODESIGN_IDENTITY="$(IDENTITY)" VERSION="$(VERSION)" \
+		bash installer/dmg/build-dmg.sh "$(APP_BUNDLE)" "$(BUILD_DIR)"
+
+# ──────────────────────────────────────────────────────
+# PKG packaging (M6)
+# ──────────────────────────────────────────────────────
+
+package-pkg: sign
+	@echo "==> Building PKG installer..."
+	KMFLOW_CODESIGN_IDENTITY="$(IDENTITY)" VERSION="$(VERSION)" \
+		bash installer/pkg/build-pkg.sh "$(APP_BUNDLE)" "$(BUILD_DIR)"
+
+# ──────────────────────────────────────────────────────
+# Full release (M9: build → sign → notarize → package)
+# ──────────────────────────────────────────────────────
+
+release:
+	@echo "==> Full release build..."
+	bash $(SCRIPTS_DIR)/release.sh

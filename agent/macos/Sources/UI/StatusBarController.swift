@@ -61,6 +61,8 @@ public final class StatusBarController {
     public func buildMenu(
         onPauseResume: @escaping () -> Void,
         onPreferences: @escaping () -> Void,
+        onTransparencyLog: @escaping () -> Void,
+        onWhatsBeingCaptured: @escaping () -> Void,
         onQuit: @escaping () -> Void
     ) -> NSMenu {
         let menu = NSMenu()
@@ -69,6 +71,8 @@ public final class StatusBarController {
         let delegate = MenuActionDelegate(
             onPauseResume: onPauseResume,
             onPreferences: onPreferences,
+            onTransparencyLog: onTransparencyLog,
+            onWhatsBeingCaptured: onWhatsBeingCaptured,
             onQuit: onQuit
         )
         self.menuDelegate = delegate
@@ -102,6 +106,17 @@ public final class StatusBarController {
 
         menu.addItem(NSMenuItem.separator())
 
+        // Transparency features
+        let capturedItem = NSMenuItem(title: "What's Being Captured", action: #selector(delegate.whatsBeingCaptured), keyEquivalent: "")
+        capturedItem.target = delegate
+        menu.addItem(capturedItem)
+
+        let logItem = NSMenuItem(title: "Transparency Log", action: #selector(delegate.transparencyLog), keyEquivalent: "t")
+        logItem.target = delegate
+        menu.addItem(logItem)
+
+        menu.addItem(NSMenuItem.separator())
+
         // Preferences
         let prefsItem = NSMenuItem(title: "Preferences...", action: #selector(delegate.preferences), keyEquivalent: ",")
         prefsItem.target = delegate
@@ -122,15 +137,27 @@ public final class StatusBarController {
 final class MenuActionDelegate: NSObject {
     private let onPauseResume: () -> Void
     private let onPreferences: () -> Void
+    private let onTransparencyLog: () -> Void
+    private let onWhatsBeingCaptured: () -> Void
     private let onQuit: () -> Void
 
-    init(onPauseResume: @escaping () -> Void, onPreferences: @escaping () -> Void, onQuit: @escaping () -> Void) {
+    init(
+        onPauseResume: @escaping () -> Void,
+        onPreferences: @escaping () -> Void,
+        onTransparencyLog: @escaping () -> Void,
+        onWhatsBeingCaptured: @escaping () -> Void,
+        onQuit: @escaping () -> Void
+    ) {
         self.onPauseResume = onPauseResume
         self.onPreferences = onPreferences
+        self.onTransparencyLog = onTransparencyLog
+        self.onWhatsBeingCaptured = onWhatsBeingCaptured
         self.onQuit = onQuit
     }
 
     @objc func pauseResume() { onPauseResume() }
     @objc func preferences() { onPreferences() }
+    @objc func transparencyLog() { onTransparencyLog() }
+    @objc func whatsBeingCaptured() { onWhatsBeingCaptured() }
     @objc func quit() { onQuit() }
 }

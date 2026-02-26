@@ -8,6 +8,7 @@ import AppKit
 import Capture
 import Consent
 import Config
+import CryptoKit
 import Foundation
 import IPC
 import PII
@@ -30,6 +31,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var stateManager: CaptureStateManager!
     private var statusBarController: StatusBarController!
     private var blocklistManager: BlocklistManager!
+    private var pythonManager: PythonProcessManager!
+    private var onboardingWindow: OnboardingWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         stateManager = CaptureStateManager()
@@ -37,12 +40,47 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusBarController = StatusBarController(stateManager: stateManager)
         statusBarController.setup()
 
-        // Check consent state
-        let consentStore = InMemoryConsentStore()  // TODO: Replace with KeychainConsentStore
-        let consentManager = ConsentManager(engagementId: "default", store: consentStore)
+        // Verify Python bundle integrity before launching
+        if let resourcesURL = Bundle.main.resourceURL?.appendingPathComponent("python") {
+            let integrityResult = IntegrityChecker.verify(bundleResourcesPath: resourcesURL)
+            switch integrityResult {
+            case .passed:
+                break
+            case .failed(let violations):
+                NSLog("KMFlowAgent: Python integrity check failed: \(violations)")
+                stateManager.setError("Integrity check failed — Python bundle may have been tampered with")
+                statusBarController.updateIcon()
+                return
+            case .manifestMissing:
+                NSLog("KMFlowAgent: Python integrity manifest not found (development mode)")
+            }
+        }
 
-        if !consentManager.captureAllowed {
+        // Check consent state using Keychain-backed store
+        let consentStore = KeychainConsentStore()
+
+        // Detect MDM-configured engagement ID, fall back to UserDefaults or "default"
+        let engagementId: String
+        if let mdmDefaults = UserDefaults(suiteName: "com.kmflow.agent"),
+           let mdmEngagement = mdmDefaults.string(forKey: "EngagementID"),
+           !mdmEngagement.isEmpty {
+            engagementId = mdmEngagement
+        } else {
+            engagementId = UserDefaults.standard.string(forKey: "engagementId") ?? "default"
+        }
+
+        let consentManager = ConsentManager(engagementId: engagementId, store: consentStore)
+
+        if consentManager.state == .neverConsented {
+            // Show first-run onboarding wizard
+            onboardingWindow = OnboardingWindow()
+            onboardingWindow?.show()
             stateManager.requireConsent()
+        } else if !consentManager.captureAllowed {
+            stateManager.requireConsent()
+        } else {
+            // Consent granted — start Python subprocess
+            startPythonSubprocess()
         }
 
         statusBarController.updateIcon()
@@ -50,5 +88,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         stateManager.stopCapture()
+        if let manager = pythonManager {
+            Task { await manager.stop() }
+        }
+    }
+
+    private func startPythonSubprocess() {
+        pythonManager = PythonProcessManager()
+        Task { await pythonManager.start() }
     }
 }

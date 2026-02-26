@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Welcome to KMFlow Agent</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #1d1d1f;
+            margin: 24px 28px;
+            background: transparent;
+        }
+        h1 {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0 0 12px 0;
+            color: #000;
+        }
+        h2 {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 18px 0 6px 0;
+            color: #1d1d1f;
+        }
+        p {
+            margin: 0 0 10px 0;
+        }
+        ul {
+            margin: 4px 0 10px 0;
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 4px;
+        }
+        .accent {
+            color: #0071e3;
+        }
+        .note {
+            font-size: 11px;
+            color: #6e6e73;
+            margin-top: 16px;
+            border-top: 1px solid #d2d2d7;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Welcome to <span class="accent">KMFlow</span> Task Mining Agent</h1>
+
+    <p>
+        This installer will set up the <strong>KMFlow Task Mining Agent</strong>
+        on your Mac. The agent observes UI activity to automatically capture
+        process intelligence for your KMFlow engagement.
+    </p>
+
+    <h2>What will be installed</h2>
+    <ul>
+        <li><strong>KMFlow Agent.app</strong> — installed to <em>/Applications</em></li>
+        <li>
+            <strong>LaunchAgent</strong> — a background service entry installed to
+            <em>~/Library/LaunchAgents/com.kmflow.agent.plist</em> so the agent
+            starts automatically at login
+        </li>
+        <li>
+            <strong>Application Support folder</strong> — local evidence buffer at
+            <em>~/Library/Application Support/KMFlowAgent/</em>
+        </li>
+    </ul>
+
+    <h2>Before you continue</h2>
+    <ul>
+        <li>macOS 13.0 (Ventura) or later is required.</li>
+        <li>Approximately 500 MB of free disk space is required.</li>
+        <li>
+            After installation you will be prompted to grant
+            <strong>Accessibility</strong> permission in System Settings.
+            The agent cannot observe UI activity without this permission.
+        </li>
+        <li>
+            Your IT administrator may have pre-approved permissions via MDM,
+            in which case no manual steps are needed.
+        </li>
+    </ul>
+
+    <p class="note">
+        To remove the agent at any time, run the uninstall script provided
+        in the KMFlow documentation, or contact your IT administrator.
+    </p>
+
+</body>
+</html>

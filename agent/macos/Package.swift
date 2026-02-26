@@ -18,7 +18,7 @@ let package = Package(
         // Main app executable
         .executableTarget(
             name: "KMFlowAgent",
-            dependencies: ["Capture", "Consent", "UI", "IPC", "PII", "Config"],
+            dependencies: ["Capture", "Consent", "UI", "IPC", "PII", "Config", "Utilities"],
             path: "Sources/KMFlowAgent"
         ),
 
@@ -36,11 +36,15 @@ let package = Package(
             path: "Sources/Consent"
         ),
 
-        // SwiftUI views: menu bar, preferences
+        // SwiftUI views: menu bar, preferences, transparency log
         .target(
             name: "UI",
             dependencies: ["Capture", "Consent"],
-            path: "Sources/UI"
+            path: "Sources/UI",
+            linkerSettings: [
+                // TransparencyLogController reads the SQLite capture buffer.
+                .linkedLibrary("sqlite3"),
+            ]
         ),
 
         // IPC: Unix domain socket protocol, event serialization

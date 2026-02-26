@@ -1,0 +1,98 @@
+#!/bin/bash
+# postinstall — KMFlow Agent PKG post-installation script.
+# Runs as root after the payload has been installed to the target volume.
+
+set -euo pipefail
+
+echo "=== KMFlow Agent Post-Installation ==="
+
+# ---------------------------------------------------------------------------
+# Determine the target user (console user, not root)
+# ---------------------------------------------------------------------------
+CONSOLE_USER="$(stat -f '%Su' /dev/console 2>/dev/null || echo "")"
+
+if [[ -z "$CONSOLE_USER" || "$CONSOLE_USER" == "root" ]]; then
+    echo "WARNING: Could not determine the console user; LaunchAgent will not be loaded automatically." >&2
+    echo "         The agent will start on next login." >&2
+    SKIP_LOAD=1
+else
+    SKIP_LOAD=0
+fi
+
+CONSOLE_UID="$(id -u "$CONSOLE_USER" 2>/dev/null || echo "")"
+USER_HOME="$(dscl . -read "/Users/$CONSOLE_USER" NFSHomeDirectory 2>/dev/null | awk '{print $2}' || eval echo "~$CONSOLE_USER")"
+
+echo "  Console user: ${CONSOLE_USER:-unknown} (uid ${CONSOLE_UID:-unknown})"
+echo "  Home:         ${USER_HOME:-unknown}"
+
+# ---------------------------------------------------------------------------
+# Step 1: Install the LaunchAgent plist
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Step 1: Installing LaunchAgent plist ---"
+
+PLIST_SRC="/Applications/KMFlow Agent.app/Contents/Resources/com.kmflow.agent.plist"
+LAUNCH_AGENTS_DIR="${USER_HOME}/Library/LaunchAgents"
+PLIST_DEST="${LAUNCH_AGENTS_DIR}/com.kmflow.agent.plist"
+
+# Fallback: use the plist shipped alongside this script if the app bundle
+# does not contain it (can happen during CI builds).
+if [[ ! -f "$PLIST_SRC" ]]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    PLIST_SRC="${SCRIPT_DIR}/../launchagent/com.kmflow.agent.plist"
+fi
+
+if [[ ! -f "$PLIST_SRC" ]]; then
+    echo "ERROR: LaunchAgent plist not found. Checked:" >&2
+    echo "  /Applications/KMFlow Agent.app/Contents/Resources/com.kmflow.agent.plist" >&2
+    echo "  $PLIST_SRC" >&2
+    exit 1
+fi
+
+mkdir -p "$LAUNCH_AGENTS_DIR"
+cp "$PLIST_SRC" "$PLIST_DEST"
+
+# Ensure the plist is owned by the console user (installer runs as root)
+if [[ -n "$CONSOLE_USER" ]]; then
+    chown "${CONSOLE_USER}" "$PLIST_DEST"
+fi
+chmod 644 "$PLIST_DEST"
+
+echo "  Installed: $PLIST_DEST"
+
+# ---------------------------------------------------------------------------
+# Step 2: Create Application Support directories
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Step 2: Creating Application Support directories ---"
+
+APP_SUPPORT_DIR="${USER_HOME}/Library/Application Support/KMFlowAgent"
+LOG_DIR="${USER_HOME}/Library/Logs/KMFlowAgent"
+
+for DIR in "$APP_SUPPORT_DIR" "$LOG_DIR"; do
+    mkdir -p "$DIR"
+    chmod 0700 "$DIR"
+    if [[ -n "$CONSOLE_USER" ]]; then
+        chown -R "${CONSOLE_USER}" "$DIR"
+    fi
+    echo "  Created: $DIR (0700)"
+done
+
+# ---------------------------------------------------------------------------
+# Step 3: Load the LaunchAgent for the console user
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Step 3: Loading LaunchAgent ---"
+
+if [[ $SKIP_LOAD -eq 1 ]]; then
+    echo "  Skipping LaunchAgent load (no console user detected)."
+    echo "  The agent will start automatically on next login."
+else
+    launchctl bootstrap "gui/${CONSOLE_UID}" "$PLIST_DEST" \
+        && echo "  LaunchAgent loaded for uid ${CONSOLE_UID}." \
+        || echo "  WARNING: launchctl bootstrap returned non-zero. The agent will start on next login."
+fi
+
+echo ""
+echo "=== Post-installation complete ==="
+exit 0

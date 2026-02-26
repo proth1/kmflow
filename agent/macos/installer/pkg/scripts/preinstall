@@ -1,0 +1,82 @@
+#!/bin/bash
+# preinstall — KMFlow Agent PKG pre-installation script.
+# Runs as root before the payload is copied to the target volume.
+# Exit 1 to abort the installation.
+
+set -euo pipefail
+
+echo "=== KMFlow Agent Pre-Installation ==="
+
+# ---------------------------------------------------------------------------
+# Check 1: macOS version >= 13.0
+# ---------------------------------------------------------------------------
+echo "--- Checking macOS version ---"
+
+OS_VERSION="$(sw_vers -productVersion)"
+OS_MAJOR="$(echo "$OS_VERSION" | cut -d. -f1)"
+
+echo "  Detected macOS: $OS_VERSION"
+
+if [[ "$OS_MAJOR" -lt 13 ]]; then
+    echo "ERROR: KMFlow Agent requires macOS 13.0 (Ventura) or later." >&2
+    echo "       Current version: $OS_VERSION" >&2
+    exit 1
+fi
+
+echo "  macOS version check: PASS"
+
+# ---------------------------------------------------------------------------
+# Check 2: Available disk space >= 500 MB
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Checking available disk space ---"
+
+# df outputs 1024-byte blocks; multiply by 1024 to get bytes, then convert to MB
+INSTALL_VOLUME="${3:-/}"
+AVAILABLE_KB="$(df -k "$INSTALL_VOLUME" | awk 'NR==2 {print $4}')"
+AVAILABLE_MB=$(( AVAILABLE_KB / 1024 ))
+REQUIRED_MB=500
+
+echo "  Volume:    $INSTALL_VOLUME"
+echo "  Available: ${AVAILABLE_MB} MB"
+echo "  Required:  ${REQUIRED_MB} MB"
+
+if [[ $AVAILABLE_MB -lt $REQUIRED_MB ]]; then
+    echo "ERROR: Insufficient disk space. At least ${REQUIRED_MB} MB required; ${AVAILABLE_MB} MB available." >&2
+    exit 1
+fi
+
+echo "  Disk space check: PASS"
+
+# ---------------------------------------------------------------------------
+# Check 3: Stop any running KMFlow Agent instance
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Stopping running KMFlow Agent ---"
+
+# Attempt to unload the LaunchAgent for the current user (best-effort; the
+# agent may not be installed yet on a fresh install).
+CURRENT_USER_UID="$(id -u "${USER:-$(stat -f '%Su' /dev/console)}")"
+
+launchctl bootout "gui/${CURRENT_USER_UID}" com.kmflow.agent 2>/dev/null \
+    && echo "  LaunchAgent unloaded." \
+    || echo "  LaunchAgent not loaded (OK for fresh install)."
+
+# Kill any remaining process by name
+if pgrep -x "KMFlowAgent" &>/dev/null; then
+    echo "  Killing running KMFlowAgent process(es)..."
+    pkill -x "KMFlowAgent" || true
+    # Give the process a moment to exit
+    sleep 1
+    if pgrep -x "KMFlowAgent" &>/dev/null; then
+        echo "  Force-killing stubborn KMFlowAgent process(es)..."
+        pkill -9 -x "KMFlowAgent" || true
+    fi
+    echo "  KMFlowAgent stopped."
+else
+    echo "  KMFlowAgent not running (OK)."
+fi
+
+echo ""
+echo "=== Pre-installation checks passed ==="
+exit 0

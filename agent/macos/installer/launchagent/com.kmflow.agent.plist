@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.kmflow.agent.plist — LaunchAgent for KMFlow Task Mining Agent
+  Install location: ~/Library/LaunchAgents/com.kmflow.agent.plist
+
+  Installation is handled by the PKG postinstall script.
+  Load manually: launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.kmflow.agent.plist
+  Unload:        launchctl bootout  gui/$(id -u) com.kmflow.agent
+-->
+<plist version="1.0">
+<dict>
+
+    <!-- Unique service label; must match the bundle identifier -->
+    <key>Label</key>
+    <string>com.kmflow.agent</string>
+
+    <!-- Full path to the agent binary inside the .app bundle -->
+    <key>Program</key>
+    <string>/Applications/KMFlow Agent.app/Contents/MacOS/KMFlowAgent</string>
+
+    <!-- Start the agent automatically when the user logs in -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!--
+      Keep the agent alive indefinitely.
+      SuccessfulExit=false means launchd will restart the agent even if it
+      exits with a zero exit code (i.e. restarts on crash AND on clean exit).
+      Set SuccessfulExit=true if you want launchd to leave a clean exit alone.
+    -->
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <!--
+      Minimum seconds between successive restarts.
+      Prevents a tight crash-restart loop from spinning the CPU.
+    -->
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <!-- Standard output is forwarded to the agent log file -->
+    <key>StandardOutPath</key>
+    <string>/Users/Shared/KMFlowAgent/Logs/agent.log</string>
+    <!-- NOTE: This path is a default fallback. The postinstall script creates
+         ~/Library/Logs/KMFlowAgent/ owned by the console user.  For a per-user
+         LaunchAgent the correct runtime path is expanded by launchd using the
+         HOME environment variable.  Use the path below when deploying through
+         MDM with launchd's environment substitution support:
+           $(HOME)/Library/Logs/KMFlowAgent/agent.log
+         For the PKG installer the postinstall script rewrites this plist with
+         the actual home directory before installing it. -->
+
+    <key>StandardErrorPath</key>
+    <string>/Users/Shared/KMFlowAgent/Logs/agent-error.log</string>
+
+    <!--
+      Environment variables passed to the agent process.
+      HOME is used by the agent to locate its Application Support directory.
+    -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>/Users/Shared</string>
+        <!-- Overridden by postinstall to the console user's home directory. -->
+    </dict>
+
+    <!-- Logging level for launchd's own log output (optional) -->
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <!-- Do NOT display a dock icon or UI for this background agent -->
+    <key>LSUIElement</key>
+    <true/>
+
+</dict>
+</plist>

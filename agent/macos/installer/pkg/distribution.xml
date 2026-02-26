@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  distribution.xml - Apple Installer Distribution Definition for KMFlow Agent
+  Used by productbuild to produce the final .pkg installer.
+-->
+<installer-gui-script minSpecVersion="2">
+
+    <!-- Title and branding -->
+    <title>KMFlow Task Mining Agent</title>
+    <organization>com.kmflow</organization>
+
+    <!-- Installer UI resources (placed in ./resources/) -->
+    <welcome    file="welcome.html"    mime-type="text/html"/>
+    <license    file="license.html"    mime-type="text/html"/>
+    <conclusion file="conclusion.html" mime-type="text/html"/>
+
+    <!-- OS and hardware requirements -->
+    <os-version min="13.0"/>
+
+    <!-- Allow external scripts (preinstall / postinstall) -->
+    <options allow-external-scripts="yes" customize="never" require-scripts="yes"/>
+
+    <!-- Choices outline: a single required choice; agent installation is not optional -->
+    <choices-outline>
+        <line choice="com.kmflow.agent.choice"/>
+    </choices-outline>
+
+    <!-- Choice definition -->
+    <choice
+        id="com.kmflow.agent.choice"
+        visible="true"
+        enabled="true"
+        selected="true"
+        title="KMFlow Task Mining Agent"
+        description="Installs the KMFlow Agent application and configures it to start automatically at login.">
+
+        <pkg-ref id="com.kmflow.agent.pkg"/>
+    </choice>
+
+    <!--
+      Package reference.
+      References the component package built by pkgbuild.
+      The actual filename is substituted by productbuild at build time.
+    -->
+    <pkg-ref id="com.kmflow.agent.pkg"
+             installKBytes="512000"
+             version="0"
+             auth="Root">
+        KMFlowAgent-component.pkg
+    </pkg-ref>
+
+</installer-gui-script>

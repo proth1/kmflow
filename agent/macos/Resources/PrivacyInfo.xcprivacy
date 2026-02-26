@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  PrivacyInfo.xcprivacy — Apple Privacy Manifest for KMFlow Task Mining Agent
+  Bundle ID: com.kmflow.agent
+
+  This manifest declares:
+    - Data collection practices (no tracking, product interaction only)
+    - Required-reason API usage (file timestamps, user defaults)
+
+  Required for App Store submission and notarization starting Spring 2024.
+  Reference: https://developer.apple.com/documentation/bundleresources/privacy_manifest_files
+-->
+<plist version="1.0">
+<dict>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Tracking declaration                                                -->
+    <!-- ------------------------------------------------------------------ -->
+
+    <!-- The app does NOT engage in tracking as defined by Apple's policy.  -->
+    <key>NSPrivacyTracking</key>
+    <false/>
+
+    <!-- No domains used for tracking (cross-app/site data correlation).    -->
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Collected data types                                                -->
+    <!-- ------------------------------------------------------------------ -->
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array>
+        <dict>
+            <!--
+              Product Interaction data — the agent observes UI activity
+              (window titles, application names, click counts) to build
+              process models.  Data is never linked to user identity and
+              is used solely for the app's core functionality (task mining).
+            -->
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeProductInteraction</string>
+
+            <!-- Data IS linked to the app's primary functionality.         -->
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <false/>
+
+            <!-- Data is NOT linked to user identity or personal profiles.  -->
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <false/>
+
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <!-- App functionality: building process intelligence models -->
+                <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+            </array>
+        </dict>
+    </array>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Required-reason API usage                                           -->
+    <!-- ------------------------------------------------------------------ -->
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+
+        <!--
+          File Timestamps API
+          Reason DDA9.1: The app accesses file timestamps to manage its local
+          SQLite buffer (evidence capture database).  Timestamps are used
+          internally to determine buffer age and eviction eligibility; they
+          are never exposed to third parties or used for fingerprinting.
+        -->
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>DDA9.1</string>
+            </array>
+        </dict>
+
+        <!--
+          User Defaults API
+          Reason CA92.1: The app reads NSUserDefaults to retrieve user
+          preferences and MDM-pushed configuration values (e.g., capture
+          policy, backend URL).  No defaults are written without explicit
+          user or MDM action.
+        -->
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>CA92.1</string>
+            </array>
+        </dict>
+
+    </array>
+
+</dict>
+</plist>

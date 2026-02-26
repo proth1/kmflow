@@ -1,0 +1,167 @@
+# KMFlow Agent — Release Pipeline (M9)
+#
+# Triggered by tags matching 'agent/v*'.
+# Builds, signs, notarizes, packages, and creates a GitHub release.
+
+name: Agent Release
+
+on:
+  push:
+    tags:
+      - 'agent/v*'
+  workflow_dispatch:
+    inputs:
+      skip_notarize:
+        description: 'Skip notarization'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+env:
+  MACOS_RUNNER: macos-14
+
+jobs:
+  build-and-release:
+    runs-on: macos-14
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Swift
+        run: swift --version
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install build tools
+        run: |
+          brew install create-dmg
+          pip install pip --upgrade
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/agent/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/agent/v}"
+          else
+            VERSION="$(date +%Y.%m.%j)-dev"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Import signing certificate
+        if: env.MACOS_CERT_P12 != ''
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          # Create temporary keychain
+          KEYCHAIN_PATH=$RUNNER_TEMP/signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -hex 16)
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Import certificate
+          echo "$MACOS_CERT_P12" | base64 --decode > $RUNNER_TEMP/certificate.p12
+          security import $RUNNER_TEMP/certificate.p12 \
+            -P "$MACOS_CERT_PASSWORD" \
+            -A \
+            -t cert \
+            -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+
+          security list-keychain -d user -s "$KEYCHAIN_PATH" login.keychain
+
+          # Extract identity
+          IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          echo "KMFLOW_CODESIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+
+      - name: Build release
+        working-directory: agent/macos
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          KMFLOW_CODESIGN_IDENTITY: ${{ env.KMFLOW_CODESIGN_IDENTITY || '-' }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+        run: |
+          RELEASE_ARGS=""
+          if [[ "${{ inputs.skip_notarize }}" == "true" ]] || [[ -z "${APPLE_ID:-}" ]]; then
+            RELEASE_ARGS="--skip-notarize"
+          fi
+          bash scripts/release.sh $RELEASE_ARGS
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kmflow-agent-${{ steps.version.outputs.version }}
+          path: |
+            agent/macos/build/*.dmg
+            agent/macos/build/*.pkg
+            agent/macos/build/*.zip
+            agent/macos/build/SHA256SUMS
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${GITHUB_REF#refs/tags/}"
+
+          # Collect release assets
+          ASSETS=()
+          for f in agent/macos/build/*.dmg agent/macos/build/*.pkg agent/macos/build/*.zip agent/macos/build/SHA256SUMS; do
+            [ -f "$f" ] && ASSETS+=("$f")
+          done
+
+          ASSET_FLAGS=""
+          for a in "${ASSETS[@]}"; do
+            ASSET_FLAGS="$ASSET_FLAGS $a"
+          done
+
+          gh release create "$TAG" \
+            --title "KMFlow Agent v${VERSION}" \
+            --notes "$(cat <<'NOTES'
+          ## KMFlow Task Mining Agent v${VERSION}
+
+          ### Installation
+
+          **Ad-hoc / Engagement deployment:**
+          Download `KMFlowAgent-${VERSION}.dmg`, open it, and drag KMFlow Agent to Applications.
+
+          **MDM / Enterprise deployment:**
+          Use `KMFlowAgent-${VERSION}-signed.pkg` with your MDM solution (Jamf, Intune, Mosyle).
+          Deploy the configuration profiles from `installer/profiles/` to pre-configure the agent.
+
+          ### Verification
+
+          Verify the download integrity:
+          ```bash
+          shasum -a 256 -c SHA256SUMS
+          ```
+
+          Verify code signing:
+          ```bash
+          spctl --assess --type exec -vvv "/Applications/KMFlow Agent.app"
+          ```
+          NOTES
+          )" \
+            $ASSET_FLAGS
+
+      - name: Cleanup keychain
+        if: always()
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/signing.keychain-db
+          if [ -f "$KEYCHAIN_PATH" ]; then
+            security delete-keychain "$KEYCHAIN_PATH" 2>/dev/null || true
+          fi
+          rm -f $RUNNER_TEMP/certificate.p12

@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.kmflow.agent.tcc.mobileconfig — TCC/PPPC Configuration Profile
+  Payload type: com.apple.TCC.configuration-profile-policy
+
+  This profile pre-authorises the KMFlow Agent for Accessibility and
+  (optionally) Screen Capture access via MDM-pushed Privacy Preferences
+  Policy Control (PPPC).  When deployed by MDM, users will NOT be prompted
+  to manually grant these permissions.
+
+  Requirements:
+    - Must be deployed via a supervised MDM solution (Jamf, Mosyle, etc.)
+    - MDM must have PPPC payload permission from Apple for Accessibility
+    - The CodeRequirement below MUST match the actual signed binary
+
+  NOTE: Adjust the CodeRequirement string to match your production
+        Developer ID certificate once the app is signed for distribution.
+
+  Deploy: install via MDM — this profile cannot be installed manually
+          for Accessibility payloads (Apple restriction since macOS 10.15).
+-->
+<plist version="1.0">
+<dict>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Profile metadata                                                     -->
+    <!-- ------------------------------------------------------------------ -->
+
+    <key>PayloadDisplayName</key>
+    <string>KMFlow Agent — Privacy Permissions (TCC/PPPC)</string>
+
+    <key>PayloadDescription</key>
+    <string>Pre-authorises the KMFlow Task Mining Agent for Accessibility and Screen Capture access required for process intelligence capture.</string>
+
+    <key>PayloadIdentifier</key>
+    <string>com.kmflow.agent.tcc</string>
+
+    <key>PayloadOrganization</key>
+    <string>KMFlow</string>
+
+    <key>PayloadType</key>
+    <string>Configuration</string>
+
+    <key>PayloadVersion</key>
+    <integer>1</integer>
+
+    <key>PayloadUUID</key>
+    <string>C3D4E5F6-A7B8-9012-CDEF-123456789012</string>
+
+    <!-- PPPC profiles must be supervised and cannot be user-removed         -->
+    <key>PayloadRemovalDisallowed</key>
+    <true/>
+
+    <key>PayloadScope</key>
+    <string>System</string>
+
+    <!-- ------------------------------------------------------------------ -->
+    <!-- TCC/PPPC payload                                                     -->
+    <!-- ------------------------------------------------------------------ -->
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+
+            <key>PayloadType</key>
+            <string>com.apple.TCC.configuration-profile-policy</string>
+
+            <key>PayloadVersion</key>
+            <integer>1</integer>
+
+            <key>PayloadIdentifier</key>
+            <string>com.kmflow.agent.tcc.pppc</string>
+
+            <key>PayloadDisplayName</key>
+            <string>KMFlow Agent TCC Policy</string>
+
+            <key>PayloadUUID</key>
+            <string>D4E5F6A7-B8C9-0123-DEFA-234567890123</string>
+
+            <key>Services</key>
+            <dict>
+
+                <!-- ------------------------------------------------------ -->
+                <!-- Accessibility (required — enables AXUIElement + CGEvent) -->
+                <!-- ------------------------------------------------------ -->
+                <key>Accessibility</key>
+                <array>
+                    <dict>
+                        <!-- Bundle ID of the binary being granted access     -->
+                        <key>Identifier</key>
+                        <string>com.kmflow.agent</string>
+
+                        <!-- Use bundleID as the identifier type              -->
+                        <key>IdentifierType</key>
+                        <string>bundleID</string>
+
+                        <!--
+                          CodeRequirement — designate requirement string from codesign.
+                          For ad-hoc (dev): use the placeholder below.
+                          For Developer ID: replace with output of:
+                            codesign -d --requirements - "KMFlow Agent.app" 2>&1 \
+                              | grep designated
+
+                          PLACEHOLDER — replace before MDM deployment:
+                        -->
+                        <key>CodeRequirement</key>
+                        <string>identifier "com.kmflow.agent" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] and certificate leaf[field.1.2.840.113635.100.6.1.13] and certificate leaf[subject.OU] = "REPLACE_TEAM_ID"</string>
+
+                        <!-- Pre-approve without user prompt                  -->
+                        <key>Allowed</key>
+                        <true/>
+
+                        <!--
+                          StaticCode=false means TCC re-validates the binary
+                          signature each time (more secure, catches tampering).
+                        -->
+                        <key>StaticCode</key>
+                        <false/>
+
+                        <key>Comment</key>
+                        <string>KMFlow Agent requires Accessibility to observe UI activity via AXUIElement and CGEventTap APIs.</string>
+                    </dict>
+                </array>
+
+                <!-- ------------------------------------------------------ -->
+                <!-- ScreenCapture (optional — enable if content_level       -->
+                <!-- capture policy requires screenshot-based evidence)      -->
+                <!-- Comment out this block if screen capture is not needed. -->
+                <!-- ------------------------------------------------------ -->
+                <key>ScreenCapture</key>
+                <array>
+                    <dict>
+                        <key>Identifier</key>
+                        <string>com.kmflow.agent</string>
+
+                        <key>IdentifierType</key>
+                        <string>bundleID</string>
+
+                        <key>CodeRequirement</key>
+                        <string>identifier "com.kmflow.agent" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] and certificate leaf[field.1.2.840.113635.100.6.1.13] and certificate leaf[subject.OU] = "REPLACE_TEAM_ID"</string>
+
+                        <key>Allowed</key>
+                        <true/>
+
+                        <key>StaticCode</key>
+                        <false/>
+
+                        <key>Comment</key>
+                        <string>KMFlow Agent optionally captures screenshots when content_level capture policy is enabled. Disable this block if action_level policy is used.</string>
+                    </dict>
+                </array>
+
+            </dict>
+            <!-- end Services -->
+
+        </dict>
+    </array>
+
+</dict>
+</plist>
