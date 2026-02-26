@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.067
+**Version**: 2026.02.068
 **Last Updated**: 2026-02-26
 
 ## Quick Stats
@@ -9,7 +9,7 @@
 |--------|-------|
 | SQLAlchemy Models | 78+ classes across 12 modules |
 | API Routes | 25+ routers |
-| Test Count | 2306 backend + 206 frontend passing |
+| Test Count | 2308 backend + 206 frontend passing |
 | Coverage | >80% |
 | Python Version | 3.12+ |
 | FastAPI Version | 0.109+ |
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.068 | 2026-02-26 | Audit Phase 2 PR 1: platform auth/API hardening — pagination bounds, WS membership, TOM access (#239) |
 | 2026.02.067 | 2026-02-26 | Audit Phase 1 PR 3: agent security — entitlements, signing, installer, Swift actors (#244) |
 | 2026.02.066 | 2026-02-26 | Audit Phase 1 PR 2: rate limiter hardening — pruning, X-Forwarded-For rejection (#243) |
 | 2026.02.065 | 2026-02-25 | Audit Phase 1 PR 1: engagement access control, MCP auth cleanup, PIA R8 fix (#242) |
@@ -51,7 +52,7 @@
 
 ## Platform Health
 
-- All 2306 backend + 206 frontend tests passing
+- All 2308 backend + 206 frontend tests passing
 - No known critical vulnerabilities
 - Backend lint/format/type checks clean
 

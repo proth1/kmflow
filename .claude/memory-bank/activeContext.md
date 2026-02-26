@@ -4,11 +4,20 @@
 
 ## Current Focus
 
-**Audit Remediation Phase 1 COMPLETE** — All 3 PRs merged (Epic #238)
-- Next: Phase 2 (HIGH findings) or re-run `/code-audit` to verify
+**Audit Remediation Phase 2 IN PROGRESS** — PR 1 merged, continuing with remaining HIGHs
+- PR 1 done (auth/API hardening): pagination, WebSocket membership, TOM access, log_audit dedup
+- Remaining: missing FK indexes migration, GDPR data subject rights, security events table
+- Most platform HIGHs already resolved (15/17 per Explore agent triage)
 
 ## Recently Completed
 
+- **PR #249 merged** — Audit Phase 2 PR 1: Platform Auth & API Hardening (v2026.02.068)
+  - Pagination bounds on 22 limit/offset params across 10 route files (ge/le validators)
+  - WebSocket engagement membership verification for monitoring + alerts endpoints
+  - TOM CRUD membership checks for all 6 routes (create/list/get/update models, create/list gaps)
+  - Replaced duplicate _log_audit in engagements.py with centralized log_audit
+  - 2 new WebSocket auth tests, 2308 total backend tests
+  - PR review: APPROVE with 2 MEDIUM (auth duplication — follow-up, get/update TOM — fixed), 3 LOW
 - **PR #248 merged** — Audit Phase 1 PR 3: Agent Security (v2026.02.067)
   - Removed Apple Events entitlement, mouse x/y coordinates, nil bundleId bypass
   - Fixed signing (refuse ad-hoc for release), notarization (verify Accepted status), pip hashes
@@ -65,7 +74,7 @@
 
 ## Session Notes
 
-- 2306 backend tests + 206 frontend tests passing
+- 2308 backend tests + 206 frontend tests passing
 - All 8 task mining epics (1-8) complete
 - Phase 1 MVP + Phase 2 ML + Phase 3 graph integration implemented
 

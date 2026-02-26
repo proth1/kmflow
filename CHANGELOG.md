@@ -3,6 +3,18 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.068] - 2026-02-26
+### Security
+- Add WebSocket engagement membership verification for monitoring and alerts endpoints (#239)
+- Wire engagement membership checks into all TOM CRUD routes (#239)
+- Add pagination bounds (ge/le) to 22 limit/offset params across 10 route files (#239)
+
+### Changed
+- Replace duplicate _log_audit in engagements.py with centralized log_audit from core (#239)
+
+### Added
+- 2 new WebSocket auth tests for engagement membership (2308 total backend)
+
 ## [2026.02.067] - 2026-02-26
 ### Security
 - Remove unused Apple Events entitlement from macOS agent (least privilege) (#244)
