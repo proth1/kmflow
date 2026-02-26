@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.063
+**Version**: 2026.02.064
 **Last Updated**: 2026-02-25
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.064 | 2026-02-25 | Audit Phase 0: fix false security claims in whitepaper, DPA, PIA, TCC profile, WelcomeView (#241) |
 | 2026.02.063 | 2026-02-25 | CISO-ready agent installer: app bundle, code signing, Keychain hardening, onboarding wizard, DMG/PKG/MDM |
 | 2026.02.062 | 2026-02-25 | ML task segmentation: feature extraction, gradient boosting, hybrid classification, sequence mining |
 | 2026.02.061 | 2026-02-25 | Knowledge graph integration: ingestion, semantic bridge, LCD weight, variant detection |

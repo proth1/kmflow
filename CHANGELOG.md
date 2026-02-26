@@ -3,6 +3,16 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.064] - 2026-02-25
+### Security
+- Audit Phase 0: Fix false security claims in whitepaper, DPA, PIA templates (#241)
+- Correct encryption claims from "AES-256-GCM" to "planned — not yet implemented"
+- Correct PII layer claims from "four-layer" to "two-layer on-device" (L3/L4 planned)
+- Remove ScreenCapture from default TCC profile (principle of least privilege)
+- Rename L1Filter to CaptureContextFilter for architectural clarity
+- Fix incorrect socket and uninstall paths in whitepaper
+- Fix false "All data is encrypted" UI string in WelcomeView
+
 ## [2026.02.063] - 2026-02-25
 ### Added
 - CISO-ready macOS Task Mining Agent installer: app bundle with embedded Python.framework, code signing, notarization, privacy manifest

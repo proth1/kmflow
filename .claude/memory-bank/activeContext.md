@@ -4,10 +4,20 @@
 
 ## Current Focus
 
-No active work item.
+**Audit Remediation Phase 1** — Critical Security Fixes (Epic #238)
+- Story #242: Platform Security (auth, injection, infra) — next PR
+- Story #243: Platform Quality (data integrity, tests, compliance)
+- Story #244: Agent Security (entitlements, encryption, signing, installer)
 
 ## Recently Completed
 
+- **PR #245 merged** — Audit Phase 0: Documentation Corrections (v2026.02.064)
+  - Fixed false encryption, PII layer, socket path, uninstall path claims in whitepaper
+  - Corrected DPA template, PIA template with "planned" disclaimers
+  - Removed ScreenCapture from TCC profile (least privilege)
+  - Renamed L1Filter → CaptureContextFilter for clarity
+  - Fixed "All data is encrypted" UI string in WelcomeView
+  - PR review: 1 MEDIUM (PIA R8 row — will fix in Phase 1)
 - **Committed to main** — CISO-ready macOS Agent Installer (v2026.02.063)
   - App bundle with embedded Python.framework, code signing, notarization pipeline
   - Security hardening: Keychain for secrets, mTLS, SHA-256 integrity manifest
