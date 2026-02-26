@@ -68,6 +68,7 @@ else
         codesign \
             --force \
             --sign "$IDENTITY" \
+            --options runtime \
             --timestamp \
             "$BINARY"
     done

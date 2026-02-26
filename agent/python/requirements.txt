@@ -1,6 +1,8 @@
 # KMFlow Agent — Python dependencies (pinned with SHA-256 hashes)
 #
 # All versions are pinned with == and verified via --require-hashes.
+# Hashes below are for macosx_14_0_arm64 wheels (the primary build target).
+# For x86_64 or universal builds, add the corresponding platform wheel hashes.
 # To update: download new wheel, compute hash with `pip hash <file>`,
 # update both version and hash below.
 #
