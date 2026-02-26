@@ -32,6 +32,26 @@ CODESIGN_IDENTITY="${KMFLOW_CODESIGN_IDENTITY:--}"
 PBS_BASE_URL="https://github.com/indygreg/python-build-standalone/releases/download/${PBS_RELEASE}"
 
 # ---------------------------------------------------------------------------
+# Known SHA-256 checksums for python-build-standalone tarballs.
+# Update these when changing PBS_RELEASE or PYTHON_VERSION.
+# Obtain checksums from the SHA256SUMS file published with each release:
+#   https://github.com/indygreg/python-build-standalone/releases/download/${PBS_RELEASE}/SHA256SUMS
+# ---------------------------------------------------------------------------
+declare -A PBS_CHECKSUMS=(
+    # Placeholder hashes — MUST be replaced with real values from the release
+    # SHA256SUMS file before any production build. The build will fail if these
+    # do not match the downloaded tarball.
+    #
+    # To populate:
+    #   1. Download the tarball manually or via this script (first run will fail verification)
+    #   2. Run: shasum -a 256 ~/.cache/kmflow-python/<tarball>
+    #   3. Paste the hash below for the matching architecture
+    #   4. Re-run the build to verify
+    ["aarch64"]=""
+    ["x86_64"]=""
+)
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 log()  { echo "[embed-python] $*" >&2; }
@@ -144,6 +164,34 @@ download_tarball() {
         curl -fL --progress-bar --output "$cached" "$url" \
             || { rm -f "$cached"; die "Download failed for ${url}"; }
         log "Saved to cache: ${cached}"
+    fi
+
+    # SHA-256 verification — ensure the tarball matches the expected checksum.
+    local pbs_arch
+    case "$arch" in
+        arm64)   pbs_arch="aarch64" ;;
+        x86_64)  pbs_arch="x86_64"  ;;
+    esac
+    local expected_hash="${PBS_CHECKSUMS[$pbs_arch]:-}"
+    if [[ -n "$expected_hash" ]]; then
+        local actual_hash
+        actual_hash=$(shasum -a 256 "$cached" | awk '{print $1}')
+        if [[ "$actual_hash" != "$expected_hash" ]]; then
+            log "HASH MISMATCH for ${filename}!"
+            log "  Expected: ${expected_hash}"
+            log "  Actual:   ${actual_hash}"
+            rm -f "$cached"
+            die "SHA-256 verification failed — possible supply chain attack or corrupt download. Removed cached file."
+        fi
+        log "SHA-256 verified: ${actual_hash}"
+    else
+        log "WARNING: No SHA-256 checksum configured for arch '${pbs_arch}'."
+        log "         Populate PBS_CHECKSUMS in this script before production builds."
+        log "         Current file hash: $(shasum -a 256 "$cached" | awk '{print $1}')"
+        if [[ "${KMFLOW_RELEASE_BUILD:-0}" == "1" ]]; then
+            rm -f "$cached"
+            die "SHA-256 checksum verification is mandatory for release builds. Populate PBS_CHECKSUMS and retry."
+        fi
     fi
 
     echo "$cached"
@@ -322,16 +370,18 @@ codesign_framework() {
     local fw_root="$1"
     log "Codesigning Python.framework with identity: ${CODESIGN_IDENTITY}"
 
-    # Sign all dylibs and .so files first, then the binary, then the framework
+    # Sign all dylibs and .so files first, then the binary, then the framework.
+    # --options runtime enables Hardened Runtime (required for notarization).
+    # --timestamp is required for notarization (Apple rejects untimestamped signatures).
     find "${fw_root}" \( -name "*.so" -o -name "*.dylib" \) -print0 \
-        | xargs -0 -P4 codesign --force --sign "$CODESIGN_IDENTITY" 2>/dev/null || true
+        | xargs -0 -P4 codesign --force --sign "$CODESIGN_IDENTITY" --options runtime --timestamp 2>/dev/null || true
 
-    codesign --force --sign "$CODESIGN_IDENTITY" \
+    codesign --force --sign "$CODESIGN_IDENTITY" --options runtime --timestamp \
         "${fw_root}/Versions/${PYTHON_VERSION}/bin/python${PYTHON_VERSION}" \
         2>/dev/null || true
 
     # Sign the framework bundle itself
-    codesign --force --sign "$CODESIGN_IDENTITY" "$fw_root" 2>/dev/null || true
+    codesign --force --sign "$CODESIGN_IDENTITY" --options runtime --timestamp "$fw_root" 2>/dev/null || true
 }
 
 # ---------------------------------------------------------------------------

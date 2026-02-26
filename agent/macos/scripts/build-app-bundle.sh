@@ -318,13 +318,14 @@ find "$FRAMEWORKS" \( -name "*.dylib" -o -name "*.so" \) -print0 \
     | xargs -0 -P4 codesign \
         --force \
         --sign "$CODESIGN_IDENTITY" \
+        --options runtime \
         --timestamp \
         2>/dev/null || true
 
 # 2. Sign the embedded Python interpreter binary
 PYTHON_BIN="${FRAMEWORKS}/Python.framework/Versions/3.12/bin/python3.12"
 if [[ -f "$PYTHON_BIN" ]]; then
-    codesign --force --sign "$CODESIGN_IDENTITY" --timestamp "$PYTHON_BIN" 2>/dev/null || true
+    codesign --force --sign "$CODESIGN_IDENTITY" --options runtime --timestamp "$PYTHON_BIN" 2>/dev/null || true
 fi
 
 # 3. Sign the Python launcher shim (shell scripts don't need codesigning per se,
@@ -336,6 +337,7 @@ fi
 codesign \
     --force \
     --sign "$CODESIGN_IDENTITY" \
+    --options runtime \
     --timestamp \
     --entitlements "${RESOURCES}/KMFlowAgent.entitlements" \
     "${MACOS_BUNDLE}/${SWIFT_BINARY_NAME}"
@@ -345,6 +347,7 @@ codesign \
     --force \
     --deep \
     --sign "$CODESIGN_IDENTITY" \
+    --options runtime \
     --timestamp \
     --entitlements "${RESOURCES}/KMFlowAgent.entitlements" \
     "$APP_BUNDLE"
