@@ -3,6 +3,30 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.128] - 2026-02-27
+### Added
+- Governance CRUD APIs: policy/control/regulation CRUD with soft-delete, Neo4j graph sync (write transactions), GET single regulation endpoint, governance chain traversal, 10 BDD tests (#329)
+
+## [2026.02.127] - 2026-02-27
+### Added
+- Process maturity scoring: CMMI-aligned maturity levels (1-5), MaturityScore model + migration 051, evidence coverage/governance/metric dimensions, maturity heatmap with latest-per-area subquery, MaturityScoringService, 15 BDD tests (#358)
+
+## [2026.02.126] - 2026-02-27
+### Added
+- Governance gap detection: GapFinding model + migration 055, regulation-aware gap resolution, ungoverned activity Cypher queries, severity scoring by activity criticality, idempotent gap persistence, 17 BDD tests (#340)
+
+## [2026.02.125] - 2026-02-27
+### Added
+- Control effectiveness scoring: ControlEffectivenessScore model + migration 054, execution rate thresholds (90/70/50%), evidence-linked scoring, trend analysis with period comparison, 17 BDD tests (#336)
+
+## [2026.02.124] - 2026-02-27
+### Added
+- Compliance state machine: ComplianceAssessment model + migration 053, control coverage percentage, state transitions (NOT_ASSESSED → FULLY/PARTIALLY/NON_COMPLIANT), compliance dashboard summary, 20 BDD tests (#333)
+
+## [2026.02.123] - 2026-02-27
+### Added
+- Per-activity TOM alignment scoring: TOMAlignmentRun/TOMAlignmentResult models + migration 051, async background scoring, cosine similarity classification (NO_GAP/PARTIAL/FULL), gap rationale generation with LLM fallback, paginated results, 30 BDD tests (#348, #352)
+
 ## [2026.02.122] - 2026-02-27
 ### Added
 - TOM definition management APIs with structured dimensions: TOMDimensionRecord and TOMVersion models, migration 050, structured DimensionInput with maturity 1-5 validation, version snapshotting on PATCH with atomic SQL-level increment and SELECT FOR UPDATE, duplicate dimension_type validation, version history endpoint, import/export endpoints, 18 BDD tests (#344)

@@ -1,15 +1,15 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.122
+**Version**: 2026.02.128
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
 
 | Metric | Value |
 |--------|-------|
-| SQLAlchemy Models | 78+ classes across 12 modules |
+| SQLAlchemy Models | 82+ classes across 12 modules |
 | API Routes | 26+ routers |
-| Test Count | 3006 backend + 206 frontend passing |
+| Test Count | 3115 backend + 206 frontend passing |
 | Coverage | >80% |
 | Python Version | 3.12+ |
 | FastAPI Version | 0.109+ |
@@ -27,6 +27,12 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.128 | 2026-02-27 | Governance CRUD APIs: soft-delete, Neo4j graph sync, governance chain traversal, 10 tests (#329) |
+| 2026.02.127 | 2026-02-27 | Process maturity scoring: CMMI levels 1-5, evidence/governance/metric dimensions, heatmap, 15 tests (#358) |
+| 2026.02.126 | 2026-02-27 | Governance gap detection: GapFinding model, regulation-aware resolution, severity scoring, 17 tests (#340) |
+| 2026.02.125 | 2026-02-27 | Control effectiveness scoring: execution rate thresholds, evidence-linked, trend analysis, 17 tests (#336) |
+| 2026.02.124 | 2026-02-27 | Compliance state machine: coverage percentage, state transitions, dashboard summary, 20 tests (#333) |
+| 2026.02.123 | 2026-02-27 | Per-activity TOM alignment scoring: async background scoring, cosine similarity, gap rationale, 30 tests (#348, #352) |
 | 2026.02.122 | 2026-02-27 | TOM definition management APIs: structured dimensions, version history, import/export, 18 tests (#344) |
 | 2026.02.121 | 2026-02-27 | Cross-source consistency reporting: disagreement report, agreement rate, POV trend, 13 tests (#392) |
 | 2026.02.120 | 2026-02-27 | Disagreement resolution workflow: 5-endpoint conflict API, filterable report, audit trail, 48h auto-escalation, 21 tests (#388) |

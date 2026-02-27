@@ -8,6 +8,12 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #445 merged** — Governance CRUD APIs: soft-delete, Neo4j write transactions, GET regulation (#329) (v2026.02.128)
+- **PR #444 merged** — Process maturity scoring: CMMI levels 1-5, heatmap, MaturityScoringService (#358) (v2026.02.127)
+- **PR #443 merged** — Governance gap detection: GapFinding, regulation-aware resolution (#340) (v2026.02.126)
+- **PR #442 merged** — Control effectiveness scoring: execution rate thresholds, trend analysis (#336) (v2026.02.125)
+- **PR #441 merged** — Compliance state machine: coverage percentage, state transitions (#333) (v2026.02.124)
+- **PR #440 merged** — Per-activity TOM alignment scoring + gap rationale (#348, #352) (v2026.02.123)
 - **PR #438 merged** — TOM definition management APIs with structured dimensions (#344) (v2026.02.122)
   - TOMDimensionRecord, TOMVersion models + migration 050
   - Structured DimensionInput with maturity 1-5, version snapshotting on PATCH
