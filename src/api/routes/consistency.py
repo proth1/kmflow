@@ -8,21 +8,91 @@ Implements Story #392: Cross-Source Consistency Reporting.
 
 from __future__ import annotations
 
+import html
 import logging
 import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
+from src.core.models import User
 from src.core.models.conflict import ConflictObject, MismatchType, ResolutionStatus
 from src.core.models.pov import ProcessModel, ProcessModelStatus
+from src.core.permissions import require_permission
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/engagements", tags=["consistency"])
+
+
+# -- Response Schemas ---------------------------------------------------------
+
+
+class ConflictEntry(BaseModel):
+    """A single conflict entry in the disagreement report."""
+
+    conflict_id: str
+    type: str
+    severity: float
+    resolution_status: str
+    resolution_type: str | None
+    source_a_id: str | None
+    source_b_id: str | None
+    resolver_id: str | None = None
+    resolved_at: str | None = None
+    created_at: str
+
+
+class ReportSummary(BaseModel):
+    """Summary header for disagreement report."""
+
+    total_conflicts: int
+    open_count: int
+    escalated_count: int
+    resolved_count: int
+    type_breakdown: dict[str, int]
+
+
+class DisagreementReportResponse(BaseModel):
+    """Full disagreement report response."""
+
+    engagement_id: str
+    summary: ReportSummary
+    conflicts: list[ConflictEntry]
+
+
+class ConsistencyMetricsResponse(BaseModel):
+    """Consistency metrics with agreement rate."""
+
+    engagement_id: str
+    total_element_pairs: int
+    conflicting_pairs: int
+    agreement_rate: float
+    resolved_conflict_rate: float
+    open_conflict_count: int
+    resolved_count: int
+
+
+class TrendEntry(BaseModel):
+    """A single entry in the POV trend."""
+
+    pov_version: int
+    pov_created_at: str | None
+    open_conflict_count: int
+    resolved_conflict_count: int
+    agreement_rate: float
+
+
+class ConsistencyTrendResponse(BaseModel):
+    """POV version trend with conflict reduction rate."""
+
+    engagement_id: str
+    trend: list[TrendEntry]
+    conflict_reduction_rate: float | None
 
 
 # ---------------------------------------------------------------------------
@@ -32,13 +102,17 @@ router = APIRouter(prefix="/api/v1/engagements", tags=["consistency"])
 
 @router.get(
     "/{engagement_id}/reports/disagreement",
+    response_model=DisagreementReportResponse,
     summary="Disagreement report for an engagement",
 )
 async def disagreement_report(
     engagement_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-    format: str = Query("json", description="Output format: json or pdf"),
-) -> dict[str, Any]:
+    user: User = Depends(require_permission("engagement:read")),
+    output_format: str = Query("json", alias="format", description="Output format: json or pdf"),
+    limit: int = Query(default=200, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
+) -> Any:
     """Return a disagreement report listing all ConflictObjects with full status.
 
     Each entry includes conflict_id, type, severity, resolution_status,
@@ -49,6 +123,8 @@ async def disagreement_report(
         select(ConflictObject)
         .where(ConflictObject.engagement_id == engagement_id)
         .order_by(ConflictObject.severity.desc(), ConflictObject.created_at.asc())
+        .limit(limit)
+        .offset(offset)
     )
     result = await session.execute(query)
     conflicts = result.scalars().all()
@@ -96,7 +172,7 @@ async def disagreement_report(
         "conflicts": items,
     }
 
-    if format == "pdf":
+    if output_format == "pdf":
         # PDF generation via existing infrastructure
         try:
             from src.core.pdf_generator import html_to_pdf, is_pdf_available
@@ -132,13 +208,13 @@ def _render_disagreement_html(report: dict[str, Any]) -> str:
     for c in report["conflicts"]:
         rows += (
             f"<tr>"
-            f"<td>{c['conflict_id'][:8]}...</td>"
-            f"<td>{c['type']}</td>"
+            f"<td>{html.escape(str(c['conflict_id'][:8]))}...</td>"
+            f"<td>{html.escape(str(c['type']))}</td>"
             f"<td>{c['severity']:.2f}</td>"
-            f"<td>{c['resolution_status']}</td>"
-            f"<td>{c['resolution_type'] or '-'}</td>"
-            f"<td>{c['source_a_id'][:8] if c['source_a_id'] else '-'}...</td>"
-            f"<td>{c['source_b_id'][:8] if c['source_b_id'] else '-'}...</td>"
+            f"<td>{html.escape(str(c['resolution_status']))}</td>"
+            f"<td>{html.escape(str(c['resolution_type'])) if c['resolution_type'] else '-'}</td>"
+            f"<td>{html.escape(str(c['source_a_id'][:8])) if c['source_a_id'] else '-'}...</td>"
+            f"<td>{html.escape(str(c['source_b_id'][:8])) if c['source_b_id'] else '-'}...</td>"
             f"</tr>"
         )
 
@@ -154,7 +230,7 @@ th {{ background-color: #f4f4f4; }}
 .summary {{ margin: 1em 0; padding: 1em; background: #f9f9f9; border-radius: 4px; }}
 </style></head><body>
 <h1>Cross-Source Disagreement Report</h1>
-<p>Engagement: {report["engagement_id"]}</p>
+<p>Engagement: {html.escape(str(report["engagement_id"]))}</p>
 <div class="summary">
 <strong>Summary:</strong>
 Total: {summary["total_conflicts"]} |
@@ -179,11 +255,13 @@ Resolved: {summary["resolved_count"]}
 
 @router.get(
     "/{engagement_id}/consistency-metrics",
+    response_model=ConsistencyMetricsResponse,
     summary="Consistency metrics with agreement rate",
 )
 async def consistency_metrics(
     engagement_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """Return consistency metrics including agreement rate.
 
@@ -265,11 +343,13 @@ async def consistency_metrics(
 
 @router.get(
     "/{engagement_id}/consistency-metrics/trend",
+    response_model=ConsistencyTrendResponse,
     summary="POV version trend with conflict reduction rate",
 )
 async def consistency_trend(
     engagement_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """Return conflict reduction trend across POV versions.
 

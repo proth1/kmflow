@@ -17,6 +17,7 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from src.api.routes.consistency import router
+from src.core.models import User, UserRole
 from src.core.models.conflict import ConflictObject, MismatchType, ResolutionStatus, ResolutionType
 from src.core.models.pov import ProcessModel, ProcessModelStatus
 
@@ -25,6 +26,14 @@ from src.core.models.pov import ProcessModel, ProcessModelStatus
 # ---------------------------------------------------------------------------
 
 ENG_ID = uuid.uuid4()
+USER_ID = uuid.uuid4()
+
+
+def _mock_user() -> User:
+    u = MagicMock(spec=User)
+    u.id = USER_ID
+    u.role = UserRole.PLATFORM_ADMIN
+    return u
 
 
 def _make_conflict(
@@ -76,9 +85,14 @@ def _make_process_model(
     return obj
 
 
-def _make_app() -> FastAPI:
+def _make_app_with_session(session: AsyncMock) -> FastAPI:
+    """Create a test app with session and auth overrides."""
+    from src.core.auth import get_current_user
+
     app = FastAPI()
     app.include_router(router)
+    app.dependency_overrides[__import__("src.api.deps", fromlist=["get_session"]).get_session] = lambda: session
+    app.dependency_overrides[get_current_user] = lambda: _mock_user()
     return app
 
 
@@ -105,8 +119,7 @@ class TestScenario1DisagreementReport:
         mock_result.scalars.return_value.all.return_value = conflicts
         session.execute = AsyncMock(return_value=mock_result)
 
-        app = _make_app()
-        app.dependency_overrides[__import__("src.api.deps", fromlist=["get_session"]).get_session] = lambda: session
+        app = _make_app_with_session(session)
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.get(f"/api/v1/engagements/{ENG_ID}/reports/disagreement")
@@ -133,8 +146,7 @@ class TestScenario1DisagreementReport:
         mock_result.scalars.return_value.all.return_value = conflicts
         session.execute = AsyncMock(return_value=mock_result)
 
-        app = _make_app()
-        app.dependency_overrides[__import__("src.api.deps", fromlist=["get_session"]).get_session] = lambda: session
+        app = _make_app_with_session(session)
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.get(f"/api/v1/engagements/{ENG_ID}/reports/disagreement")
@@ -159,8 +171,7 @@ class TestScenario1DisagreementReport:
         mock_result.scalars.return_value.all.return_value = [conflict]
         session.execute = AsyncMock(return_value=mock_result)
 
-        app = _make_app()
-        app.dependency_overrides[__import__("src.api.deps", fromlist=["get_session"]).get_session] = lambda: session
+        app = _make_app_with_session(session)
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.get(f"/api/v1/engagements/{ENG_ID}/reports/disagreement")
@@ -192,8 +203,7 @@ class TestScenario1DisagreementReport:
         mock_result.scalars.return_value.all.return_value = conflicts
         session.execute = AsyncMock(return_value=mock_result)
 
-        app = _make_app()
-        app.dependency_overrides[__import__("src.api.deps", fromlist=["get_session"]).get_session] = lambda: session
+        app = _make_app_with_session(session)
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.get(f"/api/v1/engagements/{ENG_ID}/reports/disagreement")
@@ -232,8 +242,7 @@ class TestScenario2ConsistencyMetrics:
 
         session.execute = AsyncMock(side_effect=[count_15, count_5, count_10, model_result])
 
-        app = _make_app()
-        app.dependency_overrides[__import__("src.api.deps", fromlist=["get_session"]).get_session] = lambda: session
+        app = _make_app_with_session(session)
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.get(f"/api/v1/engagements/{ENG_ID}/consistency-metrics")
@@ -264,8 +273,7 @@ class TestScenario2ConsistencyMetrics:
 
         session.execute = AsyncMock(side_effect=[count_10, count_7, count_3, model_result])
 
-        app = _make_app()
-        app.dependency_overrides[__import__("src.api.deps", fromlist=["get_session"]).get_session] = lambda: session
+        app = _make_app_with_session(session)
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.get(f"/api/v1/engagements/{ENG_ID}/consistency-metrics")
@@ -293,8 +301,7 @@ class TestScenario2ConsistencyMetrics:
 
         session.execute = AsyncMock(side_effect=[count_total, count_resolved, count_open, model_result])
 
-        app = _make_app()
-        app.dependency_overrides[__import__("src.api.deps", fromlist=["get_session"]).get_session] = lambda: session
+        app = _make_app_with_session(session)
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.get(f"/api/v1/engagements/{ENG_ID}/consistency-metrics")
@@ -315,8 +322,7 @@ class TestScenario2ConsistencyMetrics:
 
         session.execute = AsyncMock(side_effect=[count_0, count_0, count_0, model_result])
 
-        app = _make_app()
-        app.dependency_overrides[__import__("src.api.deps", fromlist=["get_session"]).get_session] = lambda: session
+        app = _make_app_with_session(session)
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.get(f"/api/v1/engagements/{ENG_ID}/consistency-metrics")
@@ -358,8 +364,7 @@ class TestScenario3PovTrend:
 
         session.execute = AsyncMock(return_value=models_result)
 
-        app = _make_app()
-        app.dependency_overrides[__import__("src.api.deps", fromlist=["get_session"]).get_session] = lambda: session
+        app = _make_app_with_session(session)
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.get(f"/api/v1/engagements/{ENG_ID}/consistency-metrics/trend")
@@ -394,8 +399,7 @@ class TestScenario3PovTrend:
 
         session.execute = AsyncMock(return_value=models_result)
 
-        app = _make_app()
-        app.dependency_overrides[__import__("src.api.deps", fromlist=["get_session"]).get_session] = lambda: session
+        app = _make_app_with_session(session)
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.get(f"/api/v1/engagements/{ENG_ID}/consistency-metrics/trend")
@@ -421,8 +425,7 @@ class TestScenario3PovTrend:
 
         session.execute = AsyncMock(return_value=models_result)
 
-        app = _make_app()
-        app.dependency_overrides[__import__("src.api.deps", fromlist=["get_session"]).get_session] = lambda: session
+        app = _make_app_with_session(session)
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.get(f"/api/v1/engagements/{ENG_ID}/consistency-metrics/trend")
@@ -441,8 +444,7 @@ class TestScenario3PovTrend:
 
         session.execute = AsyncMock(return_value=models_result)
 
-        app = _make_app()
-        app.dependency_overrides[__import__("src.api.deps", fromlist=["get_session"]).get_session] = lambda: session
+        app = _make_app_with_session(session)
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.get(f"/api/v1/engagements/{ENG_ID}/consistency-metrics/trend")
@@ -476,8 +478,7 @@ class TestScenario3PovTrend:
 
         session.execute = AsyncMock(return_value=models_result)
 
-        app = _make_app()
-        app.dependency_overrides[__import__("src.api.deps", fromlist=["get_session"]).get_session] = lambda: session
+        app = _make_app_with_session(session)
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.get(f"/api/v1/engagements/{ENG_ID}/consistency-metrics/trend")
