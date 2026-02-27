@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.141
+**Version**: 2026.02.143
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,8 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.143 | 2026-02-27 | LLM audit trail: hallucination flagging, immutability enforcement, disposition stats, 21 tests (#386) |
+| 2026.02.142 | 2026-02-27 | Cohort suppression: privacy enforcement, export blocking, audit logging, 21 tests (#391) |
 | 2026.02.141 | 2026-02-27 | PDP service: ABAC policy evaluation, obligation framework, audit trail, conditions validation, default policy seeding, 25 tests (#377) |
 | 2026.02.140 | 2026-02-27 | Cross-border transfer controls: GDPR transfer evaluation, TIA/SCC workflow, jurisdiction registry, role permissions, 20 tests (#395) |
 | 2026.02.139 | 2026-02-27 | Incident response automation: P1-P4 classification, GDPR 72h deadline, containment, escalation, timeline, 16 tests (#397) |

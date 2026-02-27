@@ -3,6 +3,14 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.143] - 2026-02-27
+### Added
+- LLM audit trail with hallucination flagging: engagement-level querying with date range, hallucination flagging with re-flag guard, suggestion disposition stats (acceptance/modification/rejection rates), SQLAlchemy before_flush immutability enforcement, partial index on hallucination_flagged, migration 065, 21 tests (#386)
+
+## [2026.02.142] - 2026-02-27
+### Added
+- Cohort suppression for analytics privacy: minimum cohort size enforcement (configurable per engagement, platform default in Settings), export blocking with HTTP 422, EXPORT_BLOCKED audit logging, engagement existence validation, session commit fix, 21 tests (#391)
+
 ## [2026.02.141] - 2026-02-27
 ### Added
 - Policy Decision Point (PDP) service: ABAC policy evaluation with PERMIT/DENY decisions, in-memory cache (5s TTL with asyncio.Lock), obligation framework (watermark, enhanced audit, MFA, redaction), append-only audit trail, conditions validation, default policy seeding, role hierarchy comparison, 4 API endpoints, 25 tests (#377)
