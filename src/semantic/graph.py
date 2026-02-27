@@ -24,7 +24,7 @@ from src.semantic.ontology.loader import (
 
 logger = logging.getLogger(__name__)
 
-_VALID_PROPERTY_KEY = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
+_VALID_PROPERTY_KEY = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 
 def _validate_property_keys(props: dict[str, Any]) -> None:
@@ -130,6 +130,19 @@ class KnowledgeGraphService:
 
         async with self._driver.session() as session:
             return await session.execute_read(_tx_func)
+
+    async def run_query(
+        self,
+        query: str,
+        parameters: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Public read-only query interface for domain consumers.
+
+        Delegates to _run_query(). Use this for cross-module callers
+        (e.g. conflict detection, conformance checking) that need
+        read access to the knowledge graph.
+        """
+        return await self._run_query(query, parameters)
 
     async def _run_write_query(
         self,
@@ -381,8 +394,7 @@ class KnowledgeGraphService:
         """
         if relationship_type not in VALID_RELATIONSHIP_TYPES:
             raise ValueError(
-                f"Invalid relationship type: {relationship_type}. "
-                f"Must be one of {VALID_RELATIONSHIP_TYPES}"
+                f"Invalid relationship type: {relationship_type}. Must be one of {VALID_RELATIONSHIP_TYPES}"
             )
 
         if not rels:
@@ -504,9 +516,7 @@ class KnowledgeGraphService:
         if relationship_types:
             for rt in relationship_types:
                 if rt not in VALID_RELATIONSHIP_TYPES:
-                    raise ValueError(
-                        f"Invalid relationship type: {rt}. Must be one of {VALID_RELATIONSHIP_TYPES}"
-                    )
+                    raise ValueError(f"Invalid relationship type: {rt}. Must be one of {VALID_RELATIONSHIP_TYPES}")
             rel_filter = ":" + "|".join(relationship_types)
 
         query = f"""

@@ -465,8 +465,8 @@ class TestConflictDetectionPipeline:
         """DetectionResult has correct structure."""
         result = DetectionResult(engagement_id="eng-1")
         assert result.total_conflicts == 0
-        assert result.sequences_checked == 0
-        assert result.roles_checked == 0
+        assert result.sequence_conflicts_found == 0
+        assert result.role_conflicts_found == 0
 
     @pytest.mark.asyncio
     async def test_pipeline_combines_sequence_and_role(self) -> None:

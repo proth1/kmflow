@@ -105,8 +105,8 @@ class DetectionResult:
 
     engagement_id: str
     conflicts: list[DetectedConflict] = field(default_factory=list)
-    sequences_checked: int = 0
-    roles_checked: int = 0
+    sequence_conflicts_found: int = 0
+    role_conflicts_found: int = 0
 
     @property
     def total_conflicts(self) -> int:
@@ -149,8 +149,9 @@ class SequenceConflictDetector:
                     r2.source_weight AS weight_b,
                     r1.created_at AS created_a,
                     r2.created_at AS created_b
+                LIMIT $limit
                 """,
-                {"engagement_id": engagement_id},
+                {"engagement_id": engagement_id, "limit": 500},
             )
         except Exception:
             logger.exception("Failed to query sequence conflicts for %s", engagement_id)
@@ -217,8 +218,9 @@ class RoleConflictDetector:
                     r2.source_weight AS weight_b,
                     r1.created_at AS created_a,
                     r2.created_at AS created_b
+                LIMIT $limit
                 """,
-                {"engagement_id": engagement_id},
+                {"engagement_id": engagement_id, "limit": 500},
             )
         except Exception:
             logger.exception("Failed to query role conflicts for %s", engagement_id)
@@ -277,13 +279,13 @@ async def run_conflict_detection(
     seq_detector = SequenceConflictDetector(graph_service)
     seq_conflicts = await seq_detector.detect(engagement_id)
     result.conflicts.extend(seq_conflicts)
-    result.sequences_checked = len(seq_conflicts)
+    result.sequence_conflicts_found = len(seq_conflicts)
 
     # Detect role mismatches
     role_detector = RoleConflictDetector(graph_service)
     role_conflicts = await role_detector.detect(engagement_id)
     result.conflicts.extend(role_conflicts)
-    result.roles_checked = len(role_conflicts)
+    result.role_conflicts_found = len(role_conflicts)
 
     # Persist new conflicts (idempotent: check for existing by source pair + type)
     eng_uuid = uuid.UUID(engagement_id) if isinstance(engagement_id, str) else engagement_id
