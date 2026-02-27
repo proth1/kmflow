@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.129] - 2026-02-27
+### Added
+- Nine Universal Process Knowledge Forms: coverage computation and gap detection per engagement, ontology-validated edge type mappings, parameterized Cypher queries, 12 BDD tests (#316)
+
 ## [2026.02.128] - 2026-02-27
 ### Added
 - Governance CRUD APIs: policy/control/regulation CRUD with soft-delete, Neo4j graph sync (write transactions), GET single regulation endpoint, governance chain traversal, 10 BDD tests (#329)
