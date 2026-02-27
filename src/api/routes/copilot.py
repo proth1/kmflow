@@ -18,7 +18,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
-from src.core.models import CopilotMessage, User
+from src.core.audit import log_audit
+from src.core.models import AuditAction, CopilotMessage, User
 from src.core.permissions import require_engagement_access, require_permission
 from src.core.rate_limiter import copilot_rate_limit
 
@@ -142,6 +143,10 @@ async def copilot_chat(
         context_tokens_used=response.context_tokens_used,
     )
     session.add(assistant_msg)
+    await log_audit(
+        session, payload.engagement_id, AuditAction.DATA_ACCESS,
+        f"Copilot query: {payload.query_type}", actor=str(user.id),
+    )
     await session.commit()
 
     return {

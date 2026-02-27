@@ -18,7 +18,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
+from src.core.audit import log_audit
 from src.core.models import (
+    AuditAction,
     Contradiction,
     EvidenceGap,
     ProcessElement,
@@ -268,6 +270,15 @@ async def trigger_pov_generation(
             scope=payload.scope,
             generated_by=payload.generated_by,
         )
+
+        try:
+            eng_uuid = uuid.UUID(payload.engagement_id)
+            await log_audit(
+                session, eng_uuid, AuditAction.POV_GENERATED,
+                f"POV generation scope={payload.scope}", actor=str(user.id),
+            )
+        except ValueError:
+            pass  # engagement_id is not a valid UUID, skip audit
 
         await session.commit()
 
