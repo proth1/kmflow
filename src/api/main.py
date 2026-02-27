@@ -46,6 +46,7 @@ from src.api.routes import (
     evidence,
     gdpr,
     governance,
+    governance_overlay,
     graph,
     health,
     integrations,
@@ -249,6 +250,7 @@ def create_app() -> FastAPI:
 
     # -- Phase D: Data Governance Framework ---
     app.include_router(governance.router)
+    app.include_router(governance_overlay.router)
 
     # -- Phase 5 Routes ---
     app.include_router(admin.router)
