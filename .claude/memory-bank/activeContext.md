@@ -8,6 +8,14 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #414 merged** — Contradiction resolution with three-way distinction classifier (#312) (v2026.02.098)
+  - Naming variant: edit distance ≤2 to seed terms, entities merged, no ConflictObject
+  - Temporal shift: ≥2-year gap between document-class sources, bitemporal validity stamps
+  - Genuine disagreement: ConflictObject with epistemic frame annotations (authority scope + frame kind)
+  - Severity scoring: criticality * 0.6 + weight_diff * 0.4 for six mismatch types
+  - Persistence bridge: DetectedContradiction + flatten_to_detected_contradictions() for ORM
+  - PR review: REQUEST CHANGES → 2 CRITICAL fixed (generator.py API, old tests), M2 fixed (representative evidence)
+  - 58 BDD tests (48 domain logic + 10 persistence bridge)
 - **PR #413 merged** — Weighted consensus building with LCD algorithm (#310) (v2026.02.097)
   - Per-engagement configurable weight map, exponential decay recency bias (half-life 3yr)
   - Variant detection for structurally divergent paths (coverage threshold 0.4)

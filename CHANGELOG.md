@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.098] - 2026-02-27
+### Added
+- Contradiction resolution with three-way distinction classifier: naming variant (edit distance ≤2 to seed terms), temporal shift (≥2-year doc gap), genuine disagreement with epistemic frames; severity scoring, persistence bridge, 58 BDD tests (#312)
+
 ## [2026.02.097] - 2026-02-27
 ### Added
 - Weighted consensus building with LCD algorithm: per-engagement weight overrides, exponential decay recency bias, variant detection, ConflictStub forwarding, brightness hints, 45 BDD tests (#310)
