@@ -28,6 +28,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/validation", tags=["validation"])
 
+# Background task references to prevent GC from cancelling them
+_background_tasks: set[asyncio.Task[None]] = set()
+
 
 # ---------------------------------------------------------------------------
 # Schemas
@@ -41,12 +44,12 @@ class ReviewPackResponse(BaseModel):
     engagement_id: uuid.UUID
     pov_version_id: uuid.UUID
     segment_index: int
-    segment_activities: list
+    segment_activities: list[dict[str, Any]]
     activity_count: int
-    evidence_list: list | None = None
-    confidence_scores: dict | None = None
-    conflict_flags: list | None = None
-    seed_terms: list | None = None
+    evidence_list: list[str] | None = None
+    confidence_scores: dict[str, float] | None = None
+    conflict_flags: list[str] | None = None
+    seed_terms: list[str] | None = None
     assigned_sme_id: uuid.UUID | None = None
     assigned_role: str | None = None
     status: str
@@ -96,18 +99,24 @@ async def generate_review_packs(
 
     Returns HTTP 202 with a task_id. Packs are retrievable via GET once complete.
     """
-    # Verify POV exists
+    # Verify POV exists and belongs to the specified engagement
     pov_result = await session.execute(
-        select(ProcessModel).where(ProcessModel.id == body.pov_version_id)
+        select(ProcessModel).where(
+            ProcessModel.id == body.pov_version_id,
+            ProcessModel.engagement_id == body.engagement_id,
+        )
     )
     pov = pov_result.scalar_one_or_none()
     if pov is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="POV version not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="POV version not found for this engagement",
+        )
 
     task_id = str(uuid.uuid4())
 
-    # Launch async generation
-    asyncio.create_task(
+    # Launch async generation with reference retention
+    task = asyncio.create_task(
         _generate_packs_async(
             task_id=task_id,
             pov_version_id=body.pov_version_id,
@@ -115,6 +124,8 @@ async def generate_review_packs(
             session_factory=request.app.state.db_session_factory,
         )
     )
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
 
     return {
         "task_id": task_id,
@@ -176,7 +187,8 @@ async def _generate_packs_async(
     """Background task to generate review packs.
 
     Queries process elements from the POV, segments them, and persists
-    review packs to the database.
+    review packs to the database. On failure, writes a sentinel pack
+    with status='failed' so clients can detect the error.
     """
     try:
         async with session_factory() as session:
@@ -238,3 +250,20 @@ async def _generate_packs_async(
 
     except Exception:
         logger.exception("Failed to generate review packs (task %s)", task_id)
+        # Write a sentinel record so clients can detect the failure via GET
+        try:
+            async with session_factory() as session:
+                sentinel = ReviewPack(
+                    engagement_id=engagement_id,
+                    pov_version_id=pov_version_id,
+                    segment_index=-1,
+                    segment_activities=[],
+                    activity_count=0,
+                    status="failed",
+                    avg_confidence=0.0,
+                    task_id=task_id,
+                )
+                session.add(sentinel)
+                await session.commit()
+        except Exception:
+            logger.exception("Failed to write failure sentinel (task %s)", task_id)
