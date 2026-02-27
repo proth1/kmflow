@@ -198,6 +198,8 @@ class TestGapDetectionService:
         """Scenario 3: Previously open gap is now covered → returns its ID."""
         mock_graph = AsyncMock()
 
+        reg_id = str(uuid.uuid4())
+
         # get_ungoverned_activity_ids returns only ACTIVITY_1 (ACTIVITY_2 is now covered)
         mock_graph.run_query = AsyncMock(
             return_value=[{"activity_id": str(ACTIVITY_1)}]
@@ -210,14 +212,51 @@ class TestGapDetectionService:
         resolved = await service.resolve_covered_gaps(
             str(ENGAGEMENT_ID),
             [
-                {"id": gap1_id, "activity_id": str(ACTIVITY_1)},
-                {"id": gap2_id, "activity_id": str(ACTIVITY_2)},
+                {"id": gap1_id, "activity_id": str(ACTIVITY_1), "regulation_id": reg_id},
+                {"id": gap2_id, "activity_id": str(ACTIVITY_2), "regulation_id": reg_id},
             ],
         )
 
         # ACTIVITY_2 is no longer ungoverned, so gap2 should be resolved
         assert gap2_id in resolved
         assert gap1_id not in resolved
+
+        # Verify regulation-aware query was used (regulation_id param in query params dict)
+        call_args = mock_graph.run_query.call_args
+        query_params = call_args[0][1]  # second positional arg is the params dict
+        assert query_params["regulation_id"] == reg_id
+
+    @pytest.mark.asyncio
+    async def test_resolve_gaps_multi_regulation(self) -> None:
+        """Gaps from different regulations are checked per-regulation."""
+        mock_graph = AsyncMock()
+
+        reg_a = str(uuid.uuid4())
+        reg_b = str(uuid.uuid4())
+        gap_a = str(uuid.uuid4())
+        gap_b = str(uuid.uuid4())
+
+        # First call (reg_a): ACTIVITY_1 still ungoverned for reg_a
+        # Second call (reg_b): ACTIVITY_1 now governed for reg_b
+        mock_graph.run_query = AsyncMock(
+            side_effect=[
+                [{"activity_id": str(ACTIVITY_1)}],  # reg_a: still ungoverned
+                [],  # reg_b: governed
+            ]
+        )
+
+        service = GovernanceGapDetectionService(mock_graph)
+        resolved = await service.resolve_covered_gaps(
+            str(ENGAGEMENT_ID),
+            [
+                {"id": gap_a, "activity_id": str(ACTIVITY_1), "regulation_id": reg_a},
+                {"id": gap_b, "activity_id": str(ACTIVITY_1), "regulation_id": reg_b},
+            ],
+        )
+
+        # gap_a stays open (still ungoverned for reg_a), gap_b resolved (governed for reg_b)
+        assert gap_b in resolved
+        assert gap_a not in resolved
 
     @pytest.mark.asyncio
     async def test_resolve_empty_gaps_list(self) -> None:

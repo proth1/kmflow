@@ -94,25 +94,51 @@ class GovernanceGapDetectionService:
             return []
 
     async def get_ungoverned_activity_ids(
-        self, engagement_id: str, activity_ids: list[str]
+        self, engagement_id: str, activity_ids: list[str], regulation_id: str | None = None
     ) -> list[str]:
         """Find which activities lack ENFORCED_BY edges (no controls linked).
 
-        Returns list of activity IDs with no controls.
+        Args:
+            engagement_id: Engagement to check.
+            activity_ids: Activity IDs to inspect.
+            regulation_id: If provided, only considers controls linked to this
+                regulation via ENFORCES->Policy->GOVERNED_BY->Regulation chain.
+
+        Returns:
+            List of activity IDs with no (matching) controls.
         """
         if not activity_ids:
             return []
 
         try:
-            query = (
-                "MATCH (a:Activity) "
-                "WHERE a.id IN $activity_ids AND a.engagement_id = $engagement_id "
-                "AND NOT (a)-[:ENFORCED_BY]->(:Control) "
-                "RETURN a.id AS activity_id"
-            )
-            records = await self._graph.run_query(
-                query, {"activity_ids": activity_ids, "engagement_id": engagement_id}
-            )
+            if regulation_id:
+                # Regulation-aware: only count controls linked through the governance
+                # chain to this specific regulation.
+                query = (
+                    "MATCH (a:Activity) "
+                    "WHERE a.id IN $activity_ids AND a.engagement_id = $engagement_id "
+                    "AND NOT (a)-[:ENFORCED_BY]->(:Control)-[:ENFORCES]->(:Policy)"
+                    "-[:GOVERNED_BY]->(:Regulation {id: $regulation_id}) "
+                    "RETURN a.id AS activity_id"
+                )
+                records = await self._graph.run_query(
+                    query,
+                    {
+                        "activity_ids": activity_ids,
+                        "engagement_id": engagement_id,
+                        "regulation_id": regulation_id,
+                    },
+                )
+            else:
+                query = (
+                    "MATCH (a:Activity) "
+                    "WHERE a.id IN $activity_ids AND a.engagement_id = $engagement_id "
+                    "AND NOT (a)-[:ENFORCED_BY]->(:Control) "
+                    "RETURN a.id AS activity_id"
+                )
+                records = await self._graph.run_query(
+                    query, {"activity_ids": activity_ids, "engagement_id": engagement_id}
+                )
             return [r["activity_id"] for r in records if r.get("activity_id")]
         except Exception:
             logger.warning(
@@ -188,9 +214,12 @@ class GovernanceGapDetectionService:
     ) -> list[str]:
         """Check which open gaps are now covered and should be resolved.
 
+        Checks per-regulation: a gap is only resolved when the activity has
+        controls linked to the *same* regulation that created the gap.
+
         Args:
             engagement_id: The engagement being scanned.
-            existing_open_gaps: List of open gap dicts with activity_id.
+            existing_open_gaps: List of open gap dicts with activity_id and regulation_id.
 
         Returns:
             List of gap IDs that should be marked resolved.
@@ -198,15 +227,22 @@ class GovernanceGapDetectionService:
         if not existing_open_gaps:
             return []
 
-        activity_ids = list({g["activity_id"] for g in existing_open_gaps})
-        ungoverned_ids = await self.get_ungoverned_activity_ids(
-            engagement_id, [str(a) for a in activity_ids]
-        )
-        ungoverned_set = set(ungoverned_ids)
-
-        resolved_gap_ids = []
+        # Group gaps by regulation to perform regulation-aware checks
+        by_regulation: dict[str, list[dict[str, Any]]] = {}
         for gap in existing_open_gaps:
-            if str(gap["activity_id"]) not in ungoverned_set:
-                resolved_gap_ids.append(gap["id"])
+            reg_id = str(gap.get("regulation_id", ""))
+            by_regulation.setdefault(reg_id, []).append(gap)
+
+        resolved_gap_ids: list[str] = []
+        for reg_id, gaps in by_regulation.items():
+            activity_ids = list({str(g["activity_id"]) for g in gaps})
+            ungoverned_ids = await self.get_ungoverned_activity_ids(
+                engagement_id, activity_ids, regulation_id=reg_id if reg_id else None
+            )
+            ungoverned_set = set(ungoverned_ids)
+
+            for gap in gaps:
+                if str(gap["activity_id"]) not in ungoverned_set:
+                    resolved_gap_ids.append(gap["id"])
 
         return resolved_gap_ids
