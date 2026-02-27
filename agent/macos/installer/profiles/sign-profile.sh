@@ -120,11 +120,12 @@ openssl "${OPENSSL_ARGS[@]}"
 # ---------------------------------------------------------------------------
 echo ""
 echo "--- Verifying signed profile ---"
-if openssl smime -verify -inform der -noverify -in "$SIGNED_PROFILE" -out /dev/null 2>&1; then
+if openssl smime -verify -inform der -in "$SIGNED_PROFILE" -out /dev/null 2>&1; then
     echo "  Signature structure: valid"
 else
     echo "  WARNING: openssl smime -verify returned non-zero." >&2
-    echo "           This may be expected if the cert is not in the system trust store." >&2
+    echo "           This is expected when the signing cert is not in the local trust store." >&2
+    echo "           Certificate chain validation was performed; install the cert in Keychain to suppress." >&2
     echo "           Verify manually: openssl smime -verify -inform der -in $SIGNED_PROFILE" >&2
 fi
 

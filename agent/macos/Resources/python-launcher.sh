@@ -113,7 +113,9 @@ export KMFLOW_BUNDLE_RESOURCES="${RESOURCES_DIR}"
 # Note: DYLD_LIBRARY_PATH is stripped by SIP for protected binaries, but
 # our unprotected Python interpreter is not affected.
 # ---------------------------------------------------------------------------
-DYLD_LIBRARY_PATH="${PYTHON_HOME}/lib${DYLD_LIBRARY_PATH:+:${DYLD_LIBRARY_PATH}}"
+# Set DYLD_LIBRARY_PATH to ONLY the embedded framework — do not inherit
+# the parent process's DYLD_LIBRARY_PATH to prevent library injection.
+DYLD_LIBRARY_PATH="${PYTHON_HOME}/lib"
 export DYLD_LIBRARY_PATH
 
 # ---------------------------------------------------------------------------

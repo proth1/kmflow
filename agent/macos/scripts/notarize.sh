@@ -42,7 +42,9 @@ ZIP_PATH="${TMPDIR:-/tmp}/${APP_NAME}-notarize-$$.zip"
 
 echo "=== KMFlow Agent Notarization ==="
 echo "  App:     $APP_PATH"
-echo "  Apple ID: $APPLE_ID"
+# Mask Apple ID in log output (show first 3 chars + domain)
+MASKED_APPLE_ID="${APPLE_ID:0:3}***@${APPLE_ID#*@}"
+echo "  Apple ID: $MASKED_APPLE_ID"
 echo "  Team ID:  $TEAM_ID"
 echo "  Zip:      $ZIP_PATH"
 echo ""

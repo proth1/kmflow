@@ -287,6 +287,11 @@ INTEGRITY_FILE="${PYTHON_RESOURCES}/integrity.json"
 
 INTEGRITY_SIG_FILE="${PYTHON_RESOURCES}/integrity.sig"
 
+# Validate PYTHON_RESOURCES path doesn't contain characters that could break heredoc
+if [[ "$PYTHON_RESOURCES" == *\"* || "$PYTHON_RESOURCES" == *\\* ]]; then
+    die "PYTHON_RESOURCES path contains unsafe characters: $PYTHON_RESOURCES"
+fi
+
 python3 - <<PYEOF
 import hashlib, hmac, json, os, pathlib, secrets, sys
 

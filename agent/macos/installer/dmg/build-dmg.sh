@@ -109,7 +109,7 @@ echo "  DMG created: $DMG_PATH"
 # ---------------------------------------------------------------------------
 echo ""
 echo "--- Step 2: Signing DMG ---"
-codesign --sign "$IDENTITY" "$DMG_PATH"
+codesign --sign "$IDENTITY" --timestamp "$DMG_PATH"
 echo "  DMG signed."
 
 # ---------------------------------------------------------------------------

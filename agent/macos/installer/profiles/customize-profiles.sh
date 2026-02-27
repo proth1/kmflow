@@ -99,7 +99,21 @@ for TEMPLATE in "${TEMPLATES[@]}"; do
     CONTENT="${CONTENT//REPLACE_TEAM_ID/$TEAM_ID}"
     CONTENT="${CONTENT//REPLACE_ORG_NAME/$ORG_NAME}"
 
+    # Write content with placeholders replaced
     echo "$CONTENT" > "$OUTPUT_FILE"
+
+    # Regenerate PayloadUUID values so each deployment gets unique IDs
+    python3 -c "
+import re, subprocess, sys
+path = sys.argv[1]
+content = open(path).read()
+def new_uuid(m):
+    uuid = subprocess.check_output(['uuidgen']).decode().strip().upper()
+    return f'<key>PayloadUUID</key>\n    <string>{uuid}</string>'
+content = re.sub(r'<key>PayloadUUID</key>\s*\n\s*<string>[A-F0-9-]+</string>', new_uuid, content)
+open(path, 'w').write(content)
+" "$OUTPUT_FILE"
+    echo "    UUIDs regenerated"
     echo "    → ${OUTPUT_FILE}"
 done
 

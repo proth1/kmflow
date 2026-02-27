@@ -72,9 +72,12 @@
     <key>ProcessType</key>
     <string>Background</string>
 
-    <!-- Do NOT display a dock icon or UI for this background agent -->
-    <key>LSUIElement</key>
+    <!-- Reduce resource impact: lower I/O and CPU priority for background agent -->
+    <key>LowPriorityIO</key>
     <true/>
+
+    <key>Nice</key>
+    <integer>5</integer>
 
 </dict>
 </plist>
