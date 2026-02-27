@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.105] - 2026-02-27
+### Added
+- BPMN model assembly with evidence citations and 3D confidence: three-dimensional confidence (score + brightness + evidence grade), gap markers on DARK elements, variant annotations for multi-path evidence, B/C grade distinction, 67 tests (#315)
+
 ## [2026.02.104] - 2026-02-27
 ### Added
 - Audit logging middleware with before/after values, query API, and append-only trigger: fire-and-forget async persistence, IP extraction, user agent capture, resource type inference, admin-only query endpoint with filters/pagination, JSONB before/after change tracking, PostgreSQL append-only trigger, Alembic migration 040, 77 BDD tests (#314)

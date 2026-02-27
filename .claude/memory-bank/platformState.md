@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.104
+**Version**: 2026.02.105
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -9,7 +9,7 @@
 |--------|-------|
 | SQLAlchemy Models | 78+ classes across 12 modules |
 | API Routes | 25+ routers |
-| Test Count | 2788 backend + 206 frontend passing |
+| Test Count | 2842 backend + 206 frontend passing |
 | Coverage | >80% |
 | Python Version | 3.12+ |
 | FastAPI Version | 0.109+ |
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.105 | 2026-02-27 | BPMN assembly with 3D confidence, gap markers, variant annotations, 67 tests (#315) |
 | 2026.02.104 | 2026-02-27 | Audit logging middleware: fire-and-forget persistence, query API, append-only trigger, 77 BDD tests (#314) |
 | 2026.02.103 | 2026-02-27 | OAuth2/OIDC auth and RBAC BDD tests: JWT validation, role boundaries, engagement access (#313) |
 | 2026.02.102 | 2026-02-27 | PostgreSQL RLS: 32 engagement-scoped tables, table name validation, WITH CHECK, Alembic 039 (#311) |

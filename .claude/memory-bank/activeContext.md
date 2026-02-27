@@ -8,6 +8,11 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #421 merged** — BPMN model assembly with evidence citations and 3D confidence (#315) (v2026.02.105)
+  - Three-dimensional confidence: score + brightness + evidence grade
+  - Gap markers on DARK elements below MVC threshold, variant annotations
+  - B/C grade distinction: B requires 2+ planes, C is single-plane
+  - 67 tests (54 BDD + 13 existing)
 - **PR #420 merged** — Audit logging middleware with query API and append-only trigger (#314) (v2026.02.104)
   - Fire-and-forget async persistence via asyncio.create_task()
   - IP extraction (X-Forwarded-For aware), user agent capture, resource type inference
