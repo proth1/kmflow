@@ -64,6 +64,20 @@ class DeviationCategory(enum.StrEnum):
     TIMING_ANOMALY = "timing_anomaly"
     FREQUENCY_CHANGE = "frequency_change"
     CONTROL_BYPASS = "control_bypass"
+    SKIPPED_ACTIVITY = "skipped_activity"
+    UNDOCUMENTED_ACTIVITY = "undocumented_activity"
+    ROLE_REASSIGNMENT = "role_reassignment"
+    MISSING_EXPECTED_ACTIVITY = "missing_expected_activity"
+
+
+class DeviationSeverity(enum.StrEnum):
+    """Severity classification for deviations."""
+
+    CRITICAL = "critical"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+    INFO = "info"
 
 
 class MonitoringSourceType(enum.StrEnum):
@@ -232,35 +246,46 @@ class MonitoringJob(Base):
 
 
 class ProcessDeviation(Base):
-    """A detected deviation from baseline process model."""
+    """A detected deviation from baseline process model.
+
+    Enhanced by Story #350 with severity classification, process element
+    tracking, and telemetry reference for the deviation detection engine.
+    """
 
     __tablename__ = "process_deviations"
     __table_args__ = (
         Index("ix_process_deviations_job_id", "monitoring_job_id"),
         Index("ix_process_deviations_engagement_id", "engagement_id"),
+        Index("ix_process_deviations_severity_detected", "engagement_id", "detected_at", "severity"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     engagement_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
     )
-    monitoring_job_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("monitoring_jobs.id", ondelete="CASCADE"), nullable=False
+    monitoring_job_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("monitoring_jobs.id", ondelete="CASCADE"), nullable=True
     )
     baseline_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("process_baselines.id", ondelete="SET NULL"), nullable=True
     )
     category: Mapped[DeviationCategory] = mapped_column(Enum(DeviationCategory, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    severity: Mapped[DeviationSeverity | None] = mapped_column(
+        Enum(DeviationSeverity, values_callable=lambda e: [x.value for x in e]), nullable=True
+    )
     description: Mapped[str] = mapped_column(Text, nullable=False)
     affected_element: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    process_element_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    telemetry_ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
     magnitude: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    severity_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     details_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     detected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     engagement: Mapped["Engagement"] = relationship("Engagement")
 
     def __repr__(self) -> str:
-        return f"<ProcessDeviation(id={self.id}, category={self.category}, magnitude={self.magnitude})>"
+        return f"<ProcessDeviation(id={self.id}, category={self.category}, severity={self.severity})>"
 
 
 class MonitoringAlert(Base):
