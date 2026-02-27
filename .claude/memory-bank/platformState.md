@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.087
+**Version**: 2026.02.088
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.088 | 2026-02-27 | SeedTerm entity schema and vocabulary store (#302) |
 | 2026.02.087 | 2026-02-27 | ConflictObject model and disagreement taxonomy (#299) |
 | 2026.02.086 | 2026-02-27 | EpistemicFrame and SurveyClaim entity schemas (#297) |
 | 2026.02.085 | 2026-02-27 | Controlled edge vocabulary with constraint validation (#295) |

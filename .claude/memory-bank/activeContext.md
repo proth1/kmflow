@@ -8,6 +8,10 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #404 merged** — SeedTerm entity schema and vocabulary store (#302) (v2026.02.088)
+  - 5 term categories, 3 sources, 3 lifecycle states, self-referential merge FK
+  - Unique constraint on (engagement_id, term, domain), GIN FTS index on term
+  - 41 tests, PR review APPROVED (0 critical, 0 high)
 - **PR #403 merged** — ConflictObject and disagreement taxonomy (#299) (v2026.02.087)
   - 6 mismatch types (sequence, role, rule, existence, io, control_gap), 3 resolution types, 3 lifecycle states
   - Composite index on (engagement_id, resolution_status), severity bounds [0.0, 1.0]

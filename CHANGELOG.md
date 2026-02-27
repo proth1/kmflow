@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.088] - 2026-02-27
+### Added
+- SeedTerm entity schema: domain vocabulary store with 5 categories, 3 sources, self-referential merge, GIN FTS index (#302)
+
 ## [2026.02.087] - 2026-02-27
 ### Added
 - ConflictObject model and disagreement taxonomy: 6 mismatch types, 3 resolution types, escalation lifecycle (#299)
