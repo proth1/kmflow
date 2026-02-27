@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.098
+**Version**: 2026.02.099
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -9,7 +9,7 @@
 |--------|-------|
 | SQLAlchemy Models | 78+ classes across 12 modules |
 | API Routes | 25+ routers |
-| Test Count | 2510 backend + 206 frontend passing |
+| Test Count | 2540 backend + 206 frontend passing |
 | Coverage | >80% |
 | Python Version | 3.12+ |
 | FastAPI Version | 0.109+ |
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.099 | 2026-02-27 | Evidence aggregation and entity extraction: seed term guided, duplicate candidate detection, provenance maps (#303) |
 | 2026.02.098 | 2026-02-27 | Contradiction resolution: three-way distinction classifier, severity scoring, epistemic frames, persistence bridge (#312) |
 | 2026.02.097 | 2026-02-27 | Weighted consensus building with LCD algorithm, recency bias, variant detection (#310) |
 | 2026.02.096 | 2026-02-27 | Evidence cataloging, metadata extraction, catalog API (#304) |

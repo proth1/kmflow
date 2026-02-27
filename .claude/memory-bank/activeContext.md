@@ -8,6 +8,12 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #415 merged** — Evidence aggregation and entity extraction for LCD Steps 1-2 (#303) (v2026.02.099)
+  - Seed term guided extraction with SEED_TERM_CONFIDENCE_BOOST = 0.15
+  - DuplicateCandidate detection: containment, acronym, word overlap (smaller >= 2)
+  - ExtractionSummary with entity_to_evidence/entity_to_fragments provenance maps
+  - PR review: REQUEST CHANGES → HIGH fixed (word overlap threshold), MEDIUM fixed (seed containment, test guards)
+  - 62 BDD tests (30 new aggregation + 32 entity extraction)
 - **PR #414 merged** — Contradiction resolution with three-way distinction classifier (#312) (v2026.02.098)
   - Naming variant: edit distance ≤2 to seed terms, entities merged, no ConflictObject
   - Temporal shift: ≥2-year gap between document-class sources, bitemporal validity stamps

@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.099] - 2026-02-27
+### Added
+- Evidence aggregation and entity extraction for LCD Steps 1-2: seed term guided extraction with confidence boost, duplicate candidate detection (containment, acronym, word overlap), DuplicateCandidate dataclass, ExtractionSummary with provenance maps, 62 BDD tests (#303)
+
 ## [2026.02.098] - 2026-02-27
 ### Added
 - Contradiction resolution with three-way distinction classifier: naming variant (edit distance ≤2 to seed terms), temporal shift (≥2-year doc gap), genuine disagreement with epistemic frames; severity scoring, persistence bridge, 58 BDD tests (#312)
