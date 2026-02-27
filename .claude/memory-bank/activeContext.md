@@ -8,6 +8,10 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #403 merged** — ConflictObject and disagreement taxonomy (#299) (v2026.02.087)
+  - 6 mismatch types (sequence, role, rule, existence, io, control_gap), 3 resolution types, 3 lifecycle states
+  - Composite index on (engagement_id, resolution_status), severity bounds [0.0, 1.0]
+  - 39 tests, PR review APPROVED (0 critical, 0 high)
 - **PR #402 merged** — EpistemicFrame and SurveyClaim entity schemas (#297) (v2026.02.086)
   - SurveyClaim: 8 probe types, 4 certainty tiers, engagement-scoped with session tracking
   - EpistemicFrame: 6 frame kinds, controlled vocabulary of 12 authority_scope roles

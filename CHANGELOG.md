@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.087] - 2026-02-27
+### Added
+- ConflictObject model and disagreement taxonomy: 6 mismatch types, 3 resolution types, escalation lifecycle (#299)
+
 ## [2026.02.086] - 2026-02-27
 ### Added
 - EpistemicFrame and SurveyClaim entity schemas: structured knowledge elicitation models with controlled vocabulary enforcement (#297)
