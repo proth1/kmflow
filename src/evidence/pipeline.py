@@ -416,27 +416,35 @@ async def build_fragment_graph(
     relationship_count = 0
     errors: list[str] = []
 
-    # Batch create nodes
+    # Group entities by label and batch-create nodes per label to avoid N+1 (CRITICAL-05).
+    # Entities whose type has no label mapping are silently skipped (same as before).
     entity_to_node: dict[str, str] = {}
+    by_label: dict[str, list[ExtractedEntity]] = {}
     for entity in resolved:
         label = type_to_label.get(entity.entity_type)
-        if not label:
-            continue
+        if label:
+            by_label.setdefault(label, []).append(entity)
+
+    for label, entities in by_label.items():
+        props_list = [
+            {
+                "id": entity.id,
+                "name": entity.name,
+                "engagement_id": engagement_id,
+                "confidence": entity.confidence,
+                "entity_type": entity.entity_type,
+            }
+            for entity in entities
+        ]
         try:
-            node = await graph_service.create_node(
-                label,
-                {
-                    "id": entity.id,
-                    "name": entity.name,
-                    "engagement_id": engagement_id,
-                    "confidence": entity.confidence,
-                    "entity_type": entity.entity_type,
-                },
-            )
-            entity_to_node[entity.id] = node.id
-            node_count += 1
-        except (ConnectionError, RuntimeError) as e:
-            errors.append(f"Node creation failed for {entity.name}: {e}")
+            node_ids = await graph_service.batch_create_nodes(label, props_list)
+            for entity, node_id in zip(entities, node_ids):
+                entity_to_node[entity.id] = node_id
+            node_count += len(node_ids)
+        except (ConnectionError, RuntimeError, ValueError) as e:
+            # Log per-label failure; individual entities within are not retried.
+            errors.append(f"Batch node creation failed for label {label}: {e}")
+            logger.warning("Batch node creation failed for label %s: %s", label, e)
 
     # Create CO_OCCURS_WITH relationships for entities from same evidence
     evidence_to_entities: dict[str, set[str]] = {}

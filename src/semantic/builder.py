@@ -439,12 +439,18 @@ class KnowledgeGraphBuilder:
 
         return count
 
+    _EMBEDDING_BATCH_SIZE = 100  # Max embeddings per DB round-trip (C3-H2)
+
     async def _generate_and_store_embeddings(
         self,
         session: AsyncSession,
         fragments: list[tuple[str, str, str]],
     ) -> tuple[int, list[str]]:
         """Generate and store embeddings for fragments.
+
+        Generates embeddings individually (each may call the embedding model),
+        then stores them in batches of _EMBEDDING_BATCH_SIZE to avoid N+1
+        database writes (C3-H2).
 
         Args:
             session: Database session.
@@ -453,19 +459,28 @@ class KnowledgeGraphBuilder:
         Returns:
             Tuple of (count of embeddings stored, list of error messages).
         """
-        count = 0
         errors: list[str] = []
+        pending: list[tuple[str, list[float]]] = []
+
         for fragment_id, content, _ in fragments:
             try:
                 embedding = await self._embeddings.generate_embedding_async(content)
-                await self._embeddings.store_embedding(session, fragment_id, embedding)
-                count += 1
+                pending.append((fragment_id, embedding))
             except (ValueError, RuntimeError) as e:
                 msg = f"Embedding failed for fragment {fragment_id}: {e}"
                 errors.append(msg)
                 logger.warning("Failed to generate embedding for fragment %s: %s", fragment_id, e)
 
-        return count, errors
+            # Flush batch when it reaches the size limit
+            if len(pending) >= self._EMBEDDING_BATCH_SIZE:
+                await self._embeddings.store_embeddings_batch(session, pending)
+                pending = []
+
+        # Flush any remaining embeddings
+        if pending:
+            await self._embeddings.store_embeddings_batch(session, pending)
+
+        return len(fragments) - len(errors), errors
 
     async def build_knowledge_graph(
         self,

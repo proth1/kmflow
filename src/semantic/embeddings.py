@@ -130,6 +130,35 @@ class EmbeddingService:
             {"embedding": vector_str, "fragment_id": fragment_id},
         )
 
+    async def store_embeddings_batch(
+        self,
+        session: AsyncSession,
+        items: list[tuple[str, list[float]]],
+    ) -> int:
+        """Store multiple embedding vectors in a single batched UPDATE (C3-H2).
+
+        Executes one UPDATE per row using SQLAlchemy's bulk executemany path,
+        which issues a single round-trip for the full batch rather than N
+        individual queries.
+
+        Args:
+            session: Async database session.
+            items: List of (fragment_id, embedding_vector) pairs.
+
+        Returns:
+            Number of rows updated.
+        """
+        if not items:
+            return 0
+
+        query = text("UPDATE evidence_fragments SET embedding = :embedding WHERE id = :fragment_id")
+        params = [
+            {"embedding": "[" + ",".join(str(v) for v in embedding) + "]", "fragment_id": fragment_id}
+            for fragment_id, embedding in items
+        ]
+        await session.execute(query, params)  # type: ignore[arg-type]  # SQLAlchemy accepts list[dict] for executemany
+        return len(items)
+
     async def search_similar(
         self,
         session: AsyncSession,
