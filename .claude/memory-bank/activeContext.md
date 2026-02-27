@@ -8,6 +8,13 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #428 merged** — Monitoring agent framework (#346) (v2026.02.112)
+  - BaseMonitoringAgent ABC with lifecycle management, health state machine, exponential backoff
+  - Circuit breaker stops polling after max failures, bounded event deque (maxlen=1000)
+  - AgentRegistry for multi-agent lifecycle management and health aggregation
+  - GET /api/v1/monitoring/agents/health endpoint
+  - PR review: REQUEST CHANGES → addressed circuit breaker, bounded events, repr security, asyncio-safe docs, stop_all error handling
+  - 42 BDD tests
 - **PR #427 merged** — Monitoring dashboard aggregation endpoint (#371) (v2026.02.111)
   - Dashboard aggregation service with trend computation, deviation aggregation
   - GET /api/v1/monitoring/dashboard/{engagement_id} with date range filtering

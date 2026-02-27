@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.112] - 2026-02-27
+### Added
+- Monitoring agent framework: BaseMonitoringAgent ABC with lifecycle management (start→connect→poll→stop), health state machine (STARTING→CONNECTED→POLLING→DEGRADED→UNHEALTHY→STOPPED), exponential backoff retry with circuit breaker after max failures, bounded event history (deque maxlen=1000), AgentRegistry for multi-agent lifecycle and health aggregation, Pydantic config models (AgentConfig, RetryConfig), GET /api/v1/monitoring/agents/health endpoint, connection_params repr=False for credential safety, 42 BDD tests (#346)
+
 ## [2026.02.111] - 2026-02-27
 ### Added
 - Monitoring dashboard aggregation endpoint: GET /api/v1/monitoring/dashboard/{engagement_id} with date range filtering (default 7 days), agent status aggregation from TaskMiningAgent, deviation counts by severity, evidence flow rate (items/min last 5 min), alert summary, compliance score trend from MetricReading+SuccessMetric, trend direction computation (half-average comparison), 29 BDD tests (#371)
