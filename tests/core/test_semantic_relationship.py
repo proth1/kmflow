@@ -65,9 +65,9 @@ class TestSemanticRelationshipModel:
         index_names = {idx.name for idx in SemanticRelationship.__table__.indexes}
         assert "ix_semantic_relationships_engagement_id" in index_names
 
-    def test_retracted_at_indexed(self) -> None:
+    def test_active_partial_index(self) -> None:
         index_names = {idx.name for idx in SemanticRelationship.__table__.indexes}
-        assert "ix_semantic_relationships_retracted_at" in index_names
+        assert "ix_semantic_relationships_active" in index_names
 
     def test_source_node_indexed(self) -> None:
         index_names = {idx.name for idx in SemanticRelationship.__table__.indexes}
@@ -358,6 +358,10 @@ class TestEdgeCases:
         col = SemanticRelationship.__table__.columns["engagement_id"]
         fks = list(col.foreign_keys)
         assert fks[0].ondelete == "CASCADE"
+
+    def test_valid_range_check_constraint(self) -> None:
+        constraints = {c.name for c in SemanticRelationship.__table__.constraints if hasattr(c, "sqltext")}
+        assert "ck_semantic_relationships_valid_range" in constraints
 
     def test_read_schema_serialization(self) -> None:
         read = SemanticRelationshipRead(

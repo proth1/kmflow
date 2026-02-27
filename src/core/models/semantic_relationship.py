@@ -15,7 +15,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, func, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -37,9 +37,17 @@ class SemanticRelationship(Base):
         Index("ix_semantic_relationships_engagement_id", "engagement_id"),
         Index("ix_semantic_relationships_source_node_id", "source_node_id"),
         Index("ix_semantic_relationships_target_node_id", "target_node_id"),
-        Index("ix_semantic_relationships_retracted_at", "retracted_at"),
+        Index(
+            "ix_semantic_relationships_active",
+            "retracted_at",
+            postgresql_where=text("retracted_at IS NULL"),
+        ),
         Index("ix_semantic_relationships_edge_type", "edge_type"),
         Index("ix_semantic_relationships_superseded_by", "superseded_by"),
+        CheckConstraint(
+            "valid_to IS NULL OR valid_to >= valid_from",
+            name="ck_semantic_relationships_valid_range",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

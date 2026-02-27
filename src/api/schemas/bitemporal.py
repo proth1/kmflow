@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class BitempQueryFilter(BaseModel):
@@ -24,9 +24,9 @@ class SemanticRelationshipCreate(BaseModel):
     """Schema for creating a semantic relationship with bitemporal properties."""
 
     engagement_id: UUID
-    source_node_id: str
-    target_node_id: str
-    edge_type: str
+    source_node_id: str = Field(min_length=1, max_length=500)
+    target_node_id: str = Field(min_length=1, max_length=500)
+    edge_type: str = Field(min_length=1, max_length=100)
     valid_from: datetime | None = None
     valid_to: datetime | None = None
 

@@ -61,9 +61,17 @@ def upgrade() -> None:
     op.create_index("ix_semantic_relationships_engagement_id", "semantic_relationships", ["engagement_id"])
     op.create_index("ix_semantic_relationships_source_node_id", "semantic_relationships", ["source_node_id"])
     op.create_index("ix_semantic_relationships_target_node_id", "semantic_relationships", ["target_node_id"])
-    op.create_index("ix_semantic_relationships_retracted_at", "semantic_relationships", ["retracted_at"])
+    op.execute(
+        "CREATE INDEX ix_semantic_relationships_active "
+        "ON semantic_relationships (retracted_at) WHERE retracted_at IS NULL"
+    )
     op.create_index("ix_semantic_relationships_edge_type", "semantic_relationships", ["edge_type"])
     op.create_index("ix_semantic_relationships_superseded_by", "semantic_relationships", ["superseded_by"])
+    op.create_check_constraint(
+        "ck_semantic_relationships_valid_range",
+        "semantic_relationships",
+        "valid_to IS NULL OR valid_to >= valid_from",
+    )
 
 
 def downgrade() -> None:
