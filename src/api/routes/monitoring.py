@@ -864,10 +864,7 @@ async def get_monitoring_dashboard(
         )
         .order_by(MetricReading.recorded_at)
     )
-    compliance_data = [
-        {"date": row[0].strftime("%Y-%m-%d"), "score": row[1]}
-        for row in compliance_readings.all()
-    ]
+    compliance_data = [{"date": row[0].strftime("%Y-%m-%d"), "score": row[1]} for row in compliance_readings.all()]
     compliance_trend = build_compliance_trend(compliance_data)
 
     return {
@@ -899,10 +896,7 @@ async def get_monitoring_dashboard(
         "compliance_trend": {
             "current_score": compliance_trend.current_score,
             "trend_direction": compliance_trend.trend_direction,
-            "data_points": [
-                {"date": dp.date, "score": dp.score}
-                for dp in compliance_trend.data_points
-            ],
+            "data_points": [{"date": dp.date, "score": dp.score} for dp in compliance_trend.data_points],
         },
     }
 
@@ -952,4 +946,63 @@ async def get_pipeline_metrics(
         "total_errors": metrics.total_errors,
         "avg_quality": metrics.avg_quality,
         "window_seconds": metrics.window_seconds,
+    }
+
+
+# -- Agent Health (Story #346) -----------------------------------------------
+
+
+class AgentHealthEntry(BaseModel):
+    """Health status for a single monitoring agent."""
+
+    agent_id: str
+    status: str
+    last_poll_time: str | None = None
+    items_processed_total: int = 0
+    consecutive_failures: int = 0
+    watermark: str | None = None
+
+
+class AgentHealthResponse(BaseModel):
+    """Response for agent health endpoint."""
+
+    agents: list[AgentHealthEntry]
+    total: int
+    healthy: int
+    degraded: int
+    unhealthy: int
+
+
+@router.get("/agents/health", response_model=AgentHealthResponse)
+async def get_agent_health(
+    request: Request,
+    _user: User = Depends(require_permission("monitoring:read")),
+) -> dict[str, Any]:
+    """Get health status for all running monitoring agents.
+
+    Returns each agent's ID, health status (HEALTHY/DEGRADED/UNHEALTHY),
+    last poll time, and total items processed.
+    """
+    from src.monitoring.agents.registry import AgentRegistry
+
+    registry: AgentRegistry | None = None
+    if hasattr(request.app.state, "agent_registry"):
+        registry = request.app.state.agent_registry
+
+    if registry is None:
+        return {
+            "agents": [],
+            "total": 0,
+            "healthy": 0,
+            "degraded": 0,
+            "unhealthy": 0,
+        }
+
+    agents = registry.get_all_health()
+    return {
+        "agents": agents,
+        "total": registry.get_agent_count(),
+        "healthy": registry.get_healthy_count(),
+        "degraded": registry.get_degraded_count(),
+        "unhealthy": registry.get_unhealthy_count(),
     }
