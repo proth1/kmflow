@@ -8,6 +8,11 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #431 merged** — Scenario Comparison Workbench CRUD (#373) (v2026.02.115)
+  - Dedicated /api/v1/scenarios with max-5 enforcement (SELECT FOR UPDATE)
+  - Engagement membership authorization, ScenarioStatus enum, DRAFT-only modification restriction
+  - PR review: REQUEST CHANGES → router registration, IDOR fix, race condition fix, enum usage
+  - 20 BDD tests
 - **PR #430 merged** — Sequence and role conflict detection engine (#372) (v2026.02.114)
   - SequenceConflictDetector, RoleConflictDetector with Cypher queries
   - Severity scoring: weight differential × recency factor

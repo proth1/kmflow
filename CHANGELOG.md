@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.115] - 2026-02-27
+### Added
+- Scenario Comparison Workbench CRUD: dedicated /api/v1/scenarios routes with max-5-per-engagement enforcement (SELECT FOR UPDATE), ScenarioStatus enum (DRAFT/SIMULATED/ARCHIVED), modification CRUD with DRAFT-only restriction, engagement membership authorization (IDOR protection), modification_count via SQL subquery, router registered in main app, 20 BDD tests (#373)
+
 ## [2026.02.114] - 2026-02-27
 ### Added
 - Sequence and role conflict detection engine: SequenceConflictDetector (contradictory PRECEDES edges), RoleConflictDetector (different PERFORMED_BY assignments), severity scoring with weight differential and recency factor, idempotent ConflictObject persistence, public run_query() on KnowledgeGraphService, LIMIT 500 on Cypher queries, 26 BDD tests (#372)
