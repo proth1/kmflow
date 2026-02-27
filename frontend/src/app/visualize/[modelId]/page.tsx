@@ -12,6 +12,7 @@ import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Legend from "@/components/Legend";
 import Sidebar, { type ElementDetail } from "@/components/Sidebar";
+import { ComponentErrorBoundary } from "@/components/ComponentErrorBoundary";
 import {
   fetchBPMNXml,
   fetchProcessElements,
@@ -150,14 +151,16 @@ export default function VisualizePage() {
       {/* BPMN Viewer */}
       <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl overflow-hidden h-[600px] relative">
         {bpmnData && (
-          <BPMNViewer
-            bpmnXml={bpmnData.bpmn_xml}
-            elementConfidences={bpmnData.element_confidences}
-            evidenceCounts={evidenceCounts}
-            showConfidenceOverlay={showConfidence}
-            showEvidenceOverlay={showEvidence}
-            onElementClick={handleElementClick}
-          />
+          <ComponentErrorBoundary componentName="BPMNViewer">
+            <BPMNViewer
+              bpmnXml={bpmnData.bpmn_xml}
+              elementConfidences={bpmnData.element_confidences}
+              evidenceCounts={evidenceCounts}
+              showConfidenceOverlay={showConfidence}
+              showEvidenceOverlay={showEvidence}
+              onElementClick={handleElementClick}
+            />
+          </ComponentErrorBoundary>
         )}
       </div>
 

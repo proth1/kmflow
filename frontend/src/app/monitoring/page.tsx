@@ -12,6 +12,7 @@ import {
 import { isValidEngagementId } from "@/lib/validation";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { useEngagementData } from "@/hooks/useEngagementData";
+import { ComponentErrorBoundary } from "@/components/ComponentErrorBoundary";
 import {
   Card,
   CardContent,
@@ -27,7 +28,7 @@ interface MonitoringData {
   alerts: AlertData[];
 }
 
-export default function MonitoringDashboard() {
+function MonitoringDashboardInner() {
   const [engagementId, setEngagementId] = useState("");
 
   const fetchMonitoringData = useCallback(
@@ -172,5 +173,13 @@ export default function MonitoringDashboard() {
         </Card>
       </div>
     </PageLayout>
+  );
+}
+
+export default function MonitoringDashboard() {
+  return (
+    <ComponentErrorBoundary componentName="MonitoringDashboard">
+      <MonitoringDashboardInner />
+    </ComponentErrorBoundary>
   );
 }

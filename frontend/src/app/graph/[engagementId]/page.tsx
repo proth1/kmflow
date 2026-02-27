@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
+import { ComponentErrorBoundary } from "@/components/ComponentErrorBoundary";
 
 const GraphExplorer = dynamic(() => import("@/components/GraphExplorer"), {
   ssr: false,
@@ -80,10 +81,12 @@ export default function GraphExplorerPage() {
           Engagement: {engagementId} | Nodes: {data?.nodes.length ?? 0} | Edges: {data?.edges.length ?? 0}
         </p>
         <div style={{ height: "calc(100vh - 250px)" }}>
-          <GraphExplorer
-            nodes={(data?.nodes ?? []) as any}
-            edges={(data?.edges ?? []) as any}
-          />
+          <ComponentErrorBoundary componentName="GraphExplorer">
+            <GraphExplorer
+              nodes={(data?.nodes ?? []) as any}
+              edges={(data?.edges ?? []) as any}
+            />
+          </ComponentErrorBoundary>
         </div>
       </div>
     </main>

@@ -30,27 +30,31 @@ export default function RegulatoryOverlay({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     async function load() {
       setLoading(true);
       setError(null);
       try {
         const [compData, ungovData] = await Promise.allSettled([
-          fetchComplianceState(engagementId),
-          fetchUngovernedProcesses(engagementId),
+          fetchComplianceState(engagementId, controller.signal),
+          fetchUngovernedProcesses(engagementId, controller.signal),
         ]);
 
         if (compData.status === "fulfilled") setCompliance(compData.value);
         if (ungovData.status === "fulfilled")
           setUngoverned(ungovData.value.ungoverned);
       } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
         setError(
           err instanceof Error ? err.message : "Failed to load overlay",
         );
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
     load();
+    return () => controller.abort();
   }, [engagementId]);
 
   if (loading) {
