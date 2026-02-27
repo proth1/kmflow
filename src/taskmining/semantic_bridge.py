@@ -8,13 +8,12 @@ Story #227 — Part of Epic #225 (Knowledge Graph Integration).
 
 from __future__ import annotations
 
-from neo4j.exceptions import Neo4jError
-
 import logging
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
+from neo4j.exceptions import Neo4jError
 
 from src.semantic.graph import KnowledgeGraphService
 

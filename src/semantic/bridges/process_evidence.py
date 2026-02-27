@@ -6,13 +6,12 @@ and evidence items based on semantic similarity and co-occurrence.
 
 from __future__ import annotations
 
-from neo4j.exceptions import Neo4jError
-
 import logging
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 
 import numpy as np
+from neo4j.exceptions import Neo4jError
 
 from src.semantic.graph import KnowledgeGraphService
 

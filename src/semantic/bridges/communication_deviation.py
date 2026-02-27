@@ -6,9 +6,9 @@ communication patterns, creating DEVIATES_FROM relationships.
 
 from __future__ import annotations
 
-from neo4j.exceptions import Neo4jError
-
 import logging
+
+from neo4j.exceptions import Neo4jError
 
 from src.semantic.bridges.process_evidence import BridgeResult
 from src.semantic.graph import KnowledgeGraphService

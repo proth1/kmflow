@@ -6,9 +6,9 @@ linking discovered processes to target operating model specifications.
 
 from __future__ import annotations
 
-from neo4j.exceptions import Neo4jError
-
 import logging
+
+from neo4j.exceptions import Neo4jError
 
 from src.core.models import TOMDimension
 from src.semantic.bridges.process_evidence import BridgeResult

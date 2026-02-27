@@ -6,11 +6,10 @@ when evidence content references policy-related terms.
 
 from __future__ import annotations
 
-from neo4j.exceptions import Neo4jError
-
 import logging
 
 import numpy as np
+from neo4j.exceptions import Neo4jError
 
 from src.semantic.bridges.process_evidence import BridgeResult, EmbeddingServiceProtocol
 from src.semantic.graph import KnowledgeGraphService
