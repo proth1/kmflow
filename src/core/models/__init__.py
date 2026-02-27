@@ -46,6 +46,11 @@ from src.core.models.evidence import (
     FragmentType,
     ValidationStatus,
 )
+from src.core.models.illumination import (
+    IlluminationAction,
+    IlluminationActionStatus,
+    IlluminationActionType,
+)
 from src.core.models.governance import (
     ComplianceAssessment,
     ComplianceLevel,
@@ -214,6 +219,10 @@ __all__ = [
     "EvidenceLineage",
     "FragmentType",
     "ValidationStatus",
+    # illumination
+    "IlluminationAction",
+    "IlluminationActionStatus",
+    "IlluminationActionType",
     # governance
     "ComplianceAssessment",
     "ComplianceLevel",

@@ -19,12 +19,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
 from src.api.services.dark_room_backlog import DarkRoomBacklogService
+from src.api.services.illumination_planner import IlluminationPlannerService
 from src.core.audit import log_audit
 from src.core.models import (
     AuditAction,
     Contradiction,
     EngagementMember,
     EvidenceGap,
+    IlluminationActionStatus,
     ProcessElement,
     ProcessModel,
     User,
@@ -656,3 +658,250 @@ async def get_dark_room_backlog(
         offset=offset,
     )
     return backlog
+
+
+# -- Illumination Plan Helpers -----------------------------------------------
+
+
+async def _get_model_or_404(session: AsyncSession, model_id: str) -> ProcessModel:
+    """Look up a process model by ID, raising 404 if not found."""
+    try:
+        model_uuid = uuid.UUID(model_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid model ID format",
+        ) from None
+
+    result = await session.execute(select(ProcessModel).where(ProcessModel.id == model_uuid))
+    model = result.scalar_one_or_none()
+    if not model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Process model {model_id} not found",
+        )
+    return model
+
+
+# -- Illumination Plan Schemas -----------------------------------------------
+
+
+class IlluminationActionEntry(BaseModel):
+    """A single illumination action."""
+
+    id: str
+    element_id: str
+    element_name: str
+    action_type: str
+    target_knowledge_form: int
+    target_form_name: str
+    status: str
+    linked_item_id: str | None = None
+
+
+class IlluminationPlanResponse(BaseModel):
+    """Response for creating an illumination plan."""
+
+    engagement_id: str
+    element_id: str
+    actions_created: int
+    actions: list[IlluminationActionEntry]
+
+
+class IlluminationProgressResponse(BaseModel):
+    """Response for illumination progress."""
+
+    engagement_id: str
+    element_id: str
+    total_actions: int
+    completed_actions: int
+    pending_actions: int
+    in_progress_actions: int
+    all_complete: bool
+    actions: list[dict]
+
+
+class ActionStatusUpdateRequest(BaseModel):
+    """Request to update an illumination action's status."""
+
+    status: str
+    linked_item_id: str | None = None
+
+
+class ActionStatusUpdateResponse(BaseModel):
+    """Response after updating an action's status."""
+
+    id: str
+    element_id: str
+    action_type: str
+    target_knowledge_form: int
+    status: str
+    linked_item_id: str | None = None
+
+
+class SegmentCompletionResponse(BaseModel):
+    """Response for segment completion check."""
+
+    element_id: str
+    all_complete: bool
+    total_actions: int
+    completed_actions: int
+    should_recalculate: bool
+
+
+# -- Illumination Plan Routes ------------------------------------------------
+
+
+@router.post(
+    "/{model_id}/dark-room/{element_id}/illuminate",
+    response_model=IlluminationPlanResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_illumination_plan(
+    model_id: str,
+    element_id: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("pov:read")),
+) -> dict[str, Any]:
+    """Create an illumination plan for a Dark segment.
+
+    Generates acquisition actions based on missing knowledge forms.
+    Each missing form maps to a shelf request, persona probe, or
+    system extraction action.
+    """
+    model = await _get_model_or_404(session, model_id)
+    await _check_engagement_member(session, user, model.engagement_id)
+
+    graph_service = KnowledgeGraphService(request.app.state.neo4j_driver)
+    backlog_service = DarkRoomBacklogService(graph_service)
+
+    # Get dark segments to find the element's missing forms
+    backlog = await backlog_service.get_dark_segments(
+        engagement_id=str(model.engagement_id), limit=500
+    )
+    target_item = next(
+        (item for item in backlog["items"] if item["element_id"] == element_id),
+        None,
+    )
+    if target_item is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Element {element_id} not found in Dark Room backlog",
+        )
+
+    planner = IlluminationPlannerService(session)
+    actions = await planner.create_illumination_plan(
+        engagement_id=str(model.engagement_id),
+        element_id=element_id,
+        element_name=target_item["element_name"],
+        missing_forms=target_item["missing_knowledge_forms"],
+    )
+
+    await log_audit(
+        session, model.engagement_id, AuditAction.EVIDENCE_VALIDATED,
+        f"Created illumination plan with {len(actions)} actions for {element_id}",
+        actor=str(user.id),
+    )
+    await session.commit()
+
+    return {
+        "engagement_id": str(model.engagement_id),
+        "element_id": element_id,
+        "actions_created": len(actions),
+        "actions": actions,
+    }
+
+
+@router.get(
+    "/{model_id}/dark-room/{element_id}/progress",
+    response_model=IlluminationProgressResponse,
+)
+async def get_illumination_progress(
+    model_id: str,
+    element_id: str,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("pov:read")),
+) -> dict[str, Any]:
+    """Get illumination progress for a specific Dark segment.
+
+    Returns total/completed/pending counts and per-action status.
+    """
+    model = await _get_model_or_404(session, model_id)
+    await _check_engagement_member(session, user, model.engagement_id)
+
+    planner = IlluminationPlannerService(session)
+    progress = await planner.get_progress(
+        engagement_id=str(model.engagement_id),
+        element_id=element_id,
+    )
+    return progress
+
+
+@router.patch(
+    "/{model_id}/dark-room/actions/{action_id}",
+    response_model=ActionStatusUpdateResponse,
+)
+async def update_action_status(
+    model_id: str,
+    action_id: str,
+    payload: ActionStatusUpdateRequest,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("pov:read")),
+) -> dict[str, Any]:
+    """Update the status of an illumination action.
+
+    Transitions an action between pending, in_progress, and complete states.
+    """
+    model = await _get_model_or_404(session, model_id)
+    await _check_engagement_member(session, user, model.engagement_id)
+
+    try:
+        new_status = IlluminationActionStatus(payload.status)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid status: {payload.status}. Must be one of: pending, in_progress, complete",
+        ) from None
+
+    planner = IlluminationPlannerService(session)
+    result = await planner.update_action_status(
+        action_id=action_id,
+        new_status=new_status,
+        linked_item_id=payload.linked_item_id,
+    )
+
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Action {action_id} not found",
+        )
+
+    await session.commit()
+    return result
+
+
+@router.get(
+    "/{model_id}/dark-room/{element_id}/completion",
+    response_model=SegmentCompletionResponse,
+)
+async def check_segment_completion(
+    model_id: str,
+    element_id: str,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("pov:read")),
+) -> dict[str, Any]:
+    """Check if all illumination actions for a segment are complete.
+
+    Returns completion status and whether confidence recalculation
+    should be triggered.
+    """
+    model = await _get_model_or_404(session, model_id)
+    await _check_engagement_member(session, user, model.engagement_id)
+
+    planner = IlluminationPlannerService(session)
+    completion = await planner.check_segment_completion(
+        engagement_id=str(model.engagement_id),
+        element_id=element_id,
+    )
+    return completion
