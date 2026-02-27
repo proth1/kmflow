@@ -3,6 +3,14 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.076] - 2026-02-26
+### Fixed
+- Replace ~58 broad `except Exception` with specific exception types across 57 Python files (#267)
+- Annotate ~55 intentionally broad handlers with `# Intentionally broad: <reason>` comments (#267)
+- Widen health check handlers for TCP-level connectivity errors (OSError, ConnectionRefusedError) (#267)
+- Add httpx.HTTPError to Camunda route handlers (#267)
+- Replace os.path with pathlib.Path in evidence pipeline and Visio parser (#267)
+
 ## [2026.02.075] - 2026-02-26
 ### Fixed
 - Fix N+1 query in governance SLA health dashboard and alerting — batch-fetch evidence items once per engagement (#261)

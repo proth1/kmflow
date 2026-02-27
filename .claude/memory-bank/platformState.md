@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.075
+**Version**: 2026.02.076
 **Last Updated**: 2026-02-26
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.076 | 2026-02-26 | Audit Phase 6: Replace ~58 broad except Exception with specific types, annotate ~55 intentional, widen health checks (#267) |
 | 2026.02.075 | 2026-02-26 | Audit Phase 5: N+1 SLA query fix, release build flag export, real SHA-256 checksums, astral-sh URL migration (#261) |
 | 2026.02.074 | 2026-02-26 | Audit Phase 4: consent lifecycle — property promotion, revocation handler, withdraw UI, reject unsigned records (#259) |
 | 2026.02.073 | 2026-02-26 | Audit Phase 3: periodic integrity, HMAC manifest, expanded PII, per-event consent, tests, ADR, profile customization (#257) |
