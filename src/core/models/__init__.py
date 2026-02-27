@@ -26,9 +26,11 @@ from src.core.models.engagement import (
     FollowUpReminder,
     ShelfDataRequest,
     ShelfDataRequestItem,
+    ShelfDataRequestToken,
     ShelfRequestItemPriority,
     ShelfRequestItemStatus,
     ShelfRequestStatus,
+    UploadFileStatus,
 )
 from src.core.models.evidence import (
     DataCatalogEntry,
@@ -161,9 +163,11 @@ __all__ = [
     "FollowUpReminder",
     "ShelfDataRequest",
     "ShelfDataRequestItem",
+    "ShelfDataRequestToken",
     "ShelfRequestItemPriority",
     "ShelfRequestItemStatus",
     "ShelfRequestStatus",
+    "UploadFileStatus",
     # evidence
     "DataCatalogEntry",
     "DataClassification",

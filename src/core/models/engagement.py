@@ -1,12 +1,12 @@
-"""Engagement models: status enums, Engagement, ShelfDataRequest, ShelfDataRequestItem."""
+"""Engagement models: status enums, Engagement, ShelfDataRequest, ShelfDataRequestItem, ShelfDataRequestToken."""
 
 from __future__ import annotations
 
 import enum
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
-from sqlalchemy import BigInteger, Date, DateTime, Enum, ForeignKey, Index, String, Text, func
+from sqlalchemy import BigInteger, Date, DateTime, Enum, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -92,11 +92,13 @@ class Engagement(Base):
     )
 
     # Relationships
-    evidence_items: Mapped[list["EvidenceItem"]] = relationship(
+    evidence_items: Mapped[list["EvidenceItem"]] = relationship(  # noqa: F821, UP037
         "EvidenceItem", back_populates="engagement", cascade="all, delete-orphan"
     )
-    audit_logs: Mapped[list["AuditLog"]] = relationship("AuditLog", back_populates="engagement", passive_deletes=True)
-    shelf_data_requests: Mapped[list["ShelfDataRequest"]] = relationship(
+    audit_logs: Mapped[list["AuditLog"]] = relationship(  # noqa: F821, UP037
+        "AuditLog", back_populates="engagement", passive_deletes=True
+    )
+    shelf_data_requests: Mapped[list[ShelfDataRequest]] = relationship(
         "ShelfDataRequest", back_populates="engagement", cascade="all, delete-orphan"
     )
 
@@ -134,10 +136,10 @@ class ShelfDataRequest(Base):
 
     # Relationships
     engagement: Mapped[Engagement] = relationship("Engagement", back_populates="shelf_data_requests")
-    items: Mapped[list["ShelfDataRequestItem"]] = relationship(
+    items: Mapped[list[ShelfDataRequestItem]] = relationship(
         "ShelfDataRequestItem", back_populates="request", cascade="all, delete-orphan"
     )
-    follow_up_reminders: Mapped[list["FollowUpReminder"]] = relationship(
+    follow_up_reminders: Mapped[list[FollowUpReminder]] = relationship(
         "FollowUpReminder", back_populates="request", cascade="all, delete-orphan"
     )
 
@@ -155,7 +157,7 @@ class ShelfDataRequest(Base):
         return round(fulfilled / len(self.items) * 100.0, 2)
 
     @property
-    def outstanding_items(self) -> list["ShelfDataRequestItem"]:
+    def outstanding_items(self) -> list[ShelfDataRequestItem]:
         """Return items that are still REQUESTED or PENDING."""
         outstanding_statuses = {ShelfRequestItemStatus.PENDING, ShelfRequestItemStatus.REQUESTED}
         return [item for item in self.items if item.status in outstanding_statuses]
@@ -234,3 +236,49 @@ class FollowUpReminder(Base):
 
     def __repr__(self) -> str:
         return f"<FollowUpReminder(id={self.id}, item_id={self.item_id}, type={self.reminder_type})>"
+
+
+class UploadFileStatus(enum.StrEnum):
+    """Status values for an individual file in a bulk intake upload."""
+
+    QUEUED = "queued"
+    PROCESSING = "processing"
+    COMPLETE = "complete"
+    FAILED = "failed"
+
+
+class ShelfDataRequestToken(Base):
+    """Time-limited intake token for client evidence submission.
+
+    Clients receive a URL containing this token; no authentication is
+    required on the client side. The token is validated by expiry
+    timestamp before the intake handler processes uploads.
+    """
+
+    __tablename__ = "shelf_data_request_tokens"
+    __table_args__ = (
+        Index("ix_shelf_request_tokens_request_id", "request_id"),
+        Index("ix_shelf_request_tokens_token", "token", unique=True),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    token: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), unique=True, nullable=False, default=uuid.uuid4)
+    request_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("shelf_data_requests.id", ondelete="CASCADE"), nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    used_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # Relationships
+    request: Mapped[ShelfDataRequest] = relationship("ShelfDataRequest")
+
+    @property
+    def is_expired(self) -> bool:
+        """Check if the token has expired."""
+
+        return datetime.now(UTC) > self.expires_at
+
+    def __repr__(self) -> str:
+        return f"<ShelfDataRequestToken(id={self.id}, request_id={self.request_id}, expired={self.is_expired})>"
