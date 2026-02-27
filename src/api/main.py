@@ -38,6 +38,7 @@ from src.api.routes import (
     cohort,
     conflicts,
     conformance,
+    consent,
     consistency,
     copilot,
     dashboard,
@@ -321,6 +322,9 @@ def create_app() -> FastAPI:
 
     # -- Export Watermarking Routes (Story #387) ---
     app.include_router(exports.router)
+
+    # -- Consent Architecture Routes (Story #382) ---
+    app.include_router(consent.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)
