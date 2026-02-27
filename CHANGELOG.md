@@ -3,6 +3,14 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.132] - 2026-02-27
+### Added
+- Governance overlay API for process model activities: per-activity governance status classification (governed/partially_governed/ungoverned), ontology-aligned Cypher traversal (GOVERNED_BY→Policy/Regulation, IMPLEMENTS reverse join for Controls), IDOR-safe engagement access check, 10 BDD tests (#331)
+
+## [2026.02.131] - 2026-02-27
+### Added
+- Gap-targeted probe generation from knowledge form gaps: GapProbeGenerator with brightness-based uplift scoring, form-to-probe-type mapping consolidated as single source of truth, POST/GET endpoints with pagination, 12 BDD tests (#327)
+
 ## [2026.02.130] - 2026-02-27
 ### Added
 - CanonicalActivityEvent schema and Event Spine Builder: multi-source canonicalization, dedup with tolerance window, FK-constrained engagement_id, timezone-safe comparison, pagination with true count, 17 BDD tests (#334)
