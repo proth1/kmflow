@@ -335,7 +335,7 @@ async def extract_fragment_entities(
         )
 
     # Resolve entities across all fragments
-    resolved = resolve_entities(all_entities) if all_entities else []
+    resolved, _ = resolve_entities(all_entities) if all_entities else ([], [])
 
     logger.info(
         "Entity extraction for engagement %s: %d entities extracted, %d resolved",
@@ -411,7 +411,7 @@ async def build_fragment_graph(
     if not all_entities:
         return {"node_count": 0, "relationship_count": 0, "errors": []}
 
-    resolved = resolve_entities(all_entities)
+    resolved, _ = resolve_entities(all_entities)
     node_count = 0
     relationship_count = 0
     errors: list[str] = []

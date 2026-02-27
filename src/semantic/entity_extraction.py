@@ -50,6 +50,27 @@ class ExtractedEntity:
 
 
 @dataclass
+class DuplicateCandidate:
+    """A pair of entities flagged as potential duplicates.
+
+    Attributes:
+        entity_a_id: ID of the first entity.
+        entity_b_id: ID of the second entity.
+        entity_a_name: Name of the first entity.
+        entity_b_name: Name of the second entity.
+        entity_type: Shared entity type.
+        similarity_reason: Why these were flagged as duplicates.
+    """
+
+    entity_a_id: str
+    entity_b_id: str
+    entity_a_name: str
+    entity_b_name: str
+    entity_type: EntityType
+    similarity_reason: str
+
+
+@dataclass
 class ExtractionResult:
     """Result from running entity extraction on a text fragment.
 
@@ -382,20 +403,29 @@ def _extract_documents(text: str) -> list[ExtractedEntity]:
     return entities
 
 
+SEED_TERM_CONFIDENCE_BOOST: float = 0.15
+"""Confidence boost for entities that match an engagement seed term."""
+
+
 async def extract_entities(
     text: str,
     fragment_id: str | None = None,
     use_llm: bool = False,
+    seed_terms: list[str] | None = None,
 ) -> ExtractionResult:
     """Extract entities from a text fragment.
 
     Uses rule-based NLP patterns as the MVP fallback. When use_llm is True,
     an LLM-based extraction path (not yet implemented) would be used.
 
+    If seed_terms are provided, entities whose names match a seed term
+    receive a confidence boost of SEED_TERM_CONFIDENCE_BOOST.
+
     Args:
         text: The text to extract entities from.
         fragment_id: Optional ID of the source fragment.
         use_llm: Whether to use LLM-based extraction (not yet implemented).
+        seed_terms: Canonical terms from the engagement seed list.
 
     Returns:
         ExtractionResult with all extracted entities.
@@ -415,11 +445,35 @@ async def extract_entities(
     all_entities.extend(_extract_decisions(text))
     all_entities.extend(_extract_documents(text))
 
+    # Apply seed term confidence boost
+    if seed_terms:
+        seed_lower = {t.lower().strip() for t in seed_terms}
+        for entity in all_entities:
+            matched_seed = _match_seed_term(entity.name, seed_lower)
+            if matched_seed:
+                entity.confidence = min(1.0, entity.confidence + SEED_TERM_CONFIDENCE_BOOST)
+                entity.metadata["matched_seed_term"] = matched_seed
+
     return ExtractionResult(
         entities=all_entities,
         fragment_id=fragment_id,
         raw_text_length=len(text),
     )
+
+
+def _match_seed_term(entity_name: str, seed_terms_lower: set[str]) -> str | None:
+    """Check if an entity name matches a seed term (case-insensitive).
+
+    Returns the matched seed term or None.
+    """
+    name_lower = entity_name.lower().strip()
+    if name_lower in seed_terms_lower:
+        return name_lower
+    # Also check substring containment for compound names
+    for seed in seed_terms_lower:
+        if seed in name_lower or name_lower in seed:
+            return seed
+    return None
 
 
 def _normalize_name(name: str) -> str:
@@ -433,21 +487,26 @@ def _normalize_name(name: str) -> str:
     return normalized
 
 
-def resolve_entities(entities: list[ExtractedEntity]) -> list[ExtractedEntity]:
+def resolve_entities(
+    entities: list[ExtractedEntity],
+) -> tuple[list[ExtractedEntity], list[DuplicateCandidate]]:
     """Resolve entities by merging duplicates and near-duplicates.
 
     Uses normalized name comparison to detect when different names refer
     to the same entity. The entity with the highest confidence is kept
     as the canonical entry; others become aliases.
 
+    Also detects potential duplicate pairs across entities of the same type
+    that share significant normalized name overlap (containment check).
+
     Args:
         entities: List of entities to resolve.
 
     Returns:
-        Deduplicated list of entities with aliases populated.
+        Tuple of (resolved entities, duplicate candidate pairs).
     """
     if not entities:
-        return []
+        return [], []
 
     # Group by (entity_type, normalized_name)
     groups: dict[tuple[str, str], list[ExtractedEntity]] = {}
@@ -471,4 +530,100 @@ def resolve_entities(entities: list[ExtractedEntity]) -> list[ExtractedEntity]:
                     canonical.aliases.append(other.name)
             resolved.append(canonical)
 
-    return resolved
+    # Detect cross-entity duplicate candidates (different raw names, same type)
+    duplicate_candidates = _detect_duplicate_candidates(resolved)
+
+    return resolved, duplicate_candidates
+
+
+def _detect_duplicate_candidates(
+    entities: list[ExtractedEntity],
+) -> list[DuplicateCandidate]:
+    """Detect potential duplicate pairs among resolved entities.
+
+    Compares entities of the same type that have different canonical names
+    but high normalized name overlap (one contains the other, or they share
+    a significant common prefix).
+
+    Args:
+        entities: List of resolved entities.
+
+    Returns:
+        List of duplicate candidate pairs.
+    """
+    candidates: list[DuplicateCandidate] = []
+    seen_pairs: set[tuple[str, str]] = set()
+
+    # Group by entity type
+    by_type: dict[str, list[ExtractedEntity]] = {}
+    for entity in entities:
+        if entity.entity_type not in by_type:
+            by_type[entity.entity_type] = []
+        by_type[entity.entity_type].append(entity)
+
+    for etype, type_entities in by_type.items():
+        for i, a in enumerate(type_entities):
+            for b in type_entities[i + 1 :]:
+                norm_a = _normalize_name(a.name)
+                norm_b = _normalize_name(b.name)
+
+                if norm_a == norm_b:
+                    continue  # Already merged during resolution
+
+                pair_key = (min(a.id, b.id), max(a.id, b.id))
+                if pair_key in seen_pairs:
+                    continue
+
+                reason = _check_name_similarity(norm_a, norm_b)
+                if reason:
+                    seen_pairs.add(pair_key)
+                    candidates.append(
+                        DuplicateCandidate(
+                            entity_a_id=a.id,
+                            entity_b_id=b.id,
+                            entity_a_name=a.name,
+                            entity_b_name=b.name,
+                            entity_type=EntityType(etype),
+                            similarity_reason=reason,
+                        )
+                    )
+
+    return candidates
+
+
+def _check_name_similarity(norm_a: str, norm_b: str) -> str | None:
+    """Check if two normalized names are similar enough to be duplicates.
+
+    Checks containment, acronym matching, and high word overlap.
+
+    Returns a reason string if similar, None otherwise.
+    """
+    # Containment: one name contains the other
+    if norm_a in norm_b:
+        return f"'{norm_a}' is contained in '{norm_b}'"
+    if norm_b in norm_a:
+        return f"'{norm_b}' is contained in '{norm_a}'"
+
+    words_a = set(norm_a.split())
+    words_b = set(norm_b.split())
+
+    # Abbreviation/acronym detection: check if initials of one match the other
+    words_a_list = norm_a.split()
+    words_b_list = norm_b.split()
+    if len(words_a_list) >= 2 and len(words_b_list) == 1:
+        initials = "".join(w[0] for w in words_a_list if w)
+        if initials == norm_b:
+            return f"'{norm_b}' is an acronym of '{norm_a}'"
+    if len(words_b_list) >= 2 and len(words_a_list) == 1:
+        initials = "".join(w[0] for w in words_b_list if w)
+        if initials == norm_a:
+            return f"'{norm_a}' is an acronym of '{norm_b}'"
+
+    # High word overlap: >50% of the smaller set's words shared
+    if words_a and words_b:
+        overlap = words_a & words_b
+        smaller = min(len(words_a), len(words_b))
+        if smaller >= 1 and len(overlap) / smaller >= 0.5:
+            return f"High word overlap: {overlap}"
+
+    return None
