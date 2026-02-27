@@ -178,20 +178,13 @@ class TestBestWorstFlags:
             [sid_a, sid_b], ENGAGEMENT_ID
         )
 
-        # Scenario A has higher (less negative = closer to 0) cycle_time_delta
-        # Actually -25 < -5, so B is "max" (closer to 0) — wait, the service says max is best.
-        # -5 > -25, so B's cycle_time_delta is higher = "best" by max_is_best logic
-        # But in context: -25% means 25% faster, -5% means only 5% faster.
-        # The PRD says "best cycle time delta" = most improvement = most negative.
-        # However the service uses max_is_best which would flag -5 as best.
-        # Let me verify the actual values and flags.
         entries = comparison["scenarios"]
         a_entry = next(e for e in entries if e["scenario_id"] == str(sid_a))
         b_entry = next(e for e in entries if e["scenario_id"] == str(sid_b))
 
-        # With max_is_best: -5 > -25, so B flagged as "best" for cycle_time_delta
-        assert b_entry["metrics"]["flags"]["cycle_time_delta_pct"] == "best"
-        assert a_entry["metrics"]["flags"]["cycle_time_delta_pct"] == "worst"
+        # min_is_best: -25 < -5, so A (most improvement) flagged as "best"
+        assert a_entry["metrics"]["flags"]["cycle_time_delta_pct"] == "best"
+        assert b_entry["metrics"]["flags"]["cycle_time_delta_pct"] == "worst"
 
     @pytest.mark.asyncio
     async def test_no_flags_when_values_equal(self) -> None:

@@ -75,7 +75,9 @@ class ScenarioComparisonService:
             fte_delta = metrics.get("fte_delta", 0.0)
             avg_confidence = scenario.evidence_confidence_score or 0.0
             removals = compliance_removals.get(scenario.id, 0)
-            # Governance coverage: 100% minus penalty for each removed control
+            # Governance coverage: 10%-per-removal heuristic. This is a simplified
+            # approximation until the compliance-tagged element model is available,
+            # at which point the true ratio (remaining/total) should be used.
             governance_coverage = max(0.0, 100.0 - (removals * 10.0))
 
             entries.append({
@@ -122,6 +124,7 @@ class ScenarioComparisonService:
                 SimulationResult.scenario_id.in_(scenario_ids),
                 SimulationResult.status == SimulationStatus.COMPLETED,
             )
+            .order_by(SimulationResult.completed_at.desc())
         )
         result = await self._session.execute(stmt)
         results = result.scalars().all()
@@ -156,8 +159,8 @@ class ScenarioComparisonService:
             return
 
         metric_comparators = {
-            "cycle_time_delta_pct": "max_is_best",  # Higher reduction = better
-            "fte_delta": "min_is_best",  # Fewer FTEs removed = less disruptive
+            "cycle_time_delta_pct": "min_is_best",  # Most negative = most improvement (-25% > -5%)
+            "fte_delta": "min_is_best",  # Most negative = greatest efficiency gain
             "avg_confidence": "max_is_best",
             "governance_coverage_pct": "max_is_best",
             "compliance_flags": "min_is_best",
