@@ -10,8 +10,9 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import event, func, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from src.core.models.llm_audit import LLMAuditLog
 from src.core.models.simulation import AlternativeSuggestion, SimulationScenario, SuggestionDisposition
@@ -21,15 +22,33 @@ class AuditLogImmutableError(Exception):
     """Raised when attempting to modify immutable audit log fields."""
 
 
+# Fields that cannot be modified after creation
+_IMMUTABLE_FIELDS = frozenset({
+    "prompt_text", "response_text", "evidence_ids",
+    "prompt_tokens", "completion_tokens", "model_name",
+    "scenario_id", "user_id", "created_at",
+})
+
+
+@event.listens_for(Session, "before_flush")
+def _enforce_immutability(session: Session, flush_context: Any, instances: Any) -> None:
+    """Prevent modification of immutable LLMAuditLog fields."""
+    for obj in session.dirty:
+        if not isinstance(obj, LLMAuditLog):
+            continue
+        insp = inspect(obj)
+        for field in _IMMUTABLE_FIELDS:
+            hist = insp.attrs[field].history
+            if hist.has_changes():
+                raise AuditLogImmutableError(
+                    f"Cannot modify immutable field '{field}' on LLMAuditLog"
+                )
+
+
 class LLMAuditService:
     """Service for LLM audit trail operations."""
 
-    # Fields that cannot be modified after creation
-    IMMUTABLE_FIELDS = frozenset({
-        "prompt_text", "response_text", "evidence_ids",
-        "prompt_tokens", "completion_tokens", "model_name",
-        "scenario_id", "user_id", "created_at",
-    })
+    IMMUTABLE_FIELDS = _IMMUTABLE_FIELDS
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -110,11 +129,17 @@ class LLMAuditService:
         if log is None:
             raise ValueError(f"LLM audit log {audit_log_id} not found")
 
+        if log.hallucination_flagged:
+            raise ValueError(
+                f"LLM audit log {audit_log_id} is already flagged as a hallucination"
+            )
+
         log.hallucination_flagged = True
         log.hallucination_reason = reason
         log.flagged_at = datetime.now(UTC)
         log.flagged_by_user_id = flagged_by
         await self._session.flush()
+        await self._session.commit()
 
         return self._serialize(log)
 
@@ -174,25 +199,19 @@ class LLMAuditService:
         modified = disposition_counts.get(SuggestionDisposition.MODIFIED.value, 0)
         rejected = disposition_counts.get(SuggestionDisposition.REJECTED.value, 0)
 
-        # Hallucination count
-        halluc_q = select(func.count()).select_from(
+        # Hallucination count (with same date filter)
+        halluc_base = (
             select(LLMAuditLog.id)
             .where(
                 LLMAuditLog.scenario_id.in_(scenario_ids_query),
                 LLMAuditLog.hallucination_flagged.is_(True),
             )
-            .subquery()
         )
         if from_date:
-            halluc_q = select(func.count()).select_from(
-                select(LLMAuditLog.id)
-                .where(
-                    LLMAuditLog.scenario_id.in_(scenario_ids_query),
-                    LLMAuditLog.hallucination_flagged.is_(True),
-                    LLMAuditLog.created_at >= from_date,
-                )
-                .subquery()
-            )
+            halluc_base = halluc_base.where(LLMAuditLog.created_at >= from_date)
+        if to_date:
+            halluc_base = halluc_base.where(LLMAuditLog.created_at <= to_date)
+        halluc_q = select(func.count()).select_from(halluc_base.subquery())
         halluc_result = await self._session.execute(halluc_q)
         hallucination_count = halluc_result.scalar() or 0
 

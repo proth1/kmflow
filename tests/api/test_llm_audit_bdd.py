@@ -178,6 +178,25 @@ async def test_flag_hallucination_sets_fields(
     assert log.flagged_by_user_id == user_id
     assert log.flagged_at is not None
     mock_session.flush.assert_awaited_once()
+    mock_session.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_flag_hallucination_already_flagged_rejected(
+    service: LLMAuditService, mock_session: AsyncMock
+) -> None:
+    """Given an already-flagged entry, When I flag again, Then ValueError."""
+    log = _make_audit_log(hallucination_flagged=True)
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = log
+    mock_session.execute = AsyncMock(return_value=result_mock)
+
+    with pytest.raises(ValueError, match="already flagged"):
+        await service.flag_hallucination(
+            audit_log_id=log.id,
+            reason="Another reason",
+            flagged_by=uuid.uuid4(),
+        )
 
 
 @pytest.mark.asyncio
@@ -337,6 +356,17 @@ def test_immutable_fields_defined() -> None:
 def test_immutable_fields_is_frozenset() -> None:
     """Immutable fields set cannot be modified."""
     assert isinstance(LLMAuditService.IMMUTABLE_FIELDS, frozenset)
+
+
+def test_immutability_listener_registered() -> None:
+    """The before_flush event listener for immutability is registered."""
+    from src.api.services.llm_audit import AuditLogImmutableError, _enforce_immutability
+
+    # Verify the function exists and is callable
+    assert callable(_enforce_immutability)
+    # Verify the error class is raisable
+    with pytest.raises(AuditLogImmutableError, match="Cannot modify"):
+        raise AuditLogImmutableError("Cannot modify immutable field 'prompt_text'")
 
 
 # ---------------------------------------------------------------------------

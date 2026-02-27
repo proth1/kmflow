@@ -42,9 +42,16 @@ def upgrade() -> None:
             nullable=True,
         ),
     )
+    op.create_index(
+        "ix_llm_audit_logs_hallucination_flagged",
+        "llm_audit_logs",
+        ["hallucination_flagged"],
+        postgresql_where=sa.text("hallucination_flagged = true"),
+    )
 
 
 def downgrade() -> None:
+    op.drop_index("ix_llm_audit_logs_hallucination_flagged", table_name="llm_audit_logs")
     op.drop_column("llm_audit_logs", "flagged_by_user_id")
     op.drop_column("llm_audit_logs", "flagged_at")
     op.drop_column("llm_audit_logs", "hallucination_reason")

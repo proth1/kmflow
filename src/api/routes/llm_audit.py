@@ -115,7 +115,7 @@ async def flag_hallucination(
     audit_log_id: UUID,
     body: FlagHallucinationRequest,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("simulation:read")),
+    user: User = Depends(require_permission("simulation:create")),
 ) -> Any:
     """Flag an LLM audit entry as containing a hallucination."""
     from src.api.services.llm_audit import LLMAuditService

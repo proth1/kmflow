@@ -88,10 +88,10 @@ async def test_flag_hallucination_returns_updated_entry(mock_session: AsyncMock)
     log_mock.model_name = "gpt-4"
     log_mock.evidence_ids = None
     log_mock.error_message = None
-    log_mock.hallucination_flagged = True
-    log_mock.hallucination_reason = "Invented citation"
-    log_mock.flagged_at = datetime.now(UTC)
-    log_mock.flagged_by_user_id = uuid.uuid4()
+    log_mock.hallucination_flagged = False
+    log_mock.hallucination_reason = None
+    log_mock.flagged_at = None
+    log_mock.flagged_by_user_id = None
     log_mock.created_at = datetime.now(UTC)
 
     result_mock = MagicMock()
