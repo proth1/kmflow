@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.143
+**Version**: 2026.02.144
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -9,7 +9,7 @@
 |--------|-------|
 | SQLAlchemy Models | 82+ classes across 12 modules |
 | API Routes | 26+ routers |
-| Test Count | 3211 backend + 206 frontend passing |
+| Test Count | 3230 backend + 206 frontend passing |
 | Coverage | >80% |
 | Python Version | 3.12+ |
 | FastAPI Version | 0.109+ |
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.144 | 2026-02-27 | Evidence confidence overlay: per-element brightness, Dark-area warnings, risk score, multi-scenario comparison, 19 tests (#385) |
 | 2026.02.143 | 2026-02-27 | LLM audit trail: hallucination flagging, immutability enforcement, disposition stats, 21 tests (#386) |
 | 2026.02.142 | 2026-02-27 | Cohort suppression: privacy enforcement, export blocking, audit logging, 21 tests (#391) |
 | 2026.02.141 | 2026-02-27 | PDP service: ABAC policy evaluation, obligation framework, audit trail, conditions validation, default policy seeding, 25 tests (#377) |

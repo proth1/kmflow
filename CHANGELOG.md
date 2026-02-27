@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.144] - 2026-02-27
+### Added
+- Evidence confidence overlay per scenario: per-element brightness lookup from ProcessElement, Dark-area modification warnings, risk score computation (bright/(bright+dark)), multi-scenario comparison with max-10 cap, engagement access control, 19 tests (#385)
+
 ## [2026.02.143] - 2026-02-27
 ### Added
 - LLM audit trail with hallucination flagging: engagement-level querying with date range, hallucination flagging with re-flag guard, suggestion disposition stats (acceptance/modification/rejection rates), SQLAlchemy before_flush immutability enforcement, partial index on hallucination_flagged, migration 065, 21 tests (#386)
