@@ -8,6 +8,7 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #455 merged** — Telemetry micro-surveys: MicroSurvey model, deviation-to-probe mapping, anomaly threshold gate, SurveyClaim linkage, API endpoints, ORM relationships, 16 tests (#398) (v2026.02.138)
 - **PR #454 merged** — Shelf-epistemic integration: auto-create shelf items from epistemic actions, follow-through rate endpoint, source filter, 11 tests (#399) (v2026.02.137)
 - **PR #453 merged** — Epistemic Action Planner: GET endpoint, shelf linkage, IDOR guard, pagination, shelf_request_id in response, 10 tests (#389) (v2026.02.136)
 - **PR #452 merged** — Illumination Planner: targeted evidence acquisition, 9-form action mapping, idempotency guard, progress tracking, segment completion, 11 tests (#396) (v2026.02.135)

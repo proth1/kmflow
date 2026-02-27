@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.138] - 2026-02-27
+### Added
+- Telemetry-triggered micro-survey generation: MicroSurvey model with GENERATED/SENT/RESPONDED status, deviation-to-probe mapping (5 categories), anomaly threshold gate (>2.0 std devs), SurveyClaim linkage, API endpoints (generate/respond/list), migration 060, ORM relationships, 16 tests (#398)
+
 ## [2026.02.137] - 2026-02-27
 ### Added
 - Shelf-epistemic integration: auto-create shelf data request items from epistemic actions, follow-through rate endpoint (target >50%), source filter (PLANNER/MANUAL), ShelfRequestItemSource enum, migration 059, 11 BDD tests (#399)
