@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.108
+**Version**: 2026.02.109
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -9,7 +9,7 @@
 |--------|-------|
 | SQLAlchemy Models | 78+ classes across 12 modules |
 | API Routes | 25+ routers |
-| Test Count | 2842 backend + 206 frontend passing |
+| Test Count | 2875 backend + 206 frontend passing |
 | Coverage | >80% |
 | Python Version | 3.12+ |
 | FastAPI Version | 0.109+ |
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.109 | 2026-02-27 | Continuous evidence pipeline: async Redis stream consumer, quality scoring, per-engagement quality monitoring, MetricsCollector, pipeline metrics API, 33 tests (#360) |
 | 2026.02.108 | 2026-02-27 | Review pack generation: 3-8 activity segments, SME routing, async gen, failure sentinel, 36 tests (#349) |
 | 2026.02.107 | 2026-02-27 | RACI matrix derivation from knowledge graph edges, SME validation, CSV export, 41 tests (#351) |
 | 2026.02.106 | 2026-02-27 | Deviation detection engine: severity scoring, timing/skipped/undocumented detection, 45 tests (#350) |

@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.109] - 2026-02-27
+### Added
+- Continuous evidence collection pipeline: async Redis stream consumer with quality scoring, contradiction detection hook, incremental knowledge graph updates, time-based per-engagement quality threshold monitoring, rolling-window MetricsCollector (processing rate, p99 latency, queue depth, errors, avg quality), GET /api/v1/monitoring/pipeline/metrics endpoint with auth, submit_evidence_to_pipeline helper, 33 BDD tests (#360)
+
 ## [2026.02.108] - 2026-02-27
 ### Added
 - Review pack generation engine: segments POV activities into 3-8 activity packs, aggregates evidence/confidence/conflicts/seed terms, SME routing by primary role, async POST with task_id (HTTP 202), paginated GET, failure sentinel on error, engagement validation, Alembic migration 043, 36 BDD tests (#349)

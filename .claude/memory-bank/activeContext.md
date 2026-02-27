@@ -8,6 +8,14 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #425 merged** — Continuous evidence collection pipeline (#360) (v2026.02.109)
+  - Async Redis stream consumer with quality scoring, knowledge graph updates, contradiction detection hook
+  - Time-based per-engagement quality threshold monitoring (10-min window)
+  - MetricsCollector: rolling window with processing rate, p99 latency, queue depth, errors, avg quality
+  - GET /api/v1/monitoring/pipeline/metrics endpoint with monitoring:read auth
+  - submit_evidence_to_pipeline() helper for Redis stream publishing
+  - PR review: REQUEST CHANGES → HIGH fixed (auth, Request type, behavioral tests), MEDIUM fixed (per-engagement quality, time-based window)
+  - 33 BDD tests
 - **PR #424 merged** — Review pack generation engine (#349) (v2026.02.108)
   - Segments POV activities into 3-8 activity review packs
   - Aggregates evidence, confidence scores, conflict flags, seed terms per pack
