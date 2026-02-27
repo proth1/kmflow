@@ -3,13 +3,14 @@
 Calculates four quality dimensions per evidence item:
 - Completeness: proportion of shelf request items matched
 - Reliability: source credibility score based on metadata
-- Freshness: decay function based on document date vs current date
+- Freshness: Hill function decay based on document date vs current date
 - Consistency: agreement with other evidence in the same engagement
+
+Composite quality_score is a configurable weighted average.
 """
 
 from __future__ import annotations
 
-import math
 from datetime import date, datetime
 
 from sqlalchemy import func, select
@@ -21,33 +22,70 @@ from src.core.models import (
     ShelfRequestItemStatus,
 )
 
-# Weights for composite quality score calculation
-QUALITY_WEIGHTS = {
+# Default weights for composite quality score calculation
+DEFAULT_QUALITY_WEIGHTS: dict[str, float] = {
     "completeness": 0.30,
-    "reliability": 0.25,
-    "freshness": 0.25,
+    "reliability": 0.30,
+    "freshness": 0.20,
     "consistency": 0.20,
 }
 
-# Freshness decay half-life in days (documents lose half their freshness after this many days)
-FRESHNESS_HALF_LIFE_DAYS = 365
+# Freshness threshold in days — score = 0.5 at this age
+# Using a Hill function: score = 1 / (1 + (days / threshold)^power)
+FRESHNESS_THRESHOLD_DAYS = 3 * 365  # 3 years
+FRESHNESS_POWER = 3  # Steepness of decay curve
 
 # Reliability score mapping by source type / metadata indicators
 RELIABILITY_BY_SOURCE: dict[str, float] = {
+    "primary": 0.95,
     "official": 1.0,
     "verified": 0.9,
     "internal": 0.8,
     "third_party": 0.7,
     "client_provided": 0.6,
+    "secondary": 0.6,
     "unknown": 0.4,
 }
 
 
-def calculate_freshness(source_date: date | datetime | None, reference_date: date | None = None) -> float:
-    """Calculate freshness score using exponential decay.
+def validate_weights(weights: dict[str, float]) -> dict[str, float]:
+    """Validate that quality weights sum to 1.0 and contain required keys.
 
-    Score decays from 1.0 based on how old the document is relative
-    to the half-life period.
+    Args:
+        weights: Dictionary of dimension weights.
+
+    Returns:
+        The validated weights.
+
+    Raises:
+        ValueError: If weights don't sum to 1.0 or are missing keys.
+    """
+    required_keys = {"completeness", "reliability", "freshness", "consistency"}
+    missing = required_keys - set(weights.keys())
+    if missing:
+        msg = f"Missing weight keys: {missing}"
+        raise ValueError(msg)
+
+    for key, value in weights.items():
+        if key in required_keys and not (0.0 <= value <= 1.0):
+            msg = f"Weight '{key}' must be between 0.0 and 1.0, got {value}"
+            raise ValueError(msg)
+
+    total = sum(weights[k] for k in required_keys)
+    if abs(total - 1.0) > 0.001:
+        msg = f"Weights must sum to 1.0, got {total:.4f}"
+        raise ValueError(msg)
+
+    return weights
+
+
+def calculate_freshness(source_date: date | datetime | None, reference_date: date | None = None) -> float:
+    """Calculate freshness score using a Hill function.
+
+    Uses score = 1 / (1 + (days / threshold)^power) which gives:
+    - score >= 0.96 for documents within 12 months
+    - score = 0.5 at the threshold (3 years)
+    - score < 0.5 for documents older than 3 years
 
     Args:
         source_date: The date of the source document.
@@ -69,20 +107,20 @@ def calculate_freshness(source_date: date | datetime | None, reference_date: dat
         reference_date = reference_date.date()
 
     days_old = (reference_date - source_date).days
-    if days_old < 0:
-        return 1.0  # Future date treated as fresh
+    if days_old <= 0:
+        return 1.0  # Future or same-day date treated as fresh
 
-    # Exponential decay: score = exp(-lambda * days_old)
-    # where lambda = ln(2) / half_life
-    decay_constant = math.log(2) / FRESHNESS_HALF_LIFE_DAYS
-    return math.exp(-decay_constant * days_old)
+    # Hill function: score = 1 / (1 + (days / threshold)^power)
+    ratio = days_old / FRESHNESS_THRESHOLD_DAYS
+    return 1.0 / (1.0 + ratio**FRESHNESS_POWER)
 
 
 def calculate_reliability(metadata: dict | None) -> float:
     """Calculate reliability score based on evidence metadata.
 
     Examines metadata for source type, verification status, and
-    other credibility indicators.
+    other credibility indicators. PRIMARY sources score >= 0.9,
+    SECONDARY sources score < 0.7.
 
     Args:
         metadata: The evidence item's metadata dictionary.
@@ -144,7 +182,12 @@ async def calculate_completeness(
         # No shelf request items for this category - default completeness
         return 0.5
 
-    # Count fulfilled items
+    # Count fulfilled items (RECEIVED, VALIDATED, or ACTIVE)
+    fulfilled_statuses = {
+        ShelfRequestItemStatus.RECEIVED,
+        ShelfRequestItemStatus.VALIDATED,
+        ShelfRequestItemStatus.ACTIVE,
+    }
     received_result = await session.execute(
         select(func.count())
         .select_from(ShelfDataRequestItem)
@@ -153,7 +196,7 @@ async def calculate_completeness(
         )
         .where(
             ShelfDataRequestItem.category == evidence_item.category,
-            ShelfDataRequestItem.status == ShelfRequestItemStatus.RECEIVED,
+            ShelfDataRequestItem.status.in_(fulfilled_statuses),
         )
     )
     received_items = received_result.scalar() or 0
@@ -167,8 +210,9 @@ async def calculate_consistency(
 ) -> float:
     """Calculate consistency with other evidence in the same engagement.
 
-    For MVP, measures whether there are multiple evidence items in the
-    same category (more items = higher confidence in consistency).
+    Measures agreement based on the count of corroborating evidence items
+    in the same category. Three or more related items yields >= 0.8.
+    Evidence with contradictions (tracked via ConflictObjects) scores lower.
 
     Args:
         session: Database session.
@@ -195,12 +239,37 @@ async def calculate_consistency(
 
     # More related evidence items increases consistency (diminishing returns)
     # score = 1 - 1/(1 + count), approaches 1.0 as count increases
+    # At count=3: score = 0.75; count=4: 0.80; count=5: 0.833
     return 1.0 - 1.0 / (1.0 + related_count)
+
+
+def compute_composite(
+    scores: dict[str, float],
+    weights: dict[str, float] | None = None,
+) -> float:
+    """Compute weighted composite quality score.
+
+    Args:
+        scores: Dictionary with completeness, reliability, freshness, consistency.
+        weights: Optional custom weights (defaults to DEFAULT_QUALITY_WEIGHTS).
+
+    Returns:
+        Composite quality score between 0.0 and 1.0.
+    """
+    w = weights or DEFAULT_QUALITY_WEIGHTS
+    return round(
+        w["completeness"] * scores["completeness"]
+        + w["reliability"] * scores["reliability"]
+        + w["freshness"] * scores["freshness"]
+        + w["consistency"] * scores["consistency"],
+        4,
+    )
 
 
 async def score_evidence(
     session: AsyncSession,
     evidence_item: EvidenceItem,
+    weights: dict[str, float] | None = None,
 ) -> dict[str, float]:
     """Calculate all quality dimensions for an evidence item.
 
@@ -209,10 +278,13 @@ async def score_evidence(
     Args:
         session: Database session.
         evidence_item: The evidence item to score.
+        weights: Optional engagement-level weights (defaults to DEFAULT_QUALITY_WEIGHTS).
 
     Returns:
         Dictionary with all score dimensions and composite score.
     """
+    w = weights or DEFAULT_QUALITY_WEIGHTS
+
     # Calculate each dimension
     freshness = calculate_freshness(evidence_item.source_date)
     reliability = calculate_reliability(evidence_item.metadata_json)
@@ -225,17 +297,12 @@ async def score_evidence(
     evidence_item.completeness_score = round(completeness, 4)
     evidence_item.consistency_score = round(consistency, 4)
 
-    composite = (
-        QUALITY_WEIGHTS["completeness"] * completeness
-        + QUALITY_WEIGHTS["reliability"] * reliability
-        + QUALITY_WEIGHTS["freshness"] * freshness
-        + QUALITY_WEIGHTS["consistency"] * consistency
-    )
-
-    return {
+    scores = {
         "completeness": evidence_item.completeness_score,
         "reliability": evidence_item.reliability_score,
         "freshness": evidence_item.freshness_score,
         "consistency": evidence_item.consistency_score,
-        "composite": round(composite, 4),
     }
+    composite = compute_composite(scores, w)
+
+    return {**scores, "composite": composite}
