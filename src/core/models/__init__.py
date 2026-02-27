@@ -142,6 +142,10 @@ from src.core.models.tom import (
     TOMDimension,
     TOMGapType,
 )
+from src.core.models.validation import (
+    ReviewPack,
+    ReviewPackStatus,
+)
 
 __all__ = [
     # audit
@@ -266,6 +270,9 @@ __all__ = [
     "TaskMiningAgent",
     "TaskMiningEvent",
     "TaskMiningSession",
+    # validation
+    "ReviewPack",
+    "ReviewPackStatus",
     # tom
     "Benchmark",
     "BestPractice",
