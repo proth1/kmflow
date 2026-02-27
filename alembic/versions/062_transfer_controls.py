@@ -1,7 +1,7 @@
 """Add cross-border data transfer control tables.
 
-Revision ID: 061
-Revises: 060
+Revision ID: 062
+Revises: 061
 Create Date: 2026-02-27
 """
 
