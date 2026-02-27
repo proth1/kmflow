@@ -8,6 +8,10 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #405 merged** — SemanticRelationship bitemporal validity (#305) (v2026.02.089)
+  - 5 bitemporal columns: asserted_at, retracted_at, valid_from, valid_to, superseded_by
+  - Partial index on active relationships, CheckConstraint valid_to >= valid_from
+  - 42 tests, PR review REQUEST CHANGES addressed (partial index, check constraint, field limits)
 - **PR #404 merged** — SeedTerm entity schema and vocabulary store (#302) (v2026.02.088)
   - 5 term categories, 3 sources, 3 lifecycle states, self-referential merge FK
   - Unique constraint on (engagement_id, term, domain), GIN FTS index on term

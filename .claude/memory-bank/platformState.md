@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.088
+**Version**: 2026.02.089
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -9,7 +9,7 @@
 |--------|-------|
 | SQLAlchemy Models | 78+ classes across 12 modules |
 | API Routes | 25+ routers |
-| Test Count | 2341 backend + 206 frontend passing |
+| Test Count | 2383 backend + 206 frontend passing |
 | Coverage | >80% |
 | Python Version | 3.12+ |
 | FastAPI Version | 0.109+ |
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.089 | 2026-02-27 | SemanticRelationship bitemporal validity model (#305) |
 | 2026.02.088 | 2026-02-27 | SeedTerm entity schema and vocabulary store (#302) |
 | 2026.02.087 | 2026-02-27 | ConflictObject model and disagreement taxonomy (#299) |
 | 2026.02.086 | 2026-02-27 | EpistemicFrame and SurveyClaim entity schemas (#297) |
