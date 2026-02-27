@@ -45,10 +45,15 @@ def _mock_session() -> AsyncMock:
 
 
 def _setup_cohort_query(session: AsyncMock, cohort_size: int | None) -> None:
-    """Set up mock to return cohort_minimum_size from query."""
-    scalar_result = MagicMock()
-    scalar_result.scalar_one_or_none.return_value = cohort_size
-    session.execute = AsyncMock(return_value=scalar_result)
+    """Set up mock to return cohort_minimum_size from query.
+
+    _get_minimum selects (Engagement.id, Engagement.cohort_minimum_size)
+    and calls one_or_none() which returns a row tuple.
+    """
+    engagement_id = uuid.UUID(ENGAGEMENT_ID)
+    row_result = MagicMock()
+    row_result.one_or_none.return_value = (engagement_id, cohort_size)
+    session.execute = AsyncMock(return_value=row_result)
 
 
 # ---------------------------------------------------------------------------

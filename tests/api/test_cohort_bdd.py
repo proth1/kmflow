@@ -34,10 +34,11 @@ def _setup_engagement_cohort(session: AsyncMock, cohort_size: int | None) -> Mag
     engagement.id = ENGAGEMENT_ID
     engagement.cohort_minimum_size = cohort_size
 
-    # For _get_minimum: select(Engagement.cohort_minimum_size)
-    scalar_result = MagicMock()
-    scalar_result.scalar_one_or_none.return_value = cohort_size
-    session.execute = AsyncMock(return_value=scalar_result)
+    # For _get_minimum: select(Engagement.id, Engagement.cohort_minimum_size)
+    row_result = MagicMock()
+    # one_or_none() returns a Row-like tuple (id, cohort_minimum_size)
+    row_result.one_or_none.return_value = (ENGAGEMENT_ID, cohort_size)
+    session.execute = AsyncMock(return_value=row_result)
 
     return engagement
 
@@ -293,3 +294,73 @@ def test_export_blocked_error_message() -> None:
     assert "minimum threshold 5" in str(error)
     assert error.cohort_size == 3
     assert error.minimum == 5
+
+
+# ---------------------------------------------------------------------------
+# Audit logging for blocked exports
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_export_blocked_creates_audit_log() -> None:
+    """When an export is blocked, an AuditLog entry is created."""
+    session = _mock_session()
+    _setup_engagement_cohort(session, 5)
+
+    service = CohortSuppressionService(session)
+    with pytest.raises(CohortExportBlockedError):
+        await service.check_export(
+            engagement_id=ENGAGEMENT_ID,
+            cohort_size=3,
+            requester="analyst@example.com",
+        )
+
+    # Verify audit log was added to session
+    session.add.assert_called_once()
+    audit_entry = session.add.call_args[0][0]
+    assert audit_entry.action.value == "export_blocked"
+    assert audit_entry.engagement_id == ENGAGEMENT_ID
+    assert audit_entry.actor == "analyst@example.com"
+
+
+# ---------------------------------------------------------------------------
+# Non-existent engagement handling
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_nonexistent_engagement_raises_value_error() -> None:
+    """When engagement does not exist, _get_minimum raises ValueError."""
+    session = _mock_session()
+    row_result = MagicMock()
+    row_result.one_or_none.return_value = None
+    session.execute = AsyncMock(return_value=row_result)
+
+    service = CohortSuppressionService(session)
+    with pytest.raises(ValueError, match="not found"):
+        await service.check_cohort(
+            engagement_id=uuid.uuid4(),
+            cohort_size=3,
+        )
+
+
+@pytest.mark.asyncio
+async def test_configure_commits_session() -> None:
+    """configure_engagement commits the session after flushing."""
+    session = _mock_session()
+    engagement = MagicMock(spec=Engagement)
+    engagement.id = ENGAGEMENT_ID
+    engagement.cohort_minimum_size = 5
+
+    scalar_result = MagicMock()
+    scalar_result.scalar_one_or_none.return_value = engagement
+    session.execute = AsyncMock(return_value=scalar_result)
+
+    service = CohortSuppressionService(session)
+    await service.configure_engagement(
+        engagement_id=ENGAGEMENT_ID,
+        minimum_cohort_size=10,
+    )
+
+    session.flush.assert_awaited_once()
+    session.commit.assert_awaited_once()

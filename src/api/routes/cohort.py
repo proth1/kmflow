@@ -95,11 +95,17 @@ async def check_cohort(
     from src.security.cohort.suppression import CohortSuppressionService
 
     service = CohortSuppressionService(session)
-    return await service.check_cohort(
-        engagement_id=body.engagement_id,
-        cohort_size=body.cohort_size,
-        context=body.context,
-    )
+    try:
+        return await service.check_cohort(
+            engagement_id=body.engagement_id,
+            cohort_size=body.cohort_size,
+            context=body.context,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
 
 
 @router.post("/export-check", response_model=ExportCheckResponse)
@@ -124,6 +130,11 @@ async def check_export(
     except CohortExportBlockedError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
 
@@ -170,6 +181,12 @@ async def get_engagement_config(
     from src.security.cohort.suppression import CohortSuppressionService
 
     service = CohortSuppressionService(session)
-    return await service.get_engagement_config(
-        engagement_id=engagement_id,
-    )
+    try:
+        return await service.get_engagement_config(
+            engagement_id=engagement_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc

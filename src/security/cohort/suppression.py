@@ -16,6 +16,8 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.config import get_settings
+from src.core.models.audit import AuditAction, AuditLog
 from src.core.models.engagement import Engagement
 
 logger = logging.getLogger(__name__)
@@ -24,10 +26,9 @@ logger = logging.getLogger(__name__)
 class CohortSuppressionService:
     """Evaluates cohort size and enforces suppression thresholds."""
 
-    DEFAULT_MINIMUM_COHORT_SIZE = 5
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
+        self._default_minimum = get_settings().cohort_minimum_size
 
     async def check_cohort(
         self,
@@ -101,6 +102,17 @@ class CohortSuppressionService:
                 minimum,
                 requester,
             )
+            # Audit log the blocked export attempt
+            audit_entry = AuditLog(
+                engagement_id=engagement_id,
+                action=AuditAction.EXPORT_BLOCKED,
+                actor=requester,
+                details=(
+                    f"Export blocked: cohort size {cohort_size} below minimum {minimum}"
+                ),
+            )
+            self._session.add(audit_entry)
+            await self._session.flush()
             raise CohortExportBlockedError(
                 cohort_size=cohort_size,
                 minimum=minimum,
@@ -142,6 +154,7 @@ class CohortSuppressionService:
 
         engagement.cohort_minimum_size = minimum_cohort_size
         await self._session.flush()
+        await self._session.commit()
 
         return {
             "engagement_id": str(engagement_id),
@@ -161,23 +174,35 @@ class CohortSuppressionService:
 
         Returns:
             Configuration dict with minimum cohort size.
+
+        Raises:
+            ValueError: If engagement not found.
         """
         minimum = await self._get_minimum(engagement_id)
         return {
             "engagement_id": str(engagement_id),
             "cohort_minimum_size": minimum,
-            "is_default": minimum == self.DEFAULT_MINIMUM_COHORT_SIZE,
+            "is_default": minimum == self._default_minimum,
         }
 
     async def _get_minimum(self, engagement_id: uuid.UUID) -> int:
-        """Get the effective minimum cohort size for an engagement."""
+        """Get the effective minimum cohort size for an engagement.
+
+        Raises:
+            ValueError: If the engagement does not exist.
+        """
         result = await self._session.execute(
-            select(Engagement.cohort_minimum_size).where(Engagement.id == engagement_id)
+            select(Engagement.id, Engagement.cohort_minimum_size).where(
+                Engagement.id == engagement_id
+            )
         )
-        row = result.scalar_one_or_none()
-        if row is not None:
-            return row
-        return self.DEFAULT_MINIMUM_COHORT_SIZE
+        row = result.one_or_none()
+        if row is None:
+            raise ValueError(f"Engagement {engagement_id} not found")
+        override = row[1]
+        if override is not None:
+            return override
+        return self._default_minimum
 
 
 class CohortExportBlockedError(Exception):
