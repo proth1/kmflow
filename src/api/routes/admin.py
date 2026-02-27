@@ -91,7 +91,7 @@ async def rotate_encryption_key(
                 rotated += 1
 
         await session.commit()
-    except SQLAlchemyError as e:
+    except (SQLAlchemyError, ValueError) as e:
         await session.rollback()
         logger.error("Key rotation failed after %d credentials, rolled back: %s", rotated, e)
         raise HTTPException(

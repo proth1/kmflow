@@ -43,7 +43,7 @@ class TestListDeployments:
 
     @pytest.mark.asyncio
     async def test_list_deployments_engine_error(self, client, app_with_camunda, mock_camunda_client):
-        mock_camunda_client.list_deployments.side_effect = Exception("Connection refused")
+        mock_camunda_client.list_deployments.side_effect = ConnectionError("Connection refused")
         response = await client.get("/api/v1/camunda/deployments")
         assert response.status_code == 502
 
@@ -72,7 +72,7 @@ class TestDeployProcess:
 
     @pytest.mark.asyncio
     async def test_deploy_process_engine_error(self, client, app_with_camunda, mock_camunda_client):
-        mock_camunda_client.deploy_process.side_effect = Exception("Deploy failed")
+        mock_camunda_client.deploy_process.side_effect = ConnectionError("Deploy failed")
         response = await client.post(
             "/api/v1/camunda/deploy",
             files={"file": ("process.bpmn", io.BytesIO(b"<bpmn/>"), "application/xml")},
@@ -93,7 +93,7 @@ class TestProcessDefinitions:
 
     @pytest.mark.asyncio
     async def test_list_process_definitions_error(self, client, app_with_camunda, mock_camunda_client):
-        mock_camunda_client.list_process_definitions.side_effect = Exception("Timeout")
+        mock_camunda_client.list_process_definitions.side_effect = ConnectionError("Timeout")
         response = await client.get("/api/v1/camunda/process-definitions")
         assert response.status_code == 502
 
@@ -123,7 +123,7 @@ class TestStartProcess:
 
     @pytest.mark.asyncio
     async def test_start_process_error(self, client, app_with_camunda, mock_camunda_client):
-        mock_camunda_client.start_process.side_effect = Exception("Process not found")
+        mock_camunda_client.start_process.side_effect = ConnectionError("Process not found")
         response = await client.post(
             "/api/v1/camunda/process/badKey/start",
             json={},
@@ -148,7 +148,7 @@ class TestProcessInstances:
 
     @pytest.mark.asyncio
     async def test_get_instances_error(self, client, app_with_camunda, mock_camunda_client):
-        mock_camunda_client.get_process_instances.side_effect = Exception("Error")
+        mock_camunda_client.get_process_instances.side_effect = ConnectionError("Error")
         response = await client.get("/api/v1/camunda/process-instances")
         assert response.status_code == 502
 
@@ -173,6 +173,6 @@ class TestGetTasks:
 
     @pytest.mark.asyncio
     async def test_get_tasks_error(self, client, app_with_camunda, mock_camunda_client):
-        mock_camunda_client.get_tasks.side_effect = Exception("Error")
+        mock_camunda_client.get_tasks.side_effect = ConnectionError("Error")
         response = await client.get("/api/v1/camunda/tasks")
         assert response.status_code == 502

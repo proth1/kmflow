@@ -84,7 +84,7 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
                     engagement_id=engagement_id,
                     duration_ms=duration_ms,
                 )
-        except SQLAlchemyError as e:
+        except Exception as e:  # Intentionally broad: audit must not block requests
             logger.warning("Audit persistence failed (request not blocked): %s", e)
 
         response.headers["X-Audit-Logged"] = "true"
