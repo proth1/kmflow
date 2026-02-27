@@ -8,6 +8,7 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #465 merged** — Data classification + GDPR compliance: 4-tier classification, retention enforcement, ROPA tracking, compliance reporting, 31 tests (#317) (v2026.02.148)
 - **PR #464 merged** — Scenario comparison dashboard: 5-metric comparison, best/worst flagging, governance heuristic, 13 tests (#383) (v2026.02.147)
 - **PR #463 merged** — Consent architecture: 3 consent modes, policy bundles, immutability triggers, RESTRICT FK, 23 tests (#382) (v2026.02.146)
 - **PR #462 merged** — Export watermarking: HMAC-SHA256 invisible watermarks, append-only log, forensic extractor, 20 tests (#387) (v2026.02.145)

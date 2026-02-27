@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.148] - 2026-02-27
+### Added
+- Data classification and GDPR compliance framework: four-tier classification (public/internal/confidential/restricted) with access control, per-engagement retention policies with ARCHIVE/DELETE enforcement, ROPA tracking with all six Article 6 lawful bases, compliance reporting, RBAC-protected API routes, migration 068, 31 tests (#317)
+
 ## [2026.02.147] - 2026-02-27
 ### Added
 - Scenario comparison dashboard API: side-by-side comparison of 2-5 scenarios across 5 metrics (cycle time, FTE, confidence, governance coverage, compliance flags), best/worst flagging with min_is_best for deltas, governance heuristic documentation, deterministic result ordering, 13 tests (#383)
