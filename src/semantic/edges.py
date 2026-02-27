@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import enum
 import logging
+import uuid
 from typing import Any
 
 from neo4j import AsyncDriver
@@ -195,6 +196,12 @@ class EdgeConstraintValidator:
             CycleDetectedError: If acyclicity would be violated.
             ValueError: If source or target node doesn't exist.
         """
+        # Step 0: Validate edge_type is a known enum member before Cypher interpolation
+        try:
+            EdgeVocabulary(edge_type)
+        except ValueError as err:
+            raise EdgeValidationError(f"Unknown edge type: {edge_type}") from err
+
         # Step 1: Look up node labels
         source_label = await self._get_node_label(from_id)
         if source_label is None:
@@ -212,17 +219,17 @@ class EdgeConstraintValidator:
             variant_id = (properties or {}).get("variant_id")
             await self._check_acyclicity(edge_type, from_id, to_id, variant_id)
 
-        # Step 4: Create edge(s)
+        # Step 4: Create edge(s) — atomically for bidirectional types
         props = properties or {}
         created: list[dict[str, str]] = []
 
-        await self._write_edge(from_id, to_id, edge_type, props)
-        created.append({"from_id": from_id, "to_id": to_id, "type": edge_type})
-
-        # Bidirectional: create reverse edge
         if edge_type in BIDIRECTIONAL_EDGES:
-            await self._write_edge(to_id, from_id, edge_type, props)
+            await self._write_edge_pair(from_id, to_id, edge_type, props)
+            created.append({"from_id": from_id, "to_id": to_id, "type": edge_type})
             created.append({"from_id": to_id, "to_id": from_id, "type": edge_type})
+        else:
+            await self._write_edge(from_id, to_id, edge_type, props)
+            created.append({"from_id": from_id, "to_id": to_id, "type": edge_type})
 
         logger.info(
             "Created %d %s edge(s): %s->%s",
@@ -233,6 +240,41 @@ class EdgeConstraintValidator:
         )
         return created
 
+    async def _write_edge_pair(
+        self,
+        from_id: str,
+        to_id: str,
+        edge_type: str,
+        properties: dict[str, Any],
+    ) -> None:
+        """Write a bidirectional edge pair atomically in a single transaction."""
+        fwd_id = uuid.uuid4().hex[:16]
+        rev_id = uuid.uuid4().hex[:16]
+        fwd_props = {**properties, "id": fwd_id}
+        rev_props = {**properties, "id": rev_id}
+
+        fwd_set = ", ".join(f"r1.{k} = $fwd_{k}" for k in fwd_props)
+        rev_set = ", ".join(f"r2.{k} = $rev_{k}" for k in rev_props)
+        fwd_params = {f"fwd_{k}": v for k, v in fwd_props.items()}
+        rev_params = {f"rev_{k}": v for k, v in rev_props.items()}
+
+        query = f"""
+        MATCH (a {{id: $from_id}}), (b {{id: $to_id}})
+        CREATE (a)-[r1:{edge_type}]->(b)
+        SET {fwd_set}
+        CREATE (b)-[r2:{edge_type}]->(a)
+        SET {rev_set}
+        RETURN r1.id AS fwd_id, r2.id AS rev_id
+        """
+        params = {"from_id": from_id, "to_id": to_id, **fwd_params, **rev_params}
+
+        async def _tx(tx):
+            result = await tx.run(query, params)
+            return await result.data()
+
+        async with self._driver.session() as session:
+            await session.execute_write(_tx)
+
     async def _write_edge(
         self,
         from_id: str,
@@ -241,8 +283,6 @@ class EdgeConstraintValidator:
         properties: dict[str, Any],
     ) -> None:
         """Write a single edge to Neo4j within a write transaction."""
-        import uuid
-
         edge_id = uuid.uuid4().hex[:16]
         props = {**properties, "id": edge_id}
 

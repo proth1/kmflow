@@ -142,6 +142,8 @@ def _mock_driver_with_labels(label_map: dict[str, str]) -> MagicMock:
 
     class FakeWriteTx:
         async def run(self, query: str, params: dict):
+            if "fwd_id" in query:
+                return FakeResult([{"fwd_id": "test-fwd", "rev_id": "test-rev"}])
             return FakeResult([{"id": "test-id"}])
 
     class FakeResult:
@@ -321,3 +323,84 @@ class TestNodeNotFound:
 
         with pytest.raises(ValueError, match="Target node not found"):
             await validator.create_validated_edge("A", "missing", "PRECEDES")
+
+
+@pytest.mark.asyncio
+class TestEdgeTypeEnumValidation:
+    """Edge type must be a valid EdgeVocabulary member before Cypher interpolation."""
+
+    async def test_unknown_edge_type_rejected_at_create(self):
+        driver = _mock_driver_with_labels({"A": "Activity", "B": "Activity"})
+        validator = EdgeConstraintValidator(driver)
+
+        with pytest.raises(EdgeValidationError, match="Unknown edge type"):
+            await validator.create_validated_edge("A", "B", "MALICIOUS_TYPE")
+
+
+@pytest.mark.asyncio
+class TestRealAcyclicityCheck:
+    """Test _check_acyclicity with the real method (not patched)."""
+
+    async def test_cycle_detected_via_real_check(self):
+        """When FakeReadTx returns has_path=True, CycleDetectedError is raised."""
+
+        def _make_cycle_driver() -> MagicMock:
+            """Driver where acyclicity check returns has_path=True."""
+
+            class CycleFakeReadTx:
+                def __init__(self, lmap: dict[str, str]) -> None:
+                    self._lmap = lmap
+
+                async def run(self, query: str, params: dict):
+                    nid = params.get("nid")
+                    if nid and nid in self._lmap:
+                        return _FakeResult([{"labels": [self._lmap[nid]]}])
+                    if "has_path" in query:
+                        return _FakeResult([{"has_path": True}])
+                    return _FakeResult([])
+
+            class CycleFakeWriteTx:
+                async def run(self, query: str, params: dict):
+                    return _FakeResult([{"id": "test-id"}])
+
+            class _FakeResult:
+                def __init__(self, rows: list[dict]) -> None:
+                    self._rows = rows
+
+                async def data(self) -> list[dict]:
+                    return self._rows
+
+            class CycleFakeSession:
+                def __init__(self, lmap: dict[str, str]) -> None:
+                    self._lmap = lmap
+
+                async def __aenter__(self):
+                    return self
+
+                async def __aexit__(self, *args):
+                    pass
+
+                async def execute_read(self, func):
+                    return await func(CycleFakeReadTx(self._lmap))
+
+                async def execute_write(self, func):
+                    return await func(CycleFakeWriteTx())
+
+            d = MagicMock()
+            d.session.return_value = CycleFakeSession({"C": "Activity", "A": "Activity"})
+            return d
+
+        driver = _make_cycle_driver()
+        validator = EdgeConstraintValidator(driver)
+
+        with pytest.raises(CycleDetectedError, match="cycle"):
+            await validator.create_validated_edge("C", "A", "PRECEDES", {"variant_id": "v1"})
+
+    async def test_acyclicity_without_variant_id(self):
+        """Acyclicity check works without variant_id (no cycle)."""
+        driver = _mock_driver_with_labels({"A": "Activity", "B": "Activity"})
+        validator = EdgeConstraintValidator(driver)
+
+        result = await validator.create_validated_edge("A", "B", "DEPENDS_ON")
+        assert len(result) == 1
+        assert result[0]["type"] == "DEPENDS_ON"
