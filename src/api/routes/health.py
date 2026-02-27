@@ -7,6 +7,7 @@ for PostgreSQL, Neo4j, and Redis.
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 from typing import Any
 
 import redis.asyncio as aioredis
@@ -14,7 +15,9 @@ from fastapi import APIRouter, Request
 from neo4j.exceptions import Neo4jError
 from sqlalchemy.exc import SQLAlchemyError
 
-router = APIRouter()
+from src.api.version import API_VERSION
+
+router = APIRouter(tags=["health"])
 logger = logging.getLogger(__name__)
 
 
@@ -31,7 +34,8 @@ async def health_check(request: Request) -> dict[str, Any]:
                 "neo4j": "up" | "down",
                 "redis": "up" | "down"
             },
-            "version": "0.1.0"
+            "version": API_VERSION,
+            "timestamp": "<ISO 8601 UTC>"
         }
     """
     services: dict[str, str] = {}
@@ -88,5 +92,6 @@ async def health_check(request: Request) -> dict[str, Any]:
     return {
         "status": status,
         "services": services,
-        "version": "0.1.0",
+        "version": API_VERSION,
+        "timestamp": datetime.now(UTC).isoformat(),
     }

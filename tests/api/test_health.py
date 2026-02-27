@@ -26,7 +26,10 @@ async def test_health_all_services_up(client: AsyncClient, mock_db_session: Asyn
     assert data["services"]["postgres"] == "up"
     assert data["services"]["neo4j"] == "up"
     assert data["services"]["redis"] == "up"
-    assert data["version"] == "0.1.0"
+    from src.api.version import API_VERSION
+
+    assert data["version"] == API_VERSION
+    assert "timestamp" in data
 
 
 @pytest.mark.asyncio
@@ -86,5 +89,6 @@ async def test_health_response_structure(client: AsyncClient, mock_db_session: A
     assert "status" in data
     assert "services" in data
     assert "version" in data
+    assert "timestamp" in data
     assert isinstance(data["services"], dict)
     assert {"postgres", "neo4j", "redis"} <= set(data["services"].keys())
