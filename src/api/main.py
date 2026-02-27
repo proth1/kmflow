@@ -38,6 +38,7 @@ from src.api.routes import (
     conformance,
     copilot,
     dashboard,
+    deviations,
     engagements,
     evidence,
     gdpr,
@@ -253,6 +254,9 @@ def create_app() -> FastAPI:
 
     # -- Audit Log Query Routes (Story #314) ---
     app.include_router(audit_logs.router)
+
+    # -- Deviation Detection Routes (Story #350) ---
+    app.include_router(deviations.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)
