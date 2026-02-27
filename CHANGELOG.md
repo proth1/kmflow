@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.093] - 2026-02-27
+### Added
+- Evidence lifecycle state machine: PENDING→VALIDATED→ACTIVE→EXPIRED→ARCHIVED with audit trail, SHA-256 hashing, auto-classification, retention expiry, 52 BDD tests (#301)
+
 ## [2026.02.092] - 2026-02-27
 ### Added
 - Evidence quality scoring engine: Hill function freshness, configurable weights, validate_weights, composite scoring with 57 BDD tests (#300)

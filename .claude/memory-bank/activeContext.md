@@ -8,6 +8,10 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #409 merged** — Evidence lifecycle state machine (#301) (v2026.02.093)
+  - State machine: PENDING → VALIDATED → ACTIVE → EXPIRED → ARCHIVED
+  - SHA-256 hashing, audit builder, auto-classification, retention expiry
+  - 52 BDD tests, review findings addressed (UTC datetimes, docstring, typing)
 - **PR #408 merged** — Evidence quality scoring engine (#300) (v2026.02.092)
   - Hill function freshness: >=0.96 at 12mo, 0.5 at 3yr, <0.5 beyond
   - PRIMARY/SECONDARY reliability, configurable engagement-level weights
