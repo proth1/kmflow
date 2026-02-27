@@ -46,6 +46,7 @@ from src.core.models.evidence import (
     ValidationStatus,
 )
 from src.core.models.governance import (
+    ComplianceAssessment,
     ComplianceLevel,
     Control,
     ControlEffectiveness,
@@ -137,12 +138,15 @@ from src.core.models.taskmining import (
     TaskMiningSession,
 )
 from src.core.models.tom import (
+    AlignmentRunStatus,
     Benchmark,
     BestPractice,
     GapAnalysisResult,
     ProcessMaturity,
     RoadmapStatus,
     TargetOperatingModel,
+    TOMAlignmentResult,
+    TOMAlignmentRun,
     TOMDimension,
     TOMDimensionRecord,
     TOMGapType,
@@ -200,6 +204,7 @@ __all__ = [
     "FragmentType",
     "ValidationStatus",
     # governance
+    "ComplianceAssessment",
     "ComplianceLevel",
     "Control",
     "ControlEffectiveness",
@@ -286,12 +291,15 @@ __all__ = [
     "ReviewPack",
     "ReviewPackStatus",
     # tom
+    "AlignmentRunStatus",
     "Benchmark",
     "BestPractice",
     "GapAnalysisResult",
     "ProcessMaturity",
     "RoadmapStatus",
     "TargetOperatingModel",
+    "TOMAlignmentResult",
+    "TOMAlignmentRun",
     "TOMDimension",
     "TOMDimensionRecord",
     "TOMGapType",
