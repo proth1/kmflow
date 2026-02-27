@@ -143,16 +143,16 @@ Many entities exist in both stores with no defined consistency model. No specifi
 
 ---
 
-## Dissenting Views
+## Dissenting Views (Resolved)
 
-- **LCD terminology**: Process Mining Specialist recommends renaming "LCD" to "Evidence-Weighted Consensus" since the algorithm is permissive (includes anything mentioned), not conservative (only what everyone agrees on). KM/Ontology Expert agrees. This may conflict with David Johnson's original vision — flagged for founder discussion.
-- **Monolith vs microservices**: Enterprise Architect recommends documenting the current state as a "modular monolith" with decomposition roadmap. This is purely descriptive accuracy, not an architectural change.
-- **Open/Closed World Assumption**: KM/Ontology Expert recommends OWA by default with CWA for specific queries (Control Gap detection). This is a fundamental ontological decision that should involve the founder.
+- **LCD terminology**: Process Mining Specialist recommended renaming "LCD" to "Evidence-Weighted Consensus" since the algorithm is permissive (includes anything mentioned), not conservative (only what everyone agrees on). **Resolution**: Keep "LCD" as David's brand term but add inline clarification throughout the PRD that the algorithm is evidence-weighted and inclusive, not limited to universal agreement. The term traces to David's original call (speech-to-text captured "least competent nominator"); the meaning is now explicit.
+- **Monolith vs microservices**: Enterprise Architect recommends documenting the current state as a "modular monolith" with decomposition roadmap. **Resolution**: Applied in Section 14 — architecture diagram described as logical service boundaries, not deployment units.
+- **Open/Closed World Assumption**: KM/Ontology Expert recommended OWA by default with CWA for specific queries. **Resolution**: Applied in Section 6.2 — OWA default (consistent with evidence-first philosophy and brightness model), CWA only for Control Gap detection against specific regulatory frameworks.
 
 ---
 
 ## Next Steps
 
-1. Apply the Top 10 PRD changes to `docs/prd/PRD_KMFlow_Platform.md` → version 2.1.0
-2. Review LCD terminology with David Johnson
+1. ~~Apply the Top 10 PRD changes to `docs/prd/PRD_KMFlow_Platform.md` → version 2.1.0~~ ✓ Done
+2. ~~Resolve LCD terminology and OWA/CWA decisions~~ ✓ Resolved in PRD v2.1.0
 3. Decompose revised PRD into GitHub Issues backlog
