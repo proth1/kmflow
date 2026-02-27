@@ -89,6 +89,13 @@ from src.core.models.simulation import (
     SimulationType,
     SuggestionDisposition,
 )
+from src.core.models.survey import (
+    CertaintyTier,
+    EpistemicFrame,
+    FrameKind,
+    ProbeType,
+    SurveyClaim,
+)
 from src.core.models.taskmining import (
     ActionCategory,
     AgentStatus,
@@ -197,6 +204,12 @@ __all__ = [
     "SimulationStatus",
     "SimulationType",
     "SuggestionDisposition",
+    # survey
+    "CertaintyTier",
+    "EpistemicFrame",
+    "FrameKind",
+    "ProbeType",
+    "SurveyClaim",
     # taskmining
     "ActionCategory",
     "AgentStatus",
