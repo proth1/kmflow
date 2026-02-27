@@ -7,6 +7,7 @@ and Claude API generation. Persists chat history per engagement.
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncGenerator
 from typing import Any
 from uuid import UUID
 
@@ -209,7 +210,7 @@ async def copilot_chat_stream(
     neo4j_driver = getattr(request.app.state, "neo4j_driver", None)
     orchestrator = CopilotOrchestrator(neo4j_driver=neo4j_driver)
 
-    async def event_generator():
+    async def event_generator() -> AsyncGenerator[str, None]:
         try:
             async for chunk in orchestrator.chat_streaming(
                 query=payload.query,

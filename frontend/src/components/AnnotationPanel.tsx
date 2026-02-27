@@ -37,26 +37,33 @@ export default function AnnotationPanel({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAnnotations = useCallback(async () => {
-    try {
-      const params = new URLSearchParams({
-        engagement_id: engagementId,
-        target_type: targetType,
-        target_id: targetId,
-      });
-      const data = await apiGet<{ items: Annotation[] }>(
-        `/api/v1/annotations/?${params.toString()}`,
-      );
-      setAnnotations(data.items || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load annotations");
-    } finally {
-      setLoading(false);
-    }
-  }, [engagementId, targetType, targetId]);
+  const fetchAnnotations = useCallback(
+    async (signal?: AbortSignal) => {
+      try {
+        const params = new URLSearchParams({
+          engagement_id: engagementId,
+          target_type: targetType,
+          target_id: targetId,
+        });
+        const data = await apiGet<{ items: Annotation[] }>(
+          `/api/v1/annotations/?${params.toString()}`,
+          signal,
+        );
+        setAnnotations(data.items || []);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setError(err instanceof Error ? err.message : "Failed to load annotations");
+      } finally {
+        if (!signal?.aborted) setLoading(false);
+      }
+    },
+    [engagementId, targetType, targetId],
+  );
 
   useEffect(() => {
-    fetchAnnotations();
+    const controller = new AbortController();
+    fetchAnnotations(controller.signal);
+    return () => controller.abort();
   }, [fetchAnnotations]);
 
   const handleSubmit = async () => {
