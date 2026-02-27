@@ -73,6 +73,7 @@ from src.api.routes import (
     reports,
     scenario_comparison,
     scenarios,
+    seed_lists,
     shelf_requests,
     simulations,
     survey_claims,
@@ -305,6 +306,9 @@ def create_app() -> FastAPI:
 
     # -- Micro-Survey Routes (Story #398) ---
     app.include_router(micro_surveys.router)
+
+    # -- Seed List Routes (Story #321) ---
+    app.include_router(seed_lists.router)
 
     # -- Survey Claim Routes (Story #322) ---
     app.include_router(survey_claims.router)
