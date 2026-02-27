@@ -8,6 +8,7 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #467 merged** — Seed list pipeline: 4-stage workflow, consultant upload, NLP refinement, probe generation, extraction targeting, 25 tests (#321) (v2026.02.150)
 - **PR #466 merged** — Certainty tier tracking: SurveyClaimHistory audit trail, tier promotion, shelf data auto-generation, IDOR-safe endpoints, 24 tests (#322) (v2026.02.149)
 - **PR #465 merged** — Data classification + GDPR compliance: 4-tier classification, retention enforcement, ROPA tracking, compliance reporting, 31 tests (#317) (v2026.02.148)
 - **PR #464 merged** — Scenario comparison dashboard: 5-metric comparison, best/worst flagging, governance heuristic, 13 tests (#383) (v2026.02.147)

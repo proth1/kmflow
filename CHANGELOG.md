@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.150] - 2026-02-27
+### Added
+- Seed list pipeline with 4-stage workflow: consultant vocabulary upload with deduplication, NLP refinement with source tracking, probe generation (4 templates per term), extraction targeting for active terms, engagement-scoped endpoints with IDOR-safe DELETE, 25 tests (#321)
+
 ## [2026.02.149] - 2026-02-27
 ### Added
 - Certainty tier tracking and survey claim management: SurveyClaimHistory audit trail, tier promotion with history recording, paginated filtered claim queries, shelf data request auto-generation from SUSPECTED claims, engagement-scoped IDOR-safe endpoints with require_engagement_access, migration 069, 24 tests (#322)
