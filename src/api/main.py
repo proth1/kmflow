@@ -42,6 +42,7 @@ from src.api.routes import (
     consistency,
     copilot,
     dashboard,
+    data_classification,
     deviations,
     engagements,
     event_spine,
@@ -327,6 +328,9 @@ def create_app() -> FastAPI:
 
     # -- Consent Architecture Routes (Story #382) ---
     app.include_router(consent.router)
+
+    # -- Data Classification & GDPR Compliance Routes (Story #317) ---
+    app.include_router(data_classification.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)

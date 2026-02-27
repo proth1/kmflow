@@ -21,9 +21,7 @@ from src.core.models.conflict import (
     ResolutionType,
 )
 from src.core.models.conformance import ConformanceResult, ReferenceProcessModel
-from src.security.consent.models import EndpointConsentRecord, EndpointConsentType, PolicyBundle
 from src.core.models.dark_room import DarkRoomSnapshot
-from src.core.models.export_log import ExportLog
 from src.core.models.engagement import (
     Engagement,
     EngagementStatus,
@@ -47,6 +45,13 @@ from src.core.models.evidence import (
     EvidenceLineage,
     FragmentType,
     ValidationStatus,
+)
+from src.core.models.export_log import ExportLog
+from src.core.models.gdpr import (
+    DataProcessingActivity,
+    LawfulBasis,
+    RetentionAction,
+    RetentionPolicy,
 )
 from src.core.models.governance import (
     ComplianceAssessment,
@@ -96,6 +101,13 @@ from src.core.models.pattern import (
     PatternAccessRule,
     PatternCategory,
     PatternLibraryEntry,
+)
+from src.core.models.pdp import (
+    ObligationType,
+    OperationType,
+    PDPAuditEntry,
+    PDPDecisionType,
+    PDPPolicy,
 )
 from src.core.models.pov import (
     BrightnessClassification,
@@ -177,13 +189,6 @@ from src.core.models.tom import (
     TOMVersion,
     TransformationRoadmapModel,
 )
-from src.core.models.pdp import (
-    ObligationType,
-    OperationType,
-    PDPAuditEntry,
-    PDPDecisionType,
-    PDPPolicy,
-)
 from src.core.models.transfer import (
     DataResidencyRestriction,
     DataTransferLog,
@@ -197,6 +202,7 @@ from src.core.models.validation import (
     ReviewPack,
     ReviewPackStatus,
 )
+from src.security.consent.models import EndpointConsentRecord, EndpointConsentType, PolicyBundle
 
 __all__ = [
     # audit
@@ -247,6 +253,13 @@ __all__ = [
     "EvidenceLineage",
     "FragmentType",
     "ValidationStatus",
+    # export_log
+    "ExportLog",
+    # gdpr
+    "DataProcessingActivity",
+    "LawfulBasis",
+    "RetentionAction",
+    "RetentionPolicy",
     # illumination
     "IlluminationAction",
     "IlluminationActionStatus",
@@ -382,4 +395,8 @@ __all__ = [
     "TIAStatus",
     "TransferDecision",
     "TransferImpactAssessment",
+    # consent
+    "EndpointConsentRecord",
+    "EndpointConsentType",
+    "PolicyBundle",
 ]
