@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.128
+**Version**: 2026.02.129
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -9,7 +9,7 @@
 |--------|-------|
 | SQLAlchemy Models | 82+ classes across 12 modules |
 | API Routes | 26+ routers |
-| Test Count | 3115 backend + 206 frontend passing |
+| Test Count | 3127 backend + 206 frontend passing |
 | Coverage | >80% |
 | Python Version | 3.12+ |
 | FastAPI Version | 0.109+ |
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.129 | 2026-02-27 | Nine Universal Knowledge Forms: coverage computation, gap detection, ontology-validated edge types, 12 tests (#316) |
 | 2026.02.128 | 2026-02-27 | Governance CRUD APIs: soft-delete, Neo4j graph sync, governance chain traversal, 10 tests (#329) |
 | 2026.02.127 | 2026-02-27 | Process maturity scoring: CMMI levels 1-5, evidence/governance/metric dimensions, heatmap, 15 tests (#358) |
 | 2026.02.126 | 2026-02-27 | Governance gap detection: GapFinding model, regulation-aware resolution, severity scoring, 17 tests (#340) |

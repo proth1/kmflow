@@ -49,6 +49,7 @@ from src.api.routes import (
     graph,
     health,
     integrations,
+    knowledge_forms,
     lineage,
     metrics,
     monitoring,
@@ -272,6 +273,9 @@ def create_app() -> FastAPI:
 
     # -- Consistency Reporting Routes (Story #392) ---
     app.include_router(consistency.router)
+
+    # -- Knowledge Forms Coverage Routes (Story #316) ---
+    app.include_router(knowledge_forms.router)
 
     # -- Event Spine Routes (Story #334) ---
     app.include_router(event_spine.router)
