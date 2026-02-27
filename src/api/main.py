@@ -70,6 +70,7 @@ from src.api.routes import (
     raci,
     regulatory,
     reports,
+    scenario_comparison,
     scenarios,
     shelf_requests,
     simulations,
@@ -242,6 +243,7 @@ def create_app() -> FastAPI:
     app.include_router(websocket.router)
     app.include_router(patterns.router)
     app.include_router(simulations.router)
+    app.include_router(scenario_comparison.router)  # Must precede scenarios (static /compare before /{id})
     app.include_router(scenarios.router)
     app.include_router(portal.router)
     app.include_router(mcp_router)
