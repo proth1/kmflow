@@ -338,11 +338,16 @@ class TestComplianceTrend:
         mock_session = AsyncMock()
 
         # First call: activity exists
-        activity = _make_plain_mock(id=ACTIVITY_ID)
+        activity = _make_plain_mock(id=ACTIVITY_ID, model_id=MODEL_ID)
         act_result = MagicMock()
         act_result.scalar_one_or_none.return_value = activity
 
-        # Second call: assessments
+        # Second call: process model lookup (for engagement access check)
+        process_model = _make_plain_mock(id=MODEL_ID, engagement_id=ENGAGEMENT_ID)
+        pm_result = MagicMock()
+        pm_result.scalar_one_or_none.return_value = process_model
+
+        # Third call: assessments
         now = datetime.now(UTC)
         assessments = []
         states = [
@@ -368,7 +373,7 @@ class TestComplianceTrend:
         assess_result = MagicMock()
         assess_result.scalars.return_value.all.return_value = assessments
 
-        mock_session.execute = AsyncMock(side_effect=[act_result, assess_result])
+        mock_session.execute = AsyncMock(side_effect=[act_result, pm_result, assess_result])
 
         app = _make_app_with_session(mock_session)
 
@@ -417,14 +422,19 @@ class TestComplianceTrend:
         """No assessments → empty list."""
         mock_session = AsyncMock()
 
-        activity = _make_plain_mock(id=ACTIVITY_ID)
+        activity = _make_plain_mock(id=ACTIVITY_ID, model_id=MODEL_ID)
         act_result = MagicMock()
         act_result.scalar_one_or_none.return_value = activity
+
+        # Process model lookup for engagement access check
+        process_model = _make_plain_mock(id=MODEL_ID, engagement_id=ENGAGEMENT_ID)
+        pm_result = MagicMock()
+        pm_result.scalar_one_or_none.return_value = process_model
 
         assess_result = MagicMock()
         assess_result.scalars.return_value.all.return_value = []
 
-        mock_session.execute = AsyncMock(side_effect=[act_result, assess_result])
+        mock_session.execute = AsyncMock(side_effect=[act_result, pm_result, assess_result])
 
         app = _make_app_with_session(mock_session)
 

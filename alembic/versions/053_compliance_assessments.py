@@ -53,6 +53,7 @@ def upgrade() -> None:
         sa.Column("assessed_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("assessed_by", sa.String(255), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
     )
     op.create_index("ix_compliance_assessments_activity_id", "compliance_assessments", ["activity_id"])
     op.create_index("ix_compliance_assessments_engagement_id", "compliance_assessments", ["engagement_id"])

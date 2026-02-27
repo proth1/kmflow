@@ -30,9 +30,11 @@ from src.core.models import (
     DataCatalogEntry,
     DataClassification,
     DataLayer,
+    EngagementMember,
     EvidenceItem,
     ProcessElement,
     User,
+    UserRole,
 )
 from src.core.permissions import require_engagement_access, require_permission
 from src.datalake.backend import get_storage_backend
@@ -685,6 +687,20 @@ async def trigger_compliance_assessment(
 
     engagement_id = process_model.engagement_id
 
+    # Verify engagement access (platform admins bypass)
+    if user.role != UserRole.PLATFORM_ADMIN:
+        member_result = await session.execute(
+            select(EngagementMember).where(
+                EngagementMember.engagement_id == engagement_id,
+                EngagementMember.user_id == user.id,
+            )
+        )
+        if not member_result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not a member of this engagement",
+            )
+
     # Build graph service and assess
     from src.semantic.graph import KnowledgeGraphService
 
@@ -752,11 +768,32 @@ async def get_compliance_trend(
     act_result = await session.execute(
         select(ProcessElement).where(ProcessElement.id == activity_id)
     )
-    if not act_result.scalar_one_or_none():
+    activity = act_result.scalar_one_or_none()
+    if not activity:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Activity {activity_id} not found",
         )
+
+    # Verify engagement access via activity's process model
+    from src.core.models import ProcessModel
+
+    model_result = await session.execute(
+        select(ProcessModel).where(ProcessModel.id == activity.model_id)
+    )
+    pm = model_result.scalar_one_or_none()
+    if pm and user.role != UserRole.PLATFORM_ADMIN:
+        member_result = await session.execute(
+            select(EngagementMember).where(
+                EngagementMember.engagement_id == pm.engagement_id,
+                EngagementMember.user_id == user.id,
+            )
+        )
+        if not member_result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not a member of this engagement",
+            )
 
     # Build query with optional date filtering
     query = (

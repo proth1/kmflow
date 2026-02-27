@@ -67,7 +67,7 @@ class ComplianceAssessmentService:
         """
         try:
             query = (
-                "MATCH (a)-[:ENFORCED_BY]->(c) "
+                "MATCH (a:Activity)-[:ENFORCED_BY]->(c:Control) "
                 "WHERE a.id = $activity_id AND a.engagement_id = $engagement_id "
                 "RETURN c.id AS control_id, c.name AS control_name"
             )
@@ -97,7 +97,7 @@ class ComplianceAssessmentService:
 
         try:
             query = (
-                "MATCH (c)-[:EVIDENCED_BY]->(e) "
+                "MATCH (c:Control)-[:EVIDENCED_BY]->(e:Evidence) "
                 "WHERE c.id IN $control_ids AND c.engagement_id = $engagement_id "
                 "RETURN DISTINCT c.id AS control_id"
             )
