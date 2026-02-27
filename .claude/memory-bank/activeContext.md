@@ -8,6 +8,7 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #451 merged** — Dark Room backlog: prioritized Dark segments, missing knowledge forms, Neo4j form coverage, engagement authz, configurable threshold, 12 tests (#394) (v2026.02.134)
 - **PR #450 merged** — Evidence gap ranking: per-gap uplift projection, cross-scenario shared gaps (correlated subquery), Pearson correlation tracking, audit logging, 12 tests (#393) (v2026.02.133)
 - **PR #449 merged** — Governance overlay API: per-activity status (governed/partial/ungoverned), ontology-aligned Cypher, IDOR-safe engagement access, 10 tests (#331) (v2026.02.132)
 - **PR #448 merged** — Gap-targeted probe generation: brightness uplift scoring, consolidated mapping, pagination, 12 tests (#327) (v2026.02.131)

@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.133
+**Version**: 2026.02.134
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -9,7 +9,7 @@
 |--------|-------|
 | SQLAlchemy Models | 82+ classes across 12 modules |
 | API Routes | 26+ routers |
-| Test Count | 3178 backend + 206 frontend passing |
+| Test Count | 3190 backend + 206 frontend passing |
 | Coverage | >80% |
 | Python Version | 3.12+ |
 | FastAPI Version | 0.109+ |
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.134 | 2026-02-27 | Dark Room backlog: prioritized Dark segments, missing forms, Neo4j coverage, authz, configurable threshold, 12 tests (#394) |
 | 2026.02.133 | 2026-02-27 | Evidence gap ranking: uplift projection, cross-scenario gaps, Pearson correlation tracking, 12 tests (#393) |
 | 2026.02.132 | 2026-02-27 | Governance overlay API: per-activity status classification, ontology-aligned Cypher, IDOR-safe access, 10 tests (#331) |
 | 2026.02.131 | 2026-02-27 | Gap-targeted probe generation: brightness uplift scoring, consolidated mapping, pagination, 12 tests (#327) |

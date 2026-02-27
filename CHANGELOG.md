@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.134] - 2026-02-27
+### Added
+- Dark Room backlog management: prioritized Dark segments ranked by uplift, missing knowledge forms with probe types, Neo4j form coverage (outbound + inbound edges), engagement authz check, configurable dark_threshold query param, 12 BDD tests (#394)
+
 ## [2026.02.133] - 2026-02-27
 ### Added
 - Evidence gap ranking with confidence uplift projection: per-gap uplift computation, cross-scenario shared gap detection with correlated subquery, Pearson correlation accuracy tracking, UpliftProjection model + migration 057, audit logging, 12 BDD tests (#393)
