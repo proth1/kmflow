@@ -43,7 +43,7 @@ async def health_check(request: Request) -> dict[str, Any]:
             result = await session.execute(__import__("sqlalchemy").text("SELECT 1"))
             result.scalar()
             services["postgres"] = "up"
-    except SQLAlchemyError:
+    except (SQLAlchemyError, ConnectionError, OSError):
         logger.warning("PostgreSQL health check failed")
         services["postgres"] = "down"
 
@@ -52,7 +52,7 @@ async def health_check(request: Request) -> dict[str, Any]:
         neo4j_driver = request.app.state.neo4j_driver
         await neo4j_driver.verify_connectivity()
         services["neo4j"] = "up"
-    except Neo4jError:
+    except (Neo4jError, OSError, AttributeError):
         logger.warning("Neo4j health check failed")
         services["neo4j"] = "down"
 
@@ -61,7 +61,7 @@ async def health_check(request: Request) -> dict[str, Any]:
         redis_client = request.app.state.redis_client
         await redis_client.ping()
         services["redis"] = "up"
-    except aioredis.RedisError:
+    except (aioredis.RedisError, ConnectionError, OSError):
         logger.warning("Redis health check failed")
         services["redis"] = "down"
 

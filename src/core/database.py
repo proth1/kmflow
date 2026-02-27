@@ -66,6 +66,6 @@ async def get_db_session(
         try:
             yield session
             await session.commit()
-        except SQLAlchemyError:
+        except Exception:  # Intentionally broad: ensures rollback for any error during request
             await session.rollback()
             raise

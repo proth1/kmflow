@@ -42,7 +42,7 @@ async def verify_neo4j_connectivity(driver: AsyncDriver) -> bool:
     try:
         await driver.verify_connectivity()
         return True
-    except Neo4jError:
+    except (Neo4jError, OSError):
         logger.exception("Failed to connect to Neo4j")
         return False
 
