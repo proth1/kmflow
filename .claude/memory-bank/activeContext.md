@@ -8,6 +8,10 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #402 merged** — EpistemicFrame and SurveyClaim entity schemas (#297) (v2026.02.086)
+  - SurveyClaim: 8 probe types, 4 certainty tiers, engagement-scoped with session tracking
+  - EpistemicFrame: 6 frame kinds, controlled vocabulary of 12 authority_scope roles
+  - 46 tests, 100% coverage, PR review findings addressed (import ordering, engagement_id on frame)
 - **PR #401 merged** — Controlled edge vocabulary with constraint validation (#295) (v2026.02.085)
   - 12 typed edge kinds (PRECEDES, TRIGGERS, etc.), source/target label constraints via ontology
   - Atomic bidirectional creation for CONTRADICTS/VARIANT_OF, acyclicity enforcement for PRECEDES/DEPENDS_ON

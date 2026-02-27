@@ -3,6 +3,11 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.086] - 2026-02-27
+### Added
+- EpistemicFrame and SurveyClaim entity schemas: structured knowledge elicitation models with controlled vocabulary enforcement (#297)
+- 8 probe types, 4 certainty tiers, 6 frame kinds, 12 authority_scope roles
+
 ## [2026.02.085] - 2026-02-27
 ### Added
 - Controlled edge vocabulary: 12 typed edges with source/target constraints, atomic bidirectional creation, acyclicity enforcement (#295)
