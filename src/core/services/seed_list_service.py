@@ -199,7 +199,7 @@ class SeedListService:
                     "seed_term_id": str(term.id),
                     "seed_term": term.term,
                     "probe_type": template["probe_type"],
-                    "question": template["template"].format(term=term.term),
+                    "question": template["template"].replace("{term}", term.term),
                 })
 
         logger.info(

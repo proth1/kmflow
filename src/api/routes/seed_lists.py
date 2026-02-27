@@ -158,13 +158,15 @@ async def get_extraction_targets(
 
 
 @router.delete(
-    "/seed-terms/{term_id}",
+    "/engagements/{engagement_id}/seed-terms/{term_id}",
     status_code=status.HTTP_200_OK,
 )
 async def deprecate_seed_term(
+    engagement_id: UUID,
     term_id: UUID,
     session: AsyncSession = Depends(get_session),
     _user: User = Depends(require_permission("engagement:update")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Deprecate a seed term (soft delete)."""
     service = SeedListService(session)
