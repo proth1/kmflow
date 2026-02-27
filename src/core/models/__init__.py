@@ -175,6 +175,13 @@ from src.core.models.tom import (
     TOMVersion,
     TransformationRoadmapModel,
 )
+from src.core.models.pdp import (
+    ObligationType,
+    OperationType,
+    PDPAuditEntry,
+    PDPDecisionType,
+    PDPPolicy,
+)
 from src.core.models.transfer import (
     DataResidencyRestriction,
     DataTransferLog,
@@ -360,6 +367,12 @@ __all__ = [
     "TOMGapType",
     "TOMVersion",
     "TransformationRoadmapModel",
+    # pdp
+    "ObligationType",
+    "OperationType",
+    "PDPAuditEntry",
+    "PDPDecisionType",
+    "PDPPolicy",
     # transfer
     "DataResidencyRestriction",
     "DataTransferLog",
