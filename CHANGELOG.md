@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.118] - 2026-02-27
+### Added
+- Three-way distinction classifier for conflict resolution: ThreeWayDistinctionClassifier with NAMING_VARIANT (seed list alias + graph VARIANT_OF merge), TEMPORAL_SHIFT (non-overlapping effective dates + bitemporal validity), GENUINE_DISAGREEMENT (epistemic frame tagging + SME review flag), public run_write_query() on KnowledgeGraphService, MERGED_EDGE relationship in ontology, resolution_details/classified_at/classifier_version columns on ConflictObject (migration 048), batch classification, idempotent re-classification, 20 BDD tests (#384)
+
 ## [2026.02.117] - 2026-02-27
 ### Added
 - Rule and existence conflict detection with temporal resolution: RuleConflictDetector (BusinessRule/HAS_RULE Cypher), ExistenceConflictDetector (EVIDENCED_BY absence), configurable authority weights per evidence category, check_temporal_resolution() for non-overlapping effective dates, conflict_detail (JSON) and resolution_hint columns on ConflictObject (migration 047), BusinessRule node and HAS_RULE relationship in ontology, pipeline extended to 4 detectors, 31 BDD tests (#375)
