@@ -99,7 +99,9 @@ class SuccessMetric(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     unit: Mapped[str] = mapped_column(String(100), nullable=False)
     target_value: Mapped[float] = mapped_column(Float, nullable=False)
-    category: Mapped[MetricCategory] = mapped_column(Enum(MetricCategory, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    category: Mapped[MetricCategory] = mapped_column(
+        Enum(MetricCategory, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
@@ -119,8 +121,12 @@ class MetricReading(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    metric_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("success_metrics.id", ondelete="CASCADE"), nullable=False)
-    engagement_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False)
+    metric_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("success_metrics.id", ondelete="CASCADE"), nullable=False
+    )
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
     value: Mapped[float] = mapped_column(Float, nullable=False)
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -138,7 +144,9 @@ class Annotation(Base):
     __table_args__ = (Index("ix_annotations_engagement_id", "engagement_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    engagement_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
     target_type: Mapped[str] = mapped_column(String(100), nullable=False)
     target_id: Mapped[str] = mapped_column(String(255), nullable=False)
     author_id: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -176,7 +184,7 @@ class IntegrationConnection(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
 
     def __repr__(self) -> str:
         return f"<IntegrationConnection(id={self.id}, type='{self.connector_type}', name='{self.name}')>"
@@ -202,7 +210,7 @@ class ProcessBaseline(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
 
     def __repr__(self) -> str:
         return f"<ProcessBaseline(id={self.id}, name='{self.name}')>"
@@ -225,9 +233,13 @@ class MonitoringJob(Base):
         UUID(as_uuid=True), ForeignKey("process_baselines.id", ondelete="SET NULL"), nullable=True
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    source_type: Mapped[MonitoringSourceType] = mapped_column(Enum(MonitoringSourceType, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    source_type: Mapped[MonitoringSourceType] = mapped_column(
+        Enum(MonitoringSourceType, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
     status: Mapped[MonitoringStatus] = mapped_column(
-        Enum(MonitoringStatus, values_callable=lambda e: [x.value for x in e]), default=MonitoringStatus.CONFIGURING, nullable=False
+        Enum(MonitoringStatus, values_callable=lambda e: [x.value for x in e]),
+        default=MonitoringStatus.CONFIGURING,
+        nullable=False,
     )
     schedule_cron: Mapped[str] = mapped_column(String(100), default="0 0 * * *", nullable=False)
     config_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
@@ -239,7 +251,7 @@ class MonitoringJob(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
 
     def __repr__(self) -> str:
         return f"<MonitoringJob(id={self.id}, name='{self.name}', status={self.status})>"
@@ -269,10 +281,10 @@ class ProcessDeviation(Base):
     baseline_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("process_baselines.id", ondelete="SET NULL"), nullable=True
     )
-    category: Mapped[DeviationCategory] = mapped_column(Enum(DeviationCategory, values_callable=lambda e: [x.value for x in e]), nullable=False)
-    severity: Mapped[DeviationSeverity | None] = mapped_column(
-        Enum(DeviationSeverity, values_callable=lambda e: [x.value for x in e]), nullable=True
+    category: Mapped[DeviationCategory] = mapped_column(
+        Enum(DeviationCategory, values_callable=lambda e: [x.value for x in e]), nullable=False
     )
+    severity: Mapped[DeviationSeverity | None] = mapped_column(String(20), nullable=True)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     affected_element: Mapped[str | None] = mapped_column(String(512), nullable=True)
     process_element_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -282,7 +294,7 @@ class ProcessDeviation(Base):
     details_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     detected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
 
     def __repr__(self) -> str:
         return f"<ProcessDeviation(id={self.id}, category={self.category}, severity={self.severity})>"
@@ -305,8 +317,12 @@ class MonitoringAlert(Base):
     monitoring_job_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("monitoring_jobs.id", ondelete="CASCADE"), nullable=False
     )
-    severity: Mapped[AlertSeverity] = mapped_column(Enum(AlertSeverity, values_callable=lambda e: [x.value for x in e]), nullable=False)
-    status: Mapped[AlertStatus] = mapped_column(Enum(AlertStatus, values_callable=lambda e: [x.value for x in e]), default=AlertStatus.NEW, nullable=False)
+    severity: Mapped[AlertSeverity] = mapped_column(
+        Enum(AlertSeverity, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
+    status: Mapped[AlertStatus] = mapped_column(
+        Enum(AlertStatus, values_callable=lambda e: [x.value for x in e]), default=AlertStatus.NEW, nullable=False
+    )
     title: Mapped[str] = mapped_column(String(512), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     deviation_ids: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
@@ -319,7 +335,7 @@ class MonitoringAlert(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
 
     def __repr__(self) -> str:
         return f"<MonitoringAlert(id={self.id}, severity={self.severity}, status={self.status})>"

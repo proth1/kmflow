@@ -24,6 +24,14 @@ from src.monitoring.deviation.types import (
 
 logger = logging.getLogger(__name__)
 
+# TODO(#350-followup): Add service layer to persist DeviationRecord -> ProcessDeviation ORM objects.
+# Currently the engine produces in-memory DeviationRecords; a persistence service is needed
+# to bridge engine output to the database for the API endpoint to query.
+
+# Timing severity formula constants
+TIMING_MAGNITUDE_CAP = 5.0  # Maximum deviation magnitude before capping
+TIMING_BASE_SEVERITY_FLOOR = 0.3  # Base severity floor for timing anomalies
+
 
 @dataclass
 class PovElement:
@@ -185,15 +193,18 @@ class DeviationEngine:
             if min_hours <= event.duration_hours <= max_hours:
                 continue
 
-            # Compute deviation magnitude as ratio of excess over baseline max
-            deviation_magnitude = abs(event.duration_hours - max_hours) / max_hours if max_hours > 0 else 1.0
+            # Compute deviation magnitude as ratio of excess/deficit over the relevant baseline bound
+            if event.duration_hours > max_hours:
+                deviation_magnitude = (event.duration_hours - max_hours) / max_hours if max_hours > 0 else 1.0
+            else:
+                deviation_magnitude = (min_hours - event.duration_hours) / min_hours if min_hours > 0 else 1.0
 
             # Importance-weighted severity
             importance = element.importance_score
             coefficient = self.coefficients.get(DeviationType.TIMING_ANOMALY, 0.8)
-            # Scale by deviation magnitude (capped at 1.0)
-            raw_score = importance * coefficient * min(deviation_magnitude, 5.0) / 5.0
-            score = min(raw_score + importance * coefficient * 0.3, 1.0)
+            # Scale by deviation magnitude (capped at TIMING_MAGNITUDE_CAP)
+            raw_score = importance * coefficient * min(deviation_magnitude, TIMING_MAGNITUDE_CAP) / TIMING_MAGNITUDE_CAP
+            score = min(raw_score + importance * coefficient * TIMING_BASE_SEVERITY_FLOOR, 1.0)
             severity = classify_severity(score)
 
             deviations.append(

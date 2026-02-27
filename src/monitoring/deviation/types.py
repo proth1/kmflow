@@ -12,6 +12,8 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
+from src.core.models.monitoring import DeviationSeverity
+
 
 class DeviationType(enum.StrEnum):
     """Specific deviation types detected by the engine."""
@@ -22,16 +24,6 @@ class DeviationType(enum.StrEnum):
     ROLE_REASSIGNMENT = "role_reassignment"
     MISSING_EXPECTED_ACTIVITY = "missing_expected_activity"
     SEQUENCE_CHANGE = "sequence_change"
-
-
-class DeviationSeverity(enum.StrEnum):
-    """Severity classification for deviations."""
-
-    CRITICAL = "critical"
-    HIGH = "high"
-    MEDIUM = "medium"
-    LOW = "low"
-    INFO = "info"
 
 
 # Severity thresholds based on computed severity score
