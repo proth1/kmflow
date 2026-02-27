@@ -23,6 +23,7 @@ from src.core.models.conformance import ConformanceResult, ReferenceProcessModel
 from src.core.models.engagement import (
     Engagement,
     EngagementStatus,
+    FollowUpReminder,
     ShelfDataRequest,
     ShelfDataRequestItem,
     ShelfRequestItemPriority,
@@ -157,6 +158,7 @@ __all__ = [
     # engagement
     "Engagement",
     "EngagementStatus",
+    "FollowUpReminder",
     "ShelfDataRequest",
     "ShelfDataRequestItem",
     "ShelfRequestItemPriority",
