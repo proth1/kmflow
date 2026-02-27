@@ -5,6 +5,7 @@ so that existing code using ``from src.core.models import X`` continues to work.
 """
 
 from src.core.models.audit import AuditAction, AuditLog, HttpAuditEvent
+from src.core.models.llm_audit import LLMAuditLog
 from src.core.models.auth import (
     CopilotMessage,
     EngagementMember,
@@ -155,6 +156,8 @@ __all__ = [
     "AuditAction",
     "AuditLog",
     "HttpAuditEvent",
+    # llm_audit
+    "LLMAuditLog",
     # auth
     "CopilotMessage",
     "EngagementMember",
