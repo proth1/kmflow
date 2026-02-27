@@ -65,6 +65,22 @@ class AlternativeSuggesterService:
 
         return suggestions
 
+    def build_prompt(self, scenario: Any, context_notes: str | None) -> str:
+        """Public interface for prompt building. Used by suggestion_engine for audit logging."""
+        return self._build_prompt(scenario, context_notes)
+
+    async def call_llm(self, prompt: str) -> str:
+        """Public interface for LLM calls. Used by suggestion_engine for audit logging."""
+        return await self._call_llm(prompt)
+
+    def parse_response(self, llm_response: str, prompt: str) -> list[dict[str, Any]]:
+        """Public interface for response parsing. Used by suggestion_engine for audit logging."""
+        return self._parse_response(llm_response, prompt)
+
+    def fallback_suggestions(self, scenario: Any, prompt: str) -> list[dict[str, Any]]:
+        """Public interface for fallback suggestions. Used by suggestion_engine for audit logging."""
+        return self._fallback_suggestions(scenario, prompt)
+
     def _build_prompt(self, scenario: Any, context_notes: str | None) -> str:
         """Build the LLM prompt from scenario context.
 
@@ -150,12 +166,8 @@ Surface unknowns and areas where evidence is insufficient for confident recommen
                 parsed = json.loads(llm_response[start:end])
                 results = []
                 for item in parsed:
-                    suggestion_text = _sanitize_text(
-                        item.get("suggestion_text", ""), self._MAX_SUGGESTION_LEN
-                    )
-                    rationale = _sanitize_text(
-                        item.get("rationale", ""), self._MAX_SUGGESTION_LEN
-                    )
+                    suggestion_text = _sanitize_text(item.get("suggestion_text", ""), self._MAX_SUGGESTION_LEN)
+                    rationale = _sanitize_text(item.get("rationale", ""), self._MAX_SUGGESTION_LEN)
                     results.append(
                         {
                             "suggestion_text": suggestion_text,

@@ -48,6 +48,7 @@ from src.core.models import (
     AuditAction,
     EpistemicAction,
     FinancialAssumption,
+    LLMAuditLog,
     ScenarioModification,
     SimulationResult,
     SimulationScenario,
@@ -919,6 +920,54 @@ async def update_suggestion_disposition(
     await session.commit()
     await session.refresh(suggestion)
     return suggestion_to_response(suggestion)
+
+
+# -- LLM Audit Route ----------------------------------------------------------
+
+
+@router.get("/scenarios/{scenario_id}/llm-audit")
+async def get_llm_audit(
+    scenario_id: UUID,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:read")),
+) -> dict[str, Any]:
+    """Retrieve LLM audit trail for a scenario."""
+
+    await get_scenario_or_404(session, scenario_id)
+
+    query = (
+        select(LLMAuditLog)
+        .where(LLMAuditLog.scenario_id == scenario_id)
+        .order_by(LLMAuditLog.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    result = await session.execute(query)
+    logs = result.scalars().all()
+
+    count_result = await session.execute(
+        select(func.count(LLMAuditLog.id)).where(LLMAuditLog.scenario_id == scenario_id)
+    )
+    total = count_result.scalar() or 0
+
+    items = [
+        {
+            "id": str(log.id),
+            "scenario_id": str(log.scenario_id),
+            "user_id": str(log.user_id) if log.user_id else None,
+            "prompt_tokens": log.prompt_tokens,
+            "completion_tokens": log.completion_tokens,
+            "model_name": log.model_name,
+            "error_message": log.error_message,
+            "evidence_ids": log.evidence_ids,
+            "created_at": log.created_at.isoformat() if log.created_at else "",
+        }
+        for log in logs
+    ]
+
+    return {"items": items, "total": total}
 
 
 # -- Financial Impact ---------------------------------------------------------
