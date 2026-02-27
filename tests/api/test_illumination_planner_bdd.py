@@ -266,6 +266,14 @@ async def test_api_create_illumination_plan() -> None:
     """POST /dark-room/{element_id}/illuminate creates an illumination plan."""
     pm = _mock_process_model()
     session = _mock_session_with_model(pm)
+
+    # Override execute to handle both model lookup and idempotency check
+    model_result = MagicMock()
+    model_result.scalar_one_or_none.return_value = pm
+    idempotency_result = MagicMock()
+    idempotency_result.scalars.return_value.first.return_value = None
+    session.execute = AsyncMock(side_effect=[model_result, idempotency_result])
+
     app = _make_app(session)
 
     backlog_items = [

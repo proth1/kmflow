@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from typing import Any
+from typing import Any, Literal
 
 import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -724,7 +724,7 @@ class IlluminationProgressResponse(BaseModel):
 class ActionStatusUpdateRequest(BaseModel):
     """Request to update an illumination action's status."""
 
-    status: str
+    status: Literal["pending", "in_progress", "complete"]
     linked_item_id: str | None = None
 
 
@@ -773,6 +773,22 @@ async def create_illumination_plan(
     model = await _get_model_or_404(session, model_id)
     await _check_engagement_member(session, user, model.engagement_id)
 
+    # Idempotency: check for existing non-complete actions
+    from src.core.models import IlluminationAction
+
+    existing = await session.execute(
+        select(IlluminationAction).where(
+            IlluminationAction.engagement_id == model.engagement_id,
+            IlluminationAction.element_id == element_id,
+            IlluminationAction.status != IlluminationActionStatus.COMPLETE,
+        )
+    )
+    if existing.scalars().first() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Active illumination plan already exists for element {element_id}",
+        )
+
     graph_service = KnowledgeGraphService(request.app.state.neo4j_driver)
     backlog_service = DarkRoomBacklogService(graph_service)
 
@@ -799,7 +815,7 @@ async def create_illumination_plan(
     )
 
     await log_audit(
-        session, model.engagement_id, AuditAction.EVIDENCE_VALIDATED,
+        session, model.engagement_id, AuditAction.EPISTEMIC_PLAN_GENERATED,
         f"Created illumination plan with {len(actions)} actions for {element_id}",
         actor=str(user.id),
     )
