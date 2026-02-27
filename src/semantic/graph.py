@@ -560,21 +560,22 @@ class KnowledgeGraphService:
     # Delete operations
     # -----------------------------------------------------------------
 
-    async def delete_node(self, node_id: str) -> bool:
+    async def delete_node(self, node_id: str, engagement_id: str) -> bool:
         """Delete a node and all its relationships by ID.
 
         Args:
             node_id: The unique node identifier.
+            engagement_id: Required engagement scope to prevent cross-engagement deletion.
 
         Returns:
             True if a node was deleted, False if not found.
         """
         query = """
-        MATCH (n {id: $node_id})
+        MATCH (n {id: $node_id, engagement_id: $engagement_id})
         DETACH DELETE n
         RETURN count(n) AS deleted
         """
-        records = await self._run_write_query(query, {"node_id": node_id})
+        records = await self._run_write_query(query, {"node_id": node_id, "engagement_id": engagement_id})
         deleted = records[0]["deleted"] if records else 0
         if deleted:
             logger.info("Deleted node %s and its relationships", node_id)
