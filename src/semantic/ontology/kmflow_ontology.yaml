@@ -216,6 +216,22 @@ node_types:
       - effective_to
       - source_weight
 
+  ControlRequirement:
+    description: >
+      A governance control requirement extracted from regulatory policy.
+      Maps activity types to required control types. Used by ControlGapDetector
+      to identify activities missing required GOVERNED_BY edges.
+    extractable: false
+    required_properties:
+      - name
+      - engagement_id
+      - activity_pattern
+      - required_control_type
+    optional_properties:
+      - source_id
+      - criticality
+      - source_weight
+
   UserAction:
     description: An aggregated user action observed via desktop task mining.
     extractable: false
@@ -253,6 +269,13 @@ relationship_types:
     valid_to:
       - Policy
       - Regulation
+
+  REQUIRES_CONTROL:
+    description: A ControlRequirement specifies that matching activities must have governance controls.
+    valid_from:
+      - ControlRequirement
+    valid_to:
+      - Activity
 
   DEVIATES_FROM:
     description: Observed process deviates from documented/expected process.
