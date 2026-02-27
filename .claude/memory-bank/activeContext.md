@@ -4,10 +4,17 @@
 
 ## Current Focus
 
-Agent build and demo — first successful build and launch of KMFlowAgent.app.
+Audit Phase 8 remediation complete. Ready for re-scan to verify CRITICAL=0, HIGH=0.
 
 ## Recently Completed
 
+- **PRs #271-#275 merged** — Audit Phase 8: 10 CRITICALs + 28 HIGHs (v2026.02.083)
+  - PR #271: Security hardening — Cypher injection, event loop, prod secrets, localStorage XSS, CF Worker XSS, DB passwords, auth scoping
+  - PR #272: Data layer/API — FK indexes, Alembic imports, Neo4j deletes, rate limiting, pagination, response models
+  - PR #273: N+1 performance — Batch Neo4j nodes, batch embeddings, Redis rate limiter
+  - PR #274: Test/compliance — 33 new tests, GDPR erasure, audit logging, PII masking, credential encryption, CVE upgrades
+  - PR #275: Frontend — ErrorBoundary, AbortControllers, stub audit, type hints
+  - PR review findings addressed: plaintext config_json dual-write fixed, Neo4j delete engagement-scoped
 - **PR #270 merged** — Fix macOS agent build scripts (v2026.02.078)
   - bash 3.2 compat: replaced `declare -A`, `mapfile`, subshell EXIT traps
   - Ad-hoc codesign: strip pre-existing signatures, sign outside .app context, no --timestamp

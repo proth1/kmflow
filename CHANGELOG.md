@@ -3,6 +3,42 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.083] - 2026-02-27
+### Security
+- Fix Neo4j Cypher injection in get_relationships/traverse via VALID_RELATIONSHIP_TYPES allowlist (#271)
+- Remove localStorage XSS-vulnerable token fallback in EvidenceUploader (#271)
+- Add escapeHtml() to CF Worker, escape all user-controlled values in HTML templates (#271)
+- Replace hardcoded DB passwords in init script with env vars (#271)
+- Extend production secret validator to check postgres/neo4j passwords and debug flag (#271)
+- Wrap sync run_simulation with asyncio.to_thread to prevent event loop blocking (#271)
+- Filter list_engagements by membership for non-admin users (#271)
+- Clear plaintext config_json when encrypted_config is written (#274)
+- Encrypt integration credentials at rest with Fernet (#274)
+- Mask PII in MCP auth logs (#274)
+
+### Added
+- Neo4j delete_node() and delete_engagement_subgraph() with engagement scoping (#272)
+- ComponentErrorBoundary for BPMNViewer, GraphExplorer, MonitoringDashboard (#275)
+- GDPR erasure job with _anonymize_user helper (#274)
+- 33 new tests: audit logging, evidence dedup, auth cookie/blacklist, GDPR erasure (#274)
+- AbortControllers in RegulatoryOverlay and AnnotationPanel useEffect (#275)
+- Batch embedding writes via store_embeddings_batch() (#273)
+- Redis-backed sliding window LLM rate limiter replacing in-process dict (#273)
+
+### Changed
+- Batch Neo4j node creation in evidence pipeline (N+1 fix) (#273)
+- Add FK indexes on conformance.pov_model_id and taskmining.evidence_item_id (#272)
+- Simplify Alembic env.py model imports to auto-register (#272)
+- Add global rate limiting default (100/min) via SlowAPI (#272)
+- Add pagination to get_fragments, POV gaps/contradictions/evidence-map endpoints (#272)
+- Rename _assess_dimension_maturity to public API (#272)
+- Add 12 Pydantic response schemas and response_model to 8 TOM endpoints (#272)
+- Add audit logging to integration, governance, copilot, POV mutation endpoints (#274)
+- Add user_consents and copilot_messages to GDPR data export (#274)
+- Fix CI workflow to reference requirements.lock (#274)
+- Upgrade agent cryptography>=43.0.0 (CVE-2024-26130) and PyJWT>=2.10.1 (CVE-2024-53861) (#274)
+- Add AsyncGenerator return type to copilot event_generator (#275)
+
 ## [2026.02.078] - 2026-02-27
 ### Fixed
 - Fix macOS agent build scripts for bash 3.2 compatibility (no `declare -A`, `mapfile`) (#270)
