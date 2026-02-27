@@ -199,6 +199,23 @@ node_types:
       - survey_id
       - respondent_role
 
+  BusinessRule:
+    description: >
+      A business rule governing an activity (e.g., approval threshold, SLA).
+      Extracted from policy documents, system configs, or interviews.
+      Used by RuleConflictDetector to find contradictory rules across sources.
+    extractable: false
+    required_properties:
+      - rule_text
+      - engagement_id
+      - source_id
+    optional_properties:
+      - threshold_value
+      - threshold_currency
+      - effective_from
+      - effective_to
+      - source_weight
+
   UserAction:
     description: An aggregated user action observed via desktop task mining.
     extractable: false
@@ -388,6 +405,15 @@ relationship_types:
       - Application
     valid_to:
       - System
+
+  HAS_RULE:
+    description: >
+      An activity has an associated business rule. Used by
+      RuleConflictDetector to find contradictory rules from different sources.
+    valid_from:
+      - Activity
+    valid_to:
+      - BusinessRule
 
   # -------------------------------------------------------------------------
   # PRD v2.1 Controlled Edge Vocabulary (12 types, Section 6.2)

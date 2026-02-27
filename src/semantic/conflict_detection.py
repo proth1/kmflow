@@ -491,8 +491,11 @@ class ExistenceConflictDetector:
             weight_present = float(record.get("weight_present", 0.5) or 0.5)
             weight_absent = float(record.get("weight_absent", 0.5) or 0.5)
 
-            # If absent source has low authority (e.g., interview omission
-            # vs policy document assertion), severity is lower
+            # Override default weights (0.5) with type-based authority lookup.
+            # A graph-provided weight of 0.5 is treated as "unset" because the
+            # graph builder defaults to 0.5. Explicit 0.5 weights are
+            # indistinguishable from unset — acceptable since evidence type
+            # lookup is more accurate than the graph default.
             type_present = record.get("type_present")
             type_absent = record.get("type_absent")
             if weight_present == 0.5 and type_present:
