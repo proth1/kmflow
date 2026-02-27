@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.136
+**Version**: 2026.02.137
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.137 | 2026-02-27 | Shelf-epistemic integration: auto-create shelf items, follow-through rate, source filter, 11 tests (#399) |
 | 2026.02.136 | 2026-02-27 | Epistemic Action Planner: GET endpoint, shelf linkage, IDOR guard, pagination, 10 tests (#389) |
 | 2026.02.135 | 2026-02-27 | Illumination Planner: targeted evidence acquisition, 9-form action mapping, idempotency guard, progress tracking, 11 tests (#396) |
 | 2026.02.134 | 2026-02-27 | Dark Room backlog: prioritized Dark segments, missing forms, Neo4j coverage, authz, configurable threshold, 12 tests (#394) |

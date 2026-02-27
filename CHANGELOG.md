@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.137] - 2026-02-27
+### Added
+- Shelf-epistemic integration: auto-create shelf data request items from epistemic actions, follow-through rate endpoint (target >50%), source filter (PLANNER/MANUAL), ShelfRequestItemSource enum, migration 059, 11 BDD tests (#399)
+
 ## [2026.02.136] - 2026-02-27
 ### Added
 - Epistemic Action Planner: GET endpoint for cached plans, shelf request linkage fix, engagement-level IDOR guard, pagination, shelf_request_id in response, 10 BDD tests (#389)
