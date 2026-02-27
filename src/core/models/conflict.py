@@ -86,6 +86,9 @@ class ConflictObject(Base):
     resolution_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     conflict_detail: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     resolution_hint: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    resolution_details: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    classified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    classifier_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

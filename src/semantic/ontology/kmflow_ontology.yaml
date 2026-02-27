@@ -506,6 +506,20 @@ relationship_types:
     constraints:
       bidirectional: true
 
+  MERGED_EDGE:
+    description: Edge transferred from a non-canonical node during naming variant merge. Preserves original relationship properties.
+    valid_from:
+      - Activity
+    valid_to:
+      - Activity
+      - Role
+      - Evidence
+      - Decision
+      - System
+      - BusinessRule
+    optional_properties:
+      - merged_from
+
 # ---------------------------------------------------------------------------
 # Evidence Categories (mirrors EvidenceCategory enum for reference)
 # ---------------------------------------------------------------------------
