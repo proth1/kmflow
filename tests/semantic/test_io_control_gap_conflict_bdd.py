@@ -68,7 +68,7 @@ class TestScenario1IOMismatch:
 
     @pytest.mark.asyncio
     async def test_io_mismatch_detected(self) -> None:
-        """Given upstream 'Draft Report Preparation' produces 'Draft Report'
+        """Given upstream 'Draft Report Preparation' does not produce 'Approved Report'
         And downstream 'Report Approval' consumes 'Approved Report'
         When the I/O mismatch detector runs
         Then an IO_MISMATCH ConflictObject is created."""
@@ -78,8 +78,7 @@ class TestScenario1IOMismatch:
                 {
                     "upstream_name": "Draft Report Preparation",
                     "downstream_name": "Report Approval",
-                    "produced_artifact": "Draft Report",
-                    "consumed_artifact": "Approved Report",
+                    "unmatched_artifact": "Approved Report",
                     "source_upstream": SOURCE_A,
                     "source_downstream": SOURCE_B,
                 },
@@ -94,15 +93,14 @@ class TestScenario1IOMismatch:
 
     @pytest.mark.asyncio
     async def test_io_mismatch_references_artifacts(self) -> None:
-        """Conflict references both activities and mismatched artifact types."""
+        """Conflict references both activities and the unmatched artifact."""
         graph = _make_graph_service()
         graph.run_query = AsyncMock(
             return_value=[
                 {
                     "upstream_name": "Draft Report Preparation",
                     "downstream_name": "Report Approval",
-                    "produced_artifact": "Draft Report",
-                    "consumed_artifact": "Approved Report",
+                    "unmatched_artifact": "Approved Report",
                     "source_upstream": SOURCE_A,
                     "source_downstream": SOURCE_B,
                 },
@@ -113,8 +111,7 @@ class TestScenario1IOMismatch:
         conflicts = await detector.detect(ENGAGEMENT_ID)
 
         detail = conflicts[0].conflict_detail
-        assert detail["produced_artifact"] == "Draft Report"
-        assert detail["consumed_artifact"] == "Approved Report"
+        assert detail["unmatched_artifact"] == "Approved Report"
         assert detail["upstream_activity"] == "Draft Report Preparation"
         assert detail["downstream_activity"] == "Report Approval"
 
@@ -127,8 +124,7 @@ class TestScenario1IOMismatch:
                 {
                     "upstream_name": "Draft Report Preparation",
                     "downstream_name": "Report Approval",
-                    "produced_artifact": "Draft Report",
-                    "consumed_artifact": "Approved Report",
+                    "unmatched_artifact": "Approved Report",
                     "source_upstream": SOURCE_A,
                     "source_downstream": SOURCE_B,
                 },
@@ -312,7 +308,7 @@ class TestScenario3ShelfDataRequest:
         )
 
         eng_uuid = uuid.UUID(ENGAGEMENT_ID)
-        count = await _create_shelf_requests_for_control_gaps(session, eng_uuid, [gap_conflict], {})
+        count = await _create_shelf_requests_for_control_gaps(session, eng_uuid, [gap_conflict])
 
         assert count == 1
         session.add.assert_called_once()
@@ -340,7 +336,7 @@ class TestScenario3ShelfDataRequest:
         )
 
         eng_uuid = uuid.UUID(ENGAGEMENT_ID)
-        await _create_shelf_requests_for_control_gaps(session, eng_uuid, [gap_conflict], {})
+        await _create_shelf_requests_for_control_gaps(session, eng_uuid, [gap_conflict])
 
         added_request = session.add.call_args[0][0]
         assert added_request.title == "Evidence required: governance control for [Process Payment]"
@@ -366,7 +362,7 @@ class TestScenario3ShelfDataRequest:
         )
 
         eng_uuid = uuid.UUID(ENGAGEMENT_ID)
-        await _create_shelf_requests_for_control_gaps(session, eng_uuid, [gap_conflict], {})
+        await _create_shelf_requests_for_control_gaps(session, eng_uuid, [gap_conflict])
 
         added_request = session.add.call_args[0][0]
         body = added_request.description
@@ -395,7 +391,7 @@ class TestScenario3ShelfDataRequest:
         )
 
         eng_uuid = uuid.UUID(ENGAGEMENT_ID)
-        await _create_shelf_requests_for_control_gaps(session, eng_uuid, [gap_conflict], {})
+        await _create_shelf_requests_for_control_gaps(session, eng_uuid, [gap_conflict])
 
         added_request = session.add.call_args[0][0]
         assert added_request.status == ShelfRequestStatus.OPEN
@@ -426,7 +422,7 @@ class TestScenario3ShelfDataRequest:
         )
 
         eng_uuid = uuid.UUID(ENGAGEMENT_ID)
-        count = await _create_shelf_requests_for_control_gaps(session, eng_uuid, [gap_conflict], {})
+        count = await _create_shelf_requests_for_control_gaps(session, eng_uuid, [gap_conflict])
 
         assert count == 0
         session.add.assert_not_called()
@@ -458,6 +454,11 @@ class TestActivityCriticality:
     def test_none_activity(self) -> None:
         assert _activity_criticality(None) == 0.6
 
+    def test_multi_keyword_returns_highest(self) -> None:
+        """When multiple keywords match, return the highest criticality."""
+        # "financial" (0.9) + "compliance" (0.8) + "audit" (0.75) → max = 0.9
+        assert _activity_criticality("Financial Compliance Audit") == 0.9
+
 
 # ===========================================================================
 # Pipeline integration
@@ -473,29 +474,19 @@ class TestPipelineIntegration:
         graph = _make_graph_service()
         session = _make_session()
 
-        # IO mismatch returns 1 result, control gap returns 1 result
-        call_count = 0
-
         async def _mock_query(query: str, params: dict) -> list:
-            nonlocal call_count
-            call_count += 1
-            # Calls 1-4: sequence, role, rule, existence detectors (empty)
-            if call_count <= 4:
-                return []
-            # Call 5: IO mismatch detector
-            if call_count == 5:
+            # Match on query content instead of call ordering
+            if "CONSUMES" in query and "NOT EXISTS" in query:
                 return [
                     {
                         "upstream_name": "Prepare Report",
                         "downstream_name": "Review Report",
-                        "produced_artifact": "Draft",
-                        "consumed_artifact": "Final",
+                        "unmatched_artifact": "Final",
                         "source_upstream": SOURCE_A,
                         "source_downstream": SOURCE_B,
                     },
                 ]
-            # Call 6: Control gap detector
-            if call_count == 6:
+            if "ControlRequirement" in query:
                 return [
                     {
                         "activity_name": "Process Payment",
@@ -522,12 +513,8 @@ class TestPipelineIntegration:
         graph = _make_graph_service()
         session = _make_session()
 
-        call_count = 0
-
         async def _mock_query(query: str, params: dict) -> list:
-            nonlocal call_count
-            call_count += 1
-            if call_count == 6:
+            if "ControlRequirement" in query:
                 return [
                     {
                         "activity_name": "Process Payment",
@@ -552,18 +539,13 @@ class TestPipelineIntegration:
         graph = _make_graph_service()
         session = _make_session()
 
-        call_count = 0
-
         async def _mock_query(query: str, params: dict) -> list:
-            nonlocal call_count
-            call_count += 1
-            if call_count == 5:
+            if "CONSUMES" in query and "NOT EXISTS" in query:
                 return [
                     {
                         "upstream_name": "A",
                         "downstream_name": "B",
-                        "produced_artifact": "X",
-                        "consumed_artifact": "Y",
+                        "unmatched_artifact": "Y",
                         "source_upstream": SOURCE_A,
                         "source_downstream": SOURCE_B,
                     },
@@ -574,7 +556,7 @@ class TestPipelineIntegration:
 
         await run_conflict_detection(graph, session, ENGAGEMENT_ID)
 
-        # session.add should have been called for the IO conflict + shelf request
+        # session.add should have been called for the IO conflict
         assert session.add.call_count >= 1
 
 

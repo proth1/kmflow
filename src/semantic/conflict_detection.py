@@ -569,10 +569,10 @@ class ExistenceConflictDetector:
 class IOMismatchDetector:
     """Detect I/O mismatches between connected activities.
 
-    Finds cases where an upstream activity PRODUCES a DataObject that does not
-    match the DataObject CONSUMED by its downstream activity (connected via
-    PRECEDES). The mismatch is detected when the produced and consumed
-    DataObject names differ for the same PRECEDES pair.
+    Finds DataObjects consumed by a downstream activity that are NOT produced
+    by its upstream activity (connected via PRECEDES). This avoids a cartesian
+    product when multiple DataObjects are involved — only truly unmatched
+    artifacts are reported.
     """
 
     def __init__(self, graph_service: Any) -> None:
@@ -588,16 +588,15 @@ class IOMismatchDetector:
                 MATCH (upstream:Activity)-[:PRECEDES]->(downstream:Activity)
                 WHERE upstream.engagement_id = $engagement_id
                 WITH upstream, downstream
-                MATCH (upstream)-[:PRODUCES]->(produced:DataObject)
                 MATCH (downstream)-[:CONSUMES]->(consumed:DataObject)
-                WHERE produced.name <> consumed.name
-                  AND produced.engagement_id = $engagement_id
-                  AND consumed.engagement_id = $engagement_id
+                WHERE consumed.engagement_id = $engagement_id
+                  AND NOT EXISTS {
+                    MATCH (upstream)-[:PRODUCES]->(consumed)
+                  }
                 RETURN
                     upstream.name AS upstream_name,
                     downstream.name AS downstream_name,
-                    produced.name AS produced_artifact,
-                    consumed.name AS consumed_artifact,
+                    consumed.name AS unmatched_artifact,
                     upstream.source_id AS source_upstream,
                     downstream.source_id AS source_downstream
                 LIMIT $limit
@@ -616,8 +615,7 @@ class IOMismatchDetector:
             detail_dict: dict[str, Any] = {
                 "upstream_activity": record.get("upstream_name"),
                 "downstream_activity": record.get("downstream_name"),
-                "produced_artifact": record.get("produced_artifact"),
-                "consumed_artifact": record.get("consumed_artifact"),
+                "unmatched_artifact": record.get("unmatched_artifact"),
             }
 
             conflicts.append(
@@ -629,18 +627,17 @@ class IOMismatchDetector:
                     severity_score=score,
                     severity_label=label,
                     detail=(
-                        f"I/O mismatch: '{record.get('upstream_name')}' produces "
-                        f"'{record.get('produced_artifact')}' but '{record.get('downstream_name')}' "
-                        f"consumes '{record.get('consumed_artifact')}'"
+                        f"I/O mismatch: '{record.get('downstream_name')}' consumes "
+                        f"'{record.get('unmatched_artifact')}' but '{record.get('upstream_name')}' "
+                        f"does not produce it"
                     ),
                     edge_a_data={
                         "activity": record.get("upstream_name"),
-                        "artifact": record.get("produced_artifact"),
-                        "direction": "produces",
+                        "status": "does_not_produce",
                     },
                     edge_b_data={
                         "activity": record.get("downstream_name"),
-                        "artifact": record.get("consumed_artifact"),
+                        "artifact": record.get("unmatched_artifact"),
                         "direction": "consumes",
                     },
                     conflict_detail=detail_dict,
@@ -663,12 +660,15 @@ DEFAULT_CONTROL_CRITICALITY: dict[str, float] = {
 
 
 def _activity_criticality(activity_name: str) -> float:
-    """Estimate control gap severity from activity name keywords."""
+    """Estimate control gap severity from activity name keywords.
+
+    Returns the highest matching criticality score when multiple keywords
+    match (e.g. "Financial Compliance Audit" matches financial=0.9,
+    compliance=0.8, audit=0.75 → returns 0.9).
+    """
     name_lower = (activity_name or "").lower()
-    for keyword, score in DEFAULT_CONTROL_CRITICALITY.items():
-        if keyword in name_lower:
-            return score
-    return 0.6  # Default medium severity
+    matches = [score for keyword, score in DEFAULT_CONTROL_CRITICALITY.items() if keyword in name_lower]
+    return max(matches) if matches else 0.6
 
 
 class ControlGapDetector:
@@ -765,7 +765,6 @@ async def _create_shelf_requests_for_control_gaps(
     session: AsyncSession,
     engagement_id: uuid.UUID,
     control_gap_conflicts: list[DetectedConflict],
-    persisted_conflict_ids: dict[str, uuid.UUID],
 ) -> int:
     """Auto-generate shelf data requests for CONTROL_GAP ConflictObjects.
 
@@ -776,7 +775,6 @@ async def _create_shelf_requests_for_control_gaps(
         session: Database session.
         engagement_id: The engagement UUID.
         control_gap_conflicts: List of detected control gap conflicts.
-        persisted_conflict_ids: Map of conflict detail key → persisted ConflictObject ID.
 
     Returns:
         Number of shelf data requests created.
@@ -888,7 +886,6 @@ async def run_conflict_detection(
     # Persist new conflicts (idempotent: check for existing by source pair + type)
     eng_uuid = uuid.UUID(engagement_id) if isinstance(engagement_id, str) else engagement_id
     persisted = 0
-    persisted_ids: dict[str, uuid.UUID] = {}
 
     for conflict in result.conflicts:
         # Check for existing conflict with same sources and type
@@ -918,15 +915,13 @@ async def run_conflict_detection(
         )
         session.add(obj)
         persisted += 1
-        detail_key = f"{conflict.mismatch_type}:{conflict.source_a_id}:{conflict.source_b_id}"
-        persisted_ids[detail_key] = obj.id
 
     if persisted > 0:
         await session.flush()
 
     # Auto-generate shelf data requests for control gaps
     if gap_conflicts:
-        shelf_count = await _create_shelf_requests_for_control_gaps(session, eng_uuid, gap_conflicts, persisted_ids)
+        shelf_count = await _create_shelf_requests_for_control_gaps(session, eng_uuid, gap_conflicts)
         result.shelf_requests_created = shelf_count
 
     logger.info(
