@@ -51,6 +51,7 @@ from src.api.routes import (
     governance_overlay,
     graph,
     health,
+    incidents,
     integrations,
     knowledge_forms,
     lineage,
@@ -293,6 +294,9 @@ def create_app() -> FastAPI:
 
     # -- Micro-Survey Routes (Story #398) ---
     app.include_router(micro_surveys.router)
+
+    # -- Incident Response Routes (Story #397) ---
+    app.include_router(incidents.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)

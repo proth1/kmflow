@@ -65,6 +65,13 @@ from src.core.models.illumination import (
     IlluminationActionStatus,
     IlluminationActionType,
 )
+from src.core.models.incident import (
+    Incident,
+    IncidentClassification,
+    IncidentEvent,
+    IncidentEventType,
+    IncidentStatus,
+)
 from src.core.models.llm_audit import LLMAuditLog
 from src.core.models.monitoring import (
     AlertSeverity,
@@ -227,6 +234,12 @@ __all__ = [
     "IlluminationAction",
     "IlluminationActionStatus",
     "IlluminationActionType",
+    # incident
+    "Incident",
+    "IncidentClassification",
+    "IncidentEvent",
+    "IncidentEventType",
+    "IncidentStatus",
     # governance
     "ComplianceAssessment",
     "ComplianceLevel",
