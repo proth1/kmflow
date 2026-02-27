@@ -6,6 +6,7 @@ best practices, and benchmarks.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from datetime import datetime
@@ -21,6 +22,7 @@ from sqlalchemy.orm import selectinload
 from src.api.deps import get_session
 from src.core.audit import log_audit
 from src.core.models import (
+    AlignmentRunStatus,
     AuditAction,
     Benchmark,
     BestPractice,
@@ -28,6 +30,8 @@ from src.core.models import (
     EngagementMember,
     GapAnalysisResult,
     TargetOperatingModel,
+    TOMAlignmentResult,
+    TOMAlignmentRun,
     TOMDimension,
     TOMDimensionRecord,
     TOMGapType,
@@ -40,6 +44,9 @@ from src.core.permissions import require_engagement_access, require_permission
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/tom", tags=["tom"])
+
+# Background task references to prevent GC from cancelling them
+_background_tasks: set[asyncio.Task[None]] = set()
 
 
 async def _check_engagement_member(session: AsyncSession, user: User, engagement_id: UUID) -> None:
@@ -149,6 +156,10 @@ class GapCreate(BaseModel):
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     rationale: str | None = None
     recommendation: str | None = None
+    business_criticality: int | None = Field(None, ge=1, le=5)
+    risk_exposure: int | None = Field(None, ge=1, le=5)
+    regulatory_impact: int | None = Field(None, ge=1, le=5)
+    remediation_cost: int | None = Field(None, ge=1, le=5)
 
 
 class GapResponse(BaseModel):
@@ -166,6 +177,11 @@ class GapResponse(BaseModel):
     rationale: str | None
     recommendation: str | None
     priority_score: float
+    composite_score: float
+    business_criticality: int | None
+    risk_exposure: int | None
+    regulatory_impact: int | None
+    remediation_cost: int | None
     created_at: Any
 
 
@@ -589,6 +605,10 @@ async def create_gap(
         confidence=payload.confidence,
         rationale=payload.rationale,
         recommendation=payload.recommendation,
+        business_criticality=payload.business_criticality,
+        risk_exposure=payload.risk_exposure,
+        regulatory_impact=payload.regulatory_impact,
+        remediation_cost=payload.remediation_cost,
     )
     session.add(gap)
     await session.flush()
@@ -608,12 +628,16 @@ async def list_gaps(
     engagement_id: UUID,
     tom_id: UUID | None = None,
     dimension: TOMDimension | None = None,
+    sort: str | None = Query(None, description="Sort order: 'priority' for composite_score desc"),
     limit: int = Query(default=20, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
-    """List gap analysis results for an engagement."""
+    """List gap analysis results for an engagement.
+
+    Use sort=priority to order by composite_score descending.
+    """
     await _check_engagement_member(session, user, engagement_id)
     query = select(GapAnalysisResult).where(GapAnalysisResult.engagement_id == engagement_id)
     count_query = (
@@ -627,12 +651,120 @@ async def list_gaps(
         query = query.where(GapAnalysisResult.dimension == dimension)
         count_query = count_query.where(GapAnalysisResult.dimension == dimension)
 
-    query = query.offset(offset).limit(limit)
-    result = await session.execute(query)
-    gaps = list(result.scalars().all())
     count_result = await session.execute(count_query)
     total = count_result.scalar() or 0
+
+    if sort == "priority":
+        # Priority sort requires loading all gaps for Python-side sort
+        # (composite_score is a computed property, not a DB column).
+        # Cap at 1000 to prevent excessive memory usage.
+        max_sort_rows = 1000
+        result = await session.execute(query.limit(max_sort_rows))
+        gaps = list(result.scalars().all())
+        gaps.sort(key=lambda g: g.composite_score, reverse=True)
+        gaps = gaps[offset : offset + limit]
+    else:
+        result = await session.execute(query.offset(offset).limit(limit))
+        gaps = list(result.scalars().all())
+
     return {"items": gaps, "total": total}
+
+
+# -- Gap Rationale Generation Routes (Story #352) ----------------------------
+
+
+class RationaleResponse(BaseModel):
+    """Response for a single gap rationale generation."""
+
+    gap_id: UUID
+    rationale: str
+    recommendation: str
+
+
+class BulkRationaleResponse(BaseModel):
+    """Response for bulk rationale generation."""
+
+    engagement_id: UUID
+    gaps_processed: int
+    results: list[RationaleResponse]
+
+
+@router.post("/gaps/{gap_id}/generate-rationale", response_model=RationaleResponse)
+async def generate_gap_rationale(
+    gap_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
+) -> dict[str, Any]:
+    """Generate LLM-powered rationale for a single gap."""
+    from src.tom.rationale_generator import RationaleGeneratorService
+
+    result = await session.execute(
+        select(GapAnalysisResult).where(GapAnalysisResult.id == gap_id)
+    )
+    gap = result.scalar_one_or_none()
+    if not gap:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Gap {gap_id} not found")
+
+    await _check_engagement_member(session, user, gap.engagement_id)
+
+    # Get TOM specification for context
+    tom_spec = None
+    if gap.tom_id:
+        tom_result = await session.execute(
+            select(TargetOperatingModel)
+            .where(TargetOperatingModel.id == gap.tom_id)
+            .options(selectinload(TargetOperatingModel.dimension_records))
+        )
+        tom = tom_result.scalar_one_or_none()
+        if tom and tom.dimension_records:
+            for dr in tom.dimension_records:
+                if str(dr.dimension_type) == str(gap.dimension):
+                    tom_spec = dr.description
+                    break
+
+    generator = RationaleGeneratorService()
+    rationale_data = await generator.generate_rationale(gap, tom_spec)
+
+    gap.rationale = rationale_data["rationale"]
+    gap.recommendation = rationale_data["recommendation"]
+    await session.commit()
+
+    return {
+        "gap_id": gap.id,
+        "rationale": rationale_data["rationale"],
+        "recommendation": rationale_data["recommendation"],
+    }
+
+
+@router.post(
+    "/gaps/engagement/{engagement_id}/generate-rationales",
+    response_model=BulkRationaleResponse,
+)
+async def generate_bulk_rationales(
+    engagement_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
+    _engagement_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Generate LLM-powered rationales for all gaps without rationale in an engagement."""
+    from src.tom.rationale_generator import RationaleGeneratorService
+
+    generator = RationaleGeneratorService()
+    results = await generator.generate_bulk_rationales(session, str(engagement_id))
+    await session.commit()
+
+    return {
+        "engagement_id": engagement_id,
+        "gaps_processed": len(results),
+        "results": [
+            {
+                "gap_id": r["gap_id"],
+                "rationale": r["rationale"],
+                "recommendation": r["recommendation"],
+            }
+            for r in results
+        ],
+    }
 
 
 # -- Best Practices Routes ----------------------------------------------------
@@ -1313,3 +1445,220 @@ async def export_roadmap(
     await session.commit()
 
     return HTMLResponse(content=html_content)
+
+
+# -- Per-Activity Alignment Scoring Routes (Story #348) ----------------------
+
+
+class AlignmentRunTriggerResponse(BaseModel):
+    """Response for triggering an alignment scoring run."""
+
+    run_id: UUID
+    status: str
+    message: str
+
+
+class AlignmentResultEntry(BaseModel):
+    """A single per-activity, per-dimension alignment result."""
+
+    model_config = {"from_attributes": True}
+
+    id: UUID
+    activity_id: UUID
+    dimension_type: TOMDimension
+    gap_type: TOMGapType
+    deviation_score: float
+    alignment_evidence: dict[str, Any] | None
+
+
+class AlignmentRunResultsResponse(BaseModel):
+    """Paginated results for an alignment run."""
+
+    run_id: UUID
+    status: str
+    items: list[AlignmentResultEntry]
+    total: int
+
+
+@router.post(
+    "/scoring/{engagement_id}/run",
+    response_model=AlignmentRunTriggerResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def trigger_alignment_scoring(
+    engagement_id: UUID,
+    request: Request,
+    tom_id: UUID = Query(..., description="TOM to score against"),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
+    _engagement_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Trigger asynchronous per-activity TOM alignment scoring.
+
+    Creates a TOMAlignmentRun in PENDING status and kicks off background
+    scoring. Returns the run_id immediately.
+    """
+    # Verify engagement exists
+    eng_result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
+    if not eng_result.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {engagement_id} not found")
+
+    # Verify TOM exists and belongs to this engagement
+    tom_result = await session.execute(
+        select(TargetOperatingModel).where(
+            TargetOperatingModel.id == tom_id,
+            TargetOperatingModel.engagement_id == engagement_id,
+        )
+    )
+    if not tom_result.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"TOM {tom_id} not found for this engagement")
+
+    # Check for existing active run (prevent duplicates)
+    existing_run_result = await session.execute(
+        select(TOMAlignmentRun).where(
+            TOMAlignmentRun.engagement_id == engagement_id,
+            TOMAlignmentRun.tom_id == tom_id,
+            TOMAlignmentRun.status.in_([AlignmentRunStatus.PENDING, AlignmentRunStatus.RUNNING]),
+        )
+    )
+    if existing_run_result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An alignment scoring run is already in progress for this engagement and TOM",
+        )
+
+    # Create alignment run record
+    run = TOMAlignmentRun(engagement_id=engagement_id, tom_id=tom_id)
+    session.add(run)
+    await session.flush()
+    run_id = run.id
+
+    await log_audit(
+        session,
+        engagement_id,
+        AuditAction.GAP_ANALYSIS_RUN,
+        json.dumps({"tom_id": str(tom_id), "run_id": str(run_id)}),
+    )
+    await session.commit()
+
+    # Launch async scoring with reference retention
+    task = asyncio.create_task(
+        _run_alignment_scoring_async(
+            run_id=run_id,
+            session_factory=request.app.state.db_session_factory,
+            neo4j_driver=request.app.state.neo4j_driver,
+        )
+    )
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+
+    return {
+        "run_id": run_id,
+        "status": AlignmentRunStatus.PENDING.value,
+        "message": "Alignment scoring started",
+    }
+
+
+@router.get(
+    "/scoring/runs/{run_id}/results",
+    response_model=AlignmentRunResultsResponse,
+)
+async def get_alignment_run_results(
+    run_id: UUID,
+    limit: int = Query(50, ge=1, le=500, description="Items per page"),
+    offset: int = Query(0, ge=0, description="Offset for pagination"),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+) -> dict[str, Any]:
+    """Retrieve paginated results for an alignment scoring run."""
+    # Fetch the run
+    run_result = await session.execute(
+        select(TOMAlignmentRun).where(TOMAlignmentRun.id == run_id)
+    )
+    run = run_result.scalar_one_or_none()
+    if not run:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Alignment run {run_id} not found")
+
+    await _check_engagement_member(session, user, run.engagement_id)
+
+    # Count total results
+    count_result = await session.execute(
+        select(func.count()).select_from(TOMAlignmentResult).where(TOMAlignmentResult.run_id == run_id)
+    )
+    total = count_result.scalar() or 0
+
+    # Fetch paginated results
+    results_query = (
+        select(TOMAlignmentResult)
+        .where(TOMAlignmentResult.run_id == run_id)
+        .order_by(TOMAlignmentResult.activity_id, TOMAlignmentResult.dimension_type)
+        .limit(limit)
+        .offset(offset)
+    )
+    result = await session.execute(results_query)
+    items = list(result.scalars().all())
+
+    return {
+        "run_id": run_id,
+        "status": run.status.value,
+        "items": items,
+        "total": total,
+    }
+
+
+async def _run_alignment_scoring_async(
+    run_id: UUID,
+    session_factory: Any,
+    neo4j_driver: Any,
+) -> None:
+    """Background task to execute alignment scoring."""
+    from src.semantic.graph import KnowledgeGraphService
+    from src.tom.alignment_scoring import AlignmentScoringService
+
+    try:
+        async with session_factory() as session:
+            # Re-fetch the run record within this session
+            run_result = await session.execute(
+                select(TOMAlignmentRun).where(TOMAlignmentRun.id == run_id)
+            )
+            run = run_result.scalar_one_or_none()
+            if not run:
+                logger.error("Alignment run %s not found in background task", run_id)
+                return
+
+            graph_service = KnowledgeGraphService(neo4j_driver)
+
+            # Try to get embedding service (optional)
+            embedding_service = None
+            try:
+                from src.rag.embeddings import EmbeddingService
+
+                embedding_service = EmbeddingService()
+            except Exception:
+                logger.info("Embedding service not available, using graph-only scoring")
+
+            scoring_service = AlignmentScoringService(
+                graph_service=graph_service,
+                embedding_service=embedding_service,
+            )
+
+            await scoring_service.run_scoring(session, run)
+            await session.commit()
+
+    except Exception:
+        logger.exception("Background alignment scoring failed for run %s", run_id)
+        try:
+            async with session_factory() as session:
+                run_result = await session.execute(
+                    select(TOMAlignmentRun).where(TOMAlignmentRun.id == run_id)
+                )
+                run = run_result.scalar_one_or_none()
+                if run and run.status != AlignmentRunStatus.FAILED:
+                    from datetime import UTC
+
+                    run.status = AlignmentRunStatus.FAILED
+                    run.completed_at = datetime.now(UTC)
+                    run.error_message = "Background scoring task failed"
+                    await session.commit()
+        except Exception:
+            logger.exception("Failed to update run %s status to FAILED", run_id)
