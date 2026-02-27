@@ -123,7 +123,13 @@ class EvidenceCoverageService:
         self,
         element_ids: list[str],
     ) -> dict[str, BrightnessClassification]:
-        """Build a map of element_id -> brightness from ProcessElement records."""
+        """Build a map of element_id -> brightness from ProcessElement records.
+
+        ScenarioModification.element_id stores the process element's name
+        (String(512)), matching ProcessElement.name. This is intentional:
+        scenarios reference elements by their human-readable name, not UUID.
+        See scenarios.py create_modification where element_name=payload.element_id.
+        """
         result = await self._session.execute(
             select(ProcessElement.name, ProcessElement.brightness_classification).where(
                 ProcessElement.name.in_(element_ids),

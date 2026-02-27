@@ -13,6 +13,7 @@ from src.api.routes.auth import get_current_user
 from src.core.models import User, UserRole
 from src.core.models.pov import BrightnessClassification
 from src.core.models.simulation import ScenarioModification, SimulationScenario
+from src.core.permissions import require_engagement_access
 
 ENGAGEMENT_ID = uuid.uuid4()
 SCENARIO_ID = uuid.uuid4()
@@ -31,6 +32,7 @@ def _make_app(mock_session: AsyncMock) -> TestClient:
     app = create_app()
     app.dependency_overrides[get_session] = lambda: mock_session
     app.dependency_overrides[get_current_user] = lambda: _mock_user()
+    app.dependency_overrides[require_engagement_access] = lambda: _mock_user()
     return TestClient(app)
 
 
@@ -112,3 +114,17 @@ class TestCompareEvidenceCoverage:
             },
         )
         assert resp.status_code == 422
+
+    def test_exceeds_max_scenarios_returns_422(self) -> None:
+        mock_session = AsyncMock()
+        client = _make_app(mock_session)
+        ids = ",".join(str(uuid.uuid4()) for _ in range(11))
+        resp = client.get(
+            "/api/v1/scenarios/compare/evidence-coverage",
+            params={
+                "scenario_ids": ids,
+                "engagement_id": str(ENGAGEMENT_ID),
+            },
+        )
+        assert resp.status_code == 422
+        assert "Maximum" in resp.json()["detail"]
