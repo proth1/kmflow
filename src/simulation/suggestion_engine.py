@@ -48,7 +48,7 @@ async def generate_audited_suggestions(
     settings = get_settings()
     suggester = AlternativeSuggesterService(settings)
 
-    prompt_text = suggester._build_prompt(scenario, context_notes)
+    prompt_text = suggester.build_prompt(scenario, context_notes)
     response_text: str | None = None
     error_message: str | None = None
     prompt_tokens = 0
@@ -56,9 +56,9 @@ async def generate_audited_suggestions(
     suggestions: list[dict[str, Any]] = []
 
     try:
-        llm_response = await suggester._call_llm(prompt_text)
+        llm_response = await suggester.call_llm(prompt_text)
         response_text = llm_response
-        suggestions = suggester._parse_response(llm_response, prompt_text)
+        suggestions = suggester.parse_response(llm_response, prompt_text)
 
         # Estimate tokens from text length (approximation when SDK doesn't return usage)
         prompt_tokens = len(prompt_text) // 4
@@ -67,24 +67,28 @@ async def generate_audited_suggestions(
     except Exception as exc:
         error_message = str(exc)
         logger.exception("LLM suggestion failed for scenario %s", scenario.id)
-        suggestions = suggester._fallback_suggestions(scenario, prompt_text)
+        suggestions = suggester.fallback_suggestions(scenario, prompt_text)
         response_text = suggestions[0].get("llm_response") if suggestions else None
 
     finally:
-        # Always persist audit log
-        audit_entry = LLMAuditLog(
-            scenario_id=scenario.id,
-            user_id=user_id,
-            prompt_text=prompt_text,
-            response_text=response_text,
-            evidence_ids=None,
-            prompt_tokens=prompt_tokens,
-            completion_tokens=completion_tokens,
-            model_name=settings.suggester_model,
-            error_message=error_message,
-        )
-        session.add(audit_entry)
-        await session.flush()
+        # Always persist audit log — wrapped in try/except to avoid masking
+        # the original exception if the database is also unavailable
+        try:
+            audit_entry = LLMAuditLog(
+                scenario_id=scenario.id,
+                user_id=user_id,
+                prompt_text=prompt_text,
+                response_text=response_text,
+                evidence_ids=None,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                model_name=settings.suggester_model,
+                error_message=error_message,
+            )
+            session.add(audit_entry)
+            await session.flush()
+        except Exception:
+            logger.exception("CRITICAL: Failed to persist LLM audit log for scenario %s", scenario.id)
 
     # Post-process: add governance flags
     if graph_service:

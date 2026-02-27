@@ -63,9 +63,9 @@ class TestScenario1StructuredSuggestions:
             patch("src.simulation.suggestion_engine.AlternativeSuggesterService") as mock_svc_cls,
         ):
             mock_svc = mock_svc_cls.return_value
-            mock_svc._build_prompt.return_value = "test prompt"
-            mock_svc._call_llm = AsyncMock(return_value=llm_response)
-            mock_svc._parse_response.return_value = [
+            mock_svc.build_prompt.return_value = "test prompt"
+            mock_svc.call_llm = AsyncMock(return_value=llm_response)
+            mock_svc.parse_response.return_value = [
                 {
                     "suggestion_text": "Consider automating step 3",
                     "rationale": "Reduces cycle time",
@@ -98,9 +98,9 @@ class TestScenario1StructuredSuggestions:
             patch("src.simulation.suggestion_engine.AlternativeSuggesterService") as mock_svc_cls,
         ):
             mock_svc = mock_svc_cls.return_value
-            mock_svc._build_prompt.return_value = "test prompt"
-            mock_svc._call_llm = AsyncMock(side_effect=RuntimeError("API down"))
-            mock_svc._fallback_suggestions.return_value = [
+            mock_svc.build_prompt.return_value = "test prompt"
+            mock_svc.call_llm = AsyncMock(side_effect=RuntimeError("API down"))
+            mock_svc.fallback_suggestions.return_value = [
                 {"suggestion_text": "Fallback suggestion", "llm_response": None},
             ]
 
@@ -125,9 +125,9 @@ class TestScenario2RequiredFields:
             patch("src.simulation.suggestion_engine.AlternativeSuggesterService") as mock_svc_cls,
         ):
             mock_svc = mock_svc_cls.return_value
-            mock_svc._build_prompt.return_value = "test prompt"
-            mock_svc._call_llm = AsyncMock(return_value="[]")
-            mock_svc._parse_response.return_value = [
+            mock_svc.build_prompt.return_value = "test prompt"
+            mock_svc.call_llm = AsyncMock(return_value="[]")
+            mock_svc.parse_response.return_value = [
                 {"suggestion_text": "Automate step 3", "rationale": "Faster"},
             ]
 
@@ -150,9 +150,9 @@ class TestScenario2RequiredFields:
             patch("src.simulation.suggestion_engine.AlternativeSuggesterService") as mock_svc_cls,
         ):
             mock_svc = mock_svc_cls.return_value
-            mock_svc._build_prompt.return_value = "test prompt"
-            mock_svc._call_llm = AsyncMock(return_value="[]")
-            mock_svc._parse_response.return_value = [
+            mock_svc.build_prompt.return_value = "test prompt"
+            mock_svc.call_llm = AsyncMock(return_value="[]")
+            mock_svc.parse_response.return_value = [
                 {"suggestion_text": "As a consideration for review, automate step 3"},
             ]
 
@@ -190,9 +190,9 @@ class TestScenario3GovernanceFlags:
             patch("src.simulation.suggestion_engine.AlternativeSuggesterService") as mock_svc_cls,
         ):
             mock_svc = mock_svc_cls.return_value
-            mock_svc._build_prompt.return_value = "test prompt"
-            mock_svc._call_llm = AsyncMock(return_value="[]")
-            mock_svc._parse_response.return_value = [
+            mock_svc.build_prompt.return_value = "test prompt"
+            mock_svc.call_llm = AsyncMock(return_value="[]")
+            mock_svc.parse_response.return_value = [
                 {
                     "suggestion_text": "Automate manual review",
                     "affected_element_ids": ["elem-001"],
@@ -230,9 +230,9 @@ class TestScenario3GovernanceFlags:
             patch("src.simulation.suggestion_engine.AlternativeSuggesterService") as mock_svc_cls,
         ):
             mock_svc = mock_svc_cls.return_value
-            mock_svc._build_prompt.return_value = "test prompt"
-            mock_svc._call_llm = AsyncMock(return_value="[]")
-            mock_svc._parse_response.return_value = [
+            mock_svc.build_prompt.return_value = "test prompt"
+            mock_svc.call_llm = AsyncMock(return_value="[]")
+            mock_svc.parse_response.return_value = [
                 {
                     "suggestion_text": "Simplify step",
                     "affected_element_ids": ["elem-999"],
@@ -265,9 +265,9 @@ class TestScenario3GovernanceFlags:
             patch("src.simulation.suggestion_engine.AlternativeSuggesterService") as mock_svc_cls,
         ):
             mock_svc = mock_svc_cls.return_value
-            mock_svc._build_prompt.return_value = "test prompt"
-            mock_svc._call_llm = AsyncMock(return_value="[]")
-            mock_svc._parse_response.return_value = [
+            mock_svc.build_prompt.return_value = "test prompt"
+            mock_svc.call_llm = AsyncMock(return_value="[]")
+            mock_svc.parse_response.return_value = [
                 {"suggestion_text": "Do something"},
             ]
 
@@ -282,7 +282,7 @@ class TestScenario3GovernanceFlags:
 
 
 class TestScenario4AuditLogging:
-    """Scenario 5: Full LLM interaction is logged for audit."""
+    """Scenario 4: Full LLM interaction is logged for audit."""
 
     @pytest.mark.asyncio
     async def test_audit_log_created_on_success(self) -> None:
@@ -297,9 +297,9 @@ class TestScenario4AuditLogging:
             patch("src.simulation.suggestion_engine.AlternativeSuggesterService") as mock_svc_cls,
         ):
             mock_svc = mock_svc_cls.return_value
-            mock_svc._build_prompt.return_value = "test prompt text"
-            mock_svc._call_llm = AsyncMock(return_value="[{}]")
-            mock_svc._parse_response.return_value = [{"suggestion_text": "Test"}]
+            mock_svc.build_prompt.return_value = "test prompt text"
+            mock_svc.call_llm = AsyncMock(return_value="[{}]")
+            mock_svc.parse_response.return_value = [{"suggestion_text": "Test"}]
 
             await generate_audited_suggestions(scenario, user_id, session)
 
@@ -327,9 +327,9 @@ class TestScenario4AuditLogging:
             patch("src.simulation.suggestion_engine.AlternativeSuggesterService") as mock_svc_cls,
         ):
             mock_svc = mock_svc_cls.return_value
-            mock_svc._build_prompt.return_value = "test prompt"
-            mock_svc._call_llm = AsyncMock(side_effect=RuntimeError("Claude timeout"))
-            mock_svc._fallback_suggestions.return_value = [
+            mock_svc.build_prompt.return_value = "test prompt"
+            mock_svc.call_llm = AsyncMock(side_effect=RuntimeError("Claude timeout"))
+            mock_svc.fallback_suggestions.return_value = [
                 {"suggestion_text": "Fallback", "llm_response": None},
             ]
 
@@ -357,15 +357,41 @@ class TestScenario4AuditLogging:
             patch("src.simulation.suggestion_engine.AlternativeSuggesterService") as mock_svc_cls,
         ):
             mock_svc = mock_svc_cls.return_value
-            mock_svc._build_prompt.return_value = prompt_text
-            mock_svc._call_llm = AsyncMock(return_value=llm_response)
-            mock_svc._parse_response.return_value = [{"suggestion_text": "Test"}]
+            mock_svc.build_prompt.return_value = prompt_text
+            mock_svc.call_llm = AsyncMock(return_value=llm_response)
+            mock_svc.parse_response.return_value = [{"suggestion_text": "Test"}]
 
             await generate_audited_suggestions(scenario, user_id, session)
 
         audit_entry = session.add.call_args[0][0]
         assert audit_entry.prompt_tokens == 100
         assert audit_entry.completion_tokens == 50
+
+
+class TestAuditFlushFailure:
+    """Audit persistence failure does not mask the original exception."""
+
+    @pytest.mark.asyncio
+    async def test_flush_failure_does_not_crash(self) -> None:
+        """If session.flush() fails in the finally block, suggestions are still returned."""
+        scenario = _make_scenario()
+        user_id = uuid.uuid4()
+        session = AsyncMock()
+        session.add = MagicMock()
+        session.flush = AsyncMock(side_effect=RuntimeError("DB down"))
+
+        with (
+            patch("src.simulation.suggestion_engine.get_settings", return_value=_make_settings()),
+            patch("src.simulation.suggestion_engine.AlternativeSuggesterService") as mock_svc_cls,
+        ):
+            mock_svc = mock_svc_cls.return_value
+            mock_svc.build_prompt.return_value = "test prompt"
+            mock_svc.call_llm = AsyncMock(return_value="[]")
+            mock_svc.parse_response.return_value = [{"suggestion_text": "Test"}]
+
+            result = await generate_audited_suggestions(scenario, user_id, session)
+
+        assert len(result) == 1
 
 
 class TestLLMAuditLogModel:

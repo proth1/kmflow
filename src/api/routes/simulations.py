@@ -48,6 +48,7 @@ from src.core.models import (
     AuditAction,
     EpistemicAction,
     FinancialAssumption,
+    LLMAuditLog,
     ScenarioModification,
     SimulationResult,
     SimulationScenario,
@@ -933,7 +934,6 @@ async def get_llm_audit(
     user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """Retrieve LLM audit trail for a scenario."""
-    from src.core.models import LLMAuditLog
 
     await get_scenario_or_404(session, scenario_id)
 
