@@ -42,6 +42,7 @@ from src.api.routes import (
     dashboard,
     deviations,
     engagements,
+    event_spine,
     evidence,
     gdpr,
     governance,
@@ -271,6 +272,9 @@ def create_app() -> FastAPI:
 
     # -- Consistency Reporting Routes (Story #392) ---
     app.include_router(consistency.router)
+
+    # -- Event Spine Routes (Story #334) ---
+    app.include_router(event_spine.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)

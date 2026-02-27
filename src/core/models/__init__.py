@@ -20,6 +20,7 @@ from src.core.models.conflict import (
     ResolutionStatus,
     ResolutionType,
 )
+from src.core.models.canonical_event import CanonicalActivityEvent, EventMappingStatus
 from src.core.models.conformance import ConformanceResult, ReferenceProcessModel
 from src.core.models.dark_room import DarkRoomSnapshot
 from src.core.models.engagement import (
@@ -178,6 +179,9 @@ __all__ = [
     "User",
     "UserConsent",
     "UserRole",
+    # canonical_event
+    "CanonicalActivityEvent",
+    "EventMappingStatus",
     # conflict
     "ConflictObject",
     "MismatchType",
