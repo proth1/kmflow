@@ -8,6 +8,11 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #401 merged** — Controlled edge vocabulary with constraint validation (#295) (v2026.02.085)
+  - 12 typed edge kinds (PRECEDES, TRIGGERS, etc.), source/target label constraints via ontology
+  - Atomic bidirectional creation for CONTRADICTS/VARIANT_OF, acyclicity enforcement for PRECEDES/DEPENDS_ON
+  - Ontology v2.0.0: 20 node types, 26 relationship types; validation CLI updated
+  - 31 tests, PR review findings addressed (Cypher injection guard, atomic txn, validate.py counts)
 - **PR #400 merged** — Three-dimensional confidence model schema (#294) (v2026.02.084)
   - Two-stage formula: strength/quality → min; Evidence grades A-U; Brightness BRIGHT/DIM/DARK with coherence constraint
   - 32 tests, 99% coverage, PR review APPROVED (0 critical, 0 high)

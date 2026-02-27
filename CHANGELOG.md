@@ -3,6 +3,11 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.085] - 2026-02-27
+### Added
+- Controlled edge vocabulary: 12 typed edges with source/target constraints, atomic bidirectional creation, acyclicity enforcement (#295)
+- Ontology v2.0.0: 5 new node types (DataObject, Assertion, Event, Gateway, SurveyClaim), 10+ new relationship types
+
 ## [2026.02.084] - 2026-02-27
 ### Added
 - Three-dimensional confidence model: two-stage scoring formula, evidence grades (A-U), brightness classification with coherence constraint (#294)
