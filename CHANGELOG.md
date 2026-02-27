@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.130] - 2026-02-27
+### Added
+- CanonicalActivityEvent schema and Event Spine Builder: multi-source canonicalization, dedup with tolerance window, FK-constrained engagement_id, timezone-safe comparison, pagination with true count, 17 BDD tests (#334)
+
 ## [2026.02.129] - 2026-02-27
 ### Added
 - Nine Universal Process Knowledge Forms: coverage computation and gap detection per engagement, ontology-validated edge type mappings, parameterized Cypher queries, 12 BDD tests (#316)

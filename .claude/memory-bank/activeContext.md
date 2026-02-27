@@ -8,6 +8,7 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #447 merged** — CanonicalActivityEvent + Event Spine Builder: canonicalization, dedup, FK constraint, timezone safety, 17 tests (#334) (v2026.02.130)
 - **PR #446 merged** — Nine Universal Knowledge Forms: coverage computation, gap detection, ontology-validated edge types, 12 tests (#316) (v2026.02.129)
 - **PR #445 merged** — Governance CRUD APIs: soft-delete, Neo4j write transactions, GET regulation (#329) (v2026.02.128)
 - **PR #444 merged** — Process maturity scoring: CMMI levels 1-5, heatmap, MaturityScoringService (#358) (v2026.02.127)
