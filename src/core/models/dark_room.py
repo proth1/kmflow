@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -23,6 +23,10 @@ class DarkRoomSnapshot(Base):
     __table_args__ = (
         Index("ix_dark_room_snapshots_engagement_id", "engagement_id"),
         Index("ix_dark_room_snapshots_pov_version_id", "pov_version_id"),
+        UniqueConstraint(
+            "engagement_id", "version_number",
+            name="uq_dark_room_snapshots_engagement_version",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(

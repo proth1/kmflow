@@ -61,9 +61,15 @@ def upgrade() -> None:
         "dark_room_snapshots",
         ["pov_version_id"],
     )
+    op.create_unique_constraint(
+        "uq_dark_room_snapshots_engagement_version",
+        "dark_room_snapshots",
+        ["engagement_id", "version_number"],
+    )
 
 
 def downgrade() -> None:
+    op.drop_constraint("uq_dark_room_snapshots_engagement_version", "dark_room_snapshots")
     op.drop_index("ix_dark_room_snapshots_pov_version_id", "dark_room_snapshots")
     op.drop_index("ix_dark_room_snapshots_engagement_id", "dark_room_snapshots")
     op.drop_table("dark_room_snapshots")

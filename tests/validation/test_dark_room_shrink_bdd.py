@@ -4,11 +4,14 @@ Covers all 3 acceptance scenarios:
 1. Per-version shrink rate computation
 2. Below-target alert generation
 3. Illumination timeline
+
+Plus endpoint integration tests for authorization and response shape.
 """
 
 from __future__ import annotations
 
 import uuid
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -543,3 +546,168 @@ class TestConstants:
             pov_version_id="pov-2",
         )
         assert event.evidence_ids == []
+
+
+# ===========================================================================
+# Endpoint Integration Tests
+# ===========================================================================
+
+
+class TestDarkRoomEndpointIntegration:
+    """Integration tests for the dark-room-shrink endpoint."""
+
+    def test_endpoint_uses_require_engagement_access(self) -> None:
+        """Endpoint should use require_engagement_access (not require_permission)."""
+        from src.api.routes.validation import get_dark_room_shrink
+
+        # Check the dependency injection params
+        params = get_dark_room_shrink.__wrapped__ if hasattr(get_dark_room_shrink, "__wrapped__") else get_dark_room_shrink
+        import inspect
+        sig = inspect.signature(params)
+        current_user_param = sig.parameters.get("current_user")
+        assert current_user_param is not None
+        # The Depends() default should reference require_engagement_access
+        dep = current_user_param.default
+        assert hasattr(dep, "dependency")
+        from src.core.permissions import require_engagement_access
+        assert dep.dependency is require_engagement_access
+
+    def test_endpoint_does_not_use_require_permission(self) -> None:
+        """Endpoint should NOT reference require_permission (was CRITICAL review finding)."""
+        import inspect
+
+        from src.api.routes.validation import get_dark_room_shrink
+        source = inspect.getsource(get_dark_room_shrink)
+        assert "require_permission" not in source
+
+    @pytest.mark.asyncio
+    async def test_endpoint_returns_correct_structure_with_empty_data(self) -> None:
+        """Endpoint returns valid response structure when no snapshots exist."""
+        from src.api.routes.validation import get_dark_room_shrink
+
+        eng_id = uuid.uuid4()
+
+        # Mock session that returns empty results
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = []
+        mock_result = MagicMock()
+        mock_result.scalars.return_value = mock_scalars
+        mock_session = AsyncMock()
+        mock_session.execute.return_value = mock_result
+
+        mock_user = MagicMock()
+        mock_user.id = uuid.uuid4()
+
+        result = await get_dark_room_shrink(
+            engagement_id=eng_id,
+            session=mock_session,
+            current_user=mock_user,
+        )
+
+        assert result["engagement_id"] == str(eng_id)
+        assert result["shrink_rate_target"] == DEFAULT_SHRINK_RATE_TARGET
+        assert result["versions"] == []
+        assert result["alerts"] == []
+        assert result["illumination_timeline"] == []
+
+    @pytest.mark.asyncio
+    async def test_endpoint_computes_shrink_rates_from_snapshots(self) -> None:
+        """Endpoint correctly fetches and computes shrink rates from DB snapshots."""
+        from src.api.routes.validation import get_dark_room_shrink
+
+        eng_id = uuid.uuid4()
+        pov_id_1 = uuid.uuid4()
+        pov_id_2 = uuid.uuid4()
+
+        # Create mock snapshot objects
+        snap1 = MagicMock()
+        snap1.version_number = 1
+        snap1.pov_version_id = pov_id_1
+        snap1.dark_count = 20
+        snap1.dim_count = 5
+        snap1.bright_count = 15
+        snap1.total_elements = 40
+        snap1.snapshot_at = MagicMock()
+        snap1.snapshot_at.isoformat.return_value = "2026-02-20T12:00:00+00:00"
+
+        snap2 = MagicMock()
+        snap2.version_number = 2
+        snap2.pov_version_id = pov_id_2
+        snap2.dark_count = 16
+        snap2.dim_count = 9
+        snap2.bright_count = 15
+        snap2.total_elements = 40
+        snap2.snapshot_at = MagicMock()
+        snap2.snapshot_at.isoformat.return_value = "2026-02-21T12:00:00+00:00"
+
+        # Mock session: first execute returns snapshots, second returns dark names, third returns elements
+        mock_session = AsyncMock()
+
+        # Snapshot query result
+        snap_scalars = MagicMock()
+        snap_scalars.all.return_value = [snap1, snap2]
+        snap_result = MagicMock()
+        snap_result.scalars.return_value = snap_scalars
+
+        # Dark elements query result
+        dark_scalars = MagicMock()
+        dark_scalars.all.return_value = ["Invoice Processing", "Payment"]
+        dark_result = MagicMock()
+        dark_result.scalars.return_value = dark_scalars
+
+        # Elements query for illumination timeline
+        el_result = MagicMock()
+        el_result.all.return_value = []
+
+        mock_session.execute.side_effect = [snap_result, dark_result, el_result]
+
+        mock_user = MagicMock()
+        mock_user.id = uuid.uuid4()
+
+        result = await get_dark_room_shrink(
+            engagement_id=eng_id,
+            session=mock_session,
+            current_user=mock_user,
+        )
+
+        assert len(result["versions"]) == 2
+        assert result["versions"][0]["dark_count"] == 20
+        assert result["versions"][0]["reduction_pct"] is None
+        assert result["versions"][1]["dark_count"] == 16
+        assert result["versions"][1]["reduction_pct"] == pytest.approx(20.0, abs=0.1)
+
+    @pytest.mark.asyncio
+    async def test_endpoint_response_matches_pydantic_schema(self) -> None:
+        """Response from endpoint should validate against DarkRoomDashboardResponse."""
+        from src.api.routes.validation import DarkRoomDashboardResponse, get_dark_room_shrink
+
+        eng_id = uuid.uuid4()
+
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = []
+        mock_result = MagicMock()
+        mock_result.scalars.return_value = mock_scalars
+        mock_session = AsyncMock()
+        mock_session.execute.return_value = mock_result
+
+        mock_user = MagicMock()
+        mock_user.id = uuid.uuid4()
+
+        result = await get_dark_room_shrink(
+            engagement_id=eng_id,
+            session=mock_session,
+            current_user=mock_user,
+        )
+
+        # Validate the dict against the Pydantic model
+        validated = DarkRoomDashboardResponse(**result)
+        assert validated.engagement_id == str(eng_id)
+        assert validated.shrink_rate_target == DEFAULT_SHRINK_RATE_TARGET
+
+    def test_unique_constraint_on_model(self) -> None:
+        """Model should have unique constraint on (engagement_id, version_number)."""
+        from src.core.models.dark_room import DarkRoomSnapshot
+
+        constraints = DarkRoomSnapshot.__table__.constraints
+        uq_names = {c.name for c in constraints if hasattr(c, "columns") and len(c.columns) > 1}
+        assert "uq_dark_room_snapshots_engagement_version" in uq_names

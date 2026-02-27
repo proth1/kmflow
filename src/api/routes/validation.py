@@ -29,7 +29,7 @@ from src.core.models import (
     User,
 )
 from src.core.models.validation import ReviewPack, ReviewPackStatus
-from src.core.permissions import require_engagement_access, require_permission
+from src.core.permissions import require_engagement_access
 from src.validation.dark_room import (
     DEFAULT_SHRINK_RATE_TARGET,
     compute_illumination_timeline,
@@ -337,21 +337,14 @@ class DarkRoomDashboardResponse(BaseModel):
 @router.get("/dark-room-shrink", response_model=DarkRoomDashboardResponse)
 async def get_dark_room_shrink(
     engagement_id: UUID = Query(..., description="Engagement UUID"),
-    request: Request = ...,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(require_permission("validation:read")),
+    current_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Get Dark-Room Shrink Rate dashboard data.
 
     Returns per-version dark segment counts, reduction percentages,
     alerts when shrink rate is below target, and illumination timeline.
     """
-    await require_engagement_access(
-        engagement_id=engagement_id,
-        request=request,
-        user=current_user,
-    )
-
     # Fetch snapshots ordered by version
     snapshot_query = (
         select(DarkRoomSnapshot)

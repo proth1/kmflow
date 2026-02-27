@@ -57,17 +57,6 @@ class IlluminationEvent:
     evidence_ids: list[str] = field(default_factory=list)
 
 
-@dataclass
-class DarkRoomDashboardData:
-    """Complete dark room dashboard response."""
-
-    engagement_id: str
-    shrink_rate_target: float
-    versions: list[VersionShrinkData]
-    alerts: list[ShrinkRateAlert]
-    illumination_timeline: list[IlluminationEvent]
-
-
 def compute_shrink_rates(
     snapshots: list[dict[str, Any]],
 ) -> list[VersionShrinkData]:
