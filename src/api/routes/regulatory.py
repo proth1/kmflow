@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -264,8 +265,6 @@ async def delete_policy(
     user: User = Depends(require_permission("engagement:update")),
 ) -> None:
     """Soft-delete a policy (sets deleted_at, does not hard delete)."""
-    from datetime import UTC, datetime
-
     result = await session.execute(select(Policy).where(Policy.id == policy_id, Policy.deleted_at.is_(None)))
     policy = result.scalar_one_or_none()
     if not policy:
@@ -368,8 +367,6 @@ async def delete_control(
     user: User = Depends(require_permission("engagement:update")),
 ) -> None:
     """Soft-delete a control and remove its ENFORCED_BY edges from Neo4j."""
-    from datetime import UTC, datetime
-
     result = await session.execute(select(Control).where(Control.id == control_id, Control.deleted_at.is_(None)))
     control = result.scalar_one_or_none()
     if not control:
@@ -381,7 +378,7 @@ async def delete_control(
 
         driver = request.app.state.neo4j_driver
         graph_service = KnowledgeGraphService(driver)
-        await graph_service.run_query(
+        await graph_service.run_write_query(
             "MATCH (:Activity)-[r:ENFORCED_BY]->(c:Control {id: $control_id}) DELETE r",
             {"control_id": str(control_id)},
         )
@@ -450,6 +447,22 @@ async def list_regulations(
     return {"items": regulations, "total": total}
 
 
+@router.get("/regulations/{regulation_id}", response_model=RegulationResponse)
+async def get_regulation(
+    regulation_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+) -> Regulation:
+    """Get a specific regulation by ID."""
+    result = await session.execute(
+        select(Regulation).where(Regulation.id == regulation_id, Regulation.deleted_at.is_(None))
+    )
+    regulation = result.scalar_one_or_none()
+    if not regulation:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Regulation {regulation_id} not found")
+    return regulation
+
+
 @router.patch("/regulations/{regulation_id}", response_model=RegulationResponse)
 async def update_regulation(
     regulation_id: UUID,
@@ -479,8 +492,6 @@ async def delete_regulation(
     user: User = Depends(require_permission("engagement:update")),
 ) -> None:
     """Soft-delete a regulation (sets deleted_at, does not hard delete)."""
-    from datetime import UTC, datetime
-
     result = await session.execute(select(Regulation).where(Regulation.id == regulation_id, Regulation.deleted_at.is_(None)))
     regulation = result.scalar_one_or_none()
     if not regulation:

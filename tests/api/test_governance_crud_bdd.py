@@ -251,7 +251,7 @@ async def test_scenario_3_control_soft_delete() -> None:
     _override_deps(mock_session)
 
     mock_graph = AsyncMock()
-    mock_graph.run_query = AsyncMock(return_value=[])
+    mock_graph.run_write_query = AsyncMock(return_value=[])
 
     APP.state.neo4j_driver = MagicMock()
 
@@ -268,9 +268,9 @@ async def test_scenario_3_control_soft_delete() -> None:
             # Verify soft-delete was set
             assert control.deleted_at is not None
 
-            # Verify ENFORCED_BY edges were removed
-            mock_graph.run_query.assert_called_once()
-            call_args = mock_graph.run_query.call_args
+            # Verify ENFORCED_BY edges were removed via write query
+            mock_graph.run_write_query.assert_called_once()
+            call_args = mock_graph.run_write_query.call_args
             assert "ENFORCED_BY" in call_args[0][0]
             assert "DELETE r" in call_args[0][0]
 
@@ -448,9 +448,7 @@ async def test_get_deleted_regulation_returns_404() -> None:
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.get(f"/api/v1/regulatory/regulations/{REGULATION_ID}")
 
-    # The GET endpoint doesn't exist standalone -- regulations don't have a get by id endpoint yet
-    # Check the list endpoint excludes deleted ones (verified by scenario 4 mock)
-    assert resp.status_code == 404 or resp.status_code == 405
+    assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
