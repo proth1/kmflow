@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.145] - 2026-02-27
+### Added
+- Export watermarking with recipient tracking: HMAC-SHA256 invisible watermarks, visible watermark text, HTML meta embedding, append-only export log with RESTRICT FK policy, WatermarkExtractor forensic recovery, dedicated watermark_signing_key, export:read RBAC permission, migration 066, 20 tests (#387)
+
 ## [2026.02.144] - 2026-02-27
 ### Added
 - Evidence confidence overlay per scenario: per-element brightness lookup from ProcessElement, Dark-area modification warnings, risk score computation (bright/(bright+dark)), multi-scenario comparison with max-10 cap, engagement access control, 19 tests (#385)
