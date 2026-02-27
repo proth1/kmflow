@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import time
 
+import redis.asyncio as aioredis
 from fastapi import Depends, HTTPException, Request, status
 
 from src.core.config import get_settings
@@ -64,7 +65,7 @@ async def copilot_rate_limit(
             )
     except HTTPException:
         raise
-    except Exception as e:
+    except aioredis.RedisError as e:
         logger.warning("Rate limiter Redis error (allowing request): %s", e)
 
     return user

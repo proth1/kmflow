@@ -6,6 +6,8 @@ linking discovered processes to target operating model specifications.
 
 from __future__ import annotations
 
+from neo4j.exceptions import Neo4jError
+
 import logging
 
 from src.core.models import TOMDimension
@@ -67,7 +69,7 @@ class ProcessTOMBridge:
                             properties={"dimension": dim, "source": "process_tom_bridge"},
                         )
                         result.relationships_created += 1
-                    except Exception as e:
+                    except Neo4jError as e:
                         result.errors.append(str(e))
 
         return result

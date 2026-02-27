@@ -42,7 +42,7 @@ class BpmnParser(BaseParser):
 
         try:
             return await self._parse_bpmn(file_path)
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: parser library exceptions vary by format
             logger.exception("Failed to parse BPMN: %s", file_name)
             return ParseResult(error=f"Parse error: {e}")
 

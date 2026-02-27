@@ -103,7 +103,7 @@ async def copilot_chat(
             query_type=payload.query_type,
             history=payload.history,
         )
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.exception("Copilot chat failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -219,7 +219,7 @@ async def copilot_chat_stream(
                 history=payload.history,
             ):
                 yield chunk
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: SSE generator must catch all errors to send DONE event
             logger.exception("Copilot streaming failed: %s", e)
             yield "data: Error: An error occurred. Please try again.\n\n"
             yield "data: [DONE]\n\n"

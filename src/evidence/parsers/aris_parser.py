@@ -73,7 +73,7 @@ class ArisParser(BaseParser):
             tree = DefusedET.parse(str(path))
         except DefusedET.ParseError as e:
             return ParseResult(error=f"Invalid XML in ARIS file: {e}")
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: parser library exceptions vary by format
             return ParseResult(error=f"Failed to parse ARIS file: {e}")
 
         root = tree.getroot()

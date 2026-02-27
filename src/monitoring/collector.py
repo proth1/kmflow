@@ -68,7 +68,7 @@ async def collect_evidence(
             "errors": result.get("errors", []),
             "collected_at": datetime.now(UTC).isoformat(),
         }
-    except Exception as e:
+    except Exception as e:  # Intentionally broad: connector may raise any error
         logger.exception("Evidence collection failed for %s", connector_type)
         return {
             "records_collected": 0,

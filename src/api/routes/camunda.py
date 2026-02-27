@@ -44,7 +44,7 @@ async def list_deployments(
     client = _get_camunda_client(request)
     try:
         return await client.list_deployments()
-    except Exception as e:
+    except (ConnectionError, OSError) as e:
         logger.error("Failed to list deployments: %s", e)
         raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine") from e
 
@@ -65,7 +65,7 @@ async def deploy_process(
             bpmn_xml=content,
             filename=file.filename or "process.bpmn",
         )
-    except Exception as e:
+    except (ConnectionError, OSError) as e:
         logger.error("Failed to deploy process: %s", e)
         raise HTTPException(status_code=502, detail="Failed to deploy process to Camunda engine") from e
 
@@ -79,7 +79,7 @@ async def list_process_definitions(
     client = _get_camunda_client(request)
     try:
         return await client.list_process_definitions()
-    except Exception as e:
+    except (ConnectionError, OSError) as e:
         logger.error("Failed to list process definitions: %s", e)
         raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine") from e
 
@@ -95,7 +95,7 @@ async def start_process(
     client = _get_camunda_client(request)
     try:
         return await client.start_process(key, variables=body.variables)
-    except Exception as e:
+    except (ConnectionError, OSError) as e:
         logger.error("Failed to start process %s: %s", key, e)
         raise HTTPException(status_code=502, detail=f"Failed to start process '{key}'") from e
 
@@ -110,7 +110,7 @@ async def get_process_instances(
     client = _get_camunda_client(request)
     try:
         return await client.get_process_instances(active=active)
-    except Exception as e:
+    except (ConnectionError, OSError) as e:
         logger.error("Failed to get process instances: %s", e)
         raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine") from e
 
@@ -125,6 +125,6 @@ async def get_tasks(
     client = _get_camunda_client(request)
     try:
         return await client.get_tasks(assignee=assignee)
-    except Exception as e:
+    except (ConnectionError, OSError) as e:
         logger.error("Failed to get tasks: %s", e)
         raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine") from e

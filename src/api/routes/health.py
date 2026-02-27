@@ -9,7 +9,10 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+import redis.asyncio as aioredis
 from fastapi import APIRouter, Request
+from neo4j.exceptions import Neo4jError
+from sqlalchemy.exc import SQLAlchemyError
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -40,7 +43,7 @@ async def health_check(request: Request) -> dict[str, Any]:
             result = await session.execute(__import__("sqlalchemy").text("SELECT 1"))
             result.scalar()
             services["postgres"] = "up"
-    except Exception:
+    except SQLAlchemyError:
         logger.warning("PostgreSQL health check failed")
         services["postgres"] = "down"
 
@@ -49,7 +52,7 @@ async def health_check(request: Request) -> dict[str, Any]:
         neo4j_driver = request.app.state.neo4j_driver
         await neo4j_driver.verify_connectivity()
         services["neo4j"] = "up"
-    except Exception:
+    except Neo4jError:
         logger.warning("Neo4j health check failed")
         services["neo4j"] = "down"
 
@@ -58,7 +61,7 @@ async def health_check(request: Request) -> dict[str, Any]:
         redis_client = request.app.state.redis_client
         await redis_client.ping()
         services["redis"] = "up"
-    except Exception:
+    except aioredis.RedisError:
         logger.warning("Redis health check failed")
         services["redis"] = "down"
 
@@ -69,7 +72,7 @@ async def health_check(request: Request) -> dict[str, Any]:
             services["camunda"] = "up"
         else:
             services["camunda"] = "down"
-    except Exception:
+    except (ConnectionError, OSError):
         logger.warning("Camunda health check failed")
         services["camunda"] = "down"
 

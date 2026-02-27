@@ -57,7 +57,7 @@ class VideoParser(BaseParser):
                         metadata={"source": "frame_extraction", "file_name": file_name},
                     )
                 )
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: parser library exceptions vary by format
             logger.warning("Frame extraction failed for %s: %s", file_name, e)
 
         # Attempt audio extraction and transcription
@@ -71,7 +71,7 @@ class VideoParser(BaseParser):
                         metadata={"source": "audio_transcription", "file_name": file_name},
                     )
                 )
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: parser library exceptions vary by format
             logger.warning("Audio extraction failed for %s: %s", file_name, e)
 
         # Always add a reference fragment
@@ -200,7 +200,7 @@ class VideoParser(BaseParser):
         except FileNotFoundError:
             logger.info("ffmpeg not found; video audio extraction unavailable")
             return ""
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: parser library exceptions vary by format
             logger.warning("Audio extraction error for %s: %s", file_path, e)
             return ""
         finally:

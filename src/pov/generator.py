@@ -258,7 +258,7 @@ async def generate_pov(
             },
         )
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.exception("POV generation failed for engagement %s", engagement_id)
         model.status = ProcessModelStatus.FAILED
         model.metadata_json = {"error": str(e)}

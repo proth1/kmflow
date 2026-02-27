@@ -36,7 +36,7 @@ class DocumentParser(BaseParser):
                 return await self._parse_text(file_path)
             else:
                 return ParseResult(error=f"Unsupported document format: {ext}")
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: parser library exceptions vary by format
             logger.exception("Failed to parse document: %s", file_name)
             return ParseResult(error=f"Parse error: {e}")
 

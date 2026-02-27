@@ -11,6 +11,7 @@ import logging
 import uuid
 from typing import Any
 
+import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
@@ -38,20 +39,20 @@ _JOB_TTL = 86400
 async def _set_job(request: Request, job_id: str, data: dict[str, Any]) -> None:
     """Store a job record in Redis."""
     try:
-        redis = request.app.state.redis_client
-        await redis.setex(f"pov:job:{job_id}", _JOB_TTL, json.dumps(data))
-    except Exception:
+        redis_client = request.app.state.redis_client
+        await redis_client.setex(f"pov:job:{job_id}", _JOB_TTL, json.dumps(data))
+    except aioredis.RedisError:
         logger.warning("Redis unavailable for job store, job %s status may be lost", job_id)
 
 
 async def _get_job(request: Request, job_id: str) -> dict[str, Any] | None:
     """Retrieve a job record from Redis."""
     try:
-        redis = request.app.state.redis_client
-        raw = await redis.get(f"pov:job:{job_id}")
+        redis_client = request.app.state.redis_client
+        raw = await redis_client.get(f"pov:job:{job_id}")
         if raw:
             return json.loads(raw)
-    except Exception:
+    except aioredis.RedisError:
         logger.warning("Redis unavailable for job store lookup")
     return None
 
@@ -292,7 +293,7 @@ async def trigger_pov_generation(
 
         await _set_job(request, job_id, job_data)
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.exception("POV generation failed")
         await _set_job(request, job_id, {"status": "failed", "result": None, "error": str(e)})
 
