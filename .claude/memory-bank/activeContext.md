@@ -8,6 +8,9 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #407 merged** — Shelf data request workflow (#298) (v2026.02.091)
+  - ShelfRequestStatus: OPEN, COMPLETE, CANCELLED; FollowUpReminder model
+  - 53 BDD tests, PR review findings addressed (enum docs, server_default, priority enum)
 - **PR #406 merged** — Evidence parsers with factory dispatch (#296) (v2026.02.090)
   - DocumentParser: PDF (pdfplumber), HTML (lxml with script/style stripping), TXT
   - StructuredDataParser: Excel (openpyxl), CSV, JSON

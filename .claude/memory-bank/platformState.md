@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.090
+**Version**: 2026.02.091
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.091 | 2026-02-27 | Shelf data request workflow with BDD-aligned status enums (#298) |
 | 2026.02.090 | 2026-02-27 | Evidence parsers: document, structured data, BPMN with factory dispatch (#296) |
 | 2026.02.089 | 2026-02-27 | SemanticRelationship bitemporal validity model (#305) |
 | 2026.02.088 | 2026-02-27 | SeedTerm entity schema and vocabulary store (#302) |
