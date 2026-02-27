@@ -246,6 +246,28 @@ class TestScenario1TOMCreationWithDimensions:
         assert resp.status_code == 422
 
     @pytest.mark.asyncio
+    async def test_duplicate_dimension_types_rejected(self) -> None:
+        session = AsyncMock()
+        session.execute.return_value = _mock_engagement_result()
+        _override_deps(session)
+
+        async with AsyncClient(transport=ASGITransport(app=APP), base_url="http://test") as ac:
+            resp = await ac.post(
+                "/api/v1/tom/models",
+                json={
+                    "engagement_id": str(ENGAGEMENT_ID),
+                    "name": "Duplicate Dims",
+                    "dimensions": [
+                        {"dimension_type": "process_architecture", "maturity_target": 3, "description": "First"},
+                        {"dimension_type": "process_architecture", "maturity_target": 4, "description": "Duplicate"},
+                    ],
+                },
+            )
+
+        assert resp.status_code == 422
+        assert "Duplicate" in resp.json()["detail"]
+
+    @pytest.mark.asyncio
     async def test_engagement_not_found_returns_404(self) -> None:
         session = AsyncMock()
         not_found = MagicMock()
@@ -287,7 +309,8 @@ class TestScenario2VersionHistory:
         session.commit = AsyncMock()
 
         async def fake_refresh(obj: object, attribute_names: list | None = None) -> None:
-            pass
+            # Simulate DB returning incremented version after SQL expression commit
+            obj.version = 2
 
         session.refresh = fake_refresh
         _override_deps(session)
@@ -311,6 +334,7 @@ class TestScenario2VersionHistory:
 
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = tom
+        # execute is called twice: 1) TOM lookup with selectinload, 2) SELECT FOR UPDATE
         session.execute.return_value = mock_result
 
         added_objects: list = []
@@ -318,21 +342,23 @@ class TestScenario2VersionHistory:
         session.commit = AsyncMock()
 
         async def fake_refresh(obj: object, attribute_names: list | None = None) -> None:
-            pass
+            obj.version = 2
 
         session.refresh = fake_refresh
         _override_deps(session)
 
-        async with AsyncClient(transport=ASGITransport(app=APP), base_url="http://test") as ac:
-            await ac.patch(
-                f"/api/v1/tom/models/{TOM_ID}",
-                json={"name": "Updated TOM Name"},
-            )
+        with mock.patch("src.api.routes.tom.TOMVersion", side_effect=lambda **kw: _make_plain_mock(**kw)):
+            async with AsyncClient(transport=ASGITransport(app=APP), base_url="http://test") as ac:
+                await ac.patch(
+                    f"/api/v1/tom/models/{TOM_ID}",
+                    json={"name": "Updated TOM Name"},
+                )
 
-        # Should have added a TOMVersion object
-        version_adds = [obj for obj in added_objects if isinstance(obj, TOMVersion)]
+        # Should have added a TOMVersion mock (patched)
+        assert session.add.call_count >= 1
+        # Verify snapshot was created with version_number=1
+        version_adds = [obj for obj in added_objects if hasattr(obj, "version_number") and obj.version_number == 1]
         assert len(version_adds) == 1
-        assert version_adds[0].version_number == 1
 
     @pytest.mark.asyncio
     async def test_patch_with_dimension_update(self) -> None:
@@ -347,7 +373,7 @@ class TestScenario2VersionHistory:
         session.commit = AsyncMock()
 
         async def fake_refresh(obj: object, attribute_names: list | None = None) -> None:
-            pass
+            obj.version = 2
 
         session.refresh = fake_refresh
         _override_deps(session)

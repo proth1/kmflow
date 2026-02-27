@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -15,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.api.deps import get_session
 from src.core.audit import log_audit
@@ -106,8 +108,8 @@ class TOMResponse(BaseModel):
     version: int
     dimensions: list[DimensionResponse] | None = None
     maturity_targets: dict[str, Any] | None
-    created_at: Any
-    updated_at: Any
+    created_at: datetime
+    updated_at: datetime
 
 
 class TOMList(BaseModel):
@@ -125,7 +127,7 @@ class TOMVersionResponse(BaseModel):
     version_number: int
     snapshot: dict[str, Any]
     changed_by: str | None
-    created_at: Any
+    created_at: datetime
 
 
 class TOMVersionList(BaseModel):
@@ -280,6 +282,15 @@ async def create_tom(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found"
         )
+    # Validate no duplicate dimension types
+    if payload.dimensions:
+        dim_types = [d.dimension_type for d in payload.dimensions]
+        if len(dim_types) != len(set(dim_types)):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Duplicate dimension_type values are not allowed",
+            )
+
     tom = TargetOperatingModel(
         engagement_id=payload.engagement_id,
         name=payload.name,
@@ -316,7 +327,6 @@ async def list_toms(
 ) -> dict[str, Any]:
     """List target operating models for an engagement."""
     await _check_engagement_member(session, user, engagement_id)
-    from sqlalchemy.orm import selectinload
 
     query = (
         select(TargetOperatingModel)
@@ -343,7 +353,6 @@ async def get_tom(
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """Get a specific TOM by ID with embedded dimensions."""
-    from sqlalchemy.orm import selectinload
 
     result = await session.execute(
         select(TargetOperatingModel)
@@ -365,7 +374,6 @@ async def update_tom(
     user: User = Depends(require_permission("engagement:update")),
 ) -> dict[str, Any]:
     """Update a TOM (partial update). Creates a version snapshot before applying changes."""
-    from sqlalchemy.orm import selectinload
 
     result = await session.execute(
         select(TargetOperatingModel)
@@ -409,8 +417,13 @@ async def update_tom(
                 )
                 session.add(dim_record)
 
-    # Bump version
-    tom.version += 1
+    # Bump version atomically via SQL expression to prevent race conditions
+    await session.execute(
+        select(TargetOperatingModel)
+        .where(TargetOperatingModel.id == tom.id)
+        .with_for_update()
+    )
+    tom.version = TargetOperatingModel.version + 1  # type: ignore[assignment]  # SA SQL expression
 
     await session.commit()
     await session.refresh(tom, attribute_names=["dimension_records"])
@@ -465,7 +478,6 @@ async def export_tom(
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """Export a TOM as a portable JSON document."""
-    from sqlalchemy.orm import selectinload
 
     result = await session.execute(
         select(TargetOperatingModel)
@@ -514,6 +526,15 @@ async def import_tom(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found"
         )
+
+    # Validate no duplicate dimension types
+    if payload.dimensions:
+        dim_types = [d.dimension_type for d in payload.dimensions]
+        if len(dim_types) != len(set(dim_types)):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Duplicate dimension_type values are not allowed",
+            )
 
     tom = TargetOperatingModel(
         engagement_id=payload.engagement_id,
