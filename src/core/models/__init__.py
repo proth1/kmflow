@@ -160,6 +160,7 @@ from src.core.models.tom import (
     TOMVersion,
     TransformationRoadmapModel,
 )
+from src.core.models.uplift_projection import UpliftProjection
 from src.core.models.validation import (
     ReviewPack,
     ReviewPackStatus,
@@ -301,6 +302,8 @@ __all__ = [
     "TaskMiningAgent",
     "TaskMiningEvent",
     "TaskMiningSession",
+    # uplift_projection
+    "UpliftProjection",
     # validation
     "ReviewPack",
     "ReviewPackStatus",
