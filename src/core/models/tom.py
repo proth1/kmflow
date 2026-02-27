@@ -178,7 +178,7 @@ class TransformationRoadmapModel(Base):
         default=RoadmapStatus.DRAFT,
         nullable=False,
     )
-    phases: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    phases: Mapped[list | None] = mapped_column(JSON, nullable=True)
     total_initiatives: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     estimated_duration_weeks: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

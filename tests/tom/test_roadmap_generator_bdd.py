@@ -279,6 +279,22 @@ class TestDependencyOrdering:
         assert b_phase is not None
         assert b_phase != a_phase
 
+    def test_circular_dependency_handled_gracefully(self) -> None:
+        """Gaps with circular dependencies are still included in output."""
+        id_a = str(uuid.uuid4())
+        id_b = str(uuid.uuid4())
+
+        gap_a = _make_gap(gap_id=id_a, severity=0.8, confidence=0.8, remediation_cost=2, depends_on_ids=[id_b])
+        gap_b = _make_gap(gap_id=id_b, severity=0.7, confidence=0.7, remediation_cost=2, depends_on_ids=[id_a])
+
+        sorted_gaps = _topological_sort([gap_a, gap_b])
+
+        # Both gaps should appear in output despite the cycle
+        assert len(sorted_gaps) == 2
+        result_ids = {str(g.id) for g in sorted_gaps}
+        assert id_a in result_ids
+        assert id_b in result_ids
+
 
 # ===========================================================================
 # Scenario 3: Client-Ready Export with Timeline and Effort Estimates

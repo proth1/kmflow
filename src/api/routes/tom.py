@@ -199,7 +199,9 @@ async def create_tom(
     await _check_engagement_member(session, user, payload.engagement_id)
     eng_result = await session.execute(select(Engagement).where(Engagement.id == payload.engagement_id))
     if not eng_result.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found"
+        )
     tom = TargetOperatingModel(
         engagement_id=payload.engagement_id,
         name=payload.name,
@@ -289,7 +291,9 @@ async def create_gap(
     await _check_engagement_member(session, user, payload.engagement_id)
     eng_result = await session.execute(select(Engagement).where(Engagement.id == payload.engagement_id))
     if not eng_result.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found"
+        )
     gap = GapAnalysisResult(
         engagement_id=payload.engagement_id,
         tom_id=payload.tom_id,
@@ -958,6 +962,8 @@ async def get_prioritized_roadmap(
             detail=f"Roadmap {roadmap_id} not found",
         )
 
+    await _check_engagement_member(session, user, roadmap.engagement_id)
+
     return {
         "id": roadmap.id,
         "engagement_id": roadmap.engagement_id,
@@ -972,7 +978,7 @@ async def get_prioritized_roadmap(
 @router.get("/roadmaps/{roadmap_id}/export")
 async def export_roadmap(
     roadmap_id: UUID,
-    format: str = Query(default="html", description="Export format: html"),
+    export_format: str = Query(default="html", alias="format", description="Export format: html"),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
 ) -> Any:
@@ -992,10 +998,10 @@ async def export_roadmap(
             detail=f"Roadmap {roadmap_id} not found",
         )
 
+    await _check_engagement_member(session, user, roadmap.engagement_id)
+
     # Fetch engagement name
-    eng_result = await session.execute(
-        select(Engagement).where(Engagement.id == roadmap.engagement_id)
-    )
+    eng_result = await session.execute(select(Engagement).where(Engagement.id == roadmap.engagement_id))
     engagement = eng_result.scalar_one_or_none()
     eng_name = engagement.name if engagement else "Unknown Engagement"
 
@@ -1006,10 +1012,10 @@ async def export_roadmap(
         "generated_at": roadmap.generated_at.isoformat() if roadmap.generated_at else "",
     }
 
-    if format != "html":
+    if export_format != "html":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported export format: {format}. Supported: html",
+            detail=f"Unsupported export format: {export_format}. Supported: html",
         )
 
     html_content = export_roadmap_html(roadmap_data, eng_name)
