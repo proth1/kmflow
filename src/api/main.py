@@ -44,6 +44,7 @@ from src.api.routes import (
     engagements,
     event_spine,
     evidence,
+    evidence_gap_ranking,
     gap_probes,
     gdpr,
     governance,
@@ -285,6 +286,9 @@ def create_app() -> FastAPI:
 
     # -- Gap Probe Routes (Story #327) ---
     app.include_router(gap_probes.router)
+
+    # -- Evidence Gap Ranking Routes (Story #393) ---
+    app.include_router(evidence_gap_ranking.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)
