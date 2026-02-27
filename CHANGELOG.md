@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.114] - 2026-02-27
+### Added
+- Sequence and role conflict detection engine: SequenceConflictDetector (contradictory PRECEDES edges), RoleConflictDetector (different PERFORMED_BY assignments), severity scoring with weight differential and recency factor, idempotent ConflictObject persistence, public run_query() on KnowledgeGraphService, LIMIT 500 on Cypher queries, 26 BDD tests (#372)
+
 ## [2026.02.113] - 2026-02-27
 ### Added
 - Gap-prioritized transformation roadmap generator: topological sort (Kahn's algorithm) for dependency resolution, threshold-based phase bucketing into 3-4 implementation phases (Quick Wins→Foundation→Transformation→Optimization), composite scoring from priority_score + effort estimate, HTML export with XSS-safe rendering, TransformationRoadmapModel with JSONB phases, remediation_cost and depends_on_ids columns on GapAnalysisResult, effort_weeks property (1-5 scale → 0.5-8 weeks), IDOR-protected roadmap endpoints with engagement membership checks, Alembic migration 045, 31 BDD tests (#368)

@@ -8,6 +8,12 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #430 merged** — Sequence and role conflict detection engine (#372) (v2026.02.114)
+  - SequenceConflictDetector, RoleConflictDetector with Cypher queries
+  - Severity scoring: weight differential × recency factor
+  - Idempotent ConflictObject persistence, public run_query() on KnowledgeGraphService
+  - PR review: APPROVE WITH CONDITIONS → LIMIT on Cypher queries, public run_query(), counter renames
+  - 26 BDD tests
 - **PR #429 merged** — Gap-prioritized transformation roadmap generator (#368) (v2026.02.113)
   - Topological sort (Kahn's algorithm) for dependency resolution
   - Threshold-based phase bucketing into 3-4 phases (Quick Wins→Foundation→Transformation→Optimization)
