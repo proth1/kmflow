@@ -27,6 +27,9 @@ from src.core.models import (
     AuditAction,
     ComplianceAssessment,
     ComplianceLevel,
+    Control,
+    ControlEffectiveness,
+    ControlEffectivenessScore,
     DataCatalogEntry,
     DataClassification,
     DataLayer,
@@ -42,6 +45,7 @@ from src.datalake.silver import SilverLayerWriter
 from src.governance.alerting import check_and_alert_sla_breaches
 from src.governance.catalog import DataCatalogService
 from src.governance.compliance import ComplianceAssessmentService
+from src.governance.effectiveness import ControlEffectivenessScoringService
 from src.governance.export import export_governance_package
 from src.governance.migration import MigrationResult, migrate_engagement
 from src.governance.policy import PolicyEngine, PolicyViolation
@@ -640,6 +644,35 @@ class ComplianceTrendResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Control effectiveness scoring schemas
+# ---------------------------------------------------------------------------
+
+
+class EffectivenessScoreResponse(BaseModel):
+    """Response for a single effectiveness score record."""
+
+    model_config = {"from_attributes": True}
+
+    id: uuid.UUID
+    control_id: uuid.UUID
+    engagement_id: uuid.UUID
+    effectiveness: ControlEffectiveness
+    execution_rate: float
+    evidence_source_ids: list[uuid.UUID] | None
+    recommendation: str | None
+    scored_at: datetime
+    scored_by: str | None
+
+
+class EffectivenessScoreHistoryResponse(BaseModel):
+    """Response for effectiveness score history."""
+
+    control_id: uuid.UUID
+    scores: list[EffectivenessScoreResponse]
+    total: int
+
+
+# ---------------------------------------------------------------------------
 # Compliance assessment routes
 # ---------------------------------------------------------------------------
 
@@ -655,13 +688,7 @@ async def trigger_compliance_assessment(
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("governance:write")),
 ) -> dict[str, Any]:
-    """Trigger a compliance assessment for a process activity.
-
-    Queries ENFORCED_BY edges in the knowledge graph to determine required
-    controls, checks for evidence of execution, and computes compliance state.
-    The assessment record is persisted for trend analysis.
-    """
-    # Verify activity exists
+    """Trigger a compliance assessment for a process activity."""
     act_result = await session.execute(
         select(ProcessElement).where(ProcessElement.id == activity_id)
     )
@@ -672,7 +699,6 @@ async def trigger_compliance_assessment(
             detail=f"Activity {activity_id} not found",
         )
 
-    # Get engagement_id from the activity's process model
     from src.core.models import ProcessModel
 
     model_result = await session.execute(
@@ -687,7 +713,6 @@ async def trigger_compliance_assessment(
 
     engagement_id = process_model.engagement_id
 
-    # Verify engagement access (platform admins bypass)
     if user.role != UserRole.PLATFORM_ADMIN:
         member_result = await session.execute(
             select(EngagementMember).where(
@@ -701,7 +726,6 @@ async def trigger_compliance_assessment(
                 detail="Not a member of this engagement",
             )
 
-    # Build graph service and assess
     from src.semantic.graph import KnowledgeGraphService
 
     graph_service = KnowledgeGraphService(request.app.state.neo4j_driver)
@@ -710,7 +734,6 @@ async def trigger_compliance_assessment(
         str(activity_id), str(engagement_id)
     )
 
-    # Persist assessment record
     record = ComplianceAssessment(
         activity_id=activity_id,
         engagement_id=engagement_id,
@@ -759,12 +782,7 @@ async def get_compliance_trend(
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("governance:read")),
 ) -> dict[str, Any]:
-    """Get compliance assessment trend for a process activity.
-
-    Returns historical assessments in chronological order. Supports optional
-    date range filtering via from_date and to_date query parameters.
-    """
-    # Verify activity exists
+    """Get compliance assessment trend for a process activity."""
     act_result = await session.execute(
         select(ProcessElement).where(ProcessElement.id == activity_id)
     )
@@ -775,7 +793,6 @@ async def get_compliance_trend(
             detail=f"Activity {activity_id} not found",
         )
 
-    # Verify engagement access via activity's process model
     from src.core.models import ProcessModel
 
     model_result = await session.execute(
@@ -795,7 +812,6 @@ async def get_compliance_trend(
                 detail="Not a member of this engagement",
             )
 
-    # Build query with optional date filtering
     query = (
         select(ComplianceAssessment)
         .where(ComplianceAssessment.activity_id == activity_id)
@@ -828,4 +844,165 @@ async def get_compliance_trend(
             for a in assessments
         ],
         "total": len(assessments),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Control effectiveness scoring routes
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/controls/{control_id}/score",
+    response_model=EffectivenessScoreResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def score_control_effectiveness(
+    control_id: uuid.UUID,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("governance:write")),
+) -> dict[str, Any]:
+    """Score a control's effectiveness based on execution evidence."""
+    ctrl_result = await session.execute(
+        select(Control).where(Control.id == control_id)
+    )
+    control = ctrl_result.scalar_one_or_none()
+    if not control:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Control {control_id} not found",
+        )
+
+    engagement_id = control.engagement_id
+
+    if user.role != UserRole.PLATFORM_ADMIN:
+        member_result = await session.execute(
+            select(EngagementMember).where(
+                EngagementMember.engagement_id == engagement_id,
+                EngagementMember.user_id == user.id,
+            )
+        )
+        if not member_result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not a member of this engagement",
+            )
+
+    from src.semantic.graph import KnowledgeGraphService
+
+    graph_service = KnowledgeGraphService(request.app.state.neo4j_driver)
+    scoring_service = ControlEffectivenessScoringService(graph_service)
+    score_data = await scoring_service.score_control(
+        str(control_id), control.name, str(engagement_id)
+    )
+
+    record = ControlEffectivenessScore(
+        control_id=control_id,
+        engagement_id=engagement_id,
+        effectiveness=score_data["effectiveness"],
+        execution_rate=score_data["execution_rate"],
+        evidence_source_ids=score_data["evidence_source_ids"] or None,
+        recommendation=score_data["recommendation"],
+        scored_by=str(user.id),
+    )
+    session.add(record)
+
+    control.effectiveness = score_data["effectiveness"]
+    control.effectiveness_score = float(score_data["execution_rate"])
+
+    await log_audit(
+        session,
+        engagement_id,
+        AuditAction.ENGAGEMENT_UPDATED,
+        f"Control {control.name} scored: {score_data['effectiveness'].value}",
+        actor=str(user.id),
+    )
+
+    await session.commit()
+    await session.refresh(record)
+
+    return {
+        "id": record.id,
+        "control_id": record.control_id,
+        "engagement_id": record.engagement_id,
+        "effectiveness": record.effectiveness,
+        "execution_rate": float(record.execution_rate),
+        "evidence_source_ids": record.evidence_source_ids,
+        "recommendation": record.recommendation,
+        "scored_at": record.scored_at,
+        "scored_by": record.scored_by,
+    }
+
+
+@router.get(
+    "/controls/{control_id}/effectiveness-scores",
+    response_model=EffectivenessScoreHistoryResponse,
+)
+async def get_effectiveness_score_history(
+    control_id: uuid.UUID,
+    limit: int = Query(50, ge=1, le=500, description="Items per page"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("governance:read")),
+) -> dict[str, Any]:
+    """Get historical effectiveness scores for a control."""
+    ctrl_result = await session.execute(
+        select(Control).where(Control.id == control_id)
+    )
+    control = ctrl_result.scalar_one_or_none()
+    if not control:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Control {control_id} not found",
+        )
+
+    if user.role != UserRole.PLATFORM_ADMIN:
+        member_result = await session.execute(
+            select(EngagementMember).where(
+                EngagementMember.engagement_id == control.engagement_id,
+                EngagementMember.user_id == user.id,
+            )
+        )
+        if not member_result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not a member of this engagement",
+            )
+
+    from sqlalchemy import func as sa_func
+
+    count_result = await session.execute(
+        select(sa_func.count())
+        .select_from(ControlEffectivenessScore)
+        .where(ControlEffectivenessScore.control_id == control_id)
+    )
+    total = count_result.scalar() or 0
+
+    result = await session.execute(
+        select(ControlEffectivenessScore)
+        .where(ControlEffectivenessScore.control_id == control_id)
+        .order_by(ControlEffectivenessScore.scored_at.asc())
+        .offset(offset)
+        .limit(limit)
+    )
+    scores = list(result.scalars().all())
+
+    return {
+        "control_id": control_id,
+        "scores": [
+            {
+                "id": s.id,
+                "control_id": s.control_id,
+                "engagement_id": s.engagement_id,
+                "effectiveness": s.effectiveness,
+                "execution_rate": float(s.execution_rate),
+                "evidence_source_ids": s.evidence_source_ids,
+                "recommendation": s.recommendation,
+                "scored_at": s.scored_at,
+                "scored_by": s.scored_by,
+            }
+            for s in scores
+        ],
+        "total": total,
     }
