@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.093
+**Version**: 2026.02.094
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -9,7 +9,7 @@
 |--------|-------|
 | SQLAlchemy Models | 78+ classes across 12 modules |
 | API Routes | 25+ routers |
-| Test Count | 2383 backend + 206 frontend passing |
+| Test Count | 2416 backend + 206 frontend passing |
 | Coverage | >80% |
 | Python Version | 3.12+ |
 | FastAPI Version | 0.109+ |
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.094 | 2026-02-27 | API gateway BDD tests, health endpoint enhancements (#307) |
 | 2026.02.093 | 2026-02-27 | Evidence lifecycle state machine with audit trail (#301) |
 | 2026.02.092 | 2026-02-27 | Evidence quality scoring engine with Hill function, configurable weights (#300) |
 | 2026.02.091 | 2026-02-27 | Shelf data request workflow with BDD-aligned status enums (#298) |

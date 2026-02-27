@@ -8,6 +8,10 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #410 merged** — API gateway BDD tests and health endpoint enhancements (#307) (v2026.02.094)
+  - Health endpoint: timestamp (UTC ISO), API_VERSION constant, router tags
+  - 33 tests: 5 BDD scenario classes + structural tests
+  - PR review: APPROVE, MEDIUM fixes (error handler behavioral tests, CORS assertion tightened)
 - **PR #409 merged** — Evidence lifecycle state machine (#301) (v2026.02.093)
   - State machine: PENDING → VALIDATED → ACTIVE → EXPIRED → ARCHIVED
   - SHA-256 hashing, audit builder, auto-classification, retention expiry

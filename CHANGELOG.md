@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.094] - 2026-02-27
+### Added
+- API gateway BDD tests: health endpoint enhancements (timestamp, API_VERSION), OpenAPI, request tracing, CORS, DI validation with 33 tests (#307)
+
 ## [2026.02.093] - 2026-02-27
 ### Added
 - Evidence lifecycle state machine: PENDING→VALIDATED→ACTIVE→EXPIRED→ARCHIVED with audit trail, SHA-256 hashing, auto-classification, retention expiry, 52 BDD tests (#301)
