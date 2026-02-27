@@ -93,6 +93,8 @@ class AuditAction(enum.StrEnum):
     CONFLICT_ASSIGNED = "conflict_assigned"
     CONFLICT_RESOLVED = "conflict_resolved"
     CONFLICT_ESCALATED = "conflict_escalated"
+    # -- Cohort suppression (Story #391) -------------------------------------------
+    EXPORT_BLOCKED = "export_blocked"
 
 
 class AuditLog(Base):

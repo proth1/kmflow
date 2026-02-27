@@ -35,6 +35,7 @@ from src.api.routes import (
     admin,
     audit_logs,
     camunda,
+    cohort,
     conflicts,
     conformance,
     consistency,
@@ -305,6 +306,9 @@ def create_app() -> FastAPI:
 
     # -- PDP Routes (Story #377) ---
     app.include_router(pdp.router)
+
+    # -- Cohort Suppression Routes (Story #391) ---
+    app.include_router(cohort.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)

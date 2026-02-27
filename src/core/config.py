@@ -159,6 +159,9 @@ class Settings(BaseSettings):
     taskmining_pii_quarantine_hours: int = 24
     taskmining_batch_max_size: int = 1000
 
+    # ── Cohort Suppression (Story #391) ──────────────────────────
+    cohort_minimum_size: int = 5
+
     @property
     def jwt_verification_keys(self) -> list[str]:
         """Return list of keys to try for JWT verification (supports rotation).
