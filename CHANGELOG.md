@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.107] - 2026-02-27
+### Added
+- RACI matrix derivation from knowledge graph edges: PERFORMED_BY→R, GOVERNED_BY→A, CONSULTED_BY/REVIEWS→C, NOTIFIED_BY→I, dedup on (activity, role, assignment), SME validation with audit trail, CSV export, GET/POST/PATCH/GET endpoints, Alembic migration 042, 41 BDD tests (#351)
+
 ## [2026.02.106] - 2026-02-27
 ### Added
 - Process deviation detection engine with severity scoring: skipped activity, timing anomaly, and undocumented activity detection, importance-weighted severity formula, DeviationSeverity enum, GET /api/v1/deviations with filters/pagination, Alembic migration 041, 45 BDD tests (#350)

@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.106
+**Version**: 2026.02.107
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.107 | 2026-02-27 | RACI matrix derivation from knowledge graph edges, SME validation, CSV export, 41 tests (#351) |
 | 2026.02.106 | 2026-02-27 | Deviation detection engine: severity scoring, timing/skipped/undocumented detection, 45 tests (#350) |
 | 2026.02.105 | 2026-02-27 | BPMN assembly with 3D confidence, gap markers, variant annotations, 67 tests (#315) |
 | 2026.02.104 | 2026-02-27 | Audit logging middleware: fire-and-forget persistence, query API, append-only trigger, 77 BDD tests (#314) |

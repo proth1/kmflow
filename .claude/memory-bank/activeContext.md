@@ -8,6 +8,13 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #423 merged** — RACI matrix derivation from knowledge graph edges (#351) (v2026.02.107)
+  - PERFORMED_BY→R, GOVERNED_BY→A, CONSULTED_BY/REVIEWS→C, NOTIFIED_BY→I
+  - Dedup on (activity_id, role_id, assignment), engagement-scoped
+  - SME validation endpoint with engagement access check and audit trail
+  - CSV export (rows=activities, cols=roles), paginated GET, derive POST
+  - PR review: REQUEST CHANGES → HIGH fixed (auth bypass on validate), MEDIUM fixed (audit trail, unused schema, server_default)
+  - Alembic migration 042, 41 BDD tests
 - **PR #422 merged** — Process deviation detection engine with severity scoring (#350) (v2026.02.106)
   - Skipped activity, timing anomaly, undocumented activity detection
   - Importance-weighted severity formula: importance_score * magnitude_coefficient
