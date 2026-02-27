@@ -35,6 +35,7 @@ from src.api.routes import (
     admin,
     audit_logs,
     camunda,
+    conflicts,
     conformance,
     copilot,
     dashboard,
@@ -263,6 +264,9 @@ def create_app() -> FastAPI:
 
     # -- Review Pack Validation Routes (Story #349) ---
     app.include_router(validation.router)
+
+    # -- Conflict Resolution Routes (Story #388) ---
+    app.include_router(conflicts.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)

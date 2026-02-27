@@ -1,7 +1,11 @@
-"""Pydantic schemas for ConflictObject CRUD operations."""
+"""Pydantic schemas for ConflictObject CRUD operations.
+
+Supports Story #388: Disagreement Resolution Workflow.
+"""
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -28,6 +32,26 @@ class ConflictResolutionUpdate(BaseModel):
     resolution_notes: str | None = None
 
 
+class ConflictResolveRequest(BaseModel):
+    """Schema for resolving a conflict via PATCH /api/v1/conflicts/{id}/resolve."""
+
+    resolution_type: ResolutionType
+    resolution_notes: str | None = None
+    resolver_id: UUID
+
+
+class ConflictAssignRequest(BaseModel):
+    """Schema for assigning a conflict to an SME reviewer."""
+
+    assigned_to: UUID
+
+
+class ConflictEscalateRequest(BaseModel):
+    """Schema for manually escalating a conflict."""
+
+    escalation_notes: str | None = None
+
+
 class ConflictObjectRead(BaseModel):
     """Schema for reading a conflict object."""
 
@@ -41,5 +65,18 @@ class ConflictObjectRead(BaseModel):
     severity: float
     escalation_flag: bool
     resolution_notes: str | None = None
+    conflict_detail: dict[str, Any] | None = None
+    resolution_details: dict[str, Any] | None = None
+    resolver_id: str | None = None
+    assigned_to: str | None = None
     created_at: str
     resolved_at: str | None = None
+
+
+class ConflictListResponse(BaseModel):
+    """Paginated response for conflict listings."""
+
+    items: list[ConflictObjectRead]
+    total: int
+    limit: int
+    offset: int
