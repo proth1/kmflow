@@ -3,6 +3,17 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.077] - 2026-02-27
+### Changed
+- Convert IntegrityChecker from `@unchecked Sendable` + NSLock to Swift actor (#263)
+- Replace `fputs`/`NSLog` with structured `os.Logger`/`AgentLogger` across 4 Swift files (#263)
+- Convert 5 implicitly-unwrapped optionals to regular optionals in AppDelegate (#263)
+- Fix PermissionsView timer closure to capture `state` reference instead of `self` struct (#263)
+- Add 128-char length validation on MDM-supplied engagementId (#263)
+- Move MockPermissionsProvider from production code to test target (#263)
+- Add `@MainActor` annotation to AppSwitchMonitor (#263)
+- Fix import ordering in 5 semantic bridge files (stdlib before third-party)
+
 ## [2026.02.076] - 2026-02-26
 ### Fixed
 - Replace ~58 broad `except Exception` with specific exception types across 57 Python files (#267)
