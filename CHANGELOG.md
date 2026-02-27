@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.135] - 2026-02-27
+### Added
+- Illumination Planner: targeted evidence acquisition with FORM_ACTION_TYPE_MAP (9 forms → 3 action types), idempotency guard (409 on duplicate), progress tracking, segment completion with recalculation trigger, 11 BDD tests (#396)
+
 ## [2026.02.134] - 2026-02-27
 ### Added
 - Dark Room backlog management: prioritized Dark segments ranked by uplift, missing knowledge forms with probe types, Neo4j form coverage (outbound + inbound edges), engagement authz check, configurable dark_threshold query param, 12 BDD tests (#394)
