@@ -5,12 +5,13 @@ Provides endpoints for building and retrieving case event spines.
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
@@ -34,7 +35,7 @@ class CanonicalEventResponse(BaseModel):
     id: UUID
     case_id: str
     activity_name: str
-    timestamp_utc: Any
+    timestamp_utc: datetime
     source_system: str
     performer_role_ref: str | None
     confidence_score: float
@@ -108,6 +109,23 @@ async def get_event_spine(
     Events are ordered by timestamp_utc ascending to form a complete
     case timeline.
     """
+    # Verify engagement exists
+    eng_result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
+    if not eng_result.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Engagement not found")
+
+    # Total count for pagination
+    count_result = await session.execute(
+        select(func.count())
+        .select_from(CanonicalActivityEvent)
+        .where(
+            CanonicalActivityEvent.case_id == case_id,
+            CanonicalActivityEvent.engagement_id == engagement_id,
+        )
+    )
+    total = count_result.scalar() or 0
+
+    # Paginated events
     result = await session.execute(
         select(CanonicalActivityEvent)
         .where(
@@ -123,6 +141,6 @@ async def get_event_spine(
     return {
         "engagement_id": engagement_id,
         "case_id": case_id,
-        "total_events": len(events),
+        "total_events": total,
         "events": events,
     }

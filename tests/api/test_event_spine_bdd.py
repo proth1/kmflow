@@ -313,10 +313,21 @@ async def test_get_event_spine_returns_ordered_events() -> None:
         process_element_id=None,
     )
 
+    # Mock engagement existence check
+    eng = MagicMock(spec=Engagement)
+    eng.id = ENGAGEMENT_ID
+    eng_result = MagicMock()
+    eng_result.scalar_one_or_none.return_value = eng
+
+    # Mock count query
+    count_result = MagicMock()
+    count_result.scalar.return_value = 2
+
+    # Mock spine query
     spine_result = MagicMock()
     spine_result.scalars.return_value.all.return_value = [evt1, evt2]
 
-    session.execute = AsyncMock(return_value=spine_result)
+    session.execute = AsyncMock(side_effect=[eng_result, count_result, spine_result])
     app = _make_app(session)
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:

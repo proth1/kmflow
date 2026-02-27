@@ -21,7 +21,10 @@ def upgrade() -> None:
     op.create_table(
         "canonical_activity_events",
         sa.Column("id", UUID(as_uuid=True), primary_key=True),
-        sa.Column("engagement_id", UUID(as_uuid=True), nullable=False),
+        sa.Column(
+            "engagement_id", UUID(as_uuid=True),
+            sa.ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False,
+        ),
         sa.Column("case_id", sa.String(255), nullable=False),
         sa.Column("activity_name", sa.String(512), nullable=False),
         sa.Column("timestamp_utc", sa.DateTime(timezone=True), nullable=False),

@@ -8,7 +8,7 @@ confidence), and orders by timestamp to form a complete case timeline.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -91,6 +91,10 @@ class EventSpineBuilder:
             "raw_payload": raw,
         }
 
+        # Validate required fields after mapping
+        if not event["case_id"]:
+            logger.warning("Event missing case_id after mapping from %s: %s", source_system, raw)
+
         # Check if activity_name mapped to a known process element
         if not event["activity_name"]:
             event["mapping_status"] = "unmapped"
@@ -148,6 +152,12 @@ class EventSpineBuilder:
             ts_a = datetime.fromisoformat(ts_a)
         if isinstance(ts_b, str):
             ts_b = datetime.fromisoformat(ts_b)
+
+        # Normalize timezone-naive datetimes to UTC for safe comparison
+        if ts_a.tzinfo is None:
+            ts_a = ts_a.replace(tzinfo=UTC)
+        if ts_b.tzinfo is None:
+            ts_b = ts_b.replace(tzinfo=UTC)
 
         return abs(ts_a - ts_b) <= self._dedup_tolerance
 

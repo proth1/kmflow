@@ -10,7 +10,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, Float, Index, String, func
+from sqlalchemy import DateTime, Enum, Float, ForeignKey, Index, String, func
 from sqlalchemy.dialects.postgresql import ARRAY, JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -38,7 +38,9 @@ class CanonicalActivityEvent(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    engagement_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
     case_id: Mapped[str] = mapped_column(String(255), nullable=False)
     activity_name: Mapped[str] = mapped_column(String(512), nullable=False)
     timestamp_utc: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
