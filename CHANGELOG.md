@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.106] - 2026-02-27
+### Added
+- Process deviation detection engine with severity scoring: skipped activity, timing anomaly, and undocumented activity detection, importance-weighted severity formula, DeviationSeverity enum, GET /api/v1/deviations with filters/pagination, Alembic migration 041, 45 BDD tests (#350)
+
 ## [2026.02.105] - 2026-02-27
 ### Added
 - BPMN model assembly with evidence citations and 3D confidence: three-dimensional confidence (score + brightness + evidence grade), gap markers on DARK elements, variant annotations for multi-path evidence, B/C grade distinction, 67 tests (#315)

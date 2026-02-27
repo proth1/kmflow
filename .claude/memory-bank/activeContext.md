@@ -8,6 +8,13 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #422 merged** — Process deviation detection engine with severity scoring (#350) (v2026.02.106)
+  - Skipped activity, timing anomaly, undocumented activity detection
+  - Importance-weighted severity formula: importance_score * magnitude_coefficient
+  - DeviationSeverity enum (CRITICAL/HIGH/MEDIUM/LOW/INFO), threshold classification
+  - GET /api/v1/deviations with type/severity/date filters and pagination
+  - PR review: REQUEST CHANGES → MEDIUM fixes (unified enum, ORM/migration alignment, timing constants)
+  - Alembic migration 041, 45 BDD tests
 - **PR #421 merged** — BPMN model assembly with evidence citations and 3D confidence (#315) (v2026.02.105)
   - Three-dimensional confidence: score + brightness + evidence grade
   - Gap markers on DARK elements below MVC threshold, variant annotations
