@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.116
+**Version**: 2026.02.117
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -9,7 +9,7 @@
 |--------|-------|
 | SQLAlchemy Models | 78+ classes across 12 modules |
 | API Routes | 25+ routers |
-| Test Count | 2875 backend + 206 frontend passing |
+| Test Count | 2906 backend + 206 frontend passing |
 | Coverage | >80% |
 | Python Version | 3.12+ |
 | FastAPI Version | 0.109+ |
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.117 | 2026-02-27 | Rule/existence conflict detection: RuleConflictDetector, ExistenceConflictDetector, temporal resolution, authority weights, ontology updates, 31 tests (#375) |
 | 2026.02.116 | 2026-02-27 | LLM suggestion engine: audited suggestions, governance flags, LLMAuditLog model, 14 tests (#374) |
 | 2026.02.115 | 2026-02-27 | Scenario Workbench CRUD: /api/v1/scenarios with max-5 enforcement, IDOR protection, DRAFT-only modifications, 20 tests (#373) |
 | 2026.02.114 | 2026-02-27 | Sequence/role conflict detection: contradictory PRECEDES/PERFORMED_BY edges, severity scoring, idempotent persistence, 26 tests (#372) |

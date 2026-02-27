@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.117] - 2026-02-27
+### Added
+- Rule and existence conflict detection with temporal resolution: RuleConflictDetector (BusinessRule/HAS_RULE Cypher), ExistenceConflictDetector (EVIDENCED_BY absence), configurable authority weights per evidence category, check_temporal_resolution() for non-overlapping effective dates, conflict_detail (JSON) and resolution_hint columns on ConflictObject (migration 047), BusinessRule node and HAS_RULE relationship in ontology, pipeline extended to 4 detectors, 31 BDD tests (#375)
+
 ## [2026.02.116] - 2026-02-27
 ### Added
 - LLM suggestion engine with audit logging: generate_audited_suggestions() wrapping AlternativeSuggesterService, LLMAuditLog model + migration (046), governance flag enrichment via GOVERNED_BY graph relationships, consideration framing enforcement, audit log in try/except finally block, public method delegators on suggester service, GET /scenarios/{id}/llm-audit route, 14 BDD tests (#374)
