@@ -65,7 +65,7 @@ class GenerateProbesResponse(BaseModel):
 @router.post(
     "/{engagement_id}/gap-probes/generate",
     response_model=GenerateProbesResponse,
-    status_code=status.HTTP_200_OK,
+    status_code=status.HTTP_201_CREATED,
 )
 async def generate_gap_probes(
     engagement_id: UUID,
@@ -78,6 +78,10 @@ async def generate_gap_probes(
 
     Analyzes knowledge form coverage gaps for Dim and Dark activities
     and generates prioritized survey probes.
+
+    TODO: Persist generated probes to database for stable IDs and
+    referenceability by survey bot. Currently recomputes on every call.
+    See follow-up issue for persistence model.
     """
     eng_result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
     if not eng_result.scalar_one_or_none():

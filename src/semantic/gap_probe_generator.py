@@ -15,6 +15,7 @@ from src.core.models.pov import BrightnessClassification
 from src.core.models.survey import ProbeType
 from src.governance.knowledge_forms import (
     FORM_NUMBERS,
+    FORM_PROBE_TYPE_MAP,
     KnowledgeForm,
     KnowledgeFormsCoverageService,
 )
@@ -24,17 +25,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Mapping from knowledge form to the probe type that fills the gap.
+# Derive typed mapping from the single source of truth in knowledge_forms.py.
 FORM_TO_PROBE_TYPE: dict[KnowledgeForm, ProbeType] = {
-    KnowledgeForm.ACTIVITIES: ProbeType.EXISTENCE,
-    KnowledgeForm.SEQUENCES: ProbeType.SEQUENCE,
-    KnowledgeForm.DEPENDENCIES: ProbeType.DEPENDENCY,
-    KnowledgeForm.INPUTS_OUTPUTS: ProbeType.INPUT_OUTPUT,
-    KnowledgeForm.RULES: ProbeType.GOVERNANCE,
-    KnowledgeForm.PERSONAS: ProbeType.PERFORMER,
-    KnowledgeForm.CONTROLS: ProbeType.GOVERNANCE,
-    KnowledgeForm.EVIDENCE: ProbeType.EXISTENCE,
-    KnowledgeForm.UNCERTAINTY: ProbeType.UNCERTAINTY,
+    form: ProbeType(probe_str) for form, probe_str in FORM_PROBE_TYPE_MAP.items()
 }
 
 # Weight per form for confidence uplift calculation.

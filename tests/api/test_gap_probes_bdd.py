@@ -322,10 +322,76 @@ async def test_generate_endpoint_returns_count() -> None:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.post(f"/api/v1/engagements/{ENGAGEMENT_ID}/gap-probes/generate")
 
-    assert resp.status_code == 200
+    assert resp.status_code == 201
     data = resp.json()
     assert data["probes_generated"] >= 1
     assert "Generated" in data["message"]
+
+
+@pytest.mark.asyncio
+async def test_generate_engagement_not_found_returns_404() -> None:
+    """POST /gap-probes/generate with non-existent engagement returns 404."""
+    session = _mock_session_with_engagement(None)
+    app = _make_app(session)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.post(f"/api/v1/engagements/{uuid.uuid4()}/gap-probes/generate")
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_pagination_offset_and_limit() -> None:
+    """GET /gap-probes with offset and limit returns correct slice."""
+    eng = _make_engagement(ENGAGEMENT_ID)
+    session = _mock_session_with_engagement(eng)
+    app = _make_app(session)
+
+    # Two activities, both DARK, both missing multiple forms → many probes
+    form_coverage: dict[str, set[str]] = {
+        "PRECEDES": set(),
+        "DEPENDS_ON": set(),
+        "CONSUMES": set(),
+        "GOVERNED_BY": set(),
+        "PERFORMED_BY": set(),
+        "REQUIRES_CONTROL": set(),
+        "SUPPORTED_BY": set(),
+        "CONTRADICTS": set(),
+    }
+
+    with patch("src.api.routes.gap_probes.KnowledgeGraphService") as mock_graph_cls:
+        mock_graph = mock_graph_cls.return_value
+        mock_graph.run_query = AsyncMock(
+            side_effect=_build_mock_run_query(
+                [ACTIVITY_APPROVE, ACTIVITY_REVIEW],
+                {ACTIVITY_APPROVE: "dark", ACTIVITY_REVIEW: "dark"},
+                form_coverage,
+            )
+        )
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            # Get all probes first
+            resp_all = await client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/gap-probes?limit=200")
+            # Get paginated slice
+            resp_page = await client.get(
+                f"/api/v1/engagements/{ENGAGEMENT_ID}/gap-probes?limit=2&offset=1"
+            )
+
+    assert resp_all.status_code == 200
+    assert resp_page.status_code == 200
+
+    all_data = resp_all.json()
+    page_data = resp_page.json()
+
+    # total_probes should be the same regardless of pagination
+    assert page_data["total_probes"] == all_data["total_probes"]
+    assert page_data["total_probes"] > 3  # enough probes to test pagination
+    # paginated result should have exactly 2 probes
+    assert len(page_data["probes"]) == 2
+    # Verify offset works: paginated probes should match the slice structure
+    # (same form_number/activity_id at offset 1, since probes are recomputed
+    # deterministically in the same order)
+    assert page_data["probes"][0]["form_number"] == all_data["probes"][1]["form_number"]
+    assert page_data["probes"][0]["activity_id"] == all_data["probes"][1]["activity_id"]
 
 
 @pytest.mark.asyncio
