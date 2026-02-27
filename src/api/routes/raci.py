@@ -23,6 +23,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
+from src.core.auth import get_current_user
 from src.core.models import User
 from src.core.models.raci import RACICell, RACIStatus
 from src.core.permissions import require_engagement_access
@@ -65,12 +66,6 @@ class PaginatedRACIResponse(BaseModel):
     limit: int
     offset: int
     summary: dict[str, int] | None = None
-
-
-class RACIValidateRequest(BaseModel):
-    """Request body for SME validation of a RACI cell."""
-
-    pass
 
 
 class RACIDeriveResponse(BaseModel):
@@ -208,18 +203,27 @@ async def derive_raci_matrix(
 @router.patch("/{cell_id}/validate", response_model=RACICellResponse)
 async def validate_raci_cell(
     cell_id: UUID,
+    request: Request,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(require_engagement_access),
+    current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """SME validates a RACI cell, changing status from 'proposed' to 'validated'.
 
-    Records the validator's user ID and timestamp for audit trail.
+    Loads the cell first, then verifies the user has access to the cell's
+    engagement. Records the validator's user ID and timestamp for audit trail.
     """
     result = await session.execute(select(RACICell).where(RACICell.id == cell_id))
     cell = result.scalar_one_or_none()
 
     if cell is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="RACI cell not found")
+
+    # Verify engagement access using the cell's engagement_id
+    await require_engagement_access(
+        engagement_id=cell.engagement_id,
+        request=request,
+        user=current_user,
+    )
 
     if cell.status == RACIStatus.VALIDATED:
         raise HTTPException(
@@ -232,6 +236,15 @@ async def validate_raci_cell(
     cell.validated_at = func.now()
     await session.commit()
     await session.refresh(cell)
+
+    logger.info(
+        "RACI cell %s validated by user %s (activity=%s, role=%s, assignment=%s)",
+        cell_id,
+        current_user.id,
+        cell.activity_name,
+        cell.role_name,
+        cell.assignment,
+    )
 
     return cell
 

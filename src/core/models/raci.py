@@ -58,8 +58,8 @@ class RACICell(Base):
     role_id: Mapped[str] = mapped_column(String(255), nullable=False)
     role_name: Mapped[str] = mapped_column(String(512), nullable=False)
     assignment: Mapped[str] = mapped_column(String(1), nullable=False)
-    status: Mapped[str] = mapped_column(String(20), default="proposed", nullable=False)
-    confidence: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), server_default="proposed", nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, server_default="1.0", nullable=False)
     source_edge_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     validator_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
