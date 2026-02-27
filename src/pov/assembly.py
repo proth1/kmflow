@@ -101,11 +101,12 @@ def _determine_evidence_grade(element: ConsensusElement) -> str:
         return "D"
 
     # Check for multi-plane coverage (from triangulation data)
-    plane_count = len(getattr(tri, "supporting_planes", set()))
+    plane_count = len(tri.supporting_planes)
     if source_count >= 3 and plane_count >= 2:
         return "A"
-    if source_count >= 2:
+    if source_count >= 2 and plane_count >= 2:
         return "B"
+    # 2+ sources but single plane (unvalidated cross-plane)
     return "C"
 
 

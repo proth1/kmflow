@@ -602,11 +602,30 @@ class TestThreeDimensionalConfidence:
         conf = ext.find(f"{{{KMFLOW_NS}}}confidence")
         assert conf.get("evidence_grade") == "A"
 
-    def test_grade_b_for_two_sources(self):
-        """Grade B for 2+ sources without multi-plane threshold."""
+    def test_grade_b_for_two_sources_multiplane(self):
+        """Grade B for 2+ sources with 2+ evidence planes."""
         elements = [
             _scored(
-                "Two Sources",
+                "Two Sources Multi Plane",
+                score=0.70,
+                evidence_ids=["e1", "e2"],
+                source_count=2,
+                evidence_planes={"documented_formal", "system_behavioral"},
+            )
+        ]
+        xml_str = assemble_bpmn(elements)
+        process = _get_process(_parse(xml_str))
+        task = process.find(f"{{{BPMN_NS}}}task")
+
+        ext = task.find(f"{{{BPMN_NS}}}extensionElements")
+        conf = ext.find(f"{{{KMFLOW_NS}}}confidence")
+        assert conf.get("evidence_grade") == "B"
+
+    def test_grade_c_for_two_sources_single_plane(self):
+        """Grade C for 2+ sources but single evidence plane (unvalidated)."""
+        elements = [
+            _scored(
+                "Two Sources Single Plane",
                 score=0.70,
                 evidence_ids=["e1", "e2"],
                 source_count=2,
@@ -619,7 +638,7 @@ class TestThreeDimensionalConfidence:
 
         ext = task.find(f"{{{BPMN_NS}}}extensionElements")
         conf = ext.find(f"{{{KMFLOW_NS}}}confidence")
-        assert conf.get("evidence_grade") == "B"
+        assert conf.get("evidence_grade") == "C"
 
 
 # ── Helper function unit tests ──
@@ -668,9 +687,20 @@ class TestDetermineEvidenceGrade:
         elem = _scored("One Src", evidence_ids=["e1"], source_count=1)[0]
         assert _determine_evidence_grade(elem) == "D"
 
-    def test_grade_b_two_sources(self):
-        elem = _scored("Two Src", evidence_ids=["e1", "e2"], source_count=2)[0]
+    def test_grade_b_two_sources_multiplane(self):
+        elem = _scored(
+            "Two Src",
+            evidence_ids=["e1", "e2"],
+            source_count=2,
+            evidence_planes={"system_behavioral", "documented_formal"},
+        )[0]
         assert _determine_evidence_grade(elem) == "B"
+
+    def test_grade_c_two_sources_single_plane(self):
+        elem = _scored(
+            "Two Src Single", evidence_ids=["e1", "e2"], source_count=2, evidence_planes={"documented_formal"}
+        )[0]
+        assert _determine_evidence_grade(elem) == "C"
 
     def test_grade_a_three_sources_two_planes(self):
         elem = _scored(
@@ -681,15 +711,15 @@ class TestDetermineEvidenceGrade:
         )[0]
         assert _determine_evidence_grade(elem) == "A"
 
-    def test_grade_b_three_sources_one_plane(self):
-        """3 sources but only 1 plane → grade B (not A)."""
+    def test_grade_c_three_sources_one_plane(self):
+        """3 sources but only 1 plane → grade C (not A or B)."""
         elem = _scored(
             "Single Plane",
             evidence_ids=["e1", "e2", "e3"],
             source_count=3,
             evidence_planes={"documented_formal"},
         )[0]
-        assert _determine_evidence_grade(elem) == "B"
+        assert _determine_evidence_grade(elem) == "C"
 
 
 class TestAddGapMarker:
