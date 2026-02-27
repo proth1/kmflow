@@ -184,9 +184,11 @@ class DocumentParser(BaseParser):
         if title_el is not None and title_el.text:
             metadata["title"] = title_el.text.strip()
 
-        # Extract body text
+        # Extract body text (strip script/style tags to avoid leaking JS/CSS)
         body = tree.find(".//body")
         if body is not None:
+            for element in body.iter("script", "style"):
+                element.drop_tree()
             text = body.text_content()
             if text and text.strip():
                 fragments.append(

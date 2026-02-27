@@ -125,6 +125,7 @@ MIME_TO_EXTENSION: dict[str, str] = {
     "text/csv": ".csv",
     "application/json": ".json",
     "text/plain": ".txt",
+    "text/html": ".html",
     "text/xml": ".xml",
     "application/xml": ".xml",
 }

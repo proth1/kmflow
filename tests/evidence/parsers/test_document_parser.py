@@ -137,6 +137,25 @@ class TestHtmlParsing:
         assert result.metadata.get("char_count") == len(html_content)
 
     @pytest.mark.asyncio
+    async def test_html_script_style_stripped(self, parser: DocumentParser, tmp_path: Path) -> None:
+        """Script and style tags are stripped so JS/CSS doesn't leak into text."""
+        html_path = tmp_path / "scripted.html"
+        html_path.write_text(
+            "<html><body><script>var x = 1;</script>"
+            "<style>.cls { color: red; }</style>"
+            "<p>Clean text only.</p></body></html>"
+        )
+
+        result = await parser.parse(str(html_path), "scripted.html")
+
+        assert result.error is None
+        text_frags = [f for f in result.fragments if f.fragment_type == FragmentType.TEXT]
+        assert len(text_frags) == 1
+        assert "var x" not in text_frags[0].content
+        assert "color: red" not in text_frags[0].content
+        assert "Clean text only" in text_frags[0].content
+
+    @pytest.mark.asyncio
     async def test_htm_extension_supported(self, parser: DocumentParser, tmp_path: Path) -> None:
         html_path = tmp_path / "test.htm"
         html_path.write_text("<html><body><p>Works</p></body></html>")
