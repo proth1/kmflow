@@ -51,7 +51,10 @@ private struct ManifestSignature: Decodable {
 ///
 /// Use the static `verify(bundleResourcesPath:)` for one-shot checks,
 /// or create an instance for periodic background verification.
-public final class IntegrityChecker: @unchecked Sendable {
+///
+/// The instance methods use Swift actor isolation for thread-safe periodic
+/// check management (replaces the previous `@unchecked Sendable` + NSLock).
+public actor IntegrityChecker {
 
     private static let log = os.Logger(
         subsystem: "com.kmflow.agent",
@@ -67,7 +70,6 @@ public final class IntegrityChecker: @unchecked Sendable {
     private let checkInterval: TimeInterval
     private let violationHandler: ViolationHandler?
     private var periodicTask: Task<Void, Never>?
-    private let lock = NSLock()
 
     /// Create a checker for periodic integrity verification.
     ///
@@ -86,7 +88,7 @@ public final class IntegrityChecker: @unchecked Sendable {
     }
 
     deinit {
-        stopPeriodicChecks()
+        periodicTask?.cancel()
     }
 
     /// Start periodic integrity checking in the background.
@@ -94,8 +96,6 @@ public final class IntegrityChecker: @unchecked Sendable {
     /// Returns immediately. Checks run every `checkInterval` seconds.
     /// Call `stopPeriodicChecks()` to cancel.
     public func startPeriodicChecks() {
-        lock.lock()
-        defer { lock.unlock() }
         guard periodicTask == nil else { return }
 
         let path = bundleResourcesPath
@@ -121,8 +121,6 @@ public final class IntegrityChecker: @unchecked Sendable {
 
     /// Stop periodic integrity checks.
     public func stopPeriodicChecks() {
-        lock.lock()
-        defer { lock.unlock() }
         periodicTask?.cancel()
         periodicTask = nil
     }

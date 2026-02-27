@@ -162,9 +162,13 @@ public struct PermissionsView: View {
         // Perform an immediate check before the first tick.
         checkAccessibility()
 
+        // Capture `state` (a reference type) rather than `self` (a struct)
+        // to avoid retaining a stale copy of the view struct in the timer closure.
+        let observedState = state
         let timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
             Task { @MainActor in
-                self.checkAccessibility()
+                let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false] as CFDictionary
+                observedState.accessibilityGranted = AXIsProcessTrustedWithOptions(options)
             }
         }
         pollTimer = timer
