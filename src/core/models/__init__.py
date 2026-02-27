@@ -86,6 +86,11 @@ from src.core.models.pov import (
     ProcessModel,
     ProcessModelStatus,
 )
+from src.core.models.raci import (
+    RACIAssignment,
+    RACICell,
+    RACIStatus,
+)
 from src.core.models.seed_term import (
     SeedTerm,
     TermCategory,
@@ -202,6 +207,10 @@ __all__ = [
     "ProcessBaseline",
     "ProcessDeviation",
     "SuccessMetric",
+    # raci
+    "RACIAssignment",
+    "RACICell",
+    "RACIStatus",
     # pattern
     "PatternAccessRule",
     "PatternCategory",
