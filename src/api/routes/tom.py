@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+import uuid as _uuid
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -1385,7 +1386,7 @@ async def compute_maturity_scores(
     engagement_id: UUID,
     body: MaturityComputeRequest,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("tom:write")),
+    user: User = Depends(require_permission("engagement:update")),
     _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Compute maturity scores for all process areas in an engagement.
@@ -1398,8 +1399,6 @@ async def compute_maturity_scores(
     engagement = eng_result.scalar_one_or_none()
     if not engagement:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Engagement not found")
-
-    await _check_engagement_member(session, user, engagement_id)
 
     # Fetch all process models for this engagement
     pm_result = await session.execute(
@@ -1432,9 +1431,6 @@ async def compute_maturity_scores(
     score_results = await scorer.score_engagement(pm_dicts, governance_map)
 
     # Persist scores
-    import uuid as _uuid
-    from datetime import UTC
-
     now = datetime.now(UTC)
     score_responses = []
     for sr in score_results:
@@ -1488,7 +1484,7 @@ async def compute_maturity_scores(
 async def get_maturity_heatmap(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("tom:read")),
+    user: User = Depends(require_permission("engagement:read")),
     _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Return the maturity heatmap for all process areas in an engagement.
@@ -1500,8 +1496,6 @@ async def get_maturity_heatmap(
     eng_result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
     if not eng_result.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Engagement not found")
-
-    await _check_engagement_member(session, user, engagement_id)
 
     # Get latest maturity scores per process model using a subquery
     latest_scores_subq = (
