@@ -1,7 +1,8 @@
-"""Audit logging middleware for mutating API requests.
+"""Audit logging middleware for all API requests.
 
-Automatically logs POST, PUT, PATCH, DELETE requests with user identity,
-endpoint path, and engagement context to the application audit log.
+Automatically logs every HTTP request with user identity, endpoint path,
+IP address, user agent, engagement context, and response status to the
+audit trail. Fires asynchronously to avoid adding latency.
 """
 
 from __future__ import annotations
@@ -10,7 +11,6 @@ import logging
 import time
 
 from fastapi import Request, Response
-from sqlalchemy.exc import SQLAlchemyError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from src.core.audit import log_audit_event_async
@@ -19,18 +19,41 @@ logger = logging.getLogger(__name__)
 
 MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
+# Paths exempt from audit logging (health checks, OpenAPI docs)
+_SKIP_PATHS = frozenset({"/api/v1/health", "/docs", "/openapi.json", "/redoc"})
+
+
+def _extract_client_ip(request: Request) -> str:
+    """Extract client IP, preferring X-Forwarded-For when behind a proxy."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        # First IP in the chain is the original client
+        return forwarded.split(",")[0].strip()
+    if request.client:
+        return request.client.host
+    return "unknown"
+
+
+def _extract_resource_type(path: str) -> str | None:
+    """Infer resource type from URL path segments."""
+    parts = path.strip("/").split("/")
+    # Pattern: /api/v1/{resource}/... → resource
+    if len(parts) >= 3 and parts[0] == "api" and parts[1] == "v1":
+        return parts[2]
+    return None
+
 
 class AuditLoggingMiddleware(BaseHTTPMiddleware):
-    """Log all mutating HTTP requests for audit trail.
+    """Log all HTTP requests for audit trail compliance.
 
     Captures method, path, user identity (from JWT), response status,
-    and request duration. Persists to the http_audit_events table when
-    a database session factory is available on app.state.
-    Non-mutating requests (GET, HEAD, OPTIONS) are skipped.
+    IP address, user agent, and request duration. Persists to the
+    http_audit_events table via async fire-and-forget.
     """
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        if request.method not in MUTATING_METHODS:
+        # Skip health checks and docs
+        if request.url.path in _SKIP_PATHS:
             return await call_next(request)
 
         start = time.monotonic()
@@ -39,6 +62,10 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
         # Extract user identity from request state (set by auth dependencies)
         if hasattr(request.state, "user"):
             user_id = str(getattr(request.state.user, "id", "anonymous"))
+
+        ip_address = _extract_client_ip(request)
+        user_agent = request.headers.get("user-agent", "")
+        resource_type = _extract_resource_type(request.url.path)
 
         response = await call_next(request)
         duration_ms = round((time.monotonic() - start) * 1000, 2)
@@ -52,13 +79,14 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
                 engagement_id = path_parts[idx + 1]
 
         logger.info(
-            "AUDIT method=%s path=%s user=%s status=%d duration_ms=%.2f engagement=%s",
+            "AUDIT method=%s path=%s user=%s status=%d duration_ms=%.2f engagement=%s ip=%s",
             request.method,
             request.url.path,
             user_id,
             response.status_code,
             duration_ms,
             engagement_id or "none",
+            ip_address,
         )
 
         # Persist to database for compliance using the app-level session factory
@@ -73,6 +101,9 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
                         status_code=response.status_code,
                         engagement_id=engagement_id,
                         duration_ms=duration_ms,
+                        ip_address=ip_address,
+                        user_agent=user_agent,
+                        resource_type=resource_type,
                         session=session,
                     )
             else:
@@ -83,6 +114,9 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
                     status_code=response.status_code,
                     engagement_id=engagement_id,
                     duration_ms=duration_ms,
+                    ip_address=ip_address,
+                    user_agent=user_agent,
+                    resource_type=resource_type,
                 )
         except Exception as e:  # Intentionally broad: audit must not block requests
             logger.warning("Audit persistence failed (request not blocked): %s", e)
