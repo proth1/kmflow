@@ -573,3 +573,149 @@ class TestAgentLifecycle:
 
         await agent.stop()
         assert agent.health == AgentHealth.STOPPED
+
+
+# ===========================================================================
+# Circuit breaker tests (ARCH-1 fix)
+# ===========================================================================
+
+
+class TestCircuitBreaker:
+    """Agent stops polling after reaching UNHEALTHY state."""
+
+    @pytest.mark.asyncio
+    async def test_agent_stops_polling_after_unhealthy(self) -> None:
+        """Agent breaks the poll loop after max consecutive failures."""
+        config = make_config(
+            retry=RetryConfig(
+                max_consecutive_failures=2,
+                initial_delay_seconds=0.01,
+                max_delay_seconds=0.02,
+            )
+        )
+        agent = MockMonitoringAgent(config)
+        agent._poll_error = RuntimeError("Timeout")
+
+        await agent.start()
+        await asyncio.sleep(0.5)
+
+        # Agent should have stopped itself (circuit breaker)
+        assert agent._running is False
+        health_statuses = [e.status for e in agent._health_events]
+        assert AgentHealth.UNHEALTHY in health_statuses
+
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_fires_alert(self) -> None:
+        """Alert is fired when circuit breaker triggers."""
+        config = make_config(
+            retry=RetryConfig(
+                max_consecutive_failures=2,
+                initial_delay_seconds=0.01,
+                max_delay_seconds=0.02,
+            )
+        )
+        agent = MockMonitoringAgent(config)
+        agent._poll_error = RuntimeError("Timeout")
+
+        await agent.start()
+        await asyncio.sleep(0.5)
+        await agent.stop()
+
+        assert len(agent.alert_calls) >= 1
+        assert agent.alert_calls[-1][1] == "critical"
+
+
+# ===========================================================================
+# Registry stop_all tests (CQ-3 fix)
+# ===========================================================================
+
+
+class TestRegistryStopAll:
+    """Registry stop_all handles errors gracefully."""
+
+    @pytest.mark.asyncio
+    async def test_stop_all_stops_running_agents(self) -> None:
+        """stop_all stops all running agents."""
+        registry = AgentRegistry()
+        agents = []
+        for i in range(3):
+            a = MockMonitoringAgent(make_config(f"agent-{i}"))
+            a.health = AgentHealth.POLLING
+            registry.register(a)
+            agents.append(a)
+
+        await registry.stop_all()
+
+        for a in agents:
+            assert a.health == AgentHealth.STOPPED
+
+    @pytest.mark.asyncio
+    async def test_stop_all_continues_on_error(self) -> None:
+        """stop_all continues to next agent if one fails to stop."""
+
+        class FailStopAgent(MockMonitoringAgent):
+            async def stop(self) -> None:
+                raise RuntimeError("Stop failed")
+
+        registry = AgentRegistry()
+        fail_agent = FailStopAgent(make_config("fail-agent"))
+        fail_agent.health = AgentHealth.POLLING
+        ok_agent = MockMonitoringAgent(make_config("ok-agent"))
+        ok_agent.health = AgentHealth.POLLING
+
+        registry.register(fail_agent)
+        registry.register(ok_agent)
+
+        await registry.stop_all()  # Should not raise
+
+        assert ok_agent.health == AgentHealth.STOPPED
+
+
+# ===========================================================================
+# Bounded event history tests (CQ-1 fix)
+# ===========================================================================
+
+
+class TestBoundedEventHistory:
+    """Event lists are bounded to prevent memory leaks."""
+
+    def test_health_events_bounded(self) -> None:
+        """Health events deque has a maximum length."""
+        from src.monitoring.agents.base import MAX_EVENT_HISTORY
+
+        config = make_config()
+        agent = MockMonitoringAgent(config)
+
+        # Emit more events than the max
+        for i in range(MAX_EVENT_HISTORY + 100):
+            agent._emit_health(AgentHealth.POLLING, f"event-{i}")
+
+        assert len(agent._health_events) == MAX_EVENT_HISTORY
+
+    def test_extraction_events_bounded(self) -> None:
+        """Extraction events deque has a maximum length."""
+        from src.monitoring.agents.base import MAX_EVENT_HISTORY
+
+        config = make_config()
+        agent = MockMonitoringAgent(config)
+
+        for i in range(MAX_EVENT_HISTORY + 100):
+            agent._emit_extraction(i)
+
+        assert len(agent._extraction_events) == MAX_EVENT_HISTORY
+
+
+# ===========================================================================
+# Security: connection_params repr test (SEC-1 fix)
+# ===========================================================================
+
+
+class TestConfigSecurity:
+    """Connection params are not exposed in repr."""
+
+    def test_connection_params_hidden_in_repr(self) -> None:
+        """connection_params should not appear in config repr."""
+        config = make_config()
+        config_repr = repr(config)
+        assert "localhost" not in config_repr
+        assert "5432" not in config_repr

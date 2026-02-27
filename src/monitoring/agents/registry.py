@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class AgentRegistry:
     """Registry of monitoring agents with lifecycle management.
 
-    Thread-safe for concurrent agent start/stop operations within
+    Asyncio-safe for concurrent agent start/stop operations within
     a single asyncio event loop.
     """
 
@@ -69,10 +69,13 @@ class AgentRegistry:
         logger.info("Stopped agent: %s", agent_id)
 
     async def stop_all(self) -> None:
-        """Stop all running agents."""
+        """Stop all running agents. Continues if individual stops fail."""
         for agent in self._agents.values():
             if agent.health not in (AgentHealth.STOPPED,):
-                await agent.stop()
+                try:
+                    await agent.stop()
+                except Exception:
+                    logger.exception("Failed to stop agent %s", agent.agent_id)
 
     def unregister(self, agent_id: str) -> None:
         """Remove an agent from the registry.

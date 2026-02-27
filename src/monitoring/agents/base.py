@@ -10,6 +10,7 @@ Defines the abstract base class for all monitoring agents with:
 from __future__ import annotations
 
 import asyncio
+import collections
 import contextlib
 import enum
 import logging
@@ -20,6 +21,8 @@ from typing import Any
 from src.monitoring.agents.config import AgentConfig
 
 logger = logging.getLogger(__name__)
+
+MAX_EVENT_HISTORY = 1000
 
 
 class AgentHealth(enum.StrEnum):
@@ -78,8 +81,8 @@ class BaseMonitoringAgent(ABC):
         self.consecutive_failures: int = 0
         self._task: asyncio.Task[None] | None = None
         self._running = False
-        self._health_events: list[HealthEvent] = []
-        self._extraction_events: list[ExtractionEvent] = []
+        self._health_events: collections.deque[HealthEvent] = collections.deque(maxlen=MAX_EVENT_HISTORY)
+        self._extraction_events: collections.deque[ExtractionEvent] = collections.deque(maxlen=MAX_EVENT_HISTORY)
 
     def _emit_health(self, status: AgentHealth, detail: str = "") -> None:
         """Record a health status change."""
@@ -202,6 +205,9 @@ class BaseMonitoringAgent(ABC):
                         f"Agent unhealthy after {self.consecutive_failures} failures: {exc}",
                         severity="critical",
                     )
+                    # Circuit breaker: stop polling after max failures
+                    self._running = False
+                    break
                 else:
                     self._emit_health(AgentHealth.DEGRADED, str(exc))
 

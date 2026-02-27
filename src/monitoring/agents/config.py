@@ -24,6 +24,6 @@ class AgentConfig(BaseModel):
     agent_id: str = Field(..., min_length=1)
     source_type: str = Field(..., min_length=1)
     polling_interval_seconds: float = Field(default=60.0, ge=0.01)
-    connection_params: dict[str, str] = Field(default_factory=dict)
+    connection_params: dict[str, str] = Field(default_factory=dict, repr=False)
     retry: RetryConfig = Field(default_factory=RetryConfig)
     enabled: bool = True
