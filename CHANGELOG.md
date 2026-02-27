@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.097] - 2026-02-27
+### Added
+- Weighted consensus building with LCD algorithm: per-engagement weight overrides, exponential decay recency bias, variant detection, ConflictStub forwarding, brightness hints, 45 BDD tests (#310)
+
 ## [2026.02.096] - 2026-02-27
 ### Added
 - Evidence cataloging with automated metadata extraction: PDF/Excel extractors, language detection, catalog API with LIKE-safe search, JSONB metadata, 38 BDD tests (#304)

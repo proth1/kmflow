@@ -8,6 +8,12 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #413 merged** — Weighted consensus building with LCD algorithm (#310) (v2026.02.097)
+  - Per-engagement configurable weight map, exponential decay recency bias (half-life 3yr)
+  - Variant detection for structurally divergent paths (coverage threshold 0.4)
+  - ConflictStub forwarding for downstream contradiction resolution
+  - ConsensusResult dataclass, brightness hints (bright/dim/dark), 45 BDD tests
+  - PR review: REQUEST CHANGES → 2 CRITICAL fixed (breaking API, existing tests), 2 HIGH fixed (recency constants, blend ratio)
 - **PR #411 merged** — Evidence cataloging with metadata extraction (#304) (v2026.02.096)
   - MetadataExtractor base with PDF + Excel implementations, language detection
   - Catalog API: GET /catalog with category, date range, language, q filters (LIKE-safe)
