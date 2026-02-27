@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.149] - 2026-02-27
+### Added
+- Certainty tier tracking and survey claim management: SurveyClaimHistory audit trail, tier promotion with history recording, paginated filtered claim queries, shelf data request auto-generation from SUSPECTED claims, engagement-scoped IDOR-safe endpoints with require_engagement_access, migration 069, 24 tests (#322)
+
 ## [2026.02.148] - 2026-02-27
 ### Added
 - Data classification and GDPR compliance framework: four-tier classification (public/internal/confidential/restricted) with access control, per-engagement retention policies with ARCHIVE/DELETE enforcement, ROPA tracking with all six Article 6 lawful bases, compliance reporting, RBAC-protected API routes, migration 068, 31 tests (#317)

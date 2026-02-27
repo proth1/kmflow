@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.148
+**Version**: 2026.02.149
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.149 | 2026-02-27 | Certainty tier tracking: SurveyClaimHistory audit trail, tier promotion, shelf data auto-generation, IDOR-safe engagement-scoped endpoints, 24 tests (#322) |
 | 2026.02.148 | 2026-02-27 | Data classification + GDPR compliance: 4-tier classification, retention enforcement, ROPA tracking, compliance reporting, 31 tests (#317) |
 | 2026.02.147 | 2026-02-27 | Scenario comparison dashboard: 5-metric comparison, best/worst flagging, governance heuristic, 13 tests (#383) |
 | 2026.02.146 | 2026-02-27 | Consent architecture: 3 consent modes, policy bundles, immutability triggers, RESTRICT FK, 23 tests (#382) |
