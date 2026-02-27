@@ -10,8 +10,8 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Index, Text, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Index, String, Text, func
+from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.core.database import Base
@@ -84,13 +84,10 @@ class ConflictObject(Base):
     severity: Mapped[float] = mapped_column(Float, default=0.5, nullable=False)
     escalation_flag: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     resolution_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    conflict_detail: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    resolution_hint: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     def __repr__(self) -> str:
-        return (
-            f"<ConflictObject(id={self.id}, type={self.mismatch_type}, "
-            f"status={self.resolution_status})>"
-        )
+        return f"<ConflictObject(id={self.id}, type={self.mismatch_type}, status={self.resolution_status})>"
