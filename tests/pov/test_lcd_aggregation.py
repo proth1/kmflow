@@ -323,11 +323,11 @@ class TestDuplicateEntityFlagging:
         ]
         resolved, duplicates = resolve_entities(entities)
 
-        if duplicates:
-            pair = duplicates[0]
-            assert pair.entity_a_id in ("a1", "a2")
-            assert pair.entity_b_id in ("a1", "a2")
-            assert pair.entity_a_id != pair.entity_b_id
+        assert len(duplicates) >= 1, "Expected at least one duplicate candidate pair"
+        pair = duplicates[0]
+        assert pair.entity_a_id in ("a1", "a2")
+        assert pair.entity_b_id in ("a1", "a2")
+        assert pair.entity_a_id != pair.entity_b_id
 
     def test_duplicate_candidate_has_shared_type(self):
         """Duplicate candidate pair has the shared entity type."""
@@ -337,8 +337,8 @@ class TestDuplicateEntityFlagging:
         ]
         resolved, duplicates = resolve_entities(entities)
 
-        if duplicates:
-            assert duplicates[0].entity_type == EntityType.ROLE
+        assert len(duplicates) >= 1, "Expected at least one duplicate candidate pair"
+        assert duplicates[0].entity_type == EntityType.ROLE
 
     def test_no_duplicates_for_different_types(self):
         """Entities of different types are never flagged as duplicates."""
@@ -366,8 +366,8 @@ class TestDuplicateEntityFlagging:
         ]
         resolved, duplicates = resolve_entities(entities)
 
-        if duplicates:
-            assert duplicates[0].similarity_reason != ""
+        assert len(duplicates) >= 1, "Expected at least one duplicate candidate pair"
+        assert duplicates[0].similarity_reason != ""
 
     def test_acronym_detection(self):
         """Acronyms of multi-word names are detected as potential duplicates."""

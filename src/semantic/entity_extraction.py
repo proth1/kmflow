@@ -470,8 +470,9 @@ def _match_seed_term(entity_name: str, seed_terms_lower: set[str]) -> str | None
     if name_lower in seed_terms_lower:
         return name_lower
     # Also check substring containment for compound names
+    # Require minimum seed length of 3 to avoid false positives on short terms
     for seed in seed_terms_lower:
-        if seed in name_lower or name_lower in seed:
+        if len(seed) >= 3 and (seed in name_lower or name_lower in seed):
             return seed
     return None
 
@@ -620,10 +621,11 @@ def _check_name_similarity(norm_a: str, norm_b: str) -> str | None:
             return f"'{norm_a}' is an acronym of '{norm_b}'"
 
     # High word overlap: >50% of the smaller set's words shared
+    # Require smaller >= 2 to avoid false positives on single-word entities
     if words_a and words_b:
         overlap = words_a & words_b
         smaller = min(len(words_a), len(words_b))
-        if smaller >= 1 and len(overlap) / smaller >= 0.5:
+        if smaller >= 2 and len(overlap) / smaller >= 0.5:
             return f"High word overlap: {overlap}"
 
     return None
