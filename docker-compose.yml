@@ -9,7 +9,9 @@ services:
           memory: 1g
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres_dev
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:-postgres_dev}
+      KMFLOW_DB_PASSWORD: ${POSTGRES_PASSWORD:-kmflow_dev_password}
+      CAMUNDA_DB_PASSWORD: ${CAMUNDA_DB_PASSWORD:-camunda_dev}
     ports:
       - "${POSTGRES_PORT:-5433}:5432"
     volumes:
