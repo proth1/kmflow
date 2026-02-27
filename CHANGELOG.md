@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.140] - 2026-02-27
+### Added
+- Cross-border data transfer controls: GDPR-compliant transfer evaluation chain (residency → jurisdiction → TIA → SCC), jurisdiction registry, Transfer Impact Assessment lifecycle, Standard Contractual Clauses recording, append-only transfer log, role permissions for transfer:read/write and incident:read/write, migration 062, 20 tests (#395)
+
 ## [2026.02.139] - 2026-02-27
 ### Added
 - Incident response automation: P1-P4 classification with GDPR 72-hour deadline, containment with access restriction and audit freeze events, 48-hour DPO escalation, timeline generation on close with 7-year retention, actor derived from authenticated user, 404/409 error differentiation, migration 061, 16 BDD tests (#397)

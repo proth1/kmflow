@@ -8,6 +8,7 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #457 merged** — Cross-border transfer controls: GDPR transfer evaluation, TIA/SCC workflow, jurisdiction registry, role permissions, 20 tests (#395) (v2026.02.140)
 - **PR #456 merged** — Incident response automation: P1-P4 classification, GDPR 72h deadline, containment, escalation, timeline, 16 tests (#397) (v2026.02.139)
 - **PR #455 merged** — Telemetry micro-surveys: MicroSurvey model, deviation-to-probe mapping, anomaly threshold gate, SurveyClaim linkage, API endpoints, ORM relationships, 16 tests (#398) (v2026.02.138)
 - **PR #454 merged** — Shelf-epistemic integration: auto-create shelf items from epistemic actions, follow-through rate endpoint, source filter, 11 tests (#399) (v2026.02.137)
