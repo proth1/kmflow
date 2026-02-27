@@ -10,6 +10,7 @@
 
 import CommonCrypto
 import Foundation
+import os.log
 import Security
 
 // MARK: - ConsentRecord
@@ -69,6 +70,12 @@ public struct KeychainConsentStore: ConsentStore, Sendable {
     /// Keychain account for the HMAC signing key.
     private let hmacKeyAccount: String = "consent.hmac_key"
 
+    /// Structured logger (os_log) — avoids depending on the Utilities module.
+    private static let log = Logger(
+        subsystem: "com.kmflow.agent",
+        category: "KeychainConsentStore"
+    )
+
     // MARK: - Init
 
     public init() {}
@@ -91,7 +98,7 @@ public struct KeychainConsentStore: ConsentStore, Sendable {
             let expectedHmac = computeHMAC(data: recordData)
             guard signed.hmac == expectedHmac else {
                 // HMAC mismatch — record may have been tampered with
-                fputs("[KeychainConsentStore] HMAC verification failed for engagement \(engagementId)\n", stderr)
+                Self.log.error("HMAC verification failed for engagement \(engagementId, privacy: .public)")
                 return .neverConsented
             }
             return signed.record.state
@@ -99,7 +106,7 @@ public struct KeychainConsentStore: ConsentStore, Sendable {
             // Legacy unsigned records are rejected — users must re-consent.
             // This closes the tamper detection bypass where an attacker could
             // write a plain ConsentRecord JSON blob without HMAC.
-            fputs("[KeychainConsentStore] Unsigned consent record rejected for engagement \(engagementId) — re-consent required\n", stderr)
+            Self.log.error("Unsigned consent record rejected for engagement \(engagementId, privacy: .public) — re-consent required")
             return .neverConsented
         }
     }
@@ -174,8 +181,7 @@ public struct KeychainConsentStore: ConsentStore, Sendable {
         let status = SecItemAdd(addQuery as CFDictionary, nil)
         if status != errSecSuccess {
             // Non-fatal: consent will fall back to neverConsented on next load.
-            // os_log is not available here without importing os; use stderr.
-            fputs("[KeychainConsentStore] SecItemAdd failed: \(status)\n", stderr)
+            Self.log.error("SecItemAdd failed with status \(status, privacy: .public)")
         }
     }
 
@@ -237,7 +243,7 @@ public struct KeychainConsentStore: ConsentStore, Sendable {
         if result != errSecSuccess {
             // Fallback: UUID-based key is weaker than SecRandomCopyBytes but
             // still provides basic tamper detection. Log the degradation.
-            fputs("[KeychainConsentStore] WARNING: SecRandomCopyBytes failed (\(result)); falling back to UUID-based HMAC key\n", stderr)
+            Self.log.warning("SecRandomCopyBytes failed (\(result, privacy: .public)); falling back to UUID-based HMAC key")
             key = Data(UUID().uuidString.utf8)
         }
         keychainSave(account: hmacKeyAccount, data: key)

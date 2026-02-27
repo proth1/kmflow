@@ -14,6 +14,7 @@ import IPC
 import PII
 import SwiftUI
 import UI
+import Utilities
 
 @main
 struct KMFlowAgentApp: App {
@@ -28,18 +29,22 @@ struct KMFlowAgentApp: App {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private var stateManager: CaptureStateManager!
-    private var statusBarController: StatusBarController!
-    private var blocklistManager: BlocklistManager!
-    private var pythonManager: PythonProcessManager!
-    private var consentManager: ConsentManager!
+    private var stateManager: CaptureStateManager?
+    private var statusBarController: StatusBarController?
+    private var blocklistManager: BlocklistManager?
+    private var pythonManager: PythonProcessManager?
+    private var consentManager: ConsentManager?
     private var onboardingWindow: OnboardingWindow?
 
+    private static let log = AgentLogger(category: "AppDelegate")
+
     func applicationDidFinishLaunching(_ notification: Notification) {
-        stateManager = CaptureStateManager()
+        let state = CaptureStateManager()
+        stateManager = state
         blocklistManager = BlocklistManager()
-        statusBarController = StatusBarController(stateManager: stateManager)
-        statusBarController.setup()
+        let statusBar = StatusBarController(stateManager: state)
+        statusBarController = statusBar
+        statusBar.setup()
 
         // Verify Python bundle integrity before launching
         if let resourcesURL = Bundle.main.resourceURL?.appendingPathComponent("python") {
@@ -48,12 +53,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case .passed:
                 break
             case .failed(let violations):
-                NSLog("KMFlowAgent: Python integrity check failed: \(violations)")
-                stateManager.setError("Integrity check failed — Python bundle may have been tampered with")
-                statusBarController.updateIcon()
+                Self.log.error("Python integrity check failed: \(violations)")
+                state.setError("Integrity check failed — Python bundle may have been tampered with")
+                statusBar.updateIcon()
                 return
             case .manifestMissing:
-                NSLog("KMFlowAgent: Python integrity manifest not found (development mode)")
+                Self.log.warning("Python integrity manifest not found (development mode)")
             }
         }
 
@@ -65,46 +70,53 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let mdmDefaults = UserDefaults(suiteName: "com.kmflow.agent"),
            let mdmEngagement = mdmDefaults.string(forKey: "EngagementID"),
            !mdmEngagement.isEmpty {
-            engagementId = mdmEngagement
+            // Validate MDM-supplied engagement ID length
+            if mdmEngagement.count > 128 {
+                Self.log.error("MDM engagementId exceeds 128 characters — using default")
+                engagementId = "default"
+            } else {
+                engagementId = mdmEngagement
+            }
         } else {
             engagementId = UserDefaults.standard.string(forKey: "engagementId") ?? "default"
         }
 
-        consentManager = ConsentManager(engagementId: engagementId, store: consentStore)
+        let consent = ConsentManager(engagementId: engagementId, store: consentStore)
+        consentManager = consent
 
         // Wire consent revocation handler — stops capture and disconnects IPC
-        consentManager.onRevocation { [weak self] _ in
+        consent.onRevocation { [weak self] _ in
             guard let self else { return }
-            self.stateManager.stopCapture()
+            self.stateManager?.stopCapture()
             if let manager = self.pythonManager {
                 Task { await manager.stop() }
             }
-            self.stateManager.requireConsent()
-            self.statusBarController.updateIcon()
+            self.stateManager?.requireConsent()
+            self.statusBarController?.updateIcon()
         }
 
         // Wire state change handler — update menu bar icon on transitions
-        stateManager.onStateChange { [weak self] _, _ in
-            self?.statusBarController.updateIcon()
+        state.onStateChange { [weak self] _, _ in
+            self?.statusBarController?.updateIcon()
         }
 
-        if consentManager.state == .neverConsented {
+        if consent.state == .neverConsented {
             // Show first-run onboarding wizard
             onboardingWindow = OnboardingWindow()
             onboardingWindow?.show()
-            stateManager.requireConsent()
-        } else if !consentManager.captureAllowed {
-            stateManager.requireConsent()
+            state.requireConsent()
+        } else if !consent.captureAllowed {
+            state.requireConsent()
         } else {
             // Consent granted — start Python subprocess
             startPythonSubprocess()
         }
 
-        statusBarController.updateIcon()
+        statusBar.updateIcon()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        stateManager.stopCapture()
+        stateManager?.stopCapture()
         if let manager = pythonManager {
             Task { await manager.stop() }
         }

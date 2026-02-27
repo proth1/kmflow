@@ -57,6 +57,9 @@ public final class TransparencyLogController: ObservableObject {
     private let bufferEncryptionKeyKeychainKey = "buffer_encryption_key"
     private let keychainService = "com.kmflow.agent"
 
+    /// Shared ISO 8601 formatter — avoids repeated allocation in the row-parsing loop.
+    private static let iso8601Formatter = ISO8601DateFormatter()
+
     // MARK: - Timer
 
     private var refreshTimer: Timer?
@@ -65,9 +68,16 @@ public final class TransparencyLogController: ObservableObject {
     // MARK: - Init / deinit
 
     public init() {
-        let appSupport = FileManager.default.urls(
+        guard let appSupport = FileManager.default.urls(
             for: .applicationSupportDirectory, in: .userDomainMask
-        ).first!
+        ).first else {
+            // Application Support directory should always exist on macOS.
+            // Fall back to a temporary path so the app can still launch.
+            databaseURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("KMFlowAgent")
+                .appendingPathComponent("buffer.db")
+            return
+        }
         databaseURL = appSupport
             .appendingPathComponent("KMFlowAgent")
             .appendingPathComponent("buffer.db")
@@ -172,7 +182,7 @@ public final class TransparencyLogController: ObservableObject {
         case SQLITE_TEXT:
             if let tsCStr = sqlite3_column_text(stmt, 1) {
                 let tsString = String(cString: tsCStr)
-                tsRaw = ISO8601DateFormatter().date(from: tsString) ?? Date()
+                tsRaw = Self.iso8601Formatter.date(from: tsString) ?? Date()
             } else {
                 tsRaw = Date()
             }

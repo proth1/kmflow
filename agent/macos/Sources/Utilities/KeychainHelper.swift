@@ -56,7 +56,17 @@ public struct KeychainHelper: Sendable {
         SecItemDelete(query as CFDictionary)
     }
 
-    public enum KeychainError: Error {
+    public enum KeychainError: Error, LocalizedError {
         case saveFailed(OSStatus)
+        case loadFailed(OSStatus)
+
+        public var errorDescription: String? {
+            switch self {
+            case .saveFailed(let status):
+                return "Keychain save failed with status \(status)"
+            case .loadFailed(let status):
+                return "Keychain load failed with status \(status)"
+            }
+        }
     }
 }

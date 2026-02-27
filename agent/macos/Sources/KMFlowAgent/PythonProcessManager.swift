@@ -6,7 +6,7 @@
 /// with an exponential-backoff circuit breaker to cap restart attempts.
 
 import Foundation
-import os.log
+import Utilities
 
 /// Actor that owns and supervises the Python subprocess.
 ///
@@ -38,7 +38,7 @@ public actor PythonProcessManager {
 
     // MARK: - Logger
 
-    private let log = os.Logger(subsystem: "com.kmflow.agent", category: "PythonProcessManager")
+    private let log = AgentLogger(category: "PythonProcessManager")
 
     // MARK: - Lifecycle
 
@@ -64,7 +64,7 @@ public actor PythonProcessManager {
         let shimURL = executableDir.appendingPathComponent("kmflow-python")
 
         guard FileManager.default.isExecutableFile(atPath: shimURL.path) else {
-            log.error("kmflow-python shim not found at \(shimURL.path, privacy: .public)")
+            log.error("kmflow-python shim not found at \(shimURL.path)")
             return
         }
 
@@ -114,13 +114,13 @@ public actor PythonProcessManager {
         do {
             try proc.run()
         } catch {
-            log.error("Failed to launch Python subprocess: \(error.localizedDescription, privacy: .public)")
+            log.error("Failed to launch Python subprocess: \(error.localizedDescription)")
             return
         }
 
         self.process = proc
         self.isRunning = true
-        log.info("Python subprocess started with PID \(proc.processIdentifier, privacy: .public)")
+        log.info("Python subprocess started with PID \(proc.processIdentifier)")
     }
 
     /// Gracefully stop the Python subprocess.
@@ -140,7 +140,7 @@ public actor PythonProcessManager {
         // termination handler does not schedule a restart.
         isRunning = false
 
-        log.info("Sending SIGTERM to Python subprocess (PID \(proc.processIdentifier, privacy: .public))")
+        log.info("Sending SIGTERM to Python subprocess (PID \(proc.processIdentifier))")
         proc.terminate()
 
         // Poll for up to 5 seconds in 100 ms increments.
@@ -156,7 +156,7 @@ public actor PythonProcessManager {
             return .killed
         }
 
-        log.info("Python subprocess exited cleanly (code \(proc.terminationStatus, privacy: .public))")
+        log.info("Python subprocess exited cleanly (code \(proc.terminationStatus))")
         process = nil
         return .terminatedGracefully
     }
@@ -176,16 +176,12 @@ public actor PythonProcessManager {
         restartTimestamps = restartTimestamps.filter { $0 > windowStart }
 
         if restartTimestamps.count >= maxRestarts {
-            log.error(
-                "Circuit breaker tripped: \(self.maxRestarts, privacy: .public) restarts in \(Int(self.restartWindow), privacy: .public) s — giving up"
-            )
+            log.error("Circuit breaker tripped: \(maxRestarts) restarts in \(Int(restartWindow)) s — giving up")
             return
         }
 
         restartTimestamps.append(Date())
-        log.warning(
-            "Restarting Python subprocess (attempt \(self.restartTimestamps.count, privacy: .public) of \(self.maxRestarts, privacy: .public))"
-        )
+        log.warning("Restarting Python subprocess (attempt \(restartTimestamps.count) of \(maxRestarts))")
         start()
     }
 
@@ -196,7 +192,7 @@ public actor PythonProcessManager {
             // Intentional stop — do not restart.
             return
         }
-        log.warning("Python subprocess exited unexpectedly with code \(exitCode, privacy: .public)")
+        log.warning("Python subprocess exited unexpectedly with code \(exitCode)")
         process = nil
         isRunning = false
         await restart()

@@ -39,6 +39,10 @@ public struct AppSwitchEvent: Sendable {
 }
 
 /// Concrete NSWorkspace-based observer.
+///
+/// All NSWorkspace notification observation and state updates run on the main
+/// queue (`queue: .main`). Full `@MainActor` annotation is deferred until
+/// BlocklistManager's `shouldCapture` is made nonisolated or async-compatible.
 public final class SystemAppSwitchMonitor: WorkspaceObserver {
     private var observer: NSObjectProtocol?
     private var lastAppName: String?

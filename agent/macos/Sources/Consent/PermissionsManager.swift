@@ -37,18 +37,5 @@ public struct SystemPermissionsProvider: PermissionsProvider {
     }
 }
 
-/// Mock permissions provider for testing.
-public actor MockPermissionsProvider: PermissionsProvider {
-    public var accessibilityGranted: Bool
-    public var screenRecordingGranted: Bool
-    public var requestCount: Int = 0
-
-    public init(accessibilityGranted: Bool = true, screenRecordingGranted: Bool = false) {
-        self.accessibilityGranted = accessibilityGranted
-        self.screenRecordingGranted = screenRecordingGranted
-    }
-
-    public nonisolated func isAccessibilityGranted() -> Bool { true }
-    public func requestAccessibility() { requestCount += 1 }
-    public nonisolated func isScreenRecordingGranted() -> Bool { false }
-}
+// MockPermissionsProvider moved to Tests/ConsentTests/ — test doubles
+// should not ship in production binaries.
