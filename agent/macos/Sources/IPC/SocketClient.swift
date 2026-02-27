@@ -79,6 +79,10 @@ public actor SocketClient {
             throw SocketError.connectionFailed("connect() failed: \(errno)")
         }
 
+        // Ignore SIGPIPE — if the server closes the socket mid-write,
+        // we handle the error in send() rather than crashing the process.
+        signal(SIGPIPE, SIG_IGN)
+
         fileHandle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
 
         // Perform auth handshake if token is configured.
@@ -88,11 +92,28 @@ public actor SocketClient {
             guard let jsonData = try? JSONSerialization.data(withJSONObject: authDict),
                   let authData = String(data: jsonData, encoding: .utf8)?.appending("\n").data(using: .utf8)
             else {
-                close(fd)
-                fileHandle = nil
+                cleanupFileHandle()
                 throw SocketError.connectionFailed("Failed to encode auth token")
             }
             fh.write(authData)
+
+            // Read server response to validate authentication was accepted.
+            // The Python server responds with {"status": "ok"} or an error.
+            let responseData = fh.availableData
+            if responseData.isEmpty {
+                cleanupFileHandle()
+                throw SocketError.connectionFailed("Server closed connection during auth handshake")
+            }
+            if let response = try? JSONSerialization.jsonObject(with: responseData) as? [String: Any],
+               let status = response["status"] as? String {
+                guard status == "ok" else {
+                    let detail = response["error"] as? String ?? "unknown"
+                    cleanupFileHandle()
+                    throw SocketError.connectionFailed("Server rejected auth: \(detail)")
+                }
+            }
+            // If response isn't valid JSON, proceed (backward compat with servers
+            // that don't send auth responses yet).
         }
 
         isConnected = true
@@ -112,8 +133,7 @@ public actor SocketClient {
             fh.write(data)
         } catch {
             // Write failed — mark disconnected for next attempt
-            isConnected = false
-            fileHandle = nil
+            cleanupFileHandle()
             throw error
         }
     }
@@ -134,6 +154,11 @@ public actor SocketClient {
 
     /// Disconnect from the socket.
     public func disconnect() {
+        cleanupFileHandle()
+    }
+
+    /// Close and nil out the file handle, resetting connection state.
+    private func cleanupFileHandle() {
         fileHandle?.closeFile()
         fileHandle = nil
         isConnected = false

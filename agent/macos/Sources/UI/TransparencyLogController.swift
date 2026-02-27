@@ -54,8 +54,7 @@ public final class TransparencyLogController: ObservableObject {
     // MARK: - Configuration
 
     private let databaseURL: URL
-    private let bufferEncryptionKeyKeychainKey = "buffer_encryption_key"
-    private let keychainService = "com.kmflow.agent"
+    private let encryptionManager = BufferEncryptionManager()
 
     /// Shared ISO 8601 formatter — avoids repeated allocation in the row-parsing loop.
     private static let iso8601Formatter = ISO8601DateFormatter()
@@ -121,8 +120,8 @@ public final class TransparencyLogController: ObservableObject {
 
         // Load the AES-256-GCM encryption key from Keychain for decryption.
         // If no key exists yet (first launch, or pre-encryption data), rows
-        // are read as plaintext for backward compatibility.
-        let encryptionKey = loadBufferKeyFromKeychain()
+        // are read as plaintext.
+        let encryptionKey = encryptionManager.loadKey()
 
         var db: OpaquePointer?
         let openFlags = SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX
@@ -229,67 +228,35 @@ public final class TransparencyLogController: ObservableObject {
         )
     }
 
-    /// Retrieve the buffer encryption key from the Keychain.
-    ///
-    /// Returns `nil` if the key has not yet been provisioned (e.g. first
-    /// launch before Python writes its first event).
-    private func loadBufferKeyFromKeychain() -> Data? {
-        let query: [String: Any] = [
-            kSecClass as String:       kSecClassGenericPassword,
-            kSecAttrService as String: keychainService,
-            kSecAttrAccount as String: bufferEncryptionKeyKeychainKey,
-            kSecReturnData as String:  true,
-            kSecMatchLimit as String:  kSecMatchLimitOne,
-        ]
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        guard status == errSecSuccess else { return nil }
-        return result as? Data
-    }
-
-    /// Provision a new AES-256-GCM encryption key in the Keychain.
+    /// Provision a new AES-256-GCM encryption key via the encryption manager.
     ///
     /// Called once during initial setup. The Python layer reads this same
     /// key to encrypt buffer rows; the Swift layer reads it to decrypt.
     @discardableResult
     public func provisionEncryptionKey() -> Data? {
-        // Don't overwrite an existing key
-        if let existing = loadBufferKeyFromKeychain() {
-            return existing
-        }
-        // Generate 256-bit random key
-        var keyData = Data(count: 32)
-        let result = keyData.withUnsafeMutableBytes { ptr in
-            SecRandomCopyBytes(kSecRandomDefault, 32, ptr.baseAddress!)
-        }
-        guard result == errSecSuccess else { return nil }
-
-        let addQuery: [String: Any] = [
-            kSecClass as String:          kSecClassGenericPassword,
-            kSecAttrService as String:    keychainService,
-            kSecAttrAccount as String:    bufferEncryptionKeyKeychainKey,
-            kSecValueData as String:      keyData,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
-            // Prevent iCloud Keychain sync — encryption key must stay device-local.
-            kSecAttrSynchronizable as String: kCFBooleanFalse as Any,
-        ]
-        let status = SecItemAdd(addQuery as CFDictionary, nil)
-        guard status == errSecSuccess else { return nil }
-        return keyData
+        encryptionManager.provisionKey()
     }
 
     /// Attempt to decrypt a base64-encoded AES-256-GCM ciphertext.
     ///
     /// Expected format: base64(nonce‖ciphertext‖tag) where nonce = 12 bytes,
     /// tag = 16 bytes (appended by Python's `cryptography` library).
-    /// Returns the plaintext string on success, or the original string if
-    /// decryption fails (backward compat with pre-encryption data).
+    ///
+    /// When an encryption key is available, all values are expected to be
+    /// encrypted. A value that fails base64 decoding or is too short is
+    /// treated as a data integrity error and returned as `"[decryption error]"`
+    /// rather than silently passing through as plaintext. This removes the
+    /// plaintext fallback that could leak sensitive data if encryption was
+    /// misconfigured.
     private func decryptIfNeeded(_ value: String, key: Data?) -> String {
-        guard let key = key,
-              let cipherData = Data(base64Encoded: value),
+        guard let key = key else {
+            return value // no key provisioned — return as-is (pre-encryption data)
+        }
+        guard let cipherData = Data(base64Encoded: value),
               cipherData.count > 28 // 12 (nonce) + 0 (min plaintext) + 16 (tag)
         else {
-            return value // plaintext or no key — return as-is
+            // Key is available but value isn't valid ciphertext — data integrity issue
+            return "[decryption error]"
         }
 
         let nonceSize = 12
@@ -324,7 +291,64 @@ public final class TransparencyLogController: ObservableObject {
         if status == kCCSuccess, let decrypted = String(data: plaintext, encoding: .utf8) {
             return decrypted
         }
-        // Decryption failed — likely plaintext data from before encryption was enabled
-        return value
+        // Decryption failed — key is available but decryption didn't succeed
+        return "[decryption error]"
+    }
+}
+
+// MARK: - BufferEncryptionManager
+
+/// Manages the AES-256-GCM encryption key used to protect sensitive columns
+/// in the local SQLite capture buffer.
+///
+/// Extracted from `TransparencyLogController` so that key provisioning and
+/// loading logic can be reused and tested independently.
+struct BufferEncryptionManager {
+    private let keychainService = "com.kmflow.agent"
+    private let keychainAccount = "buffer_encryption_key"
+
+    /// Load the buffer encryption key from the Keychain.
+    ///
+    /// Returns `nil` if the key has not yet been provisioned.
+    func loadKey() -> Data? {
+        let query: [String: Any] = [
+            kSecClass as String:       kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: keychainAccount,
+            kSecReturnData as String:  true,
+            kSecMatchLimit as String:  kSecMatchLimitOne,
+        ]
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        guard status == errSecSuccess else { return nil }
+        return result as? Data
+    }
+
+    /// Provision a new AES-256-GCM key, or return the existing one.
+    ///
+    /// The Python layer reads this same key to encrypt buffer rows;
+    /// the Swift layer reads it to decrypt.
+    @discardableResult
+    func provisionKey() -> Data? {
+        if let existing = loadKey() {
+            return existing
+        }
+        var keyData = Data(count: 32)
+        let result = keyData.withUnsafeMutableBytes { ptr in
+            SecRandomCopyBytes(kSecRandomDefault, 32, ptr.baseAddress!)
+        }
+        guard result == errSecSuccess else { return nil }
+
+        let addQuery: [String: Any] = [
+            kSecClass as String:          kSecClassGenericPassword,
+            kSecAttrService as String:    keychainService,
+            kSecAttrAccount as String:    keychainAccount,
+            kSecValueData as String:      keyData,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+            kSecAttrSynchronizable as String: kCFBooleanFalse as Any,
+        ]
+        let status = SecItemAdd(addQuery as CFDictionary, nil)
+        guard status == errSecSuccess else { return nil }
+        return keyData
     }
 }

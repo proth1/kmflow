@@ -268,10 +268,11 @@ public struct KeychainConsentStore: ConsentStore, Sendable {
             SecRandomCopyBytes(kSecRandomDefault, 32, ptr.baseAddress!)
         }
         if result != errSecSuccess {
-            // Fallback: UUID-based key is weaker than SecRandomCopyBytes but
-            // still provides basic tamper detection. Log the degradation.
-            Self.log.warning("SecRandomCopyBytes failed (\(result, privacy: .public)); falling back to UUID-based HMAC key")
-            key = Data(UUID().uuidString.utf8)
+            // SecRandomCopyBytes failure means the system's CSPRNG is unavailable,
+            // which is a critical security issue. Do not fall back to UUID — it
+            // provides insufficient entropy for HMAC signing.
+            Self.log.error("SecRandomCopyBytes failed (\(result, privacy: .public)) — cannot generate HMAC key")
+            return Data()
         }
         keychainSave(account: hmacKeyAccount, data: key)
         return key

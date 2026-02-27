@@ -159,7 +159,12 @@ public actor IntegrityChecker {
             }
             log.info("Integrity manifest HMAC verified")
         } else {
-            log.warning("integrity.sig not found — HMAC verification skipped")
+            #if DEBUG
+            log.warning("integrity.sig not found — HMAC verification skipped (debug build)")
+            #else
+            log.error("integrity.sig not found — required in release builds")
+            return .failed(violations: ["integrity.sig (missing)"])
+            #endif
         }
 
         // Decode manifest.
