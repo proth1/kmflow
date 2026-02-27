@@ -55,6 +55,21 @@ FORM_EDGE_MAPPINGS: dict[KnowledgeForm, list[str]] = {
     KnowledgeForm.UNCERTAINTY: ["CONTRADICTS", "DEVIATES_FROM"],
 }
 
+# Map form → suggested probe type string for gap remediation.
+# Single source of truth — used by both compute_knowledge_gaps()
+# and GapProbeGenerator in src/semantic/gap_probe_generator.py.
+FORM_PROBE_TYPE_MAP: dict[KnowledgeForm, str] = {
+    KnowledgeForm.ACTIVITIES: "existence",
+    KnowledgeForm.SEQUENCES: "sequence",
+    KnowledgeForm.DEPENDENCIES: "dependency",
+    KnowledgeForm.INPUTS_OUTPUTS: "input_output",
+    KnowledgeForm.RULES: "governance",
+    KnowledgeForm.PERSONAS: "performer",
+    KnowledgeForm.CONTROLS: "governance",
+    KnowledgeForm.EVIDENCE: "existence",
+    KnowledgeForm.UNCERTAINTY: "uncertainty",
+}
+
 FORM_NUMBERS: dict[KnowledgeForm, int] = {
     KnowledgeForm.ACTIVITIES: 1,
     KnowledgeForm.SEQUENCES: 2,
@@ -213,19 +228,6 @@ class KnowledgeFormsCoverageService:
         if not activity_ids:
             return []
 
-        # Map form to suggested probe type for gap remediation
-        probe_type_map: dict[KnowledgeForm, str] = {
-            KnowledgeForm.ACTIVITIES: "existence",
-            KnowledgeForm.SEQUENCES: "sequence",
-            KnowledgeForm.DEPENDENCIES: "dependency",
-            KnowledgeForm.INPUTS_OUTPUTS: "input_output",
-            KnowledgeForm.RULES: "governance",
-            KnowledgeForm.PERSONAS: "performer",
-            KnowledgeForm.CONTROLS: "governance",
-            KnowledgeForm.EVIDENCE: "existence",
-            KnowledgeForm.UNCERTAINTY: "uncertainty",
-        }
-
         gaps = []
         for form in KnowledgeForm:
             covered = await self.compute_form_coverage(engagement_id, activity_ids, form)
@@ -236,7 +238,7 @@ class KnowledgeFormsCoverageService:
                     "form_number": FORM_NUMBERS[form],
                     "form_name": form.value,
                     "gap_type": "missing_evidence",
-                    "suggested_probe_type": probe_type_map[form],
+                    "suggested_probe_type": FORM_PROBE_TYPE_MAP[form],
                 })
 
         return gaps
