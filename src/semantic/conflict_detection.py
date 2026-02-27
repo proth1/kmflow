@@ -1,10 +1,12 @@
-"""Cross-Source Conflict Detection Engine (Stories #372, #375).
+"""Cross-Source Conflict Detection Engine (Stories #372, #375, #378).
 
 Detects cross-source conflicts in the knowledge graph:
 - Sequence mismatches: contradictory PRECEDES edges (A→B vs B→A)
 - Role mismatches: different PERFORMED_BY assignments for same activity
 - Rule mismatches: contradictory business rule values from different sources
 - Existence mismatches: activity in one source but absent in another
+- I/O mismatches: upstream output artifact doesn't match downstream expected input
+- Control gaps: activity requires governance control per policy but no GOVERNED_BY edge
 
 Temporal resolution: when conflicting sources have non-overlapping
 effective date ranges, suggests TEMPORAL_SHIFT resolution.
@@ -21,7 +23,14 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.models import ConflictObject, MismatchType, ResolutionStatus, ResolutionType
+from src.core.models import (
+    ConflictObject,
+    MismatchType,
+    ResolutionStatus,
+    ResolutionType,
+    ShelfDataRequest,
+    ShelfRequestStatus,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -182,6 +191,9 @@ class DetectionResult:
     role_conflicts_found: int = 0
     rule_conflicts_found: int = 0
     existence_conflicts_found: int = 0
+    io_conflicts_found: int = 0
+    control_gap_conflicts_found: int = 0
+    shelf_requests_created: int = 0
 
     @property
     def total_conflicts(self) -> int:
@@ -554,6 +566,268 @@ class ExistenceConflictDetector:
         return conflicts
 
 
+class IOMismatchDetector:
+    """Detect I/O mismatches between connected activities.
+
+    Finds cases where an upstream activity PRODUCES a DataObject that does not
+    match the DataObject CONSUMED by its downstream activity (connected via
+    PRECEDES). The mismatch is detected when the produced and consumed
+    DataObject names differ for the same PRECEDES pair.
+    """
+
+    def __init__(self, graph_service: Any) -> None:
+        self._graph = graph_service
+
+    async def detect(self, engagement_id: str) -> list[DetectedConflict]:
+        """Find I/O mismatches for an engagement."""
+        conflicts: list[DetectedConflict] = []
+
+        try:
+            records = await self._graph.run_query(
+                """
+                MATCH (upstream:Activity)-[:PRECEDES]->(downstream:Activity)
+                WHERE upstream.engagement_id = $engagement_id
+                WITH upstream, downstream
+                MATCH (upstream)-[:PRODUCES]->(produced:DataObject)
+                MATCH (downstream)-[:CONSUMES]->(consumed:DataObject)
+                WHERE produced.name <> consumed.name
+                  AND produced.engagement_id = $engagement_id
+                  AND consumed.engagement_id = $engagement_id
+                RETURN
+                    upstream.name AS upstream_name,
+                    downstream.name AS downstream_name,
+                    produced.name AS produced_artifact,
+                    consumed.name AS consumed_artifact,
+                    upstream.source_id AS source_upstream,
+                    downstream.source_id AS source_downstream
+                LIMIT $limit
+                """,
+                {"engagement_id": engagement_id, "limit": 500},
+            )
+        except Exception:
+            logger.exception("Failed to query I/O mismatches for %s", engagement_id)
+            return conflicts
+
+        for record in records:
+            # Higher severity for I/O mismatches since they indicate broken data flow
+            score = 0.7
+            label = severity_label(score)
+
+            detail_dict: dict[str, Any] = {
+                "upstream_activity": record.get("upstream_name"),
+                "downstream_activity": record.get("downstream_name"),
+                "produced_artifact": record.get("produced_artifact"),
+                "consumed_artifact": record.get("consumed_artifact"),
+            }
+
+            conflicts.append(
+                DetectedConflict(
+                    mismatch_type=MismatchType.IO_MISMATCH,
+                    engagement_id=engagement_id,
+                    source_a_id=str(record.get("source_upstream", "")),
+                    source_b_id=str(record.get("source_downstream", "")),
+                    severity_score=score,
+                    severity_label=label,
+                    detail=(
+                        f"I/O mismatch: '{record.get('upstream_name')}' produces "
+                        f"'{record.get('produced_artifact')}' but '{record.get('downstream_name')}' "
+                        f"consumes '{record.get('consumed_artifact')}'"
+                    ),
+                    edge_a_data={
+                        "activity": record.get("upstream_name"),
+                        "artifact": record.get("produced_artifact"),
+                        "direction": "produces",
+                    },
+                    edge_b_data={
+                        "activity": record.get("downstream_name"),
+                        "artifact": record.get("consumed_artifact"),
+                        "direction": "consumes",
+                    },
+                    conflict_detail=detail_dict,
+                )
+            )
+
+        return conflicts
+
+
+# Default control criticality levels per activity keyword.
+# Financial processing → high, general → medium.
+DEFAULT_CONTROL_CRITICALITY: dict[str, float] = {
+    "financial": 0.9,
+    "payment": 0.9,
+    "approval": 0.8,
+    "compliance": 0.8,
+    "regulatory": 0.85,
+    "audit": 0.75,
+}
+
+
+def _activity_criticality(activity_name: str) -> float:
+    """Estimate control gap severity from activity name keywords."""
+    name_lower = (activity_name or "").lower()
+    for keyword, score in DEFAULT_CONTROL_CRITICALITY.items():
+        if keyword in name_lower:
+            return score
+    return 0.6  # Default medium severity
+
+
+class ControlGapDetector:
+    """Detect missing governance controls for activities.
+
+    Finds activities that match a ControlRequirement pattern but have no
+    GOVERNED_BY edge to a Policy or Regulation node. These represent
+    compliance gaps that should trigger shelf data requests.
+    """
+
+    def __init__(self, graph_service: Any) -> None:
+        self._graph = graph_service
+
+    async def detect(self, engagement_id: str) -> list[DetectedConflict]:
+        """Find control gaps for an engagement.
+
+        Queries Neo4j for ControlRequirement nodes, then checks if matching
+        activities have the required GOVERNED_BY edges.
+        """
+        conflicts: list[DetectedConflict] = []
+
+        try:
+            records = await self._graph.run_query(
+                """
+                MATCH (cr:ControlRequirement)
+                WHERE cr.engagement_id = $engagement_id
+                WITH cr
+                MATCH (act:Activity)
+                WHERE act.engagement_id = $engagement_id
+                  AND toLower(act.name) CONTAINS toLower(cr.activity_pattern)
+                  AND NOT EXISTS {
+                    MATCH (act)-[:GOVERNED_BY]->(:Policy)
+                  }
+                  AND NOT EXISTS {
+                    MATCH (act)-[:GOVERNED_BY]->(:Regulation)
+                  }
+                RETURN
+                    act.name AS activity_name,
+                    cr.name AS requirement_name,
+                    cr.required_control_type AS required_control,
+                    cr.source_id AS policy_source_id,
+                    cr.criticality AS criticality,
+                    act.source_id AS activity_source_id
+                LIMIT $limit
+                """,
+                {"engagement_id": engagement_id, "limit": 500},
+            )
+        except Exception:
+            logger.exception("Failed to query control gaps for %s", engagement_id)
+            return conflicts
+
+        for record in records:
+            activity_name = record.get("activity_name", "")
+            criticality = record.get("criticality")
+            score = float(criticality) if criticality else _activity_criticality(activity_name)
+            label = severity_label(score)
+
+            detail_dict: dict[str, Any] = {
+                "activity": activity_name,
+                "requirement": record.get("requirement_name"),
+                "required_control": record.get("required_control"),
+                "policy_source_id": record.get("policy_source_id"),
+            }
+
+            conflicts.append(
+                DetectedConflict(
+                    mismatch_type=MismatchType.CONTROL_GAP,
+                    engagement_id=engagement_id,
+                    source_a_id=str(record.get("activity_source_id", "")),
+                    source_b_id=str(record.get("policy_source_id", "")),
+                    severity_score=score,
+                    severity_label=label,
+                    detail=(
+                        f"Control gap: '{activity_name}' requires "
+                        f"'{record.get('required_control')}' control per "
+                        f"'{record.get('requirement_name')}' but has no GOVERNED_BY edge"
+                    ),
+                    edge_a_data={
+                        "activity": activity_name,
+                        "status": "uncontrolled",
+                    },
+                    edge_b_data={
+                        "requirement": record.get("requirement_name"),
+                        "required_control": record.get("required_control"),
+                    },
+                    conflict_detail=detail_dict,
+                )
+            )
+
+        return conflicts
+
+
+async def _create_shelf_requests_for_control_gaps(
+    session: AsyncSession,
+    engagement_id: uuid.UUID,
+    control_gap_conflicts: list[DetectedConflict],
+    persisted_conflict_ids: dict[str, uuid.UUID],
+) -> int:
+    """Auto-generate shelf data requests for CONTROL_GAP ConflictObjects.
+
+    Creates a ShelfDataRequest with status OPEN for each control gap,
+    prompting evidence acquisition for the missing governance control.
+
+    Args:
+        session: Database session.
+        engagement_id: The engagement UUID.
+        control_gap_conflicts: List of detected control gap conflicts.
+        persisted_conflict_ids: Map of conflict detail key → persisted ConflictObject ID.
+
+    Returns:
+        Number of shelf data requests created.
+    """
+    created = 0
+
+    for conflict in control_gap_conflicts:
+        activity_name = conflict.conflict_detail.get("activity", "Unknown") if conflict.conflict_detail else "Unknown"
+        required_control = (
+            conflict.conflict_detail.get("required_control", "governance control")
+            if conflict.conflict_detail
+            else "governance control"
+        )
+
+        title = f"Evidence required: governance control for [{activity_name}]"
+
+        # Check if a shelf request with this title already exists
+        existing = await session.execute(
+            select(ShelfDataRequest).where(
+                ShelfDataRequest.engagement_id == engagement_id,
+                ShelfDataRequest.title == title,
+            )
+        )
+        if existing.scalar_one_or_none() is not None:
+            continue
+
+        body = (
+            f"Activity '{activity_name}' requires a '{required_control}' control "
+            f"per regulatory policy but no governance evidence exists in the knowledge graph.\n\n"
+            f"Evidence types that would satisfy this gap:\n"
+            f"- Control register documenting the control\n"
+            f"- Audit report confirming control effectiveness\n"
+            f"- Policy procedure document describing the control\n"
+            f"- System configuration evidence showing automated controls"
+        )
+
+        request = ShelfDataRequest(
+            engagement_id=engagement_id,
+            title=title,
+            description=body,
+            status=ShelfRequestStatus.OPEN,
+        )
+        session.add(request)
+        created += 1
+
+    if created > 0:
+        await session.flush()
+
+    return created
+
+
 async def run_conflict_detection(
     graph_service: Any,
     session: AsyncSession,
@@ -561,8 +835,9 @@ async def run_conflict_detection(
 ) -> DetectionResult:
     """Run full conflict detection pipeline for an engagement.
 
-    Detects sequence, role, rule, and existence mismatches, persists
-    new conflicts as ConflictObjects (idempotent — skips duplicates).
+    Detects sequence, role, rule, existence, I/O, and control gap
+    mismatches, persists new conflicts as ConflictObjects (idempotent —
+    skips duplicates). Auto-generates shelf data requests for control gaps.
 
     Args:
         graph_service: Knowledge graph service for Cypher queries.
@@ -598,9 +873,22 @@ async def run_conflict_detection(
     result.conflicts.extend(existence_conflicts)
     result.existence_conflicts_found = len(existence_conflicts)
 
+    # Detect I/O mismatches
+    io_detector = IOMismatchDetector(graph_service)
+    io_conflicts = await io_detector.detect(engagement_id)
+    result.conflicts.extend(io_conflicts)
+    result.io_conflicts_found = len(io_conflicts)
+
+    # Detect control gaps
+    gap_detector = ControlGapDetector(graph_service)
+    gap_conflicts = await gap_detector.detect(engagement_id)
+    result.conflicts.extend(gap_conflicts)
+    result.control_gap_conflicts_found = len(gap_conflicts)
+
     # Persist new conflicts (idempotent: check for existing by source pair + type)
     eng_uuid = uuid.UUID(engagement_id) if isinstance(engagement_id, str) else engagement_id
     persisted = 0
+    persisted_ids: dict[str, uuid.UUID] = {}
 
     for conflict in result.conflicts:
         # Check for existing conflict with same sources and type
@@ -630,19 +918,31 @@ async def run_conflict_detection(
         )
         session.add(obj)
         persisted += 1
+        detail_key = f"{conflict.mismatch_type}:{conflict.source_a_id}:{conflict.source_b_id}"
+        persisted_ids[detail_key] = obj.id
 
     if persisted > 0:
         await session.flush()
 
+    # Auto-generate shelf data requests for control gaps
+    if gap_conflicts:
+        shelf_count = await _create_shelf_requests_for_control_gaps(session, eng_uuid, gap_conflicts, persisted_ids)
+        result.shelf_requests_created = shelf_count
+
     logger.info(
-        "Conflict detection for %s: %d conflicts found (%d seq, %d role, %d rule, %d existence), %d new persisted",
+        "Conflict detection for %s: %d conflicts found "
+        "(%d seq, %d role, %d rule, %d existence, %d io, %d control_gap), "
+        "%d persisted, %d shelf requests",
         engagement_id,
         result.total_conflicts,
         result.sequence_conflicts_found,
         result.role_conflicts_found,
         result.rule_conflicts_found,
         result.existence_conflicts_found,
+        result.io_conflicts_found,
+        result.control_gap_conflicts_found,
         persisted,
+        result.shelf_requests_created,
     )
 
     return result
