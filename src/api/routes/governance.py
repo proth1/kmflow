@@ -20,7 +20,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
-from src.core.models import DataCatalogEntry, DataClassification, DataLayer, EvidenceItem, User
+from src.core.audit import log_audit
+from src.core.models import AuditAction, DataCatalogEntry, DataClassification, DataLayer, EvidenceItem, User
 from src.core.permissions import require_engagement_access, require_permission
 from src.datalake.backend import get_storage_backend
 from src.datalake.silver import SilverLayerWriter
@@ -204,6 +205,11 @@ async def create_catalog_entry(
         retention_days=body.retention_days,
         description=body.description,
     )
+    if body.engagement_id:
+        await log_audit(
+            session, body.engagement_id, AuditAction.ENGAGEMENT_UPDATED,
+            f"Created catalog entry: {body.dataset_name}", actor=str(user.id),
+        )
     await session.commit()
     return entry
 
@@ -244,6 +250,11 @@ async def update_catalog_entry(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Catalog entry {entry_id} not found",
         )
+    if entry.engagement_id:
+        await log_audit(
+            session, entry.engagement_id, AuditAction.ENGAGEMENT_UPDATED,
+            f"Updated catalog entry: {entry.dataset_name}", actor=str(user.id),
+        )
     await session.commit()
     return entry
 
@@ -256,6 +267,18 @@ async def delete_catalog_entry(
 ) -> None:
     """Delete a data catalog entry."""
     svc = DataCatalogService(session)
+    # Fetch entry first to get engagement_id for audit
+    entry = await svc.get_entry(entry_id)
+    if entry is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Catalog entry {entry_id} not found",
+        )
+    if entry.engagement_id:
+        await log_audit(
+            session, entry.engagement_id, AuditAction.ENGAGEMENT_UPDATED,
+            f"Deleted catalog entry: {entry.dataset_name}", actor=str(user.id),
+        )
     deleted = await svc.delete_entry(entry_id)
     if not deleted:
         raise HTTPException(

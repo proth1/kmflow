@@ -17,6 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.models import MCPAPIKey
+from src.mcp.pii import mask_pii
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ async def generate_api_key(
     await db.commit()
     await db.refresh(api_key)
 
-    logger.info("Generated API key %s for user %s, client %s", key_id, user_id, client_name)
+    logger.info("Generated API key %s for user %s, client %s", key_id, user_id, mask_pii(client_name))
     return {"key_id": key_id, "api_key": f"{key_id}.{raw_key}"}
 
 
@@ -93,7 +94,7 @@ async def validate_api_key(db: AsyncSession, api_key: str) -> dict[str, Any] | N
     key_record.last_used_at = datetime.now(UTC)
     await db.commit()
 
-    logger.info("Validated API key %s for user %s", key_id, key_record.user_id)
+    logger.info("Validated API key %s for user %s", key_id, mask_pii(str(key_record.user_id)))
     return {
         "key_id": key_id,
         "client_name": key_record.client_name,
