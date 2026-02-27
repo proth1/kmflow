@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -322,12 +322,12 @@ class TestBDDScenario5RetentionExpiry:
 
     def test_past_retention_is_expired(self) -> None:
         """Retention in the past returns True."""
-        past = datetime.now() - timedelta(days=1)
+        past = datetime.now(tz=UTC) - timedelta(days=1)
         assert check_retention_expired(past) is True
 
     def test_future_retention_not_expired(self) -> None:
         """Retention in the future returns False."""
-        future = datetime.now() + timedelta(days=365)
+        future = datetime.now(tz=UTC) + timedelta(days=365)
         assert check_retention_expired(future) is False
 
     def test_none_retention_not_expired(self) -> None:
@@ -336,9 +336,9 @@ class TestBDDScenario5RetentionExpiry:
 
     def test_reference_time_override(self) -> None:
         """Reference time can be overridden for testing."""
-        expires = datetime(2026, 6, 1)
-        before = datetime(2026, 5, 1)
-        after = datetime(2026, 7, 1)
+        expires = datetime(2026, 6, 1, tzinfo=UTC)
+        before = datetime(2026, 5, 1, tzinfo=UTC)
+        after = datetime(2026, 7, 1, tzinfo=UTC)
         assert check_retention_expired(expires, reference_time=before) is False
         assert check_retention_expired(expires, reference_time=after) is True
 
@@ -432,13 +432,12 @@ class TestStateMachineCompleteness:
 
     def test_invalid_transition_error_attributes(self) -> None:
         """InvalidTransitionError stores from/to statuses."""
-        try:
+        with pytest.raises(InvalidTransitionError) as exc_info:
             validate_transition(ValidationStatus.ACTIVE, ValidationStatus.PENDING)
-        except InvalidTransitionError as e:
-            assert e.from_status == ValidationStatus.ACTIVE
-            assert e.to_status == ValidationStatus.PENDING
-            assert "active" in str(e).lower()
-            assert "pending" in str(e).lower()
+        assert exc_info.value.from_status == ValidationStatus.ACTIVE
+        assert exc_info.value.to_status == ValidationStatus.PENDING
+        assert "active" in str(exc_info.value).lower()
+        assert "pending" in str(exc_info.value).lower()
 
     def test_validate_transition_returns_true(self) -> None:
         """Valid transition returns True."""

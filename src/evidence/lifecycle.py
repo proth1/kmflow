@@ -2,7 +2,6 @@
 
 Enforces valid state transitions for evidence items:
   PENDING → VALIDATED → ACTIVE → EXPIRED → ARCHIVED
-  PENDING → REJECTED (terminal)
   VALIDATED → ARCHIVED (skip active)
 
 Every transition is logged to an audit trail.
@@ -12,7 +11,8 @@ from __future__ import annotations
 
 import hashlib
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
+from typing import Any
 
 from src.core.models.evidence import ValidationStatus
 
@@ -76,7 +76,7 @@ def build_audit_entry(
     actor_id: str | None = None,
     reason: str | None = None,
     pov_run_id: uuid.UUID | None = None,
-) -> dict:
+) -> dict[str, Any]:
     """Build an audit log entry dict for a state transition.
 
     Args:
@@ -97,7 +97,7 @@ def build_audit_entry(
         "actor_id": actor_id,
         "reason": reason,
         "pov_run_id": str(pov_run_id) if pov_run_id else None,
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(tz=UTC).isoformat(),
     }
 
 
@@ -144,6 +144,6 @@ def check_retention_expired(
         return False
 
     if reference_time is None:
-        reference_time = datetime.now()
+        reference_time = datetime.now(tz=UTC)
 
     return reference_time > retention_expires_at
