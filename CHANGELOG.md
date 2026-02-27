@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.092] - 2026-02-27
+### Added
+- Evidence quality scoring engine: Hill function freshness, configurable weights, validate_weights, composite scoring with 57 BDD tests (#300)
+
 ## [2026.02.091] - 2026-02-27
 ### Added
 - Shelf data request workflow: BDD-aligned status enums, FollowUpReminder model, Pydantic schemas, migration 036 with 53 tests (#298)

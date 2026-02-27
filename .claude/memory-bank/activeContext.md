@@ -8,6 +8,11 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #408 merged** — Evidence quality scoring engine (#300) (v2026.02.092)
+  - Hill function freshness: >=0.96 at 12mo, 0.5 at 3yr, <0.5 beyond
+  - PRIMARY/SECONDARY reliability, configurable engagement-level weights
+  - validate_weights() with sum-to-1.0, score_evidence() with weight validation
+  - 57 BDD tests, PR review findings addressed (consistency formula, completeness tests)
 - **PR #407 merged** — Shelf data request workflow (#298) (v2026.02.091)
   - ShelfRequestStatus: OPEN, COMPLETE, CANCELLED; FollowUpReminder model
   - 53 BDD tests, PR review findings addressed (enum docs, server_default, priority enum)

@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.091
+**Version**: 2026.02.092
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.092 | 2026-02-27 | Evidence quality scoring engine with Hill function, configurable weights (#300) |
 | 2026.02.091 | 2026-02-27 | Shelf data request workflow with BDD-aligned status enums (#298) |
 | 2026.02.090 | 2026-02-27 | Evidence parsers: document, structured data, BPMN with factory dispatch (#296) |
 | 2026.02.089 | 2026-02-27 | SemanticRelationship bitemporal validity model (#305) |
