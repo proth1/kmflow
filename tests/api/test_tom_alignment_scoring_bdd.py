@@ -267,7 +267,11 @@ class TestTriggerAlignmentScoring:
         tom_result = MagicMock()
         tom_result.scalar_one_or_none.return_value = tom
 
-        mock_session.execute = AsyncMock(side_effect=[eng_result, tom_result])
+        # Third call: duplicate run check → none found
+        dup_result = MagicMock()
+        dup_result.scalar_one_or_none.return_value = None
+
+        mock_session.execute = AsyncMock(side_effect=[eng_result, tom_result, dup_result])
         mock_session.flush = AsyncMock()
         mock_session.commit = AsyncMock()
         mock_session.add = MagicMock()
@@ -278,13 +282,25 @@ class TestTriggerAlignmentScoring:
         app.state.db_session_factory = MagicMock()
         app.state.neo4j_driver = MagicMock()
 
-        # Patch TOMAlignmentRun to avoid SA instrumentation
+        # Don't patch TOMAlignmentRun (SA needs it for select queries).
+        # Track the added object and set its id on flush (simulating SA default).
+        _added_objects: list[Any] = []
+
+        def _fake_add(obj: Any) -> None:
+            _added_objects.append(obj)
+
+        mock_session.add = _fake_add
+
+        async def _fake_flush() -> None:
+            for obj in _added_objects:
+                if getattr(obj, "id", None) is None:
+                    obj.id = uuid.uuid4()
+
+        mock_session.flush = _fake_flush
+
         with (
-            mock.patch(
-                "src.api.routes.tom.TOMAlignmentRun",
-                side_effect=lambda **kw: _make_plain_mock(**kw),
-            ),
             mock.patch("src.api.routes.tom.asyncio") as mock_asyncio,
+            mock.patch("src.api.routes.tom.log_audit", new_callable=AsyncMock),
         ):
             mock_task = MagicMock()
             mock_asyncio.create_task.return_value = mock_task

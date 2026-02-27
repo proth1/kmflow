@@ -39,7 +39,7 @@ def upgrade() -> None:
             sa.Enum(
                 "pending", "running", "complete", "failed",
                 name="alignmentrunstatus",
-                create_type=False,
+                create_type=True,
             ),
             nullable=False,
             server_default="pending",

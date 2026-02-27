@@ -123,7 +123,8 @@ class AlignmentScoringService:
             logger.exception("Alignment run %s failed", run.id)
             run.status = AlignmentRunStatus.FAILED
             run.completed_at = datetime.now(UTC)
-            run.error_message = str(exc)[:1024]
+            # Store only the exception class name to avoid leaking internal details
+            run.error_message = f"Scoring failed: {type(exc).__name__}"
             raise
 
     async def _score_activities(

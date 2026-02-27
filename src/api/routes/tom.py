@@ -1510,11 +1510,32 @@ async def trigger_alignment_scoring(
     if not tom_result.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"TOM {tom_id} not found for this engagement")
 
+    # Check for existing active run (prevent duplicates)
+    existing_run_result = await session.execute(
+        select(TOMAlignmentRun).where(
+            TOMAlignmentRun.engagement_id == engagement_id,
+            TOMAlignmentRun.tom_id == tom_id,
+            TOMAlignmentRun.status.in_([AlignmentRunStatus.PENDING, AlignmentRunStatus.RUNNING]),
+        )
+    )
+    if existing_run_result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An alignment scoring run is already in progress for this engagement and TOM",
+        )
+
     # Create alignment run record
     run = TOMAlignmentRun(engagement_id=engagement_id, tom_id=tom_id)
     session.add(run)
     await session.flush()
     run_id = run.id
+
+    await log_audit(
+        session,
+        engagement_id,
+        AuditAction.GAP_ANALYSIS_RUN,
+        json.dumps({"tom_id": str(tom_id), "run_id": str(run_id)}),
+    )
     await session.commit()
 
     # Launch async scoring with reference retention
