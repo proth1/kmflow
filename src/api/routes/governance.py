@@ -1,7 +1,8 @@
 """Data governance API routes.
 
-Exposes catalog management, policy evaluation, SLA checking, and
-governance package export for the KMFlow data governance framework.
+Exposes catalog management, policy evaluation, SLA checking,
+compliance assessment, and governance package export for the KMFlow
+data governance framework.
 
 All write operations require ``governance:write``.
 All read operations require ``governance:read``.
@@ -11,23 +12,46 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
 from src.core.audit import log_audit
-from src.core.models import AuditAction, DataCatalogEntry, DataClassification, DataLayer, EvidenceItem, User
+from src.core.models import (
+    AuditAction,
+    ComplianceAssessment,
+    ComplianceLevel,
+    Control,
+    ControlEffectiveness,
+    ControlEffectivenessScore,
+    DataCatalogEntry,
+    DataClassification,
+    DataLayer,
+    Engagement,
+    EngagementMember,
+    EvidenceItem,
+    GapFinding,
+    GovernanceGapStatus,
+    ProcessElement,
+    Regulation,
+    User,
+    UserRole,
+)
 from src.core.permissions import require_engagement_access, require_permission
 from src.datalake.backend import get_storage_backend
 from src.datalake.silver import SilverLayerWriter
 from src.governance.alerting import check_and_alert_sla_breaches
 from src.governance.catalog import DataCatalogService
+from src.governance.compliance import ComplianceAssessmentService
+from src.governance.effectiveness import ControlEffectivenessScoringService
 from src.governance.export import export_governance_package
+from src.governance.gap_detection import GovernanceGapDetectionService
 from src.governance.migration import MigrationResult, migrate_engagement
 from src.governance.policy import PolicyEngine, PolicyViolation
 from src.governance.quality import SLAResult, check_quality_sla
@@ -591,4 +615,672 @@ async def get_governance_health(
         "failing_count": failing_count,
         "compliance_percentage": round(compliance_pct, 2),
         "entries": entry_statuses,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Gap detection schemas
+# ---------------------------------------------------------------------------
+
+
+class GapDetectRequest(BaseModel):
+    """Request body for triggering gap detection."""
+
+    auto_generate_shelf_requests: bool = False
+
+
+class GapFindingResponse(BaseModel):
+    """Response for a single gap finding."""
+
+    model_config = {"from_attributes": True}
+
+    id: uuid.UUID
+    engagement_id: uuid.UUID
+    activity_id: uuid.UUID
+    regulation_id: uuid.UUID | None
+    gap_type: str
+    severity: str
+    status: str
+    description: str | None
+    resolved_at: datetime | None
+    created_at: datetime
+
+
+class GapDetectionResultResponse(BaseModel):
+    """Response for a gap detection run."""
+
+    engagement_id: uuid.UUID
+    new_gaps: int
+    resolved_gaps: int
+    total_open: int
+    findings: list[GapFindingResponse]
+
+
+class GapListResponse(BaseModel):
+    """Response for listing gap findings."""
+
+    engagement_id: uuid.UUID
+    findings: list[GapFindingResponse]
+    total: int
+
+
+# ---------------------------------------------------------------------------
+# Compliance assessment schemas
+# ---------------------------------------------------------------------------
+
+
+class ComplianceAssessmentResponse(BaseModel):
+    """Response for a single compliance assessment record."""
+
+    model_config = {"from_attributes": True}
+
+    id: uuid.UUID
+    activity_id: uuid.UUID
+    engagement_id: uuid.UUID
+    state: ComplianceLevel
+    control_coverage_percentage: float
+    total_required_controls: int
+    controls_with_evidence: int
+    gaps: dict[str, Any] | None
+    assessed_at: datetime
+    assessed_by: str | None
+
+
+class ComplianceTrendResponse(BaseModel):
+    """Response for a compliance trend query."""
+
+    activity_id: uuid.UUID
+    assessments: list[ComplianceAssessmentResponse]
+    total: int
+
+
+# ---------------------------------------------------------------------------
+# Control effectiveness scoring schemas
+# ---------------------------------------------------------------------------
+
+
+class EffectivenessScoreResponse(BaseModel):
+    """Response for a single effectiveness score record."""
+
+    model_config = {"from_attributes": True}
+
+    id: uuid.UUID
+    control_id: uuid.UUID
+    engagement_id: uuid.UUID
+    effectiveness: ControlEffectiveness
+    execution_rate: float
+    evidence_source_ids: list[uuid.UUID] | None
+    recommendation: str | None
+    scored_at: datetime
+    scored_by: str | None
+
+
+class EffectivenessScoreHistoryResponse(BaseModel):
+    """Response for effectiveness score history."""
+
+    control_id: uuid.UUID
+    scores: list[EffectivenessScoreResponse]
+    total: int
+
+
+# ---------------------------------------------------------------------------
+# Gap detection routes
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/engagements/{engagement_id}/governance-gaps/detect",
+    response_model=GapDetectionResultResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def detect_governance_gaps(
+    engagement_id: uuid.UUID,
+    body: GapDetectRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("governance:write")),
+    _engagement_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Detect governance gaps in an engagement's process activities.
+
+    Cross-references active regulations and their obligations against
+    process activities to identify where controls are mandated but absent.
+    Optionally auto-generates shelf data request items for detected gaps.
+    """
+    # Verify engagement exists
+    eng_result = await session.execute(
+        select(Engagement).where(Engagement.id == engagement_id)
+    )
+    if not eng_result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Engagement {engagement_id} not found",
+        )
+
+    # Fetch regulations for this engagement
+    reg_result = await session.execute(
+        select(Regulation).where(Regulation.engagement_id == engagement_id)
+    )
+    regulations = list(reg_result.scalars().all())
+
+    reg_dicts = [
+        {
+            "id": str(r.id),
+            "name": r.name,
+            "obligations": r.obligations,
+        }
+        for r in regulations
+    ]
+
+    # Run gap detection via graph service
+    from src.semantic.graph import KnowledgeGraphService
+
+    graph_service = KnowledgeGraphService(request.app.state.neo4j_driver)
+    detector = GovernanceGapDetectionService(graph_service)
+    new_gap_data = await detector.detect_gaps(str(engagement_id), reg_dicts)
+
+    # Fetch existing open gaps for resolution check
+    existing_result = await session.execute(
+        select(GapFinding).where(
+            GapFinding.engagement_id == engagement_id,
+            GapFinding.status == GovernanceGapStatus.OPEN,
+        )
+    )
+    existing_open = list(existing_result.scalars().all())
+
+    existing_open_dicts = [
+        {"id": str(g.id), "activity_id": str(g.activity_id)}
+        for g in existing_open
+    ]
+
+    # Resolve gaps that are now covered
+    resolved_ids = await detector.resolve_covered_gaps(
+        str(engagement_id), existing_open_dicts
+    )
+    resolved_count = 0
+    now = datetime.now(UTC)
+    for gap in existing_open:
+        if str(gap.id) in resolved_ids:
+            gap.status = GovernanceGapStatus.RESOLVED
+            gap.resolved_at = now
+            resolved_count += 1
+
+    # Deduplicate: don't re-create gaps for activities that already have open findings
+    existing_activity_ids = {
+        str(g.activity_id) for g in existing_open if g.status == GovernanceGapStatus.OPEN
+    }
+    new_findings: list[GapFinding] = []
+    for gd in new_gap_data:
+        if gd["activity_id"] in existing_activity_ids:
+            continue
+        finding = GapFinding(
+            engagement_id=engagement_id,
+            activity_id=uuid.UUID(gd["activity_id"]),
+            regulation_id=uuid.UUID(gd["regulation_id"]) if gd.get("regulation_id") else None,
+            gap_type=gd["gap_type"],
+            severity=gd["severity"],
+            status=gd["status"],
+            description=gd["description"],
+        )
+        session.add(finding)
+        new_findings.append(finding)
+
+    await log_audit(
+        session,
+        engagement_id,
+        AuditAction.ENGAGEMENT_UPDATED,
+        f"Gap detection: {len(new_findings)} new, {resolved_count} resolved",
+        actor=str(user.id),
+    )
+
+    await session.commit()
+
+    # Refresh to get IDs and timestamps
+    for f in new_findings:
+        await session.refresh(f)
+
+    # Count total open after this run
+    open_count_result = await session.execute(
+        select(GapFinding).where(
+            GapFinding.engagement_id == engagement_id,
+            GapFinding.status == GovernanceGapStatus.OPEN,
+        )
+    )
+    total_open = len(list(open_count_result.scalars().all()))
+
+    return {
+        "engagement_id": engagement_id,
+        "new_gaps": len(new_findings),
+        "resolved_gaps": resolved_count,
+        "total_open": total_open,
+        "findings": [
+            {
+                "id": f.id,
+                "engagement_id": f.engagement_id,
+                "activity_id": f.activity_id,
+                "regulation_id": f.regulation_id,
+                "gap_type": f.gap_type.value if hasattr(f.gap_type, "value") else str(f.gap_type),
+                "severity": f.severity.value if hasattr(f.severity, "value") else str(f.severity),
+                "status": f.status.value if hasattr(f.status, "value") else str(f.status),
+                "description": f.description,
+                "resolved_at": f.resolved_at,
+                "created_at": f.created_at,
+            }
+            for f in new_findings
+        ],
+    }
+
+
+@router.get(
+    "/engagements/{engagement_id}/governance-gaps",
+    response_model=GapListResponse,
+)
+async def list_governance_gaps(
+    engagement_id: uuid.UUID,
+    gap_status: str | None = Query(None, alias="status", description="Filter by status: OPEN or RESOLVED"),
+    limit: int = Query(50, ge=1, le=500, description="Items per page"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("governance:read")),
+    _engagement_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """List governance gap findings for an engagement.
+
+    Filter by status (OPEN/RESOLVED) or return all. Paginated.
+    """
+    # Verify engagement exists
+    eng_result = await session.execute(
+        select(Engagement).where(Engagement.id == engagement_id)
+    )
+    if not eng_result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Engagement {engagement_id} not found",
+        )
+
+    # Build query
+    query = (
+        select(GapFinding)
+        .where(GapFinding.engagement_id == engagement_id)
+        .order_by(GapFinding.created_at.desc())
+    )
+
+    if gap_status:
+        normalized = gap_status.lower()
+        if normalized in ("open", "resolved"):
+            query = query.where(GapFinding.status == normalized)
+
+    # Count total
+    from sqlalchemy import func as sa_func
+
+    count_query = (
+        select(sa_func.count())
+        .select_from(GapFinding)
+        .where(GapFinding.engagement_id == engagement_id)
+    )
+    if gap_status:
+        normalized = gap_status.lower()
+        if normalized in ("open", "resolved"):
+            count_query = count_query.where(GapFinding.status == normalized)
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
+
+    # Fetch page
+    result = await session.execute(query.offset(offset).limit(limit))
+    findings = list(result.scalars().all())
+
+    return {
+        "engagement_id": engagement_id,
+        "findings": [
+            {
+                "id": f.id,
+                "engagement_id": f.engagement_id,
+                "activity_id": f.activity_id,
+                "regulation_id": f.regulation_id,
+                "gap_type": f.gap_type.value if hasattr(f.gap_type, "value") else str(f.gap_type),
+                "severity": f.severity.value if hasattr(f.severity, "value") else str(f.severity),
+                "status": f.status.value if hasattr(f.status, "value") else str(f.status),
+                "description": f.description,
+                "resolved_at": f.resolved_at,
+                "created_at": f.created_at,
+            }
+            for f in findings
+        ],
+        "total": total,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Compliance assessment routes
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/activities/{activity_id}/compliance-assessments",
+    response_model=ComplianceAssessmentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def trigger_compliance_assessment(
+    activity_id: UUID,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("governance:write")),
+) -> dict[str, Any]:
+    """Trigger a compliance assessment for a process activity."""
+    act_result = await session.execute(
+        select(ProcessElement).where(ProcessElement.id == activity_id)
+    )
+    activity = act_result.scalar_one_or_none()
+    if not activity:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Activity {activity_id} not found",
+        )
+
+    from src.core.models import ProcessModel
+
+    model_result = await session.execute(
+        select(ProcessModel).where(ProcessModel.id == activity.model_id)
+    )
+    process_model = model_result.scalar_one_or_none()
+    if not process_model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Process model for activity {activity_id} not found",
+        )
+
+    engagement_id = process_model.engagement_id
+
+    if user.role != UserRole.PLATFORM_ADMIN:
+        member_result = await session.execute(
+            select(EngagementMember).where(
+                EngagementMember.engagement_id == engagement_id,
+                EngagementMember.user_id == user.id,
+            )
+        )
+        if not member_result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not a member of this engagement",
+            )
+
+    from src.semantic.graph import KnowledgeGraphService
+
+    graph_service = KnowledgeGraphService(request.app.state.neo4j_driver)
+    compliance_service = ComplianceAssessmentService(graph_service)
+    assessment_data = await compliance_service.assess_activity(
+        str(activity_id), str(engagement_id)
+    )
+
+    record = ComplianceAssessment(
+        activity_id=activity_id,
+        engagement_id=engagement_id,
+        state=assessment_data["state"],
+        control_coverage_percentage=assessment_data["control_coverage_percentage"],
+        total_required_controls=assessment_data["total_required_controls"],
+        controls_with_evidence=assessment_data["controls_with_evidence"],
+        gaps=assessment_data["gaps"],
+        assessed_by=str(user.id),
+    )
+    session.add(record)
+
+    await log_audit(
+        session,
+        engagement_id,
+        AuditAction.ENGAGEMENT_UPDATED,
+        f"Compliance assessed for activity {activity_id}: {assessment_data['state'].value}",
+        actor=str(user.id),
+    )
+
+    await session.commit()
+    await session.refresh(record)
+
+    return {
+        "id": record.id,
+        "activity_id": record.activity_id,
+        "engagement_id": record.engagement_id,
+        "state": record.state,
+        "control_coverage_percentage": float(record.control_coverage_percentage),
+        "total_required_controls": record.total_required_controls,
+        "controls_with_evidence": record.controls_with_evidence,
+        "gaps": record.gaps,
+        "assessed_at": record.assessed_at,
+        "assessed_by": record.assessed_by,
+    }
+
+
+@router.get(
+    "/activities/{activity_id}/compliance-trend",
+    response_model=ComplianceTrendResponse,
+)
+async def get_compliance_trend(
+    activity_id: UUID,
+    from_date: datetime | None = Query(None, description="Start date for trend"),
+    to_date: datetime | None = Query(None, description="End date for trend"),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("governance:read")),
+) -> dict[str, Any]:
+    """Get compliance assessment trend for a process activity."""
+    act_result = await session.execute(
+        select(ProcessElement).where(ProcessElement.id == activity_id)
+    )
+    activity = act_result.scalar_one_or_none()
+    if not activity:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Activity {activity_id} not found",
+        )
+
+    from src.core.models import ProcessModel
+
+    model_result = await session.execute(
+        select(ProcessModel).where(ProcessModel.id == activity.model_id)
+    )
+    pm = model_result.scalar_one_or_none()
+    if pm and user.role != UserRole.PLATFORM_ADMIN:
+        member_result = await session.execute(
+            select(EngagementMember).where(
+                EngagementMember.engagement_id == pm.engagement_id,
+                EngagementMember.user_id == user.id,
+            )
+        )
+        if not member_result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not a member of this engagement",
+            )
+
+    query = (
+        select(ComplianceAssessment)
+        .where(ComplianceAssessment.activity_id == activity_id)
+        .order_by(ComplianceAssessment.assessed_at.asc())
+    )
+
+    if from_date:
+        query = query.where(ComplianceAssessment.assessed_at >= from_date)
+    if to_date:
+        query = query.where(ComplianceAssessment.assessed_at <= to_date)
+
+    result = await session.execute(query)
+    assessments = list(result.scalars().all())
+
+    return {
+        "activity_id": activity_id,
+        "assessments": [
+            {
+                "id": a.id,
+                "activity_id": a.activity_id,
+                "engagement_id": a.engagement_id,
+                "state": a.state,
+                "control_coverage_percentage": float(a.control_coverage_percentage),
+                "total_required_controls": a.total_required_controls,
+                "controls_with_evidence": a.controls_with_evidence,
+                "gaps": a.gaps,
+                "assessed_at": a.assessed_at,
+                "assessed_by": a.assessed_by,
+            }
+            for a in assessments
+        ],
+        "total": len(assessments),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Control effectiveness scoring routes
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/controls/{control_id}/score",
+    response_model=EffectivenessScoreResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def score_control_effectiveness(
+    control_id: uuid.UUID,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("governance:write")),
+) -> dict[str, Any]:
+    """Score a control's effectiveness based on execution evidence."""
+    ctrl_result = await session.execute(
+        select(Control).where(Control.id == control_id)
+    )
+    control = ctrl_result.scalar_one_or_none()
+    if not control:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Control {control_id} not found",
+        )
+
+    engagement_id = control.engagement_id
+
+    if user.role != UserRole.PLATFORM_ADMIN:
+        member_result = await session.execute(
+            select(EngagementMember).where(
+                EngagementMember.engagement_id == engagement_id,
+                EngagementMember.user_id == user.id,
+            )
+        )
+        if not member_result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not a member of this engagement",
+            )
+
+    from src.semantic.graph import KnowledgeGraphService
+
+    graph_service = KnowledgeGraphService(request.app.state.neo4j_driver)
+    scoring_service = ControlEffectivenessScoringService(graph_service)
+    score_data = await scoring_service.score_control(
+        str(control_id), control.name, str(engagement_id)
+    )
+
+    record = ControlEffectivenessScore(
+        control_id=control_id,
+        engagement_id=engagement_id,
+        effectiveness=score_data["effectiveness"],
+        execution_rate=score_data["execution_rate"],
+        evidence_source_ids=score_data["evidence_source_ids"] or None,
+        recommendation=score_data["recommendation"],
+        scored_by=str(user.id),
+    )
+    session.add(record)
+
+    control.effectiveness = score_data["effectiveness"]
+    control.effectiveness_score = float(score_data["execution_rate"])
+
+    await log_audit(
+        session,
+        engagement_id,
+        AuditAction.ENGAGEMENT_UPDATED,
+        f"Control {control.name} scored: {score_data['effectiveness'].value}",
+        actor=str(user.id),
+    )
+
+    await session.commit()
+    await session.refresh(record)
+
+    return {
+        "id": record.id,
+        "control_id": record.control_id,
+        "engagement_id": record.engagement_id,
+        "effectiveness": record.effectiveness,
+        "execution_rate": float(record.execution_rate),
+        "evidence_source_ids": record.evidence_source_ids,
+        "recommendation": record.recommendation,
+        "scored_at": record.scored_at,
+        "scored_by": record.scored_by,
+    }
+
+
+@router.get(
+    "/controls/{control_id}/effectiveness-scores",
+    response_model=EffectivenessScoreHistoryResponse,
+)
+async def get_effectiveness_score_history(
+    control_id: uuid.UUID,
+    limit: int = Query(50, ge=1, le=500, description="Items per page"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("governance:read")),
+) -> dict[str, Any]:
+    """Get historical effectiveness scores for a control."""
+    ctrl_result = await session.execute(
+        select(Control).where(Control.id == control_id)
+    )
+    control = ctrl_result.scalar_one_or_none()
+    if not control:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Control {control_id} not found",
+        )
+
+    if user.role != UserRole.PLATFORM_ADMIN:
+        member_result = await session.execute(
+            select(EngagementMember).where(
+                EngagementMember.engagement_id == control.engagement_id,
+                EngagementMember.user_id == user.id,
+            )
+        )
+        if not member_result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not a member of this engagement",
+            )
+
+    from sqlalchemy import func as sa_func
+
+    count_result = await session.execute(
+        select(sa_func.count())
+        .select_from(ControlEffectivenessScore)
+        .where(ControlEffectivenessScore.control_id == control_id)
+    )
+    total = count_result.scalar() or 0
+
+    result = await session.execute(
+        select(ControlEffectivenessScore)
+        .where(ControlEffectivenessScore.control_id == control_id)
+        .order_by(ControlEffectivenessScore.scored_at.asc())
+        .offset(offset)
+        .limit(limit)
+    )
+    scores = list(result.scalars().all())
+
+    return {
+        "control_id": control_id,
+        "scores": [
+            {
+                "id": s.id,
+                "control_id": s.control_id,
+                "engagement_id": s.engagement_id,
+                "effectiveness": s.effectiveness,
+                "execution_rate": float(s.execution_rate),
+                "evidence_source_ids": s.evidence_source_ids,
+                "recommendation": s.recommendation,
+                "scored_at": s.scored_at,
+                "scored_by": s.scored_by,
+            }
+            for s in scores
+        ],
+        "total": total,
     }
