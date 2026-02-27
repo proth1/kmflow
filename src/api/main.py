@@ -51,6 +51,7 @@ from src.api.routes import (
     patterns,
     portal,
     pov,
+    raci,
     regulatory,
     reports,
     shelf_requests,
@@ -233,6 +234,7 @@ def create_app() -> FastAPI:
     # -- Phase 8 Routes ---
     app.include_router(metrics.router)
     app.include_router(annotations_routes.router)
+    app.include_router(raci.router)
 
     # -- Phase C: Data Layer Evolution ---
     app.include_router(lineage.router)
