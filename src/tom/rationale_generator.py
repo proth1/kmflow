@@ -74,6 +74,11 @@ FEW_SHOT_EXAMPLES: list[dict[str, Any]] = [
 ]
 
 
+def _sanitize_xml_content(text: str) -> str:
+    """Strip XML-like closing tags that could break prompt boundaries."""
+    return text.replace("</activity>", "").replace("</tom_spec>", "")
+
+
 def build_rationale_prompt(
     gap_type: str,
     dimension: str,
@@ -105,6 +110,9 @@ Rationale: {ex['rationale']}
 Recommendation: {ex['recommendation']}
 ---"""
 
+    safe_activity = _sanitize_xml_content(activity_description)
+    safe_tom = _sanitize_xml_content(tom_specification)
+
     return f"""You are a process intelligence analyst generating gap analysis rationale.
 
 Given information about a gap between a current-state process activity and a Target Operating Model (TOM) specification, generate:
@@ -129,8 +137,8 @@ Now generate rationale and recommendation for:
 
 Gap Type: {gap_type.upper()}
 Dimension: {dimension}
-Current Activity: <activity>{activity_description}</activity>
-TOM Specification: <tom_spec>{tom_specification}</tom_spec>
+Current Activity: <activity>{safe_activity}</activity>
+TOM Specification: <tom_spec>{safe_tom}</tom_spec>
 Severity: {severity}
 Confidence: {confidence}
 
@@ -152,20 +160,24 @@ class RationaleGeneratorService:
         self,
         gap: GapAnalysisResult,
         tom_specification: str | None = None,
+        activity_description: str | None = None,
     ) -> dict[str, str]:
         """Generate rationale for a single gap.
 
         Args:
             gap: The gap analysis result record.
             tom_specification: The TOM dimension specification text.
+            activity_description: Description of the current-state activity.
+                Falls back to gap.activity_name or gap_type if not provided.
 
         Returns:
             Dict with 'rationale' and 'recommendation' keys.
         """
+        desc = activity_description or getattr(gap, "activity_name", None) or str(gap.gap_type)
         prompt = build_rationale_prompt(
             gap_type=str(gap.gap_type),
             dimension=str(gap.dimension),
-            activity_description=gap.recommendation or str(gap.gap_type),
+            activity_description=desc,
             tom_specification=tom_specification or "Not specified",
             severity=gap.severity,
             confidence=gap.confidence,

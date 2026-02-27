@@ -654,15 +654,18 @@ async def list_gaps(
     count_result = await session.execute(count_query)
     total = count_result.scalar() or 0
 
-    result = await session.execute(query)
-    gaps = list(result.scalars().all())
-
-    # Apply priority sort in Python (composite_score is a computed property)
     if sort == "priority":
+        # Priority sort requires loading all gaps for Python-side sort
+        # (composite_score is a computed property, not a DB column).
+        # Cap at 1000 to prevent excessive memory usage.
+        max_sort_rows = 1000
+        result = await session.execute(query.limit(max_sort_rows))
+        gaps = list(result.scalars().all())
         gaps.sort(key=lambda g: g.composite_score, reverse=True)
-
-    # Apply pagination after sort
-    gaps = gaps[offset : offset + limit]
+        gaps = gaps[offset : offset + limit]
+    else:
+        result = await session.execute(query.offset(offset).limit(limit))
+        gaps = list(result.scalars().all())
 
     return {"items": gaps, "total": total}
 
