@@ -39,8 +39,6 @@ EVIDENCE_COVERAGE_FACTORS: dict[str, float] = {
     "audit_log": 0.30,
 }
 
-# Default factor for unknown evidence types
-DEFAULT_COVERAGE_FACTOR = 0.20
 
 
 class EvidenceGapRankingService:
@@ -103,9 +101,8 @@ class EvidenceGapRankingService:
         self, engagement_id: str, projections: list[dict[str, Any]]
     ) -> int:
         """Persist uplift projections to the database."""
-        count = 0
-        for proj in projections:
-            record = UpliftProjection(
+        records = [
+            UpliftProjection(
                 id=uuid.UUID(proj["id"]),
                 engagement_id=uuid.UUID(engagement_id),
                 element_id=proj["element_id"],
@@ -116,11 +113,11 @@ class EvidenceGapRankingService:
                 projected_uplift=proj["projected_uplift"],
                 brightness=proj["brightness"],
             )
-            self._session.add(record)
-            count += 1
-
+            for proj in projections
+        ]
+        self._session.add_all(records)
         await self._session.flush()
-        return count
+        return len(records)
 
     async def get_cross_scenario_gaps(
         self, engagement_id: str
@@ -132,12 +129,24 @@ class EvidenceGapRankingService:
         """
         eng_uuid = uuid.UUID(engagement_id)
 
-        # Find element_ids that appear in modifications across multiple scenarios
-        subq = (
+        # Correlated subquery for total uplift per element
+        uplift_subq = (
+            select(func.coalesce(func.sum(UpliftProjection.projected_uplift), 0.0))
+            .where(
+                UpliftProjection.engagement_id == eng_uuid,
+                UpliftProjection.element_id == ScenarioModification.element_id,
+            )
+            .correlate(ScenarioModification)
+            .scalar_subquery()
+        )
+
+        # Single query: shared gaps + uplift in one pass (no N+1)
+        query = (
             select(
                 ScenarioModification.element_id,
                 ScenarioModification.element_name,
                 func.count(func.distinct(ScenarioModification.scenario_id)).label("scenario_count"),
+                uplift_subq.label("total_uplift"),
             )
             .join(
                 SimulationScenario,
@@ -148,22 +157,12 @@ class EvidenceGapRankingService:
             .having(func.count(func.distinct(ScenarioModification.scenario_id)) > 1)
         )
 
-        result = await self._session.execute(subq)
+        result = await self._session.execute(query)
         rows = result.all()
 
-        # For each shared gap, sum uplift projections across scenarios
         gaps: list[dict[str, Any]] = []
         for row in rows:
-            # Get total projected uplift for this element
-            uplift_result = await self._session.execute(
-                select(func.sum(UpliftProjection.projected_uplift))
-                .where(
-                    UpliftProjection.engagement_id == eng_uuid,
-                    UpliftProjection.element_id == row.element_id,
-                )
-            )
-            total_uplift = uplift_result.scalar() or 0.0
-
+            total_uplift = row.total_uplift or 0.0
             gaps.append({
                 "element_id": row.element_id,
                 "element_name": row.element_name,

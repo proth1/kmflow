@@ -45,6 +45,7 @@ def _mock_session_with_engagement(engagement: Any) -> AsyncMock:
     session.flush = AsyncMock()
     session.commit = AsyncMock()
     session.add = MagicMock()
+    session.add_all = MagicMock()
     return session
 
 
@@ -106,7 +107,7 @@ async def test_scenario_1_per_gap_uplift_projection() -> None:
             transport=ASGITransport(app=app), base_url="http://test"
         ) as client:
             resp = await client.post(
-                f"/api/v1/epistemic/uplift-projections?engagement_id={ENGAGEMENT_ID}"
+                f"/api/v1/engagements/{ENGAGEMENT_ID}/uplift-projections"
             )
 
     assert resp.status_code == 201
@@ -139,27 +140,24 @@ async def test_scenario_2_cross_scenario_shared_gaps() -> None:
     Then E1 is flagged as shared gap with 'improves all scenarios' label."""
     eng = _make_engagement(ENGAGEMENT_ID)
 
-    # Mock session with multiple return values for different queries
+    # Mock session with return values for different queries
     session = AsyncMock()
 
     # First call: engagement existence check
     eng_result = MagicMock()
     eng_result.scalar_one_or_none.return_value = eng
 
-    # Second call: cross-scenario query (shared gaps)
+    # Second call: single combined query (shared gaps + uplift via correlated subquery)
     shared_row = MagicMock()
     shared_row.element_id = ELEMENT_DARK
     shared_row.element_name = "Wire Transfer Review"
     shared_row.scenario_count = 3
+    shared_row.total_uplift = 0.45
     shared_result = MagicMock()
     shared_result.all.return_value = [shared_row]
 
-    # Third call: uplift sum query
-    uplift_result = MagicMock()
-    uplift_result.scalar.return_value = 0.45
-
     session.execute = AsyncMock(
-        side_effect=[eng_result, shared_result, uplift_result]
+        side_effect=[eng_result, shared_result]
     )
 
     app = _make_app(session)
@@ -168,7 +166,7 @@ async def test_scenario_2_cross_scenario_shared_gaps() -> None:
         transport=ASGITransport(app=app), base_url="http://test"
     ) as client:
         resp = await client.get(
-            f"/api/v1/epistemic/cross-scenario-gaps?engagement_id={ENGAGEMENT_ID}"
+            f"/api/v1/engagements/{ENGAGEMENT_ID}/cross-scenario-gaps"
         )
 
     assert resp.status_code == 200
@@ -211,7 +209,7 @@ async def test_scenario_3_uplift_correlation_sufficient_data() -> None:
         transport=ASGITransport(app=app), base_url="http://test"
     ) as client:
         resp = await client.get(
-            f"/api/v1/epistemic/uplift-accuracy?engagement_id={ENGAGEMENT_ID}"
+            f"/api/v1/engagements/{ENGAGEMENT_ID}/uplift-accuracy"
         )
 
     assert resp.status_code == 200
@@ -246,7 +244,7 @@ async def test_scenario_3_insufficient_data() -> None:
         transport=ASGITransport(app=app), base_url="http://test"
     ) as client:
         resp = await client.get(
-            f"/api/v1/epistemic/uplift-accuracy?engagement_id={ENGAGEMENT_ID}"
+            f"/api/v1/engagements/{ENGAGEMENT_ID}/uplift-accuracy"
         )
 
     assert resp.status_code == 200
@@ -271,7 +269,7 @@ async def test_engagement_not_found_returns_404() -> None:
         transport=ASGITransport(app=app), base_url="http://test"
     ) as client:
         resp = await client.post(
-            f"/api/v1/epistemic/uplift-projections?engagement_id={uuid.uuid4()}"
+            f"/api/v1/engagements/{uuid.uuid4()}/uplift-projections"
         )
     assert resp.status_code == 404
 
@@ -291,7 +289,7 @@ async def test_no_dark_dim_elements_returns_empty() -> None:
             transport=ASGITransport(app=app), base_url="http://test"
         ) as client:
             resp = await client.post(
-                f"/api/v1/epistemic/uplift-projections?engagement_id={ENGAGEMENT_ID}"
+                f"/api/v1/engagements/{ENGAGEMENT_ID}/uplift-projections"
             )
 
     assert resp.status_code == 201
@@ -319,7 +317,7 @@ async def test_cross_scenario_no_shared_gaps() -> None:
         transport=ASGITransport(app=app), base_url="http://test"
     ) as client:
         resp = await client.get(
-            f"/api/v1/epistemic/cross-scenario-gaps?engagement_id={ENGAGEMENT_ID}"
+            f"/api/v1/engagements/{ENGAGEMENT_ID}/cross-scenario-gaps"
         )
 
     assert resp.status_code == 200

@@ -6,6 +6,7 @@ cross-scenario shared gaps, and tracking projection accuracy.
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 from uuid import UUID
 
@@ -16,11 +17,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
 from src.api.services.evidence_gap_ranking import EvidenceGapRankingService
-from src.core.models import Engagement, User
+from src.core.audit import log_audit
+from src.core.models import AuditAction, Engagement, User
 from src.core.permissions import require_engagement_access, require_permission
 from src.semantic.graph import KnowledgeGraphService
 
-router = APIRouter(prefix="/api/v1/epistemic", tags=["evidence-gap-ranking"])
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/api/v1/engagements", tags=["evidence-gap-ranking"])
 
 
 # ---------------------------------------------------------------------------
@@ -82,8 +86,22 @@ class UpliftAccuracyResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+async def _get_engagement_or_404(session: AsyncSession, engagement_id: UUID) -> Engagement:
+    """Fetch engagement or raise 404."""
+    eng_result = await session.execute(
+        select(Engagement).where(Engagement.id == engagement_id)
+    )
+    eng = eng_result.scalar_one_or_none()
+    if not eng:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Engagement not found",
+        )
+    return eng
+
+
 @router.post(
-    "/uplift-projections",
+    "/{engagement_id}/uplift-projections",
     response_model=UpliftProjectionsResponse,
     status_code=status.HTTP_201_CREATED,
 )
@@ -99,20 +117,18 @@ async def compute_uplift_projections(
     Projects the confidence increase from obtaining each evidence type
     for each element. Persists projections for accuracy tracking.
     """
-    eng_result = await session.execute(
-        select(Engagement).where(Engagement.id == engagement_id)
-    )
-    if not eng_result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Engagement not found",
-        )
+    await _get_engagement_or_404(session, engagement_id)
 
     graph_service = KnowledgeGraphService(request.app.state.neo4j_driver)
     service = EvidenceGapRankingService(session, graph_service)
 
     projections = await service.compute_uplift_projections(str(engagement_id))
-    await service.persist_projections(str(engagement_id), projections)
+    count = await service.persist_projections(str(engagement_id), projections)
+
+    await log_audit(
+        session, engagement_id, AuditAction.EVIDENCE_VALIDATED,
+        f"Computed {count} uplift projections", actor=str(user.id),
+    )
     await session.commit()
 
     return {
@@ -123,7 +139,7 @@ async def compute_uplift_projections(
 
 
 @router.get(
-    "/cross-scenario-gaps",
+    "/{engagement_id}/cross-scenario-gaps",
     response_model=CrossScenarioGapsResponse,
 )
 async def get_cross_scenario_gaps(
@@ -136,14 +152,7 @@ async def get_cross_scenario_gaps(
 
     Returns elements modified in 2+ scenarios with combined uplift estimate.
     """
-    eng_result = await session.execute(
-        select(Engagement).where(Engagement.id == engagement_id)
-    )
-    if not eng_result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Engagement not found",
-        )
+    await _get_engagement_or_404(session, engagement_id)
 
     service = EvidenceGapRankingService(session)
     gaps = await service.get_cross_scenario_gaps(str(engagement_id))
@@ -155,7 +164,7 @@ async def get_cross_scenario_gaps(
 
 
 @router.get(
-    "/uplift-accuracy",
+    "/{engagement_id}/uplift-accuracy",
     response_model=UpliftAccuracyResponse,
 )
 async def get_uplift_accuracy(
@@ -169,14 +178,7 @@ async def get_uplift_accuracy(
     Requires minimum 10 resolved projections. Returns correlation
     coefficient and whether it meets the 0.7 target.
     """
-    eng_result = await session.execute(
-        select(Engagement).where(Engagement.id == engagement_id)
-    )
-    if not eng_result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Engagement not found",
-        )
+    await _get_engagement_or_404(session, engagement_id)
 
     service = EvidenceGapRankingService(session)
     accuracy = await service.compute_uplift_accuracy(str(engagement_id))
