@@ -9,7 +9,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from datetime import datetime
+import uuid as _uuid
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -29,6 +30,9 @@ from src.core.models import (
     Engagement,
     EngagementMember,
     GapAnalysisResult,
+    MaturityScore,
+    ProcessMaturity,
+    ProcessModel,
     TargetOperatingModel,
     TOMAlignmentResult,
     TOMAlignmentRun,
@@ -40,6 +44,7 @@ from src.core.models import (
     UserRole,
 )
 from src.core.permissions import require_engagement_access, require_permission
+from src.tom.maturity_scorer import MaturityScoringService
 
 logger = logging.getLogger(__name__)
 
@@ -1447,6 +1452,58 @@ async def export_roadmap(
     return HTMLResponse(content=html_content)
 
 
+# ---------------------------------------------------------------------------
+# Maturity Scoring schemas
+# ---------------------------------------------------------------------------
+
+
+class MaturityComputeRequest(BaseModel):
+    """Request body for computing maturity scores."""
+
+    governance_map: dict[str, dict[str, Any]] | None = None
+
+
+class MaturityScoreResponse(BaseModel):
+    """Response for a single maturity score."""
+
+    model_config = {"from_attributes": True}
+
+    id: UUID
+    process_model_id: UUID
+    process_area_name: str
+    maturity_level: ProcessMaturity
+    level_number: int
+    evidence_dimensions: dict[str, Any] | None
+    recommendations: list[str] | None
+    scored_at: datetime
+
+
+class MaturityComputeResponse(BaseModel):
+    """Response for a batch maturity computation."""
+
+    engagement_id: UUID
+    scores_computed: int
+    scores: list[MaturityScoreResponse]
+
+
+class MaturityHeatmapEntry(BaseModel):
+    """A single entry in the maturity heatmap."""
+
+    process_model_id: UUID
+    process_area_name: str
+    maturity_level: ProcessMaturity
+    level_number: int
+
+
+class MaturityHeatmapResponse(BaseModel):
+    """Full maturity heatmap response."""
+
+    engagement_id: UUID
+    process_areas: list[MaturityHeatmapEntry]
+    overall_engagement_maturity: float
+    process_area_count: int
+
+
 # -- Per-Activity Alignment Scoring Routes (Story #348) ----------------------
 
 
@@ -1478,6 +1535,194 @@ class AlignmentRunResultsResponse(BaseModel):
     status: str
     items: list[AlignmentResultEntry]
     total: int
+
+
+# ---------------------------------------------------------------------------
+# Maturity Scoring routes
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/engagements/{engagement_id}/maturity-scores/compute",
+    response_model=MaturityComputeResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def compute_maturity_scores(
+    engagement_id: UUID,
+    body: MaturityComputeRequest,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
+    _engagement_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Compute maturity scores for all process areas in an engagement.
+
+    Evaluates evidence coverage, governance linkages, and metric
+    availability to assign a CMMI-aligned maturity level (1-5).
+    """
+    # Verify engagement exists
+    eng_result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
+    engagement = eng_result.scalar_one_or_none()
+    if not engagement:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Engagement not found")
+
+    # Fetch all process models for this engagement
+    pm_result = await session.execute(
+        select(ProcessModel).where(ProcessModel.engagement_id == engagement_id)
+    )
+    process_models = list(pm_result.scalars().all())
+
+    if not process_models:
+        return {
+            "engagement_id": engagement_id,
+            "scores_computed": 0,
+            "scores": [],
+        }
+
+    # Build process model dicts with form_coverage from metadata
+    pm_dicts = []
+    for pm in process_models:
+        meta = pm.metadata_json or {}
+        pm_dicts.append({
+            "id": str(pm.id),
+            "engagement_id": str(engagement_id),
+            "scope": pm.scope,
+            "form_coverage": meta.get("form_coverage", 0.0),
+        })
+
+    # Use governance_map from request body, or default to empty
+    governance_map = body.governance_map or {}
+
+    scorer = MaturityScoringService()
+    score_results = await scorer.score_engagement(pm_dicts, governance_map)
+
+    # Persist scores
+    now = datetime.now(UTC)
+    score_responses = []
+    for sr in score_results:
+        score_id = _uuid.uuid4()
+        ms = MaturityScore(
+            id=score_id,
+            engagement_id=engagement_id,
+            process_model_id=UUID(sr["process_model_id"]),
+            maturity_level=sr["maturity_level"],
+            level_number=sr["level_number"],
+            evidence_dimensions=sr["evidence_dimensions"],
+            recommendations=sr["recommendations"],
+        )
+        session.add(ms)
+
+        # Find process area name
+        pm_name = next(
+            (p["scope"] for p in pm_dicts if p["id"] == sr["process_model_id"]),
+            "Unknown",
+        )
+        score_responses.append({
+            "id": score_id,
+            "process_model_id": UUID(sr["process_model_id"]),
+            "process_area_name": pm_name,
+            "maturity_level": sr["maturity_level"],
+            "level_number": sr["level_number"],
+            "evidence_dimensions": sr["evidence_dimensions"],
+            "recommendations": sr["recommendations"],
+            "scored_at": now,
+        })
+
+    await session.commit()
+
+    await log_audit(
+        session, engagement_id, AuditAction.ENGAGEMENT_UPDATED,
+        f"Computed maturity scores for {len(score_results)} process areas",
+        actor=str(user.id),
+    )
+
+    return {
+        "engagement_id": engagement_id,
+        "scores_computed": len(score_results),
+        "scores": score_responses,
+    }
+
+
+@router.get(
+    "/engagements/{engagement_id}/maturity-heatmap",
+    response_model=MaturityHeatmapResponse,
+)
+async def get_maturity_heatmap(
+    engagement_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Return the maturity heatmap for all process areas in an engagement.
+
+    Returns the most recent maturity score per process area, plus
+    the overall engagement maturity as the average of all level numbers.
+    """
+    # Verify engagement exists
+    eng_result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
+    if not eng_result.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Engagement not found")
+
+    # Get latest maturity scores per process model using a subquery
+    latest_scores_subq = (
+        select(
+            MaturityScore.process_model_id,
+            func.max(MaturityScore.scored_at).label("latest_scored_at"),
+        )
+        .where(MaturityScore.engagement_id == engagement_id)
+        .group_by(MaturityScore.process_model_id)
+        .subquery()
+    )
+
+    score_result = await session.execute(
+        select(MaturityScore)
+        .join(
+            latest_scores_subq,
+            (MaturityScore.process_model_id == latest_scores_subq.c.process_model_id)
+            & (MaturityScore.scored_at == latest_scores_subq.c.latest_scored_at),
+        )
+        .where(MaturityScore.engagement_id == engagement_id)
+    )
+    scores = list(score_result.scalars().all())
+
+    if not scores:
+        return {
+            "engagement_id": engagement_id,
+            "process_areas": [],
+            "overall_engagement_maturity": 0.0,
+            "process_area_count": 0,
+        }
+
+    # Fetch process model names
+    pm_ids = [s.process_model_id for s in scores]
+    pm_result = await session.execute(
+        select(ProcessModel).where(ProcessModel.id.in_(pm_ids))
+    )
+    pm_map = {pm.id: pm.scope for pm in pm_result.scalars().all()}
+
+    areas = []
+    total_level = 0
+    for s in scores:
+        areas.append({
+            "process_model_id": s.process_model_id,
+            "process_area_name": pm_map.get(s.process_model_id, "Unknown"),
+            "maturity_level": s.maturity_level,
+            "level_number": s.level_number,
+        })
+        total_level += s.level_number
+
+    overall = round(total_level / len(scores), 2) if scores else 0.0
+
+    return {
+        "engagement_id": engagement_id,
+        "process_areas": areas,
+        "overall_engagement_maturity": overall,
+        "process_area_count": len(scores),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Alignment Scoring routes
+# ---------------------------------------------------------------------------
 
 
 @router.post(
@@ -1654,8 +1899,6 @@ async def _run_alignment_scoring_async(
                 )
                 run = run_result.scalar_one_or_none()
                 if run and run.status != AlignmentRunStatus.FAILED:
-                    from datetime import UTC
-
                     run.status = AlignmentRunStatus.FAILED
                     run.completed_at = datetime.now(UTC)
                     run.error_message = "Background scoring task failed"

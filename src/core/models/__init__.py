@@ -142,10 +142,12 @@ from src.core.models.taskmining import (
     TaskMiningSession,
 )
 from src.core.models.tom import (
+    MATURITY_LEVEL_NUMBER,
     AlignmentRunStatus,
     Benchmark,
     BestPractice,
     GapAnalysisResult,
+    MaturityScore,
     ProcessMaturity,
     RoadmapStatus,
     TargetOperatingModel,
@@ -299,10 +301,12 @@ __all__ = [
     "ReviewPack",
     "ReviewPackStatus",
     # tom
+    "MATURITY_LEVEL_NUMBER",
     "AlignmentRunStatus",
     "Benchmark",
     "BestPractice",
     "GapAnalysisResult",
+    "MaturityScore",
     "ProcessMaturity",
     "RoadmapStatus",
     "TargetOperatingModel",
