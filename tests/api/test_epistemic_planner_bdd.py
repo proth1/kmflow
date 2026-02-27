@@ -239,6 +239,7 @@ async def test_scenario_3_api_response_get() -> None:
     action_mock.information_gain_score = 0.06
     action_mock.recommended_evidence_category = "documents"
     action_mock.priority = "high"
+    action_mock.shelf_request_id = None
 
     scenario_result = MagicMock()
     scenario_result.scalar_one_or_none.return_value = scenario
@@ -250,16 +251,18 @@ async def test_scenario_3_api_response_get() -> None:
 
     app = _make_app(session)
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as client:
-        resp = await client.get(f"/api/v1/simulations/scenarios/{SCENARIO_ID}/epistemic-plan")
+    with patch("src.api.routes.simulations.require_engagement_access", new_callable=AsyncMock):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.get(f"/api/v1/simulations/scenarios/{SCENARIO_ID}/epistemic-plan")
 
     assert resp.status_code == 200
     data = resp.json()
     assert data["scenario_id"] == str(SCENARIO_ID)
     assert len(data["actions"]) == 1
     assert data["actions"][0]["target_element_id"] == "e1"
+    assert data["actions"][0]["shelf_request_id"] is None
     assert data["aggregated_view"]["total"] == 1
 
 

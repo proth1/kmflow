@@ -703,6 +703,9 @@ async def generate_epistemic_plan(
 @router.get("/scenarios/{scenario_id}/epistemic-plan", response_model=EpistemicPlanResponse)
 async def get_epistemic_plan(
     scenario_id: UUID,
+    request: Request,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
@@ -710,12 +713,17 @@ async def get_epistemic_plan(
 
     Returns previously generated actions ranked by information gain.
     """
-    await get_scenario_or_404(session, scenario_id)
+    scenario = await get_scenario_or_404(session, scenario_id)
+
+    # IDOR check: verify user has access to this engagement
+    await require_engagement_access(scenario.engagement_id, request, user)
 
     result = await session.execute(
         select(EpistemicAction)
         .where(EpistemicAction.scenario_id == scenario_id)
         .order_by(EpistemicAction.information_gain_score.desc())
+        .offset(offset)
+        .limit(limit)
     )
     actions = list(result.scalars().all())
 
@@ -735,6 +743,7 @@ async def get_epistemic_plan(
                 "information_gain_score": a.information_gain_score,
                 "recommended_evidence_category": a.recommended_evidence_category,
                 "priority": a.priority,
+                "shelf_request_id": str(a.shelf_request_id) if a.shelf_request_id else None,
             }
             for a in actions
         ],
