@@ -55,6 +55,7 @@ from src.api.routes import (
     raci,
     regulatory,
     reports,
+    scenarios,
     shelf_requests,
     simulations,
     taskmining,
@@ -225,6 +226,7 @@ def create_app() -> FastAPI:
     app.include_router(websocket.router)
     app.include_router(patterns.router)
     app.include_router(simulations.router)
+    app.include_router(scenarios.router)
     app.include_router(portal.router)
     app.include_router(mcp_router)
     app.include_router(camunda.router)
