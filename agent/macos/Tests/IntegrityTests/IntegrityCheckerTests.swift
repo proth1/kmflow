@@ -160,12 +160,12 @@ final class IntegrityCheckerTests: XCTestCase {
             checkInterval: 0.1
         )
 
-        checker.startPeriodicChecks()
-        checker.startPeriodicChecks() // double-start should be no-op
+        await checker.startPeriodicChecks()
+        await checker.startPeriodicChecks() // double-start should be no-op
 
         try await Task.sleep(nanoseconds: 300_000_000)
 
-        checker.stopPeriodicChecks()
-        checker.stopPeriodicChecks() // double-stop should be no-op
+        await checker.stopPeriodicChecks()
+        await checker.stopPeriodicChecks() // double-stop should be no-op
     }
 }
