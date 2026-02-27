@@ -16,6 +16,7 @@ Session Variable:
 from __future__ import annotations
 
 import logging
+import re
 from uuid import UUID
 
 from sqlalchemy import text
@@ -26,30 +27,51 @@ logger = logging.getLogger(__name__)
 # Session variable name for engagement context
 RLS_SESSION_VAR = "app.current_engagement_id"
 
+# Regex for valid PostgreSQL table names (lowercase, underscores, digits)
+_TABLE_NAME_RE = re.compile(r"^[a-z_][a-z0-9_]*$")
+
 # Tables that have engagement_id and should receive RLS policies.
-# Ordered alphabetically for consistency.
+# Ordered alphabetically for consistency. Table names must match
+# the __tablename__ attribute of their SQLAlchemy model exactly.
+#
+# Excluded from RLS (nullable engagement_id, special handling needed):
+# - http_audit_events: string engagement_id (no FK), nullable
+# - engagement_members: junction table, needs its own access pattern
+# - alternative_suggestions: nullable engagement_id
+# - pattern_library_entries: uses source_engagement_id (different column)
 ENGAGEMENT_SCOPED_TABLES: list[str] = [
     "annotations",
     "audit_logs",
     "conflict_objects",
     "conformance_results",
-    "control_objectives",
+    "controls",
     "copilot_messages",
     "data_catalog_entries",
+    "epistemic_frames",
     "evidence_items",
+    "financial_assumptions",
+    "gap_analysis_results",
     "integration_connections",
     "metric_readings",
     "monitoring_alerts",
     "monitoring_jobs",
     "pattern_access_rules",
-    "policy_rules",
+    "pii_quarantine",
+    "policies",
     "process_baselines",
     "process_deviations",
     "process_models",
-    "regulatory_requirements",
+    "regulations",
     "seed_terms",
     "semantic_relationships",
     "shelf_data_requests",
+    "simulation_scenarios",
+    "survey_claims",
+    "target_operating_models",
+    "task_mining_actions",
+    "task_mining_agents",
+    "task_mining_events",
+    "task_mining_sessions",
 ]
 
 
@@ -102,6 +124,20 @@ async def set_rls_bypass(session: AsyncSession, bypass: bool = True) -> None:
     logger.debug("RLS bypass set to %s", bypass)
 
 
+def _validate_table_name(table_name: str) -> None:
+    """Validate table name to prevent SQL injection in DDL generation.
+
+    Args:
+        table_name: The table name to validate.
+
+    Raises:
+        ValueError: If the table name contains invalid characters.
+    """
+    if not _TABLE_NAME_RE.match(table_name):
+        msg = f"Invalid table name: {table_name!r} (must match [a-z_][a-z0-9_]*)"
+        raise ValueError(msg)
+
+
 def apply_engagement_rls(table_name: str) -> list[str]:
     """Generate SQL statements to apply RLS to an engagement-scoped table.
 
@@ -110,7 +146,7 @@ def apply_engagement_rls(table_name: str) -> list[str]:
     2. Force RLS even for table owners
     3. Create a SELECT policy filtering by engagement_id
     4. Create an INSERT policy ensuring new rows match context
-    5. Create an UPDATE policy filtering by engagement_id
+    5. Create an UPDATE policy with USING + WITH CHECK (prevents engagement_id mutation)
     6. Create a DELETE policy filtering by engagement_id
 
     Args:
@@ -118,7 +154,12 @@ def apply_engagement_rls(table_name: str) -> list[str]:
 
     Returns:
         List of SQL DDL strings to execute.
+
+    Raises:
+        ValueError: If table_name contains invalid characters.
     """
+    _validate_table_name(table_name)
+
     policy_name = f"engagement_isolation_{table_name}"
     rls_condition = f"engagement_id = current_setting('{RLS_SESSION_VAR}')::uuid"
 
@@ -129,8 +170,11 @@ def apply_engagement_rls(table_name: str) -> list[str]:
         (f"CREATE POLICY {policy_name}_select ON {table_name} FOR SELECT USING ({rls_condition})"),
         # INSERT: can only insert rows for current engagement
         (f"CREATE POLICY {policy_name}_insert ON {table_name} FOR INSERT WITH CHECK ({rls_condition})"),
-        # UPDATE: can only update rows for current engagement
-        (f"CREATE POLICY {policy_name}_update ON {table_name} FOR UPDATE USING ({rls_condition})"),
+        # UPDATE: USING controls visibility, WITH CHECK prevents engagement_id mutation
+        (
+            f"CREATE POLICY {policy_name}_update ON {table_name} "
+            f"FOR UPDATE USING ({rls_condition}) WITH CHECK ({rls_condition})"
+        ),
         # DELETE: can only delete rows for current engagement
         (f"CREATE POLICY {policy_name}_delete ON {table_name} FOR DELETE USING ({rls_condition})"),
     ]
@@ -144,7 +188,12 @@ def remove_engagement_rls(table_name: str) -> list[str]:
 
     Returns:
         List of SQL DDL strings to execute.
+
+    Raises:
+        ValueError: If table_name contains invalid characters.
     """
+    _validate_table_name(table_name)
+
     policy_name = f"engagement_isolation_{table_name}"
 
     return [

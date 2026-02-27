@@ -305,9 +305,34 @@ class TestRlsTableCoverage:
 
     def test_governance_tables_in_scoped(self) -> None:
         """Governance tables must be engagement-scoped."""
-        governance_tables = {"policy_rules", "control_objectives", "regulatory_requirements"}
+        governance_tables = {"policies", "controls", "regulations"}
         for table in governance_tables:
             assert table in ENGAGEMENT_SCOPED_TABLES, f"{table} missing from ENGAGEMENT_SCOPED_TABLES"
+
+    def test_simulation_tables_in_scoped(self) -> None:
+        """Simulation tables must be engagement-scoped."""
+        assert "simulation_scenarios" in ENGAGEMENT_SCOPED_TABLES
+        assert "financial_assumptions" in ENGAGEMENT_SCOPED_TABLES
+
+    def test_tom_tables_in_scoped(self) -> None:
+        """TOM and gap analysis tables must be engagement-scoped."""
+        assert "target_operating_models" in ENGAGEMENT_SCOPED_TABLES
+        assert "gap_analysis_results" in ENGAGEMENT_SCOPED_TABLES
+
+    def test_task_mining_tables_in_scoped(self) -> None:
+        """Task mining tables must be engagement-scoped."""
+        tm_tables = {"task_mining_agents", "task_mining_sessions", "task_mining_events", "task_mining_actions"}
+        for table in tm_tables:
+            assert table in ENGAGEMENT_SCOPED_TABLES, f"{table} missing from ENGAGEMENT_SCOPED_TABLES"
+
+    def test_survey_tables_in_scoped(self) -> None:
+        """Survey and epistemic frame tables must be engagement-scoped."""
+        assert "survey_claims" in ENGAGEMENT_SCOPED_TABLES
+        assert "epistemic_frames" in ENGAGEMENT_SCOPED_TABLES
+
+    def test_pii_quarantine_in_scoped(self) -> None:
+        """PII quarantine table must be engagement-scoped."""
+        assert "pii_quarantine" in ENGAGEMENT_SCOPED_TABLES
 
     def test_tables_are_sorted(self) -> None:
         """Table list should be alphabetically sorted for consistency."""
@@ -400,3 +425,76 @@ class TestRlsEdgeCases:
 
         # No policy statement should be the same between two different tables
         assert not policies_a.intersection(policies_b)
+
+
+# ---------------------------------------------------------------------------
+# Table name validation (SQL injection prevention)
+# ---------------------------------------------------------------------------
+
+
+class TestTableNameValidation:
+    """Verify table name validation prevents SQL injection."""
+
+    def test_valid_table_name_accepted(self) -> None:
+        """Valid PostgreSQL table names should be accepted."""
+        stmts = apply_engagement_rls("evidence_items")
+        assert len(stmts) == 6
+
+    def test_sql_injection_rejected(self) -> None:
+        """Table names with SQL injection should be rejected."""
+        with pytest.raises(ValueError, match="Invalid table name"):
+            apply_engagement_rls("evidence_items; DROP TABLE users")
+
+    def test_uppercase_rejected(self) -> None:
+        """Uppercase table names should be rejected."""
+        with pytest.raises(ValueError, match="Invalid table name"):
+            apply_engagement_rls("EvidenceItems")
+
+    def test_hyphen_rejected(self) -> None:
+        """Hyphens in table names should be rejected."""
+        with pytest.raises(ValueError, match="Invalid table name"):
+            apply_engagement_rls("evidence-items")
+
+    def test_space_rejected(self) -> None:
+        """Spaces in table names should be rejected."""
+        with pytest.raises(ValueError, match="Invalid table name"):
+            apply_engagement_rls("evidence items")
+
+    def test_empty_string_rejected(self) -> None:
+        """Empty table name should be rejected."""
+        with pytest.raises(ValueError, match="Invalid table name"):
+            apply_engagement_rls("")
+
+    def test_remove_also_validates(self) -> None:
+        """remove_engagement_rls should also validate table names."""
+        with pytest.raises(ValueError, match="Invalid table name"):
+            remove_engagement_rls("DROP TABLE users;")
+
+
+# ---------------------------------------------------------------------------
+# UPDATE policy WITH CHECK clause
+# ---------------------------------------------------------------------------
+
+
+class TestUpdatePolicyWithCheck:
+    """Verify UPDATE policy prevents engagement_id mutation."""
+
+    def test_update_policy_has_with_check(self) -> None:
+        """UPDATE policy must have WITH CHECK to prevent engagement_id mutation."""
+        stmts = apply_engagement_rls("evidence_items")
+        update_policy = [s for s in stmts if "FOR UPDATE" in s][0]
+        assert "WITH CHECK" in update_policy
+
+    def test_update_policy_has_using_and_with_check(self) -> None:
+        """UPDATE policy should have both USING (visibility) and WITH CHECK (mutation)."""
+        stmts = apply_engagement_rls("evidence_items")
+        update_policy = [s for s in stmts if "FOR UPDATE" in s][0]
+        assert "USING" in update_policy
+        assert "WITH CHECK" in update_policy
+
+    def test_update_with_check_references_same_condition(self) -> None:
+        """Both USING and WITH CHECK should reference the same RLS condition."""
+        stmts = apply_engagement_rls("evidence_items")
+        update_policy = [s for s in stmts if "FOR UPDATE" in s][0]
+        # Should contain the condition twice (once in USING, once in WITH CHECK)
+        assert update_policy.count("current_setting") == 2
