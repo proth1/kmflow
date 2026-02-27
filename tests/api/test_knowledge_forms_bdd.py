@@ -77,51 +77,48 @@ async def test_scenario_1_coverage_computation() -> None:
         mock_graph = mock_graph_cls.return_value
 
         async def mock_run_query(query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
-            # Activity listing
+            # Activity listing (no edge_types param)
             if "RETURN a.id AS activity_id" in query and "type(r)" not in query:
                 return [
                     {"activity_id": ACTIVITY_A},
                     {"activity_id": ACTIVITY_B},
                     {"activity_id": ACTIVITY_C},
                 ]
-            # PRECEDES / FOLLOWED_BY (sequences) - outbound
-            if "PRECEDES" in query and "-[r]->()" in query:
-                return [{"activity_id": ACTIVITY_A}, {"activity_id": ACTIVITY_B}]
-            # PRECEDES / FOLLOWED_BY - inbound
-            if "PRECEDES" in query and "()-[r]->" in query:
+            edge_types = params.get("edge_types", [])
+            is_outbound = "-[r]->()" in query
+            # Sequences (PRECEDES/FOLLOWED_BY) - outbound A,B; inbound C
+            if "PRECEDES" in edge_types:
+                if is_outbound:
+                    return [{"activity_id": ACTIVITY_A}, {"activity_id": ACTIVITY_B}]
                 return [{"activity_id": ACTIVITY_C}]
-            # DEPENDS_ON - none
-            if "DEPENDS_ON" in query:
+            # Dependencies (DEPENDS_ON) - none
+            if "DEPENDS_ON" in edge_types:
                 return []
-            # CONSUMES / PRODUCES - outbound A only
-            if "CONSUMES" in query and "-[r]->()" in query:
-                return [{"activity_id": ACTIVITY_A}]
-            if "CONSUMES" in query and "()-[r]->" in query:
+            # Inputs/Outputs (CONSUMES/PRODUCES) - outbound A only
+            if "CONSUMES" in edge_types:
+                return [{"activity_id": ACTIVITY_A}] if is_outbound else []
+            # Rules (GOVERNED_BY/HAS_RULE) - none
+            if "GOVERNED_BY" in edge_types:
                 return []
-            # GOVERNED_BY - none
-            if "GOVERNED_BY" in query:
+            # Personas (PERFORMED_BY) - outbound all 3
+            if "PERFORMED_BY" in edge_types:
+                if is_outbound:
+                    return [
+                        {"activity_id": ACTIVITY_A},
+                        {"activity_id": ACTIVITY_B},
+                        {"activity_id": ACTIVITY_C},
+                    ]
                 return []
-            # PERFORMED_BY outbound - all 3
-            if "PERFORMED_BY" in query and "-[r]->()" in query:
-                return [
-                    {"activity_id": ACTIVITY_A},
-                    {"activity_id": ACTIVITY_B},
-                    {"activity_id": ACTIVITY_C},
-                ]
-            if "PERFORMED_BY" in query and "()-[r]->" in query:
+            # Controls (REQUIRES_CONTROL/MITIGATES) - A only
+            if "REQUIRES_CONTROL" in edge_types:
+                return [{"activity_id": ACTIVITY_A}] if is_outbound else []
+            # Evidence (SUPPORTED_BY/EVIDENCED_BY) - A and B
+            if "SUPPORTED_BY" in edge_types:
+                if is_outbound:
+                    return [{"activity_id": ACTIVITY_A}, {"activity_id": ACTIVITY_B}]
                 return []
-            # ENFORCED_BY - A only
-            if "ENFORCED_BY" in query and "-[r]->()" in query:
-                return [{"activity_id": ACTIVITY_A}]
-            if "ENFORCED_BY" in query and "()-[r]->" in query:
-                return []
-            # SUPPORTED_BY - A and B
-            if "SUPPORTED_BY" in query and "-[r]->()" in query:
-                return [{"activity_id": ACTIVITY_A}, {"activity_id": ACTIVITY_B}]
-            if "SUPPORTED_BY" in query and "()-[r]->" in query:
-                return []
-            # HAS_UNCERTAINTY / CONTRADICTS - none
-            if "HAS_UNCERTAINTY" in query:
+            # Uncertainty (CONTRADICTS/DEVIATES_FROM) - none
+            if "CONTRADICTS" in edge_types:
                 return []
             return []
 
@@ -174,11 +171,13 @@ async def test_scenario_2_missing_form_detection() -> None:
         async def mock_run_query(query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
             if "RETURN a.id AS activity_id" in query and "type(r)" not in query:
                 return [{"activity_id": ACTIVITY_A}]
-            if "PRECEDES" in query and "-[r]->()" in query:
+            edge_types = params.get("edge_types", [])
+            is_outbound = "-[r]->()" in query
+            if "PRECEDES" in edge_types and is_outbound:
                 return [{"activity_id": ACTIVITY_A}]
-            if "PERFORMED_BY" in query and "-[r]->()" in query:
+            if "PERFORMED_BY" in edge_types and is_outbound:
                 return [{"activity_id": ACTIVITY_A}]
-            if "GOVERNED_BY" in query:
+            if "GOVERNED_BY" in edge_types:
                 return []  # No rules!
             return []
 
@@ -266,11 +265,12 @@ async def test_scenario_4_knowledge_gaps() -> None:
         async def mock_run_query(query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
             if "RETURN a.id AS activity_id" in query and "type(r)" not in query:
                 return [{"activity_id": ACTIVITY_A}, {"activity_id": ACTIVITY_B}]
-            # GOVERNED_BY (Form 5) - neither covered
-            if "GOVERNED_BY" in query:
+            edge_types = params.get("edge_types", [])
+            # GOVERNED_BY/HAS_RULE (Form 5) - neither covered
+            if "GOVERNED_BY" in edge_types:
                 return []
-            # HAS_UNCERTAINTY (Form 9) - neither covered
-            if "HAS_UNCERTAINTY" in query:
+            # CONTRADICTS/DEVIATES_FROM (Form 9) - neither covered
+            if "CONTRADICTS" in edge_types:
                 return []
             # Everything else - all covered
             if "-[r]->()" in query or "()-[r]->" in query:
@@ -321,7 +321,8 @@ async def test_scenario_5_coverage_progression() -> None:
         async def mock_run_query_v1(query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
             if "RETURN a.id AS activity_id" in query and "type(r)" not in query:
                 return [{"activity_id": ACTIVITY_A}, {"activity_id": ACTIVITY_B}]
-            if "GOVERNED_BY" in query:
+            edge_types = params.get("edge_types", [])
+            if "GOVERNED_BY" in edge_types:
                 return []  # No rules
             if "-[r]->()" in query or "()-[r]->" in query:
                 return [{"activity_id": ACTIVITY_A}, {"activity_id": ACTIVITY_B}]
@@ -347,9 +348,11 @@ async def test_scenario_5_coverage_progression() -> None:
         async def mock_run_query_v2(query: str, params: dict[str, Any]) -> list[dict[str, Any]]:
             if "RETURN a.id AS activity_id" in query and "type(r)" not in query:
                 return [{"activity_id": ACTIVITY_A}, {"activity_id": ACTIVITY_B}]
-            if "GOVERNED_BY" in query and "-[r]->()" in query:
+            edge_types = params.get("edge_types", [])
+            is_outbound = "-[r]->()" in query
+            if "GOVERNED_BY" in edge_types and is_outbound:
                 return [{"activity_id": ACTIVITY_A}]  # A now has rules
-            if "GOVERNED_BY" in query:
+            if "GOVERNED_BY" in edge_types:
                 return []
             if "-[r]->()" in query or "()-[r]->" in query:
                 return [{"activity_id": ACTIVITY_A}, {"activity_id": ACTIVITY_B}]
@@ -472,3 +475,24 @@ async def test_form_numbers_complete() -> None:
     numbers = set(FORM_NUMBERS.values())
     assert numbers == set(range(1, 10))
     assert len(FORM_NUMBERS) == len(KnowledgeForm)
+
+
+@pytest.mark.asyncio
+async def test_edge_types_exist_in_ontology() -> None:
+    """All edge types in FORM_EDGE_MAPPINGS must exist in kmflow_ontology.yaml."""
+    import yaml
+
+    from src.governance.knowledge_forms import FORM_EDGE_MAPPINGS
+
+    ontology_path = "src/semantic/ontology/kmflow_ontology.yaml"
+    with open(ontology_path) as f:
+        ontology = yaml.safe_load(f)
+
+    ontology_edges = set(ontology.get("relationship_types", {}).keys())
+
+    for form, edge_types in FORM_EDGE_MAPPINGS.items():
+        for edge_type in edge_types:
+            assert edge_type in ontology_edges, (
+                f"Edge type '{edge_type}' for form '{form.value}' "
+                f"not found in ontology. Available: {sorted(ontology_edges)}"
+            )

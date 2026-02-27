@@ -2,24 +2,27 @@
 
 Computes coverage of the 9 knowledge forms per activity by querying
 Neo4j for the presence of specific edge types. Each form maps to
-one or more Neo4j relationship types:
+one or more Neo4j relationship types from kmflow_ontology.yaml:
 
-  Form 1 (Activities)     → HAS_ACTIVITY
+  Form 1 (Activities)     → DECOMPOSES_INTO (auto-covered if activity exists)
   Form 2 (Sequences)      → PRECEDES / FOLLOWED_BY
   Form 3 (Dependencies)   → DEPENDS_ON
   Form 4 (Inputs/Outputs) → CONSUMES / PRODUCES
-  Form 5 (Rules)          → GOVERNED_BY
+  Form 5 (Rules)          → GOVERNED_BY / HAS_RULE
   Form 6 (Personas)       → PERFORMED_BY
-  Form 7 (Controls)       → ENFORCED_BY
-  Form 8 (Evidence)       → SUPPORTED_BY
-  Form 9 (Uncertainty)    → HAS_UNCERTAINTY / CONTRADICTS
+  Form 7 (Controls)       → REQUIRES_CONTROL / MITIGATES
+  Form 8 (Evidence)       → SUPPORTED_BY / EVIDENCED_BY
+  Form 9 (Uncertainty)    → CONTRADICTS / DEVIATES_FROM
 """
 
 from __future__ import annotations
 
 import enum
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from src.semantic.graph import KnowledgeGraphService
 
 logger = logging.getLogger(__name__)
 
@@ -39,16 +42,17 @@ class KnowledgeForm(enum.StrEnum):
 
 
 # Mapping from form to Neo4j edge types that satisfy it.
+# All edge types must exist in src/semantic/ontology/kmflow_ontology.yaml.
 FORM_EDGE_MAPPINGS: dict[KnowledgeForm, list[str]] = {
-    KnowledgeForm.ACTIVITIES: ["HAS_ACTIVITY"],
+    KnowledgeForm.ACTIVITIES: ["DECOMPOSES_INTO"],
     KnowledgeForm.SEQUENCES: ["PRECEDES", "FOLLOWED_BY"],
     KnowledgeForm.DEPENDENCIES: ["DEPENDS_ON"],
     KnowledgeForm.INPUTS_OUTPUTS: ["CONSUMES", "PRODUCES"],
-    KnowledgeForm.RULES: ["GOVERNED_BY"],
+    KnowledgeForm.RULES: ["GOVERNED_BY", "HAS_RULE"],
     KnowledgeForm.PERSONAS: ["PERFORMED_BY"],
-    KnowledgeForm.CONTROLS: ["ENFORCED_BY"],
-    KnowledgeForm.EVIDENCE: ["SUPPORTED_BY"],
-    KnowledgeForm.UNCERTAINTY: ["HAS_UNCERTAINTY", "CONTRADICTS"],
+    KnowledgeForm.CONTROLS: ["REQUIRES_CONTROL", "MITIGATES"],
+    KnowledgeForm.EVIDENCE: ["SUPPORTED_BY", "EVIDENCED_BY"],
+    KnowledgeForm.UNCERTAINTY: ["CONTRADICTS", "DEVIATES_FROM"],
 }
 
 FORM_NUMBERS: dict[KnowledgeForm, int] = {
@@ -67,7 +71,7 @@ FORM_NUMBERS: dict[KnowledgeForm, int] = {
 class KnowledgeFormsCoverageService:
     """Computes per-activity and engagement-wide coverage of the 9 forms."""
 
-    def __init__(self, graph_service: Any) -> None:
+    def __init__(self, graph_service: KnowledgeGraphService) -> None:
         self._graph = graph_service
 
     async def get_activity_ids(self, engagement_id: str) -> list[str]:
@@ -96,30 +100,29 @@ class KnowledgeFormsCoverageService:
             # Form 1: activity exists → automatically covered
             return set(activity_ids)
 
-        # Build MATCH pattern for edge types
-        # Use OPTIONAL MATCH with relationship type filter
-        edge_type_list = "[" + ", ".join(f"'{e}'" for e in edge_types) + "]"
+        # Use parameterized $edge_types to avoid Cypher injection
+        params = {
+            "engagement_id": engagement_id,
+            "activity_ids": activity_ids,
+            "edge_types": edge_types,
+        }
         query = (
             "MATCH (a:Activity) "
             "WHERE a.id IN $activity_ids AND a.engagement_id = $engagement_id "
-            f"MATCH (a)-[r]->() WHERE type(r) IN {edge_type_list} "
+            "MATCH (a)-[r]->() WHERE type(r) IN $edge_types "
             "RETURN DISTINCT a.id AS activity_id"
         )
-        records = await self._graph.run_query(
-            query, {"engagement_id": engagement_id, "activity_ids": activity_ids}
-        )
+        records = await self._graph.run_query(query, params)
         covered = {r["activity_id"] for r in records}
 
         # Also check inbound edges (e.g., PRECEDES may come from another node)
         query_inbound = (
             "MATCH (a:Activity) "
             "WHERE a.id IN $activity_ids AND a.engagement_id = $engagement_id "
-            f"MATCH ()-[r]->(a) WHERE type(r) IN {edge_type_list} "
+            "MATCH ()-[r]->(a) WHERE type(r) IN $edge_types "
             "RETURN DISTINCT a.id AS activity_id"
         )
-        records_in = await self._graph.run_query(
-            query_inbound, {"engagement_id": engagement_id, "activity_ids": activity_ids}
-        )
+        records_in = await self._graph.run_query(query_inbound, params)
         covered.update(r["activity_id"] for r in records_in)
 
         return covered
