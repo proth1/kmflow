@@ -78,3 +78,23 @@ TRIANGULATION_THRESHOLDS: dict[str, float] = {
     "moderately": 0.40,
     # Below 0.40 = weakly
 }
+
+# Four evidence planes from PRD Section 6.2
+EVIDENCE_PLANES: dict[str, str] = {
+    "structured_data": "system_behavioral",
+    "task_mining": "system_behavioral",  # Forward-looking: not yet in EvidenceCategory enum
+    "saas_exports": "system_behavioral",
+    "bpm_process_models": "documented_formal",
+    "documents": "documented_formal",
+    "regulatory_policy": "documented_formal",
+    "controls_evidence": "documented_formal",
+    "images": "observed_field",
+    "video": "observed_field",
+    "job_aids_edge_cases": "observed_field",
+    "km4work": "human_interpretation",
+    "audio": "human_interpretation",
+    "domain_communications": "human_interpretation",
+}
+
+# Cross-plane corroboration bonus for evidence_agreement
+CROSS_PLANE_BONUS: float = 0.15
