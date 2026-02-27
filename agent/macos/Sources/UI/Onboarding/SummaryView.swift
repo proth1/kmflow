@@ -137,6 +137,16 @@ public struct SummaryView: View {
                     value: state.connectionTestPassed ? "Verified" : "Not verified"
                 )
                 .foregroundColor(state.connectionTestPassed ? .green : .orange)
+
+                // Show MDM source indicator when values are centrally managed
+                if state.isMDMConfigured {
+                    Divider().padding(.leading, 120)
+                    SummaryRow(
+                        label: "Configuration",
+                        value: "Managed by your organization (MDM)"
+                    )
+                    .foregroundColor(.secondary)
+                }
             }
             .background(
                 RoundedRectangle(cornerRadius: 10)

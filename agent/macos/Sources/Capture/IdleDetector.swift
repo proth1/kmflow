@@ -38,6 +38,18 @@ public actor IdleDetector {
     public var currentlyIdle: Bool {
         isIdle
     }
+
+    /// Duration of the current idle period, rounded to 15-minute bins to
+    /// reduce granularity and protect employee privacy.
+    ///
+    /// Returns 0 if the user is not idle. Coarsening prevents detailed
+    /// inference of exact break timing from idle durations.
+    public var coarsenedIdleDuration: TimeInterval {
+        guard isIdle else { return 0 }
+        let raw = Date().timeIntervalSince(lastActivityTime)
+        let binSize: TimeInterval = 900 // 15 minutes
+        return (raw / binSize).rounded(.down) * binSize
+    }
 }
 
 public enum IdleTransition: Sendable {

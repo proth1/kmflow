@@ -89,7 +89,10 @@ public final class TransparencyLogController: ObservableObject {
     // MARK: - Public API
 
     /// Start the 5-second polling timer and perform an immediate load.
+    ///
+    /// Runs a one-time purge of events older than 7 days before loading.
     public func startRefreshing() {
+        purgeExpiredEvents()
         loadEvents()
         refreshTimer = Timer.scheduledTimer(
             withTimeInterval: refreshInterval,
@@ -105,6 +108,38 @@ public final class TransparencyLogController: ObservableObject {
     public func stopRefreshing() {
         refreshTimer?.invalidate()
         refreshTimer = nil
+    }
+
+    /// Delete events older than `retentionDays` from the local SQLite buffer.
+    ///
+    /// Called during `startRefreshing()` to enforce the 7-day local retention
+    /// limit. Uses a read-write connection for the DELETE operation.
+    public func purgeExpiredEvents(retentionDays: Int = 7) {
+        guard FileManager.default.fileExists(atPath: databaseURL.path) else { return }
+
+        var db: OpaquePointer?
+        let openResult = sqlite3_open_v2(
+            databaseURL.path, &db,
+            SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX, nil
+        )
+        guard openResult == SQLITE_OK, let database = db else {
+            sqlite3_close(db)
+            return
+        }
+        defer { sqlite3_close(database) }
+
+        // Delete rows with timestamp older than N days ago.
+        // Handles both REAL (epoch) and TEXT (ISO8601) timestamp formats.
+        let cutoffEpoch = Date(timeIntervalSinceNow: -Double(retentionDays * 86400))
+            .timeIntervalSince1970
+        let sql = "DELETE FROM events WHERE timestamp < ?;"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK,
+              let statement = stmt else { return }
+        defer { sqlite3_finalize(statement) }
+
+        sqlite3_bind_double(statement, 1, cutoffEpoch)
+        sqlite3_step(statement)
     }
 
     /// Synchronously read up to `limit` events from the SQLite buffer.

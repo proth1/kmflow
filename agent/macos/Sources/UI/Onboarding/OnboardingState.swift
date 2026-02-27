@@ -77,6 +77,9 @@ public final class OnboardingState: ObservableObject {
     /// Whether the last HTTP health-check against `backendURL` succeeded.
     @Published public var connectionTestPassed: Bool = false
 
+    /// `true` when engagement values were pre-populated from MDM configuration.
+    @Published public var isMDMConfigured: Bool = false
+
     // Completion
     /// Set to `true` when the user confirms the summary step.
     @Published public private(set) var isComplete: Bool = false
