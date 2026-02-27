@@ -46,6 +46,7 @@ from src.core.models.evidence import (
     ValidationStatus,
 )
 from src.core.models.governance import (
+    ComplianceAssessment,
     ComplianceLevel,
     Control,
     ControlEffectiveness,
@@ -202,6 +203,7 @@ __all__ = [
     "FragmentType",
     "ValidationStatus",
     # governance
+    "ComplianceAssessment",
     "ComplianceLevel",
     "Control",
     "ControlEffectiveness",

@@ -1,12 +1,13 @@
-"""Governance models: policy/control enums, Policy, Control, Regulation."""
+"""Governance models: policy/control enums, Policy, Control, Regulation, ComplianceAssessment."""
 
 from __future__ import annotations
 
 import enum
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, Index, String, Text, func
+from sqlalchemy import DateTime, Enum, Float, ForeignKey, Index, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -122,3 +123,50 @@ class Regulation(Base):
 
     def __repr__(self) -> str:
         return f"<Regulation(id={self.id}, name='{self.name}', framework='{self.framework}')>"
+
+
+class ComplianceAssessment(Base):
+    """A point-in-time compliance assessment for a process element.
+
+    Tracks compliance state based on control coverage percentage.
+    Historical records are maintained for trend analysis.
+    """
+
+    __tablename__ = "compliance_assessments"
+    __table_args__ = (
+        Index("ix_compliance_assessments_activity_id", "activity_id"),
+        Index("ix_compliance_assessments_engagement_id", "engagement_id"),
+        Index("ix_compliance_assessments_assessed_at", "assessed_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    activity_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("process_elements.id", ondelete="CASCADE"), nullable=False
+    )
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    state: Mapped[ComplianceLevel] = mapped_column(
+        Enum(ComplianceLevel, values_callable=lambda e: [x.value for x in e]),
+        default=ComplianceLevel.NOT_ASSESSED,
+        nullable=False,
+    )
+    control_coverage_percentage: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), default=Decimal("0.00"), nullable=False
+    )
+    total_required_controls: Mapped[int] = mapped_column(default=0, nullable=False)
+    controls_with_evidence: Mapped[int] = mapped_column(default=0, nullable=False)
+    gaps: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    assessed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    assessed_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    # Relationships
+    activity: Mapped["ProcessElement"] = relationship("ProcessElement")
+    engagement: Mapped["Engagement"] = relationship("Engagement")
+
+    def __repr__(self) -> str:
+        return f"<ComplianceAssessment(id={self.id}, activity_id={self.activity_id}, state={self.state})>"

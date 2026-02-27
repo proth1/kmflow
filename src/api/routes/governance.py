@@ -1,7 +1,8 @@
 """Data governance API routes.
 
-Exposes catalog management, policy evaluation, SLA checking, and
-governance package export for the KMFlow data governance framework.
+Exposes catalog management, policy evaluation, SLA checking,
+compliance assessment, and governance package export for the KMFlow
+data governance framework.
 
 All write operations require ``governance:write``.
 All read operations require ``governance:read``.
@@ -13,20 +14,34 @@ import logging
 import uuid
 from datetime import datetime
 from typing import Any
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
 from src.core.audit import log_audit
-from src.core.models import AuditAction, DataCatalogEntry, DataClassification, DataLayer, EvidenceItem, User
+from src.core.models import (
+    AuditAction,
+    ComplianceAssessment,
+    ComplianceLevel,
+    DataCatalogEntry,
+    DataClassification,
+    DataLayer,
+    EngagementMember,
+    EvidenceItem,
+    ProcessElement,
+    User,
+    UserRole,
+)
 from src.core.permissions import require_engagement_access, require_permission
 from src.datalake.backend import get_storage_backend
 from src.datalake.silver import SilverLayerWriter
 from src.governance.alerting import check_and_alert_sla_breaches
 from src.governance.catalog import DataCatalogService
+from src.governance.compliance import ComplianceAssessmentService
 from src.governance.export import export_governance_package
 from src.governance.migration import MigrationResult, migrate_engagement
 from src.governance.policy import PolicyEngine, PolicyViolation
@@ -591,4 +606,226 @@ async def get_governance_health(
         "failing_count": failing_count,
         "compliance_percentage": round(compliance_pct, 2),
         "entries": entry_statuses,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Compliance assessment schemas
+# ---------------------------------------------------------------------------
+
+
+class ComplianceAssessmentResponse(BaseModel):
+    """Response for a single compliance assessment record."""
+
+    model_config = {"from_attributes": True}
+
+    id: uuid.UUID
+    activity_id: uuid.UUID
+    engagement_id: uuid.UUID
+    state: ComplianceLevel
+    control_coverage_percentage: float
+    total_required_controls: int
+    controls_with_evidence: int
+    gaps: dict[str, Any] | None
+    assessed_at: datetime
+    assessed_by: str | None
+
+
+class ComplianceTrendResponse(BaseModel):
+    """Response for a compliance trend query."""
+
+    activity_id: uuid.UUID
+    assessments: list[ComplianceAssessmentResponse]
+    total: int
+
+
+# ---------------------------------------------------------------------------
+# Compliance assessment routes
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/activities/{activity_id}/compliance-assessments",
+    response_model=ComplianceAssessmentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def trigger_compliance_assessment(
+    activity_id: UUID,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("governance:write")),
+) -> dict[str, Any]:
+    """Trigger a compliance assessment for a process activity.
+
+    Queries ENFORCED_BY edges in the knowledge graph to determine required
+    controls, checks for evidence of execution, and computes compliance state.
+    The assessment record is persisted for trend analysis.
+    """
+    # Verify activity exists
+    act_result = await session.execute(
+        select(ProcessElement).where(ProcessElement.id == activity_id)
+    )
+    activity = act_result.scalar_one_or_none()
+    if not activity:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Activity {activity_id} not found",
+        )
+
+    # Get engagement_id from the activity's process model
+    from src.core.models import ProcessModel
+
+    model_result = await session.execute(
+        select(ProcessModel).where(ProcessModel.id == activity.model_id)
+    )
+    process_model = model_result.scalar_one_or_none()
+    if not process_model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Process model for activity {activity_id} not found",
+        )
+
+    engagement_id = process_model.engagement_id
+
+    # Verify engagement access (platform admins bypass)
+    if user.role != UserRole.PLATFORM_ADMIN:
+        member_result = await session.execute(
+            select(EngagementMember).where(
+                EngagementMember.engagement_id == engagement_id,
+                EngagementMember.user_id == user.id,
+            )
+        )
+        if not member_result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not a member of this engagement",
+            )
+
+    # Build graph service and assess
+    from src.semantic.graph import KnowledgeGraphService
+
+    graph_service = KnowledgeGraphService(request.app.state.neo4j_driver)
+    compliance_service = ComplianceAssessmentService(graph_service)
+    assessment_data = await compliance_service.assess_activity(
+        str(activity_id), str(engagement_id)
+    )
+
+    # Persist assessment record
+    record = ComplianceAssessment(
+        activity_id=activity_id,
+        engagement_id=engagement_id,
+        state=assessment_data["state"],
+        control_coverage_percentage=assessment_data["control_coverage_percentage"],
+        total_required_controls=assessment_data["total_required_controls"],
+        controls_with_evidence=assessment_data["controls_with_evidence"],
+        gaps=assessment_data["gaps"],
+        assessed_by=str(user.id),
+    )
+    session.add(record)
+
+    await log_audit(
+        session,
+        engagement_id,
+        AuditAction.ENGAGEMENT_UPDATED,
+        f"Compliance assessed for activity {activity_id}: {assessment_data['state'].value}",
+        actor=str(user.id),
+    )
+
+    await session.commit()
+    await session.refresh(record)
+
+    return {
+        "id": record.id,
+        "activity_id": record.activity_id,
+        "engagement_id": record.engagement_id,
+        "state": record.state,
+        "control_coverage_percentage": float(record.control_coverage_percentage),
+        "total_required_controls": record.total_required_controls,
+        "controls_with_evidence": record.controls_with_evidence,
+        "gaps": record.gaps,
+        "assessed_at": record.assessed_at,
+        "assessed_by": record.assessed_by,
+    }
+
+
+@router.get(
+    "/activities/{activity_id}/compliance-trend",
+    response_model=ComplianceTrendResponse,
+)
+async def get_compliance_trend(
+    activity_id: UUID,
+    from_date: datetime | None = Query(None, description="Start date for trend"),
+    to_date: datetime | None = Query(None, description="End date for trend"),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("governance:read")),
+) -> dict[str, Any]:
+    """Get compliance assessment trend for a process activity.
+
+    Returns historical assessments in chronological order. Supports optional
+    date range filtering via from_date and to_date query parameters.
+    """
+    # Verify activity exists
+    act_result = await session.execute(
+        select(ProcessElement).where(ProcessElement.id == activity_id)
+    )
+    activity = act_result.scalar_one_or_none()
+    if not activity:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Activity {activity_id} not found",
+        )
+
+    # Verify engagement access via activity's process model
+    from src.core.models import ProcessModel
+
+    model_result = await session.execute(
+        select(ProcessModel).where(ProcessModel.id == activity.model_id)
+    )
+    pm = model_result.scalar_one_or_none()
+    if pm and user.role != UserRole.PLATFORM_ADMIN:
+        member_result = await session.execute(
+            select(EngagementMember).where(
+                EngagementMember.engagement_id == pm.engagement_id,
+                EngagementMember.user_id == user.id,
+            )
+        )
+        if not member_result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not a member of this engagement",
+            )
+
+    # Build query with optional date filtering
+    query = (
+        select(ComplianceAssessment)
+        .where(ComplianceAssessment.activity_id == activity_id)
+        .order_by(ComplianceAssessment.assessed_at.asc())
+    )
+
+    if from_date:
+        query = query.where(ComplianceAssessment.assessed_at >= from_date)
+    if to_date:
+        query = query.where(ComplianceAssessment.assessed_at <= to_date)
+
+    result = await session.execute(query)
+    assessments = list(result.scalars().all())
+
+    return {
+        "activity_id": activity_id,
+        "assessments": [
+            {
+                "id": a.id,
+                "activity_id": a.activity_id,
+                "engagement_id": a.engagement_id,
+                "state": a.state,
+                "control_coverage_percentage": float(a.control_coverage_percentage),
+                "total_required_controls": a.total_required_controls,
+                "controls_with_evidence": a.controls_with_evidence,
+                "gaps": a.gaps,
+                "assessed_at": a.assessed_at,
+                "assessed_by": a.assessed_by,
+            }
+            for a in assessments
+        ],
+        "total": len(assessments),
     }
