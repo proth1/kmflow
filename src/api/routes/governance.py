@@ -14,19 +14,30 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
 from src.core.audit import log_audit
-from src.core.models import AuditAction, DataCatalogEntry, DataClassification, DataLayer, EvidenceItem, User
+from src.core.models import (
+    AuditAction,
+    Control,
+    ControlEffectiveness,
+    ControlEffectivenessScore,
+    DataCatalogEntry,
+    DataClassification,
+    DataLayer,
+    EvidenceItem,
+    User,
+)
 from src.core.permissions import require_engagement_access, require_permission
 from src.datalake.backend import get_storage_backend
 from src.datalake.silver import SilverLayerWriter
 from src.governance.alerting import check_and_alert_sla_breaches
 from src.governance.catalog import DataCatalogService
+from src.governance.effectiveness import ControlEffectivenessScoringService
 from src.governance.export import export_governance_package
 from src.governance.migration import MigrationResult, migrate_engagement
 from src.governance.policy import PolicyEngine, PolicyViolation
@@ -591,4 +602,182 @@ async def get_governance_health(
         "failing_count": failing_count,
         "compliance_percentage": round(compliance_pct, 2),
         "entries": entry_statuses,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Control effectiveness scoring schemas
+# ---------------------------------------------------------------------------
+
+
+class EffectivenessScoreResponse(BaseModel):
+    """Response for a single effectiveness score record."""
+
+    model_config = {"from_attributes": True}
+
+    id: uuid.UUID
+    control_id: uuid.UUID
+    engagement_id: uuid.UUID
+    effectiveness: ControlEffectiveness
+    execution_rate: float
+    evidence_source_ids: list[uuid.UUID] | None
+    recommendation: str | None
+    scored_at: datetime
+    scored_by: str | None
+
+
+class EffectivenessScoreHistoryResponse(BaseModel):
+    """Response for effectiveness score history."""
+
+    control_id: uuid.UUID
+    scores: list[EffectivenessScoreResponse]
+    total: int
+
+
+# ---------------------------------------------------------------------------
+# Control effectiveness scoring routes
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/controls/{control_id}/score",
+    response_model=EffectivenessScoreResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def score_control_effectiveness(
+    control_id: uuid.UUID,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("governance:write")),
+) -> dict[str, Any]:
+    """Score a control's effectiveness based on execution evidence.
+
+    Queries SUPPORTED_BY edges in the knowledge graph to compute execution rate,
+    classifies into effectiveness tier, and persists the score record.
+    Previous scores are preserved for historical analysis.
+    """
+    # Verify control exists
+    ctrl_result = await session.execute(
+        select(Control).where(Control.id == control_id)
+    )
+    control = ctrl_result.scalar_one_or_none()
+    if not control:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Control {control_id} not found",
+        )
+
+    engagement_id = control.engagement_id
+
+    # Build graph service and score
+    from src.semantic.graph import KnowledgeGraphService
+
+    graph_service = KnowledgeGraphService(request.app.state.neo4j_driver)
+    scoring_service = ControlEffectivenessScoringService(graph_service)
+    score_data = await scoring_service.score_control(
+        str(control_id), control.name, str(engagement_id)
+    )
+
+    # Persist score record
+    record = ControlEffectivenessScore(
+        control_id=control_id,
+        engagement_id=engagement_id,
+        effectiveness=score_data["effectiveness"],
+        execution_rate=score_data["execution_rate"],
+        evidence_source_ids=score_data["evidence_source_ids"] or None,
+        recommendation=score_data["recommendation"],
+        scored_by=str(user.id),
+    )
+    session.add(record)
+
+    # Update the control's effectiveness property
+    control.effectiveness = score_data["effectiveness"]
+    control.effectiveness_score = float(score_data["execution_rate"])
+
+    await log_audit(
+        session,
+        engagement_id,
+        AuditAction.ENGAGEMENT_UPDATED,
+        f"Control {control.name} scored: {score_data['effectiveness'].value}",
+        actor=str(user.id),
+    )
+
+    await session.commit()
+    await session.refresh(record)
+
+    return {
+        "id": record.id,
+        "control_id": record.control_id,
+        "engagement_id": record.engagement_id,
+        "effectiveness": record.effectiveness,
+        "execution_rate": float(record.execution_rate),
+        "evidence_source_ids": record.evidence_source_ids,
+        "recommendation": record.recommendation,
+        "scored_at": record.scored_at,
+        "scored_by": record.scored_by,
+    }
+
+
+@router.get(
+    "/controls/{control_id}/effectiveness-scores",
+    response_model=EffectivenessScoreHistoryResponse,
+)
+async def get_effectiveness_score_history(
+    control_id: uuid.UUID,
+    limit: int = Query(50, ge=1, le=500, description="Items per page"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("governance:read")),
+) -> dict[str, Any]:
+    """Get historical effectiveness scores for a control.
+
+    Returns scores in chronological order (oldest first) with pagination.
+    """
+    # Verify control exists
+    ctrl_result = await session.execute(
+        select(Control).where(Control.id == control_id)
+    )
+    if not ctrl_result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Control {control_id} not found",
+        )
+
+    # Count total
+    from sqlalchemy import func as sa_func
+
+    count_result = await session.execute(
+        select(sa_func.count())
+        .select_from(ControlEffectivenessScore)
+        .where(ControlEffectivenessScore.control_id == control_id)
+    )
+    total = count_result.scalar() or 0
+
+    # Fetch scores
+    result = await session.execute(
+        select(ControlEffectivenessScore)
+        .where(ControlEffectivenessScore.control_id == control_id)
+        .order_by(ControlEffectivenessScore.scored_at.asc())
+        .offset(offset)
+        .limit(limit)
+    )
+    scores = list(result.scalars().all())
+
+    return {
+        "control_id": control_id,
+        "scores": [
+            {
+                "id": s.id,
+                "control_id": s.control_id,
+                "engagement_id": s.engagement_id,
+                "effectiveness": s.effectiveness,
+                "execution_rate": float(s.execution_rate),
+                "evidence_source_ids": s.evidence_source_ids,
+                "recommendation": s.recommendation,
+                "scored_at": s.scored_at,
+                "scored_by": s.scored_by,
+            }
+            for s in scores
+        ],
+        "total": total,
     }
