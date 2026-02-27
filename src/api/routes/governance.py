@@ -11,23 +11,35 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
 from src.core.audit import log_audit
-from src.core.models import AuditAction, DataCatalogEntry, DataClassification, DataLayer, EvidenceItem, User
+from src.core.models import (
+    AuditAction,
+    DataCatalogEntry,
+    DataClassification,
+    DataLayer,
+    Engagement,
+    EvidenceItem,
+    GapFinding,
+    GovernanceGapStatus,
+    Regulation,
+    User,
+)
 from src.core.permissions import require_engagement_access, require_permission
 from src.datalake.backend import get_storage_backend
 from src.datalake.silver import SilverLayerWriter
 from src.governance.alerting import check_and_alert_sla_breaches
 from src.governance.catalog import DataCatalogService
 from src.governance.export import export_governance_package
+from src.governance.gap_detection import GovernanceGapDetectionService
 from src.governance.migration import MigrationResult, migrate_engagement
 from src.governance.policy import PolicyEngine, PolicyViolation
 from src.governance.quality import SLAResult, check_quality_sla
@@ -591,4 +603,277 @@ async def get_governance_health(
         "failing_count": failing_count,
         "compliance_percentage": round(compliance_pct, 2),
         "entries": entry_statuses,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Gap detection schemas
+# ---------------------------------------------------------------------------
+
+
+class GapDetectRequest(BaseModel):
+    """Request body for triggering gap detection."""
+
+    auto_generate_shelf_requests: bool = False
+
+
+class GapFindingResponse(BaseModel):
+    """Response for a single gap finding."""
+
+    model_config = {"from_attributes": True}
+
+    id: uuid.UUID
+    engagement_id: uuid.UUID
+    activity_id: uuid.UUID
+    regulation_id: uuid.UUID | None
+    gap_type: str
+    severity: str
+    status: str
+    description: str | None
+    resolved_at: datetime | None
+    created_at: datetime
+
+
+class GapDetectionResultResponse(BaseModel):
+    """Response for a gap detection run."""
+
+    engagement_id: uuid.UUID
+    new_gaps: int
+    resolved_gaps: int
+    total_open: int
+    findings: list[GapFindingResponse]
+
+
+class GapListResponse(BaseModel):
+    """Response for listing gap findings."""
+
+    engagement_id: uuid.UUID
+    findings: list[GapFindingResponse]
+    total: int
+
+
+# ---------------------------------------------------------------------------
+# Gap detection routes
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/engagements/{engagement_id}/governance-gaps/detect",
+    response_model=GapDetectionResultResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def detect_governance_gaps(
+    engagement_id: uuid.UUID,
+    body: GapDetectRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("governance:write")),
+    _engagement_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Detect governance gaps in an engagement's process activities.
+
+    Cross-references active regulations and their obligations against
+    process activities to identify where controls are mandated but absent.
+    Optionally auto-generates shelf data request items for detected gaps.
+    """
+    # Verify engagement exists
+    eng_result = await session.execute(
+        select(Engagement).where(Engagement.id == engagement_id)
+    )
+    if not eng_result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Engagement {engagement_id} not found",
+        )
+
+    # Fetch regulations for this engagement
+    reg_result = await session.execute(
+        select(Regulation).where(Regulation.engagement_id == engagement_id)
+    )
+    regulations = list(reg_result.scalars().all())
+
+    reg_dicts = [
+        {
+            "id": str(r.id),
+            "name": r.name,
+            "obligations": r.obligations,
+        }
+        for r in regulations
+    ]
+
+    # Run gap detection via graph service
+    from src.semantic.graph import KnowledgeGraphService
+
+    graph_service = KnowledgeGraphService(request.app.state.neo4j_driver)
+    detector = GovernanceGapDetectionService(graph_service)
+    new_gap_data = await detector.detect_gaps(str(engagement_id), reg_dicts)
+
+    # Fetch existing open gaps for resolution check
+    existing_result = await session.execute(
+        select(GapFinding).where(
+            GapFinding.engagement_id == engagement_id,
+            GapFinding.status == GovernanceGapStatus.OPEN,
+        )
+    )
+    existing_open = list(existing_result.scalars().all())
+
+    existing_open_dicts = [
+        {"id": str(g.id), "activity_id": str(g.activity_id)}
+        for g in existing_open
+    ]
+
+    # Resolve gaps that are now covered
+    resolved_ids = await detector.resolve_covered_gaps(
+        str(engagement_id), existing_open_dicts
+    )
+    resolved_count = 0
+    now = datetime.now(UTC)
+    for gap in existing_open:
+        if str(gap.id) in resolved_ids:
+            gap.status = GovernanceGapStatus.RESOLVED
+            gap.resolved_at = now
+            resolved_count += 1
+
+    # Deduplicate: don't re-create gaps for activities that already have open findings
+    existing_activity_ids = {
+        str(g.activity_id) for g in existing_open if g.status == GovernanceGapStatus.OPEN
+    }
+    new_findings: list[GapFinding] = []
+    for gd in new_gap_data:
+        if gd["activity_id"] in existing_activity_ids:
+            continue
+        finding = GapFinding(
+            engagement_id=engagement_id,
+            activity_id=uuid.UUID(gd["activity_id"]),
+            regulation_id=uuid.UUID(gd["regulation_id"]) if gd.get("regulation_id") else None,
+            gap_type=gd["gap_type"],
+            severity=gd["severity"],
+            status=gd["status"],
+            description=gd["description"],
+        )
+        session.add(finding)
+        new_findings.append(finding)
+
+    await log_audit(
+        session,
+        engagement_id,
+        AuditAction.ENGAGEMENT_UPDATED,
+        f"Gap detection: {len(new_findings)} new, {resolved_count} resolved",
+        actor=str(user.id),
+    )
+
+    await session.commit()
+
+    # Refresh to get IDs and timestamps
+    for f in new_findings:
+        await session.refresh(f)
+
+    # Count total open after this run
+    open_count_result = await session.execute(
+        select(GapFinding).where(
+            GapFinding.engagement_id == engagement_id,
+            GapFinding.status == GovernanceGapStatus.OPEN,
+        )
+    )
+    total_open = len(list(open_count_result.scalars().all()))
+
+    return {
+        "engagement_id": engagement_id,
+        "new_gaps": len(new_findings),
+        "resolved_gaps": resolved_count,
+        "total_open": total_open,
+        "findings": [
+            {
+                "id": f.id,
+                "engagement_id": f.engagement_id,
+                "activity_id": f.activity_id,
+                "regulation_id": f.regulation_id,
+                "gap_type": f.gap_type.value if hasattr(f.gap_type, "value") else str(f.gap_type),
+                "severity": f.severity.value if hasattr(f.severity, "value") else str(f.severity),
+                "status": f.status.value if hasattr(f.status, "value") else str(f.status),
+                "description": f.description,
+                "resolved_at": f.resolved_at,
+                "created_at": f.created_at,
+            }
+            for f in new_findings
+        ],
+    }
+
+
+@router.get(
+    "/engagements/{engagement_id}/governance-gaps",
+    response_model=GapListResponse,
+)
+async def list_governance_gaps(
+    engagement_id: uuid.UUID,
+    gap_status: str | None = Query(None, alias="status", description="Filter by status: OPEN or RESOLVED"),
+    limit: int = Query(50, ge=1, le=500, description="Items per page"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("governance:read")),
+    _engagement_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """List governance gap findings for an engagement.
+
+    Filter by status (OPEN/RESOLVED) or return all. Paginated.
+    """
+    # Verify engagement exists
+    eng_result = await session.execute(
+        select(Engagement).where(Engagement.id == engagement_id)
+    )
+    if not eng_result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Engagement {engagement_id} not found",
+        )
+
+    # Build query
+    query = (
+        select(GapFinding)
+        .where(GapFinding.engagement_id == engagement_id)
+        .order_by(GapFinding.created_at.desc())
+    )
+
+    if gap_status:
+        normalized = gap_status.lower()
+        if normalized in ("open", "resolved"):
+            query = query.where(GapFinding.status == normalized)
+
+    # Count total
+    from sqlalchemy import func as sa_func
+
+    count_query = (
+        select(sa_func.count())
+        .select_from(GapFinding)
+        .where(GapFinding.engagement_id == engagement_id)
+    )
+    if gap_status:
+        normalized = gap_status.lower()
+        if normalized in ("open", "resolved"):
+            count_query = count_query.where(GapFinding.status == normalized)
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
+
+    # Fetch page
+    result = await session.execute(query.offset(offset).limit(limit))
+    findings = list(result.scalars().all())
+
+    return {
+        "engagement_id": engagement_id,
+        "findings": [
+            {
+                "id": f.id,
+                "engagement_id": f.engagement_id,
+                "activity_id": f.activity_id,
+                "regulation_id": f.regulation_id,
+                "gap_type": f.gap_type.value if hasattr(f.gap_type, "value") else str(f.gap_type),
+                "severity": f.severity.value if hasattr(f.severity, "value") else str(f.severity),
+                "status": f.status.value if hasattr(f.status, "value") else str(f.status),
+                "description": f.description,
+                "resolved_at": f.resolved_at,
+                "created_at": f.created_at,
+            }
+            for f in findings
+        ],
+        "total": total,
     }
