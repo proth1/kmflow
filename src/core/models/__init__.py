@@ -139,9 +139,11 @@ from src.core.models.tom import (
     BestPractice,
     GapAnalysisResult,
     ProcessMaturity,
+    RoadmapStatus,
     TargetOperatingModel,
     TOMDimension,
     TOMGapType,
+    TransformationRoadmapModel,
 )
 from src.core.models.validation import (
     ReviewPack,
@@ -281,7 +283,9 @@ __all__ = [
     "BestPractice",
     "GapAnalysisResult",
     "ProcessMaturity",
+    "RoadmapStatus",
     "TargetOperatingModel",
     "TOMDimension",
     "TOMGapType",
+    "TransformationRoadmapModel",
 ]

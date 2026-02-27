@@ -845,3 +845,179 @@ async def get_roadmap_summary(
         "total_gaps": len(gaps),
         "gaps_by_dimension": by_dimension,
     }
+
+
+# -- Gap-Prioritized Roadmap Routes (Story #368) -----------------------------
+
+
+class RoadmapRecommendationDetail(BaseModel):
+    """A recommendation within a roadmap phase."""
+
+    gap_id: str
+    title: str
+    dimension: str
+    gap_type: str
+    composite_score: float
+    effort_weeks: float
+    remediation_cost: int
+    rationale_summary: str
+    depends_on: list[str] = Field(default_factory=list)
+
+
+class PrioritizedPhaseResponse(BaseModel):
+    """A phase in the prioritized roadmap."""
+
+    phase_number: int
+    name: str
+    duration_weeks_estimate: int
+    recommendation_count: int
+    recommendation_ids: list[str]
+    recommendations: list[RoadmapRecommendationDetail]
+
+
+class PrioritizedRoadmapResponse(BaseModel):
+    """Full prioritized roadmap response."""
+
+    model_config = {"from_attributes": True}
+
+    id: UUID
+    engagement_id: UUID
+    status: str
+    total_initiatives: int
+    estimated_duration_weeks: int
+    phases: list[PrioritizedPhaseResponse]
+    generated_at: Any
+
+
+class GenerateRoadmapResponse(BaseModel):
+    """Response for roadmap generation."""
+
+    roadmap_id: UUID
+    engagement_id: UUID
+    status: str
+    total_initiatives: int
+    estimated_duration_weeks: int
+    phase_count: int
+
+
+@router.post(
+    "/roadmaps/{engagement_id}/generate",
+    response_model=GenerateRoadmapResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def generate_prioritized_roadmap(
+    engagement_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
+    _engagement_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Generate a prioritized transformation roadmap from gap analysis.
+
+    Groups gaps into 3-4 phases based on composite_score and effort_estimate,
+    resolves dependencies via topological sort, and persists the roadmap.
+    """
+    from src.tom.roadmap_generator import generate_roadmap as gen_roadmap
+
+    # Verify engagement exists
+    eng_result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
+    if not eng_result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Engagement {engagement_id} not found",
+        )
+
+    roadmap = await gen_roadmap(session, engagement_id)
+    await session.commit()
+
+    return {
+        "roadmap_id": roadmap.id,
+        "engagement_id": roadmap.engagement_id,
+        "status": roadmap.status.value,
+        "total_initiatives": roadmap.total_initiatives,
+        "estimated_duration_weeks": roadmap.estimated_duration_weeks,
+        "phase_count": len(roadmap.phases or []),
+    }
+
+
+@router.get("/roadmaps/{roadmap_id}", response_model=PrioritizedRoadmapResponse)
+async def get_prioritized_roadmap(
+    roadmap_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+) -> dict[str, Any]:
+    """Retrieve a generated roadmap by ID (structured JSON)."""
+    from src.core.models import TransformationRoadmapModel
+
+    result = await session.execute(
+        select(TransformationRoadmapModel).where(TransformationRoadmapModel.id == roadmap_id)
+    )
+    roadmap = result.scalar_one_or_none()
+    if not roadmap:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Roadmap {roadmap_id} not found",
+        )
+
+    return {
+        "id": roadmap.id,
+        "engagement_id": roadmap.engagement_id,
+        "status": roadmap.status.value,
+        "total_initiatives": roadmap.total_initiatives,
+        "estimated_duration_weeks": roadmap.estimated_duration_weeks,
+        "phases": roadmap.phases or [],
+        "generated_at": roadmap.generated_at,
+    }
+
+
+@router.get("/roadmaps/{roadmap_id}/export")
+async def export_roadmap(
+    roadmap_id: UUID,
+    format: str = Query(default="html", description="Export format: html"),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+) -> Any:
+    """Export a roadmap as client-ready HTML document."""
+    from fastapi.responses import HTMLResponse
+
+    from src.core.models import TransformationRoadmapModel
+    from src.tom.roadmap_exporter import export_roadmap_html
+
+    result = await session.execute(
+        select(TransformationRoadmapModel).where(TransformationRoadmapModel.id == roadmap_id)
+    )
+    roadmap = result.scalar_one_or_none()
+    if not roadmap:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Roadmap {roadmap_id} not found",
+        )
+
+    # Fetch engagement name
+    eng_result = await session.execute(
+        select(Engagement).where(Engagement.id == roadmap.engagement_id)
+    )
+    engagement = eng_result.scalar_one_or_none()
+    eng_name = engagement.name if engagement else "Unknown Engagement"
+
+    roadmap_data = {
+        "phases": roadmap.phases or [],
+        "total_initiatives": roadmap.total_initiatives,
+        "estimated_duration_weeks": roadmap.estimated_duration_weeks,
+        "generated_at": roadmap.generated_at.isoformat() if roadmap.generated_at else "",
+    }
+
+    if format != "html":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported export format: {format}. Supported: html",
+        )
+
+    html_content = export_roadmap_html(roadmap_data, eng_name)
+
+    # Update exported_at
+    from datetime import UTC, datetime
+
+    roadmap.exported_at = datetime.now(UTC)
+    await session.commit()
+
+    return HTMLResponse(content=html_content)

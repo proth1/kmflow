@@ -1,4 +1,4 @@
-"""TOM models: dimension/gap/maturity enums, TargetOperatingModel, GapAnalysisResult, BestPractice, Benchmark."""
+"""TOM models: dimension/gap/maturity enums, TargetOperatingModel, GapAnalysisResult, BestPractice, Benchmark, TransformationRoadmap."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, Index, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -93,6 +93,8 @@ class GapAnalysisResult(Base):
     confidence: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
     recommendation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    remediation_cost: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    depends_on_ids: Mapped[list | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
@@ -103,6 +105,12 @@ class GapAnalysisResult(Base):
     def priority_score(self) -> float:
         """Computed priority: severity * confidence."""
         return round(self.severity * self.confidence, 4)
+
+    @property
+    def effort_weeks(self) -> float:
+        """Effort estimate in weeks derived from remediation_cost (1-5 scale)."""
+        cost_map = {1: 0.5, 2: 1.0, 3: 2.0, 4: 4.0, 5: 8.0}
+        return cost_map.get(self.remediation_cost or 3, 2.0)
 
     def __repr__(self) -> str:
         return f"<GapAnalysisResult(id={self.id}, gap_type={self.gap_type}, dimension={self.dimension})>"
@@ -144,3 +152,41 @@ class Benchmark(Base):
 
     def __repr__(self) -> str:
         return f"<Benchmark(id={self.id}, metric='{self.metric_name}', industry='{self.industry}')>"
+
+
+class RoadmapStatus(enum.StrEnum):
+    """Transformation roadmap status."""
+
+    DRAFT = "draft"
+    FINAL = "final"
+
+
+class TransformationRoadmapModel(Base):
+    """A persisted transformation roadmap generated from gap analysis."""
+
+    __tablename__ = "transformation_roadmaps"
+    __table_args__ = (
+        Index("ix_transformation_roadmaps_engagement_id", "engagement_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    status: Mapped[RoadmapStatus] = mapped_column(
+        Enum(RoadmapStatus, values_callable=lambda e: [x.value for x in e]),
+        default=RoadmapStatus.DRAFT,
+        nullable=False,
+    )
+    phases: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    total_initiatives: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    estimated_duration_weeks: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    exported_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finalized: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # Relationships
+    engagement: Mapped["Engagement"] = relationship("Engagement")
+
+    def __repr__(self) -> str:
+        return f"<TransformationRoadmapModel(id={self.id}, status={self.status})>"
