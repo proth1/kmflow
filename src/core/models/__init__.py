@@ -5,7 +5,6 @@ so that existing code using ``from src.core.models import X`` continues to work.
 """
 
 from src.core.models.audit import AuditAction, AuditLog, HttpAuditEvent
-from src.core.models.llm_audit import LLMAuditLog
 from src.core.models.auth import (
     CopilotMessage,
     EngagementMember,
@@ -14,13 +13,13 @@ from src.core.models.auth import (
     UserConsent,
     UserRole,
 )
+from src.core.models.canonical_event import CanonicalActivityEvent, EventMappingStatus
 from src.core.models.conflict import (
     ConflictObject,
     MismatchType,
     ResolutionStatus,
     ResolutionType,
 )
-from src.core.models.canonical_event import CanonicalActivityEvent, EventMappingStatus
 from src.core.models.conformance import ConformanceResult, ReferenceProcessModel
 from src.core.models.dark_room import DarkRoomSnapshot
 from src.core.models.engagement import (
@@ -31,6 +30,7 @@ from src.core.models.engagement import (
     ShelfDataRequestItem,
     ShelfDataRequestToken,
     ShelfRequestItemPriority,
+    ShelfRequestItemSource,
     ShelfRequestItemStatus,
     ShelfRequestStatus,
     UploadFileStatus,
@@ -46,11 +46,6 @@ from src.core.models.evidence import (
     FragmentType,
     ValidationStatus,
 )
-from src.core.models.illumination import (
-    IlluminationAction,
-    IlluminationActionStatus,
-    IlluminationActionType,
-)
 from src.core.models.governance import (
     ComplianceAssessment,
     ComplianceLevel,
@@ -65,6 +60,12 @@ from src.core.models.governance import (
     PolicyType,
     Regulation,
 )
+from src.core.models.illumination import (
+    IlluminationAction,
+    IlluminationActionStatus,
+    IlluminationActionType,
+)
+from src.core.models.llm_audit import LLMAuditLog
 from src.core.models.monitoring import (
     AlertSeverity,
     AlertStatus,
@@ -206,6 +207,7 @@ __all__ = [
     "ShelfDataRequestItem",
     "ShelfDataRequestToken",
     "ShelfRequestItemPriority",
+    "ShelfRequestItemSource",
     "ShelfRequestItemStatus",
     "ShelfRequestStatus",
     "UploadFileStatus",

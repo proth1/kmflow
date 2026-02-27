@@ -61,6 +61,13 @@ class ShelfRequestItemPriority(enum.StrEnum):
     LOW = "low"
 
 
+class ShelfRequestItemSource(enum.StrEnum):
+    """Origin of a shelf data request item."""
+
+    PLANNER = "planner"
+    MANUAL = "manual"
+
+
 class Engagement(Base):
     """A consulting engagement scope."""
 
@@ -196,6 +203,15 @@ class ShelfDataRequestItem(Base):
     )
     received_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     uploaded_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    epistemic_action_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("epistemic_actions.id", ondelete="SET NULL"), nullable=True
+    )
+    source: Mapped[ShelfRequestItemSource] = mapped_column(
+        Enum(ShelfRequestItemSource, values_callable=lambda e: [x.value for x in e]),
+        default=ShelfRequestItemSource.MANUAL,
+        nullable=False,
+        server_default="manual",
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
