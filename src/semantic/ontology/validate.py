@@ -71,15 +71,15 @@ def validate_schema() -> list[str]:
                 if ep_label not in node_labels:
                     errors.append(f"Relationship '{rel_type}' {endpoint_key} references unknown node type '{ep_label}'")
 
-    # Check expected counts (from PRD: 13 node types, 12 relationship types)
-    if len(node_labels) != 13:
-        errors.append(f"Expected 13 node types, found {len(node_labels)}: {sorted(node_labels)}")
-    if len(rel_types) != 12:
-        errors.append(f"Expected 12 relationship types, found {len(rel_types)}: {sorted(rel_types)}")
+    # Check expected counts (PRD v2.1: 20 node types, 26 relationship types)
+    if len(node_labels) != 20:
+        errors.append(f"Expected 20 node types, found {len(node_labels)}: {sorted(node_labels)}")
+    if len(rel_types) != 26:
+        errors.append(f"Expected 26 relationship types, found {len(rel_types)}: {sorted(rel_types)}")
 
-    # Check extractable types cover the 5 EntityType enum values
+    # Check extractable types cover the EntityType enum values (8 in PRD v2.1)
     extractable = {defn["entity_type"] for defn in ontology["node_types"].values() if defn.get("extractable")}
-    expected_extractable = {"activity", "decision", "role", "system", "document"}
+    expected_extractable = {"activity", "decision", "role", "system", "document", "data_object", "event", "gateway"}
     if extractable != expected_extractable:
         missing = expected_extractable - extractable
         extra = extractable - expected_extractable
