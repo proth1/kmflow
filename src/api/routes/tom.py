@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -15,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.api.deps import get_session
 from src.core.audit import log_audit
@@ -27,7 +29,9 @@ from src.core.models import (
     GapAnalysisResult,
     TargetOperatingModel,
     TOMDimension,
+    TOMDimensionRecord,
     TOMGapType,
+    TOMVersion,
     User,
     UserRole,
 )
@@ -58,12 +62,20 @@ async def _check_engagement_member(session: AsyncSession, user: User, engagement
 # -- Request/Response Schemas ------------------------------------------------
 
 
+class DimensionInput(BaseModel):
+    """Schema for a single TOM dimension input."""
+
+    dimension_type: TOMDimension
+    maturity_target: int = Field(..., ge=1, le=5)
+    description: str | None = None
+
+
 class TOMCreate(BaseModel):
     """Schema for creating a target operating model."""
 
     engagement_id: UUID
     name: str = Field(..., min_length=1, max_length=512)
-    dimensions: dict[str, Any] | None = None
+    dimensions: list[DimensionInput] | None = None
     maturity_targets: dict[str, Any] | None = None
 
 
@@ -71,8 +83,18 @@ class TOMUpdate(BaseModel):
     """Schema for updating a TOM (PATCH)."""
 
     name: str | None = Field(None, min_length=1, max_length=512)
-    dimensions: dict[str, Any] | None = None
+    dimensions: list[DimensionInput] | None = None
     maturity_targets: dict[str, Any] | None = None
+
+
+class DimensionResponse(BaseModel):
+    """Schema for a TOM dimension in responses."""
+
+    model_config = {"from_attributes": True}
+
+    dimension_type: TOMDimension
+    maturity_target: int
+    description: str | None
 
 
 class TOMResponse(BaseModel):
@@ -83,10 +105,11 @@ class TOMResponse(BaseModel):
     id: UUID
     engagement_id: UUID
     name: str
-    dimensions: dict[str, Any] | None
+    version: int
+    dimensions: list[DimensionResponse] | None = None
     maturity_targets: dict[str, Any] | None
-    created_at: Any
-    updated_at: Any
+    created_at: datetime
+    updated_at: datetime
 
 
 class TOMList(BaseModel):
@@ -94,6 +117,25 @@ class TOMList(BaseModel):
 
     items: list[TOMResponse]
     total: int
+
+
+class TOMVersionResponse(BaseModel):
+    """Schema for a TOM version history entry."""
+
+    model_config = {"from_attributes": True}
+
+    version_number: int
+    snapshot: dict[str, Any]
+    changed_by: str | None
+    created_at: datetime
+
+
+class TOMVersionList(BaseModel):
+    """Schema for listing TOM versions."""
+
+    tom_id: UUID
+    current_version: int
+    versions: list[TOMVersionResponse]
 
 
 class GapCreate(BaseModel):
@@ -189,12 +231,50 @@ class BenchmarkResponse(BaseModel):
 # -- TOM Routes ---------------------------------------------------------------
 
 
+def _tom_to_response(tom: TargetOperatingModel) -> dict[str, Any]:
+    """Convert TOM ORM instance to response dict with embedded dimensions."""
+    dim_list = [
+        {
+            "dimension_type": dr.dimension_type,
+            "maturity_target": dr.maturity_target,
+            "description": dr.description,
+        }
+        for dr in (tom.dimension_records or [])
+    ]
+    return {
+        "id": tom.id,
+        "engagement_id": tom.engagement_id,
+        "name": tom.name,
+        "version": tom.version,
+        "dimensions": dim_list if dim_list else None,
+        "maturity_targets": tom.maturity_targets,
+        "created_at": tom.created_at,
+        "updated_at": tom.updated_at,
+    }
+
+
+def _snapshot_dimensions(tom: TargetOperatingModel) -> dict[str, Any]:
+    """Create a JSON-serialisable snapshot of the TOM's current state."""
+    return {
+        "name": tom.name,
+        "maturity_targets": tom.maturity_targets,
+        "dimensions": [
+            {
+                "dimension_type": dr.dimension_type.value if hasattr(dr.dimension_type, "value") else str(dr.dimension_type),
+                "maturity_target": dr.maturity_target,
+                "description": dr.description,
+            }
+            for dr in (tom.dimension_records or [])
+        ],
+    }
+
+
 @router.post("/models", response_model=TOMResponse, status_code=status.HTTP_201_CREATED)
 async def create_tom(
     payload: TOMCreate,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:update")),
-) -> TargetOperatingModel:
+) -> dict[str, Any]:
     """Create a new target operating model."""
     await _check_engagement_member(session, user, payload.engagement_id)
     eng_result = await session.execute(select(Engagement).where(Engagement.id == payload.engagement_id))
@@ -202,18 +282,39 @@ async def create_tom(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found"
         )
+    # Validate no duplicate dimension types
+    if payload.dimensions:
+        dim_types = [d.dimension_type for d in payload.dimensions]
+        if len(dim_types) != len(set(dim_types)):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Duplicate dimension_type values are not allowed",
+            )
+
     tom = TargetOperatingModel(
         engagement_id=payload.engagement_id,
         name=payload.name,
-        dimensions=payload.dimensions,
+        version=1,
         maturity_targets=payload.maturity_targets,
     )
     session.add(tom)
     await session.flush()
+
+    # Create structured dimension records
+    if payload.dimensions:
+        for dim_input in payload.dimensions:
+            dim_record = TOMDimensionRecord(
+                tom_id=tom.id,
+                dimension_type=dim_input.dimension_type,
+                maturity_target=dim_input.maturity_target,
+                description=dim_input.description,
+            )
+            session.add(dim_record)
+
     await log_audit(session, payload.engagement_id, AuditAction.TOM_CREATED, json.dumps({"name": payload.name}))
     await session.commit()
-    await session.refresh(tom)
-    return tom
+    await session.refresh(tom, attribute_names=["dimension_records"])
+    return _tom_to_response(tom)
 
 
 @router.get("/models", response_model=TOMList)
@@ -226,7 +327,12 @@ async def list_toms(
 ) -> dict[str, Any]:
     """List target operating models for an engagement."""
     await _check_engagement_member(session, user, engagement_id)
-    query = select(TargetOperatingModel).where(TargetOperatingModel.engagement_id == engagement_id)
+
+    query = (
+        select(TargetOperatingModel)
+        .where(TargetOperatingModel.engagement_id == engagement_id)
+        .options(selectinload(TargetOperatingModel.dimension_records))
+    )
     count_query = (
         select(func.count())
         .select_from(TargetOperatingModel)
@@ -237,7 +343,7 @@ async def list_toms(
     toms = list(result.scalars().all())
     count_result = await session.execute(count_query)
     total = count_result.scalar() or 0
-    return {"items": toms, "total": total}
+    return {"items": [_tom_to_response(t) for t in toms], "total": total}
 
 
 @router.get("/models/{tom_id}", response_model=TOMResponse)
@@ -245,14 +351,19 @@ async def get_tom(
     tom_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
-) -> TargetOperatingModel:
-    """Get a specific TOM by ID."""
-    result = await session.execute(select(TargetOperatingModel).where(TargetOperatingModel.id == tom_id))
+) -> dict[str, Any]:
+    """Get a specific TOM by ID with embedded dimensions."""
+
+    result = await session.execute(
+        select(TargetOperatingModel)
+        .where(TargetOperatingModel.id == tom_id)
+        .options(selectinload(TargetOperatingModel.dimension_records))
+    )
     tom = result.scalar_one_or_none()
     if not tom:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"TOM {tom_id} not found")
     await _check_engagement_member(session, user, tom.engagement_id)
-    return tom
+    return _tom_to_response(tom)
 
 
 @router.patch("/models/{tom_id}", response_model=TOMResponse)
@@ -261,21 +372,196 @@ async def update_tom(
     payload: TOMUpdate,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:update")),
-) -> TargetOperatingModel:
-    """Update a TOM (partial update)."""
+) -> dict[str, Any]:
+    """Update a TOM (partial update). Creates a version snapshot before applying changes."""
+
+    result = await session.execute(
+        select(TargetOperatingModel)
+        .where(TargetOperatingModel.id == tom_id)
+        .options(selectinload(TargetOperatingModel.dimension_records))
+    )
+    tom = result.scalar_one_or_none()
+    if not tom:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"TOM {tom_id} not found")
+    await _check_engagement_member(session, user, tom.engagement_id)
+
+    # Snapshot current state before changes
+    snapshot = _snapshot_dimensions(tom)
+    version_record = TOMVersion(
+        tom_id=tom.id,
+        version_number=tom.version,
+        snapshot=snapshot,
+        changed_by=str(user.id) if user else None,
+    )
+    session.add(version_record)
+
+    # Apply scalar updates (name, maturity_targets)
+    update_data = payload.model_dump(exclude_unset=True, exclude={"dimensions"})
+    for field_name, value in update_data.items():
+        setattr(tom, field_name, value)
+
+    # Apply dimension updates if provided
+    if payload.dimensions is not None:
+        # Update or create dimension records
+        existing = {dr.dimension_type: dr for dr in tom.dimension_records}
+        for dim_input in payload.dimensions:
+            if dim_input.dimension_type in existing:
+                existing[dim_input.dimension_type].maturity_target = dim_input.maturity_target
+                existing[dim_input.dimension_type].description = dim_input.description
+            else:
+                dim_record = TOMDimensionRecord(
+                    tom_id=tom.id,
+                    dimension_type=dim_input.dimension_type,
+                    maturity_target=dim_input.maturity_target,
+                    description=dim_input.description,
+                )
+                session.add(dim_record)
+
+    # Bump version atomically via SQL expression to prevent race conditions
+    await session.execute(
+        select(TargetOperatingModel)
+        .where(TargetOperatingModel.id == tom.id)
+        .with_for_update()
+    )
+    tom.version = TargetOperatingModel.version + 1  # type: ignore[assignment]  # SA SQL expression
+
+    await session.commit()
+    await session.refresh(tom, attribute_names=["dimension_records"])
+    return _tom_to_response(tom)
+
+
+# -- Version History Routes ----------------------------------------------------
+
+
+@router.get("/models/{tom_id}/versions", response_model=TOMVersionList)
+async def get_tom_versions(
+    tom_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+) -> dict[str, Any]:
+    """Get version history for a TOM."""
     result = await session.execute(select(TargetOperatingModel).where(TargetOperatingModel.id == tom_id))
     tom = result.scalar_one_or_none()
     if not tom:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"TOM {tom_id} not found")
     await _check_engagement_member(session, user, tom.engagement_id)
 
-    update_data = payload.model_dump(exclude_unset=True)
-    for field_name, value in update_data.items():
-        setattr(tom, field_name, value)
+    versions_result = await session.execute(
+        select(TOMVersion)
+        .where(TOMVersion.tom_id == tom_id)
+        .order_by(TOMVersion.version_number.asc())
+    )
+    versions = list(versions_result.scalars().all())
 
+    return {
+        "tom_id": tom.id,
+        "current_version": tom.version,
+        "versions": [
+            {
+                "version_number": v.version_number,
+                "snapshot": v.snapshot,
+                "changed_by": v.changed_by,
+                "created_at": v.created_at,
+            }
+            for v in versions
+        ],
+    }
+
+
+# -- Import/Export Routes -----------------------------------------------------
+
+
+@router.get("/models/{tom_id}/export")
+async def export_tom(
+    tom_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+) -> dict[str, Any]:
+    """Export a TOM as a portable JSON document."""
+
+    result = await session.execute(
+        select(TargetOperatingModel)
+        .where(TargetOperatingModel.id == tom_id)
+        .options(selectinload(TargetOperatingModel.dimension_records))
+    )
+    tom = result.scalar_one_or_none()
+    if not tom:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"TOM {tom_id} not found")
+    await _check_engagement_member(session, user, tom.engagement_id)
+
+    return {
+        "name": tom.name,
+        "version": tom.version,
+        "maturity_targets": tom.maturity_targets,
+        "dimensions": [
+            {
+                "dimension_type": dr.dimension_type.value if hasattr(dr.dimension_type, "value") else str(dr.dimension_type),
+                "maturity_target": dr.maturity_target,
+                "description": dr.description,
+            }
+            for dr in (tom.dimension_records or [])
+        ],
+    }
+
+
+class TOMImport(BaseModel):
+    """Schema for importing a TOM."""
+
+    engagement_id: UUID
+    name: str = Field(..., min_length=1, max_length=512)
+    dimensions: list[DimensionInput] | None = None
+    maturity_targets: dict[str, Any] | None = None
+
+
+@router.post("/models/import", response_model=TOMResponse, status_code=status.HTTP_201_CREATED)
+async def import_tom(
+    payload: TOMImport,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
+) -> dict[str, Any]:
+    """Import a TOM from a portable JSON document."""
+    await _check_engagement_member(session, user, payload.engagement_id)
+    eng_result = await session.execute(select(Engagement).where(Engagement.id == payload.engagement_id))
+    if not eng_result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found"
+        )
+
+    # Validate no duplicate dimension types
+    if payload.dimensions:
+        dim_types = [d.dimension_type for d in payload.dimensions]
+        if len(dim_types) != len(set(dim_types)):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Duplicate dimension_type values are not allowed",
+            )
+
+    tom = TargetOperatingModel(
+        engagement_id=payload.engagement_id,
+        name=payload.name,
+        version=1,
+        maturity_targets=payload.maturity_targets,
+    )
+    session.add(tom)
+    await session.flush()
+
+    if payload.dimensions:
+        for dim_input in payload.dimensions:
+            dim_record = TOMDimensionRecord(
+                tom_id=tom.id,
+                dimension_type=dim_input.dimension_type,
+                maturity_target=dim_input.maturity_target,
+                description=dim_input.description,
+            )
+            session.add(dim_record)
+
+    await log_audit(
+        session, payload.engagement_id, AuditAction.TOM_CREATED,
+        json.dumps({"name": payload.name, "source": "import"}),
+    )
     await session.commit()
-    await session.refresh(tom)
-    return tom
+    await session.refresh(tom, attribute_names=["dimension_records"])
+    return _tom_to_response(tom)
 
 
 # -- Gap Analysis Routes ------------------------------------------------------
