@@ -49,11 +49,17 @@ export default function AnalyticsPage() {
   );
 
   useEffect(() => {
+    let mounted = true;
     fetchMetricDefinitions()
-      .then((result) => setMetrics(result.items))
+      .then((result) => {
+        if (mounted) setMetrics(result.items);
+      })
       .catch((err) => {
-        console.error("Failed to load metric definitions:", err);
+        if (mounted) console.error("Failed to load metric definitions:", err);
       });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const idError =
