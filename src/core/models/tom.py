@@ -54,6 +54,7 @@ class TargetOperatingModel(Base):
         UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(512), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     dimensions: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     maturity_targets: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -66,9 +67,70 @@ class TargetOperatingModel(Base):
     gap_results: Mapped[list[GapAnalysisResult]] = relationship(
         "GapAnalysisResult", back_populates="tom", cascade="all, delete-orphan"
     )
+    dimension_records: Mapped[list[TOMDimensionRecord]] = relationship(
+        "TOMDimensionRecord", back_populates="tom", cascade="all, delete-orphan", order_by="TOMDimensionRecord.dimension_type"
+    )
+    versions: Mapped[list[TOMVersion]] = relationship(
+        "TOMVersion", back_populates="tom", cascade="all, delete-orphan", order_by="TOMVersion.version_number"
+    )
 
     def __repr__(self) -> str:
-        return f"<TargetOperatingModel(id={self.id}, name='{self.name}')>"
+        return f"<TargetOperatingModel(id={self.id}, name='{self.name}', version={self.version})>"
+
+
+class TOMDimensionRecord(Base):
+    """A structured dimension record for a TOM."""
+
+    __tablename__ = "tom_dimensions"
+    __table_args__ = (
+        Index("ix_tom_dimensions_tom_id", "tom_id"),
+        UniqueConstraint("tom_id", "dimension_type", name="uq_tom_dimension_type"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tom_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("target_operating_models.id", ondelete="CASCADE"), nullable=False
+    )
+    dimension_type: Mapped[TOMDimension] = mapped_column(
+        Enum(TOMDimension, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
+    maturity_target: Mapped[int] = mapped_column(Integer, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    # Relationships
+    tom: Mapped[TargetOperatingModel] = relationship("TargetOperatingModel", back_populates="dimension_records")
+
+    def __repr__(self) -> str:
+        return f"<TOMDimensionRecord(tom_id={self.tom_id}, type={self.dimension_type}, target={self.maturity_target})>"
+
+
+class TOMVersion(Base):
+    """A version snapshot of a TOM, created on each update."""
+
+    __tablename__ = "tom_versions"
+    __table_args__ = (
+        Index("ix_tom_versions_tom_id", "tom_id"),
+        UniqueConstraint("tom_id", "version_number", name="uq_tom_version_number"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tom_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("target_operating_models.id", ondelete="CASCADE"), nullable=False
+    )
+    version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
+    changed_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # Relationships
+    tom: Mapped[TargetOperatingModel] = relationship("TargetOperatingModel", back_populates="versions")
+
+    def __repr__(self) -> str:
+        return f"<TOMVersion(tom_id={self.tom_id}, version={self.version_number})>"
 
 
 class GapAnalysisResult(Base):

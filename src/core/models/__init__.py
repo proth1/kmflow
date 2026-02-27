@@ -143,7 +143,9 @@ from src.core.models.tom import (
     RoadmapStatus,
     TargetOperatingModel,
     TOMDimension,
+    TOMDimensionRecord,
     TOMGapType,
+    TOMVersion,
     TransformationRoadmapModel,
 )
 from src.core.models.validation import (
@@ -289,6 +291,8 @@ __all__ = [
     "RoadmapStatus",
     "TargetOperatingModel",
     "TOMDimension",
+    "TOMDimensionRecord",
     "TOMGapType",
+    "TOMVersion",
     "TransformationRoadmapModel",
 ]
