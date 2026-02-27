@@ -90,7 +90,7 @@ class ControlEffectivenessScoringService:
         """
         try:
             query = (
-                "MATCH (c:Control)-[:SUPPORTED_BY]->(e) "
+                "MATCH (c:Control)-[:SUPPORTED_BY]->(e:Evidence) "
                 "WHERE c.id = $control_id AND c.engagement_id = $engagement_id "
                 "RETURN e.id AS evidence_id, e.has_execution_marker AS has_marker"
             )

@@ -29,8 +29,10 @@ from src.core.models import (
     DataCatalogEntry,
     DataClassification,
     DataLayer,
+    EngagementMember,
     EvidenceItem,
     User,
+    UserRole,
 )
 from src.core.permissions import require_engagement_access, require_permission
 from src.datalake.backend import get_storage_backend
@@ -669,6 +671,20 @@ async def score_control_effectiveness(
 
     engagement_id = control.engagement_id
 
+    # Verify engagement access (platform admins bypass)
+    if user.role != UserRole.PLATFORM_ADMIN:
+        member_result = await session.execute(
+            select(EngagementMember).where(
+                EngagementMember.engagement_id == engagement_id,
+                EngagementMember.user_id == user.id,
+            )
+        )
+        if not member_result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not a member of this engagement",
+            )
+
     # Build graph service and score
     from src.semantic.graph import KnowledgeGraphService
 
@@ -737,11 +753,26 @@ async def get_effectiveness_score_history(
     ctrl_result = await session.execute(
         select(Control).where(Control.id == control_id)
     )
-    if not ctrl_result.scalar_one_or_none():
+    control = ctrl_result.scalar_one_or_none()
+    if not control:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Control {control_id} not found",
         )
+
+    # Verify engagement access (platform admins bypass)
+    if user.role != UserRole.PLATFORM_ADMIN:
+        member_result = await session.execute(
+            select(EngagementMember).where(
+                EngagementMember.engagement_id == control.engagement_id,
+                EngagementMember.user_id == user.id,
+            )
+        )
+        if not member_result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not a member of this engagement",
+            )
 
     # Count total
     from sqlalchemy import func as sa_func
