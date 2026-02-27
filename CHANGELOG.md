@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.141] - 2026-02-27
+### Added
+- Policy Decision Point (PDP) service: ABAC policy evaluation with PERMIT/DENY decisions, in-memory cache (5s TTL with asyncio.Lock), obligation framework (watermark, enhanced audit, MFA, redaction), append-only audit trail, conditions validation, default policy seeding, role hierarchy comparison, 4 API endpoints, 25 tests (#377)
+
 ## [2026.02.140] - 2026-02-27
 ### Added
 - Cross-border data transfer controls: GDPR-compliant transfer evaluation chain (residency → jurisdiction → TIA → SCC), jurisdiction registry, Transfer Impact Assessment lifecycle, Standard Contractual Clauses recording, append-only transfer log, role permissions for transfer:read/write and incident:read/write, migration 062, 20 tests (#395)

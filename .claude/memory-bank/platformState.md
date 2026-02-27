@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.140
+**Version**: 2026.02.141
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.141 | 2026-02-27 | PDP service: ABAC policy evaluation, obligation framework, audit trail, conditions validation, default policy seeding, 25 tests (#377) |
 | 2026.02.140 | 2026-02-27 | Cross-border transfer controls: GDPR transfer evaluation, TIA/SCC workflow, jurisdiction registry, role permissions, 20 tests (#395) |
 | 2026.02.139 | 2026-02-27 | Incident response automation: P1-P4 classification, GDPR 72h deadline, containment, escalation, timeline, 16 tests (#397) |
 | 2026.02.138 | 2026-02-27 | Telemetry micro-surveys: deviation-to-probe mapping, anomaly threshold, SurveyClaim linkage, API endpoints, 16 tests (#398) |
