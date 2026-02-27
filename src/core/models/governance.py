@@ -1,4 +1,4 @@
-"""Governance models: policy/control enums, Policy, Control, Regulation, ControlEffectivenessScore, ComplianceAssessment."""
+"""Governance models: policy/control enums, Policy, Control, Regulation, ControlEffectivenessScore, ComplianceAssessment, GovernanceGapFinding."""
 
 from __future__ import annotations
 
@@ -39,6 +39,28 @@ class ComplianceLevel(enum.StrEnum):
     PARTIALLY_COMPLIANT = "partially_compliant"
     NON_COMPLIANT = "non_compliant"
     NOT_ASSESSED = "not_assessed"
+
+
+class GovernanceGapType(enum.StrEnum):
+    """Types of governance gaps from the disagreement taxonomy."""
+
+    CONTROL_GAP = "control_gap"
+
+
+class GovernanceGapSeverity(enum.StrEnum):
+    """Severity of governance gap findings."""
+
+    CRITICAL = "critical"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+class GovernanceGapStatus(enum.StrEnum):
+    """Status of a governance gap finding."""
+
+    OPEN = "open"
+    RESOLVED = "resolved"
 
 
 class Policy(Base):
@@ -123,6 +145,61 @@ class Regulation(Base):
 
     def __repr__(self) -> str:
         return f"<Regulation(id={self.id}, name='{self.name}', framework='{self.framework}')>"
+
+
+class GapFinding(Base):
+    """A detected governance gap where required controls are absent.
+
+    Tracks CONTROL_GAP findings from automated gap detection against
+    regulatory obligations. Historical findings are preserved; resolved
+    gaps get a resolved_at timestamp.
+    """
+
+    __tablename__ = "gap_findings"
+    __table_args__ = (
+        Index("ix_gap_findings_engagement_id", "engagement_id"),
+        Index("ix_gap_findings_activity_id", "activity_id"),
+        Index("ix_gap_findings_status", "status"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    activity_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("process_elements.id", ondelete="CASCADE"), nullable=False
+    )
+    regulation_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("regulations.id", ondelete="SET NULL"), nullable=True
+    )
+    gap_type: Mapped[GovernanceGapType] = mapped_column(
+        Enum(GovernanceGapType, values_callable=lambda e: [x.value for x in e]),
+        default=GovernanceGapType.CONTROL_GAP,
+        nullable=False,
+    )
+    severity: Mapped[GovernanceGapSeverity] = mapped_column(
+        Enum(GovernanceGapSeverity, values_callable=lambda e: [x.value for x in e]),
+        nullable=False,
+    )
+    status: Mapped[GovernanceGapStatus] = mapped_column(
+        Enum(GovernanceGapStatus, values_callable=lambda e: [x.value for x in e]),
+        default=GovernanceGapStatus.OPEN,
+        nullable=False,
+    )
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    # Relationships
+    engagement: Mapped["Engagement"] = relationship("Engagement")
+    activity: Mapped["ProcessElement"] = relationship("ProcessElement")
+    regulation: Mapped["Regulation"] = relationship("Regulation")
+
+    def __repr__(self) -> str:
+        return f"<GapFinding(id={self.id}, activity_id={self.activity_id}, type={self.gap_type}, status={self.status})>"
 
 
 class ComplianceAssessment(Base):
