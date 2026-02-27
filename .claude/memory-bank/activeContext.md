@@ -8,6 +8,13 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #429 merged** — Gap-prioritized transformation roadmap generator (#368) (v2026.02.113)
+  - Topological sort (Kahn's algorithm) for dependency resolution
+  - Threshold-based phase bucketing into 3-4 phases (Quick Wins→Foundation→Transformation→Optimization)
+  - HTML export with XSS-safe rendering via html.escape()
+  - TransformationRoadmapModel with JSONB phases, remediation_cost/depends_on_ids columns
+  - PR review: REQUEST CHANGES → IDOR fix (engagement membership check), format param rename, type annotation fix, cycle detection test
+  - Alembic migration 045, 31 BDD tests
 - **PR #428 merged** — Monitoring agent framework (#346) (v2026.02.112)
   - BaseMonitoringAgent ABC with lifecycle management, health state machine, exponential backoff
   - Circuit breaker stops polling after max failures, bounded event deque (maxlen=1000)

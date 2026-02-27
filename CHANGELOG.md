@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.113] - 2026-02-27
+### Added
+- Gap-prioritized transformation roadmap generator: topological sort (Kahn's algorithm) for dependency resolution, threshold-based phase bucketing into 3-4 implementation phases (Quick Wins→Foundation→Transformation→Optimization), composite scoring from priority_score + effort estimate, HTML export with XSS-safe rendering, TransformationRoadmapModel with JSONB phases, remediation_cost and depends_on_ids columns on GapAnalysisResult, effort_weeks property (1-5 scale → 0.5-8 weeks), IDOR-protected roadmap endpoints with engagement membership checks, Alembic migration 045, 31 BDD tests (#368)
+
 ## [2026.02.112] - 2026-02-27
 ### Added
 - Monitoring agent framework: BaseMonitoringAgent ABC with lifecycle management (start→connect→poll→stop), health state machine (STARTING→CONNECTED→POLLING→DEGRADED→UNHEALTHY→STOPPED), exponential backoff retry with circuit breaker after max failures, bounded event history (deque maxlen=1000), AgentRegistry for multi-agent lifecycle and health aggregation, Pydantic config models (AgentConfig, RetryConfig), GET /api/v1/monitoring/agents/health endpoint, connection_params repr=False for credential safety, 42 BDD tests (#346)

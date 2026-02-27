@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.112
+**Version**: 2026.02.113
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.113 | 2026-02-27 | Gap-prioritized transformation roadmap generator: topo sort, phase bucketing, HTML export, IDOR-protected endpoints, 31 tests (#368) |
 | 2026.02.112 | 2026-02-27 | Monitoring agent framework: BaseMonitoringAgent ABC, lifecycle, circuit breaker, AgentRegistry, health endpoint, 42 tests (#346) |
 | 2026.02.111 | 2026-02-27 | Monitoring dashboard: aggregated endpoint with date range filtering, agent statuses, deviation counts, evidence flow rate, alert summary, compliance trend, 29 tests (#371) |
 | 2026.02.110 | 2026-02-27 | Dark-Room Shrink Rate dashboard: DarkRoomSnapshot model, per-version shrink rate computation, below-target alerts, illumination timeline, 42 tests (#370) |
