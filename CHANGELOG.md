@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.119] - 2026-02-27
+### Added
+- I/O mismatch and control gap detection with shelf data requests: IOMismatchDetector (unmatched CONSUMES via NOT EXISTS Cypher), ControlGapDetector (ControlRequirement vs GOVERNED_BY absence), auto-generated ShelfDataRequest for control gaps, ControlRequirement node and REQUIRES_CONTROL relationship in ontology, _activity_criticality with max() multi-keyword scoring, idempotent shelf request dedup, pipeline extended to 6 detectors, 28 BDD tests (#378)
+
 ## [2026.02.118] - 2026-02-27
 ### Added
 - Three-way distinction classifier for conflict resolution: ThreeWayDistinctionClassifier with NAMING_VARIANT (seed list alias + graph VARIANT_OF merge), TEMPORAL_SHIFT (non-overlapping effective dates + bitemporal validity), GENUINE_DISAGREEMENT (epistemic frame tagging + SME review flag), public run_write_query() on KnowledgeGraphService, MERGED_EDGE relationship in ontology, resolution_details/classified_at/classifier_version columns on ConflictObject (migration 048), batch classification, idempotent re-classification, 20 BDD tests (#384)
