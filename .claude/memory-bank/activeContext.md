@@ -8,6 +8,13 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #426 merged** — Dark-Room Shrink Rate tracking dashboard (#370) (v2026.02.110)
+  - DarkRoomSnapshot model with unique constraint on (engagement_id, version_number)
+  - Per-version shrink rate computation, below-target alert generation with dark segment names
+  - Illumination timeline tracking dark→dim/bright transitions with evidence links
+  - GET /api/v1/validation/dark-room-shrink with Depends(require_engagement_access)
+  - PR review: REQUEST CHANGES → CRITICAL fixed (auth pattern), HIGH fixed (integration tests), MEDIUM fixed (unique constraint, unused dataclass)
+  - Alembic migration 044, 42 BDD tests
 - **PR #425 merged** — Continuous evidence collection pipeline (#360) (v2026.02.109)
   - Async Redis stream consumer with quality scoring, knowledge graph updates, contradiction detection hook
   - Time-based per-engagement quality threshold monitoring (10-min window)

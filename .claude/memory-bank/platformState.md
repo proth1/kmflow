@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.109
+**Version**: 2026.02.110
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.110 | 2026-02-27 | Dark-Room Shrink Rate dashboard: DarkRoomSnapshot model, per-version shrink rate computation, below-target alerts, illumination timeline, 42 tests (#370) |
 | 2026.02.109 | 2026-02-27 | Continuous evidence pipeline: async Redis stream consumer, quality scoring, per-engagement quality monitoring, MetricsCollector, pipeline metrics API, 33 tests (#360) |
 | 2026.02.108 | 2026-02-27 | Review pack generation: 3-8 activity segments, SME routing, async gen, failure sentinel, 36 tests (#349) |
 | 2026.02.107 | 2026-02-27 | RACI matrix derivation from knowledge graph edges, SME validation, CSV export, 41 tests (#351) |

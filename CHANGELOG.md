@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.110] - 2026-02-27
+### Added
+- Dark-Room Shrink Rate tracking dashboard: DarkRoomSnapshot model with unique constraint on (engagement_id, version_number), per-version shrink rate computation, below-target alert generation with dark segment names, illumination timeline tracking dark→dim/bright transitions, GET /api/v1/validation/dark-room-shrink with engagement access control, Alembic migration 044, 42 BDD tests including endpoint integration tests (#370)
+
 ## [2026.02.109] - 2026-02-27
 ### Added
 - Continuous evidence collection pipeline: async Redis stream consumer with quality scoring, contradiction detection hook, incremental knowledge graph updates, time-based per-engagement quality threshold monitoring, rolling-window MetricsCollector (processing rate, p99 latency, queue depth, errors, avg quality), GET /api/v1/monitoring/pipeline/metrics endpoint with auth, submit_evidence_to_pipeline helper, 33 BDD tests (#360)
