@@ -1,8 +1,9 @@
-"""Review pack validation API endpoints (Story #349).
+"""Validation API endpoints (Stories #349, #370).
 
 Provides:
 - POST /api/v1/validation/review-packs — Trigger async review pack generation
 - GET  /api/v1/validation/review-packs — Retrieve generated packs by pov_version_id
+- GET  /api/v1/validation/dark-room-shrink — Dark-Room Shrink Rate dashboard data
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ import logging
 import uuid
 from datetime import datetime
 from typing import Any
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
@@ -19,9 +21,21 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
-from src.core.models import ProcessElement, ProcessModel, User
+from src.core.models import (
+    BrightnessClassification,
+    DarkRoomSnapshot,
+    ProcessElement,
+    ProcessModel,
+    User,
+)
 from src.core.models.validation import ReviewPack, ReviewPackStatus
 from src.core.permissions import require_engagement_access
+from src.validation.dark_room import (
+    DEFAULT_SHRINK_RATE_TARGET,
+    compute_illumination_timeline,
+    compute_shrink_rates,
+    generate_alerts,
+)
 from src.validation.pack_generator import ActivityInfo, generate_packs
 
 logger = logging.getLogger(__name__)
@@ -267,3 +281,185 @@ async def _generate_packs_async(
                 await session.commit()
         except Exception:
             logger.exception("Failed to write failure sentinel (task %s)", task_id)
+
+
+# ---------------------------------------------------------------------------
+# Dark-Room Shrink Rate Dashboard (Story #370)
+# ---------------------------------------------------------------------------
+
+
+class ShrinkRateAlertResponse(BaseModel):
+    """Alert included when shrink rate is below target."""
+
+    severity: str
+    message: str
+    version_number: int
+    actual_rate: float
+    target_rate: float
+    dark_segments: list[str]
+
+
+class VersionShrinkResponse(BaseModel):
+    """Per-version shrink rate data."""
+
+    version_number: int
+    pov_version_id: str
+    dark_count: int
+    dim_count: int
+    bright_count: int
+    total_elements: int
+    reduction_pct: float | None
+    snapshot_at: str
+
+
+class IlluminationEventResponse(BaseModel):
+    """Timeline event for a segment that was illuminated."""
+
+    element_name: str
+    element_id: str
+    from_classification: str
+    to_classification: str
+    illuminated_in_version: int
+    pov_version_id: str
+    evidence_ids: list[str]
+
+
+class DarkRoomDashboardResponse(BaseModel):
+    """Complete dark-room shrink rate dashboard data."""
+
+    engagement_id: str
+    shrink_rate_target: float
+    versions: list[VersionShrinkResponse]
+    alerts: list[ShrinkRateAlertResponse]
+    illumination_timeline: list[IlluminationEventResponse]
+
+
+@router.get("/dark-room-shrink", response_model=DarkRoomDashboardResponse)
+async def get_dark_room_shrink(
+    engagement_id: UUID = Query(..., description="Engagement UUID"),
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Get Dark-Room Shrink Rate dashboard data.
+
+    Returns per-version dark segment counts, reduction percentages,
+    alerts when shrink rate is below target, and illumination timeline.
+    """
+    # Fetch snapshots ordered by version
+    snapshot_query = (
+        select(DarkRoomSnapshot)
+        .where(DarkRoomSnapshot.engagement_id == engagement_id)
+        .order_by(DarkRoomSnapshot.version_number.asc())
+    )
+    result = await session.execute(snapshot_query)
+    snapshots = result.scalars().all()
+
+    snapshot_dicts = [
+        {
+            "version_number": s.version_number,
+            "pov_version_id": s.pov_version_id,
+            "dark_count": s.dark_count,
+            "dim_count": s.dim_count,
+            "bright_count": s.bright_count,
+            "total_elements": s.total_elements,
+            "snapshot_at": s.snapshot_at.isoformat() if s.snapshot_at else "",
+        }
+        for s in snapshots
+    ]
+
+    # Compute shrink rates
+    versions = compute_shrink_rates(snapshot_dicts)
+
+    # Get dark segment names for alerts (from latest version)
+    dark_segment_names: list[str] = []
+    if snapshots:
+        latest = snapshots[-1]
+        dark_elements_query = (
+            select(ProcessElement.name)
+            .where(
+                ProcessElement.model_id == latest.pov_version_id,
+                ProcessElement.brightness_classification == BrightnessClassification.DARK,
+            )
+        )
+        dark_result = await session.execute(dark_elements_query)
+        dark_segment_names = list(dark_result.scalars().all())
+
+    # Generate alerts
+    alerts = generate_alerts(versions, dark_segment_names=dark_segment_names)
+
+    # Compute illumination timeline
+    illumination_timeline: list[dict[str, Any]] = []
+    if len(snapshots) >= 2:
+        # Get elements across all POV versions for this engagement
+        pov_ids = [s.pov_version_id for s in snapshots]
+        elements_query = (
+            select(
+                ProcessElement.name,
+                ProcessElement.id,
+                ProcessElement.brightness_classification,
+                ProcessElement.evidence_ids,
+                ProcessModel.version,
+                ProcessModel.id.label("pov_id"),
+            )
+            .join(ProcessModel, ProcessElement.model_id == ProcessModel.id)
+            .where(ProcessElement.model_id.in_(pov_ids))
+            .order_by(ProcessElement.name, ProcessModel.version)
+        )
+        el_result = await session.execute(elements_query)
+        element_rows = el_result.all()
+
+        version_elements = [
+            {
+                "element_name": row[0],
+                "element_id": str(row[1]),
+                "brightness_classification": row[2].value if hasattr(row[2], "value") else str(row[2]),
+                "evidence_ids": row[3] or [],
+                "version_number": row[4],
+                "pov_version_id": str(row[5]),
+            }
+            for row in element_rows
+        ]
+
+        illumination_events = compute_illumination_timeline(version_elements)
+        illumination_timeline = [
+            {
+                "element_name": e.element_name,
+                "element_id": e.element_id,
+                "from_classification": e.from_classification,
+                "to_classification": e.to_classification,
+                "illuminated_in_version": e.illuminated_in_version,
+                "pov_version_id": e.pov_version_id,
+                "evidence_ids": e.evidence_ids,
+            }
+            for e in illumination_events
+        ]
+
+    return {
+        "engagement_id": str(engagement_id),
+        "shrink_rate_target": DEFAULT_SHRINK_RATE_TARGET,
+        "versions": [
+            {
+                "version_number": v.version_number,
+                "pov_version_id": v.pov_version_id,
+                "dark_count": v.dark_count,
+                "dim_count": v.dim_count,
+                "bright_count": v.bright_count,
+                "total_elements": v.total_elements,
+                "reduction_pct": v.reduction_pct,
+                "snapshot_at": v.snapshot_at,
+            }
+            for v in versions
+        ],
+        "alerts": [
+            {
+                "severity": a.severity,
+                "message": a.message,
+                "version_number": a.version_number,
+                "actual_rate": a.actual_rate,
+                "target_rate": a.target_rate,
+                "dark_segments": a.dark_segments,
+            }
+            for a in alerts
+        ],
+        "illumination_timeline": illumination_timeline,
+    }
