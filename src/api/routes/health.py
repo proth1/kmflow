@@ -34,7 +34,8 @@ async def health_check(request: Request) -> dict[str, Any]:
                 "neo4j": "up" | "down",
                 "redis": "up" | "down"
             },
-            "version": "0.1.0"
+            "version": API_VERSION,
+            "timestamp": "<ISO 8601 UTC>"
         }
     """
     services: dict[str, str] = {}

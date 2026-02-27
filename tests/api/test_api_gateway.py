@@ -119,14 +119,15 @@ class TestBDDScenario2OpenAPIDocs:
     """
 
     def test_docs_url_enabled(self) -> None:
-        """App docs_url is /docs (debug mode)."""
+        """App docs_url is /docs (requires Settings.debug=True default)."""
         from src.api.main import create_app
 
         app = create_app()
+        # docs_url is only set when debug=True in Settings
         assert app.docs_url == "/docs"
 
     def test_redoc_url_enabled(self) -> None:
-        """App redoc_url is /redoc (debug mode)."""
+        """App redoc_url is /redoc (requires Settings.debug=True default)."""
         from src.api.main import create_app
 
         app = create_app()
@@ -241,7 +242,7 @@ class TestBDDScenario4CORSHeaders:
             },
         )
         acao = response.headers.get("access-control-allow-origin")
-        assert acao is None or acao != "http://evil.example.com"
+        assert acao is None
 
     @pytest.mark.asyncio
     async def test_cors_allows_standard_methods(self, client: AsyncClient) -> None:
@@ -356,3 +357,16 @@ class TestAPIGatewayStructure:
         # FastAPI stores exception handlers
         assert ValueError in app.exception_handlers
         assert Exception in app.exception_handlers
+
+    @pytest.mark.asyncio
+    async def test_value_error_returns_422(self, client: AsyncClient) -> None:
+        """ValueError handler returns 422 Unprocessable Entity."""
+        # Trigger a validation error via invalid query param
+        response = await client.get("/api/v1/evidence/?limit=-1")
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_not_found_returns_404(self, client: AsyncClient) -> None:
+        """Non-existent route returns 404."""
+        response = await client.get("/api/v1/nonexistent-route")
+        assert response.status_code == 404
