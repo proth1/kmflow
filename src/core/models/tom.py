@@ -43,6 +43,48 @@ class ProcessMaturity(enum.StrEnum):
     OPTIMIZING = "optimizing"
 
 
+MATURITY_LEVEL_NUMBER: dict[ProcessMaturity, int] = {
+    ProcessMaturity.INITIAL: 1,
+    ProcessMaturity.MANAGED: 2,
+    ProcessMaturity.DEFINED: 3,
+    ProcessMaturity.QUANTITATIVELY_MANAGED: 4,
+    ProcessMaturity.OPTIMIZING: 5,
+}
+
+
+class MaturityScore(Base):
+    """A maturity score computed for a specific process area within an engagement."""
+
+    __tablename__ = "maturity_scores"
+    __table_args__ = (
+        Index("ix_maturity_scores_engagement_id", "engagement_id"),
+        Index("ix_maturity_scores_process_model_id", "process_model_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    process_model_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("process_models.id", ondelete="CASCADE"), nullable=False
+    )
+    maturity_level: Mapped[ProcessMaturity] = mapped_column(
+        Enum(ProcessMaturity, values_callable=lambda e: [x.value for x in e], create_type=False),
+        nullable=False,
+    )
+    level_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    evidence_dimensions: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    recommendations: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    scored_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # Relationships
+    engagement: Mapped["Engagement"] = relationship("Engagement")
+    process_model: Mapped["ProcessModel"] = relationship("ProcessModel")
+
+    def __repr__(self) -> str:
+        return f"<MaturityScore(id={self.id}, level={self.maturity_level}, level_number={self.level_number})>"
+
+
 class TargetOperatingModel(Base):
     """A Target Operating Model definition for an engagement."""
 
