@@ -290,7 +290,7 @@ class TestCrossPlaneCorroboration:
         cross_elem = next(r for r in result if r.entity.name == "Risk Assessment")
         same_elem = next(r for r in result if r.entity.name == "Review Policy")
 
-        assert cross_elem.evidence_agreement >= same_elem.evidence_agreement
+        assert cross_elem.evidence_agreement > same_elem.evidence_agreement
 
 
 # ===========================================================================

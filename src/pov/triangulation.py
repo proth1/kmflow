@@ -163,7 +163,7 @@ def compute_evidence_agreement(
         return 0.0
 
     base = agreeing_count / total_mentioning
-    bonus = CROSS_PLANE_BONUS if cross_plane and len({base}) > 0 else 0.0
+    bonus = CROSS_PLANE_BONUS if cross_plane and base > 0.0 else 0.0
     return min(1.0, base + bonus)
 
 
@@ -235,7 +235,9 @@ def triangulate_elements(
         # Compute factors
         ev_coverage = compute_evidence_coverage(supporting_planes, available_planes)
         cross_plane = len(supporting_planes) >= 2
-        ev_agreement = compute_evidence_agreement(source_count, source_count, cross_plane=cross_plane)
+        # Agreement: use source_count vs total_sources (not source_count vs itself)
+        # so agreement reflects how broadly the entity is supported across all sources
+        ev_agreement = compute_evidence_agreement(source_count, total_sources, cross_plane=cross_plane)
 
         # Compute triangulation score (uses existing formula)
         score = _compute_triangulation_score(source_count, total_sources)
