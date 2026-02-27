@@ -3,6 +3,14 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.147] - 2026-02-27
+### Added
+- Scenario comparison dashboard API: side-by-side comparison of 2-5 scenarios across 5 metrics (cycle time, FTE, confidence, governance coverage, compliance flags), best/worst flagging with min_is_best for deltas, governance heuristic documentation, deterministic result ordering, 13 tests (#383)
+
+## [2026.02.146] - 2026-02-27
+### Added
+- Consent architecture for endpoint capture: OPT_IN/ORG_AUTHORIZED/HYBRID consent modes, policy bundle versioning, 7-year retention floor, DB-level immutability trigger on core fields, DELETE prevention trigger, RESTRICT FK policy, withdraw+create pattern for scope updates, consent validation for pipeline gating, migration 067, 23 tests (#382)
+
 ## [2026.02.145] - 2026-02-27
 ### Added
 - Export watermarking with recipient tracking: HMAC-SHA256 invisible watermarks, visible watermark text, HTML meta embedding, append-only export log with RESTRICT FK policy, WatermarkExtractor forensic recovery, dedicated watermark_signing_key, export:read RBAC permission, migration 066, 20 tests (#387)

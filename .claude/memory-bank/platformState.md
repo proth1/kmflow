@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.145
+**Version**: 2026.02.147
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,8 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.147 | 2026-02-27 | Scenario comparison dashboard: 5-metric comparison, best/worst flagging, governance heuristic, 13 tests (#383) |
+| 2026.02.146 | 2026-02-27 | Consent architecture: 3 consent modes, policy bundles, immutability triggers, RESTRICT FK, 23 tests (#382) |
 | 2026.02.145 | 2026-02-27 | Export watermarking: HMAC-SHA256 invisible watermarks, append-only log, forensic extractor, RESTRICT FK policy, 20 tests (#387) |
 | 2026.02.144 | 2026-02-27 | Evidence confidence overlay: per-element brightness, Dark-area warnings, risk score, multi-scenario comparison, 19 tests (#385) |
 | 2026.02.143 | 2026-02-27 | LLM audit trail: hallucination flagging, immutability enforcement, disposition stats, 21 tests (#386) |

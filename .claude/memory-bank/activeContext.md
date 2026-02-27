@@ -8,6 +8,10 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #464 merged** — Scenario comparison dashboard: 5-metric comparison, best/worst flagging, governance heuristic, 13 tests (#383) (v2026.02.147)
+- **PR #463 merged** — Consent architecture: 3 consent modes, policy bundles, immutability triggers, RESTRICT FK, 23 tests (#382) (v2026.02.146)
+- **PR #462 merged** — Export watermarking: HMAC-SHA256 invisible watermarks, append-only log, forensic extractor, 20 tests (#387) (v2026.02.145)
+- **PR #461 merged** — Evidence confidence overlay: per-element brightness, dark-area warnings, risk score, 19 tests (#385) (v2026.02.144)
 - **PR #460 merged** — LLM audit trail: hallucination flagging, immutability enforcement, disposition stats, 21 tests (#386) (v2026.02.143)
 - **PR #459 merged** — Cohort suppression: privacy enforcement, export blocking, audit logging, 21 tests (#391) (v2026.02.142)
 - **PR #458 merged** — PDP service: ABAC policy evaluation, obligation framework, audit trail, conditions validation, default policy seeding, 25 tests (#377) (v2026.02.141)
