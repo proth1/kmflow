@@ -237,10 +237,9 @@ async def calculate_consistency(
     if related_count == 0:
         return 0.5  # Neutral - no corroboration or contradiction
 
-    # More related evidence items increases consistency (diminishing returns)
-    # score = 1 - 1/(1 + count), approaches 1.0 as count increases
-    # At count=3: score = 0.75; count=4: 0.80; count=5: 0.833
-    return 1.0 - 1.0 / (1.0 + related_count)
+    # Scaled diminishing returns: score = 1 - 0.5 / (1 + 0.5 * count)
+    # At count=1: 0.667; count=2: 0.75; count=3: 0.80; count=5: 0.857
+    return 1.0 - 0.5 / (1.0 + 0.5 * related_count)
 
 
 def compute_composite(
@@ -283,7 +282,7 @@ async def score_evidence(
     Returns:
         Dictionary with all score dimensions and composite score.
     """
-    w = weights or DEFAULT_QUALITY_WEIGHTS
+    w = validate_weights(weights) if weights else DEFAULT_QUALITY_WEIGHTS
 
     # Calculate each dimension
     freshness = calculate_freshness(evidence_item.source_date)

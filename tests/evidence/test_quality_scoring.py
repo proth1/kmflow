@@ -23,6 +23,7 @@ from src.evidence.quality import (
     FRESHNESS_POWER,
     FRESHNESS_THRESHOLD_DAYS,
     RELIABILITY_BY_SOURCE,
+    calculate_completeness,
     calculate_freshness,
     calculate_reliability,
     compute_composite,
@@ -54,6 +55,68 @@ class TestBDDScenario1Completeness:
 
         col = EvidenceItem.__table__.columns["completeness_score"]
         assert isinstance(col.type, Float)
+
+    @pytest.mark.asyncio
+    async def test_completeness_no_shelf_items_returns_default(self) -> None:
+        """No shelf request items for category returns 0.5 default."""
+        item = MagicMock(spec=EvidenceItem)
+        item.category = EvidenceCategory.DOCUMENTS
+
+        session = AsyncMock(spec=["execute"])
+        total_mock = MagicMock()
+        total_mock.scalar.return_value = 0
+        session.execute = AsyncMock(return_value=total_mock)
+
+        score = await calculate_completeness(session, item)
+        assert score == 0.5
+
+    @pytest.mark.asyncio
+    async def test_completeness_all_fulfilled(self) -> None:
+        """All shelf items fulfilled gives 1.0."""
+        item = MagicMock(spec=EvidenceItem)
+        item.category = EvidenceCategory.DOCUMENTS
+
+        session = AsyncMock(spec=["execute"])
+        total_mock = MagicMock()
+        total_mock.scalar.return_value = 5
+        fulfilled_mock = MagicMock()
+        fulfilled_mock.scalar.return_value = 5
+        session.execute = AsyncMock(side_effect=[total_mock, fulfilled_mock])
+
+        score = await calculate_completeness(session, item)
+        assert score == 1.0
+
+    @pytest.mark.asyncio
+    async def test_completeness_partial_fulfillment(self) -> None:
+        """Partial fulfillment gives proportional score."""
+        item = MagicMock(spec=EvidenceItem)
+        item.category = EvidenceCategory.DOCUMENTS
+
+        session = AsyncMock(spec=["execute"])
+        total_mock = MagicMock()
+        total_mock.scalar.return_value = 10
+        fulfilled_mock = MagicMock()
+        fulfilled_mock.scalar.return_value = 3
+        session.execute = AsyncMock(side_effect=[total_mock, fulfilled_mock])
+
+        score = await calculate_completeness(session, item)
+        assert score == 0.3
+
+    @pytest.mark.asyncio
+    async def test_completeness_none_fulfilled(self) -> None:
+        """Zero fulfilled items gives 0.0."""
+        item = MagicMock(spec=EvidenceItem)
+        item.category = EvidenceCategory.DOCUMENTS
+
+        session = AsyncMock(spec=["execute"])
+        total_mock = MagicMock()
+        total_mock.scalar.return_value = 4
+        fulfilled_mock = MagicMock()
+        fulfilled_mock.scalar.return_value = 0
+        session.execute = AsyncMock(side_effect=[total_mock, fulfilled_mock])
+
+        score = await calculate_completeness(session, item)
+        assert score == 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -210,23 +273,42 @@ class TestBDDScenario4Consistency:
         columns = {c.name for c in EvidenceItem.__table__.columns}
         assert "consistency_score" in columns
 
-    def test_no_corroborating_evidence_neutral(self) -> None:
+    @pytest.mark.asyncio
+    async def test_no_corroborating_evidence_neutral(self) -> None:
         """Zero related items gives neutral score of 0.5."""
-        # consistency formula: 1 - 1/(1 + count)
-        # count=0: 1 - 1/1 = 0 → but returns 0.5 (special case)
-        # This is tested via the engine, validated by formula
-        assert True  # Verified in async tests below
+        from src.evidence.quality import calculate_consistency
 
-    def test_three_items_scores_075(self) -> None:
-        """3 related items: 1 - 1/(1+3) = 0.75."""
-        score = 1.0 - 1.0 / (1.0 + 3)
-        assert score == 0.75
+        item = MagicMock(spec=EvidenceItem)
+        item.engagement_id = uuid.uuid4()
+        item.category = EvidenceCategory.DOCUMENTS
+        item.id = uuid.uuid4()
 
-    def test_four_plus_items_scores_high(self) -> None:
-        """4+ related items: score >= 0.8."""
-        for count in [4, 5, 10, 20]:
-            score = 1.0 - 1.0 / (1.0 + count)
-            assert score >= 0.8, f"count={count} scored {score}"
+        session = AsyncMock(spec=["execute"])
+        count_mock = MagicMock()
+        count_mock.scalar.return_value = 0
+        session.execute = AsyncMock(return_value=count_mock)
+
+        score = await calculate_consistency(session, item)
+        assert score == 0.5
+
+    def test_three_items_scores_at_least_08(self) -> None:
+        """3 related items: score >= 0.8 per BDD Scenario 4."""
+        # Formula: 1 - 0.5 / (1 + 0.5 * count)
+        score = 1.0 - 0.5 / (1.0 + 0.5 * 3)
+        assert score >= 0.8, f"count=3 scored {score}, expected >= 0.8"
+
+    def test_formula_values_at_key_counts(self) -> None:
+        """Verify formula at key counts: 1→0.667, 2→0.75, 3→0.8, 5→0.857."""
+        expected = {1: 0.667, 2: 0.75, 3: 0.8, 5: 0.857}
+        for count, exp in expected.items():
+            score = 1.0 - 0.5 / (1.0 + 0.5 * count)
+            assert abs(score - exp) < 0.01, f"count={count}: got {score:.3f}, expected ~{exp}"
+
+    def test_high_count_items_approach_one(self) -> None:
+        """High counts approach 1.0."""
+        for count in [10, 20, 50]:
+            score = 1.0 - 0.5 / (1.0 + 0.5 * count)
+            assert score >= 0.9, f"count={count} scored {score}"
 
 
 # ---------------------------------------------------------------------------
@@ -493,6 +575,22 @@ class TestScoreEvidenceIntegration:
 
         # Expected: 0.5*0.3 + 0.4*0.3 + 0.3*0.2 + 0.5*0.2 = 0.15+0.12+0.06+0.10 = 0.43
         assert abs(result["composite"] - 0.43) < 0.01
+
+    @pytest.mark.asyncio
+    async def test_score_evidence_rejects_invalid_weights(self) -> None:
+        """score_evidence validates custom weights before scoring."""
+        item = MagicMock(spec=EvidenceItem)
+        item.source_date = date(2026, 1, 1)
+        item.metadata_json = {"source_type": "primary"}
+        item.engagement_id = uuid.uuid4()
+        item.category = EvidenceCategory.DOCUMENTS
+        item.id = uuid.uuid4()
+
+        session = AsyncMock(spec=["execute"])
+
+        bad_weights = {"completeness": 2.0, "reliability": 0.0, "freshness": 0.0, "consistency": 0.0}
+        with pytest.raises(ValueError, match="between 0.0 and 1.0"):
+            await score_evidence(session, item, weights=bad_weights)
 
 
 # ---------------------------------------------------------------------------
