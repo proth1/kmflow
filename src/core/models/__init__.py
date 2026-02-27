@@ -157,6 +157,7 @@ from src.core.models.survey import (
     SurveyClaim,
 )
 from src.core.models.survey_claim_history import SurveyClaimHistory
+from src.core.models.survey_session import SurveySession, SurveySessionStatus
 from src.core.models.taskmining import (
     ActionCategory,
     AgentStatus,
@@ -349,6 +350,8 @@ __all__ = [
     "SurveyClaim",
     # survey_claim_history
     "SurveyClaimHistory",
+    "SurveySession",
+    "SurveySessionStatus",
     # taskmining
     "ActionCategory",
     "AgentStatus",
