@@ -156,6 +156,10 @@ class GapCreate(BaseModel):
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     rationale: str | None = None
     recommendation: str | None = None
+    business_criticality: int | None = Field(None, ge=1, le=5)
+    risk_exposure: int | None = Field(None, ge=1, le=5)
+    regulatory_impact: int | None = Field(None, ge=1, le=5)
+    remediation_cost: int | None = Field(None, ge=1, le=5)
 
 
 class GapResponse(BaseModel):
@@ -173,6 +177,11 @@ class GapResponse(BaseModel):
     rationale: str | None
     recommendation: str | None
     priority_score: float
+    composite_score: float
+    business_criticality: int | None
+    risk_exposure: int | None
+    regulatory_impact: int | None
+    remediation_cost: int | None
     created_at: Any
 
 
@@ -596,6 +605,10 @@ async def create_gap(
         confidence=payload.confidence,
         rationale=payload.rationale,
         recommendation=payload.recommendation,
+        business_criticality=payload.business_criticality,
+        risk_exposure=payload.risk_exposure,
+        regulatory_impact=payload.regulatory_impact,
+        remediation_cost=payload.remediation_cost,
     )
     session.add(gap)
     await session.flush()
@@ -615,12 +628,16 @@ async def list_gaps(
     engagement_id: UUID,
     tom_id: UUID | None = None,
     dimension: TOMDimension | None = None,
+    sort: str | None = Query(None, description="Sort order: 'priority' for composite_score desc"),
     limit: int = Query(default=20, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
-    """List gap analysis results for an engagement."""
+    """List gap analysis results for an engagement.
+
+    Use sort=priority to order by composite_score descending.
+    """
     await _check_engagement_member(session, user, engagement_id)
     query = select(GapAnalysisResult).where(GapAnalysisResult.engagement_id == engagement_id)
     count_query = (
@@ -634,12 +651,117 @@ async def list_gaps(
         query = query.where(GapAnalysisResult.dimension == dimension)
         count_query = count_query.where(GapAnalysisResult.dimension == dimension)
 
-    query = query.offset(offset).limit(limit)
-    result = await session.execute(query)
-    gaps = list(result.scalars().all())
     count_result = await session.execute(count_query)
     total = count_result.scalar() or 0
+
+    result = await session.execute(query)
+    gaps = list(result.scalars().all())
+
+    # Apply priority sort in Python (composite_score is a computed property)
+    if sort == "priority":
+        gaps.sort(key=lambda g: g.composite_score, reverse=True)
+
+    # Apply pagination after sort
+    gaps = gaps[offset : offset + limit]
+
     return {"items": gaps, "total": total}
+
+
+# -- Gap Rationale Generation Routes (Story #352) ----------------------------
+
+
+class RationaleResponse(BaseModel):
+    """Response for a single gap rationale generation."""
+
+    gap_id: UUID
+    rationale: str
+    recommendation: str
+
+
+class BulkRationaleResponse(BaseModel):
+    """Response for bulk rationale generation."""
+
+    engagement_id: UUID
+    gaps_processed: int
+    results: list[RationaleResponse]
+
+
+@router.post("/gaps/{gap_id}/generate-rationale", response_model=RationaleResponse)
+async def generate_gap_rationale(
+    gap_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
+) -> dict[str, Any]:
+    """Generate LLM-powered rationale for a single gap."""
+    from src.tom.rationale_generator import RationaleGeneratorService
+
+    result = await session.execute(
+        select(GapAnalysisResult).where(GapAnalysisResult.id == gap_id)
+    )
+    gap = result.scalar_one_or_none()
+    if not gap:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Gap {gap_id} not found")
+
+    await _check_engagement_member(session, user, gap.engagement_id)
+
+    # Get TOM specification for context
+    tom_spec = None
+    if gap.tom_id:
+        tom_result = await session.execute(
+            select(TargetOperatingModel)
+            .where(TargetOperatingModel.id == gap.tom_id)
+            .options(selectinload(TargetOperatingModel.dimension_records))
+        )
+        tom = tom_result.scalar_one_or_none()
+        if tom and tom.dimension_records:
+            for dr in tom.dimension_records:
+                if str(dr.dimension_type) == str(gap.dimension):
+                    tom_spec = dr.description
+                    break
+
+    generator = RationaleGeneratorService()
+    rationale_data = await generator.generate_rationale(gap, tom_spec)
+
+    gap.rationale = rationale_data["rationale"]
+    gap.recommendation = rationale_data["recommendation"]
+    await session.commit()
+
+    return {
+        "gap_id": gap.id,
+        "rationale": rationale_data["rationale"],
+        "recommendation": rationale_data["recommendation"],
+    }
+
+
+@router.post(
+    "/gaps/engagement/{engagement_id}/generate-rationales",
+    response_model=BulkRationaleResponse,
+)
+async def generate_bulk_rationales(
+    engagement_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
+    _engagement_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Generate LLM-powered rationales for all gaps without rationale in an engagement."""
+    from src.tom.rationale_generator import RationaleGeneratorService
+
+    generator = RationaleGeneratorService()
+    results = await generator.generate_bulk_rationales(session, str(engagement_id))
+    await session.commit()
+
+    return {
+        "engagement_id": engagement_id,
+        "gaps_processed": len(results),
+        "results": [
+            {
+                "gap_id": r["gap_id"],
+                "rationale": r["rationale"],
+                "recommendation": r["recommendation"],
+            }
+            for r in results
+        ],
+    }
 
 
 # -- Best Practices Routes ----------------------------------------------------
