@@ -55,6 +55,7 @@ from src.api.routes import (
     knowledge_forms,
     lineage,
     metrics,
+    micro_surveys,
     monitoring,
     patterns,
     portal,
@@ -289,6 +290,9 @@ def create_app() -> FastAPI:
 
     # -- Evidence Gap Ranking Routes (Story #393) ---
     app.include_router(evidence_gap_ranking.router)
+
+    # -- Micro-Survey Routes (Story #398) ---
+    app.include_router(micro_surveys.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)

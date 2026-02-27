@@ -13,6 +13,14 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.core.database import Base
 
 
+class MicroSurveyStatus(enum.StrEnum):
+    """Status values for a micro-survey."""
+
+    GENERATED = "generated"
+    SENT = "sent"
+    RESPONDED = "responded"
+
+
 class CertaintyTier(enum.StrEnum):
     """Certainty levels for survey claims."""
 
@@ -94,12 +102,16 @@ class SurveyClaim(Base):
     proof_expectation: Mapped[str | None] = mapped_column(Text, nullable=True)
     related_seed_terms: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
     metadata_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    micro_survey_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("micro_surveys.id", ondelete="SET NULL"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
     epistemic_frame: Mapped[EpistemicFrame | None] = relationship(
         "EpistemicFrame", back_populates="survey_claim", uselist=False, cascade="all, delete-orphan"
     )
+    micro_survey: Mapped[MicroSurvey | None] = relationship("MicroSurvey", back_populates="claims")
 
     def __repr__(self) -> str:
         return f"<SurveyClaim(id={self.id}, certainty={self.certainty_tier}, probe={self.probe_type})>"
@@ -135,3 +147,40 @@ class EpistemicFrame(Base):
 
     def __repr__(self) -> str:
         return f"<EpistemicFrame(id={self.id}, kind={self.frame_kind}, scope={self.authority_scope})>"
+
+
+class MicroSurvey(Base):
+    """A short, telemetry-triggered micro-survey of 2-3 focused probes."""
+
+    __tablename__ = "micro_surveys"
+    __table_args__ = (
+        Index("ix_micro_surveys_engagement_id", "engagement_id"),
+        Index("ix_micro_surveys_triggering_deviation_id", "triggering_deviation_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    triggering_deviation_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("process_deviations.id", ondelete="SET NULL"), nullable=True
+    )
+    target_element_id: Mapped[str] = mapped_column(String(512), nullable=False)
+    target_element_name: Mapped[str] = mapped_column(String(512), nullable=False)
+    target_sme_role: Mapped[str] = mapped_column(String(255), nullable=False)
+    anomaly_description: Mapped[str] = mapped_column(Text, nullable=False)
+    probes: Mapped[list] = mapped_column(JSON, nullable=False)
+    status: Mapped[MicroSurveyStatus] = mapped_column(
+        Enum(MicroSurveyStatus, values_callable=lambda e: [x.value for x in e]),
+        default=MicroSurveyStatus.GENERATED,
+        nullable=False,
+        server_default="generated",
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Relationships
+    claims: Mapped[list[SurveyClaim]] = relationship("SurveyClaim", back_populates="micro_survey")
+
+    def __repr__(self) -> str:
+        return f"<MicroSurvey(id={self.id}, element='{self.target_element_name}', status={self.status})>"

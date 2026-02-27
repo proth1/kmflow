@@ -130,6 +130,8 @@ from src.core.models.survey import (
     CertaintyTier,
     EpistemicFrame,
     FrameKind,
+    MicroSurvey,
+    MicroSurveyStatus,
     ProbeType,
     SurveyClaim,
 )
@@ -297,6 +299,8 @@ __all__ = [
     "CertaintyTier",
     "EpistemicFrame",
     "FrameKind",
+    "MicroSurvey",
+    "MicroSurveyStatus",
     "ProbeType",
     "SurveyClaim",
     # taskmining
