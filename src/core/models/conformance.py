@@ -37,6 +37,7 @@ class ConformanceResult(Base):
     __table_args__ = (
         Index("ix_conformance_results_engagement_id", "engagement_id"),
         Index("ix_conformance_results_reference_model_id", "reference_model_id"),
+        Index("ix_conformance_results_pov_model_id", "pov_model_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

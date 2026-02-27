@@ -387,6 +387,8 @@ async def batch_validate(
 async def get_fragments(
     evidence_id: UUID,
     fragment_type: FragmentType | None = None,
+    limit: int = Query(default=100, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("evidence:read")),
 ) -> list[EvidenceFragment]:
@@ -394,6 +396,8 @@ async def get_fragments(
 
     Query parameters:
     - fragment_type: Optional filter by fragment type
+    - limit: Maximum results to return (default 100, max 1000)
+    - offset: Number of results to skip (default 0)
     """
     # Verify evidence exists
     ev_result = await session.execute(select(EvidenceItem.id).where(EvidenceItem.id == evidence_id))
@@ -407,7 +411,7 @@ async def get_fragments(
     if fragment_type is not None:
         query = query.where(EvidenceFragment.fragment_type == fragment_type)
 
-    query = query.order_by(EvidenceFragment.created_at)
+    query = query.order_by(EvidenceFragment.created_at).limit(limit).offset(offset)
 
     result = await session.execute(query)
     return list(result.scalars().all())
