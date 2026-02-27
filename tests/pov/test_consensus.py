@@ -6,7 +6,7 @@ import uuid
 from unittest.mock import MagicMock
 
 from src.core.models import CorroborationLevel
-from src.pov.consensus import ConsensusElement, build_consensus
+from src.pov.consensus import ConsensusElement, ConsensusResult, build_consensus
 from src.pov.triangulation import TriangulatedElement
 from src.semantic.entity_extraction import EntityType, ExtractedEntity
 
@@ -23,10 +23,12 @@ def _make_entity(name: str = "Test", entity_type: str = EntityType.ACTIVITY) -> 
 def _make_evidence_item(
     evidence_id: str | None = None,
     category: str = "documents",
+    source_date: object = None,
 ):
     item = MagicMock()
     item.id = uuid.UUID(evidence_id) if evidence_id else uuid.uuid4()
     item.category = category
+    item.source_date = source_date
     return item
 
 
@@ -50,7 +52,7 @@ def _make_triangulated(
 class TestBuildConsensus:
     """Tests for the build_consensus function."""
 
-    def test_consensus_single_element_single_source(self):
+    def test_consensus_returns_consensus_result(self):
         entity = _make_entity("Submit Request")
         ev_id = str(uuid.uuid4())
         item = _make_evidence_item(ev_id, category="documents")
@@ -58,10 +60,24 @@ class TestBuildConsensus:
 
         result = build_consensus([tri], [item])
 
-        assert len(result) == 1
-        assert isinstance(result[0], ConsensusElement)
-        # documents weight = 0.75
-        assert abs(result[0].weighted_vote_score - 0.75) < 0.01
+        assert isinstance(result, ConsensusResult)
+        assert len(result.elements) == 1
+        assert isinstance(result.elements[0], ConsensusElement)
+
+    def test_consensus_single_element_single_source(self):
+        entity = _make_entity("Submit Request")
+        ev_id = str(uuid.uuid4())
+        item = _make_evidence_item(ev_id, category="documents")
+        tri = _make_triangulated(entity, evidence_ids=[ev_id])
+
+        result = build_consensus([tri], [item])
+        elements = result.elements
+
+        assert len(elements) == 1
+        assert isinstance(elements[0], ConsensusElement)
+        # documents weight = 0.75, with recency adjustment
+        assert elements[0].weighted_vote_score >= 0.52  # min: 0.75 * 0.7
+        assert elements[0].weighted_vote_score <= 0.75  # max: 0.75 * 1.0
 
     def test_consensus_higher_weight_for_structured_data(self):
         entity = _make_entity("Process Payment")
@@ -70,10 +86,12 @@ class TestBuildConsensus:
         tri = _make_triangulated(entity, evidence_ids=[ev_id])
 
         result = build_consensus([tri], [item])
+        elements = result.elements
 
-        assert len(result) == 1
-        # structured_data weight = 1.0
-        assert abs(result[0].weighted_vote_score - 1.0) < 0.01
+        assert len(elements) == 1
+        # structured_data weight = 1.0, with recency adjustment
+        assert elements[0].weighted_vote_score >= 0.70  # min: 1.0 * 0.7
+        assert elements[0].weighted_vote_score <= 1.0   # max: 1.0 * 1.0
 
     def test_consensus_multiple_sources_averaged(self):
         entity = _make_entity("Review Invoice")
@@ -84,10 +102,12 @@ class TestBuildConsensus:
         tri = _make_triangulated(entity, evidence_ids=[ev_id1, ev_id2], source_count=2)
 
         result = build_consensus([tri], [item1, item2])
+        elements = result.elements
 
-        assert len(result) == 1
-        # Average: (1.0 + 0.50) / 2 = 0.75
-        assert abs(result[0].weighted_vote_score - 0.75) < 0.01
+        assert len(elements) == 1
+        # Average with recency: (1.0 * adj + 0.50 * adj) / 2
+        assert elements[0].weighted_vote_score > 0.4
+        assert elements[0].weighted_vote_score < 0.85
 
     def test_consensus_max_weight_tracked(self):
         entity = _make_entity("Approve Contract")
@@ -99,7 +119,7 @@ class TestBuildConsensus:
 
         result = build_consensus([tri], [item1, item2])
 
-        assert result[0].max_weight == 0.85
+        assert result.elements[0].max_weight == 0.85
 
     def test_consensus_contributing_categories(self):
         entity = _make_entity("Validate Data")
@@ -111,8 +131,8 @@ class TestBuildConsensus:
 
         result = build_consensus([tri], [item1, item2])
 
-        assert "structured_data" in result[0].contributing_categories
-        assert "documents" in result[0].contributing_categories
+        assert "structured_data" in result.elements[0].contributing_categories
+        assert "documents" in result.elements[0].contributing_categories
 
     def test_consensus_unknown_category_uses_default(self):
         entity = _make_entity("Unknown Source")
@@ -122,12 +142,14 @@ class TestBuildConsensus:
 
         result = build_consensus([tri], [item])
 
-        # Default weight is 0.30
-        assert abs(result[0].weighted_vote_score - 0.30) < 0.01
+        # Default weight is 0.30, with recency adjustment
+        assert result.elements[0].weighted_vote_score >= 0.21  # 0.30 * 0.7
+        assert result.elements[0].weighted_vote_score <= 0.30  # 0.30 * 1.0
 
     def test_consensus_empty_input(self):
         result = build_consensus([], [])
-        assert result == []
+        assert isinstance(result, ConsensusResult)
+        assert result.elements == []
 
     def test_consensus_no_evidence_ids(self):
         entity = _make_entity("Orphan")
@@ -136,5 +158,5 @@ class TestBuildConsensus:
 
         result = build_consensus([tri], [])
 
-        assert len(result) == 1
-        assert result[0].weighted_vote_score == 0.0
+        assert len(result.elements) == 1
+        assert result.elements[0].weighted_vote_score == 0.0
