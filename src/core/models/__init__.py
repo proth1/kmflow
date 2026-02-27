@@ -76,6 +76,13 @@ from src.core.models.pov import (
     ProcessModel,
     ProcessModelStatus,
 )
+from src.core.models.survey import (
+    CertaintyTier,
+    EpistemicFrame,
+    FrameKind,
+    ProbeType,
+    SurveyClaim,
+)
 from src.core.models.simulation import (
     AlternativeSuggestion,
     EpistemicAction,
@@ -185,6 +192,12 @@ __all__ = [
     "ProcessElementType",
     "ProcessModel",
     "ProcessModelStatus",
+    # survey
+    "CertaintyTier",
+    "EpistemicFrame",
+    "FrameKind",
+    "ProbeType",
+    "SurveyClaim",
     # simulation
     "AlternativeSuggestion",
     "EpistemicAction",
