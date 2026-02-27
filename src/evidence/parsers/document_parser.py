@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class DocumentParser(BaseParser):
     """Parser for document formats: PDF, DOCX, PPTX."""
 
-    supported_formats = [".pdf", ".docx", ".pptx", ".doc", ".txt"]
+    supported_formats = [".pdf", ".docx", ".pptx", ".doc", ".txt", ".html", ".htm"]
 
     async def parse(self, file_path: str, file_name: str) -> ParseResult:
         """Parse a document file and extract text fragments.
@@ -32,6 +32,8 @@ class DocumentParser(BaseParser):
                 return await self._parse_docx(file_path)
             elif ext == ".pptx":
                 return await self._parse_pptx(file_path)
+            elif ext in (".html", ".htm"):
+                return await self._parse_html(file_path)
             elif ext == ".txt":
                 return await self._parse_text(file_path)
             else:
@@ -162,6 +164,42 @@ class DocumentParser(BaseParser):
                         metadata={"slide": slide_num},
                     )
                 )
+
+        return ParseResult(fragments=fragments, metadata=metadata)  # type: ignore[arg-type]
+
+    async def _parse_html(self, file_path: str) -> ParseResult:
+        """Extract text content from HTML files."""
+        from lxml import html as lxml_html
+
+        with open(file_path, encoding="utf-8", errors="replace") as f:
+            content = f.read()
+
+        fragments: list[ParsedFragment] = []
+        metadata: dict[str, str | int | float | bool | None] = {}
+
+        tree = lxml_html.fromstring(content)
+
+        # Extract title
+        title_el = tree.find(".//title")
+        if title_el is not None and title_el.text:
+            metadata["title"] = title_el.text.strip()
+
+        # Extract body text (strip script/style tags to avoid leaking JS/CSS)
+        body = tree.find(".//body")
+        if body is not None:
+            for element in body.iter("script", "style"):
+                element.drop_tree()
+            text = body.text_content()
+            if text and text.strip():
+                fragments.append(
+                    ParsedFragment(
+                        fragment_type=FragmentType.TEXT,
+                        content=text.strip(),
+                        metadata={"source": "body"},
+                    )
+                )
+
+        metadata["char_count"] = len(content)
 
         return ParseResult(fragments=fragments, metadata=metadata)  # type: ignore[arg-type]
 
