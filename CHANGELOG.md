@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.104] - 2026-02-27
+### Added
+- Audit logging middleware with before/after values, query API, and append-only trigger: fire-and-forget async persistence, IP extraction, user agent capture, resource type inference, admin-only query endpoint with filters/pagination, JSONB before/after change tracking, PostgreSQL append-only trigger, Alembic migration 040, 77 BDD tests (#314)
+
 ## [2026.02.103] - 2026-02-27
 ### Added
 - OAuth2/OIDC authentication and RBAC authorization BDD tests: 47 tests covering JWT validation, token rejection, role boundaries for all 5 roles, engagement access control, permission matrix completeness (#313)

@@ -8,6 +8,13 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #420 merged** — Audit logging middleware with query API and append-only trigger (#314) (v2026.02.104)
+  - Fire-and-forget async persistence via asyncio.create_task()
+  - IP extraction (X-Forwarded-For aware), user agent capture, resource type inference
+  - Admin-only GET /api/v1/audit-logs with filters and pagination
+  - JSONB before/after change tracking for evidence modifications
+  - PostgreSQL append-only trigger (BEFORE UPDATE/DELETE raises exception)
+  - Alembic migration 040, 77 BDD tests (58 BDD + 19 existing)
 - **PR #419 merged** — OAuth2/OIDC auth and RBAC BDD tests (#313) (v2026.02.103)
   - 47 BDD tests: JWT validation, token rejection, role boundaries for all 5 roles
   - Permission matrix completeness, engagement access control, key rotation
