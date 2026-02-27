@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -73,41 +74,51 @@ VALID_TEMPLATE_KEYS = frozenset(
     {"consolidate_adjacent", "automate_gateway", "shift_decision_boundary", "remove_control"}
 )
 
-# In-memory rate limiter for LLM endpoints (per-user, 5 requests/minute).
-# NOTE: This is per-process only. In multi-worker deployments (uvicorn --workers N),
-# the effective limit becomes N * _LLM_RATE_LIMIT. For production multi-worker
-# deployments, replace with Redis-based rate limiting.
+# Redis-backed sliding-window rate limiter for LLM suggestion endpoint (C3-H3).
+# Replaces the previous in-process dict that was not shared across uvicorn workers.
 _LLM_RATE_LIMIT = 5
 _LLM_RATE_WINDOW = 60  # seconds
-_LLM_MAX_TRACKED_USERS = 10_000
-_llm_request_log: dict[str, list[float]] = {}
 
 
-def _check_llm_rate_limit(user_id: str) -> None:
+async def _check_llm_rate_limit(request: Request, user_id: str) -> None:
     """Raise 429 if the user exceeds LLM request rate limit.
 
-    This is an in-memory, single-process rate limiter. It does not share
-    state across multiple uvicorn workers. For multi-worker deployments,
-    use Redis-based rate limiting instead.
+    Uses a Redis sorted-set sliding window so the limit is enforced across all
+    worker processes.  Falls back to allowing the request (with a warning) if
+    Redis is unavailable, preserving availability over strict enforcement.
     """
-    now = time.monotonic()
+    redis_client: aioredis.Redis | None = getattr(request.app.state, "redis_client", None)
+    if not redis_client:
+        logger.warning("Redis unavailable; skipping LLM rate limit check for user %s", user_id)
+        return
+
+    key = f"llm_rate:{user_id}"
+    now = time.time()
     window_start = now - _LLM_RATE_WINDOW
-    # Evict stale users to prevent unbounded memory growth
-    if len(_llm_request_log) > _LLM_MAX_TRACKED_USERS:
-        stale = [uid for uid, ts in _llm_request_log.items() if not ts or ts[-1] < window_start]
-        for uid in stale:
-            del _llm_request_log[uid]
-    # Prune old entries for this user
-    user_log = _llm_request_log.get(user_id, [])
-    user_log = [t for t in user_log if t > window_start]
-    if len(user_log) >= _LLM_RATE_LIMIT:
-        _llm_request_log[user_id] = user_log
-        raise HTTPException(
-            status_code=429,
-            detail=f"Rate limit exceeded: max {_LLM_RATE_LIMIT} LLM requests per {_LLM_RATE_WINDOW}s",
-        )
-    user_log.append(now)
-    _llm_request_log[user_id] = user_log
+
+    try:
+        pipe = redis_client.pipeline()
+        # Remove timestamps older than the sliding window
+        pipe.zremrangebyscore(key, 0, window_start)
+        # Count remaining requests within the window (before adding current)
+        pipe.zcard(key)
+        # Record this request
+        pipe.zadd(key, {str(now): now})
+        # Expire the key one window after the last request
+        pipe.expire(key, _LLM_RATE_WINDOW + 1)
+        results = await pipe.execute()
+
+        request_count = results[1]
+        if request_count >= _LLM_RATE_LIMIT:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Rate limit exceeded: max {_LLM_RATE_LIMIT} LLM requests per {_LLM_RATE_WINDOW}s",
+                headers={"Retry-After": str(_LLM_RATE_WINDOW)},
+            )
+    except HTTPException:
+        raise
+    except aioredis.RedisError as e:
+        logger.warning("Redis error in LLM rate limiter (allowing request): %s", e)
 
 
 # -- Scenario Routes ----------------------------------------------------------
@@ -792,7 +803,7 @@ async def request_suggestions(
     user: User = Depends(require_permission("simulation:create")),
 ) -> dict[str, Any]:
     """Request LLM-generated alternative suggestions for a scenario."""
-    _check_llm_rate_limit(str(user.id))
+    await _check_llm_rate_limit(request, str(user.id))
 
     result = await session.execute(
         select(SimulationScenario)
