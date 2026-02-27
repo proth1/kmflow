@@ -7,6 +7,7 @@ audit trail. Fires asynchronously to avoid adding latency.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 
@@ -41,6 +42,25 @@ def _extract_resource_type(path: str) -> str | None:
     if len(parts) >= 3 and parts[0] == "api" and parts[1] == "v1":
         return parts[2]
     return None
+
+
+async def _persist_audit_event(
+    session_factory: object | None,
+    **kwargs: object,
+) -> None:
+    """Persist an audit event to the database (fire-and-forget).
+
+    Called via asyncio.create_task() from the middleware so that the
+    database round-trip does not block the HTTP response.
+    """
+    try:
+        if session_factory is not None:
+            async with session_factory() as session:
+                await log_audit_event_async(**kwargs, session=session)
+        else:
+            await log_audit_event_async(**kwargs)
+    except Exception as e:  # Intentionally broad: audit must not block requests
+        logger.warning("Audit persistence failed (request not blocked): %s", e)
 
 
 class AuditLoggingMiddleware(BaseHTTPMiddleware):
@@ -89,37 +109,23 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
             ip_address,
         )
 
-        # Persist to database for compliance using the app-level session factory
-        try:
-            session_factory = getattr(request.app.state, "db_session_factory", None)
-            if session_factory is not None:
-                async with session_factory() as session:
-                    await log_audit_event_async(
-                        method=request.method,
-                        path=request.url.path,
-                        user_id=user_id,
-                        status_code=response.status_code,
-                        engagement_id=engagement_id,
-                        duration_ms=duration_ms,
-                        ip_address=ip_address,
-                        user_agent=user_agent,
-                        resource_type=resource_type,
-                        session=session,
-                    )
-            else:
-                await log_audit_event_async(
-                    method=request.method,
-                    path=request.url.path,
-                    user_id=user_id,
-                    status_code=response.status_code,
-                    engagement_id=engagement_id,
-                    duration_ms=duration_ms,
-                    ip_address=ip_address,
-                    user_agent=user_agent,
-                    resource_type=resource_type,
-                )
-        except Exception as e:  # Intentionally broad: audit must not block requests
-            logger.warning("Audit persistence failed (request not blocked): %s", e)
+        # Fire-and-forget: persist audit event asynchronously to avoid
+        # adding database latency to the request path.
+        session_factory = getattr(request.app.state, "db_session_factory", None)
+        asyncio.create_task(
+            _persist_audit_event(
+                session_factory=session_factory,
+                method=request.method,
+                path=request.url.path,
+                user_id=user_id,
+                status_code=response.status_code,
+                engagement_id=engagement_id,
+                duration_ms=duration_ms,
+                ip_address=ip_address,
+                user_agent=user_agent[:512],
+                resource_type=resource_type,
+            )
+        )
 
         response.headers["X-Audit-Logged"] = "true"
         return response
