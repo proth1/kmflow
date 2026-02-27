@@ -56,6 +56,7 @@ from src.api.routes import (
     integrations,
     knowledge_forms,
     lineage,
+    llm_audit,
     metrics,
     micro_surveys,
     monitoring,
@@ -309,6 +310,9 @@ def create_app() -> FastAPI:
 
     # -- Cohort Suppression Routes (Story #391) ---
     app.include_router(cohort.router)
+
+    # -- LLM Audit Trail Routes (Story #386) ---
+    app.include_router(llm_audit.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)
