@@ -372,6 +372,34 @@ def test_form_recommended_probes_complete() -> None:
 
 
 @pytest.mark.asyncio
+async def test_inbound_edge_coverage() -> None:
+    """Inbound edges also count as form coverage."""
+    elements = [
+        {"element_id": "e1", "element_name": "Activity A", "confidence": 0.20, "brightness": "dark"},
+    ]
+
+    # Form 2 (Sequences): edge types are PRECEDES, FOLLOWED_BY
+    # Provide coverage via inbound edge only
+    from src.governance.knowledge_forms import FORM_EDGE_MAPPINGS, KnowledgeForm
+
+    seq_edges = FORM_EDGE_MAPPINGS[KnowledgeForm.SEQUENCES]
+    seq_key = str(tuple(sorted(seq_edges)))
+
+    graph = _make_graph_mock(
+        elements,
+        form_coverage_out={},
+        form_coverage_in={seq_key: [{"activity_id": "e1"}]},
+    )
+    service = DarkRoomBacklogService(graph)
+    result = await service.get_dark_segments("eng-1")
+
+    item = result["items"][0]
+    # Form 1 (auto) + Form 2 (via inbound) = 2 covered
+    assert item["covered_form_count"] == 2
+    assert item["missing_form_count"] == 7
+
+
+@pytest.mark.asyncio
 async def test_uplift_formula() -> None:
     """Estimated uplift = missing_ratio × brightness_gap × 0.6."""
     elements = [

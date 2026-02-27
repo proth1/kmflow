@@ -23,10 +23,12 @@ from src.core.audit import log_audit
 from src.core.models import (
     AuditAction,
     Contradiction,
+    EngagementMember,
     EvidenceGap,
     ProcessElement,
     ProcessModel,
     User,
+    UserRole,
 )
 from src.core.permissions import require_permission
 from src.pov.generator import generate_pov
@@ -551,6 +553,28 @@ async def get_bpmn_xml(
     }
 
 
+# -- Engagement Access Check -------------------------------------------------
+
+
+async def _check_engagement_member(
+    session: AsyncSession, user: User, engagement_id: uuid.UUID
+) -> None:
+    """Verify user is a member of the engagement. Platform admins bypass."""
+    if user.role == UserRole.PLATFORM_ADMIN:
+        return
+    result = await session.execute(
+        select(EngagementMember).where(
+            EngagementMember.engagement_id == engagement_id,
+            EngagementMember.user_id == user.id,
+        )
+    )
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this engagement",
+        )
+
+
 # -- Dark Room Backlog Schemas -----------------------------------------------
 
 
@@ -594,6 +618,7 @@ async def get_dark_room_backlog(
     request: Request,
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
+    dark_threshold: float = Query(default=0.4, ge=0.0, le=1.0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("pov:read")),
 ) -> dict[str, Any]:
@@ -620,8 +645,10 @@ async def get_dark_room_backlog(
             detail=f"Process model {model_id} not found",
         )
 
+    await _check_engagement_member(session, user, model.engagement_id)
+
     graph_service = KnowledgeGraphService(request.app.state.neo4j_driver)
-    backlog_service = DarkRoomBacklogService(graph_service)
+    backlog_service = DarkRoomBacklogService(graph_service, dark_threshold=dark_threshold)
 
     backlog = await backlog_service.get_dark_segments(
         engagement_id=str(model.engagement_id),
