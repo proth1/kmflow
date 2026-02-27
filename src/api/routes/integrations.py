@@ -164,7 +164,7 @@ async def create_connection(
         connector_type=payload.connector_type,
         name=payload.name,
         status="configured",
-        config_json=payload.config,
+        config_json=None,  # Plaintext cleared; use encrypted_config only
         encrypted_config=encrypted,
         field_mappings=mappings if mappings else None,
     )
