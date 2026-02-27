@@ -398,6 +398,8 @@ async def get_process_elements(
 @router.get("/{model_id}/evidence-map", response_model=list[EvidenceMapEntry])
 async def get_evidence_map(
     model_id: str,
+    limit: int = Query(default=200, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("pov:read")),
 ) -> list[dict[str, Any]]:
@@ -410,8 +412,9 @@ async def get_evidence_map(
             detail="Invalid model ID format",
         ) from None
 
-    # Get all elements for this model
-    result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == model_uuid))
+    # Get elements for this model with pagination
+    query = select(ProcessElement).where(ProcessElement.model_id == model_uuid).limit(limit).offset(offset)
+    result = await session.execute(query)
     elements = list(result.scalars().all())
 
     if not elements:
@@ -443,6 +446,8 @@ async def get_evidence_map(
 @router.get("/{model_id}/gaps", response_model=list[EvidenceGapResponse])
 async def get_evidence_gaps(
     model_id: str,
+    limit: int = Query(default=100, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("pov:read")),
 ) -> list[dict[str, Any]]:
@@ -455,7 +460,8 @@ async def get_evidence_gaps(
             detail="Invalid model ID format",
         ) from None
 
-    result = await session.execute(select(EvidenceGap).where(EvidenceGap.model_id == model_uuid))
+    query = select(EvidenceGap).where(EvidenceGap.model_id == model_uuid).limit(limit).offset(offset)
+    result = await session.execute(query)
     gaps = list(result.scalars().all())
 
     return [_gap_to_response(g) for g in gaps]
@@ -464,6 +470,8 @@ async def get_evidence_gaps(
 @router.get("/{model_id}/contradictions", response_model=list[ContradictionResponse])
 async def get_contradictions(
     model_id: str,
+    limit: int = Query(default=100, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("pov:read")),
 ) -> list[dict[str, Any]]:
@@ -476,7 +484,8 @@ async def get_contradictions(
             detail="Invalid model ID format",
         ) from None
 
-    result = await session.execute(select(Contradiction).where(Contradiction.model_id == model_uuid))
+    query = select(Contradiction).where(Contradiction.model_id == model_uuid).limit(limit).offset(offset)
+    result = await session.execute(query)
     contradictions = list(result.scalars().all())
 
     return [_contradiction_to_response(c) for c in contradictions]

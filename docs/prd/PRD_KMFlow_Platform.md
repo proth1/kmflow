@@ -1,11 +1,12 @@
 # KMFlow Platform - Product Requirements Document
 
-**Version**: 2.0.0
+**Version**: 2.1.0
 **Status**: Revised Draft
-**Last Updated**: 2026-02-26
+**Last Updated**: 2026-02-27
 **Author**: David Johnson, Paul Roth
 **Classification**: Internal - Confidential
-**Revision Note**: Incorporates KM4ProcessBot v1, WorkGraphIQ gap analysis, David Johnson architectural vision. See `docs/analysis/KMFlow-vs-WGI-Gap-Analysis.md` for full gap analysis.
+**Revision Note v2.1**: Incorporates 10-perspective expert review findings. Key changes: restructured confidence model, added process structure discovery step, security architecture section, async task architecture, GDPR/consent requirements moved to Phase 1, cross-store consistency model, acceptance criteria. See `docs/prd/PRD_v2_Expert_Review_Synthesis.md` for full review synthesis.
+**Revision Note v2.0**: Incorporates KM4ProcessBot v1, WorkGraphIQ gap analysis, David Johnson architectural vision. See `docs/analysis/KMFlow-vs-WGI-Gap-Analysis.md` for full gap analysis.
 
 ---
 
@@ -18,7 +19,7 @@ KMFlow is an AI-powered Process Intelligence platform designed for consulting en
 **What KMFlow Does**:
 - Ingests diverse client evidence per business area (not cross-enterprise)
 - Builds semantic relationships across all evidence items using a controlled edge vocabulary
-- Synthesizes a "least common denominator" first-pass process point of view
+- Synthesizes a "least common denominator" (LCD) first-pass process point of view — the baseline consensus view from all available evidence, including elements mentioned by any source weighted by evidence type and confidence
 - Scores every process element with a three-dimensional confidence model (numeric score + brightness classification + evidence grade)
 - Captures structured process knowledge via survey bot with domain-seeded probes
 - Aligns against Target Operating Models, best practices, and industry benchmarks
@@ -62,7 +63,7 @@ Organizations have fragmented process knowledge spread across BPM tools (ARIS, V
 
 KMFlow transforms consulting delivery by enabling data-driven process conversations from day one of client engagement.
 
-**Vision Statement**: Ingest a focused body of evidence related to a specific business area. Actively elicit structured process knowledge through domain-seeded probes. Create consistent semantic relationships between all evidence items using a controlled edge vocabulary. Produce a "least common denominator" first-pass point of view across the evidence corpus. Score every process element with confidence based on evidence coverage, quality, and agreement. Preserve plural truths through epistemic frames when sources legitimately disagree. Align against TOMs, best practices, and industry benchmarks. Generate prioritized gap analysis with evidence-backed recommendations. Know what you don't know — and target evidence acquisition to fill the gaps.
+**Vision Statement**: Ingest a focused body of evidence related to a specific business area. Actively elicit structured process knowledge through domain-seeded probes. Create consistent semantic relationships between all evidence items using a controlled edge vocabulary. Produce a "least common denominator" (LCD) first-pass point of view across the evidence corpus — the baseline consensus including all evidence-supported elements, weighted by source type and confidence. Score every process element with confidence based on evidence coverage, quality, and agreement. Preserve plural truths through epistemic frames when sources legitimately disagree. Align against TOMs, best practices, and industry benchmarks. Generate prioritized gap analysis with evidence-backed recommendations. Know what you don't know — and target evidence acquisition to fill the gaps.
 
 **Guiding Principles**:
 - Evidence-first: every assertion is traceable to source evidence
@@ -91,8 +92,14 @@ KMFlow transforms consulting delivery by enabling data-driven process conversati
 | **KPMG Workbench** | AI-assisted consulting | General-purpose; no semantic process graphs |
 | **Deloitte Zora** | AI-assisted analysis | General-purpose; not process intelligence |
 | **NVivo** | Qualitative data analysis | Academic focus; no process model generation; no TOM alignment |
+| **ABBYY Timeline** | Process mining from document-centric evidence | Overlapping positioning but no consulting workflow; no TOM alignment; no knowledge capture |
+| **UiPath Process Mining** | Task mining + process mining integration | Strong on structured data; weak on qualitative evidence; no confidence model |
+| **Microsoft Process Advisor** | Integrated with Power Platform | Massive distribution advantage; limited evidence diversity; no epistemic frames |
+| **IBM Process Mining** | Strong in regulated industries | Event-log-first; no qualitative evidence; limited consulting workflow |
 
 **KMFlow's Unique Position**: Consulting-first process intelligence. The only platform that combines evidence ingestion from consulting engagements, structured process knowledge capture with domain-seeded probes, semantic relationship building, confidence-scored process models with brightness classification, and automated TOM gap analysis.
+
+**Competitive Strategy**: KMFlow complements rather than replaces event-log-first tools. Its value is strongest in the pre-event-log phase (qualitative evidence, process discovery from diverse sources) and the post-event-log phase (TOM alignment, gap analysis, scenario planning). The Celonis connector (Section 6.6) bridges these complementary capabilities.
 
 ---
 
@@ -137,7 +144,13 @@ The four planes ensure comprehensive evidence coverage. No single plane is suffi
 Multi-format document processing pipeline with format-specific parsers for all 12 evidence categories.
 
 **Key Features**:
-- Shelf data request management: compose requests, deliver to clients, track responses, match received evidence to requested items, follow-up automation
+- Shelf data request management with item-level tracking:
+  - Compose requests with individual line items per evidence need
+  - Deliver to clients (email/portal)
+  - Track at item level: `SENT` → `ACKNOWLEDGED` → `PARTIAL_RESPONSE` → `RECEIVED` → `VALIDATED` (also: `WRONG_FORMAT_RECEIVED`, `ESCALATED`, `CLIENT_PUSH_BACK`, `SUBSTITUTION_OFFERED`, `CLOSED_INCOMPLETE`)
+  - Follow-up automation: configurable escalation intervals with templated language
+  - Evidence substitution: when client cannot provide requested item, analyst marks acceptable substitute and system adjusts confidence accordingly
+  - Realistic fulfillment milestones: >40% within 2 weeks, >60% within 4 weeks, >80% stretch goal
 - Evidence cataloging with automated metadata extraction
 - Evidence quality scoring across four dimensions:
   - **Completeness** (0.0-1.0): How much of the requested evidence is present
@@ -152,7 +165,7 @@ Multi-format document processing pipeline with format-specific parsers for all 1
 
 ### 6.2 Semantic Relationship Engine
 
-Knowledge graph construction using Neo4j with typed nodes and relationships. Uses a **controlled edge vocabulary** (12 typed edges) for schema discipline.
+Knowledge graph construction using Neo4j with typed nodes and relationships. Uses a **controlled edge vocabulary** for schema discipline. The authoritative vocabulary is defined in `src/semantic/ontology/kmflow_ontology.yaml` — the PRD table below describes the target vocabulary; the ontology YAML must be reconciled to match.
 
 **Semantic Bridges**:
 - `ProcessEvidenceBridge`: Process ↔ Evidence (confidence-weighted)
@@ -181,8 +194,8 @@ Knowledge graph construction using Neo4j with typed nodes and relationships. Use
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `frame_kind` | Enum | `procedural` \| `regulatory` \| `experiential` \| `telemetric` |
-| `authority_scope` | String | Who can assert this (e.g., "operations_team", "compliance_officer") |
+| `frame_kind` | Enum | `procedural` \| `regulatory` \| `experiential` \| `telemetric` \| `elicited` \| `behavioral` |
+| `authority_scope` | ControlledVocab | Who can assert this — controlled vocabulary tied to engagement roles, not freeform string (e.g., `operations_team`, `compliance_officer`, `system_telemetry`) |
 | `access_policy` | String | Visibility rules for this assertion |
 
 **Bitemporal Validity** on relationships:
@@ -194,6 +207,10 @@ Knowledge graph construction using Neo4j with typed nodes and relationships. Use
 | `valid_from` | DateTime | When the asserted fact becomes true |
 | `valid_to` | DateTime | When the asserted fact ceases to be true (null if ongoing) |
 | `superseded_by` | UUID | Reference to the superseding assertion |
+
+**Knowledge Graph Assumption Model**:
+- **Open World Assumption (default)**: A missing edge means "no evidence yet," not "doesn't exist." Consistent with the brightness model — Dark segments are under-observed, not absent. Applied to all general graph traversals and confidence scoring.
+- **Closed World Assumption (governance queries only)**: When running Control Gap detection (consistency check #6, Section 6.10.5) against a specific regulatory framework, a missing `GOVERNED_BY` edge is treated as a gap finding. CWA is scoped to the specific compliance domain under analysis.
 
 **Capabilities**:
 - Entity resolution across heterogeneous evidence sources
@@ -221,49 +238,74 @@ The intellectual core of the platform. Synthesizes a consensus first-pass proces
    - Genuine Disagreement → preserve both views with epistemic frames, mark for validation
    - Naming Variant → resolve via seed list / entity resolution
    - Temporal Shift → resolve via bitemporal validity model
-6. **Consensus Building**: Apply weighted voting across evidence sources:
+6. **Process Structure Discovery**: Reconstruct process control flow from evidence:
+   - Build a directly-follows graph (DFG) from `PRECEDES` edges extracted in Step 2, weighted by frequency and source confidence
+   - Apply dependency threshold: prune edges below configurable frequency/confidence threshold (default: 0.1)
+   - Detect parallelism: if A and B both follow C, and A and B never directly follow each other, infer parallel split (AND-gateway)
+   - Detect choice: if A and B both follow C, and A and B never co-occur in the same trace/evidence, infer exclusive split (XOR-gateway)
+   - Detect loops: if backward edges exist (B→A where A already precedes B), preserve as loop structure
+   - When event logs (XES/SaaS) are available, use directly-follows from consecutive events as high-confidence input
+   - When evidence is qualitative only (documents, interviews), mark structural inferences as Dim and flag for validation
+   - Score each structural inference with brightness classification
+   - Output: structured process graph with gateway types, suitable for BPMN assembly
+7. **Consensus Building**: Apply weighted voting across evidence sources:
    - System data (highest weight: objective)
    - Process documentation (high weight: intentional)
    - Communications/tickets (medium weight: behavioral)
    - Interviews/workshops (medium weight: subjective but expert)
    - Survey claims (medium weight: structured but unvalidated)
    - Job aids/workarounds (lower weight: may reflect exceptions)
-7. **Contradiction Resolution**: When evidence conflicts:
+8. **Contradiction Resolution**: When evidence conflicts:
    - Flag contradictions with severity scoring and disagreement type
    - Create `ConflictObject` for each detected mismatch
    - Present alternative views with supporting evidence for each
    - Apply recency bias (newer evidence weighted higher for conflicts)
    - Default to "documented + observed" over "documented only"
-8. **Model Assembly**: Generate BPMN-style process model with:
+9. **Model Assembly**: Generate BPMN 2.0 process model from the structured process graph (Step 6) with:
    - Every element traced to source evidence
    - Three-dimensional confidence score per element
    - Variant annotations where evidence supports multiple paths
    - Gap markers where evidence is insufficient (Dark segments)
 
-**Three-Dimensional Confidence Model** (per process element):
+**Confidence Model** (per process element):
+
+The confidence model has two independent dimensions plus a derived visualization classification:
 
 ```
 Dimension 1 — Confidence Score (0-1):
-confidence = (
-    evidence_coverage  * 0.30 +    # How many evidence types support this element
-    evidence_agreement * 0.25 +    # Cross-source corroboration
-    evidence_quality   * 0.20 +    # Quality scores of supporting evidence
-    source_reliability * 0.15 +    # Credibility of evidence sources
-    evidence_recency   * 0.10      # Freshness of supporting evidence
-)
 
-Dimension 2 — Brightness Classification:
-  Bright (>= 0.75): Evidence from 3+ sources, validated
-  Dim (0.40-0.74): 1-2 sources or unvalidated
-  Dark (< 0.40): Missing, contradictory, or under-observed
+  Evidence Strength (structural coverage):
+    evidence_coverage  = supporting_planes / available_planes   # normalized against evidence planes available in engagement
+    evidence_agreement = agreeing_sources / total_mentioning_sources  # actual inter-source agreement ratio
 
-Dimension 3 — Evidence Grade:
+  Evidence Quality (source trustworthiness):
+    evidence_quality   = mean quality score of supporting evidence items
+    source_reliability = weighted mean by source type (system data: 0.9, formal docs: 0.8, communications: 0.5, job aids: 0.3)
+    evidence_recency   = freshness decay function (configurable half-life per evidence category)
+
+  Composite Score:
+    strength = evidence_coverage * 0.55 + evidence_agreement * 0.45
+    quality  = evidence_quality * 0.40 + source_reliability * 0.35 + evidence_recency * 0.25
+    confidence = min(strength, quality)  # prevents high scores when either dimension is weak
+
+Dimension 2 — Evidence Grade (independent provenance assessment):
   Grade A: Validated by SME + corroborated by 2+ planes
   Grade B: Corroborated by 2+ planes, not yet validated
   Grade C: Single-plane evidence, reasonable confidence
   Grade D: Single-source, unvalidated claim
   Grade U: No evidence (dark room)
+
+Derived — Brightness Classification (visualization convenience):
+  Determined by: min(score_brightness, grade_brightness)
+  Score-based:  Bright (>= 0.75), Dim (0.40-0.74), Dark (< 0.40)
+  Grade-based:  Bright (A-B), Dim (C), Dark (D-U)
+  Coherence constraint: Grade D or U caps brightness at Dim regardless of numeric score
 ```
+
+**Confidence Propagation Rules**:
+- When an evidence item's quality score changes (e.g., freshness decay), recompute confidence for all elements within 2 hops via `EVIDENCED_BY` edges
+- Freshness decay: exponential with configurable half-life per evidence category (regulatory: 365 days, process docs: 180 days, communications: 30 days)
+- If Activity A `DEPENDS_ON` Activity B and B is Dark, A's brightness is capped at Dim (structural dependency constraint)
 
 **Minimum Viable Confidence (MVC)**: The threshold below which a process element MUST be flagged for additional evidence acquisition before publication. Default: 0.40 (boundary between Dim and Dark).
 
@@ -681,9 +723,33 @@ All relationships carry epistemic frame properties (`frame_kind`, `authority_sco
 
 ### 7.3 Vector Store (pgvector)
 
-- Embedding dimension: 768 (all-mpnet-base-v2) or 1536 (OpenAI ada-002)
+- Default embedding model: all-mpnet-base-v2 (768-dim), selected for local execution (no API cost, no data egress)
+- All embeddings within an engagement MUST use the same model and dimension
+- `embedding_model` and `embedding_dimension` tracked per engagement to prevent cross-model similarity queries
+- Alternative models configurable per engagement (requires re-embedding all evidence for that engagement)
 - Tables: `evidence_embeddings`, `process_element_embeddings`, `policy_embeddings`, `seed_term_embeddings`
-- HNSW index for approximate nearest neighbor search
+- HNSW index: `CREATE INDEX USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64)`
+- Content chunking: target 256-384 tokens per chunk (within model sequence limits), 50-100 token overlap, semantic-boundary-aware splitting (paragraph > section > sentence boundaries)
+
+### 7.4 Cross-Store Consistency
+
+PostgreSQL is the **system of record** for all entities. Neo4j is a **derived projection** optimized for graph traversal. pgvector stores embeddings as columns on their respective entity tables.
+
+**Write pattern**: Write to PostgreSQL first (within a transaction), then project to Neo4j. If Neo4j write fails, enqueue a retry via Redis with exponential backoff.
+
+**ID strategy**: Neo4j nodes store the PostgreSQL UUID as a property. No separate Neo4j-native IDs.
+
+**Reconciliation**: Daily batch job compares PostgreSQL entity counts and IDs with Neo4j node counts per engagement, logging discrepancies.
+
+**GDPR erasure cascade**: PostgreSQL deletion triggers cascading deletion in Neo4j (`MATCH (n {engagement_id: $eid}) DETACH DELETE n`) and pgvector embedding cleanup via a background job.
+
+**Failure handling**: Neo4j write failure after PostgreSQL commit queues a retry — never triggers a PostgreSQL rollback. Eventually consistent with PostgreSQL as the authority.
+
+### 7.5 Schema Evolution Strategy
+
+- **PostgreSQL**: Alembic migrations with backward-compatible column additions (nullable or with defaults). Data backfill strategy for new required columns.
+- **Neo4j**: Ontology version bumping protocol. Cypher migration scripts for adding indexes/constraints when new node types are introduced. `SchemaVersion` node in Neo4j tracks applied migrations.
+- **API**: URI-based versioning (`/api/v1/`, `/api/v2/`) for breaking changes. Minimum 6-month deprecation period with `Deprecation` and `Sunset` HTTP headers. Additive changes (new fields, new endpoints) are non-breaking.
 
 ---
 
@@ -718,9 +784,10 @@ All relationships carry epistemic frame properties (`frame_kind`, `authority_sco
 - `GET /api/v1/tom/{id}/recommendations` - Get prioritized recommendations
 
 ### 8.5 Knowledge Graph APIs
-- `GET /api/v1/graph/query` - Cypher query execution
 - `GET /api/v1/graph/traverse` - Graph traversal from node
 - `GET /api/v1/graph/search` - Semantic search across graph
+- `GET /api/v1/graph/process/{id}/evidence-chain` - Evidence lineage for process element
+- `GET /api/v1/graph/query` - Cypher query execution (restricted to `admin:graph_query` permission; query complexity limits enforced: max depth 5, max results 1000, 30s timeout)
 
 ### 8.6 Engagement APIs
 - `POST /api/v1/engagements` - Create engagement
@@ -775,21 +842,100 @@ All relationships carry epistemic frame properties (`frame_kind`, `authority_sco
 
 ---
 
-## 9. Security and Multi-Tenancy
+## 9. Security, Privacy, and Compliance
 
-- **Engagement-level data isolation**: All data scoped to engagement with row-level security
+### 9.1 Data Isolation and Access Control
+
+- **Engagement-level data isolation**: All data scoped to engagement. Current: application-layer filtering (`WHERE engagement_id = X`). Target (Phase 1): PostgreSQL Row-Level Security policies with `current_engagement_id` session variable set at connection time via middleware
 - **Authentication**: OAuth2/OIDC (consulting firm SSO integration)
-- **Authorization**: Role-based access per persona type
-- **Encryption**: AES-256 at rest, TLS 1.3 in transit
-- **Audit logging**: Complete trail of all data access and modifications
-- **Data classification**: Evidence tagged with sensitivity levels (Public, Internal, Confidential, Restricted)
+- **Authorization**: Hybrid RBAC/ABAC model. RBAC for persona-level actions (what can this role do?). ABAC for data-level decisions (can this user access this classified evidence item in this engagement context?). `access_policy` on EpistemicFrame entities uses controlled vocabulary tied to engagement roles
+- **Session management**: Access token expiry (30 minutes), refresh token expiry (7 days) with single-use rotation, concurrent session policy, session revocation on suspected compromise
+- **Encryption**: AES-256 at rest (column-level for credentials, file-level for evidence), TLS 1.3 in transit (including database connections in production), key rotation support with key hierarchy (master key → data encryption keys)
+- **Secrets management**: Integration credentials encrypted at rest, never stored in plaintext, never returned in API responses. Separate `Credential` entity with encrypted_value, rotation tracking, and access audit logging
+
+### 9.2 Audit Trail
+
+- Every data mutation (create, update, delete) MUST generate an audit log entry
+- Audit log entries MUST include: actor identity, timestamp, action type, affected entity, engagement scope, IP address, request_id, change delta
+- Audit logs MUST be immutable (append-only; no UPDATE or DELETE operations)
+- Audit log retention MUST exceed the engagement data retention period (minimum 7 years for SOX-regulated clients)
+- Audit logs for GDPR-relevant operations (erasure, consent changes, data exports) retained for statutory limitation period
+
+### 9.3 Data Classification and Handling
+
+- Evidence tagged with sensitivity levels: Public, Internal, Confidential, Restricted
+- Classification enforced at access time: RESTRICTED evidence requires elevated permissions and generates enhanced audit entries
 - **Client data handling**: No cross-engagement data leakage; isolated processing pipelines
-- **Retention policies**: Configurable per engagement with automated cleanup
-- **Compliance**: SOC2 Type II, GDPR data processing agreements
-- **Consent architecture** (Phase 3+, contingent on endpoint capture adoption): Platform-level consent model extending the existing macOS agent ConsentManager. If desktop endpoint capture (GAP-1) is adopted, formalize consent records per participant with opt-in/org-authorized/hybrid modes linked to policy bundle versions.
-- **Policy Decision Point** (Phase 3): Lightweight PDP service for access decisions and data handling obligations
+
+### 9.4 Lawful Basis Framework (GDPR)
+
+Every processing activity requires a documented lawful basis per GDPR Article 6:
+
+| Processing Activity | Lawful Basis | Article |
+|---------------------|-------------|---------|
+| Evidence ingestion and analysis | Contractual necessity | Art. 6(1)(b) |
+| LLM processing (Claude API) | Legitimate interest with documented balancing test | Art. 6(1)(f) |
+| Survey bot elicitation | Consent | Art. 6(1)(a) |
+| Desktop endpoint capture (Phase 3) | Consent | Art. 6(1)(a) |
+| Task mining | Consent | Art. 6(1)(a) |
+
+**Consent verification**: No evidence processing, copilot interaction, or survey session endpoint shall execute without verified lawful basis. Where consent is the basis, the platform verifies active consent before processing.
+
+**Data Subject Rights** (Phase 1 — MVP):
+- Art. 15 (Access): Export all personal data held for a data subject, including evidence fragments, audit logs, copilot messages, survey claims, and consent records
+- Art. 16 (Rectification): Allow data subjects to correct personal data
+- Art. 17 (Erasure): Automated erasure within 30 days of request, covering all stores (PostgreSQL, Neo4j, pgvector, Redis cache). Background job executes erasure — not just records the request
+- Art. 20 (Portability): Export personal data in machine-readable format (JSON)
+- Art. 21 (Objection): Right to object to processing based on legitimate interest
+
+### 9.5 Cross-Border Data Transfer
+
+| Data Flow | Destination | Legal Mechanism |
+|-----------|-------------|-----------------|
+| Evidence → Claude API | US (Anthropic) | SCCs + Transfer Impact Assessment |
+| Evidence → OpenAI ada-002 | US (OpenAI) | SCCs + Transfer Impact Assessment |
+| Evidence → SaaS connectors | Various | Per-connector DPA review |
+
+- Configurable data residency constraints at engagement level (e.g., "EU-only processing" flag prevents evidence from being sent to US-based LLM providers)
+- Transfer Impact Assessment required before activating each new integration connector
+- Engagement-level flag: `data_residency_restriction` (enum: `NONE`, `EU_ONLY`, `UK_ONLY`, `CUSTOM`)
+
+### 9.6 Incident Response
+
+- **Incident classification**: P1 (data breach), P2 (security incident, no breach), P3 (vulnerability), P4 (policy violation)
+- **Breach notification**: Supervisory authority within 72 hours (GDPR Art. 33); data subjects without undue delay for high-risk (Art. 34)
+- **Client notification**: Per engagement agreement SLA
+- **Forensic preservation**: Audit logs frozen upon incident detection
+- **Automated detection**: Anomalous data export volumes, unauthorized cross-engagement access attempts, credential compromise indicators
+
+### 9.7 Third-Party Risk Management
+
+- Risk assessment required before activating any new integration or AI provider
+- Data minimization matrix: specify which evidence fields are transmitted to each third party
+- AI provider controls: prompt sanitization, data retention opt-out verification, training data exclusion confirmation
+- Annual review of third-party SOC2 reports or equivalent security attestations
+- Third-party breach response procedure integrated with incident response workflow
+
+### 9.8 Data Retention
+
+| Data Category | Default Retention | Regulatory Min | Notes |
+|--------------|------------------|----------------|-------|
+| Evidence items | Engagement + 90d | Varies by industry | GDPR Art. 5(1)(e) |
+| Audit logs | 7 years | 6 years (SOX) | Immutable, separate lifecycle |
+| LLM prompts/responses | 90 days | None | Data minimization |
+| Survey claims | Engagement + 90d | None | Contains SME assertions |
+| Consent records | 7 years | 6 years (GDPR Art. 7) | Proof of lawful basis |
+| Embeddings | Same as source | Same as source | Derived data |
+
+- Retention minimum floors override user configuration (cannot set 30 days for SOX-regulated engagement)
+- **Litigation hold**: When placed on an engagement, all automated retention cleanup suspended until hold released
+
+### 9.9 Deferred Security Controls
+
+- **Policy Decision Point** (Phase 3): Lightweight PDP service for complex access decisions and data handling obligations
 - **Export watermarking** (Phase 3): PDF and narrative artifacts carry engagement-level watermarks with recipient tracking
 - **Cohort suppression** (Phase 3): Analytics suppressed below minimum cohort size to protect individual identity
+- **Endpoint capture consent** (Phase 3): Extended consent model for desktop monitoring with opt-in/org-authorized/hybrid modes
 
 ---
 
@@ -824,7 +970,7 @@ All relationships carry epistemic frame properties (`frame_kind`, `authority_sco
 3. System performs cross-source triangulation
 4. Cross-source consistency checks detect mismatches (6 rules)
 5. Three-way distinction classifies each mismatch (genuine disagreement / naming variant / temporal shift)
-6. LCD algorithm synthesizes consensus process model
+6. LCD algorithm synthesizes consensus process model (evidence-weighted, not limited to universal agreement)
 7. Three-dimensional confidence scores assigned per element (numeric + brightness + evidence grade)
 8. Contradictions flagged with ConflictObjects and alternative views
 9. BPMN process model generated with evidence citations
@@ -889,12 +1035,12 @@ All relationships carry epistemic frame properties (`frame_kind`, `authority_sco
 | Metric | Target | Measurement |
 |--------|--------|-------------|
 | Evidence processing accuracy | >90% correct classification | Validated against analyst review |
-| POV generation time | <4 hours for typical scope | End-to-end from trigger to model |
-| Confidence score correlation | >0.8 with expert assessment | Pearson correlation coefficient |
-| Consultant time savings | 60-70% reduction in process discovery | Before/after engagement comparison |
-| Evidence coverage per engagement | >80% of requested items received | Shelf data request fulfillment rate |
-| Gap detection recall | >85% of gaps identified by experts | Compared to manual gap analysis |
-| Client satisfaction | >4.5/5.0 | Post-engagement survey |
+| POV generation time | <4 hours for typical scope (100 items, 5 categories, 50 seed terms) | End-to-end from trigger to model |
+| Confidence score correlation | >0.8 with expert assessment | Pearson correlation on reference engagement (expert assessment protocol: 2 independent analysts score 50 elements using the same rubric; inter-rater kappa measured) |
+| Consultant time savings | 60-70% reduction in process discovery | `EngagementTimeline` entity captures phase start/end timestamps; compare across engagements (business outcome hypothesis until sufficient data) |
+| Evidence coverage per engagement | >40% in 2 weeks, >60% in 4 weeks, >80% stretch | Shelf data request item-level fulfillment rate |
+| Gap detection recall | >85% of gaps identified by experts | Compared to manual gap analysis on reference engagement with labeled ground-truth gaps |
+| Client satisfaction | >4.5/5.0 | Post-engagement survey (delivered via survey session type, not ad-hoc) |
 | Seed list term coverage rate | >70% of seed terms have supporting evidence | Seed terms with ≥1 evidence link / total seed terms |
 | Survey claim confirmation rate | >60% of claims confirmed via validation | Confirmed claims / total claims |
 | Disagreement resolution time | <48 hours median | Time from ConflictObject creation to resolution |
@@ -922,7 +1068,9 @@ All relationships carry epistemic frame properties (`frame_kind`, `authority_sco
 - Simple HTML process flow visualization
 - Evidence provenance tracking
 - Engagement Lead and Process Analyst dashboards
-- Security: engagement-level isolation, auth, audit logging
+- Security: engagement-level isolation (PostgreSQL RLS), auth, immutable audit logging
+- GDPR: lawful basis framework, consent verification middleware, data subject rights endpoints (access, erasure, portability)
+- Async task architecture: Redis Streams for long-running operations (POV generation, evidence batch processing)
 
 **FORMALIZE (schema + data model, no new UI)**:
 - Three-dimensional confidence model schema (numeric score + brightness + evidence grade)
@@ -1067,6 +1215,42 @@ All relationships carry epistemic frame properties (`frame_kind`, `authority_sco
 |  - Seed terms          |  - Conflict objects  |                    |
 +-------------------------------------------------------------------+
 ```
+
+**Current State**: The platform is a modular monolith — separate Python packages within a single FastAPI deployable. The architecture diagram above shows logical service boundaries, not deployment units. Service extraction will occur incrementally as scaling requirements emerge.
+
+### Async Task Architecture
+
+Long-running operations use an async task pattern via Redis Streams:
+
+| Operation | Pattern | Expected Duration |
+|-----------|---------|-------------------|
+| Evidence upload (single item) | Synchronous response + async processing | <30s response, <5min processing |
+| POV generation | Async (`202 Accepted` + task_id) | <4 hours for typical scope |
+| TOM alignment | Async | <30 minutes |
+| Simulation run | Async | <10 minutes |
+| Evidence ingestion (batch) | Async | Varies by volume |
+| GDPR erasure | Async background job | <30 days (regulatory) |
+| Dashboard queries | Synchronous | <3 seconds |
+| Graph traversal | Synchronous | <2 seconds |
+| Vector search (top-k) | Synchronous | <500ms |
+
+Async operations return `202 Accepted` with a `task_id`. Clients poll `GET /api/v1/tasks/{task_id}` for status or subscribe via WebSocket for completion notification. Task progress is reported as percentage with stage labels.
+
+**"Typical scope"** for performance targets: 100 evidence items across 5 categories, average 20 pages per document, 50 seed terms, 10,000 graph nodes, 50,000 graph edges.
+
+### Domain Events
+
+Key events that flow between processing services via Redis Streams:
+
+| Event | Triggers |
+|-------|----------|
+| `EvidenceIngested` | Graph update, embedding generation, seed list matching |
+| `GraphUpdated` | Confidence recalculation |
+| `POVGenerated` | RACI derivation, dark room assessment |
+| `ValidationDecisionRecorded` | Evidence grade update, confidence propagation |
+| `DeviationDetected` | Alert, micro-survey generation |
+
+At-least-once delivery semantics. Event handlers must be idempotent.
 
 ### Tech Stack
 

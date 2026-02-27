@@ -362,6 +362,105 @@ class BenchmarkList(BaseModel):
     total: int
 
 
+class SeedResponse(BaseModel):
+    """Schema for seed operation response."""
+
+    best_practices_seeded: int
+    benchmarks_seeded: int
+
+
+class AlignmentResponse(BaseModel):
+    """Schema for alignment analysis response."""
+
+    engagement_id: str
+    tom_id: str
+    overall_alignment: float
+    maturity_scores: dict[str, float]
+    gaps_detected: int
+    gaps_persisted: int
+    gaps: list[dict[str, Any]]
+
+
+class MaturityScoresResponse(BaseModel):
+    """Schema for maturity scores response."""
+
+    engagement_id: str
+    maturity_scores: dict[str, float]
+
+
+class PrioritizedGapsResponse(BaseModel):
+    """Schema for prioritized gaps response."""
+
+    engagement_id: str
+    gaps: list[dict[str, Any]]
+    total: int
+
+
+class ConformanceDeviationResponse(BaseModel):
+    """Schema for a single conformance deviation."""
+
+    element_name: str
+    deviation_type: str
+    severity: float
+    description: str
+
+
+class ConformanceCheckResponse(BaseModel):
+    """Schema for conformance check response."""
+
+    pov_model_id: str
+    reference_model_id: str
+    fitness_score: float
+    matching_elements: int
+    total_reference_elements: int
+    deviations: list[ConformanceDeviationResponse]
+
+
+class ConformanceModelSummary(BaseModel):
+    """Schema for a model in the conformance summary."""
+
+    id: str
+    scope: str
+    confidence_score: float
+    element_count: int
+
+
+class ConformanceSummaryResponse(BaseModel):
+    """Schema for conformance summary response."""
+
+    engagement_id: str
+    completed_models: int
+    models: list[ConformanceModelSummary]
+
+
+class RoadmapPhaseResponse(BaseModel):
+    """Schema for a roadmap phase."""
+
+    phase_number: int
+    name: str
+    duration_months: int
+    initiative_count: int
+    initiatives: list[dict[str, Any]]
+
+
+class RoadmapResponse(BaseModel):
+    """Schema for roadmap generation response."""
+
+    engagement_id: str
+    tom_id: str
+    total_initiatives: int
+    estimated_duration_months: int
+    phases: list[RoadmapPhaseResponse]
+
+
+class RoadmapSummaryResponse(BaseModel):
+    """Schema for roadmap summary response."""
+
+    engagement_id: str
+    total_gaps: int
+    gaps_by_dimension: dict[str, int]
+
+
 @router.post("/best-practices", response_model=BestPracticeResponse, status_code=status.HTTP_201_CREATED)
 async def create_best_practice(
     payload: BestPracticeCreate,
@@ -500,7 +599,7 @@ async def get_benchmark(
     return bm
 
 
-@router.post("/seed", status_code=status.HTTP_201_CREATED)
+@router.post("/seed", response_model=SeedResponse, status_code=status.HTTP_201_CREATED)
 async def seed_best_practices_and_benchmarks(
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:update")),
@@ -530,7 +629,7 @@ async def seed_best_practices_and_benchmarks(
 # -- Alignment Engine Routes (Story #30) --------------------------------------
 
 
-@router.post("/alignment/{engagement_id}/{tom_id}")
+@router.post("/alignment/{engagement_id}/{tom_id}", response_model=AlignmentResponse)
 async def run_alignment(
     engagement_id: UUID,
     tom_id: UUID,
@@ -564,7 +663,7 @@ async def run_alignment(
     }
 
 
-@router.get("/alignment/{engagement_id}/maturity")
+@router.get("/alignment/{engagement_id}/maturity", response_model=MaturityScoresResponse)
 async def get_maturity_scores(
     engagement_id: UUID,
     request: Request,
@@ -584,12 +683,12 @@ async def get_maturity_scores(
 
     scores = {}
     for dim in TomDimension:
-        scores[dim] = engine._assess_dimension_maturity(dim, stats)
+        scores[dim] = engine.assess_dimension_maturity(dim, stats)
 
     return {"engagement_id": str(engagement_id), "maturity_scores": scores}
 
 
-@router.post("/alignment/{engagement_id}/prioritize")
+@router.post("/alignment/{engagement_id}/prioritize", response_model=PrioritizedGapsResponse)
 async def prioritize_gaps(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -625,7 +724,7 @@ async def prioritize_gaps(
 # -- Conformance Routes (Story #32) -------------------------------------------
 
 
-@router.post("/conformance/check")
+@router.post("/conformance/check", response_model=ConformanceCheckResponse)
 async def check_conformance(
     pov_model_id: UUID,
     reference_model_id: UUID,
@@ -656,7 +755,7 @@ async def check_conformance(
     }
 
 
-@router.get("/conformance/{engagement_id}/summary")
+@router.get("/conformance/{engagement_id}/summary", response_model=ConformanceSummaryResponse)
 async def get_conformance_summary(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -691,7 +790,7 @@ async def get_conformance_summary(
 # -- Roadmap Routes (Story #34) -----------------------------------------------
 
 
-@router.post("/roadmap/{engagement_id}/{tom_id}")
+@router.post("/roadmap/{engagement_id}/{tom_id}", response_model=RoadmapResponse)
 async def generate_roadmap(
     engagement_id: UUID,
     tom_id: UUID,
@@ -723,7 +822,7 @@ async def generate_roadmap(
     }
 
 
-@router.get("/roadmap/{engagement_id}")
+@router.get("/roadmap/{engagement_id}", response_model=RoadmapSummaryResponse)
 async def get_roadmap_summary(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
