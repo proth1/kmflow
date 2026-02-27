@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.120
+**Version**: 2026.02.122
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -9,7 +9,7 @@
 |--------|-------|
 | SQLAlchemy Models | 78+ classes across 12 modules |
 | API Routes | 26+ routers |
-| Test Count | 2975 backend + 206 frontend passing |
+| Test Count | 3006 backend + 206 frontend passing |
 | Coverage | >80% |
 | Python Version | 3.12+ |
 | FastAPI Version | 0.109+ |
@@ -27,6 +27,8 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.122 | 2026-02-27 | TOM definition management APIs: structured dimensions, version history, import/export, 18 tests (#344) |
+| 2026.02.121 | 2026-02-27 | Cross-source consistency reporting: disagreement report, agreement rate, POV trend, 13 tests (#392) |
 | 2026.02.120 | 2026-02-27 | Disagreement resolution workflow: 5-endpoint conflict API, filterable report, audit trail, 48h auto-escalation, 21 tests (#388) |
 | 2026.02.119 | 2026-02-27 | I/O mismatch + control gap detection: IOMismatchDetector, ControlGapDetector, auto shelf requests, ControlRequirement ontology node, 28 tests (#378) |
 | 2026.02.118 | 2026-02-27 | Three-way distinction classifier: NAMING_VARIANT/TEMPORAL_SHIFT/GENUINE_DISAGREEMENT classification, run_write_query(), MERGED_EDGE ontology, bitemporal validity, 20 tests (#384) |

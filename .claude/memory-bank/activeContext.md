@@ -8,6 +8,15 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #438 merged** — TOM definition management APIs with structured dimensions (#344) (v2026.02.122)
+  - TOMDimensionRecord, TOMVersion models + migration 050
+  - Structured DimensionInput with maturity 1-5, version snapshotting on PATCH
+  - Atomic version increment (SELECT FOR UPDATE + SQL expression), duplicate dim validation
+  - Import/export endpoints, 18 BDD tests
+- **PR #437 merged** — Cross-source consistency reporting (#392) (v2026.02.121)
+  - Disagreement report, consistency metrics with agreement rate, POV version trend
+  - Pydantic response schemas, auth, HTML-escaped PDF template, pagination
+  - 13 BDD tests
 - **PR #432 merged** — LLM suggestion engine with audit logging (#374) (v2026.02.116)
   - generate_audited_suggestions() with audit in try/except finally block
   - LLMAuditLog model + migration 046, governance enrichment, consideration framing

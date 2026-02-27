@@ -3,6 +3,14 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.122] - 2026-02-27
+### Added
+- TOM definition management APIs with structured dimensions: TOMDimensionRecord and TOMVersion models, migration 050, structured DimensionInput with maturity 1-5 validation, version snapshotting on PATCH with atomic SQL-level increment and SELECT FOR UPDATE, duplicate dimension_type validation, version history endpoint, import/export endpoints, 18 BDD tests (#344)
+
+## [2026.02.121] - 2026-02-27
+### Added
+- Cross-source consistency reporting: disagreement report with summary header and per-type breakdown, consistency metrics with agreement rate formula, POV version trend with conflict reduction rate, Pydantic response schemas, require_permission auth, HTML-escaped PDF template, paginated disagreement query, 13 BDD tests (#392)
+
 ## [2026.02.120] - 2026-02-27
 ### Added
 - Disagreement resolution workflow: conflict resolution API with 5 endpoints (list/resolve/assign/escalate/escalation-check), filterable disagreement report (mismatch type, severity range, status, escalation flag, assigned SME), pagination, immutable audit trail (CONFLICT_ASSIGNED/RESOLVED/ESCALATED), 48h auto-escalation threshold, resolver_id/assigned_to columns on ConflictObject (migration 049), ConflictResolveRequest/AssignRequest/EscalateRequest schemas, 21 BDD tests (#388)
