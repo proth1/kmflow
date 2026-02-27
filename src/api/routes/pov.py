@@ -18,17 +18,21 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
+from src.api.services.dark_room_backlog import DarkRoomBacklogService
 from src.core.audit import log_audit
 from src.core.models import (
     AuditAction,
     Contradiction,
+    EngagementMember,
     EvidenceGap,
     ProcessElement,
     ProcessModel,
     User,
+    UserRole,
 )
 from src.core.permissions import require_permission
 from src.pov.generator import generate_pov
+from src.semantic.graph import KnowledgeGraphService
 
 logger = logging.getLogger(__name__)
 
@@ -547,3 +551,108 @@ async def get_bpmn_xml(
         "bpmn_xml": model.bpmn_xml,
         "element_confidences": element_confidences,
     }
+
+
+# -- Engagement Access Check -------------------------------------------------
+
+
+async def _check_engagement_member(
+    session: AsyncSession, user: User, engagement_id: uuid.UUID
+) -> None:
+    """Verify user is a member of the engagement. Platform admins bypass."""
+    if user.role == UserRole.PLATFORM_ADMIN:
+        return
+    result = await session.execute(
+        select(EngagementMember).where(
+            EngagementMember.engagement_id == engagement_id,
+            EngagementMember.user_id == user.id,
+        )
+    )
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this engagement",
+        )
+
+
+# -- Dark Room Backlog Schemas -----------------------------------------------
+
+
+class MissingFormEntry(BaseModel):
+    """A missing knowledge form entry in a dark segment."""
+
+    form_number: int
+    form_name: str
+    recommended_probes: list[str]
+    probe_type: str
+
+
+class DarkSegmentEntry(BaseModel):
+    """A single Dark Room backlog entry."""
+
+    element_id: str
+    element_name: str
+    current_confidence: float
+    brightness: str
+    estimated_confidence_uplift: float
+    missing_knowledge_forms: list[MissingFormEntry]
+    missing_form_count: int
+    covered_form_count: int
+
+
+class DarkRoomResponse(BaseModel):
+    """Response for the Dark Room backlog."""
+
+    engagement_id: str
+    dark_threshold: float
+    total_count: int
+    items: list[DarkSegmentEntry]
+
+
+# -- Dark Room Backlog Route -------------------------------------------------
+
+
+@router.get("/{model_id}/dark-room", response_model=DarkRoomResponse)
+async def get_dark_room_backlog(
+    model_id: str,
+    request: Request,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    dark_threshold: float = Query(default=0.4, ge=0.0, le=1.0),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("pov:read")),
+) -> dict[str, Any]:
+    """Get the Dark Room backlog for a process model.
+
+    Returns a prioritized list of all Dark segments ranked by estimated
+    confidence uplift. Each entry shows missing knowledge forms and
+    recommended probes for evidence acquisition.
+    """
+    try:
+        model_uuid = uuid.UUID(model_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid model ID format",
+        ) from None
+
+    result = await session.execute(select(ProcessModel).where(ProcessModel.id == model_uuid))
+    model = result.scalar_one_or_none()
+
+    if not model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Process model {model_id} not found",
+        )
+
+    await _check_engagement_member(session, user, model.engagement_id)
+
+    graph_service = KnowledgeGraphService(request.app.state.neo4j_driver)
+    backlog_service = DarkRoomBacklogService(graph_service, dark_threshold=dark_threshold)
+
+    backlog = await backlog_service.get_dark_segments(
+        engagement_id=str(model.engagement_id),
+        limit=limit,
+        offset=offset,
+    )
+    return backlog
