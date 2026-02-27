@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.084] - 2026-02-27
+### Added
+- Three-dimensional confidence model: two-stage scoring formula, evidence grades (A-U), brightness classification with coherence constraint (#294)
+
 ## [2026.02.083] - 2026-02-27
 ### Security
 - Fix Neo4j Cypher injection in get_relationships/traverse via VALID_RELATIONSHIP_TYPES allowlist (#271)

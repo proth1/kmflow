@@ -4,10 +4,13 @@
 
 ## Current Focus
 
-Audit Phase 8 remediation complete. Ready for re-scan to verify CRITICAL=0, HIGH=0.
+Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. Currently on Phase 1 Foundation stories.
 
 ## Recently Completed
 
+- **PR #400 merged** — Three-dimensional confidence model schema (#294) (v2026.02.084)
+  - Two-stage formula: strength/quality → min; Evidence grades A-U; Brightness BRIGHT/DIM/DARK with coherence constraint
+  - 32 tests, 99% coverage, PR review APPROVED (0 critical, 0 high)
 - **PRs #271-#275 merged** — Audit Phase 8: 10 CRITICALs + 28 HIGHs (v2026.02.083)
   - PR #271: Security hardening — Cypher injection, event loop, prod secrets, localStorage XSS, CF Worker XSS, DB passwords, auth scoping
   - PR #272: Data layer/API — FK indexes, Alembic imports, Neo4j deletes, rate limiting, pagination, response models

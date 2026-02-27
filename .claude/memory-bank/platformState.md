@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.083
+**Version**: 2026.02.084
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.084 | 2026-02-27 | Three-dimensional confidence model schema (#294) |
 | 2026.02.083 | 2026-02-27 | Audit Phase 8: 10 CRITICALs + 28 HIGHs across 5 PRs (#271-#275) |
 | 2026.02.078 | 2026-02-27 | Fix macOS agent build: bash 3.2 compat, codesign, @loader_path, CryptoKit (#270) |
 | 2026.02.077 | 2026-02-27 | Agent Swift quality: actor conversion, structured logging, IUO removal, import ordering fix (#263) |
