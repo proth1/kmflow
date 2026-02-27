@@ -6,6 +6,8 @@ communication patterns, creating DEVIATES_FROM relationships.
 
 from __future__ import annotations
 
+from neo4j.exceptions import Neo4jError
+
 import logging
 
 from src.semantic.bridges.process_evidence import BridgeResult
@@ -78,7 +80,7 @@ class CommunicationDeviationBridge:
                             properties={"source": "communication_deviation_bridge"},
                         )
                         result.relationships_created += 1
-                    except Exception as e:
+                    except Neo4jError as e:
                         result.errors.append(str(e))
 
         return result

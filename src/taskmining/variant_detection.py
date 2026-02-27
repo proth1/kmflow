@@ -128,7 +128,7 @@ async def detect_variants(
                         },
                     )
                     result.deviates_from_created += 1
-                except Exception as e:
+                except (ConnectionError, RuntimeError) as e:
                     result.errors.append(f"DEVIATES_FROM failed: {e}")
 
     logger.info(

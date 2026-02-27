@@ -37,7 +37,7 @@ class StructuredDataParser(BaseParser):
                 return await self._parse_json(file_path)
             else:
                 return ParseResult(error=f"Unsupported structured data format: {ext}")
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: parser library exceptions vary by format
             logger.exception("Failed to parse structured data: %s", file_name)
             return ParseResult(error=f"Parse error: {e}")
 

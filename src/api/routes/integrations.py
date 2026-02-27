@@ -265,7 +265,7 @@ async def test_connection(
             "success": success,
             "message": "Connection successful" if success else "Connection failed",
         }
-    except Exception as e:
+    except (ConnectionError, OSError, ValueError) as e:
         conn.status = "error"
         conn.error_message = str(e)
         await session.commit()
@@ -309,7 +309,7 @@ async def sync_connection(
             "records_synced": sync_result.get("records_synced", 0),
             "errors": sync_result.get("errors", []),
         }
-    except Exception as e:
+    except (ConnectionError, OSError, ValueError) as e:
         conn.status = "error"
         conn.error_message = str(e)
         await session.commit()

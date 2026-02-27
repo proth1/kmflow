@@ -83,7 +83,7 @@ class CommunicationParser(BaseParser):
         except UnicodeDecodeError:
             try:
                 text = path.read_text(encoding="latin-1")
-            except Exception as e:
+            except Exception as e:  # Intentionally broad: parser library exceptions vary by format
                 result.error = f"Failed to read file: {e}"
                 return result
 

@@ -11,7 +11,6 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import os
 import uuid
 from pathlib import Path
 from typing import Any
@@ -109,7 +108,7 @@ def validate_file_type(file_content: bytes, file_name: str, mime_type: str | Non
         detected_type = magic.from_buffer(file_content[:8192], mime=True)
     except ImportError:
         logger.debug("python-magic not available, using client-provided MIME type")
-    except Exception:
+    except (ValueError, OSError):
         logger.debug("Magic detection failed, using client-provided MIME type")
 
     if detected_type == "application/octet-stream":
@@ -241,7 +240,7 @@ async def process_evidence(
     Returns:
         List of created EvidenceFragment records.
     """
-    if not evidence_item.file_path or not os.path.exists(evidence_item.file_path):
+    if not evidence_item.file_path or not Path(evidence_item.file_path).exists():
         logger.warning("Evidence item %s has no valid file path", evidence_item.id)
         return []
 
@@ -436,7 +435,7 @@ async def build_fragment_graph(
             )
             entity_to_node[entity.id] = node.id
             node_count += 1
-        except Exception as e:
+        except (ConnectionError, RuntimeError) as e:
             errors.append(f"Node creation failed for {entity.name}: {e}")
 
     # Create CO_OCCURS_WITH relationships for entities from same evidence
@@ -469,7 +468,7 @@ async def build_fragment_graph(
                         properties={"evidence_id": ev_id},
                     )
                     relationship_count += 1
-                except Exception as e:
+                except (ConnectionError, RuntimeError) as e:
                     errors.append(f"Relationship failed {node_a}->{node_b}: {e}")
 
     logger.info(
@@ -524,7 +523,7 @@ async def generate_fragment_embeddings(
         try:
             await semantic_service.store_embedding(session, str(frag.id), embedding)
             stored += 1
-        except Exception as e:
+        except (ValueError, ConnectionError, RuntimeError) as e:
             logger.warning("Failed to store embedding for fragment %s: %s", frag.id, e)
 
     logger.info("Generated and stored %d/%d embeddings", stored, len(texts))
@@ -577,7 +576,7 @@ async def run_semantic_bridges(
             total_created += result.relationships_created
             all_errors.extend(result.errors)
             logger.info("Bridge %s: %d relationships created", name, result.relationships_created)
-        except Exception as e:
+        except (ConnectionError, RuntimeError) as e:
             error_msg = f"Bridge {name} failed: {e}"
             all_errors.append(error_msg)
             logger.warning(error_msg)
@@ -636,7 +635,7 @@ async def run_intelligence_pipeline(
             for r in extraction_results
             for e in r.get("entities", [])
         ]
-    except Exception as e:
+    except Exception as e:  # Intentionally broad: pipeline stage isolation
         logger.warning("Entity extraction failed: %s", e)
         results["errors"].append(f"Entity extraction: {e}")
 
@@ -646,14 +645,14 @@ async def run_intelligence_pipeline(
         results["graph_nodes"] = graph_results["node_count"]
         results["graph_relationships"] = graph_results["relationship_count"]
         results["errors"].extend(graph_results.get("errors", []))
-    except Exception as e:
+    except Exception as e:  # Intentionally broad: pipeline stage isolation
         logger.warning("Graph building failed: %s", e)
         results["errors"].append(f"Graph building: {e}")
 
     # Step 3: Embedding generation
     try:
         results["embeddings_stored"] = await generate_fragment_embeddings(session, fragments)
-    except Exception as e:
+    except Exception as e:  # Intentionally broad: pipeline stage isolation
         logger.warning("Embedding generation failed: %s", e)
         results["errors"].append(f"Embedding generation: {e}")
 
@@ -662,7 +661,7 @@ async def run_intelligence_pipeline(
         bridge_results = await run_semantic_bridges(str(engagement_id), neo4j_driver)
         results["bridge_relationships"] = bridge_results["relationships_created"]
         results["errors"].extend(bridge_results.get("errors", []))
-    except Exception as e:
+    except Exception as e:  # Intentionally broad: pipeline stage isolation
         logger.warning("Semantic bridges failed: %s", e)
         results["errors"].append(f"Semantic bridges: {e}")
 
@@ -773,7 +772,7 @@ async def ingest_evidence(
             source_system=source,
             content_hash=content_hash,
         )
-    except Exception as e:
+    except (ImportError, RuntimeError) as e:
         logger.warning("Lineage record creation failed (non-fatal): %s", e)
 
     # Step 7: Parse and create fragments
@@ -789,7 +788,7 @@ async def ingest_evidence(
                 engagement_id=str(engagement_id),
                 neo4j_driver=neo4j_driver,
             )
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: non-fatal pipeline stage
             logger.warning("Intelligence pipeline failed (non-fatal): %s", e)
             intelligence_results = {}
 
@@ -827,7 +826,7 @@ async def ingest_evidence(
                     "consistency": evidence_item.consistency_score,
                 },
             )
-        except Exception as e:
+        except (ImportError, OSError, RuntimeError) as e:
             logger.warning("Silver layer write failed (non-fatal): %s", e)
 
     # Step 9: Audit log

@@ -10,6 +10,7 @@ import logging
 import time
 
 from fastapi import Request, Response
+from sqlalchemy.exc import SQLAlchemyError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from src.core.audit import log_audit_event_async
@@ -83,7 +84,7 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
                     engagement_id=engagement_id,
                     duration_ms=duration_ms,
                 )
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: audit must not block requests
             logger.warning("Audit persistence failed (request not blocked): %s", e)
 
         response.headers["X-Audit-Logged"] = "true"

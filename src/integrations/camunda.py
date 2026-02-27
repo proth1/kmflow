@@ -44,7 +44,7 @@ class CamundaClient:
         try:
             result = await self._request("GET", "/engine")
             return isinstance(result, list) and len(result) > 0
-        except Exception:
+        except (httpx.HTTPError, ConnectionError):
             logger.warning("CIB7 connectivity check failed")
             return False
 

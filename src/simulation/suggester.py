@@ -59,7 +59,7 @@ class AlternativeSuggesterService:
         try:
             llm_response = await self._call_llm(prompt)
             suggestions = self._parse_response(llm_response, prompt)
-        except Exception:
+        except Exception:  # Intentionally broad: LLM fallback
             logger.exception("LLM suggestion generation failed, returning fallback")
             suggestions = self._fallback_suggestions(scenario, prompt)
 
@@ -133,7 +133,7 @@ Surface unknowns and areas where evidence is insufficient for confident recommen
                 messages=[{"role": "user", "content": prompt}],
             )
             return response.content[0].text
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: re-raised after logging
             logger.error("LLM call failed: %s", e)
             raise
 

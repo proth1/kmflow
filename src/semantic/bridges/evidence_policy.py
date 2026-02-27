@@ -6,6 +6,8 @@ when evidence content references policy-related terms.
 
 from __future__ import annotations
 
+from neo4j.exceptions import Neo4jError
+
 import logging
 
 import numpy as np
@@ -63,7 +65,7 @@ class EvidencePolicyBridge:
             try:
                 ev_embeddings = await self._embedding_service.embed_texts_async(ev_names)
                 policy_embeddings = await self._embedding_service.embed_texts_async(policy_names)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Embedding failed, falling back to word-overlap: %s", e)
                 use_embeddings = False
 
@@ -92,7 +94,7 @@ class EvidencePolicyBridge:
                             },
                         )
                         result.relationships_created += 1
-                    except Exception as e:
+                    except Neo4jError as e:
                         result.errors.append(str(e))
 
         return result

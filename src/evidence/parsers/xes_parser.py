@@ -48,7 +48,7 @@ class XesParser(BaseParser):
             result.fragments, result.metadata = self._stream_parse(file_path, file_name)
         except etree.XMLSyntaxError as e:
             result.error = f"Invalid XES XML: {e}"
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: parser library exceptions vary by format
             logger.exception("Failed to parse XES file: %s", file_name)
             result.error = f"XES parse error: {e}"
 

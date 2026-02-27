@@ -11,6 +11,7 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
@@ -90,7 +91,7 @@ async def rotate_encryption_key(
                 rotated += 1
 
         await session.commit()
-    except Exception as e:
+    except (SQLAlchemyError, ValueError) as e:
         await session.rollback()
         logger.error("Key rotation failed after %d credentials, rolled back: %s", rotated, e)
         raise HTTPException(

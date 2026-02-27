@@ -286,7 +286,7 @@ def register_tables(
                 uc_schema,
                 entry.dataset_name,
             )
-        except Exception as exc:
+        except Exception as exc:  # Intentionally broad: Databricks/Unity Catalog SDK has no specific base exception
             error_msg = f"error: {exc}"
             results[entry.dataset_name] = error_msg
             logger.warning(
@@ -313,7 +313,7 @@ def _ensure_schema(client: Any, warehouse_id: str, catalog: str, schema: str) ->
             warehouse_id=warehouse_id,
             statement=ddl,
         )
-    except Exception as exc:
+    except Exception as exc:  # Intentionally broad: Databricks/Unity Catalog SDK has no specific base exception
         logger.warning("Could not ensure schema %s.%s: %s", catalog, schema, exc)
 
 
@@ -328,6 +328,6 @@ def _discover_warehouse(client: Any) -> str:
             state = getattr(wh, "state", None)
             if state in ("RUNNING", "STOPPED", "STARTING"):
                 return str(wh.id)
-    except Exception as exc:
+    except Exception as exc:  # Intentionally broad: Databricks/Unity Catalog SDK has no specific base exception
         logger.warning("Could not discover SQL warehouse: %s", exc)
     return ""

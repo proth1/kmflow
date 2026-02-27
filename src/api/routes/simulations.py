@@ -221,7 +221,7 @@ async def run_scenario(
             impact = calculate_cascading_impact(changed, process_graph.get("process_graph", {"connections": []}))
             sim_result.impact_analysis = impact
 
-    except Exception as e:
+    except (ValueError, RuntimeError, KeyError) as e:
         sim_result.status = SimulationStatus.FAILED
         sim_result.error_message = str(e)
         sim_result.completed_at = datetime.now(UTC)

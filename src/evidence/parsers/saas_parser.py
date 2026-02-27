@@ -108,7 +108,7 @@ class SaaSExportsParser(BaseParser):
         except UnicodeDecodeError:
             try:
                 raw = path.read_text(encoding="latin-1")
-            except Exception as e:
+            except Exception as e:  # Intentionally broad: parser library exceptions vary by format
                 return ParseResult(error=f"Failed to read file: {e}")
 
         underlying_format = self._detect_underlying_format(raw)
@@ -117,7 +117,7 @@ class SaaSExportsParser(BaseParser):
         synthetic_name = f"export.{underlying_format}"
         try:
             result = await self._data_parser.parse(file_path, synthetic_name)
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: parser library exceptions vary by format
             logger.exception("Failed to parse SaaS export: %s", file_name)
             return ParseResult(error=f"SaaS parse error: {e}")
 

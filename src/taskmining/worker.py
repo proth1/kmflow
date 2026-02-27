@@ -91,11 +91,11 @@ async def run_worker(
                         task_data = json.loads(fields.get("payload", "{}"))
                         await process_task(task_data)
                         await redis_client.xack(TASK_MINING_STREAM, CONSUMER_GROUP, msg_id)
-                    except Exception:
+                    except Exception:  # Intentionally broad: worker loop
                         logger.exception("Failed to process task mining message %s", msg_id)
         except asyncio.CancelledError:
             break
-        except Exception:
+        except Exception:  # Intentionally broad: worker loop
             logger.exception("Task mining worker error, retrying in 5s")
             await asyncio.sleep(5)
 

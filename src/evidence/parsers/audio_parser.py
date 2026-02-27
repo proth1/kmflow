@@ -58,7 +58,7 @@ class AudioParser(BaseParser):
                         metadata={"source": "transcription", "file_name": file_name},
                     )
                 )
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: parser library exceptions vary by format
             logger.warning("Transcription failed for %s: %s", file_name, e)
             result.error = f"Transcription failed: {e}"
 
@@ -99,6 +99,6 @@ class AudioParser(BaseParser):
         except ImportError:
             logger.info("speech_recognition not installed; transcription unavailable")
             return ""
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: parser library exceptions vary by format
             logger.warning("Transcription error: %s", e)
             return ""

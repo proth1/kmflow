@@ -59,7 +59,7 @@ class ImageParser(BaseParser):
                         metadata={"source": "ocr", "file_name": file_name},
                     )
                 )
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: parser library exceptions vary by format
             logger.warning("OCR extraction failed for %s: %s", file_name, e)
             result.error = f"OCR extraction failed: {e}"
 

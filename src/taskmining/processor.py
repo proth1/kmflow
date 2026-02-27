@@ -118,7 +118,7 @@ async def process_event_batch(
                 max_len=max_stream_len,
             )
 
-        except Exception:
+        except (ValueError, KeyError, TypeError):
             logger.exception("Failed to process event")
             rejected += 1
 

@@ -80,6 +80,6 @@ def html_to_pdf(html: str) -> bytes:
     try:
         doc = WeasyHtml(string=enhanced_html)
         return doc.write_pdf()
-    except Exception as e:
+    except Exception as e:  # Intentionally broad: WeasyPrint has no specific public base exception
         logger.exception("PDF generation failed")
         raise RuntimeError(f"PDF generation failed: {e}") from e

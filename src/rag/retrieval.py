@@ -148,6 +148,6 @@ class HybridRetriever:
                     for r in records
                     if r.get("name")
                 ]
-        except Exception as e:
+        except (ConnectionError, RuntimeError) as e:
             logger.warning("Graph expansion failed: %s", e)
             return []

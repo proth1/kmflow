@@ -20,6 +20,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from neo4j.exceptions import Neo4jError
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -97,7 +98,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("Neo4j connection verified")
         try:
             await setup_neo4j_constraints(neo4j_driver)
-        except Exception:
+        except Neo4jError:
             logger.warning("Failed to setup Neo4j constraints (non-fatal)")
     else:
         logger.warning("Neo4j is not reachable; starting in degraded mode")
@@ -257,7 +258,7 @@ def create_app() -> FastAPI:
             content={"detail": str(exc), "request_id": request_id},
         )
 
-    @app.exception_handler(Exception)
+    @app.exception_handler(Exception)  # Intentionally broad: top-level global error handler
     async def generic_error_handler(request: Request, exc: Exception) -> JSONResponse:
         request_id = getattr(request.state, "request_id", "unknown")
         logger.exception("Unhandled error [%s]: %s", request_id, exc)

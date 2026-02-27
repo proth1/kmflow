@@ -67,7 +67,7 @@ class ControlsParser(BaseParser):
                 return await self._parse_monitoring_output(path, file_name)
             else:
                 return ParseResult(error=f"Unsupported controls format: {ext}")
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: parser library exceptions vary by format
             logger.exception("Failed to parse controls file: %s", file_name)
             return ParseResult(error=f"Controls parse error: {e}")
 
@@ -235,7 +235,7 @@ class ControlsParser(BaseParser):
             data = json.loads(raw)
         except json.JSONDecodeError as e:
             return ParseResult(error=f"Invalid JSON in monitoring file: {e}")
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: parser library exceptions vary by format
             return ParseResult(error=f"Failed to read monitoring file: {e}")
 
         if isinstance(data, list):

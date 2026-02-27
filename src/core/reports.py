@@ -359,7 +359,7 @@ class ReportEngine:
                 if report_data.report_type == "gap_analysis":
                     context["maturity_radar_svg"] = _build_maturity_radar_svg(report_data.data.get("gaps", []))
                 return template.render(**context)
-            except Exception as e:
+            except (OSError, ValueError, KeyError) as e:
                 logger.warning("Jinja2 template rendering failed, falling back: %s", e)
 
         # Fallback to inline HTML
