@@ -14,6 +14,8 @@ import logging
 
 from src.api.schemas.confidence import ConfidenceScore
 from src.pov.constants import (
+    BRIGHTNESS_BRIGHT_THRESHOLD,
+    BRIGHTNESS_DIM_THRESHOLD,
     GRADES_CAPPED_AT_DIM,
     QUALITY_WEIGHTS,
     STRENGTH_WEIGHTS,
@@ -131,8 +133,6 @@ def derive_brightness(score: float, grade: str) -> str:
     Returns:
         Brightness classification: "bright", "dim", or "dark".
     """
-    from src.pov.constants import BRIGHTNESS_BRIGHT_THRESHOLD, BRIGHTNESS_DIM_THRESHOLD
-
     if score >= BRIGHTNESS_BRIGHT_THRESHOLD:
         score_brightness = "bright"
     elif score >= BRIGHTNESS_DIM_THRESHOLD:
