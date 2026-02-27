@@ -59,6 +59,7 @@ from src.api.routes import (
     taskmining,
     tom,
     users,
+    validation,
     websocket,
 )
 from src.api.routes import (
@@ -255,6 +256,9 @@ def create_app() -> FastAPI:
 
     # -- Deviation Detection Routes (Story #350) ---
     app.include_router(deviations.router)
+
+    # -- Review Pack Validation Routes (Story #349) ---
+    app.include_router(validation.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)
