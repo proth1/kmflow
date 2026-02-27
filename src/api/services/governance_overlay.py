@@ -1,8 +1,13 @@
 """Governance overlay computation service.
 
 Computes per-activity governance status by traversing Neo4j governance
-chain edges: Activity → GOVERNED_BY → Policy, Activity → REQUIRES_CONTROL → Control,
-Control → references → Regulation. Activities are classified as:
+chain edges per kmflow_ontology.yaml:
+
+  Activity -[:GOVERNED_BY]-> Policy
+  Activity -[:GOVERNED_BY]-> Regulation
+  Control  -[:IMPLEMENTS]-> Policy  (reverse join to find controls for a policy)
+
+Activities are classified as:
 
   GOVERNED: policy + control + regulation all present
   PARTIALLY_GOVERNED: at least one governance entity linked
@@ -45,8 +50,8 @@ class GovernanceOverlayService:
         Returns:
             Dict with activities, governance_gaps, and coverage percentage.
         """
-        # Get all activities for this process model
-        activities = await self._get_activities(process_model_id, engagement_id)
+        # Get all activities for this engagement
+        activities = await self._get_activities(engagement_id)
         if not activities:
             return {
                 "process_model_id": process_model_id,
@@ -130,18 +135,22 @@ class GovernanceOverlayService:
         }
 
     async def _get_activities(
-        self, process_model_id: str, engagement_id: str
+        self, engagement_id: str
     ) -> list[dict[str, Any]]:
-        """Get all Activity nodes for a process model."""
+        """Get all Activity nodes for an engagement.
+
+        Activity nodes in the ontology have engagement_id as a required
+        property but not process_model_id — activities are scoped to the
+        engagement.
+        """
         query = (
             "MATCH (a:Activity) "
-            "WHERE a.process_model_id = $process_model_id "
-            "AND a.engagement_id = $engagement_id "
+            "WHERE a.engagement_id = $engagement_id "
             "RETURN a.id AS activity_id, a.name AS activity_name "
             "ORDER BY a.name"
         )
         return await self._graph.run_query(
-            query, {"process_model_id": process_model_id, "engagement_id": engagement_id}
+            query, {"engagement_id": engagement_id}
         )
 
     async def _get_governance_chains(
@@ -149,15 +158,17 @@ class GovernanceOverlayService:
     ) -> dict[str, dict[str, Any]]:
         """Fetch governance chain (policy, control, regulation) for each activity.
 
-        Uses a single Cypher query with OPTIONAL MATCH to efficiently
-        retrieve all governance entities in one round-trip.
+        Uses Cypher OPTIONAL MATCH per ontology relationship types:
+          - GOVERNED_BY: Activity → Policy (direct governance)
+          - GOVERNED_BY: Activity → Regulation (direct regulatory link)
+          - IMPLEMENTS: Control → Policy (reverse join to find controls)
         """
         query = (
             "MATCH (a:Activity) "
             "WHERE a.id IN $activity_ids AND a.engagement_id = $engagement_id "
             "OPTIONAL MATCH (a)-[:GOVERNED_BY]->(p:Policy) "
-            "OPTIONAL MATCH (a)-[:REQUIRES_CONTROL]->(c:Control) "
-            "OPTIONAL MATCH (c)-[:IMPLEMENTS]->(r:Regulation) "
+            "OPTIONAL MATCH (c:Control)-[:IMPLEMENTS]->(p) "
+            "OPTIONAL MATCH (a)-[:GOVERNED_BY]->(r:Regulation) "
             "RETURN a.id AS activity_id, "
             "p.id AS policy_id, p.name AS policy_name, "
             "c.id AS control_id, c.name AS control_name, "

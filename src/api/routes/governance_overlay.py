@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
 from src.api.services.governance_overlay import GovernanceOverlayService
-from src.core.models import ProcessModel, User
+from src.core.models import EngagementMember, ProcessModel, User, UserRole
 from src.core.permissions import require_permission
 from src.semantic.graph import KnowledgeGraphService
 
@@ -81,7 +81,7 @@ async def get_governance_overlay(
     process_model_id: UUID,
     request: Request,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("governance:read")),
 ) -> dict[str, Any]:
     """Compute governance overlay for a process model.
 
@@ -98,6 +98,20 @@ async def get_governance_overlay(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Process model not found",
         )
+
+    # Engagement-scoped access check (IDOR prevention)
+    if user.role != UserRole.PLATFORM_ADMIN:
+        member_result = await session.execute(
+            select(EngagementMember).where(
+                EngagementMember.engagement_id == pm.engagement_id,
+                EngagementMember.user_id == user.id,
+            )
+        )
+        if member_result.scalar_one_or_none() is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have access to this engagement",
+            )
 
     graph_service = KnowledgeGraphService(request.app.state.neo4j_driver)
     overlay_service = GovernanceOverlayService(graph_service)
