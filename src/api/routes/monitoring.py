@@ -1,13 +1,14 @@
-"""Monitoring job and baseline management routes.
+"""Monitoring job, baseline management, and dashboard routes.
 
 Provides API for configuring monitoring jobs, creating baselines,
-managing job lifecycle, and querying deviations and alerts.
+managing job lifecycle, querying deviations and alerts, and the
+aggregated monitoring dashboard (Story #371).
 """
 
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -18,22 +19,31 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
 from src.core.models import (
+    AgentStatus,
     AlertSeverity,
     AlertStatus,
     AuditAction,
     AuditLog,
     DeviationCategory,
+    MetricCategory,
+    MetricReading,
     MonitoringAlert,
     MonitoringJob,
     MonitoringSourceType,
     MonitoringStatus,
     ProcessBaseline,
     ProcessDeviation,
+    SuccessMetric,
+    TaskMiningAgent,
     User,
 )
 from src.core.permissions import require_engagement_access, require_permission
 from src.monitoring.baseline import compute_process_hash, create_baseline_snapshot
 from src.monitoring.config import validate_cron_expression, validate_monitoring_config
+from src.monitoring.dashboard import (
+    aggregate_deviation_counts,
+    build_compliance_trend,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -666,6 +676,234 @@ async def get_monitoring_stats(
         "total_deviations": total_deviations,
         "open_alerts": open_alerts,
         "critical_alerts": critical_alerts,
+    }
+
+
+# -- Dashboard (Story #371) --------------------------------------------------
+
+
+class AgentStatusResponse(BaseModel):
+    """Agent health status summary."""
+
+    total: int
+    healthy: int
+    degraded: int
+    unhealthy: int
+    agents: list[dict[str, Any]]
+
+
+class DeviationCountResponse(BaseModel):
+    """Deviation counts by severity."""
+
+    total: int
+    critical: int = 0
+    high: int = 0
+    medium: int = 0
+    low: int = 0
+    info: int = 0
+
+
+class AlertSummaryResponse(BaseModel):
+    """Alert summary for dashboard."""
+
+    total_open: int
+    new: int
+    acknowledged: int
+    critical_open: int
+
+
+class ComplianceDataPointResponse(BaseModel):
+    """Single compliance score data point."""
+
+    date: str
+    score: float
+
+
+class ComplianceTrendResponse(BaseModel):
+    """Compliance score trend for dashboard."""
+
+    current_score: float
+    trend_direction: str
+    data_points: list[ComplianceDataPointResponse]
+
+
+class DashboardResponse(BaseModel):
+    """Complete monitoring dashboard aggregated data."""
+
+    engagement_id: str
+    date_from: str
+    date_to: str
+    agent_status: AgentStatusResponse
+    deviations: DeviationCountResponse
+    evidence_flow_rate: float
+    alerts: AlertSummaryResponse
+    compliance_trend: ComplianceTrendResponse
+
+
+@router.get("/dashboard/{engagement_id}", response_model=DashboardResponse)
+async def get_monitoring_dashboard(
+    engagement_id: UUID,
+    date_from: date | None = Query(None, description="Start date (default: 7 days ago)"),
+    date_to: date | None = Query(None, description="End date (default: today)"),
+    session: AsyncSession = Depends(get_session),
+    _user: User = Depends(require_permission("monitoring:read")),
+    _eng_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Get aggregated monitoring dashboard for an engagement.
+
+    Returns agent statuses, deviation counts by severity, evidence flow rate,
+    alert summary, and compliance score trend over the selected date range.
+    """
+    now = datetime.now(UTC)
+    if date_to is None:
+        date_to = now.date()
+    if date_from is None:
+        date_from = date_to - timedelta(days=7)
+
+    dt_from = datetime(date_from.year, date_from.month, date_from.day, tzinfo=UTC)
+    dt_to = datetime(date_to.year, date_to.month, date_to.day, 23, 59, 59, tzinfo=UTC)
+
+    # --- Agent statuses ---
+    agent_result = await session.execute(
+        select(TaskMiningAgent).where(
+            TaskMiningAgent.engagement_id == engagement_id,
+            TaskMiningAgent.status.in_([AgentStatus.ACTIVE, AgentStatus.PAUSED]),
+        )
+    )
+    agents = agent_result.scalars().all()
+
+    healthy = sum(1 for a in agents if a.status == AgentStatus.ACTIVE)
+    degraded = sum(1 for a in agents if a.status == AgentStatus.PAUSED)
+    unhealthy = 0  # agents not in ACTIVE/PAUSED are filtered out
+    agent_list = [
+        {
+            "id": str(a.id),
+            "name": getattr(a, "hostname", None) or str(a.id)[:8],
+            "status": "healthy" if a.status == AgentStatus.ACTIVE else "degraded",
+        }
+        for a in agents
+    ]
+
+    # --- Deviation counts by severity (within date range) ---
+    severity_rows = await session.execute(
+        select(ProcessDeviation.severity, func.count(ProcessDeviation.id))
+        .where(
+            ProcessDeviation.engagement_id == engagement_id,
+            ProcessDeviation.detected_at >= dt_from,
+            ProcessDeviation.detected_at <= dt_to,
+        )
+        .group_by(ProcessDeviation.severity)
+    )
+    severity_counts: dict[str, int] = {}
+    for row in severity_rows.all():
+        sev_val = row[0].value if hasattr(row[0], "value") else str(row[0])
+        severity_counts[sev_val] = row[1]
+    deviation_summary = aggregate_deviation_counts(severity_counts)
+
+    # --- Evidence flow rate (items/min over last 5 min) ---
+    five_min_ago = now - timedelta(minutes=5)
+    evidence_count_result = await session.execute(
+        select(func.count(MetricReading.id)).where(
+            MetricReading.engagement_id == engagement_id,
+            MetricReading.recorded_at >= five_min_ago,
+        )
+    )
+    evidence_count = evidence_count_result.scalar() or 0
+    evidence_flow_rate = round(evidence_count / 5.0, 2)
+
+    # --- Alert summary (within date range) ---
+    alert_base = (
+        MonitoringAlert.engagement_id == engagement_id,
+        MonitoringAlert.created_at >= dt_from,
+        MonitoringAlert.created_at <= dt_to,
+    )
+    open_statuses = [AlertStatus.NEW, AlertStatus.ACKNOWLEDGED]
+
+    open_count_result = await session.execute(
+        select(func.count(MonitoringAlert.id)).where(
+            *alert_base,
+            MonitoringAlert.status.in_(open_statuses),
+        )
+    )
+    total_open = open_count_result.scalar() or 0
+
+    new_count_result = await session.execute(
+        select(func.count(MonitoringAlert.id)).where(
+            *alert_base,
+            MonitoringAlert.status == AlertStatus.NEW,
+        )
+    )
+    new_count = new_count_result.scalar() or 0
+
+    ack_count_result = await session.execute(
+        select(func.count(MonitoringAlert.id)).where(
+            *alert_base,
+            MonitoringAlert.status == AlertStatus.ACKNOWLEDGED,
+        )
+    )
+    ack_count = ack_count_result.scalar() or 0
+
+    crit_open_result = await session.execute(
+        select(func.count(MonitoringAlert.id)).where(
+            *alert_base,
+            MonitoringAlert.severity == AlertSeverity.CRITICAL,
+            MonitoringAlert.status.in_(open_statuses),
+        )
+    )
+    crit_open = crit_open_result.scalar() or 0
+
+    # --- Compliance score trend ---
+    compliance_readings = await session.execute(
+        select(MetricReading.recorded_at, MetricReading.value)
+        .join(SuccessMetric, MetricReading.metric_id == SuccessMetric.id)
+        .where(
+            MetricReading.engagement_id == engagement_id,
+            SuccessMetric.category == MetricCategory.COMPLIANCE,
+            MetricReading.recorded_at >= dt_from,
+            MetricReading.recorded_at <= dt_to,
+        )
+        .order_by(MetricReading.recorded_at)
+    )
+    compliance_data = [
+        {"date": row[0].strftime("%Y-%m-%d"), "score": row[1]}
+        for row in compliance_readings.all()
+    ]
+    compliance_trend = build_compliance_trend(compliance_data)
+
+    return {
+        "engagement_id": str(engagement_id),
+        "date_from": str(date_from),
+        "date_to": str(date_to),
+        "agent_status": {
+            "total": len(agents),
+            "healthy": healthy,
+            "degraded": degraded,
+            "unhealthy": unhealthy,
+            "agents": agent_list,
+        },
+        "deviations": {
+            "total": deviation_summary.total,
+            "critical": deviation_summary.critical,
+            "high": deviation_summary.high,
+            "medium": deviation_summary.medium,
+            "low": deviation_summary.low,
+            "info": deviation_summary.info,
+        },
+        "evidence_flow_rate": evidence_flow_rate,
+        "alerts": {
+            "total_open": total_open,
+            "new": new_count,
+            "acknowledged": ack_count,
+            "critical_open": crit_open,
+        },
+        "compliance_trend": {
+            "current_score": compliance_trend.current_score,
+            "trend_direction": compliance_trend.trend_direction,
+            "data_points": [
+                {"date": dp.date, "score": dp.score}
+                for dp in compliance_trend.data_points
+            ],
+        },
     }
 
 
