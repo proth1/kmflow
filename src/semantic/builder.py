@@ -530,7 +530,7 @@ class KnowledgeGraphBuilder:
             return result
 
         # Step 4: Resolve entities
-        resolved_entities = resolve_entities(all_entities)
+        resolved_entities, _ = resolve_entities(all_entities)
         result.entities_resolved = len(resolved_entities)
 
         # Step 5: Create nodes

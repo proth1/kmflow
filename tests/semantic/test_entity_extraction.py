@@ -288,7 +288,7 @@ class TestEntityResolution:
             ExtractedEntity(id="a1", entity_type=EntityType.ACTIVITY, name="Create Order", confidence=0.7),
             ExtractedEntity(id="a2", entity_type=EntityType.ACTIVITY, name="Create Order", confidence=0.8),
         ]
-        resolved = resolve_entities(entities)
+        resolved, _ = resolve_entities(entities)
         assert len(resolved) == 1
         assert resolved[0].confidence == 0.8  # Keeps higher confidence
 
@@ -298,7 +298,7 @@ class TestEntityResolution:
             ExtractedEntity(id="r1", entity_type=EntityType.ROLE, name="Finance Manager", confidence=0.7),
             ExtractedEntity(id="r2", entity_type=EntityType.ROLE, name="finance manager", confidence=0.6),
         ]
-        resolved = resolve_entities(entities)
+        resolved, _ = resolve_entities(entities)
         assert len(resolved) == 1
 
     def test_resolve_different_types_not_merged(self) -> None:
@@ -307,7 +307,7 @@ class TestEntityResolution:
             ExtractedEntity(id="a1", entity_type=EntityType.ACTIVITY, name="Review", confidence=0.7),
             ExtractedEntity(id="d1", entity_type=EntityType.DOCUMENT, name="Review", confidence=0.8),
         ]
-        resolved = resolve_entities(entities)
+        resolved, _ = resolve_entities(entities)
         assert len(resolved) == 2
 
     def test_resolve_populates_aliases(self) -> None:
@@ -316,7 +316,7 @@ class TestEntityResolution:
             ExtractedEntity(id="s1", entity_type=EntityType.SYSTEM, name="SAP ERP", confidence=0.9),
             ExtractedEntity(id="s2", entity_type=EntityType.SYSTEM, name="SAP erp", confidence=0.7),
         ]
-        resolved = resolve_entities(entities)
+        resolved, _ = resolve_entities(entities)
         assert len(resolved) == 1
         # The lower-confidence name that differs from canonical should be an alias
         canonical = resolved[0]
@@ -327,13 +327,14 @@ class TestEntityResolution:
 
     def test_resolve_empty_list(self) -> None:
         """Should handle empty entity list."""
-        resolved = resolve_entities([])
+        resolved, duplicates = resolve_entities([])
         assert resolved == []
+        assert duplicates == []
 
     def test_resolve_single_entity(self) -> None:
         """Should pass through a single entity unchanged."""
         entity = ExtractedEntity(id="x1", entity_type=EntityType.ROLE, name="Admin", confidence=0.8)
-        resolved = resolve_entities([entity])
+        resolved, _ = resolve_entities([entity])
         assert len(resolved) == 1
         assert resolved[0].name == "Admin"
 
@@ -343,7 +344,7 @@ class TestEntityResolution:
             ExtractedEntity(id="r1", entity_type=EntityType.ROLE, name="Head of Finance", confidence=0.7),
             ExtractedEntity(id="r2", entity_type=EntityType.ROLE, name="Head Finance", confidence=0.6),
         ]
-        resolved = resolve_entities(entities)
+        resolved, _ = resolve_entities(entities)
         # "of" is stripped during normalization, so these should merge
         assert len(resolved) == 1
 
