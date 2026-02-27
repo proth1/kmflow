@@ -87,6 +87,32 @@ class FragmentResponse(BaseModel):
     created_at: Any | None = None
 
 
+class EvidenceCatalogItem(BaseModel):
+    """Compact schema for evidence catalog entries."""
+
+    model_config = {"from_attributes": True}
+
+    id: UUID
+    title: str | None = None
+    name: str
+    category: EvidenceCategory
+    creation_date: str | None = None
+    quality_score: float | None = None
+    detected_language: str | None = None
+    validation_status: ValidationStatus
+    file_size_bytes: int | None = None
+
+
+class EvidenceCatalogResponse(BaseModel):
+    """Paginated response for the evidence catalog API."""
+
+    items: list[EvidenceCatalogItem]
+    total: int
+    limit: int
+    offset: int
+    has_more: bool
+
+
 class EvidenceList(BaseModel):
     """Schema for listing evidence items."""
 
@@ -194,6 +220,83 @@ async def upload_evidence(
         "fragment_count": len(fragments),
         "duplicate_of_id": duplicate_of_id,
         "quality_scores": quality_scores,
+    }
+
+
+@router.get("/catalog", response_model=EvidenceCatalogResponse)
+async def catalog_evidence(
+    engagement_id: UUID = Query(...),
+    category: EvidenceCategory | None = None,
+    date_from: str | None = Query(None, description="ISO date lower bound (inclusive)"),
+    date_to: str | None = Query(None, description="ISO date upper bound (inclusive)"),
+    language: str | None = Query(None, description="ISO 639-1 language code filter"),
+    q: str | None = Query(None, description="Full-text search query"),
+    limit: int = Query(default=20, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("evidence:read")),
+    _: None = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Search the evidence catalog with filtering and pagination.
+
+    Supports filtering by category, date range, language, and full-text search.
+    Returns compact catalog items with pagination metadata.
+    """
+    query = select(EvidenceItem).where(EvidenceItem.engagement_id == engagement_id)
+    count_query = select(func.count()).select_from(EvidenceItem).where(
+        EvidenceItem.engagement_id == engagement_id
+    )
+
+    if category is not None:
+        query = query.where(EvidenceItem.category == category)
+        count_query = count_query.where(EvidenceItem.category == category)
+
+    if date_from is not None:
+        query = query.where(EvidenceItem.created_at >= date_from)
+        count_query = count_query.where(EvidenceItem.created_at >= date_from)
+
+    if date_to is not None:
+        query = query.where(EvidenceItem.created_at <= date_to)
+        count_query = count_query.where(EvidenceItem.created_at <= date_to)
+
+    if language is not None:
+        query = query.where(EvidenceItem.detected_language == language)
+        count_query = count_query.where(EvidenceItem.detected_language == language)
+
+    if q is not None:
+        like_pattern = f"%{q}%"
+        query = query.where(EvidenceItem.name.ilike(like_pattern))
+        count_query = count_query.where(EvidenceItem.name.ilike(like_pattern))
+
+    query = query.offset(offset).limit(limit).order_by(EvidenceItem.created_at.desc())
+
+    result = await session.execute(query)
+    items = list(result.scalars().all())
+
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
+
+    catalog_items = []
+    for item in items:
+        em = item.extracted_metadata or {}
+        catalog_items.append({
+            "id": item.id,
+            "title": em.get("title"),
+            "name": item.name,
+            "category": item.category,
+            "creation_date": em.get("creation_date"),
+            "quality_score": item.quality_score,
+            "detected_language": item.detected_language,
+            "validation_status": item.validation_status,
+            "file_size_bytes": item.size_bytes,
+        })
+
+    return {
+        "items": catalog_items,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "has_more": (offset + limit) < total,
     }
 
 

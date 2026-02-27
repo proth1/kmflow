@@ -91,6 +91,8 @@ class EvidenceItem(Base):
 
     # Metadata
     metadata_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    extracted_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    detected_language: Mapped[str | None] = mapped_column(String(10), nullable=True)
     source_date: Mapped[datetime | None] = mapped_column(Date, nullable=True)
 
     # Quality scores (0.0 - 1.0)
