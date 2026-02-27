@@ -65,6 +65,13 @@ def _make_modification(
     return mock
 
 
+def _make_mock_user() -> MagicMock:
+    """Create a mock User for route tests."""
+    user = MagicMock()
+    user.id = uuid.uuid4()
+    return user
+
+
 # ===========================================================================
 # Scenario 1: Scenario Creation
 # ===========================================================================
@@ -174,7 +181,6 @@ class TestMaxScenarioEnforcement:
             name="Scenario 5",
         )
 
-        # Mock session: count returns 4 (room for one more)
         mock_session = AsyncMock()
         count_mock = MagicMock()
         count_mock.scalar.return_value = 4
@@ -187,14 +193,17 @@ class TestMaxScenarioEnforcement:
         mock_session.commit = AsyncMock()
         mock_session.refresh = AsyncMock(side_effect=lambda s: setattr(s, "id", new_scenario.id))
 
-        mock_user = MagicMock()
-        mock_user.id = uuid.uuid4()
+        mock_user = _make_mock_user()
 
-        with patch("src.api.routes.scenarios.log_audit", new_callable=AsyncMock):
+        with (
+            patch("src.api.routes.scenarios.log_audit", new_callable=AsyncMock),
+            patch("src.api.routes.scenarios._check_engagement_member", new_callable=AsyncMock),
+        ):
             result = await create_scenario(
                 payload=payload,
                 session=mock_session,
                 user=mock_user,
+                _engagement_user=mock_user,
             )
 
         assert result["name"] == "Scenario 5"
@@ -218,14 +227,17 @@ class TestMaxScenarioEnforcement:
 
         mock_session.execute.return_value = count_mock
 
-        mock_user = MagicMock()
-        mock_user.id = uuid.uuid4()
+        mock_user = _make_mock_user()
 
-        with pytest.raises(Exception) as exc_info:
+        with (
+            pytest.raises(Exception) as exc_info,
+            patch("src.api.routes.scenarios._check_engagement_member", new_callable=AsyncMock),
+        ):
             await create_scenario(
                 payload=payload,
                 session=mock_session,
                 user=mock_user,
+                _engagement_user=mock_user,
             )
 
         assert exc_info.value.status_code == 422
@@ -251,14 +263,17 @@ class TestMaxScenarioEnforcement:
         mock_session.commit = AsyncMock()
         mock_session.refresh = AsyncMock()
 
-        mock_user = MagicMock()
-        mock_user.id = uuid.uuid4()
+        mock_user = _make_mock_user()
 
-        with patch("src.api.routes.scenarios.log_audit", new_callable=AsyncMock):
+        with (
+            patch("src.api.routes.scenarios.log_audit", new_callable=AsyncMock),
+            patch("src.api.routes.scenarios._check_engagement_member", new_callable=AsyncMock),
+        ):
             result = await create_scenario(
                 payload=payload,
                 session=mock_session,
                 user=mock_user,
+                _engagement_user=mock_user,
             )
 
         assert result["status"] == "draft"
@@ -328,6 +343,14 @@ class TestRouteStructure:
         assert len(values) == 3
         assert set(v.value for v in values) == {"draft", "simulated", "archived"}
 
+    def test_router_registered_in_main_app(self) -> None:
+        """Scenarios router is registered in the main FastAPI app."""
+        from src.api.main import create_app
+
+        app = create_app()
+        route_paths = [r.path for r in app.routes]
+        assert any("/api/v1/scenarios" in p for p in route_paths)
+
 
 class TestModificationDraftEnforcement:
     """Modifications can only be added to DRAFT scenarios."""
@@ -353,10 +376,12 @@ class TestModificationDraftEnforcement:
         result_mock.scalar_one_or_none.return_value = scenario
         mock_session.execute.return_value = result_mock
 
-        mock_user = MagicMock()
-        mock_user.id = uuid.uuid4()
+        mock_user = _make_mock_user()
 
-        with pytest.raises(Exception) as exc_info:
+        with (
+            pytest.raises(Exception) as exc_info,
+            patch("src.api.routes.scenarios._check_engagement_member", new_callable=AsyncMock),
+        ):
             await add_modification(
                 scenario_id=sid,
                 payload=payload,
@@ -389,10 +414,12 @@ class TestModificationDraftEnforcement:
         mock_session.commit = AsyncMock()
         mock_session.refresh = AsyncMock()
 
-        mock_user = MagicMock()
-        mock_user.id = uuid.uuid4()
+        mock_user = _make_mock_user()
 
-        with patch("src.api.routes.scenarios.log_audit", new_callable=AsyncMock):
+        with (
+            patch("src.api.routes.scenarios.log_audit", new_callable=AsyncMock),
+            patch("src.api.routes.scenarios._check_engagement_member", new_callable=AsyncMock),
+        ):
             result = await add_modification(
                 scenario_id=sid,
                 payload=payload,

@@ -1,9 +1,14 @@
 """Scenario Comparison Workbench CRUD routes (Story #373).
 
-Dedicated scenario management endpoints with:
+Dedicated workbench endpoints for scenario management (separate from the
+general simulation API at /api/v1/simulations/scenarios). This router
+provides workbench-specific features:
 - Max 5 scenarios per engagement enforcement
 - Modification CRUD with element_id + JSONB payload
 - Scenario listing with modification_count
+
+The general simulation routes in simulations.py handle scenario execution,
+ranking, financial assumptions, and epistemic planning.
 """
 
 from __future__ import annotations
@@ -24,23 +29,43 @@ from src.api.schemas.scenarios import (
     ScenarioCreatePayload,
     ScenarioDetail,
     ScenarioListResponse,
+    ScenarioStatus,
     ScenarioSummary,
 )
 from src.core.audit import log_audit
 from src.core.models import (
     AuditAction,
+    EngagementMember,
     ScenarioModification,
     SimulationScenario,
     SimulationType,
     User,
+    UserRole,
 )
-from src.core.permissions import require_permission
+from src.core.permissions import require_engagement_access, require_permission
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/scenarios", tags=["scenarios"])
 
 MAX_SCENARIOS_PER_ENGAGEMENT = 5
+
+
+async def _check_engagement_member(session: AsyncSession, user: User, engagement_id: UUID) -> None:
+    """Verify user is a member of the engagement. Platform admins bypass."""
+    if user.role == UserRole.PLATFORM_ADMIN:
+        return
+    result = await session.execute(
+        select(EngagementMember).where(
+            EngagementMember.engagement_id == engagement_id,
+            EngagementMember.user_id == user.id,
+        )
+    )
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this engagement",
+        )
 
 
 # -- Helpers ------------------------------------------------------------------
@@ -53,7 +78,7 @@ def _scenario_to_summary(scenario: SimulationScenario, mod_count: int) -> dict[s
         "engagement_id": str(scenario.engagement_id),
         "name": scenario.name,
         "description": scenario.description,
-        "status": scenario.status or "draft",
+        "status": scenario.status or ScenarioStatus.DRAFT.value,
         "modification_count": mod_count,
         "created_at": scenario.created_at.isoformat() if scenario.created_at else "",
     }
@@ -64,9 +89,7 @@ def _modification_to_detail(mod: ScenarioModification) -> dict[str, Any]:
     return {
         "id": str(mod.id),
         "scenario_id": str(mod.scenario_id),
-        "modification_type": mod.modification_type.value
-        if hasattr(mod.modification_type, "value")
-        else str(mod.modification_type),
+        "modification_type": mod.modification_type.value,
         "element_id": mod.element_id,
         "payload": mod.change_data,
         "applied_at": mod.applied_at.isoformat() if mod.applied_at else "",
@@ -81,11 +104,14 @@ async def create_scenario(
     payload: ScenarioCreatePayload,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:create")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Create a new scenario with max-5-per-engagement enforcement."""
-    # Enforce max scenarios per engagement
+    # Enforce max scenarios per engagement using FOR UPDATE to prevent races
     count_result = await session.execute(
-        select(func.count(SimulationScenario.id)).where(SimulationScenario.engagement_id == payload.engagement_id)
+        select(func.count(SimulationScenario.id))
+        .where(SimulationScenario.engagement_id == payload.engagement_id)
+        .with_for_update()
     )
     current_count = count_result.scalar() or 0
 
@@ -100,7 +126,7 @@ async def create_scenario(
         name=payload.name,
         description=payload.description,
         simulation_type=SimulationType.PROCESS_CHANGE,
-        status="draft",
+        status=ScenarioStatus.DRAFT.value,
     )
     session.add(scenario)
     await log_audit(
@@ -123,6 +149,7 @@ async def list_scenarios(
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """List scenarios for an engagement with modification_count."""
     # Subquery for modification counts per scenario
@@ -171,6 +198,8 @@ async def get_scenario(
             detail=f"Scenario {scenario_id} not found",
         )
 
+    await _check_engagement_member(session, user, scenario.engagement_id)
+
     # Fetch modifications
     mod_result = await session.execute(
         select(ScenarioModification).where(ScenarioModification.scenario_id == scenario_id)
@@ -180,7 +209,7 @@ async def get_scenario(
     return {
         **_scenario_to_summary(scenario, mod_count=len(mods)),
         "modifications": [_modification_to_detail(m) for m in mods],
-        "updated_at": scenario.created_at.isoformat() if scenario.created_at else None,
+        "updated_at": None,
     }
 
 
@@ -207,7 +236,9 @@ async def add_modification(
             detail=f"Scenario {scenario_id} not found",
         )
 
-    if scenario.status != "draft":
+    await _check_engagement_member(session, user, scenario.engagement_id)
+
+    if scenario.status != ScenarioStatus.DRAFT.value:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Modifications can only be added to DRAFT scenarios",
