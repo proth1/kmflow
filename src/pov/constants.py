@@ -27,7 +27,7 @@ EVIDENCE_TYPE_WEIGHTS: dict[str, float] = {
 # Default weight for unknown evidence categories
 DEFAULT_EVIDENCE_WEIGHT: float = 0.30
 
-# Confidence scoring factor weights (must sum to 1.0)
+# Legacy flat-weight formula (kept for backwards compatibility)
 CONFIDENCE_FACTOR_WEIGHTS: dict[str, float] = {
     "coverage": 0.30,
     "agreement": 0.25,
@@ -35,6 +35,33 @@ CONFIDENCE_FACTOR_WEIGHTS: dict[str, float] = {
     "reliability": 0.15,
     "recency": 0.10,
 }
+
+# Two-stage confidence formula weights (PRD v2.1 Section 6.3)
+# Stage 1a: strength = coverage * 0.55 + agreement * 0.45
+STRENGTH_WEIGHTS: dict[str, float] = {
+    "coverage": 0.55,
+    "agreement": 0.45,
+}
+
+# Stage 1b: quality = quality * 0.40 + reliability * 0.35 + recency * 0.25
+QUALITY_WEIGHTS: dict[str, float] = {
+    "quality": 0.40,
+    "reliability": 0.35,
+    "recency": 0.25,
+}
+
+# Stage 2: final_score = min(strength, quality)
+
+# Minimum Viable Confidence threshold
+MVC_THRESHOLD: float = 0.40
+
+# Brightness thresholds
+BRIGHTNESS_BRIGHT_THRESHOLD: float = 0.75
+BRIGHTNESS_DIM_THRESHOLD: float = 0.40
+# Below DIM_THRESHOLD = DARK
+
+# Grades that cap brightness at DIM
+GRADES_CAPPED_AT_DIM: frozenset[str] = frozenset({"D", "U"})
 
 # Confidence level thresholds
 CONFIDENCE_LEVELS: list[tuple[str, float]] = [

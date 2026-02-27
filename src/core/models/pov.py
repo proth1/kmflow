@@ -6,7 +6,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, Index, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -46,6 +46,34 @@ class GapType(enum.StrEnum):
     MISSING_DATA = "missing_data"
     WEAK_EVIDENCE = "weak_evidence"
     SINGLE_SOURCE = "single_source"
+
+
+class BrightnessClassification(enum.StrEnum):
+    """Brightness classification for the three-dimensional confidence model.
+
+    Derived from min(score_brightness, grade_brightness).
+    """
+
+    BRIGHT = "bright"
+    DIM = "dim"
+    DARK = "dark"
+
+
+class EvidenceGrade(enum.StrEnum):
+    """Evidence grade for a process element.
+
+    A = SME-validated + multi-plane corroboration
+    B = Multi-source, partially validated
+    C = Multiple sources but unvalidated
+    D = Single-source unvalidated claim
+    U = No evidence (unknown)
+    """
+
+    A = "A"
+    B = "B"
+    C = "C"
+    D = "D"
+    U = "U"
 
 
 class GapSeverity(enum.StrEnum):
@@ -122,6 +150,17 @@ class ProcessElement(Base):
     )
     evidence_count: Mapped[int] = mapped_column(default=0, nullable=False)
     evidence_ids: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
+    evidence_grade: Mapped[EvidenceGrade] = mapped_column(
+        Enum(EvidenceGrade, values_callable=lambda e: [x.value for x in e]),
+        default=EvidenceGrade.U,
+        nullable=False,
+    )
+    brightness_classification: Mapped[BrightnessClassification] = mapped_column(
+        Enum(BrightnessClassification, values_callable=lambda e: [x.value for x in e]),
+        default=BrightnessClassification.DARK,
+        nullable=False,
+    )
+    mvc_threshold_passed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     metadata_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
