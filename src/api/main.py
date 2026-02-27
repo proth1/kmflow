@@ -59,6 +59,7 @@ from src.api.routes import (
     micro_surveys,
     monitoring,
     patterns,
+    pdp,
     portal,
     pov,
     raci,
@@ -301,6 +302,9 @@ def create_app() -> FastAPI:
 
     # -- Transfer Control Routes (Story #395) ---
     app.include_router(transfer_controls.router)
+
+    # -- PDP Routes (Story #377) ---
+    app.include_router(pdp.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)

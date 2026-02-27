@@ -59,6 +59,8 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "transfer:write",
         "incident:read",
         "incident:write",
+        "pdp:evaluate",
+        "pdp:admin",
     ],
     "process_analyst": [
         "engagement:read",
@@ -77,6 +79,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "governance:read",
         "transfer:read",
         "incident:read",
+        "pdp:evaluate",
     ],
     "evidence_reviewer": [
         "engagement:read",
