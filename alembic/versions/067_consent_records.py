@@ -29,7 +29,7 @@ def upgrade() -> None:
         sa.Column(
             "engagement_id",
             UUID(as_uuid=True),
-            sa.ForeignKey("engagements.id", ondelete="CASCADE"),
+            sa.ForeignKey("engagements.id", ondelete="RESTRICT"),
             nullable=False,
         ),
         sa.Column("version", sa.String(50), nullable=False),
@@ -129,7 +129,54 @@ def upgrade() -> None:
     )
 
 
+    # Immutability enforcement: prevent UPDATE on core fields.
+    # Only status and withdrawn_at may be modified (for withdrawal).
+    op.execute("""
+        CREATE OR REPLACE FUNCTION enforce_consent_record_immutability()
+        RETURNS TRIGGER AS $$
+        BEGIN
+            IF OLD.participant_id IS DISTINCT FROM NEW.participant_id
+                OR OLD.engagement_id IS DISTINCT FROM NEW.engagement_id
+                OR OLD.consent_type IS DISTINCT FROM NEW.consent_type
+                OR OLD.policy_bundle_id IS DISTINCT FROM NEW.policy_bundle_id
+                OR OLD.recorded_by IS DISTINCT FROM NEW.recorded_by
+                OR OLD.recorded_at IS DISTINCT FROM NEW.recorded_at
+                OR OLD.retention_expires_at IS DISTINCT FROM NEW.retention_expires_at
+            THEN
+                RAISE EXCEPTION 'endpoint_consent_records: core fields are immutable after creation';
+            END IF;
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+    """)
+    op.execute("""
+        CREATE TRIGGER trg_consent_records_immutability
+        BEFORE UPDATE ON endpoint_consent_records
+        FOR EACH ROW EXECUTE FUNCTION enforce_consent_record_immutability();
+    """)
+
+    # Prevent DELETE on consent records (7-year retention floor).
+    op.execute("""
+        CREATE OR REPLACE FUNCTION prevent_consent_record_delete()
+        RETURNS TRIGGER AS $$
+        BEGIN
+            RAISE EXCEPTION 'endpoint_consent_records: DELETE is prohibited (7-year retention floor)';
+        END;
+        $$ LANGUAGE plpgsql;
+    """)
+    op.execute("""
+        CREATE TRIGGER trg_consent_records_no_delete
+        BEFORE DELETE ON endpoint_consent_records
+        FOR EACH ROW EXECUTE FUNCTION prevent_consent_record_delete();
+    """)
+
+
 def downgrade() -> None:
+    op.execute("DROP TRIGGER IF EXISTS trg_consent_records_no_delete ON endpoint_consent_records;")
+    op.execute("DROP TRIGGER IF EXISTS trg_consent_records_immutability ON endpoint_consent_records;")
+    op.execute("DROP FUNCTION IF EXISTS prevent_consent_record_delete();")
+    op.execute("DROP FUNCTION IF EXISTS enforce_consent_record_immutability();")
+
     op.drop_index(
         "ix_endpoint_consent_records_status",
         table_name="endpoint_consent_records",

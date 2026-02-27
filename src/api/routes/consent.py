@@ -29,7 +29,6 @@ class RecordConsentPayload(BaseModel):
     """Request body for recording consent."""
 
     participant_id: UUID
-    engagement_id: UUID
     consent_type: EndpointConsentType
     scope: str = Field(default="application-usage-monitoring", max_length=512)
     policy_bundle_id: UUID
@@ -41,8 +40,9 @@ class UpdateOrgScopePayload(BaseModel):
     new_scope: str = Field(..., max_length=512)
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post("/engagement/{engagement_id}", status_code=status.HTTP_201_CREATED)
 async def record_consent(
+    engagement_id: UUID,
     payload: RecordConsentPayload,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:update")),
@@ -56,7 +56,7 @@ async def record_consent(
     service = ConsentService(session)
     record = await service.record_consent(
         participant_id=payload.participant_id,
-        engagement_id=payload.engagement_id,
+        engagement_id=engagement_id,
         consent_type=payload.consent_type,
         scope=payload.scope,
         policy_bundle_id=payload.policy_bundle_id,
@@ -123,9 +123,10 @@ async def update_org_scope(
 ) -> dict[str, Any]:
     """Update scope on org-authorized consent for an engagement.
 
-    Identifies affected participants and emits re-consent notification
-    events. The expanded scope is not activated for processing until
-    the notification workflow completes.
+    Withdraws existing records and creates new ones with expanded scope
+    to preserve immutability. Emits re-consent notification events.
     """
     service = ConsentService(session)
-    return await service.update_org_scope(engagement_id, payload.new_scope)
+    return await service.update_org_scope(
+        engagement_id, payload.new_scope, updated_by=user.id,
+    )

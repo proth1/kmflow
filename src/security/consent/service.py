@@ -13,7 +13,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func as sa_func
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.security.consent.models import (
@@ -93,7 +93,10 @@ class ConsentService:
         record.withdrawn_at = now
         await self._session.flush()
 
-        # Generate a deletion task ID for tracking
+        # TODO(#382): Wire to actual task queue (Redis stream or Celery).
+        # Currently returns a tracking ID without dispatching. The actual
+        # deletion across PostgreSQL, Neo4j, pgvector, and Redis will be
+        # implemented when the desktop pipeline integration is complete.
         deletion_task_id = uuid.uuid4()
 
         logger.info(
@@ -202,13 +205,18 @@ class ConsentService:
         self,
         engagement_id: uuid.UUID,
         new_scope: str,
+        updated_by: uuid.UUID,
     ) -> dict[str, Any]:
         """Expand scope on org-authorized consent for an engagement.
 
-        Identifies all participants covered by ORG_AUTHORIZED consent and
-        emits notification events. The expanded scope is recorded but
-        not activated until the notification workflow completes.
+        Preserves immutability: withdraws old records and creates new ones
+        with the expanded scope. Emits notification events for affected
+        participants. New records start as ACTIVE but the expanded scope
+        is not activated for processing until notification completes.
         """
+        now = datetime.now(UTC)
+        retention_expires = now + timedelta(days=RETENTION_YEARS * 365)
+
         # Find all active ORG_AUTHORIZED consent records for this engagement
         stmt = (
             select(EndpointConsentRecord)
@@ -223,17 +231,24 @@ class ConsentService:
 
         affected_participants = [str(r.participant_id) for r in records]
 
-        # Update scope on all matching records
-        if records:
-            await self._session.execute(
-                update(EndpointConsentRecord)
-                .where(
-                    EndpointConsentRecord.engagement_id == engagement_id,
-                    EndpointConsentRecord.consent_type == EndpointConsentType.ORG_AUTHORIZED,
-                    EndpointConsentRecord.status == ConsentStatus.ACTIVE,
-                )
-                .values(scope=new_scope)
+        # Withdraw old records and create new ones with expanded scope
+        for old_record in records:
+            old_record.status = ConsentStatus.WITHDRAWN
+            old_record.withdrawn_at = now
+
+            new_record = EndpointConsentRecord(
+                participant_id=old_record.participant_id,
+                engagement_id=old_record.engagement_id,
+                consent_type=EndpointConsentType.ORG_AUTHORIZED,
+                scope=new_scope,
+                policy_bundle_id=old_record.policy_bundle_id,
+                recorded_by=updated_by,
+                status=ConsentStatus.ACTIVE,
+                retention_expires_at=retention_expires,
             )
+            self._session.add(new_record)
+
+        if records:
             await self._session.flush()
 
         logger.info(

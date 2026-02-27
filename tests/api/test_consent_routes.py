@@ -68,10 +68,9 @@ class TestRecordConsent:
         client = _make_app(mock_session, UserRole.ENGAGEMENT_LEAD)
 
         resp = client.post(
-            "/api/v1/consent",
+            f"/api/v1/consent/engagement/{ENGAGEMENT_ID}",
             json={
                 "participant_id": str(PARTICIPANT_ID),
-                "engagement_id": str(ENGAGEMENT_ID),
                 "consent_type": "opt_in",
                 "scope": "application-usage-monitoring",
                 "policy_bundle_id": str(POLICY_BUNDLE_ID),
@@ -87,10 +86,9 @@ class TestRecordConsent:
         client = _make_app(mock_session, UserRole.PROCESS_ANALYST)
 
         resp = client.post(
-            "/api/v1/consent",
+            f"/api/v1/consent/engagement/{ENGAGEMENT_ID}",
             json={
                 "participant_id": str(PARTICIPANT_ID),
-                "engagement_id": str(ENGAGEMENT_ID),
                 "consent_type": "opt_in",
                 "scope": "application-usage-monitoring",
                 "policy_bundle_id": str(POLICY_BUNDLE_ID),
@@ -168,6 +166,7 @@ class TestQueryConsent:
 class TestUpdateOrgScope:
     def test_returns_200_with_affected_participants(self) -> None:
         mock_session = AsyncMock()
+        mock_session.add = MagicMock()
         record = _mock_consent_record()
         record.consent_type = EndpointConsentType.ORG_AUTHORIZED
 

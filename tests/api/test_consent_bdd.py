@@ -213,6 +213,7 @@ class TestOrgScopeUpdate:
         """Given ORG_AUTHORIZED consent, When scope expanded,
         Then affected participants identified and notification emitted."""
         mock_session = AsyncMock()
+        mock_session.add = MagicMock()
 
         record1 = _mock_consent_record(
             consent_type=EndpointConsentType.ORG_AUTHORIZED,
@@ -234,16 +235,22 @@ class TestOrgScopeUpdate:
 
         service = ConsentService(mock_session)
         result = await service.update_org_scope(
-            ENGAGEMENT_ID, "screen-content-capture"
+            ENGAGEMENT_ID, "screen-content-capture", updated_by=RECORDER_ID,
         )
 
         assert result["new_scope"] == "screen-content-capture"
         assert len(result["affected_participant_ids"]) == 2
         assert result["notification_required"] is True
+        # Verify old records withdrawn
+        assert record1.status == ConsentStatus.WITHDRAWN
+        assert record2.status == ConsentStatus.WITHDRAWN
+        # Verify new records created via session.add
+        assert mock_session.add.call_count == 2
 
     @pytest.mark.asyncio
     async def test_scope_update_no_matching_records(self) -> None:
         mock_session = AsyncMock()
+        mock_session.add = MagicMock()
         select_result = MagicMock()
         select_scalars = MagicMock()
         select_scalars.all.return_value = []
@@ -251,7 +258,7 @@ class TestOrgScopeUpdate:
         mock_session.execute = AsyncMock(return_value=select_result)
 
         service = ConsentService(mock_session)
-        result = await service.update_org_scope(ENGAGEMENT_ID, "new-scope")
+        result = await service.update_org_scope(ENGAGEMENT_ID, "new-scope", updated_by=RECORDER_ID)
 
         assert result["affected_participant_ids"] == []
         assert result["notification_required"] is False

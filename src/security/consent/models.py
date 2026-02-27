@@ -53,7 +53,7 @@ class PolicyBundle(Base):
     )
     engagement_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("engagements.id", ondelete="CASCADE"),
+        ForeignKey("engagements.id", ondelete="RESTRICT"),
         nullable=False,
     )
     version: Mapped[str] = mapped_column(String(50), nullable=False)
