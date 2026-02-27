@@ -4,14 +4,17 @@
 
 ## Current Focus
 
-**Audit Remediation — FULLY COMPLETE** (all severity levels addressed)
-- Phases 0-6: PRs #245-#269 (CRITICAL, HIGH, MEDIUM, LOW)
-- Phase 7: PR #263 (Swift quality — actor conversion, logging, IUOs)
-- **Result**: 0 CRITICAL, 0 HIGH, all MEDIUM addressed across platform + agent
-- Import ordering fix applied to 5 bridge files post-merge
+Agent build and demo — first successful build and launch of KMFlowAgent.app.
 
 ## Recently Completed
 
+- **PR #270 merged** — Fix macOS agent build scripts (v2026.02.078)
+  - bash 3.2 compat: replaced `declare -A`, `mapfile`, subshell EXIT traps
+  - Ad-hoc codesign: strip pre-existing signatures, sign outside .app context, no --timestamp
+  - `@rpath` → `@loader_path` (pre-built Python binary lacks header padding for LC_RPATH)
+  - CommonCrypto → CryptoKit AES.GCM (Command Line Tools SDK compat)
+  - InMemoryConsentStore actor→class, optional chaining fix
+  - Agent builds and launches successfully (~63 MB bundle, Python 3.12.7 embedded)
 - **PR #263 merged** — Agent Swift Quality & Error Handling (v2026.02.077)
   - Converted IntegrityChecker from `@unchecked Sendable` + NSLock to Swift actor
   - Replaced fputs/NSLog with structured os.Logger/AgentLogger

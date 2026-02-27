@@ -3,6 +3,15 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.078] - 2026-02-27
+### Fixed
+- Fix macOS agent build scripts for bash 3.2 compatibility (no `declare -A`, `mapfile`) (#270)
+- Fix ad-hoc codesigning: strip pre-existing signatures, sign outside `.app` context (#270)
+- Switch dylib references from `@rpath` to `@loader_path` for python-build-standalone (#270)
+- Replace CommonCrypto GCM with CryptoKit AES.GCM (Command Line Tools SDK compat) (#270)
+- Fix `InMemoryConsentStore` actor→class for protocol conformance (#270)
+- Fix optional chaining on `pythonManager?.start()` (#270)
+
 ## [2026.02.077] - 2026-02-27
 ### Changed
 - Convert IntegrityChecker from `@unchecked Sendable` + NSLock to Swift actor (#263)
