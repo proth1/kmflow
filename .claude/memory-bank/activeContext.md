@@ -8,6 +8,13 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #424 merged** — Review pack generation engine (#349) (v2026.02.108)
+  - Segments POV activities into 3-8 activity review packs
+  - Aggregates evidence, confidence scores, conflict flags, seed terms per pack
+  - SME routing by primary performing role
+  - Async POST (HTTP 202 with task_id), paginated GET
+  - PR review: REQUEST CHANGES → HIGH fixed (task retention, failure sentinel), MEDIUM fixed (engagement validation, response types)
+  - Alembic migration 043, 36 BDD tests
 - **PR #423 merged** — RACI matrix derivation from knowledge graph edges (#351) (v2026.02.107)
   - PERFORMED_BY→R, GOVERNED_BY→A, CONSULTED_BY/REVIEWS→C, NOTIFIED_BY→I
   - Dedup on (activity_id, role_id, assignment), engagement-scoped

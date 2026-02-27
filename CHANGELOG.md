@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.108] - 2026-02-27
+### Added
+- Review pack generation engine: segments POV activities into 3-8 activity packs, aggregates evidence/confidence/conflicts/seed terms, SME routing by primary role, async POST with task_id (HTTP 202), paginated GET, failure sentinel on error, engagement validation, Alembic migration 043, 36 BDD tests (#349)
+
 ## [2026.02.107] - 2026-02-27
 ### Added
 - RACI matrix derivation from knowledge graph edges: PERFORMED_BY→R, GOVERNED_BY→A, CONSULTED_BY/REVIEWS→C, NOTIFIED_BY→I, dedup on (activity, role, assignment), SME validation with audit trail, CSV export, GET/POST/PATCH/GET endpoints, Alembic migration 042, 41 BDD tests (#351)
