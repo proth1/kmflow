@@ -144,6 +144,19 @@ class KnowledgeGraphService:
         """
         return await self._run_query(query, parameters)
 
+    async def run_write_query(
+        self,
+        query: str,
+        parameters: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Public write query interface for domain consumers.
+
+        Delegates to _run_write_query(). Use this for cross-module callers
+        (e.g. conflict classifier) that need write access to merge nodes
+        or set properties on the knowledge graph.
+        """
+        return await self._run_write_query(query, parameters)
+
     async def _run_write_query(
         self,
         query: str,
