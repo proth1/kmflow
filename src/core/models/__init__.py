@@ -82,6 +82,12 @@ from src.core.models.pov import (
     ProcessModel,
     ProcessModelStatus,
 )
+from src.core.models.seed_term import (
+    SeedTerm,
+    TermCategory,
+    TermSource,
+    TermStatus,
+)
 from src.core.models.simulation import (
     AlternativeSuggestion,
     EpistemicAction,
@@ -203,6 +209,11 @@ __all__ = [
     "ProcessElementType",
     "ProcessModel",
     "ProcessModelStatus",
+    # seed_term
+    "SeedTerm",
+    "TermCategory",
+    "TermSource",
+    "TermStatus",
     # simulation
     "AlternativeSuggestion",
     "EpistemicAction",
