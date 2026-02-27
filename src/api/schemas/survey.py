@@ -34,6 +34,7 @@ class EpistemicFrameRead(BaseModel):
 
     id: str
     claim_id: str
+    engagement_id: str
     frame_kind: str
     authority_scope: str
     access_policy: str | None = None

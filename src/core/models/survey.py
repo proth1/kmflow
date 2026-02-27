@@ -109,11 +109,19 @@ class EpistemicFrame(Base):
     """Epistemic context for a survey claim or knowledge assertion."""
 
     __tablename__ = "epistemic_frames"
-    __table_args__ = (Index("ix_epistemic_frames_claim_id", "claim_id"),)
+    __table_args__ = (
+        Index("ix_epistemic_frames_claim_id", "claim_id"),
+        Index("ix_epistemic_frames_engagement_id", "engagement_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     claim_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("survey_claims.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    # Direct engagement_id per PRD Section 6.2 — enables independent engagement
+    # scoping for frames beyond survey claims (e.g., on semantic relationships).
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
     )
     frame_kind: Mapped[FrameKind] = mapped_column(
         Enum(FrameKind, values_callable=lambda e: [x.value for x in e]), nullable=False

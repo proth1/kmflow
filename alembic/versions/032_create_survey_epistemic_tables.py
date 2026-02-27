@@ -60,12 +60,14 @@ def upgrade() -> None:
         "epistemic_frames",
         sa.Column("id", UUID(as_uuid=True), primary_key=True),
         sa.Column("claim_id", UUID(as_uuid=True), sa.ForeignKey("survey_claims.id", ondelete="CASCADE"), nullable=False, unique=True),
+        sa.Column("engagement_id", UUID(as_uuid=True), sa.ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False),
         sa.Column("frame_kind", _FRAME_KIND, nullable=False),
         sa.Column("authority_scope", sa.String(255), nullable=False),
         sa.Column("access_policy", sa.Text, nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
     )
     op.create_index("ix_epistemic_frames_claim_id", "epistemic_frames", ["claim_id"])
+    op.create_index("ix_epistemic_frames_engagement_id", "epistemic_frames", ["engagement_id"])
 
 
 def downgrade() -> None:

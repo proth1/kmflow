@@ -170,6 +170,7 @@ class TestEpistemicFrameModel:
         expected = {
             "id",
             "claim_id",
+            "engagement_id",
             "frame_kind",
             "authority_scope",
             "access_policy",
@@ -187,9 +188,17 @@ class TestEpistemicFrameModel:
         assert len(fks) == 1
         assert fks[0].target_fullname == "survey_claims.id"
 
-    def test_index_defined(self) -> None:
+    def test_engagement_id_fk(self) -> None:
+        col = EpistemicFrame.__table__.columns["engagement_id"]
+        fks = list(col.foreign_keys)
+        assert len(fks) == 1
+        assert fks[0].target_fullname == "engagements.id"
+        assert col.nullable is False
+
+    def test_indexes_defined(self) -> None:
         index_names = {idx.name for idx in EpistemicFrame.__table__.indexes}
         assert "ix_epistemic_frames_claim_id" in index_names
+        assert "ix_epistemic_frames_engagement_id" in index_names
 
     def test_repr(self) -> None:
         frame = EpistemicFrame(
@@ -481,6 +490,7 @@ class TestReadSchemas:
         frame_read = EpistemicFrameRead(
             id=str(uuid.uuid4()),
             claim_id=str(uuid.uuid4()),
+            engagement_id=str(uuid.uuid4()),
             frame_kind="experiential",
             authority_scope="compliance_officer",
             created_at="2026-02-27T12:00:00Z",
@@ -518,6 +528,7 @@ class TestReadSchemas:
         read = EpistemicFrameRead(
             id=str(uuid.uuid4()),
             claim_id=str(uuid.uuid4()),
+            engagement_id=str(uuid.uuid4()),
             frame_kind="procedural",
             authority_scope="operations_team",
             access_policy="internal_only",

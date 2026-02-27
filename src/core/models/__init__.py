@@ -76,13 +76,6 @@ from src.core.models.pov import (
     ProcessModel,
     ProcessModelStatus,
 )
-from src.core.models.survey import (
-    CertaintyTier,
-    EpistemicFrame,
-    FrameKind,
-    ProbeType,
-    SurveyClaim,
-)
 from src.core.models.simulation import (
     AlternativeSuggestion,
     EpistemicAction,
@@ -95,6 +88,13 @@ from src.core.models.simulation import (
     SimulationStatus,
     SimulationType,
     SuggestionDisposition,
+)
+from src.core.models.survey import (
+    CertaintyTier,
+    EpistemicFrame,
+    FrameKind,
+    ProbeType,
+    SurveyClaim,
 )
 from src.core.models.taskmining import (
     ActionCategory,
@@ -192,12 +192,6 @@ __all__ = [
     "ProcessElementType",
     "ProcessModel",
     "ProcessModelStatus",
-    # survey
-    "CertaintyTier",
-    "EpistemicFrame",
-    "FrameKind",
-    "ProbeType",
-    "SurveyClaim",
     # simulation
     "AlternativeSuggestion",
     "EpistemicAction",
@@ -210,6 +204,12 @@ __all__ = [
     "SimulationStatus",
     "SimulationType",
     "SuggestionDisposition",
+    # survey
+    "CertaintyTier",
+    "EpistemicFrame",
+    "FrameKind",
+    "ProbeType",
+    "SurveyClaim",
     # taskmining
     "ActionCategory",
     "AgentStatus",
