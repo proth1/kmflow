@@ -175,6 +175,14 @@ from src.core.models.tom import (
     TOMVersion,
     TransformationRoadmapModel,
 )
+from src.core.models.transfer import (
+    DataResidencyRestriction,
+    DataTransferLog,
+    StandardContractualClause,
+    TIAStatus,
+    TransferDecision,
+    TransferImpactAssessment,
+)
 from src.core.models.uplift_projection import UpliftProjection
 from src.core.models.validation import (
     ReviewPack,
@@ -352,4 +360,11 @@ __all__ = [
     "TOMGapType",
     "TOMVersion",
     "TransformationRoadmapModel",
+    # transfer
+    "DataResidencyRestriction",
+    "DataTransferLog",
+    "StandardContractualClause",
+    "TIAStatus",
+    "TransferDecision",
+    "TransferImpactAssessment",
 ]

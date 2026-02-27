@@ -69,6 +69,7 @@ from src.api.routes import (
     simulations,
     taskmining,
     tom,
+    transfer_controls,
     users,
     validation,
     websocket,
@@ -297,6 +298,9 @@ def create_app() -> FastAPI:
 
     # -- Incident Response Routes (Story #397) ---
     app.include_router(incidents.router)
+
+    # -- Transfer Control Routes (Story #395) ---
+    app.include_router(transfer_controls.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)
