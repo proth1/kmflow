@@ -13,6 +13,12 @@ from src.core.models.auth import (
     UserConsent,
     UserRole,
 )
+from src.core.models.conflict import (
+    ConflictObject,
+    MismatchType,
+    ResolutionStatus,
+    ResolutionType,
+)
 from src.core.models.conformance import ConformanceResult, ReferenceProcessModel
 from src.core.models.engagement import (
     Engagement,
@@ -133,6 +139,11 @@ __all__ = [
     "User",
     "UserConsent",
     "UserRole",
+    # conflict
+    "ConflictObject",
+    "MismatchType",
+    "ResolutionStatus",
+    "ResolutionType",
     # conformance
     "ConformanceResult",
     "ReferenceProcessModel",
