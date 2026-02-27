@@ -47,6 +47,7 @@ from src.api.routes import (
     evidence,
     evidence_coverage,
     evidence_gap_ranking,
+    exports,
     gap_probes,
     gdpr,
     governance,
@@ -317,6 +318,9 @@ def create_app() -> FastAPI:
 
     # -- Evidence Coverage Routes (Story #385) ---
     app.include_router(evidence_coverage.router)
+
+    # -- Export Watermarking Routes (Story #387) ---
+    app.include_router(exports.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)
