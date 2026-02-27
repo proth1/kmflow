@@ -216,3 +216,32 @@ async def test_submit_response_survey_not_found() -> None:
             })
 
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# GET /api/v1/micro-surveys — List micro-surveys
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_list_micro_surveys_success() -> None:
+    """GET returns list of micro-surveys for an engagement."""
+    session = AsyncMock()
+    app = _make_app(session)
+
+    survey = _mock_survey()
+    result = MagicMock()
+    result.scalars.return_value.all.return_value = [survey]
+    session.execute = AsyncMock(return_value=result)
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get(
+            "/api/v1/micro-surveys",
+            params={"engagement_id": str(ENGAGEMENT_ID)},
+        )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 1
+    assert data[0]["target_sme_role"] == "process_owner"

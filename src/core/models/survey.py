@@ -111,6 +111,7 @@ class SurveyClaim(Base):
     epistemic_frame: Mapped[EpistemicFrame | None] = relationship(
         "EpistemicFrame", back_populates="survey_claim", uselist=False, cascade="all, delete-orphan"
     )
+    micro_survey: Mapped[MicroSurvey | None] = relationship("MicroSurvey", back_populates="claims")
 
     def __repr__(self) -> str:
         return f"<SurveyClaim(id={self.id}, certainty={self.certainty_tier}, probe={self.probe_type})>"
@@ -177,6 +178,9 @@ class MicroSurvey(Base):
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Relationships
+    claims: Mapped[list[SurveyClaim]] = relationship("SurveyClaim", back_populates="micro_survey")
 
     def __repr__(self) -> str:
         return f"<MicroSurvey(id={self.id}, element='{self.target_element_name}', status={self.status})>"
