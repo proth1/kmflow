@@ -20,6 +20,7 @@ from src.core.models.conflict import (
     ResolutionType,
 )
 from src.core.models.conformance import ConformanceResult, ReferenceProcessModel
+from src.core.models.dark_room import DarkRoomSnapshot
 from src.core.models.engagement import (
     Engagement,
     EngagementStatus,
@@ -167,6 +168,8 @@ __all__ = [
     # conformance
     "ConformanceResult",
     "ReferenceProcessModel",
+    # dark_room
+    "DarkRoomSnapshot",
     # engagement
     "Engagement",
     "EngagementStatus",
