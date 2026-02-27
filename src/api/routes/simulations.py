@@ -6,6 +6,7 @@ including scenario modifications, evidence coverage, and comparison.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from datetime import UTC, datetime
@@ -200,7 +201,8 @@ async def run_scenario(
 
     try:
         process_graph = scenario.parameters or {}
-        engine_result = run_simulation(
+        engine_result = await asyncio.to_thread(
+            run_simulation,
             process_graph=process_graph.get("process_graph", {"elements": [], "connections": []}),
             parameters=scenario.parameters or {},
             simulation_type=scenario.simulation_type.value

@@ -427,6 +427,11 @@ class KnowledgeGraphService:
         Returns:
             List of GraphRelationships.
         """
+        if relationship_type and relationship_type not in VALID_RELATIONSHIP_TYPES:
+            raise ValueError(
+                f"Invalid relationship type: {relationship_type}. Must be one of {VALID_RELATIONSHIP_TYPES}"
+            )
+
         rel_filter = f":{relationship_type}" if relationship_type else ""
 
         if direction == "outgoing":
@@ -497,6 +502,11 @@ class KnowledgeGraphService:
 
         rel_filter = ""
         if relationship_types:
+            for rt in relationship_types:
+                if rt not in VALID_RELATIONSHIP_TYPES:
+                    raise ValueError(
+                        f"Invalid relationship type: {rt}. Must be one of {VALID_RELATIONSHIP_TYPES}"
+                    )
             rel_filter = ":" + "|".join(relationship_types)
 
         query = f"""
@@ -545,6 +555,49 @@ class KnowledgeGraphService:
         # For MVP, this returns an empty list since pgvector search
         # is handled by the embeddings service.
         return []
+
+    # -----------------------------------------------------------------
+    # Delete operations
+    # -----------------------------------------------------------------
+
+    async def delete_node(self, node_id: str) -> bool:
+        """Delete a node and all its relationships by ID.
+
+        Args:
+            node_id: The unique node identifier.
+
+        Returns:
+            True if a node was deleted, False if not found.
+        """
+        query = """
+        MATCH (n {id: $node_id})
+        DETACH DELETE n
+        RETURN count(n) AS deleted
+        """
+        records = await self._run_write_query(query, {"node_id": node_id})
+        deleted = records[0]["deleted"] if records else 0
+        if deleted:
+            logger.info("Deleted node %s and its relationships", node_id)
+        return deleted > 0
+
+    async def delete_engagement_subgraph(self, engagement_id: str) -> int:
+        """Delete all nodes and relationships for an engagement.
+
+        Args:
+            engagement_id: The engagement whose subgraph should be removed.
+
+        Returns:
+            Count of deleted nodes.
+        """
+        query = """
+        MATCH (n {engagement_id: $engagement_id})
+        DETACH DELETE n
+        RETURN count(n) AS deleted
+        """
+        records = await self._run_write_query(query, {"engagement_id": engagement_id})
+        deleted = records[0]["deleted"] if records else 0
+        logger.info("Deleted %d nodes for engagement %s", deleted, engagement_id)
+        return deleted
 
     # -----------------------------------------------------------------
     # Engagement subgraph

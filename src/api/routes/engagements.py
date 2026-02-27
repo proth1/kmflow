@@ -22,10 +22,12 @@ from src.core.models import (
     AuditAction,
     AuditLog,
     Engagement,
+    EngagementMember,
     EngagementStatus,
     EvidenceCategory,
     EvidenceItem,
     User,
+    UserRole,
 )
 from src.core.permissions import require_engagement_access, require_permission
 
@@ -177,6 +179,16 @@ async def list_engagements(
     """
     query = select(Engagement)
     count_query = select(func.count()).select_from(Engagement)
+
+    # Non-admin users can only see engagements they are members of
+    if user.role != UserRole.PLATFORM_ADMIN:
+        member_engagement_ids = (
+            select(EngagementMember.engagement_id)
+            .where(EngagementMember.user_id == user.id)
+            .scalar_subquery()
+        )
+        query = query.where(Engagement.id.in_(member_engagement_ids))
+        count_query = count_query.where(Engagement.id.in_(member_engagement_ids))
 
     # Apply filters
     if status_filter is not None:
