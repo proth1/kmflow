@@ -229,7 +229,7 @@ async def catalog_evidence(
     category: EvidenceCategory | None = None,
     date_from: str | None = Query(None, description="ISO date lower bound (inclusive)"),
     date_to: str | None = Query(None, description="ISO date upper bound (inclusive)"),
-    language: str | None = Query(None, description="ISO 639-1 language code filter"),
+    language: str | None = Query(None, max_length=10, description="ISO 639-1 language code filter"),
     q: str | None = Query(None, description="Full-text search query"),
     limit: int = Query(default=20, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
@@ -264,9 +264,11 @@ async def catalog_evidence(
         count_query = count_query.where(EvidenceItem.detected_language == language)
 
     if q is not None:
-        like_pattern = f"%{q}%"
-        query = query.where(EvidenceItem.name.ilike(like_pattern))
-        count_query = count_query.where(EvidenceItem.name.ilike(like_pattern))
+        # Escape LIKE wildcards to prevent pattern injection
+        escaped_q = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        like_pattern = f"%{escaped_q}%"
+        query = query.where(EvidenceItem.name.ilike(like_pattern, escape="\\"))
+        count_query = count_query.where(EvidenceItem.name.ilike(like_pattern, escape="\\"))
 
     query = query.offset(offset).limit(limit).order_by(EvidenceItem.created_at.desc())
 

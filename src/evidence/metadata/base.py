@@ -51,14 +51,20 @@ class ExtractedMetadata:
             "page_count": self.page_count,
             "file_size_bytes": self.file_size_bytes,
             "detected_language": self.detected_language,
+            "sheet_count": self.sheet_count,
+            "tabular_metadata": self.tabular_metadata,
         }
-        if self.sheet_count is not None:
-            result["sheet_count"] = self.sheet_count
-        if self.tabular_metadata is not None:
-            result["tabular_metadata"] = self.tabular_metadata
         if self.extra:
             result.update(self.extra)
         return result
+
+
+def clean_string(value: str | None) -> str | None:
+    """Return stripped string or None if empty."""
+    if value is None:
+        return None
+    cleaned = str(value).strip()
+    return cleaned if cleaned else None
 
 
 class MetadataExtractor(abc.ABC):

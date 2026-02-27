@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from src.evidence.metadata.base import ExtractedMetadata, MetadataExtractor
+from src.evidence.metadata.base import ExtractedMetadata, MetadataExtractor, clean_string
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +39,8 @@ class ExcelMetadataExtractor(MetadataExtractor):
 
             # Extract workbook-level properties
             if wb.properties:
-                metadata.title = _clean_string(getattr(wb.properties, "title", None))
-                metadata.author = _clean_string(getattr(wb.properties, "creator", None))
+                metadata.title = clean_string(getattr(wb.properties, "title", None))
+                metadata.author = clean_string(getattr(wb.properties, "creator", None))
                 if wb.properties.created:
                     metadata.creation_date = wb.properties.created.isoformat()
                 if wb.properties.modified:
@@ -58,14 +58,6 @@ class ExcelMetadataExtractor(MetadataExtractor):
             logger.warning("Failed to extract Excel metadata from %s", file_path)
 
         return metadata
-
-
-def _clean_string(value: str | None) -> str | None:
-    """Return stripped string or None if empty."""
-    if value is None:
-        return None
-    cleaned = str(value).strip()
-    return cleaned if cleaned else None
 
 
 def _extract_sheet_metadata(ws: Any, sheet_name: str) -> dict[str, Any]:

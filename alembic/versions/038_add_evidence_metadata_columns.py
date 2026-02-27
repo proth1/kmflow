@@ -21,7 +21,10 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.add_column("evidence_items", sa.Column("extracted_metadata", sa.JSON(), nullable=True))
+    op.add_column(
+        "evidence_items",
+        sa.Column("extracted_metadata", sa.dialects.postgresql.JSONB(), nullable=True),
+    )
     op.add_column("evidence_items", sa.Column("detected_language", sa.String(10), nullable=True))
     op.create_index("ix_evidence_items_detected_language", "evidence_items", ["detected_language"])
 

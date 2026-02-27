@@ -8,7 +8,7 @@ from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import BigInteger, Date, DateTime, Enum, Float, ForeignKey, Index, String, Text, func
-from sqlalchemy.dialects.postgresql import JSON, UUID
+from sqlalchemy.dialects.postgresql import JSON, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.database import Base
@@ -91,7 +91,7 @@ class EvidenceItem(Base):
 
     # Metadata
     metadata_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    extracted_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    extracted_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     detected_language: Mapped[str | None] = mapped_column(String(10), nullable=True)
     source_date: Mapped[datetime | None] = mapped_column(Date, nullable=True)
 

@@ -44,6 +44,8 @@ dependencies = [
     "openpyxl>=3.1.0,<4.0",
     "lxml>=5.0.0,<6.0",
     "defusedxml>=0.7.0,<1.0",
+    # Language detection
+    "langdetect>=1.0.9,<2.0",
     # Semantic engine
     "numpy>=1.26.0,<3.0",
     # Authentication
@@ -60,6 +62,8 @@ dev = [
     "pytest-asyncio>=0.25.0",
     "pytest-cov>=6.0.0",
     "httpx>=0.28.0",
+    # PDF test generation
+    "reportlab>=4.0.0",
     # Linting and formatting
     "ruff>=0.8.0",
     "mypy>=1.14.0",
@@ -160,5 +164,7 @@ module = [
     "python_docx.*",
     "docx.*",
     "slowapi.*",
+    "langdetect.*",
+    "reportlab.*",
 ]
 ignore_missing_imports = true

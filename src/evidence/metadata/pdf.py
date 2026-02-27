@@ -10,7 +10,7 @@ import logging
 from datetime import UTC
 from pathlib import Path
 
-from src.evidence.metadata.base import ExtractedMetadata, MetadataExtractor
+from src.evidence.metadata.base import ExtractedMetadata, MetadataExtractor, clean_string
 
 logger = logging.getLogger(__name__)
 
@@ -38,22 +38,14 @@ class PdfMetadataExtractor(MetadataExtractor):
                 metadata.page_count = len(pdf.pages)
 
                 info = pdf.metadata or {}
-                metadata.title = _clean_string(info.get("Title"))
-                metadata.author = _clean_string(info.get("Author"))
+                metadata.title = clean_string(info.get("Title"))
+                metadata.author = clean_string(info.get("Author"))
                 metadata.creation_date = _parse_pdf_date(info.get("CreationDate"))
                 metadata.modification_date = _parse_pdf_date(info.get("ModDate"))
         except Exception:  # Intentionally broad: PDF files can be corrupt or encrypted
             logger.warning("Failed to extract PDF metadata from %s", file_path)
 
         return metadata
-
-
-def _clean_string(value: str | None) -> str | None:
-    """Return stripped string or None if empty."""
-    if value is None:
-        return None
-    cleaned = str(value).strip()
-    return cleaned if cleaned else None
 
 
 def _parse_pdf_date(value: str | None) -> str | None:
