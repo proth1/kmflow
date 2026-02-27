@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import time
+from collections import deque
 from typing import Any
 
 import redis.asyncio as aioredis
@@ -60,6 +61,9 @@ class ContinuousEvidencePipeline:
         self._neo4j_driver = neo4j_driver
         self._metrics = metrics or MetricsCollector()
         self._quality_threshold = quality_threshold
+        # Per-engagement time-based quality window: {engagement_id: deque[(timestamp, score)]}
+        self._quality_windows: dict[str, deque[tuple[float, float]]] = {}
+        # Legacy accessor for backward-compat with tests
         self._recent_quality_scores: list[float] = []
 
     @property
@@ -191,7 +195,6 @@ class ContinuousEvidencePipeline:
         """
         from sqlalchemy import select
 
-
         result = await session.execute(
             select(EvidenceItem).where(EvidenceItem.id == evidence_id)
         )
@@ -258,28 +261,39 @@ class ContinuousEvidencePipeline:
     ) -> None:
         """Monitor evidence quality against threshold.
 
-        Maintains a sliding window of recent quality scores and triggers
-        a QUALITY_WARNING alert when the average drops below threshold.
+        Maintains a time-based sliding window (QUALITY_WINDOW_MINUTES) of
+        quality scores per engagement and triggers a QUALITY_WARNING alert
+        when the average drops below the configured threshold.
 
         Args:
             session: Database session.
             quality_score: Quality score of the latest evidence.
             engagement_id: Engagement scope.
         """
-        self._recent_quality_scores.append(quality_score)
+        now = time.monotonic()
+        cutoff = now - (QUALITY_WINDOW_MINUTES * 60)
 
-        # Keep only the last N scores (roughly 10 minutes at typical rates)
-        max_window = 100
-        if len(self._recent_quality_scores) > max_window:
-            self._recent_quality_scores = self._recent_quality_scores[-max_window:]
+        # Get or create per-engagement window
+        if engagement_id not in self._quality_windows:
+            self._quality_windows[engagement_id] = deque()
+        window = self._quality_windows[engagement_id]
 
-        avg_quality = (
-            sum(self._recent_quality_scores) / len(self._recent_quality_scores)
-            if self._recent_quality_scores
-            else 0.0
-        )
+        # Add new score
+        window.append((now, quality_score))
 
-        if avg_quality < self._quality_threshold and len(self._recent_quality_scores) >= 5:
+        # Prune entries older than the time window
+        while window and window[0][0] < cutoff:
+            window.popleft()
+
+        # Also update legacy list for backward compat
+        self._recent_quality_scores = [score for _, score in window]
+
+        if not window:
+            return
+
+        avg_quality = sum(score for _, score in window) / len(window)
+
+        if avg_quality < self._quality_threshold and len(window) >= 5:
             logger.warning(
                 "Evidence quality below threshold: avg=%.2f, threshold=%.2f, engagement=%s",
                 avg_quality,

@@ -9,7 +9,10 @@ Covers all 4 acceptance scenarios:
 
 from __future__ import annotations
 
+import logging
 import time
+from contextlib import asynccontextmanager
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -17,6 +20,7 @@ from src.monitoring.pipeline.continuous import (
     DEFAULT_QUALITY_THRESHOLD,
     EVIDENCE_CONSUMER_GROUP,
     EVIDENCE_PIPELINE_STREAM,
+    QUALITY_WINDOW_MINUTES,
     ContinuousEvidencePipeline,
     submit_evidence_to_pipeline,
 )
@@ -26,6 +30,26 @@ from src.monitoring.pipeline.metrics import (
     PipelineMetrics,
     ProcessingEvent,
 )
+
+
+def _make_pipeline(
+    quality_threshold: float = DEFAULT_QUALITY_THRESHOLD,
+) -> ContinuousEvidencePipeline:
+    """Create a pipeline with None dependencies for unit testing."""
+    return ContinuousEvidencePipeline(
+        redis_client=None,
+        session_factory=None,
+        quality_threshold=quality_threshold,
+    )
+
+
+def _make_mock_session() -> AsyncMock:
+    """Create a mock async session with commit/refresh stubs."""
+    session = AsyncMock()
+    session.commit = AsyncMock()
+    session.refresh = AsyncMock()
+    return session
+
 
 # ===========================================================================
 # Scenario 1: New evidence ingested and quality-scored
@@ -37,36 +61,129 @@ class TestEvidenceIngestion:
 
     def test_pipeline_accepts_redis_client_and_session_factory(self) -> None:
         """Pipeline should initialize with redis, session factory, and optional neo4j."""
-        pipeline = ContinuousEvidencePipeline(
-            redis_client=None,
-            session_factory=None,
-            neo4j_driver=None,
-        )
+        pipeline = _make_pipeline()
         assert pipeline is not None
         assert pipeline._quality_threshold == DEFAULT_QUALITY_THRESHOLD
 
     def test_pipeline_has_metrics_collector(self) -> None:
         """Pipeline should expose a metrics collector."""
-        pipeline = ContinuousEvidencePipeline(
-            redis_client=None,
-            session_factory=None,
-        )
+        pipeline = _make_pipeline()
         assert pipeline.metrics is not None
         assert isinstance(pipeline.metrics, MetricsCollector)
 
     def test_pipeline_custom_quality_threshold(self) -> None:
         """Pipeline should accept custom quality threshold."""
-        pipeline = ContinuousEvidencePipeline(
-            redis_client=None,
-            session_factory=None,
-            quality_threshold=0.75,
-        )
+        pipeline = _make_pipeline(quality_threshold=0.75)
         assert pipeline._quality_threshold == 0.75
 
     def test_stream_and_consumer_group_constants(self) -> None:
         """Redis stream name and consumer group should be defined."""
         assert EVIDENCE_PIPELINE_STREAM == "kmflow:evidence:pipeline"
         assert EVIDENCE_CONSUMER_GROUP == "evidence_pipeline_workers"
+
+    @pytest.mark.asyncio
+    async def test_process_evidence_calls_scoring_and_records_metrics(self) -> None:
+        """_process_evidence should score quality, update graph, check contradictions, and record metrics."""
+        mock_session = _make_mock_session()
+
+        @asynccontextmanager
+        async def mock_session_factory():
+            yield mock_session
+
+        pipeline = ContinuousEvidencePipeline(
+            redis_client=None,
+            session_factory=mock_session_factory,
+            quality_threshold=0.6,
+        )
+
+        # Mock internal methods
+        pipeline._score_evidence = AsyncMock(return_value=0.85)
+        pipeline._update_knowledge_graph = AsyncMock()
+        pipeline._check_contradictions = AsyncMock()
+        pipeline._monitor_quality = AsyncMock()
+
+        data = {"evidence_id": "ev-123", "engagement_id": "eng-456"}
+        await pipeline._process_evidence(b"msg-1", data)
+
+        pipeline._score_evidence.assert_awaited_once_with(mock_session, "ev-123")
+        pipeline._update_knowledge_graph.assert_awaited_once_with("ev-123", "eng-456")
+        pipeline._check_contradictions.assert_awaited_once_with(mock_session, "ev-123", "eng-456")
+        pipeline._monitor_quality.assert_awaited_once_with(mock_session, 0.85, "eng-456")
+        mock_session.commit.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_process_evidence_records_latency_on_success(self) -> None:
+        """Metrics should record event with success=True on normal processing."""
+        mock_session = _make_mock_session()
+
+        @asynccontextmanager
+        async def mock_session_factory():
+            yield mock_session
+
+        mock_metrics = AsyncMock(spec=MetricsCollector)
+        pipeline = ContinuousEvidencePipeline(
+            redis_client=None,
+            session_factory=mock_session_factory,
+            metrics=mock_metrics,
+        )
+        pipeline._score_evidence = AsyncMock(return_value=0.8)
+        pipeline._update_knowledge_graph = AsyncMock()
+        pipeline._check_contradictions = AsyncMock()
+        pipeline._monitor_quality = AsyncMock()
+
+        await pipeline._process_evidence(b"msg-1", {"evidence_id": "ev-1", "engagement_id": "eng-1"})
+
+        mock_metrics.record_event.assert_awaited_once()
+        call_args = mock_metrics.record_event.call_args
+        assert call_args[0][2] is True  # success=True
+
+    @pytest.mark.asyncio
+    async def test_process_evidence_records_failure_on_exception(self) -> None:
+        """Metrics should record event with success=False when processing fails."""
+        mock_session = _make_mock_session()
+
+        @asynccontextmanager
+        async def mock_session_factory():
+            yield mock_session
+
+        mock_metrics = AsyncMock(spec=MetricsCollector)
+        pipeline = ContinuousEvidencePipeline(
+            redis_client=None,
+            session_factory=mock_session_factory,
+            metrics=mock_metrics,
+        )
+        pipeline._score_evidence = AsyncMock(side_effect=RuntimeError("DB error"))
+
+        await pipeline._process_evidence(b"msg-1", {"evidence_id": "ev-1", "engagement_id": "eng-1"})
+
+        mock_metrics.record_event.assert_awaited_once()
+        call_args = mock_metrics.record_event.call_args
+        assert call_args[0][2] is False  # success=False
+
+    @pytest.mark.asyncio
+    async def test_process_evidence_handles_bytes_keys(self) -> None:
+        """Pipeline should decode bytes keys from Redis stream messages."""
+        mock_session = _make_mock_session()
+
+        @asynccontextmanager
+        async def mock_session_factory():
+            yield mock_session
+
+        pipeline = ContinuousEvidencePipeline(
+            redis_client=None,
+            session_factory=mock_session_factory,
+        )
+        pipeline._score_evidence = AsyncMock(return_value=0.7)
+        pipeline._update_knowledge_graph = AsyncMock()
+        pipeline._check_contradictions = AsyncMock()
+        pipeline._monitor_quality = AsyncMock()
+
+        # Redis returns bytes keys
+        data = {b"evidence_id": b"ev-bytes", b"engagement_id": b"eng-bytes"}
+        await pipeline._process_evidence(b"msg-1", data)
+
+        pipeline._score_evidence.assert_awaited_once_with(mock_session, "ev-bytes")
+        pipeline._update_knowledge_graph.assert_awaited_once_with("ev-bytes", "eng-bytes")
 
 
 # ===========================================================================
@@ -79,21 +196,23 @@ class TestContradictionDetection:
 
     def test_pipeline_has_contradiction_check_method(self) -> None:
         """Pipeline should have a _check_contradictions method."""
-        pipeline = ContinuousEvidencePipeline(
-            redis_client=None,
-            session_factory=None,
-        )
+        pipeline = _make_pipeline()
         assert hasattr(pipeline, "_check_contradictions")
         assert callable(pipeline._check_contradictions)
 
     def test_pipeline_has_score_evidence_method(self) -> None:
         """Pipeline should have a _score_evidence method."""
-        pipeline = ContinuousEvidencePipeline(
-            redis_client=None,
-            session_factory=None,
-        )
+        pipeline = _make_pipeline()
         assert hasattr(pipeline, "_score_evidence")
         assert callable(pipeline._score_evidence)
+
+    @pytest.mark.asyncio
+    async def test_check_contradictions_is_callable_async(self) -> None:
+        """_check_contradictions should be an async method that runs without error."""
+        pipeline = _make_pipeline()
+        session = _make_mock_session()
+        # Should not raise — currently a stub, but must be async-callable
+        await pipeline._check_contradictions(session, "ev-1", "eng-1")
 
 
 # ===========================================================================
@@ -108,44 +227,83 @@ class TestQualityThresholdMonitoring:
         """Default quality threshold should be 0.6."""
         assert DEFAULT_QUALITY_THRESHOLD == 0.6
 
-    @pytest.mark.asyncio
-    async def test_quality_scores_tracked(self) -> None:
-        """Pipeline should accumulate quality scores for monitoring."""
-        pipeline = ContinuousEvidencePipeline(
-            redis_client=None,
-            session_factory=None,
-        )
-        pipeline._recent_quality_scores = [0.8, 0.75, 0.72, 0.70, 0.68]
-        avg = sum(pipeline._recent_quality_scores) / len(pipeline._recent_quality_scores)
-        assert avg == pytest.approx(0.73, abs=0.01)
+    def test_quality_window_minutes_constant(self) -> None:
+        """Quality window should be 10 minutes."""
+        assert QUALITY_WINDOW_MINUTES == 10
 
     @pytest.mark.asyncio
-    async def test_quality_below_threshold_detected(self) -> None:
-        """When average quality drops below threshold, it should be detectable."""
-        pipeline = ContinuousEvidencePipeline(
-            redis_client=None,
-            session_factory=None,
-            quality_threshold=0.6,
-        )
-        # Simulate quality dropping to 0.45
-        pipeline._recent_quality_scores = [0.45] * 10
-        avg = sum(pipeline._recent_quality_scores) / len(pipeline._recent_quality_scores)
-        assert avg < pipeline._quality_threshold
+    async def test_monitor_quality_tracks_scores_per_engagement(self) -> None:
+        """_monitor_quality should track scores per engagement in separate windows."""
+        pipeline = _make_pipeline(quality_threshold=0.6)
+        session = _make_mock_session()
+
+        await pipeline._monitor_quality(session, 0.8, "eng-1")
+        await pipeline._monitor_quality(session, 0.3, "eng-2")
+
+        assert "eng-1" in pipeline._quality_windows
+        assert "eng-2" in pipeline._quality_windows
+        assert len(pipeline._quality_windows["eng-1"]) == 1
+        assert len(pipeline._quality_windows["eng-2"]) == 1
 
     @pytest.mark.asyncio
-    async def test_quality_window_capped(self) -> None:
-        """Quality score history should be capped to prevent memory growth."""
-        pipeline = ContinuousEvidencePipeline(
-            redis_client=None,
-            session_factory=None,
-        )
-        # Add more than max_window scores
-        pipeline._recent_quality_scores = [0.7] * 150
-        # The _monitor_quality method trims to max_window (100)
-        max_window = 100
-        if len(pipeline._recent_quality_scores) > max_window:
-            pipeline._recent_quality_scores = pipeline._recent_quality_scores[-max_window:]
-        assert len(pipeline._recent_quality_scores) == 100
+    async def test_monitor_quality_emits_warning_below_threshold(self, caplog: pytest.LogCaptureFixture) -> None:
+        """When average quality drops below threshold with >=5 scores, a warning should be logged."""
+        pipeline = _make_pipeline(quality_threshold=0.6)
+        session = _make_mock_session()
+
+        with caplog.at_level(logging.WARNING, logger="src.monitoring.pipeline.continuous"):
+            # Add 5 low-quality scores for the same engagement
+            for _ in range(5):
+                await pipeline._monitor_quality(session, 0.3, "eng-low")
+
+        assert any("quality below threshold" in r.message.lower() for r in caplog.records)
+        assert any("eng-low" in r.message for r in caplog.records)
+
+    @pytest.mark.asyncio
+    async def test_monitor_quality_no_warning_above_threshold(self, caplog: pytest.LogCaptureFixture) -> None:
+        """No warning when average quality is above threshold."""
+        pipeline = _make_pipeline(quality_threshold=0.6)
+        session = _make_mock_session()
+
+        with caplog.at_level(logging.WARNING, logger="src.monitoring.pipeline.continuous"):
+            for _ in range(10):
+                await pipeline._monitor_quality(session, 0.9, "eng-good")
+
+        warning_records = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(warning_records) == 0
+
+    @pytest.mark.asyncio
+    async def test_monitor_quality_no_warning_fewer_than_5_scores(self, caplog: pytest.LogCaptureFixture) -> None:
+        """No warning when fewer than 5 scores even if below threshold."""
+        pipeline = _make_pipeline(quality_threshold=0.6)
+        session = _make_mock_session()
+
+        with caplog.at_level(logging.WARNING, logger="src.monitoring.pipeline.continuous"):
+            for _ in range(4):
+                await pipeline._monitor_quality(session, 0.1, "eng-few")
+
+        warning_records = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(warning_records) == 0
+
+    @pytest.mark.asyncio
+    async def test_monitor_quality_prunes_old_entries(self) -> None:
+        """Scores older than QUALITY_WINDOW_MINUTES should be pruned."""
+        pipeline = _make_pipeline(quality_threshold=0.6)
+        session = _make_mock_session()
+
+        # Manually insert an old entry with a timestamp from 20 minutes ago
+        old_timestamp = time.monotonic() - (QUALITY_WINDOW_MINUTES * 60 + 60)
+        from collections import deque
+
+        pipeline._quality_windows["eng-old"] = deque([(old_timestamp, 0.3)])
+
+        # Add a new score — the old one should be pruned
+        await pipeline._monitor_quality(session, 0.9, "eng-old")
+
+        window = pipeline._quality_windows["eng-old"]
+        assert len(window) == 1
+        # The remaining score should be the new 0.9, not the old 0.3
+        assert window[0][1] == 0.9
 
 
 # ===========================================================================
@@ -287,6 +445,29 @@ class TestPipelineMetricsAPI:
         # Routes include the full prefix from the router
         assert any(p.endswith("/pipeline/metrics") for p in route_paths)
 
+    def test_pipeline_endpoint_requires_auth(self) -> None:
+        """Pipeline metrics endpoint should require monitoring:read permission."""
+        from src.api.routes.monitoring import router
+
+        for route in router.routes:
+            if hasattr(route, "path") and route.path.endswith("/pipeline/metrics"):
+                # Check that the endpoint has dependencies (auth)
+                deps = getattr(route, "dependant", None)
+                if deps and hasattr(deps, "dependencies"):
+                    dep_names = [
+                        d.call.__name__ if hasattr(d, "call") and hasattr(d.call, "__name__") else ""
+                        for d in deps.dependencies
+                    ]
+                    assert any("require_permission" in n or "permission" in str(d) for n, d in zip(dep_names, deps.dependencies, strict=False)), (
+                        "Pipeline metrics endpoint should have require_permission dependency"
+                    )
+                break
+
+
+# ===========================================================================
+# submit_evidence_to_pipeline tests
+# ===========================================================================
+
 
 class TestSubmitEvidence:
     """Test the submit_evidence_to_pipeline helper."""
@@ -294,3 +475,22 @@ class TestSubmitEvidence:
     def test_submit_function_exists(self) -> None:
         """submit_evidence_to_pipeline should be importable."""
         assert callable(submit_evidence_to_pipeline)
+
+    @pytest.mark.asyncio
+    async def test_submit_calls_xadd_with_correct_params(self) -> None:
+        """submit_evidence_to_pipeline should call xadd on the correct stream."""
+        mock_redis = AsyncMock()
+        mock_redis.xadd = AsyncMock(return_value=b"1234-0")
+
+        msg_id = await submit_evidence_to_pipeline(
+            redis_client=mock_redis,
+            evidence_id="ev-abc",
+            engagement_id="eng-def",
+        )
+
+        mock_redis.xadd.assert_awaited_once_with(
+            EVIDENCE_PIPELINE_STREAM,
+            {"evidence_id": "ev-abc", "engagement_id": "eng-def"},
+            maxlen=50000,
+        )
+        assert msg_id == b"1234-0"

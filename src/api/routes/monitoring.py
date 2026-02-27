@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -687,19 +687,18 @@ class PipelineMetricsResponse(BaseModel):
 
 @router.get("/pipeline/metrics", response_model=PipelineMetricsResponse)
 async def get_pipeline_metrics(
-    request: Any,
+    request: Request,
+    _user: User = Depends(require_permission("monitoring:read")),
 ) -> dict[str, Any]:
     """Get continuous evidence pipeline throughput metrics.
 
     Returns processing_rate (items/min), queue_depth, and p99_latency_ms
     over a 5-minute rolling window.
     """
-    import contextlib
-
     from src.monitoring.pipeline.metrics import MetricsCollector, PipelineMetrics
 
     collector: MetricsCollector | None = None
-    with contextlib.suppress(AttributeError):
+    if hasattr(request.app.state, "pipeline_metrics"):
         collector = request.app.state.pipeline_metrics
 
     if collector is None:
