@@ -625,6 +625,7 @@ async def generate_epistemic_plan(
     await session.execute(sql_delete(EpistemicAction).where(EpistemicAction.scenario_id == scenario_id))
 
     # Persist epistemic actions
+    persisted_actions: list[EpistemicAction] = []
     for action in plan.actions[:limit]:
         ea = EpistemicAction(
             scenario_id=scenario_id,
@@ -639,6 +640,8 @@ async def generate_epistemic_plan(
             priority=action.priority,
         )
         session.add(ea)
+        persisted_actions.append(ea)
+    await session.flush()
 
     # Optionally create shelf request from high-priority actions
     if create_shelf_request and plan.high_priority_count > 0:
@@ -652,16 +655,17 @@ async def generate_epistemic_plan(
         session.add(shelf)
         await session.flush()
 
-        for action in plan.actions[:limit]:
-            if action.priority == "high":
+        for ea in persisted_actions:
+            if ea.priority == "high":
                 item = ShelfDataRequestItem(
                     request_id=shelf.id,
-                    category=action.recommended_evidence_category,
-                    item_name=f"Evidence for: {action.target_element_name}",
-                    description=action.evidence_gap_description,
+                    category=ea.recommended_evidence_category,
+                    item_name=f"Evidence for: {ea.target_element_name}",
+                    description=ea.evidence_gap_description,
                     priority="high",
                 )
                 session.add(item)
+                ea.shelf_request_id = shelf.id
 
     await log_audit(
         session,
@@ -692,6 +696,52 @@ async def generate_epistemic_plan(
             "total": plan.total_actions,
             "high_priority_count": plan.high_priority_count,
             "estimated_aggregate_uplift": plan.estimated_aggregate_uplift,
+        },
+    }
+
+
+@router.get("/scenarios/{scenario_id}/epistemic-plan", response_model=EpistemicPlanResponse)
+async def get_epistemic_plan(
+    scenario_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:read")),
+) -> dict[str, Any]:
+    """Retrieve the cached epistemic action plan for a scenario.
+
+    Returns previously generated actions ranked by information gain.
+    """
+    await get_scenario_or_404(session, scenario_id)
+
+    result = await session.execute(
+        select(EpistemicAction)
+        .where(EpistemicAction.scenario_id == scenario_id)
+        .order_by(EpistemicAction.information_gain_score.desc())
+    )
+    actions = list(result.scalars().all())
+
+    high_count = sum(1 for a in actions if a.priority == "high")
+    total_uplift = sum(a.estimated_confidence_uplift for a in actions)
+
+    return {
+        "scenario_id": str(scenario_id),
+        "actions": [
+            {
+                "target_element_id": a.target_element_id,
+                "target_element_name": a.target_element_name,
+                "evidence_gap_description": a.evidence_gap_description,
+                "current_confidence": a.current_confidence,
+                "estimated_confidence_uplift": a.estimated_confidence_uplift,
+                "projected_confidence": a.projected_confidence,
+                "information_gain_score": a.information_gain_score,
+                "recommended_evidence_category": a.recommended_evidence_category,
+                "priority": a.priority,
+            }
+            for a in actions
+        ],
+        "aggregated_view": {
+            "total": len(actions),
+            "high_priority_count": high_count,
+            "estimated_aggregate_uplift": round(total_uplift, 4),
         },
     }
 
