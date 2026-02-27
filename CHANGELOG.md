@@ -3,6 +3,14 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.101] - 2026-02-27
+### Added
+- Client evidence submission portal with token-based intake: time-limited UUID tokens, Levenshtein auto-matching, bulk upload progress tracking, intake API routes, 41 BDD tests (#308)
+
+## [2026.02.100] - 2026-02-27
+### Added
+- Cross-source triangulation engine: evidence plane classification (4 planes), evidence_coverage and evidence_agreement factors with cross-plane bonus, single-source flagging, conflict detection, 33 BDD tests (#306)
+
 ## [2026.02.099] - 2026-02-27
 ### Added
 - Evidence aggregation and entity extraction for LCD Steps 1-2: seed term guided extraction with confidence boost, duplicate candidate detection (containment, acronym, word overlap), DuplicateCandidate dataclass, ExtractionSummary with provenance maps, 62 BDD tests (#303)

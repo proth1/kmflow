@@ -8,6 +8,19 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #417 merged** — Client evidence submission portal with token-based intake (#308) (v2026.02.101)
+  - ShelfDataRequestToken model with UUID token, expiry, usage count
+  - Levenshtein auto-matching for filenames to request items (threshold 0.8)
+  - Intake API: generate-intake-link (auth'd), upload (no auth), progress (no auth)
+  - Expired tokens return HTTP 410 Gone
+  - 41 BDD tests
+- **PR #416 merged** — Cross-source triangulation engine (#306) (v2026.02.100)
+  - Evidence plane classification: 4 planes from 13 evidence categories
+  - evidence_coverage = supporting_planes / available_planes
+  - evidence_agreement = agreeing/total with cross-plane bonus (0.15)
+  - Single-source flagging, conflict detection
+  - PR review: REQUEST CHANGES → HIGH fixed (agreement calc, dead guard), MEDIUM fixed (task_mining comment, unused constant)
+  - 33 BDD tests
 - **PR #415 merged** — Evidence aggregation and entity extraction for LCD Steps 1-2 (#303) (v2026.02.099)
   - Seed term guided extraction with SEED_TERM_CONFIDENCE_BOOST = 0.15
   - DuplicateCandidate detection: containment, acronym, word overlap (smaller >= 2)
