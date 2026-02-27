@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.119
+**Version**: 2026.02.120
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -8,8 +8,8 @@
 | Metric | Value |
 |--------|-------|
 | SQLAlchemy Models | 78+ classes across 12 modules |
-| API Routes | 25+ routers |
-| Test Count | 2954 backend + 206 frontend passing |
+| API Routes | 26+ routers |
+| Test Count | 2975 backend + 206 frontend passing |
 | Coverage | >80% |
 | Python Version | 3.12+ |
 | FastAPI Version | 0.109+ |
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.120 | 2026-02-27 | Disagreement resolution workflow: 5-endpoint conflict API, filterable report, audit trail, 48h auto-escalation, 21 tests (#388) |
 | 2026.02.119 | 2026-02-27 | I/O mismatch + control gap detection: IOMismatchDetector, ControlGapDetector, auto shelf requests, ControlRequirement ontology node, 28 tests (#378) |
 | 2026.02.118 | 2026-02-27 | Three-way distinction classifier: NAMING_VARIANT/TEMPORAL_SHIFT/GENUINE_DISAGREEMENT classification, run_write_query(), MERGED_EDGE ontology, bitemporal validity, 20 tests (#384) |
 | 2026.02.117 | 2026-02-27 | Rule/existence conflict detection: RuleConflictDetector, ExistenceConflictDetector, temporal resolution, authority weights, ontology updates, 31 tests (#375) |

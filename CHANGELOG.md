@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.120] - 2026-02-27
+### Added
+- Disagreement resolution workflow: conflict resolution API with 5 endpoints (list/resolve/assign/escalate/escalation-check), filterable disagreement report (mismatch type, severity range, status, escalation flag, assigned SME), pagination, immutable audit trail (CONFLICT_ASSIGNED/RESOLVED/ESCALATED), 48h auto-escalation threshold, resolver_id/assigned_to columns on ConflictObject (migration 049), ConflictResolveRequest/AssignRequest/EscalateRequest schemas, 21 BDD tests (#388)
+
 ## [2026.02.119] - 2026-02-27
 ### Added
 - I/O mismatch and control gap detection with shelf data requests: IOMismatchDetector (unmatched CONSUMES via NOT EXISTS Cypher), ControlGapDetector (ControlRequirement vs GOVERNED_BY absence), auto-generated ShelfDataRequest for control gaps, ControlRequirement node and REQUIRES_CONTROL relationship in ontology, _activity_criticality with max() multi-keyword scoring, idempotent shelf request dedup, pipeline extended to 6 detectors, 28 BDD tests (#378)
