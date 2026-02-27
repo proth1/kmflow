@@ -1,169 +1,198 @@
-"""Tests for contradiction detection and resolution (LCD Step 5)."""
+"""Tests for the backward-compatible contradiction persistence bridge.
+
+Tests DetectedContradiction and flatten_to_detected_contradictions which
+map the three-way resolution result types to the Contradiction ORM schema.
+"""
 
 from __future__ import annotations
 
-import uuid
-from unittest.mock import MagicMock, PropertyMock
-
-from src.core.models import CorroborationLevel
-from src.pov.consensus import ConsensusElement
 from src.pov.contradiction import (
-    _compute_source_priority,
-    detect_contradictions,
+    ContradictionResolutionResult,
+    DetectedContradiction,
+    GenuineDisagreement,
+    NamingResolution,
+    TemporalResolution,
+    flatten_to_detected_contradictions,
+    resolve_contradictions,
 )
-from src.pov.triangulation import TriangulatedElement
-from src.semantic.entity_extraction import EntityType, ExtractedEntity
 
 
-def _make_entity(
-    name: str = "Test",
-    entity_type: str = EntityType.ACTIVITY,
-) -> ExtractedEntity:
-    return ExtractedEntity(
-        id=f"ent_{name.lower().replace(' ', '_')}",
-        entity_type=entity_type,
-        name=name,
-        confidence=0.7,
-    )
+class TestDetectedContradiction:
+    """Tests for the DetectedContradiction dataclass."""
 
+    def test_default_fields(self):
+        dc = DetectedContradiction()
+        assert dc.element_name == ""
+        assert dc.field_name == ""
+        assert dc.values == []
+        assert dc.resolution_value == ""
+        assert dc.resolution_reason == ""
+        assert dc.evidence_ids == []
 
-def _make_evidence_item(
-    evidence_id: str | None = None,
-    category: str = "documents",
-    quality_score: float = 0.7,
-    freshness_score: float = 0.8,
-    reliability_score: float = 0.75,
-):
-    item = MagicMock()
-    item.id = uuid.UUID(evidence_id) if evidence_id else uuid.uuid4()
-    item.category = category
-    item.freshness_score = freshness_score
-    item.reliability_score = reliability_score
-    item.completeness_score = 0.6
-    item.consistency_score = 0.65
-    type(item).quality_score = PropertyMock(return_value=quality_score)
-    return item
-
-
-def _make_consensus(
-    entity: ExtractedEntity,
-    evidence_ids: list[str] | None = None,
-    weighted_vote_score: float = 0.75,
-) -> ConsensusElement:
-    ev_ids = evidence_ids or []
-    tri = TriangulatedElement(
-        entity=entity,
-        source_count=len(ev_ids),
-        total_sources=5,
-        triangulation_score=0.5,
-        corroboration_level=CorroborationLevel.MODERATELY,
-        evidence_ids=ev_ids,
-    )
-    return ConsensusElement(
-        triangulated=tri,
-        weighted_vote_score=weighted_vote_score,
-        max_weight=0.85,
-        contributing_categories=set(),
-    )
-
-
-class TestComputeSourcePriority:
-    """Tests for _compute_source_priority."""
-
-    def test_high_quality_structured_data(self):
-        item = _make_evidence_item(
-            category="structured_data",
-            quality_score=0.9,
-            freshness_score=0.95,
+    def test_custom_fields(self):
+        dc = DetectedContradiction(
+            element_name="Process Invoice",
+            field_name="sequence_mismatch",
+            values=[{"preferred": "A", "alternative": "B"}],
+            resolution_value="A",
+            resolution_reason="Higher weight source",
+            evidence_ids=["ev1", "ev2"],
         )
-        score = _compute_source_priority(item)
-        # 1.0 * 0.4 + 0.9 * 0.3 + 0.95 * 0.3 = 0.4 + 0.27 + 0.285 = 0.955
-        assert score > 0.9
+        assert dc.element_name == "Process Invoice"
+        assert dc.field_name == "sequence_mismatch"
+        assert len(dc.evidence_ids) == 2
 
-    def test_low_quality_old_evidence(self):
-        item = _make_evidence_item(
-            category="job_aids_edge_cases",
-            quality_score=0.2,
-            freshness_score=0.1,
+
+class TestFlattenToDetectedContradictions:
+    """Tests for the flatten_to_detected_contradictions bridge function."""
+
+    def test_empty_result(self):
+        result = ContradictionResolutionResult()
+        records = flatten_to_detected_contradictions(result)
+        assert records == []
+
+    def test_naming_resolution_flattened(self):
+        result = ContradictionResolutionResult(
+            naming_resolutions=[
+                NamingResolution(
+                    entity_name_a="Risk Assesment",
+                    entity_name_b="Risk Assessment",
+                    canonical_term="Risk Assessment",
+                    merged_evidence_ids=["ev1", "ev2"],
+                ),
+            ],
         )
-        score = _compute_source_priority(item)
-        # 0.30 * 0.4 + 0.2 * 0.3 + 0.1 * 0.3 = 0.12 + 0.06 + 0.03 = 0.21
-        assert score < 0.3
+        records = flatten_to_detected_contradictions(result)
+
+        assert len(records) == 1
+        r = records[0]
+        assert r.element_name == "Risk Assessment"
+        assert r.field_name == "naming_variant"
+        assert r.resolution_value == "Risk Assessment"
+        assert "naming variant" in r.resolution_reason
+        assert r.evidence_ids == ["ev1", "ev2"]
+
+    def test_temporal_resolution_flattened(self):
+        result = ContradictionResolutionResult(
+            temporal_resolutions=[
+                TemporalResolution(
+                    element_name="Approve Loan",
+                    older_value="2-step approval",
+                    newer_value="1-step approval",
+                    older_valid_to=2023,
+                    newer_valid_from=2024,
+                    older_evidence_ids=["ev1"],
+                    newer_evidence_ids=["ev2"],
+                ),
+            ],
+        )
+        records = flatten_to_detected_contradictions(result)
+
+        assert len(records) == 1
+        r = records[0]
+        assert r.element_name == "Approve Loan"
+        assert r.field_name == "temporal_shift"
+        assert r.resolution_value == "1-step approval"
+        assert "2023" in r.resolution_reason
+        assert "2024" in r.resolution_reason
+        assert r.evidence_ids == ["ev1", "ev2"]
+
+    def test_genuine_disagreement_flattened(self):
+        result = ContradictionResolutionResult(
+            genuine_disagreements=[
+                GenuineDisagreement(
+                    element_name="Review Contract",
+                    mismatch_type="sequence_mismatch",
+                    severity=0.8,
+                    preferred_value="Before Approval",
+                    alternative_value="After Approval",
+                    preferred_evidence_ids=["ev1"],
+                    alternative_evidence_ids=["ev2"],
+                    resolution_reason="Weight differential: 0.30",
+                ),
+            ],
+        )
+        records = flatten_to_detected_contradictions(result)
+
+        assert len(records) == 1
+        r = records[0]
+        assert r.element_name == "Review Contract"
+        assert r.field_name == "sequence_mismatch"
+        assert r.resolution_value == "Before Approval"
+        assert "Weight differential" in r.resolution_reason
+        assert r.evidence_ids == ["ev1", "ev2"]
+
+    def test_mixed_results_flattened(self):
+        """All three resolution types flatten correctly in one result."""
+        result = ContradictionResolutionResult(
+            naming_resolutions=[
+                NamingResolution(
+                    entity_name_a="Verify ID",
+                    entity_name_b="Verify Id",
+                    canonical_term="Verify ID",
+                    merged_evidence_ids=["ev1", "ev2"],
+                ),
+            ],
+            temporal_resolutions=[
+                TemporalResolution(
+                    element_name="KYC Review",
+                    older_value="v1",
+                    newer_value="v2",
+                    older_valid_to=2022,
+                    newer_valid_from=2023,
+                    older_evidence_ids=["ev3"],
+                    newer_evidence_ids=["ev4"],
+                ),
+            ],
+            genuine_disagreements=[
+                GenuineDisagreement(
+                    element_name="Process Invoice",
+                    mismatch_type="role_mismatch",
+                    severity=0.5,
+                    preferred_value="Analyst",
+                    alternative_value="Manager",
+                    preferred_evidence_ids=["ev5"],
+                    alternative_evidence_ids=["ev6"],
+                    resolution_reason="Role conflict",
+                ),
+            ],
+        )
+        records = flatten_to_detected_contradictions(result)
+
+        assert len(records) == 3
+        field_names = [r.field_name for r in records]
+        assert "naming_variant" in field_names
+        assert "temporal_shift" in field_names
+        assert "role_mismatch" in field_names
 
 
-class TestDetectContradictions:
-    """Tests for the detect_contradictions function."""
+class TestResolveContradictionsEmptyInput:
+    """Test resolve_contradictions with empty inputs (smoke test)."""
 
-    def test_no_contradictions_single_element(self):
-        entity = _make_entity("Process Invoice")
-        ev_id = str(uuid.uuid4())
-        item = _make_evidence_item(ev_id)
-        consensus = _make_consensus(entity, evidence_ids=[ev_id])
+    def test_empty_stubs_returns_empty_result(self):
+        result = resolve_contradictions([], [])
+        assert result.total_resolved == 0
+        assert result.total_unresolved == 0
+        assert result.naming_resolutions == []
+        assert result.temporal_resolutions == []
+        assert result.genuine_disagreements == []
 
-        result = detect_contradictions([consensus], [item])
+    def test_no_seed_terms_defaults_to_empty(self):
+        result = resolve_contradictions([], [], seed_terms=None)
+        assert result.total_resolved == 0
 
-        assert len(result) == 0
+    def test_single_stub_with_no_evidence_classifies_as_disagreement(self):
+        """A conflict stub with nonexistent evidence falls through to genuine disagreement."""
+        from src.pov.consensus import ConflictStub
 
-    def test_quality_divergence_detected(self):
-        """Elements with large quality score differences across sources."""
-        entity = _make_entity("Review Contract")
-        ev_id1 = str(uuid.uuid4())
-        ev_id2 = str(uuid.uuid4())
-        item1 = _make_evidence_item(ev_id1, quality_score=0.95)
-        item2 = _make_evidence_item(ev_id2, quality_score=0.20)
-        consensus = _make_consensus(entity, evidence_ids=[ev_id1, ev_id2])
-
-        result = detect_contradictions([consensus], [item1, item2])
-
-        # Should detect quality divergence (0.95 - 0.20 = 0.75 > 0.4 threshold)
-        quality_contradictions = [c for c in result if c.field_name == "quality_divergence"]
-        assert len(quality_contradictions) == 1
-        assert "quality_divergence" in quality_contradictions[0].field_name
-
-    def test_no_quality_divergence_small_difference(self):
-        """No contradiction when quality scores are similar."""
-        entity = _make_entity("Submit Form")
-        ev_id1 = str(uuid.uuid4())
-        ev_id2 = str(uuid.uuid4())
-        item1 = _make_evidence_item(ev_id1, quality_score=0.70)
-        item2 = _make_evidence_item(ev_id2, quality_score=0.80)
-        consensus = _make_consensus(entity, evidence_ids=[ev_id1, ev_id2])
-
-        result = detect_contradictions([consensus], [item1, item2])
-
-        quality_contradictions = [c for c in result if c.field_name == "quality_divergence"]
-        assert len(quality_contradictions) == 0
-
-    def test_contradiction_has_resolution(self):
-        """Detected contradictions include resolution information."""
-        entity = _make_entity("Approve Purchase")
-        ev_id1 = str(uuid.uuid4())
-        ev_id2 = str(uuid.uuid4())
-        item1 = _make_evidence_item(ev_id1, quality_score=0.95)
-        item2 = _make_evidence_item(ev_id2, quality_score=0.10)
-        consensus = _make_consensus(entity, evidence_ids=[ev_id1, ev_id2])
-
-        result = detect_contradictions([consensus], [item1, item2])
-
-        quality_contradictions = [c for c in result if c.field_name == "quality_divergence"]
-        assert len(quality_contradictions) == 1
-        c = quality_contradictions[0]
-        assert c.resolution_value is not None
-        assert c.resolution_reason is not None
-        assert len(c.evidence_ids) == 2
-
-    def test_empty_input(self):
-        result = detect_contradictions([], [])
-        assert result == []
-
-    def test_single_source_no_contradiction(self):
-        """Single source element cannot have quality divergence."""
-        entity = _make_entity("Solo Task")
-        ev_id = str(uuid.uuid4())
-        item = _make_evidence_item(ev_id)
-        consensus = _make_consensus(entity, evidence_ids=[ev_id])
-
-        result = detect_contradictions([consensus], [item])
-
-        quality_contradictions = [c for c in result if c.field_name == "quality_divergence"]
-        assert len(quality_contradictions) == 0
+        stub = ConflictStub(
+            element_name="Test Element",
+            preferred_value="A",
+            alternative_value="B",
+            preferred_evidence_ids=["nonexistent_1"],
+            alternative_evidence_ids=["nonexistent_2"],
+            disagreement_type="existence_mismatch",
+        )
+        result = resolve_contradictions([stub], [])
+        assert result.total_unresolved == 1
+        assert result.genuine_disagreements[0].element_name == "Test Element"

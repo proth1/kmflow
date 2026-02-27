@@ -60,6 +60,8 @@ def compute_severity(
         Severity score between 0.0 and 1.0.
     """
     criticality = MISMATCH_CRITICALITY.get(mismatch_type, 0.5)
+    if mismatch_type not in MISMATCH_CRITICALITY:
+        logger.warning("Unknown mismatch type %r, using default criticality 0.5", mismatch_type)
     weight_diff = abs(weight_a - weight_b)
     severity = criticality * 0.6 + weight_diff * 0.4
     return max(0.0, min(1.0, severity))
@@ -355,9 +357,7 @@ def classify_conflict(
     """
     # 1. Check naming variant
     if stub.preferred_value and stub.alternative_value:
-        canonical = detect_naming_variant(
-            stub.preferred_value, stub.alternative_value, seed_terms
-        )
+        canonical = detect_naming_variant(stub.preferred_value, stub.alternative_value, seed_terms)
         if canonical is not None:
             return ResolutionType.NAMING_VARIANT.value
 
@@ -448,9 +448,7 @@ def _resolve_as_naming_variant(
     Returns:
         NamingResolution with merged evidence.
     """
-    canonical = detect_naming_variant(
-        stub.preferred_value, stub.alternative_value, seed_terms
-    )
+    canonical = detect_naming_variant(stub.preferred_value, stub.alternative_value, seed_terms)
     merged_ids = list(set(stub.preferred_evidence_ids + stub.alternative_evidence_ids))
 
     return NamingResolution(
@@ -547,13 +545,11 @@ def _resolve_as_genuine_disagreement(
 
     severity = compute_severity(stub.disagreement_type, pref_weight, alt_weight)
 
-    # Determine epistemic frame metadata from evidence categories
-    pref_cat = _get_evidence_category(
-        stub.preferred_evidence_ids[0], evidence_map
-    ) if stub.preferred_evidence_ids else ""
-    alt_cat = _get_evidence_category(
-        stub.alternative_evidence_ids[0], evidence_map
-    ) if stub.alternative_evidence_ids else ""
+    # Determine epistemic frame metadata from representative evidence
+    pref_ev = _get_representative_evidence(stub.preferred_evidence_ids, evidence_map)
+    alt_ev = _get_representative_evidence(stub.alternative_evidence_ids, evidence_map)
+    pref_cat = str(pref_ev.category) if pref_ev else ""
+    alt_cat = str(alt_ev.category) if alt_ev else ""
 
     return GenuineDisagreement(
         element_name=stub.element_name,
@@ -651,3 +647,88 @@ def resolve_contradictions(
     )
 
     return result
+
+
+# -- Backward-compatible persistence bridge -----------------------------------
+
+
+@dataclass
+class DetectedContradiction:
+    """Flat contradiction record for database persistence.
+
+    Maps the three-way resolution result types into the Contradiction ORM
+    model's column schema (element_name, field_name, values, resolution_value,
+    resolution_reason, evidence_ids).
+    """
+
+    element_name: str = ""
+    field_name: str = ""
+    values: list[dict[str, str]] = field(default_factory=list)
+    resolution_value: str = ""
+    resolution_reason: str = ""
+    evidence_ids: list[str] = field(default_factory=list)
+
+
+def flatten_to_detected_contradictions(
+    result: ContradictionResolutionResult,
+) -> list[DetectedContradiction]:
+    """Convert three-way resolution results to flat persistence records.
+
+    Each NamingResolution, TemporalResolution, and GenuineDisagreement
+    is mapped to a DetectedContradiction for database persistence via
+    the Contradiction ORM model.
+
+    Args:
+        result: Output from resolve_contradictions.
+
+    Returns:
+        List of DetectedContradiction records ready for persistence.
+    """
+    records: list[DetectedContradiction] = []
+
+    for nr in result.naming_resolutions:
+        records.append(
+            DetectedContradiction(
+                element_name=nr.canonical_term,
+                field_name="naming_variant",
+                values=[
+                    {"name_a": nr.entity_name_a, "name_b": nr.entity_name_b},
+                ],
+                resolution_value=nr.canonical_term,
+                resolution_reason=f"Merged as naming variant of seed term '{nr.canonical_term}'",
+                evidence_ids=nr.merged_evidence_ids,
+            )
+        )
+
+    for tr in result.temporal_resolutions:
+        records.append(
+            DetectedContradiction(
+                element_name=tr.element_name,
+                field_name="temporal_shift",
+                values=[
+                    {"older": tr.older_value, "newer": tr.newer_value},
+                ],
+                resolution_value=tr.newer_value,
+                resolution_reason=(
+                    f"Temporal shift resolved: older valid_to={tr.older_valid_to}, "
+                    f"newer valid_from={tr.newer_valid_from}"
+                ),
+                evidence_ids=tr.older_evidence_ids + tr.newer_evidence_ids,
+            )
+        )
+
+    for gd in result.genuine_disagreements:
+        records.append(
+            DetectedContradiction(
+                element_name=gd.element_name,
+                field_name=gd.mismatch_type,
+                values=[
+                    {"preferred": gd.preferred_value, "alternative": gd.alternative_value},
+                ],
+                resolution_value=gd.preferred_value,
+                resolution_reason=gd.resolution_reason,
+                evidence_ids=gd.preferred_evidence_ids + gd.alternative_evidence_ids,
+            )
+        )
+
+    return records

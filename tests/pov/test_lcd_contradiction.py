@@ -230,11 +230,13 @@ class TestTemporalShiftResolvedViaBitemporalValidity:
     def test_temporal_shift_detected_from_date_gap(self) -> None:
         """Given two high-quality docs with 3-year gap, temporal shift detected."""
         ev_old = _make_evidence(
-            "ev-old", category="documents",
+            "ev-old",
+            category="documents",
             source_date=datetime(2022, 6, 15, tzinfo=UTC),
         )
         ev_new = _make_evidence(
-            "ev-new", category="documents",
+            "ev-new",
+            category="documents",
             source_date=datetime(2025, 3, 1, tzinfo=UTC),
         )
 
@@ -243,11 +245,13 @@ class TestTemporalShiftResolvedViaBitemporalValidity:
     def test_temporal_shift_not_detected_for_small_gap(self) -> None:
         """No temporal shift when sources are within 1 year."""
         ev_a = _make_evidence(
-            "ev-a", category="documents",
+            "ev-a",
+            category="documents",
             source_date=datetime(2024, 1, 1, tzinfo=UTC),
         )
         ev_b = _make_evidence(
-            "ev-b", category="documents",
+            "ev-b",
+            category="documents",
             source_date=datetime(2025, 1, 1, tzinfo=UTC),
         )
 
@@ -256,11 +260,13 @@ class TestTemporalShiftResolvedViaBitemporalValidity:
     def test_temporal_shift_only_for_document_categories(self) -> None:
         """Temporal shift requires document-class evidence on both sides."""
         ev_doc = _make_evidence(
-            "ev-doc", category="documents",
+            "ev-doc",
+            category="documents",
             source_date=datetime(2020, 1, 1, tzinfo=UTC),
         )
         ev_sys = _make_evidence(
-            "ev-sys", category="structured_data",
+            "ev-sys",
+            category="structured_data",
             source_date=datetime(2025, 1, 1, tzinfo=UTC),
         )
 
@@ -269,11 +275,13 @@ class TestTemporalShiftResolvedViaBitemporalValidity:
     def test_temporal_resolution_stamps_validity(self) -> None:
         """Bitemporal validity stamps: older gets valid_to, newer gets valid_from."""
         ev_old = _make_evidence(
-            "ev-old", category="documents",
+            "ev-old",
+            category="documents",
             source_date=datetime(2022, 6, 15, tzinfo=UTC),
         )
         ev_new = _make_evidence(
-            "ev-new", category="documents",
+            "ev-new",
+            category="documents",
             source_date=datetime(2025, 3, 1, tzinfo=UTC),
         )
 
@@ -295,11 +303,13 @@ class TestTemporalShiftResolvedViaBitemporalValidity:
     def test_temporal_shift_creates_no_conflict_object(self) -> None:
         """Temporal shifts are resolvable — no ConflictObject created."""
         ev_old = _make_evidence(
-            "ev-old", category="documents",
+            "ev-old",
+            category="documents",
             source_date=datetime(2022, 1, 1, tzinfo=UTC),
         )
         ev_new = _make_evidence(
-            "ev-new", category="bpm_process_models",
+            "ev-new",
+            category="bpm_process_models",
             source_date=datetime(2025, 1, 1, tzinfo=UTC),
         )
 
@@ -316,11 +326,13 @@ class TestTemporalShiftResolvedViaBitemporalValidity:
     def test_temporal_resolution_preserves_evidence_ids(self) -> None:
         """Both source evidence links preserved on temporal resolution."""
         ev_old = _make_evidence(
-            "ev-old", category="documents",
+            "ev-old",
+            category="documents",
             source_date=datetime(2022, 1, 1, tzinfo=UTC),
         )
         ev_new = _make_evidence(
-            "ev-new", category="documents",
+            "ev-new",
+            category="documents",
             source_date=datetime(2025, 1, 1, tzinfo=UTC),
         )
 
@@ -346,11 +358,13 @@ class TestGenuineDisagreementWithEpistemicFrames:
     def test_genuine_disagreement_creates_conflict_object(self) -> None:
         """When naming variant and temporal shift don't apply, genuine disagreement."""
         ev_interview = _make_evidence(
-            "ev-sme", category="audio",
+            "ev-sme",
+            category="audio",
             source_date=datetime(2025, 1, 1, tzinfo=UTC),
         )
         ev_system = _make_evidence(
-            "ev-sys", category="structured_data",
+            "ev-sys",
+            category="structured_data",
             source_date=datetime(2025, 1, 1, tzinfo=UTC),
         )
 
