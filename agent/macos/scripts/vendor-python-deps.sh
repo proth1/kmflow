@@ -120,28 +120,16 @@ PIP_CMD=$(find_pip)
 log "Using pip: ${PIP_CMD}"
 
 # ---------------------------------------------------------------------------
-# Parse top-level requirements from file, stripping comments and blank lines
-# ---------------------------------------------------------------------------
-parse_requirements() {
-    local req_file="$1"
-    grep -v '^\s*#' "$req_file" \
-        | grep -v '^\s*$' \
-        | sed 's/#.*//' \
-        | tr -d ' '
-}
-
-# ---------------------------------------------------------------------------
 # Install packages
 # ---------------------------------------------------------------------------
 install_packages() {
     local site_dir="$1"
-    shift
-    local packages=("$@")
+    local req_file="$2"
 
     log "Installing into: ${site_dir}"
-    log "Packages: ${packages[*]}"
 
     # pip install arguments:
+    #   -r                 read packages from requirements file (handles --hash, \-continuations)
     #   --target           write packages into our site-packages dir
     #   --python-version   cross-version: target the embedded Python
     #   --platform         cross-platform: only fetch wheels for target OS/arch
@@ -151,7 +139,7 @@ install_packages() {
     #   --require-hashes   verify package integrity against hashes in requirements.txt
     #                      (requires all packages and their deps to have hashes listed)
     local hash_flag=""
-    if grep -q -- '--hash' "$REQUIREMENTS_FILE" 2>/dev/null; then
+    if grep -q -- '--hash' "$req_file" 2>/dev/null; then
         hash_flag="--require-hashes"
         log "Hash verification enabled (requirements.txt contains --hash entries)"
     else
@@ -167,8 +155,8 @@ install_packages() {
         --upgrade \
         --quiet \
         $hash_flag \
-        "${packages[@]}" \
-        || die "pip install failed for: ${packages[*]}"
+        -r "$req_file" \
+        || die "pip install failed for requirements in: ${req_file}"
 }
 
 # ---------------------------------------------------------------------------
@@ -222,23 +210,17 @@ print_manifest() {
 main() {
     mkdir -p "$SITE_PACKAGES"
 
-    # Read top-level requirements
-    mapfile -t TOP_LEVEL_PKGS < <(parse_requirements "$REQUIREMENTS_FILE")
-
-    if [[ ${#TOP_LEVEL_PKGS[@]} -eq 0 ]]; then
-        die "No packages found in requirements file: ${REQUIREMENTS_FILE}"
+    if [[ ! -s "$REQUIREMENTS_FILE" ]]; then
+        die "Requirements file is empty or missing: ${REQUIREMENTS_FILE}"
     fi
 
     log "Requirements file: ${REQUIREMENTS_FILE}"
-    log "Top-level packages: ${TOP_LEVEL_PKGS[*]}"
     log "Target platform: ${PIP_PLATFORM}"
     log "Target Python: ${PYTHON_VERSION_TAG}"
 
-    # Install all top-level packages in one pip invocation.
-    # pip resolves the full transitive dependency graph, so we don't need to
-    # manually enumerate transitives — but they are documented in TRANSITIVE_DEPS
-    # at the top of this script for reference.
-    install_packages "$SITE_PACKAGES" "${TOP_LEVEL_PKGS[@]}"
+    # Install all packages in one pip invocation using -r to handle
+    # --hash entries and line continuations natively.
+    install_packages "$SITE_PACKAGES" "$REQUIREMENTS_FILE"
 
     cleanup_site_packages "$SITE_PACKAGES"
     print_manifest "$SITE_PACKAGES"

@@ -8,7 +8,7 @@
 /// This controller opens a **read-only** SQLite connection so it cannot
 /// corrupt the live capture buffer.
 
-import CommonCrypto
+import CryptoKit
 import Foundation
 import Security
 import SQLite3
@@ -292,39 +292,28 @@ public final class TransparencyLogController: ObservableObject {
             return value // plaintext or no key — return as-is
         }
 
-        let nonceSize = 12
-        let tagSize = 16
-        let nonce = cipherData.prefix(nonceSize)
-        let ciphertextAndTag = cipherData.dropFirst(nonceSize)
-        let ciphertext = ciphertextAndTag.dropLast(tagSize)
-        let tag = ciphertextAndTag.suffix(tagSize)
+        do {
+            let nonceSize = 12
+            let tagSize = 16
+            let nonce = try AES.GCM.Nonce(data: cipherData.prefix(nonceSize))
+            let ciphertextAndTag = cipherData.dropFirst(nonceSize)
+            let ciphertext = ciphertextAndTag.dropLast(tagSize)
+            let tag = ciphertextAndTag.suffix(tagSize)
 
-        // Use CommonCrypto's CCCryptorGCM for AES-256-GCM decryption
-        var plaintext = Data(count: ciphertext.count)
-        var tagBuffer = [UInt8](tag)
+            let sealedBox = try AES.GCM.SealedBox(
+                nonce: nonce,
+                ciphertext: ciphertext,
+                tag: tag
+            )
+            let symmetricKey = SymmetricKey(data: key)
+            let plaintext = try AES.GCM.open(sealedBox, using: symmetricKey)
 
-        let status = plaintext.withUnsafeMutableBytes { ptPtr in
-            ciphertext.withUnsafeBytes { ctPtr in
-                nonce.withUnsafeBytes { noncePtr in
-                    key.withUnsafeBytes { keyPtr in
-                        CCCryptorGCMOneshotDecrypt(
-                            CCAlgorithm(kCCAlgorithmAES),
-                            keyPtr.baseAddress!, key.count,
-                            noncePtr.baseAddress!, nonceSize,
-                            nil, 0, // no additional authenticated data
-                            ctPtr.baseAddress!, ciphertext.count,
-                            ptPtr.baseAddress!,
-                            &tagBuffer, tagSize
-                        )
-                    }
-                }
+            if let decrypted = String(data: plaintext, encoding: .utf8) {
+                return decrypted
             }
+        } catch {
+            // Decryption failed — likely plaintext data from before encryption was enabled
         }
-
-        if status == kCCSuccess, let decrypted = String(data: plaintext, encoding: .utf8) {
-            return decrypted
-        }
-        // Decryption failed — likely plaintext data from before encryption was enabled
         return value
     }
 }
