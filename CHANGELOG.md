@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.136] - 2026-02-27
+### Added
+- Epistemic Action Planner: GET endpoint for cached plans, shelf request linkage fix, engagement-level IDOR guard, pagination, shelf_request_id in response, 10 BDD tests (#389)
+
 ## [2026.02.135] - 2026-02-27
 ### Added
 - Illumination Planner: targeted evidence acquisition with FORM_ACTION_TYPE_MAP (9 forms → 3 action types), idempotency guard (409 on duplicate), progress tracking, segment completion with recalculation trigger, 11 BDD tests (#396)

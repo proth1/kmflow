@@ -8,6 +8,7 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #453 merged** — Epistemic Action Planner: GET endpoint, shelf linkage, IDOR guard, pagination, shelf_request_id in response, 10 tests (#389) (v2026.02.136)
 - **PR #452 merged** — Illumination Planner: targeted evidence acquisition, 9-form action mapping, idempotency guard, progress tracking, segment completion, 11 tests (#396) (v2026.02.135)
 - **PR #451 merged** — Dark Room backlog: prioritized Dark segments, missing knowledge forms, Neo4j form coverage, engagement authz, configurable threshold, 12 tests (#394) (v2026.02.134)
 - **PR #450 merged** — Evidence gap ranking: per-gap uplift projection, cross-scenario shared gaps (correlated subquery), Pearson correlation tracking, audit logging, 12 tests (#393) (v2026.02.133)
