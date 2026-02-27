@@ -45,6 +45,7 @@ from src.api.routes import (
     engagements,
     event_spine,
     evidence,
+    evidence_coverage,
     evidence_gap_ranking,
     gap_probes,
     gdpr,
@@ -313,6 +314,9 @@ def create_app() -> FastAPI:
 
     # -- LLM Audit Trail Routes (Story #386) ---
     app.include_router(llm_audit.router)
+
+    # -- Evidence Coverage Routes (Story #385) ---
+    app.include_router(evidence_coverage.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)
