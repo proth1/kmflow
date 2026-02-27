@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 from fastapi.testclient import TestClient
@@ -54,7 +55,6 @@ class TestListSurveyClaims:
         claim.claim_text = "Test claim"
         claim.certainty_tier = CertaintyTier.SUSPECTED
         claim.proof_expectation = "Audit log"
-        from datetime import UTC, datetime
         claim.created_at = datetime(2026, 2, 27, tzinfo=UTC)
 
         list_result = MagicMock()
@@ -94,6 +94,52 @@ class TestListSurveyClaims:
         assert resp.json()["total_count"] == 0
 
 
+class TestGetSurveyClaim:
+    def test_returns_200_for_existing_claim(self) -> None:
+        mock_session = AsyncMock()
+
+        claim = MagicMock(spec=SurveyClaim)
+        claim.id = CLAIM_ID
+        claim.engagement_id = ENGAGEMENT_ID
+        claim.session_id = uuid.uuid4()
+        claim.probe_type = ProbeType.EXISTENCE
+        claim.respondent_role = "operations_team"
+        claim.claim_text = "Test claim"
+        claim.certainty_tier = CertaintyTier.SUSPECTED
+        claim.proof_expectation = "Audit log"
+        claim.created_at = datetime(2026, 2, 27, tzinfo=UTC)
+
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = claim
+        mock_session.execute = AsyncMock(return_value=result)
+
+        client = _make_app(mock_session)
+        resp = client.get(
+            f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims/{CLAIM_ID}"
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["id"] == str(CLAIM_ID)
+        assert data["certainty_tier"] == "suspected"
+
+    def test_returns_404_for_wrong_engagement(self) -> None:
+        mock_session = AsyncMock()
+
+        claim = MagicMock(spec=SurveyClaim)
+        claim.id = CLAIM_ID
+        claim.engagement_id = uuid.uuid4()  # Different engagement
+
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = claim
+        mock_session.execute = AsyncMock(return_value=result)
+
+        client = _make_app(mock_session)
+        resp = client.get(
+            f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims/{CLAIM_ID}"
+        )
+        assert resp.status_code == 404
+
+
 class TestUpdateSurveyClaim:
     def test_returns_200_on_tier_change(self) -> None:
         mock_session = AsyncMock()
@@ -109,7 +155,7 @@ class TestUpdateSurveyClaim:
 
         client = _make_app(mock_session)
         resp = client.patch(
-            f"/api/v1/survey-claims/{CLAIM_ID}",
+            f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims/{CLAIM_ID}",
             json={"certainty_tier": "known"},
         )
         assert resp.status_code == 200
@@ -125,7 +171,7 @@ class TestUpdateSurveyClaim:
 
         client = _make_app(mock_session)
         resp = client.patch(
-            f"/api/v1/survey-claims/{uuid.uuid4()}",
+            f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims/{uuid.uuid4()}",
             json={"certainty_tier": "known"},
         )
         assert resp.status_code == 404
@@ -149,7 +195,7 @@ class TestCreateShelfDataRequest:
 
         client = _make_app(mock_session)
         resp = client.post(
-            f"/api/v1/survey-claims/{CLAIM_ID}/shelf-data-request"
+            f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims/{CLAIM_ID}/shelf-data-request"
         )
         assert resp.status_code == 201
 
@@ -167,6 +213,54 @@ class TestCreateShelfDataRequest:
 
         client = _make_app(mock_session)
         resp = client.post(
-            f"/api/v1/survey-claims/{CLAIM_ID}/shelf-data-request"
+            f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims/{CLAIM_ID}/shelf-data-request"
         )
         assert resp.status_code == 422
+
+
+class TestGetClaimHistory:
+    def test_returns_200_with_history(self) -> None:
+        mock_session = AsyncMock()
+
+        claim = MagicMock(spec=SurveyClaim)
+        claim.id = CLAIM_ID
+        claim.engagement_id = ENGAGEMENT_ID
+
+        # First execute: get_claim, second: get_claim_history
+        claim_result = MagicMock()
+        claim_result.scalar_one_or_none.return_value = claim
+
+        history_result = MagicMock()
+        history_scalars = MagicMock()
+        history_scalars.all.return_value = []
+        history_result.scalars.return_value = history_scalars
+
+        mock_session.execute = AsyncMock(
+            side_effect=[claim_result, history_result]
+        )
+
+        client = _make_app(mock_session)
+        resp = client.get(
+            f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims/{CLAIM_ID}/history"
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["claim_id"] == str(CLAIM_ID)
+        assert data["history"] == []
+
+    def test_returns_404_for_wrong_engagement(self) -> None:
+        mock_session = AsyncMock()
+
+        claim = MagicMock(spec=SurveyClaim)
+        claim.id = CLAIM_ID
+        claim.engagement_id = uuid.uuid4()  # Different engagement
+
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = claim
+        mock_session.execute = AsyncMock(return_value=result)
+
+        client = _make_app(mock_session)
+        resp = client.get(
+            f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims/{CLAIM_ID}/history"
+        )
+        assert resp.status_code == 404
