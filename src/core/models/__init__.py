@@ -64,9 +64,11 @@ from src.core.models.pattern import (
     PatternLibraryEntry,
 )
 from src.core.models.pov import (
+    BrightnessClassification,
     Contradiction,
     CorroborationLevel,
     EvidenceGap,
+    EvidenceGrade,
     GapSeverity,
     GapType,
     ProcessElement,
@@ -172,9 +174,11 @@ __all__ = [
     "PatternCategory",
     "PatternLibraryEntry",
     # pov
+    "BrightnessClassification",
     "Contradiction",
     "CorroborationLevel",
     "EvidenceGap",
+    "EvidenceGrade",
     "GapSeverity",
     "GapType",
     "ProcessElement",
