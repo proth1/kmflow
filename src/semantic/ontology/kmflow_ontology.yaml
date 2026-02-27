@@ -7,12 +7,12 @@
 # Version history:
 #   1.0.0 - Initial formalization from code constants (Phase A)
 
-version: "1.0.0"
+version: "2.0.0"
 description: >
   KMFlow process intelligence knowledge graph ontology. Captures activities,
   decisions, roles, systems, evidence, documents, processes, policies,
   controls, regulations, TOM definitions, and gaps identified during
-  consulting engagements.
+  consulting engagements. Reconciled with PRD v2.1 Section 6.2.
 
 # ---------------------------------------------------------------------------
 # Node Types
@@ -145,6 +145,60 @@ node_types:
       - app_category
       - platform
 
+  DataObject:
+    description: An input or output data artifact consumed or produced by activities.
+    extractable: true
+    entity_type: data_object
+    required_properties:
+      - name
+      - engagement_id
+    optional_properties:
+      - confidence
+      - aliases
+
+  Assertion:
+    description: A knowledge claim about the process, linked to evidence and epistemic frames.
+    extractable: false
+    required_properties:
+      - name
+      - engagement_id
+    optional_properties:
+      - frame_kind
+      - authority_scope
+      - access_policy
+
+  Event:
+    description: A BPMN event (start, intermediate, end) in a process flow.
+    extractable: true
+    entity_type: event
+    required_properties:
+      - name
+      - engagement_id
+    optional_properties:
+      - event_type
+      - confidence
+
+  Gateway:
+    description: A BPMN gateway (exclusive, parallel, inclusive) controlling process flow.
+    extractable: true
+    entity_type: gateway
+    required_properties:
+      - name
+      - engagement_id
+    optional_properties:
+      - gateway_type
+      - confidence
+
+  SurveyClaim:
+    description: A claim from a knowledge survey or interview, pending validation.
+    extractable: false
+    required_properties:
+      - name
+      - engagement_id
+    optional_properties:
+      - survey_id
+      - respondent_role
+
   UserAction:
     description: An aggregated user action observed via desktop task mining.
     extractable: false
@@ -207,15 +261,21 @@ relationship_types:
       - TOM
 
   CONTRADICTS:
-    description: Two pieces of evidence or elements contradict each other.
+    description: Two pieces of evidence or elements contradict each other. Bidirectional.
     valid_from:
       - Evidence
       - Activity
       - Document
+      - Assertion
+      - SurveyClaim
     valid_to:
       - Evidence
       - Activity
       - Document
+      - Assertion
+      - SurveyClaim
+    constraints:
+      bidirectional: true
 
   MITIGATES:
     description: A control mitigates a gap or risk.
@@ -328,6 +388,97 @@ relationship_types:
       - Application
     valid_to:
       - System
+
+  # -------------------------------------------------------------------------
+  # PRD v2.1 Controlled Edge Vocabulary (12 types, Section 6.2)
+  # -------------------------------------------------------------------------
+  PRECEDES:
+    description: Activity A happens before Activity B. Acyclic within variant.
+    valid_from:
+      - Activity
+    valid_to:
+      - Activity
+    constraints:
+      acyclic_within: variant_id
+    optional_properties:
+      - variant_id
+      - frequency
+
+  TRIGGERS:
+    description: Event or gateway causes an Activity to start.
+    valid_from:
+      - Event
+      - Gateway
+    valid_to:
+      - Activity
+
+  DEPENDS_ON:
+    description: Activity A requires Activity B to complete first. Acyclic.
+    valid_from:
+      - Activity
+    valid_to:
+      - Activity
+    constraints:
+      acyclic_within: variant_id
+
+  CONSUMES:
+    description: Activity uses a DataObject as input.
+    valid_from:
+      - Activity
+    valid_to:
+      - DataObject
+
+  PRODUCES:
+    description: Activity generates a DataObject as output.
+    valid_from:
+      - Activity
+    valid_to:
+      - DataObject
+
+  PERFORMED_BY:
+    description: Activity is performed by a Role.
+    valid_from:
+      - Activity
+    valid_to:
+      - Role
+    optional_properties:
+      - confidence
+
+  EVIDENCED_BY:
+    description: Assertion is supported by an Evidence item.
+    valid_from:
+      - Assertion
+      - Activity
+      - Process
+    valid_to:
+      - Evidence
+
+  SUPERSEDES:
+    description: Assertion X replaces Assertion Y. Requires bitemporal validity.
+    valid_from:
+      - Assertion
+    valid_to:
+      - Assertion
+    optional_properties:
+      - valid_from_time
+      - retracted_at
+
+  DECOMPOSES_INTO:
+    description: Process breaks down into Subprocess. Hierarchical.
+    valid_from:
+      - Process
+    valid_to:
+      - Subprocess
+      - Activity
+
+  VARIANT_OF:
+    description: Activity A is an alternative to Activity B. Bidirectional.
+    valid_from:
+      - Activity
+    valid_to:
+      - Activity
+    constraints:
+      bidirectional: true
 
 # ---------------------------------------------------------------------------
 # Evidence Categories (mirrors EvidenceCategory enum for reference)
