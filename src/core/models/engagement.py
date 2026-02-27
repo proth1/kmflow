@@ -80,6 +80,9 @@ class Engagement(Base):
     retention_days: Mapped[int | None] = mapped_column(
         BigInteger, nullable=True, default=365
     )  # 365-day default satisfies data minimization; None = indefinite (not recommended)
+    quality_weights: Mapped[dict | None] = mapped_column(
+        JSON, nullable=True, default=None
+    )  # Engagement-level quality scoring weights; None = use system defaults
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
