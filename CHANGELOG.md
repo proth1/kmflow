@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.111] - 2026-02-27
+### Added
+- Monitoring dashboard aggregation endpoint: GET /api/v1/monitoring/dashboard/{engagement_id} with date range filtering (default 7 days), agent status aggregation from TaskMiningAgent, deviation counts by severity, evidence flow rate (items/min last 5 min), alert summary, compliance score trend from MetricReading+SuccessMetric, trend direction computation (half-average comparison), 29 BDD tests (#371)
+
 ## [2026.02.110] - 2026-02-27
 ### Added
 - Dark-Room Shrink Rate tracking dashboard: DarkRoomSnapshot model with unique constraint on (engagement_id, version_number), per-version shrink rate computation, below-target alert generation with dark segment names, illumination timeline tracking dark→dim/bright transitions, GET /api/v1/validation/dark-room-shrink with engagement access control, Alembic migration 044, 42 BDD tests including endpoint integration tests (#370)

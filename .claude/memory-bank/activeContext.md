@@ -8,6 +8,12 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #427 merged** — Monitoring dashboard aggregation endpoint (#371) (v2026.02.111)
+  - Dashboard aggregation service with trend computation, deviation aggregation
+  - GET /api/v1/monitoring/dashboard/{engagement_id} with date range filtering
+  - Agent statuses, deviation counts by severity, evidence flow rate, alert summary, compliance trend
+  - PR review: APPROVE (no critical/high findings, only medium suggestions)
+  - 29 BDD tests
 - **PR #426 merged** — Dark-Room Shrink Rate tracking dashboard (#370) (v2026.02.110)
   - DarkRoomSnapshot model with unique constraint on (engagement_id, version_number)
   - Per-version shrink rate computation, below-target alert generation with dark segment names
