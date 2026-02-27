@@ -82,6 +82,7 @@ def upgrade() -> None:
             sa.ForeignKey("engagements.id", ondelete="CASCADE"),
             nullable=False,
         ),
+        sa.Column("created_by", UUID(as_uuid=True), nullable=True),
         sa.Column("retention_days", sa.Integer, nullable=False, server_default="365"),
         sa.Column(
             "action",

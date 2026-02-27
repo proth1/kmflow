@@ -104,6 +104,9 @@ class RetentionPolicy(Base):
     action: Mapped[RetentionAction] = mapped_column(
         Enum(RetentionAction), nullable=False, default=RetentionAction.ARCHIVE
     )
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

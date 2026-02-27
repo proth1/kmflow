@@ -123,6 +123,63 @@ class TestRetentionPolicyEnforcement:
         assert old_item.validation_status == ValidationStatus.ARCHIVED
 
     @pytest.mark.asyncio
+    async def test_enforce_retention_deletes_expired_items(self) -> None:
+        """Given DELETE retention, When enforcement runs,
+        Then expired items are deleted from session."""
+        mock_session = AsyncMock()
+
+        policy = MagicMock(spec=RetentionPolicy)
+        policy.engagement_id = ENGAGEMENT_ID
+        policy.retention_days = 30
+        policy.action = RetentionAction.DELETE
+
+        policy_result = MagicMock()
+        policy_result.scalar_one_or_none.return_value = policy
+
+        old_item = MagicMock(spec=EvidenceItem)
+        old_item.id = uuid.uuid4()
+        old_item.validation_status = ValidationStatus.ACTIVE
+
+        items_result = MagicMock()
+        items_scalars = MagicMock()
+        items_scalars.all.return_value = [old_item]
+        items_result.scalars.return_value = items_scalars
+
+        mock_session.execute = AsyncMock(side_effect=[policy_result, items_result])
+
+        service = GdprComplianceService(mock_session)
+        result = await service.enforce_retention(ENGAGEMENT_ID)
+
+        assert result["affected_count"] == 1
+        assert result["action"] == "delete"
+        mock_session.delete.assert_awaited_once_with(old_item)
+
+    @pytest.mark.asyncio
+    async def test_update_existing_retention_policy(self) -> None:
+        """When updating an existing policy, the existing record is modified."""
+        mock_session = AsyncMock()
+
+        existing = MagicMock(spec=RetentionPolicy)
+        existing.id = uuid.uuid4()
+        existing.engagement_id = ENGAGEMENT_ID
+        existing.retention_days = 90
+        existing.action = RetentionAction.ARCHIVE
+
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = existing
+        mock_session.execute = AsyncMock(return_value=result)
+
+        service = GdprComplianceService(mock_session)
+        policy = await service.set_retention_policy(
+            engagement_id=ENGAGEMENT_ID,
+            retention_days=180,
+            action=RetentionAction.DELETE,
+        )
+
+        assert policy.retention_days == 180
+        assert policy.action == RetentionAction.DELETE
+
+    @pytest.mark.asyncio
     async def test_enforce_retention_no_policy(self) -> None:
         """When no retention policy configured, return 0 affected."""
         mock_session = AsyncMock()

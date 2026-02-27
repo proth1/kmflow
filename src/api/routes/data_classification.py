@@ -61,6 +61,7 @@ async def set_retention_policy(
         engagement_id=engagement_id,
         retention_days=payload.retention_days,
         action=payload.action,
+        created_by=user.id,
     )
     return {
         "id": str(policy.id),

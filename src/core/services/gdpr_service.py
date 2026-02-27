@@ -75,6 +75,7 @@ class GdprComplianceService:
         engagement_id: uuid.UUID,
         retention_days: int,
         action: RetentionAction = RetentionAction.ARCHIVE,
+        created_by: uuid.UUID | None = None,
     ) -> RetentionPolicy:
         """Set or update the retention policy for an engagement."""
         existing = await self.get_retention_policy(engagement_id)
@@ -88,6 +89,7 @@ class GdprComplianceService:
             engagement_id=engagement_id,
             retention_days=retention_days,
             action=action,
+            created_by=created_by,
         )
         self._session.add(policy)
         await self._session.flush()
@@ -123,6 +125,8 @@ class GdprComplianceService:
         for item in expired_items:
             if policy.action == RetentionAction.ARCHIVE:
                 item.validation_status = ValidationStatus.ARCHIVED
+            elif policy.action == RetentionAction.DELETE:
+                await self._session.delete(item)
             affected_ids.append(str(item.id))
 
         if expired_items:

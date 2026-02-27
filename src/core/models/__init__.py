@@ -270,11 +270,6 @@ __all__ = [
     "IncidentEvent",
     "IncidentEventType",
     "IncidentStatus",
-    # gdpr
-    "DataProcessingActivity",
-    "LawfulBasis",
-    "RetentionAction",
-    "RetentionPolicy",
     # governance
     "ComplianceAssessment",
     "ComplianceLevel",
