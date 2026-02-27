@@ -3,6 +3,14 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.103] - 2026-02-27
+### Added
+- OAuth2/OIDC authentication and RBAC authorization BDD tests: 47 tests covering JWT validation, token rejection, role boundaries for all 5 roles, engagement access control, permission matrix completeness (#313)
+
+## [2026.02.102] - 2026-02-27
+### Added
+- PostgreSQL Row-Level Security for engagement data isolation: RLS policies on 32 engagement-scoped tables, table name validation, WITH CHECK on UPDATE, session context management, admin bypass mechanism, Alembic migration 039, 50 BDD tests (#311)
+
 ## [2026.02.101] - 2026-02-27
 ### Added
 - Client evidence submission portal with token-based intake: time-limited UUID tokens, Levenshtein auto-matching, bulk upload progress tracking, intake API routes, 41 BDD tests (#308)

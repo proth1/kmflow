@@ -8,6 +8,17 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #419 merged** — OAuth2/OIDC auth and RBAC BDD tests (#313) (v2026.02.103)
+  - 47 BDD tests: JWT validation, token rejection, role boundaries for all 5 roles
+  - Permission matrix completeness, engagement access control, key rotation
+- **PR #418 merged** — PostgreSQL RLS for engagement data isolation (#311) (v2026.02.102)
+  - RLS policies on 32 engagement-scoped tables with FORCE ROW LEVEL SECURITY
+  - Table name validation regex (SQL injection prevention)
+  - WITH CHECK on UPDATE policy (prevents engagement_id mutation)
+  - SET LOCAL app.current_engagement_id (transaction-scoped)
+  - Admin bypass: SET LOCAL row_security = off
+  - Alembic migration 039, 50 BDD tests
+  - PR review: REQUEST CHANGES → 2 CRITICAL fixed (wrong table names, missing tables), 2 HIGH fixed (validation, WITH CHECK)
 - **PR #417 merged** — Client evidence submission portal with token-based intake (#308) (v2026.02.101)
   - ShelfDataRequestToken model with UUID token, expiry, usage count
   - Levenshtein auto-matching for filenames to request items (threshold 0.8)

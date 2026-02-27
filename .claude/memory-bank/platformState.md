@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.101
+**Version**: 2026.02.103
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -9,7 +9,7 @@
 |--------|-------|
 | SQLAlchemy Models | 78+ classes across 12 modules |
 | API Routes | 25+ routers |
-| Test Count | 2614 backend + 206 frontend passing |
+| Test Count | 2711 backend + 206 frontend passing |
 | Coverage | >80% |
 | Python Version | 3.12+ |
 | FastAPI Version | 0.109+ |
@@ -27,6 +27,8 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.103 | 2026-02-27 | OAuth2/OIDC auth and RBAC BDD tests: JWT validation, role boundaries, engagement access (#313) |
+| 2026.02.102 | 2026-02-27 | PostgreSQL RLS: 32 engagement-scoped tables, table name validation, WITH CHECK, Alembic 039 (#311) |
 | 2026.02.101 | 2026-02-27 | Client evidence submission portal: token-based intake, Levenshtein auto-matching, bulk upload progress (#308) |
 | 2026.02.100 | 2026-02-27 | Cross-source triangulation: evidence planes, coverage/agreement factors, cross-plane bonus, conflict detection (#306) |
 | 2026.02.099 | 2026-02-27 | Evidence aggregation and entity extraction: seed term guided, duplicate candidate detection, provenance maps (#303) |
