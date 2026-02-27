@@ -25,14 +25,19 @@ class EngagementStatus(enum.StrEnum):
 
 
 class ShelfRequestStatus(enum.StrEnum):
-    """Status values for a shelf data request."""
+    """Status values for a shelf data request.
+
+    Lifecycle: DRAFT → OPEN → IN_PROGRESS → COMPLETE → (CANCELLED | OVERDUE)
+    Legacy values SENT and COMPLETED are retained for backward compatibility
+    with existing database rows. New code should use COMPLETE, not COMPLETED.
+    """
 
     DRAFT = "draft"
     OPEN = "open"
-    SENT = "sent"
+    SENT = "sent"  # Legacy: retained for existing rows
     IN_PROGRESS = "in_progress"
     COMPLETE = "complete"
-    COMPLETED = "completed"
+    COMPLETED = "completed"  # Legacy: use COMPLETE for new records
     CANCELLED = "cancelled"
     OVERDUE = "overdue"
 
@@ -217,7 +222,7 @@ class FollowUpReminder(Base):
     item_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("shelf_data_request_items.id", ondelete="CASCADE"), nullable=False
     )
-    reminder_type: Mapped[str] = mapped_column(String(50), default="overdue", nullable=False)
+    reminder_type: Mapped[str] = mapped_column(String(50), default="overdue", server_default="overdue", nullable=False)
     sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships

@@ -7,6 +7,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from src.core.models.engagement import ShelfRequestItemPriority
 from src.core.models.evidence import EvidenceCategory
 
 
@@ -16,7 +17,7 @@ class ShelfDataRequestItemCreate(BaseModel):
     category: EvidenceCategory
     item_name: str = Field(min_length=1, max_length=512)
     description: str | None = None
-    priority: str = "medium"
+    priority: ShelfRequestItemPriority = ShelfRequestItemPriority.MEDIUM
 
 
 class ShelfDataRequestCreate(BaseModel):
