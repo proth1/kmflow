@@ -144,7 +144,8 @@ async def generate_pov(
         )
 
         # Step 4: Build consensus
-        consensus = build_consensus(triangulated, aggregated.evidence_items)
+        consensus_result = build_consensus(triangulated, aggregated.evidence_items)
+        consensus = consensus_result.elements
 
         # Step 5: Detect and resolve contradictions
         contradictions = detect_contradictions(consensus, aggregated.evidence_items)

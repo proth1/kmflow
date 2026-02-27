@@ -16,13 +16,23 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 
 from src.core.models import EvidenceItem
-from src.pov.constants import DEFAULT_EVIDENCE_WEIGHT, EVIDENCE_TYPE_WEIGHTS
+from src.pov.constants import (
+    BRIGHTNESS_BRIGHT_THRESHOLD,
+    BRIGHTNESS_DIM_THRESHOLD,
+    DEFAULT_EVIDENCE_WEIGHT,
+    EVIDENCE_TYPE_WEIGHTS,
+)
 from src.pov.triangulation import TriangulatedElement
 
 logger = logging.getLogger(__name__)
+
+# Recency blend ratio: weight = base_weight * (BASE + FACTOR * recency)
+# BASE provides stability; FACTOR allows newer evidence to score higher.
+RECENCY_BLEND_BASE: float = 0.7
+RECENCY_BLEND_FACTOR: float = 0.3
 
 
 @dataclass
@@ -34,7 +44,7 @@ class ConsensusElement:
         weighted_vote_score: Score from weighted voting across evidence types.
         max_weight: Highest evidence type weight supporting this element.
         contributing_categories: Set of evidence categories supporting this element.
-        source_reliability: Weighted mean reliability across contributing sources.
+        source_reliability: Highest single-source weight (max reliability).
         brightness_hint: Suggested brightness classification based on consensus.
     """
 
@@ -178,19 +188,16 @@ def compute_recency_factor(
     if source_date is None:
         return 0.5  # neutral for undated evidence
 
-    if reference_date is None:
-        from datetime import UTC
+    if half_life_years <= 0:
+        return 1.0  # guard against division by zero
 
+    if reference_date is None:
         reference_date = datetime.now(tz=UTC)
 
     # Make both tz-aware for comparison
     if source_date.tzinfo is None:
-        from datetime import UTC
-
         source_date = source_date.replace(tzinfo=UTC)
     if reference_date.tzinfo is None:
-        from datetime import UTC
-
         reference_date = reference_date.replace(tzinfo=UTC)
 
     age_days = (reference_date - source_date).days
@@ -368,22 +375,20 @@ def build_consensus(
         weighted_sum = 0.0
         max_weight = 0.0
         categories: set[str] = set()
-        recency_sum = 0.0
         source_count = 0
 
         for ev_id in tri_elem.evidence_ids:
             category = evidence_category_map.get(ev_id, "")
             weight = _get_evidence_weight(category, weight_map)
 
-            # Apply recency bias: weight * recency_factor
+            # Apply recency bias: weight * (base + factor * recency)
             ev_item = evidence_map.get(ev_id)
             recency = compute_recency_factor(
                 getattr(ev_item, "source_date", None) if ev_item else None
             )
 
-            adjusted_weight = weight * (0.7 + 0.3 * recency)  # 70% base + 30% recency
+            adjusted_weight = weight * (RECENCY_BLEND_BASE + RECENCY_BLEND_FACTOR * recency)
             weighted_sum += adjusted_weight
-            recency_sum += recency
             max_weight = max(max_weight, weight)
             source_count += 1
             if category:
@@ -391,12 +396,12 @@ def build_consensus(
 
         # Normalized weighted vote score
         vote_score = weighted_sum / source_count if source_count > 0 else 0.0
-        source_reliability = max_weight  # Highest single-source weight
+        source_reliability = max_weight
 
         # Brightness hint based on vote score
-        if vote_score >= 0.75:
+        if vote_score >= BRIGHTNESS_BRIGHT_THRESHOLD:
             brightness = "bright"
-        elif vote_score >= 0.40:
+        elif vote_score >= BRIGHTNESS_DIM_THRESHOLD:
             brightness = "dim"
         else:
             brightness = "dark"
