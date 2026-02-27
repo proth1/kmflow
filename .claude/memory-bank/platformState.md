@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.094
+**Version**: 2026.02.096
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,8 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.096 | 2026-02-27 | Evidence cataloging, metadata extraction, catalog API (#304) |
+| 2026.02.095 | 2026-02-27 | Database infrastructure BDD tests (#309) |
 | 2026.02.094 | 2026-02-27 | API gateway BDD tests, health endpoint enhancements (#307) |
 | 2026.02.093 | 2026-02-27 | Evidence lifecycle state machine with audit trail (#301) |
 | 2026.02.092 | 2026-02-27 | Evidence quality scoring engine with Hill function, configurable weights (#300) |

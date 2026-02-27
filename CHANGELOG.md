@@ -3,6 +3,14 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.096] - 2026-02-27
+### Added
+- Evidence cataloging with automated metadata extraction: PDF/Excel extractors, language detection, catalog API with LIKE-safe search, JSONB metadata, 38 BDD tests (#304)
+
+## [2026.02.095] - 2026-02-27
+### Added
+- Database infrastructure BDD tests: Docker Compose services, pgvector, Neo4j APOC, Alembic migrations, SQLAlchemy async session — 35 tests (#309)
+
 ## [2026.02.094] - 2026-02-27
 ### Added
 - API gateway BDD tests: health endpoint enhancements (timestamp, API_VERSION), OpenAPI, request tracing, CORS, DI validation with 33 tests (#307)

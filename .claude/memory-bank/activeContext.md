@@ -8,6 +8,14 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #411 merged** — Evidence cataloging with metadata extraction (#304) (v2026.02.096)
+  - MetadataExtractor base with PDF + Excel implementations, language detection
+  - Catalog API: GET /catalog with category, date range, language, q filters (LIKE-safe)
+  - JSONB metadata column, migration 038, 38 BDD tests
+  - PR review fixes: LIKE wildcard escape, langdetect deps, deduplicate clean_string
+- **PR #412 merged** — Database infrastructure BDD tests (#309) (v2026.02.095)
+  - 35 BDD tests validating Docker Compose, pgvector, Neo4j APOC, Alembic, async session
+  - PR review: APPROVE with LOW suggestions only
 - **PR #410 merged** — API gateway BDD tests and health endpoint enhancements (#307) (v2026.02.094)
   - Health endpoint: timestamp (UTC ISO), API_VERSION constant, router tags
   - 33 tests: 5 BDD scenario classes + structural tests
