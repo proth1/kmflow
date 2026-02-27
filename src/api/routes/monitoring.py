@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -666,4 +666,52 @@ async def get_monitoring_stats(
         "total_deviations": total_deviations,
         "open_alerts": open_alerts,
         "critical_alerts": critical_alerts,
+    }
+
+
+# -- Pipeline Metrics (Story #360) -------------------------------------------
+
+
+class PipelineMetricsResponse(BaseModel):
+    """Response from pipeline metrics endpoint."""
+
+    processing_rate: float
+    queue_depth: int
+    p99_latency_ms: float
+    avg_latency_ms: float
+    total_processed: int
+    total_errors: int
+    avg_quality: float
+    window_seconds: int
+
+
+@router.get("/pipeline/metrics", response_model=PipelineMetricsResponse)
+async def get_pipeline_metrics(
+    request: Request,
+    _user: User = Depends(require_permission("monitoring:read")),
+) -> dict[str, Any]:
+    """Get continuous evidence pipeline throughput metrics.
+
+    Returns processing_rate (items/min), queue_depth, and p99_latency_ms
+    over a 5-minute rolling window.
+    """
+    from src.monitoring.pipeline.metrics import MetricsCollector, PipelineMetrics
+
+    collector: MetricsCollector | None = None
+    if hasattr(request.app.state, "pipeline_metrics"):
+        collector = request.app.state.pipeline_metrics
+
+    if collector is None:
+        return PipelineMetrics().__dict__
+
+    metrics = await collector.get_metrics()
+    return {
+        "processing_rate": metrics.processing_rate,
+        "queue_depth": metrics.queue_depth,
+        "p99_latency_ms": metrics.p99_latency_ms,
+        "avg_latency_ms": metrics.avg_latency_ms,
+        "total_processed": metrics.total_processed,
+        "total_errors": metrics.total_errors,
+        "avg_quality": metrics.avg_quality,
+        "window_seconds": metrics.window_seconds,
     }
