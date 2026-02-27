@@ -120,17 +120,6 @@ PIP_CMD=$(find_pip)
 log "Using pip: ${PIP_CMD}"
 
 # ---------------------------------------------------------------------------
-# Parse top-level requirements from file, stripping comments and blank lines
-# ---------------------------------------------------------------------------
-parse_requirements() {
-    local req_file="$1"
-    grep -v '^\s*#' "$req_file" \
-        | grep -v '^\s*$' \
-        | sed 's/#.*//' \
-        | tr -d ' '
-}
-
-# ---------------------------------------------------------------------------
 # Install packages
 # ---------------------------------------------------------------------------
 install_packages() {

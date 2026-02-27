@@ -348,11 +348,14 @@ while IFS= read -r -d '' macho; do
     codesign --remove-signature "$macho" 2>/dev/null || true
 done < <(find "$FRAMEWORKS" \( -name "*.dylib" -o -name "*.so" \) -type f -print0 2>/dev/null)
 PYTHON_BIN="${FRAMEWORKS}/Python.framework/Versions/3.12/bin/python3.12"
-[[ -f "$PYTHON_BIN" ]] && codesign --remove-signature "$PYTHON_BIN" 2>/dev/null || true
+if [[ -f "$PYTHON_BIN" ]]; then
+    codesign --remove-signature "$PYTHON_BIN" 2>/dev/null || true
+fi
 codesign --remove-signature "${MACOS_BUNDLE}/${SWIFT_BINARY_NAME}" 2>/dev/null || true
 
 # Sign inside-out: dylibs/so → Python interpreter → Swift binary.
 # All are signed sequentially with the same ad-hoc identity ("-").
+# TODO: For Developer ID signing, re-enable --options runtime and --timestamp.
 log "Signing Mach-O binaries..."
 while IFS= read -r -d '' macho; do
     codesign --force --sign "$CODESIGN_IDENTITY" "$macho" \
