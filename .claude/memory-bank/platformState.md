@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.089
+**Version**: 2026.02.090
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.090 | 2026-02-27 | Evidence parsers: document, structured data, BPMN with factory dispatch (#296) |
 | 2026.02.089 | 2026-02-27 | SemanticRelationship bitemporal validity model (#305) |
 | 2026.02.088 | 2026-02-27 | SeedTerm entity schema and vocabulary store (#302) |
 | 2026.02.087 | 2026-02-27 | ConflictObject model and disagreement taxonomy (#299) |

@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.090] - 2026-02-27
+### Added
+- Evidence parsers: document (PDF/HTML/TXT), structured data (Excel/CSV/JSON), BPMN with factory dispatch and 74 BDD tests (#296)
+
 ## [2026.02.089] - 2026-02-27
 ### Added
 - SemanticRelationship model with bitemporal validity: transaction + valid time, partial active index, check constraint (#305)

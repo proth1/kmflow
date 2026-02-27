@@ -8,6 +8,13 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #406 merged** — Evidence parsers with factory dispatch (#296) (v2026.02.090)
+  - DocumentParser: PDF (pdfplumber), HTML (lxml with script/style stripping), TXT
+  - StructuredDataParser: Excel (openpyxl), CSV, JSON
+  - BpmnParser: BPMN XML (activities, flows, gateways, lanes, participants)
+  - Factory dispatch by extension + MIME type, auto-classification by evidence category
+  - 74 BDD tests (17 document + 15 structured + 14 BPMN + 27 factory + 1 script/style)
+  - PR review: APPROVE with 2 MEDIUM fixed (script/style leakage, text/html MIME)
 - **PR #405 merged** — SemanticRelationship bitemporal validity (#305) (v2026.02.089)
   - 5 bitemporal columns: asserted_at, retracted_at, valid_from, valid_to, superseded_by
   - Partial index on active relationships, CheckConstraint valid_to >= valid_from
