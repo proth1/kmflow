@@ -62,7 +62,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        // Check consent state using Keychain-backed store
+        // Check consent state using Keychain-backed store.
+        // Run one-time migration to clean up pre-HMAC legacy records.
         let consentStore = KeychainConsentStore()
 
         // Detect MDM-configured engagement ID, fall back to UserDefaults or "default"
@@ -80,6 +81,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             engagementId = UserDefaults.standard.string(forKey: "engagementId") ?? "default"
         }
+
+        // Migrate legacy unsigned consent records before loading
+        consentStore.migrateLegacyRecords(engagementId: engagementId)
 
         let consent = ConsentManager(engagementId: engagementId, store: consentStore)
         consentManager = consent

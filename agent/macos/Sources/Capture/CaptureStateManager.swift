@@ -31,7 +31,16 @@ public final class CaptureStateManager: ObservableObject {
     /// Monitors register here to actually stop/start their event taps.
     private var stateChangeHandlers: [CaptureStateChangeHandler] = []
 
-    public init() {}
+    /// UserDefaults key for persisting the last known capture state across launches.
+    private static let persistedStateKey = "com.kmflow.agent.captureState"
+
+    public init() {
+        // Restore persisted state if available (crash recovery).
+        if let raw = UserDefaults.standard.string(forKey: Self.persistedStateKey),
+           let restored = CaptureState(rawValue: raw) {
+            state = restored
+        }
+    }
 
     /// Register a handler that is called on every state transition.
     /// Use this to wire monitor start/stop to the state machine.
@@ -42,6 +51,7 @@ public final class CaptureStateManager: ObservableObject {
     private func transition(to newState: CaptureState) {
         let oldState = state
         state = newState
+        UserDefaults.standard.set(newState.rawValue, forKey: Self.persistedStateKey)
         for handler in stateChangeHandlers {
             handler(oldState, newState)
         }

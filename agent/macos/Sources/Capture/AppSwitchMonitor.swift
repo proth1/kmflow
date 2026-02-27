@@ -71,10 +71,13 @@ public final class SystemAppSwitchMonitor: WorkspaceObserver {
 
             // L1 blocklist check
             guard self.blocklistManager.shouldCapture(bundleId: bundleId) else {
-                // Update tracking but don't emit event
+                // Update tracking but don't emit event.
+                // Clear lastSwitchTime to prevent dwell time from accumulating
+                // across blocked apps — otherwise the next allowed app would
+                // include time spent in a blocked app in its dwell calculation.
                 self.lastAppName = nil
                 self.lastBundleId = nil
-                self.lastSwitchTime = Date()
+                self.lastSwitchTime = nil
                 return
             }
 
