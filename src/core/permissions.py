@@ -61,6 +61,7 @@ ROLE_PERMISSIONS: dict[str, list[str]] = {
         "incident:write",
         "pdp:evaluate",
         "pdp:admin",
+        "export:read",
     ],
     "process_analyst": [
         "engagement:read",
