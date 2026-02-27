@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.133] - 2026-02-27
+### Added
+- Evidence gap ranking with confidence uplift projection: per-gap uplift computation, cross-scenario shared gap detection with correlated subquery, Pearson correlation accuracy tracking, UpliftProjection model + migration 057, audit logging, 12 BDD tests (#393)
+
 ## [2026.02.132] - 2026-02-27
 ### Added
 - Governance overlay API for process model activities: per-activity governance status classification (governed/partially_governed/ungoverned), ontology-aligned Cypher traversal (GOVERNED_BY→Policy/Regulation, IMPLEMENTS reverse join for Controls), IDOR-safe engagement access check, 10 BDD tests (#331)
