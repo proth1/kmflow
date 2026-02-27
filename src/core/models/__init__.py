@@ -156,6 +156,7 @@ from src.core.models.survey import (
     ProbeType,
     SurveyClaim,
 )
+from src.core.models.survey_claim_history import SurveyClaimHistory
 from src.core.models.taskmining import (
     ActionCategory,
     AgentStatus,
@@ -346,6 +347,8 @@ __all__ = [
     "MicroSurveyStatus",
     "ProbeType",
     "SurveyClaim",
+    # survey_claim_history
+    "SurveyClaimHistory",
     # taskmining
     "ActionCategory",
     "AgentStatus",
