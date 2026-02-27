@@ -8,6 +8,11 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #432 merged** — LLM suggestion engine with audit logging (#374) (v2026.02.116)
+  - generate_audited_suggestions() with audit in try/except finally block
+  - LLMAuditLog model + migration 046, governance enrichment, consideration framing
+  - PR review: REQUEST CHANGES → public method delegators, flush safety, docstring fix
+  - 14 BDD tests
 - **PR #431 merged** — Scenario Comparison Workbench CRUD (#373) (v2026.02.115)
   - Dedicated /api/v1/scenarios with max-5 enforcement (SELECT FOR UPDATE)
   - Engagement membership authorization, ScenarioStatus enum, DRAFT-only modification restriction

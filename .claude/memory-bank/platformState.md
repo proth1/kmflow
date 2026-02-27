@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.115
+**Version**: 2026.02.116
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.116 | 2026-02-27 | LLM suggestion engine: audited suggestions, governance flags, LLMAuditLog model, 14 tests (#374) |
 | 2026.02.115 | 2026-02-27 | Scenario Workbench CRUD: /api/v1/scenarios with max-5 enforcement, IDOR protection, DRAFT-only modifications, 20 tests (#373) |
 | 2026.02.114 | 2026-02-27 | Sequence/role conflict detection: contradictory PRECEDES/PERFORMED_BY edges, severity scoring, idempotent persistence, 26 tests (#372) |
 | 2026.02.113 | 2026-02-27 | Gap-prioritized transformation roadmap generator: topo sort, phase bucketing, HTML export, IDOR-protected endpoints, 31 tests (#368) |
