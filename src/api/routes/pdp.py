@@ -12,6 +12,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
@@ -143,13 +144,16 @@ async def create_rule(
             reason=body.reason,
             priority=body.priority,
         )
-    except Exception as exc:
-        if "unique" in str(exc).lower() or "duplicate" in str(exc).lower():
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"Policy rule '{body.name}' already exists",
-            ) from exc
-        raise
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    except IntegrityError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Policy rule '{body.name}' already exists",
+        ) from exc
     return policy
 
 

@@ -7,6 +7,7 @@ PERMIT/DENY decisions with optional obligations.
 
 from __future__ import annotations
 
+import asyncio
 import collections
 import logging
 import time
@@ -39,7 +40,8 @@ _ROLE_RANK: dict[str, int] = {
 # In-memory policy cache for sub-10ms response times
 _policy_cache: list[dict[str, Any]] = []
 _cache_loaded_at: float = 0.0
-_CACHE_TTL_SECONDS = 30.0
+_CACHE_TTL_SECONDS = 5.0  # 5s TTL ensures new rules take effect within acceptance criteria window
+_cache_lock = asyncio.Lock()
 
 # Latency tracking for health endpoint
 _recent_latencies: collections.deque[float] = collections.deque(maxlen=100)
@@ -139,7 +141,11 @@ class PDPService:
         classification: str,
         operation: str,
     ) -> bool:
-        """Check if a policy's conditions match the request context."""
+        """Check if a policy's conditions match the request context.
+
+        Note: Policies are currently global (not engagement-scoped). Engagement-scoped
+        policy conditions are deferred to a follow-up issue.
+        """
         conditions = policy.get("conditions_json", {})
 
         # Classification match
@@ -168,33 +174,45 @@ class PDPService:
         return True
 
     async def _ensure_cache(self) -> None:
-        """Load policies into in-memory cache if TTL expired."""
+        """Load policies into in-memory cache if TTL expired.
+
+        Uses an asyncio.Lock to prevent thundering herd on cache refresh.
+        """
         global _policy_cache, _cache_loaded_at
         now = time.monotonic()
         if now - _cache_loaded_at < _CACHE_TTL_SECONDS and _policy_cache:
             return
 
-        result = await self._session.execute(
-            select(PDPPolicy)
-            .where(PDPPolicy.is_active.is_(True))
-            .order_by(PDPPolicy.priority)
-        )
-        policies = result.scalars().all()
+        async with _cache_lock:
+            # Double-check after acquiring lock (another coroutine may have refreshed)
+            now = time.monotonic()
+            if now - _cache_loaded_at < _CACHE_TTL_SECONDS and _policy_cache:
+                return
 
-        _policy_cache = [
-            {
-                "id": p.id,
-                "name": p.name,
-                "conditions_json": p.conditions_json,
-                "decision": p.decision.value if hasattr(p.decision, "value") else p.decision,
-                "obligations_json": p.obligations_json,
-                "reason": p.reason,
-                "priority": p.priority,
-            }
-            for p in policies
-        ]
-        _cache_loaded_at = now
-        logger.debug("PDP policy cache refreshed: %d policies loaded", len(_policy_cache))
+            result = await self._session.execute(
+                select(PDPPolicy)
+                .where(PDPPolicy.is_active.is_(True))
+                .order_by(PDPPolicy.priority)
+            )
+            policies = result.scalars().all()
+
+            _policy_cache = [
+                {
+                    "id": p.id,
+                    "name": p.name,
+                    "conditions_json": p.conditions_json,
+                    "decision": p.decision.value if hasattr(p.decision, "value") else p.decision,
+                    "obligations_json": p.obligations_json,
+                    "reason": p.reason,
+                    "priority": p.priority,
+                }
+                for p in policies
+            ]
+            _cache_loaded_at = now
+            logger.debug("PDP policy cache refreshed: %d policies loaded", len(_policy_cache))
+
+    # Allowed keys for conditions_json validation (SEC-2)
+    ALLOWED_CONDITION_KEYS = {"classification", "operation", "min_role", "max_role"}
 
     async def create_rule(
         self,
@@ -212,7 +230,7 @@ class PDPService:
         Args:
             name: Unique policy name.
             description: Human-readable description.
-            conditions_json: Matching conditions dict.
+            conditions_json: Matching conditions dict (keys must be in ALLOWED_CONDITION_KEYS).
             decision: PERMIT or DENY.
             obligations_json: Optional list of obligations.
             reason: Reason string.
@@ -220,7 +238,11 @@ class PDPService:
 
         Returns:
             Created PDPPolicy.
+
+        Raises:
+            ValueError: If conditions_json contains unknown keys.
         """
+        self._validate_conditions(conditions_json)
         policy = PDPPolicy(
             id=uuid.uuid4(),
             name=name,
@@ -249,6 +271,20 @@ class PDPService:
             .order_by(PDPPolicy.priority)
         )
         return list(result.scalars().all())
+
+    @classmethod
+    def _validate_conditions(cls, conditions: dict) -> None:
+        """Validate that conditions_json only uses allowed keys.
+
+        Raises:
+            ValueError: If unknown keys are found.
+        """
+        unknown = set(conditions.keys()) - cls.ALLOWED_CONDITION_KEYS
+        if unknown:
+            raise ValueError(
+                f"Unknown condition keys: {sorted(unknown)}. "
+                f"Allowed: {sorted(cls.ALLOWED_CONDITION_KEYS)}"
+            )
 
     @staticmethod
     def _invalidate_cache() -> None:

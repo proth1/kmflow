@@ -7,6 +7,8 @@ Create Date: 2026-02-27
 
 from __future__ import annotations
 
+import uuid
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import JSON, UUID
@@ -53,6 +55,59 @@ def upgrade() -> None:
     )
     op.create_index("ix_pdp_audit_actor", "pdp_audit_entries", ["actor"])
     op.create_index("ix_pdp_audit_engagement", "pdp_audit_entries", ["engagement_id"])
+
+
+    # Seed default policies so the system does not start fully-open
+    policies_table = sa.table(
+        "pdp_policies",
+        sa.column("id", UUID(as_uuid=True)),
+        sa.column("name", sa.String),
+        sa.column("description", sa.Text),
+        sa.column("conditions_json", JSON),
+        sa.column("decision", sa.String),
+        sa.column("obligations_json", JSON),
+        sa.column("reason", sa.String),
+        sa.column("priority", sa.Integer),
+        sa.column("is_active", sa.Boolean),
+    )
+    op.bulk_insert(
+        policies_table,
+        [
+            {
+                "id": str(uuid.uuid4()),
+                "name": "deny_restricted_below_lead",
+                "description": "Deny restricted data access for roles below engagement_lead",
+                "conditions_json": {"classification": "restricted", "max_role": "process_analyst"},
+                "decision": "deny",
+                "obligations_json": None,
+                "reason": "insufficient_clearance",
+                "priority": 10,
+                "is_active": True,
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "name": "watermark_confidential_export",
+                "description": "Require watermark on confidential data exports",
+                "conditions_json": {"classification": "confidential", "operation": "export"},
+                "decision": "permit",
+                "obligations_json": [{"type": "apply_watermark", "params": {"visible": True}}],
+                "reason": "export_permitted_with_watermark",
+                "priority": 20,
+                "is_active": True,
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "name": "enhanced_audit_restricted",
+                "description": "Require enhanced audit for restricted data access by authorized roles",
+                "conditions_json": {"classification": "restricted", "min_role": "engagement_lead"},
+                "decision": "permit",
+                "obligations_json": [{"type": "log_enhanced_audit", "params": {}}],
+                "reason": "access_permitted_with_enhanced_audit",
+                "priority": 50,
+                "is_active": True,
+            },
+        ],
+    )
 
 
 def downgrade() -> None:

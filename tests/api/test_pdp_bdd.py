@@ -411,3 +411,38 @@ async def test_list_rules() -> None:
     service = PDPService(session)
     result = await service.list_rules()
     assert len(result) == 2
+
+
+# ---------------------------------------------------------------------------
+# Conditions validation (SEC-2)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_create_rule_rejects_unknown_condition_keys() -> None:
+    """Creating a rule with unknown condition keys raises ValueError."""
+    session = _mock_session()
+    service = PDPService(session)
+
+    with pytest.raises(ValueError, match="Unknown condition keys"):
+        await service.create_rule(
+            name="bad_rule",
+            conditions_json={"clasification": "restricted", "unknown_key": "value"},
+            decision=PDPDecisionType.DENY,
+        )
+
+
+@pytest.mark.asyncio
+async def test_create_rule_accepts_valid_condition_keys() -> None:
+    """Creating a rule with only valid condition keys succeeds."""
+    session = _mock_session()
+    service = PDPService(session)
+
+    policy = await service.create_rule(
+        name="valid_rule",
+        conditions_json={"classification": "restricted", "operation": "read", "max_role": "process_analyst"},
+        decision=PDPDecisionType.DENY,
+        reason="test",
+    )
+
+    assert policy.name == "valid_rule"
