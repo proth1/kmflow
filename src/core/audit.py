@@ -25,6 +25,9 @@ async def log_audit_event_async(
     status_code: int,
     engagement_id: str | None = None,
     duration_ms: float = 0.0,
+    ip_address: str | None = None,
+    user_agent: str | None = None,
+    resource_type: str | None = None,
     session: AsyncSession | None = None,
 ) -> None:
     """Persist an HTTP audit event for compliance.
@@ -34,22 +37,26 @@ async def log_audit_event_async(
     http_audit_events table (no engagement FK constraint).
 
     Args:
-        method: HTTP method (POST, PUT, PATCH, DELETE, etc.).
+        method: HTTP method (GET, POST, PUT, PATCH, DELETE, etc.).
         path: Request URL path.
         user_id: Authenticated user identifier, or "anonymous".
         status_code: HTTP response status code.
         engagement_id: Engagement UUID string extracted from the path, or None.
         duration_ms: Request processing time in milliseconds.
+        ip_address: Client IP address.
+        user_agent: Client user agent string.
+        resource_type: Inferred resource type from the URL path.
         session: Optional database session for persistence.
     """
     logger.info(
-        "AUDIT_DB method=%s path=%s user=%s status=%d duration_ms=%.2f engagement=%s",
+        "AUDIT_DB method=%s path=%s user=%s status=%d duration_ms=%.2f engagement=%s ip=%s",
         method,
         path,
         user_id,
         status_code,
         duration_ms,
         engagement_id or "none",
+        ip_address or "unknown",
     )
 
     if session is not None:
@@ -193,3 +200,50 @@ async def log_audit(
     """Create an audit log entry for a business action."""
     audit = AuditLog(engagement_id=engagement_id, action=action, actor=actor, details=details)
     session.add(audit)
+
+
+async def log_evidence_change(
+    session: AsyncSession,
+    *,
+    engagement_id: UUID,
+    evidence_id: UUID,
+    actor: str,
+    before_value: dict | None = None,
+    after_value: dict | None = None,
+    ip_address: str | None = None,
+    user_agent: str | None = None,
+    result_status: int | None = None,
+) -> AuditLog:
+    """Record an evidence modification with before/after values.
+
+    Creates an AuditLog entry with JSONB snapshots of the changed fields,
+    enabling full change tracking for compliance investigations.
+
+    Args:
+        session: Database session.
+        engagement_id: Engagement owning the evidence.
+        evidence_id: The evidence item being modified.
+        actor: User identifier performing the change.
+        before_value: Dict of field values before the change.
+        after_value: Dict of field values after the change.
+        ip_address: Client IP address.
+        user_agent: Client user agent.
+        result_status: HTTP status code of the response.
+
+    Returns:
+        The created AuditLog entry.
+    """
+    audit = AuditLog(
+        engagement_id=engagement_id,
+        action=AuditAction.EVIDENCE_VALIDATED,
+        actor=actor,
+        resource_type="evidence",
+        resource_id=evidence_id,
+        before_value=before_value,
+        after_value=after_value,
+        ip_address=ip_address,
+        user_agent=user_agent,
+        result_status=result_status,
+    )
+    session.add(audit)
+    return audit

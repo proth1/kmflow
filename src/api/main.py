@@ -33,7 +33,7 @@ from src.api.middleware.security import (
 )
 from src.api.routes import (
     admin,
-    auth as auth_routes,
+    audit_logs,
     camunda,
     conformance,
     copilot,
@@ -62,6 +62,9 @@ from src.api.routes import (
 )
 from src.api.routes import (
     annotations as annotations_routes,
+)
+from src.api.routes import (
+    auth as auth_routes,
 )
 from src.api.routes.auth import limiter
 from src.api.version import API_VERSION
@@ -138,9 +141,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         from src.taskmining.worker import run_worker as run_tm_worker
 
         for i in range(settings.taskmining_worker_count):
-            task = asyncio.create_task(
-                run_tm_worker(redis_client, f"tm-worker-{i}", shutdown_event)
-            )
+            task = asyncio.create_task(run_tm_worker(redis_client, f"tm-worker-{i}", shutdown_event))
             worker_tasks.append(task)
         logger.info("Started %d task mining workers", settings.taskmining_worker_count)
 
@@ -247,6 +248,9 @@ def create_app() -> FastAPI:
 
     # -- Task Mining Routes ---
     app.include_router(taskmining.router)
+
+    # -- Audit Log Query Routes (Story #314) ---
+    app.include_router(audit_logs.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)
