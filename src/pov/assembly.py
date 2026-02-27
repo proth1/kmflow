@@ -1,8 +1,9 @@
 """BPMN 2.0 XML assembly for the LCD algorithm.
 
-Step 7: Generates valid BPMN 2.0 XML from scored process elements with
+Step 9: Generates valid BPMN 2.0 XML from scored process elements with
 activities, gateways, events, sequence flows, and custom properties
-for confidence scores and evidence IDs.
+for three-dimensional confidence scores, evidence citations, gap markers,
+and variant annotations.
 """
 
 from __future__ import annotations
@@ -11,7 +12,13 @@ import logging
 import uuid
 import xml.etree.ElementTree as ET
 
-from src.pov.consensus import ConsensusElement
+from src.pov.consensus import ConsensusElement, VariantAnnotation
+from src.pov.constants import (
+    BRIGHTNESS_BRIGHT_THRESHOLD,
+    BRIGHTNESS_DIM_THRESHOLD,
+    GRADES_CAPPED_AT_DIM,
+    MVC_THRESHOLD,
+)
 from src.semantic.entity_extraction import EntityType
 
 logger = logging.getLogger(__name__)
@@ -38,10 +45,169 @@ def _make_id(prefix: str = "elem") -> str:
     return f"{prefix}_{uuid.uuid4().hex[:8]}"
 
 
+def _classify_brightness(score: float, evidence_grade: str) -> str:
+    """Classify brightness from score and evidence grade.
+
+    Applies the coherence constraint: grades D or U cap brightness at DIM
+    regardless of the numeric score.
+
+    Args:
+        score: Confidence score between 0 and 1.
+        evidence_grade: Evidence grade (A, B, C, D, U).
+
+    Returns:
+        Brightness classification: BRIGHT, DIM, or DARK.
+    """
+    # Score-based brightness
+    if score >= BRIGHTNESS_BRIGHT_THRESHOLD:
+        score_brightness = "BRIGHT"
+    elif score >= BRIGHTNESS_DIM_THRESHOLD:
+        score_brightness = "DIM"
+    else:
+        score_brightness = "DARK"
+
+    # Grade-based cap
+    grade_brightness = "DIM" if evidence_grade in GRADES_CAPPED_AT_DIM else "BRIGHT"
+
+    # Coherence: take minimum (DARK < DIM < BRIGHT)
+    brightness_order = {"DARK": 0, "DIM": 1, "BRIGHT": 2}
+    min_val = min(brightness_order[score_brightness], brightness_order[grade_brightness])
+    return {0: "DARK", 1: "DIM", 2: "BRIGHT"}[min_val]
+
+
+def _determine_evidence_grade(element: ConsensusElement) -> str:
+    """Determine evidence grade (A-U) for a consensus element.
+
+    Grade logic from PRD Section 6.3:
+    - A: 3+ sources from 2+ evidence planes (strong multi-plane corroboration)
+    - B: 2+ sources with some validation
+    - C: 2+ sources but unvalidated
+    - D: Single source
+    - U: No evidence
+
+    Args:
+        element: The consensus element with triangulation data.
+
+    Returns:
+        Evidence grade string: A, B, C, D, or U.
+    """
+    tri = element.triangulated
+    source_count = tri.source_count
+    evidence_ids = tri.evidence_ids
+
+    if not evidence_ids or source_count == 0:
+        return "U"
+    if source_count == 1:
+        return "D"
+
+    # Check for multi-plane coverage (from triangulation data)
+    plane_count = len(getattr(tri, "supporting_planes", set()))
+    if source_count >= 3 and plane_count >= 2:
+        return "A"
+    if source_count >= 2:
+        return "B"
+    return "C"
+
+
+def _add_confidence_extensions(
+    ext_elements: ET.Element,
+    elem: ConsensusElement,
+    score: float,
+    level: str,
+) -> tuple[str, str]:
+    """Add three-dimensional confidence extensions to a BPMN element.
+
+    Adds:
+    - kmflow:confidence with score, level, brightness, evidence_grade
+    - kmflow:evidence with source_count and evidence IDs
+
+    Args:
+        ext_elements: The extensionElements XML node.
+        elem: The consensus element.
+        score: Confidence score.
+        level: Confidence level string.
+
+    Returns:
+        Tuple of (brightness, evidence_grade) for use in gap detection.
+    """
+    evidence_grade = _determine_evidence_grade(elem)
+    brightness = _classify_brightness(score, evidence_grade)
+
+    # Three-dimensional confidence
+    ET.SubElement(
+        ext_elements,
+        f"{{{KMFLOW_NS}}}confidence",
+        {
+            "score": f"{score:.4f}",
+            "level": level,
+            "brightness": brightness,
+            "evidence_grade": evidence_grade,
+        },
+    )
+
+    # Evidence citations
+    ET.SubElement(
+        ext_elements,
+        f"{{{KMFLOW_NS}}}evidence",
+        {
+            "source_count": str(elem.triangulated.source_count),
+            "ids": ",".join(elem.triangulated.evidence_ids),
+        },
+    )
+
+    return brightness, evidence_grade
+
+
+def _add_gap_marker(
+    ext_elements: ET.Element,
+    element_name: str,
+    score: float,
+) -> None:
+    """Add a gap marker annotation for DARK elements below MVC threshold.
+
+    Args:
+        ext_elements: The extensionElements XML node.
+        element_name: Name of the element for the gap description.
+        score: The element's confidence score.
+    """
+    ET.SubElement(
+        ext_elements,
+        f"{{{KMFLOW_NS}}}gapMarker",
+        {
+            "type": "insufficient_evidence",
+            "description": f"'{element_name}' has confidence {score:.2f} below MVC threshold {MVC_THRESHOLD}",
+            "requires_additional_evidence": "true",
+        },
+    )
+
+
+def _add_variant_annotation(
+    ext_elements: ET.Element,
+    variant: VariantAnnotation,
+) -> None:
+    """Add variant annotation to a BPMN element.
+
+    Args:
+        ext_elements: The extensionElements XML node.
+        variant: The variant annotation data.
+    """
+    ET.SubElement(
+        ext_elements,
+        f"{{{KMFLOW_NS}}}variant",
+        {
+            "label": variant.variant_label,
+            "evidence_count": str(len(variant.evidence_ids)),
+            "evidence_ids": ",".join(variant.evidence_ids),
+            "coverage": f"{variant.evidence_coverage:.4f}",
+        },
+    )
+
+
 def assemble_bpmn(
     scored_elements: list[tuple[ConsensusElement, float, str]],
     process_name: str = "Generated Process",
     process_id: str | None = None,
+    variants: list[VariantAnnotation] | None = None,
 ) -> str:
     """Generate BPMN 2.0 XML from scored process elements.
 
@@ -51,18 +217,29 @@ def assemble_bpmn(
     - Exclusive gateways for each DECISION entity
     - End event
     - Sequence flows connecting elements
-    - Custom extension properties for confidence and evidence data
+    - Three-dimensional confidence (score + brightness + evidence_grade)
+    - Evidence citations on every element
+    - Gap markers on DARK elements below MVC threshold
+    - Variant annotations for multi-path evidence
 
     Args:
         scored_elements: List of (element, score, level) tuples.
         process_name: Name for the BPMN process.
         process_id: Optional process ID (generated if not provided).
+        variants: Optional list of variant annotations from consensus.
 
     Returns:
         BPMN 2.0 XML string.
     """
     if process_id is None:
         process_id = _make_id("process")
+
+    variants = variants or []
+
+    # Build variant lookup: element_name → list[VariantAnnotation]
+    variant_map: dict[str, list[VariantAnnotation]] = {}
+    for v in variants:
+        variant_map.setdefault(v.element_name, []).append(v)
 
     # Register namespaces for clean output
     ET.register_namespace("bpmn", BPMN_NS)
@@ -72,8 +249,6 @@ def assemble_bpmn(
     ET.register_namespace("kmflow", KMFLOW_NS)
 
     # Root definitions element
-    # Namespace declarations are handled by ET.register_namespace above;
-    # only non-namespace attributes go in the attrib dict.
     definitions = ET.Element(
         f"{{{BPMN_NS}}}definitions",
         {
@@ -91,6 +266,7 @@ def assemble_bpmn(
 
     # Collect flow elements for sequence flows
     flow_node_ids: list[str] = []
+    gap_count = 0
 
     # Start event
     start_id = _make_id("start")
@@ -125,25 +301,19 @@ def assemble_bpmn(
             {"id": elem_id, "name": entity.name},
         )
 
-        # Add extension elements for confidence and evidence
+        # Add extension elements for three-dimensional confidence + evidence
         ext_elements = ET.SubElement(bpmn_elem, f"{{{BPMN_NS}}}extensionElements")
+        brightness, _evidence_grade = _add_confidence_extensions(ext_elements, elem, score, level)
 
-        # Confidence score
-        ET.SubElement(
-            ext_elements,
-            f"{{{KMFLOW_NS}}}confidence",
-            {"score": f"{score:.4f}", "level": level},
-        )
+        # Gap marker for DARK elements
+        if brightness == "DARK" and score < MVC_THRESHOLD:
+            _add_gap_marker(ext_elements, entity.name, score)
+            gap_count += 1
 
-        # Evidence IDs
-        ET.SubElement(
-            ext_elements,
-            f"{{{KMFLOW_NS}}}evidence",
-            {
-                "source_count": str(elem.triangulated.source_count),
-                "ids": ",".join(elem.triangulated.evidence_ids),
-            },
-        )
+        # Variant annotations
+        if entity.name in variant_map:
+            for variant in variant_map[entity.name]:
+                _add_variant_annotation(ext_elements, variant)
 
         flow_node_ids.append(elem_id)
 
@@ -202,10 +372,11 @@ def assemble_bpmn(
     xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n' + xml_str
 
     logger.info(
-        "Assembled BPMN with %d flow nodes, %d systems, %d documents",
+        "Assembled BPMN with %d flow nodes, %d systems, %d documents, %d gaps",
         len(flow_node_ids),
         len(systems),
         len(documents),
+        gap_count,
     )
 
     return xml_str
