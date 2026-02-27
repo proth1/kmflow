@@ -86,6 +86,10 @@ class AuditAction(enum.StrEnum):
     PII_QUARANTINED = "pii_quarantined"
     PII_QUARANTINE_RELEASED = "pii_quarantine_released"
     PII_QUARANTINE_AUTO_DELETED = "pii_quarantine_auto_deleted"
+    # -- Conflict resolution workflow (Story #388) --------------------------------
+    CONFLICT_ASSIGNED = "conflict_assigned"
+    CONFLICT_RESOLVED = "conflict_resolved"
+    CONFLICT_ESCALATED = "conflict_escalated"
 
 
 class AuditLog(Base):
