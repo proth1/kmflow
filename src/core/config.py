@@ -67,6 +67,7 @@ class Settings(BaseSettings):
     jwt_refresh_token_expire_minutes: int = 10080  # 7 days
     auth_dev_mode: bool = False  # Allow local dev tokens
     encryption_key: str = "dev-encryption-key-change-in-production"
+    watermark_signing_key: str = "dev-watermark-key-change-in-production"
 
     # ── Cookie Auth (Issue #156) ──────────────────────────────────
     # cookie_domain: Set to the shared domain (e.g. ".example.com") for

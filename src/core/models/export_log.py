@@ -30,13 +30,13 @@ class ExportLog(Base):
     )
     recipient_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
+        ForeignKey("users.id", ondelete="RESTRICT"),
         nullable=False,
     )
     document_type: Mapped[str] = mapped_column(String(50), nullable=False)
     engagement_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("engagements.id", ondelete="CASCADE"),
+        ForeignKey("engagements.id", ondelete="RESTRICT"),
         nullable=False,
     )
     exported_at: Mapped[datetime] = mapped_column(

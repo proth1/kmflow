@@ -27,14 +27,14 @@ def upgrade() -> None:
         sa.Column(
             "recipient_id",
             UUID(as_uuid=True),
-            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            sa.ForeignKey("users.id", ondelete="RESTRICT"),
             nullable=False,
         ),
         sa.Column("document_type", sa.String(50), nullable=False),
         sa.Column(
             "engagement_id",
             UUID(as_uuid=True),
-            sa.ForeignKey("engagements.id", ondelete="CASCADE"),
+            sa.ForeignKey("engagements.id", ondelete="RESTRICT"),
             nullable=False,
         ),
         sa.Column(

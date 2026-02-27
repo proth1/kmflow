@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
-from src.core.models import User, UserRole
+from src.core.models import User
 from src.core.permissions import require_engagement_access, require_permission
 from src.security.watermark.extractor import WatermarkExtractor
 from src.security.watermark.service import WatermarkService
@@ -37,18 +37,13 @@ async def list_exports(
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("export:read")),
     _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Get paginated export logs for an engagement.
 
-    Restricted to ENGAGEMENT_LEAD role via engagement:manage permission.
+    Restricted to roles with export:read permission (engagement_lead, platform_admin).
     """
-    if user.role not in (UserRole.PLATFORM_ADMIN, UserRole.ENGAGEMENT_LEAD):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only engagement leads and platform admins can view export logs",
-        )
 
     service = WatermarkService(session)
     return await service.get_export_logs(engagement_id, limit, offset)
@@ -58,18 +53,13 @@ async def list_exports(
 async def extract_watermark(
     payload: WatermarkExtractPayload,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("export:read")),
 ) -> dict[str, Any]:
     """Extract and verify an invisible watermark from a recovered document.
 
     Used for forensic identification of the source of leaked documents.
     Returns the decoded watermark payload and matching export log entry.
     """
-    if user.role not in (UserRole.PLATFORM_ADMIN, UserRole.ENGAGEMENT_LEAD):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only engagement leads and platform admins can extract watermarks",
-        )
 
     extractor = WatermarkExtractor(session)
     result = await extractor.extract_from_encoded(payload.encoded_watermark)

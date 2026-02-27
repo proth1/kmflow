@@ -31,7 +31,7 @@ class WatermarkService:
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
-        self._secret_key = get_settings().jwt_secret_key.encode("utf-8")
+        self._secret_key = get_settings().watermark_signing_key.encode("utf-8")
 
     def generate_visible_watermark(
         self,
@@ -144,7 +144,6 @@ class WatermarkService:
         )
         self._session.add(entry)
         await self._session.flush()
-        await self._session.commit()
         return entry
 
     async def get_export_logs(

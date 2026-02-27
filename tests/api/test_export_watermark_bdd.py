@@ -134,7 +134,6 @@ class TestExportLogCreation:
         assert added.recipient_id == USER_ID
         assert added.document_type == "PDF"
         mock_session.flush.assert_awaited_once()
-        mock_session.commit.assert_awaited_once()
 
 
 class TestExportLogQuery:
