@@ -36,20 +36,12 @@ class CreateIncidentRequest(BaseModel):
     classification: IncidentClassification
     title: str
     description: str
-    reported_by: str
-
-
-class ContainIncidentRequest(BaseModel):
-    """Request to execute containment actions."""
-
-    actor: str
 
 
 class CloseIncidentRequest(BaseModel):
     """Request to close an incident with resolution summary."""
 
     resolution_summary: str
-    actor: str
 
 
 class IncidentResponse(BaseModel):
@@ -128,7 +120,7 @@ async def create_incident(
         classification=body.classification,
         title=body.title,
         description=body.description,
-        reported_by=body.reported_by,
+        reported_by=user.email,
     )
     return incident
 
@@ -136,7 +128,6 @@ async def create_incident(
 @router.post("/{incident_id}/contain", response_model=ContainmentResponse)
 async def contain_incident(
     incident_id: UUID,
-    body: ContainIncidentRequest,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("incident:write")),
 ) -> dict[str, Any]:
@@ -150,13 +141,13 @@ async def contain_incident(
     try:
         return await service.contain_incident(
             incident_id=incident_id,
-            actor=body.actor,
+            actor=user.email,
         )
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
+        msg = str(exc)
+        if "not found" in msg:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg) from exc
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=msg) from exc
 
 
 @router.post("/{incident_id}/close", response_model=CloseResponse)
@@ -178,13 +169,13 @@ async def close_incident(
         return await service.close_incident(
             incident_id=incident_id,
             resolution_summary=body.resolution_summary,
-            actor=body.actor,
+            actor=user.email,
         )
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
+        msg = str(exc)
+        if "not found" in msg:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=msg) from exc
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=msg) from exc
 
 
 @router.get("/{incident_id}/timeline", response_model=list[TimelineEventResponse])
