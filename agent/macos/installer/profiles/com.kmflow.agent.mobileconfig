@@ -27,7 +27,7 @@
     <string>com.kmflow.agent.config</string>
 
     <key>PayloadOrganization</key>
-    <string>KMFlow</string>
+    <string>REPLACE_ORG_NAME</string>
 
     <key>PayloadType</key>
     <string>Configuration</string>
@@ -113,6 +113,17 @@
                 <string>com.apple.keychainaccess</string>
                 <string>com.apple.systempreferences</string>
             </array>
+
+            <!-- ----------------------------------------------------------
+              ConsentText (dict)
+              Displayed to the user before profile installation.
+              Provides transparency about data collection scope.
+            ------------------------------------------------------------ -->
+            <key>ConsentText</key>
+            <dict>
+                <key>default</key>
+                <string>This profile configures the KMFlow Task Mining Agent to capture application usage data (app names, window titles, interaction patterns) for process analysis. No screen content, keystrokes, or personal communications are recorded. Data is encrypted in transit and at rest. You may withdraw consent at any time via the agent menu bar icon.</string>
+            </dict>
 
         </dict>
     </array>

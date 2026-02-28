@@ -123,6 +123,42 @@ fi
 echo ""
 
 # ---------------------------------------------------------------------------
+# Check 5: Hardened Runtime flag
+# ---------------------------------------------------------------------------
+echo "--- Check 5: Hardened Runtime ---"
+if codesign -d --verbose=4 "$APP_PATH" 2>&1 | grep -q "flags=0x10000(runtime)"; then
+    check_result "Hardened Runtime enabled" "PASS"
+else
+    check_result "Hardened Runtime enabled" "FAIL" "Runtime flag not found in codesign output"
+fi
+echo ""
+
+# ---------------------------------------------------------------------------
+# Check 6: Team ID present (non-ad-hoc)
+# ---------------------------------------------------------------------------
+echo "--- Check 6: Team ID ---"
+TEAM_ID="$(codesign -d --verbose=2 "$APP_PATH" 2>&1 | grep 'TeamIdentifier=' | cut -d= -f2)"
+if [[ -n "$TEAM_ID" && "$TEAM_ID" != "not set" ]]; then
+    check_result "Team ID present ($TEAM_ID)" "PASS"
+else
+    echo "  [WARN] No Team ID — expected for ad-hoc builds."
+    check_result "Team ID present" "FAIL" "TeamIdentifier not set (ad-hoc signing)"
+fi
+echo ""
+
+# ---------------------------------------------------------------------------
+# Check 7: Notarization staple (non-fatal)
+# ---------------------------------------------------------------------------
+echo "--- Check 7: Notarization staple ---"
+if xcrun stapler validate "$APP_PATH" 2>&1 | grep -q "The validate action worked"; then
+    check_result "Notarization ticket stapled" "PASS"
+else
+    echo "  [WARN] No stapled ticket — expected for non-notarized builds."
+    check_result "Notarization ticket stapled" "FAIL" "No stapled ticket found"
+fi
+echo ""
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 echo "=== Verification Summary ==="
