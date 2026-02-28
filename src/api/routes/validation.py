@@ -1,9 +1,10 @@
-"""Validation API endpoints (Stories #349, #353, #370).
+"""Validation API endpoints (Stories #349, #353, #357, #370).
 
 Provides:
 - POST /api/v1/validation/review-packs — Trigger async review pack generation
 - GET  /api/v1/validation/review-packs — Retrieve generated packs by pov_version_id
 - POST /api/v1/validation/review-packs/{id}/decisions — Submit reviewer decision
+- GET  /api/v1/validation/grading-progression — Evidence grade progression data
 - GET  /api/v1/validation/dark-room-shrink — Dark-Room Shrink Rate dashboard data
 """
 
@@ -29,6 +30,7 @@ from src.core.models import (
     ProcessModel,
     User,
 )
+from src.core.models.grading_snapshot import GradingSnapshot
 from src.core.models.validation import ReviewPack, ReviewPackStatus
 from src.core.models.validation_decision import ReviewerAction
 from src.core.permissions import require_engagement_access
@@ -39,6 +41,10 @@ from src.validation.dark_room import (
     compute_illumination_timeline,
     compute_shrink_rates,
     generate_alerts,
+)
+from src.validation.grading_progression import (
+    DEFAULT_IMPROVEMENT_TARGET,
+    compute_grade_distributions,
 )
 from src.validation.pack_generator import ActivityInfo, generate_packs
 
@@ -240,6 +246,16 @@ async def submit_decision(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Review pack not found",
+        )
+
+    # SEC-02: Validate element_id belongs to this review pack
+    pack_element_ids = {
+        a["id"] for a in (pack.segment_activities or []) if isinstance(a, dict) and "id" in a
+    }
+    if pack_element_ids and body.element_id not in pack_element_ids:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Element not found in this review pack",
         )
 
     graph = KnowledgeGraphService(request.app.state.neo4j_driver)
@@ -533,4 +549,87 @@ async def get_dark_room_shrink(
             for a in alerts
         ],
         "illumination_timeline": illumination_timeline,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Grading Progression Dashboard (Story #357)
+# ---------------------------------------------------------------------------
+
+
+class VersionGradeResponse(BaseModel):
+    """Per-version grade distribution data."""
+
+    version_number: int
+    pov_version_id: str
+    grade_counts: dict[str, int]
+    total_elements: int
+    improvement_pct: float | None
+    snapshot_at: str
+
+
+class GradingProgressionResponse(BaseModel):
+    """Complete grading progression dashboard data."""
+
+    engagement_id: str
+    improvement_target: float
+    versions: list[VersionGradeResponse]
+
+
+@router.get("/grading-progression", response_model=GradingProgressionResponse)
+async def get_grading_progression(
+    engagement_id: UUID = Query(..., description="Engagement UUID"),
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Get evidence grading progression data across POV versions.
+
+    Returns per-version grade distributions (U/D/C/B/A counts),
+    improvement percentages, and the target KPI threshold.
+    """
+    snapshot_query = (
+        select(GradingSnapshot)
+        .where(GradingSnapshot.engagement_id == engagement_id)
+        .order_by(GradingSnapshot.version_number.asc())
+    )
+    result = await session.execute(snapshot_query)
+    snapshots = result.scalars().all()
+
+    snapshot_dicts = [
+        {
+            "version_number": s.version_number,
+            "pov_version_id": str(s.pov_version_id),
+            "grade_u": s.grade_u,
+            "grade_d": s.grade_d,
+            "grade_c": s.grade_c,
+            "grade_b": s.grade_b,
+            "grade_a": s.grade_a,
+            "total_elements": s.total_elements,
+            "snapshot_at": s.snapshot_at.isoformat() if s.snapshot_at else "",
+        }
+        for s in snapshots
+    ]
+
+    distributions = compute_grade_distributions(snapshot_dicts)
+
+    return {
+        "engagement_id": str(engagement_id),
+        "improvement_target": DEFAULT_IMPROVEMENT_TARGET,
+        "versions": [
+            {
+                "version_number": d.version_number,
+                "pov_version_id": d.pov_version_id,
+                "grade_counts": {
+                    "U": d.grade_u,
+                    "D": d.grade_d,
+                    "C": d.grade_c,
+                    "B": d.grade_b,
+                    "A": d.grade_a,
+                },
+                "total_elements": d.total_elements,
+                "improvement_pct": d.improvement_pct,
+                "snapshot_at": d.snapshot_at,
+            }
+            for d in distributions
+        ],
     }

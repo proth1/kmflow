@@ -29,6 +29,10 @@ GRADE_PROMOTION: dict[EvidenceGrade, EvidenceGrade] = {
     EvidenceGrade.A: EvidenceGrade.A,  # Already max
 }
 
+# Domain constants
+CONFIDENCE_BOOST = 0.1
+REJECT_SEVERITY = 0.8
+
 
 class ReviewerActionsService:
     """Handles structured reviewer actions with graph write-back."""
@@ -66,6 +70,7 @@ class ReviewerActionsService:
         write_back_result = await handler(
             element_id=element_id,
             engagement_id=engagement_id,
+            reviewer_id=reviewer_id,
             payload=payload or {},
         )
 
@@ -104,16 +109,17 @@ class ReviewerActionsService:
         *,
         element_id: str,
         engagement_id: uuid.UUID,
+        reviewer_id: uuid.UUID,
         payload: dict[str, Any],
     ) -> dict[str, Any]:
         """CONFIRM: Promote evidence grade and increase confidence.
 
         Grade promotion: C->B, B->A (capped at A).
         """
-        # Get current grade from Neo4j (scoped to engagement)
+        # Get current grade from Neo4j (scoped to engagement + labeled)
         result = await self._graph.run_query(
             """
-            MATCH (a {id: $element_id, engagement_id: $engagement_id})
+            MATCH (a:Assertion {id: $element_id, engagement_id: $engagement_id})
             RETURN a.evidence_grade AS grade, a.confidence_score AS confidence
             """,
             {
@@ -122,11 +128,11 @@ class ReviewerActionsService:
             },
         )
 
-        current_grade = "C"
-        current_confidence = 0.5
-        if result:
-            current_grade = result[0].get("grade", "C")
-            current_confidence = result[0].get("confidence", 0.5)
+        if not result:
+            raise ValueError(f"Assertion {element_id} not found in graph")
+
+        current_grade = result[0].get("grade", "C")
+        current_confidence = result[0].get("confidence", 0.5)
 
         # Promote grade
         try:
@@ -136,13 +142,12 @@ class ReviewerActionsService:
         new_grade = GRADE_PROMOTION[grade_enum]
 
         # Confidence boost from confirmation
-        confidence_boost = 0.1
-        new_confidence = min(1.0, current_confidence + confidence_boost)
+        new_confidence = min(1.0, current_confidence + CONFIDENCE_BOOST)
 
-        # Update in Neo4j (scoped to engagement)
+        # Update in Neo4j (scoped to engagement + labeled)
         await self._graph.run_write_query(
             """
-            MATCH (a {id: $element_id, engagement_id: $engagement_id})
+            MATCH (a:Assertion {id: $element_id, engagement_id: $engagement_id})
             SET a.evidence_grade = $new_grade,
                 a.confidence_score = $new_confidence,
                 a.confirmed_at = datetime(),
@@ -153,7 +158,7 @@ class ReviewerActionsService:
                 "engagement_id": str(engagement_id),
                 "new_grade": new_grade.value,
                 "new_confidence": new_confidence,
-                "reviewer_id": payload.get("reviewer_id", ""),
+                "reviewer_id": str(reviewer_id),
             },
         )
 
@@ -170,6 +175,7 @@ class ReviewerActionsService:
         *,
         element_id: str,
         engagement_id: uuid.UUID,
+        reviewer_id: uuid.UUID,
         payload: dict[str, Any],
     ) -> dict[str, Any]:
         """CORRECT: Create superseding assertion with SUPERSEDES edge.
@@ -240,15 +246,16 @@ class ReviewerActionsService:
         *,
         element_id: str,
         engagement_id: uuid.UUID,
+        reviewer_id: uuid.UUID,
         payload: dict[str, Any],
     ) -> dict[str, Any]:
         """REJECT: Mark assertion as rejected and create ConflictObject."""
         rejection_reason = payload.get("rejection_reason", "")
 
-        # Mark as rejected in Neo4j (scoped to engagement)
+        # Mark as rejected in Neo4j (scoped to engagement + labeled)
         await self._graph.run_write_query(
             """
-            MATCH (a {id: $element_id, engagement_id: $engagement_id})
+            MATCH (a:Assertion {id: $element_id, engagement_id: $engagement_id})
             SET a.rejected = true,
                 a.rejected_at = datetime(),
                 a.rejection_reason = $reason
@@ -265,7 +272,7 @@ class ReviewerActionsService:
             engagement_id=engagement_id,
             mismatch_type=MismatchType.EXISTENCE_MISMATCH,
             resolution_status=ResolutionStatus.UNRESOLVED,
-            severity=0.8,
+            severity=REJECT_SEVERITY,
             escalation_flag=True,
             conflict_detail={
                 "element_id": element_id,
@@ -289,13 +296,13 @@ class ReviewerActionsService:
                 created_at: datetime()
             })
             WITH co
-            MATCH (a {id: $element_id, engagement_id: $engagement_id})
+            MATCH (a:Assertion {id: $element_id, engagement_id: $engagement_id})
             MERGE (co)-[:INVOLVES]->(a)
             """,
             {
                 "conflict_id": conflict_node_id,
                 "mismatch_type": MismatchType.EXISTENCE_MISMATCH.value,
-                "severity": 0.8,
+                "severity": REJECT_SEVERITY,
                 "engagement_id": str(engagement_id),
                 "element_id": element_id,
             },
@@ -313,6 +320,7 @@ class ReviewerActionsService:
         *,
         element_id: str,
         engagement_id: uuid.UUID,
+        reviewer_id: uuid.UUID,
         payload: dict[str, Any],
     ) -> dict[str, Any]:
         """DEFER: Add element to Dark Room backlog (no graph modification)."""
