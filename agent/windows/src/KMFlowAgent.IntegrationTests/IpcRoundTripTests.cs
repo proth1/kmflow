@@ -10,6 +10,13 @@ using KMFlowAgent.IPC;
 using FluentAssertions;
 using Xunit;
 
+// Helper to wrap the source-generated serialization call
+file static class EventSerializer
+{
+    public static string Serialize(CaptureEvent evt) =>
+        JsonSerializer.Serialize(evt, EventProtocolJsonContext.Default.CaptureEvent);
+}
+
 namespace KMFlowAgent.IntegrationTests;
 
 /// <summary>
@@ -87,7 +94,7 @@ public class IpcRoundTripTests : IAsyncLifetime
             bundleIdentifier: "testapp.exe",
             windowTitle: "Test Window");
 
-        var json = EventProtocol.Serialize(evt);
+        var json = EventSerializer.Serialize(evt);
 
         json.Should().NotBeNullOrEmpty();
 
@@ -118,7 +125,7 @@ public class IpcRoundTripTests : IAsyncLifetime
                 applicationName: "TestApp",
                 bundleIdentifier: "test.exe");
 
-            var json = EventProtocol.Serialize(evt);
+            var json = EventSerializer.Serialize(evt);
             json.Should().NotBeNullOrEmpty($"event type {eventType} should serialize");
 
             // Verify it contains the snake_case event type
@@ -142,7 +149,7 @@ public class IpcRoundTripTests : IAsyncLifetime
                 eventData: new Dictionary<string, object> { ["key_count"] = i }))
             .ToList();
 
-        var serialized = events.Select(EventProtocol.Serialize).ToList();
+        var serialized = events.Select(EventSerializer.Serialize).ToList();
 
         serialized.Should().HaveCount(100);
 
@@ -171,7 +178,7 @@ public class IpcRoundTripTests : IAsyncLifetime
                 ["x"] = 100.5,
             });
 
-        var json = EventProtocol.Serialize(evt);
+        var json = EventSerializer.Serialize(evt);
         var doc = JsonDocument.Parse(json);
         var data = doc.RootElement.GetProperty("event_data");
 
