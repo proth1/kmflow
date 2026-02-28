@@ -162,7 +162,6 @@ describe("ScenarioFinancialColumn", () => {
     render(
       <ScenarioFinancialColumn
         scenarioName="As-Is Process"
-        scenarioId="sc-1"
         costRange={sampleRange}
         topSensitivities={sampleSensitivities}
         overallConfidence={0.75}
@@ -181,7 +180,6 @@ describe("ScenarioFinancialColumn", () => {
     render(
       <ScenarioFinancialColumn
         scenarioName="As-Is"
-        scenarioId="sc-1"
         costRange={sampleRange}
         topSensitivities={sampleSensitivities}
         overallConfidence={0.8}

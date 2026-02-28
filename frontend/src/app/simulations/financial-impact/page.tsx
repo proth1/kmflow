@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeftRight, RefreshCw } from "lucide-react";
 import {
   Card,
@@ -43,7 +44,9 @@ function impactToCostRange(impact: FinancialImpactData): CostRange {
 }
 
 export default function FinancialImpactPage() {
-  const [engagementId, setEngagementId] = useState("");
+  const searchParams = useSearchParams();
+  const engagementId = searchParams.get("engagement_id") ?? "";
+
   const [scenarios, setScenarios] = useState<ScenarioData[]>([]);
   const [columns, setColumns] = useState<ScenarioColumn[]>([]);
   const [loading, setLoading] = useState(false);
@@ -52,12 +55,8 @@ export default function FinancialImpactPage() {
   const [compareA, setCompareA] = useState<string>("");
   const [compareB, setCompareB] = useState<string>("");
 
-  // Load engagement ID from URL params
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const eid = params.get("engagement_id");
-    if (eid) setEngagementId(eid);
-  }, []);
+  // Use ref to avoid stale closure in loadAllScenarios
+  const compareInitialized = useRef(false);
 
   // Load scenarios when engagement ID is set
   useEffect(() => {
@@ -77,38 +76,44 @@ export default function FinancialImpactPage() {
     return () => { cancelled = true; };
   }, [engagementId]);
 
-  // Load all scenario data side-by-side
+  // Load all scenario data in parallel
   const loadAllScenarios = useCallback(async () => {
     if (scenarios.length === 0) return;
     setLoading(true);
     setError(null);
 
     try {
-      const cols: ScenarioColumn[] = [];
-      for (const scenario of scenarios) {
-        const [impact, assumptions] = await Promise.all([
-          fetchFinancialImpact(scenario.id),
-          fetchEngagementAssumptions(engagementId),
-        ]);
-        cols.push({
-          scenario,
-          impact,
-          assumptions: assumptions.items,
-          costRange: impactToCostRange(impact),
-          topSensitivities: impact.sensitivity_analysis.slice(0, 3),
-        });
-      }
+      // Fetch assumptions once (engagement-scoped, same for all scenarios)
+      const assumptions = await fetchEngagementAssumptions(engagementId);
+
+      // Fetch financial impact for all scenarios in parallel
+      const cols = await Promise.all(
+        scenarios.map(async (scenario): Promise<ScenarioColumn> => {
+          const impact = await fetchFinancialImpact(scenario.id);
+          return {
+            scenario,
+            impact,
+            assumptions: assumptions.items,
+            costRange: impactToCostRange(impact),
+            topSensitivities: impact.sensitivity_analysis.slice(0, 3),
+          };
+        }),
+      );
+
       setColumns(cols);
-      if (!compareA && cols.length >= 2) {
+
+      // Initialize comparison selectors once (avoid re-render loop)
+      if (!compareInitialized.current && cols.length >= 2) {
         setCompareA(cols[0].scenario.id);
         setCompareB(cols[1].scenario.id);
+        compareInitialized.current = true;
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load financial data");
     } finally {
       setLoading(false);
     }
-  }, [scenarios, engagementId, compareA]);
+  }, [scenarios, engagementId]);
 
   // Auto-load when scenarios are available
   useEffect(() => {
@@ -117,7 +122,7 @@ export default function FinancialImpactPage() {
     }
   }, [scenarios, columns.length, loadAllScenarios]);
 
-  // Handle assumption edit with SWR-style cache invalidation
+  // Handle assumption edit with cache invalidation
   const handleAssumptionSave = useCallback(async (
     assumptionId: string,
     updates: { value?: number; confidence?: number },
@@ -125,7 +130,7 @@ export default function FinancialImpactPage() {
     await updateEngagementAssumption(engagementId, assumptionId, updates);
     setStatusMessage("Assumption updated — recalculating estimates...");
 
-    // Reload all financial data (SWR cache invalidation pattern)
+    // Reload financial data to reflect updated assumptions
     await loadAllScenarios();
     setStatusMessage("Estimates updated successfully");
     setTimeout(() => setStatusMessage(null), 3000);
@@ -183,18 +188,20 @@ export default function FinancialImpactPage() {
 
       {/* Side-by-side scenario columns */}
       {columns.length > 0 && (
-        <div className="grid gap-6" style={{ gridTemplateColumns: `repeat(${Math.min(columns.length, 3)}, 1fr)` }}>
+        <div
+          className="grid gap-6"
+          style={{ gridTemplateColumns: `repeat(${Math.min(columns.length, 3)}, 1fr)` }}
+        >
           {columns.map((col) => (
             <ScenarioFinancialColumn
               key={col.scenario.id}
-              scenarioId={col.scenario.id}
               scenarioName={col.scenario.name}
               costRange={col.costRange}
               topSensitivities={col.topSensitivities}
               overallConfidence={
-                col.impact.sensitivity_analysis.length > 0
+                col.assumptions.length > 0
                   ? col.assumptions.reduce((sum, a) => sum + a.confidence, 0) /
-                    Math.max(col.assumptions.length, 1)
+                    col.assumptions.length
                   : 0
               }
               assumptions={col.assumptions}
@@ -252,7 +259,6 @@ export default function FinancialImpactPage() {
               <ScenarioDeltaHighlight
                 scenarioA={{ name: colA.scenario.name, costRange: colA.costRange }}
                 scenarioB={{ name: colB.scenario.name, costRange: colB.costRange }}
-                method="to-be minus as-is staffing cost"
               />
             )}
           </CardContent>

@@ -15,7 +15,6 @@ import type { SensitivityEntryData } from "@/lib/api/simulations";
 
 interface ScenarioFinancialColumnProps {
   scenarioName: string;
-  scenarioId: string;
   costRange: CostRange;
   topSensitivities: SensitivityEntryData[];
   overallConfidence: number;
