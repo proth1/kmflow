@@ -78,6 +78,7 @@ from src.api.routes import (
     scenario_comparison,
     scenario_simulation,
     scenarios,
+    schema_library,
     seed_lists,
     sensitivity,
     shelf_requests,
@@ -375,6 +376,9 @@ def create_app() -> FastAPI:
 
     # -- Transformation Templates Routes (Story #376) ---
     app.include_router(transformation_templates.router)
+
+    # -- Schema Intelligence Library Routes (Story #335) ---
+    app.include_router(schema_library.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)

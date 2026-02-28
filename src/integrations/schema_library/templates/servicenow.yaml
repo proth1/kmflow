@@ -1,0 +1,104 @@
+platform: servicenow
+version: "1.0"
+description: "ServiceNow ITSM schema template covering incident, change, and problem tables"
+
+tables:
+  - name: incident
+    description: "ServiceNow Incident table (incident)"
+    correlation_keys:
+      - number
+      - sys_id
+    lifecycle_states:
+      "1": "new"
+      "2": "in_progress"
+      "3": "on_hold"
+      "6": "resolved"
+      "7": "closed"
+      "8": "cancelled"
+    fields:
+      - source_field: number
+        kmflow_attribute: case_id
+      - source_field: short_description
+        kmflow_attribute: title
+      - source_field: description
+        kmflow_attribute: description
+      - source_field: state
+        kmflow_attribute: lifecycle_phase
+        transform_fn: map_lifecycle_state
+      - source_field: priority
+        kmflow_attribute: priority
+      - source_field: assigned_to
+        kmflow_attribute: assignee
+      - source_field: assignment_group
+        kmflow_attribute: team
+      - source_field: opened_at
+        kmflow_attribute: created_at
+        transform_fn: parse_datetime
+      - source_field: resolved_at
+        kmflow_attribute: resolved_at
+        transform_fn: parse_datetime
+      - source_field: closed_at
+        kmflow_attribute: closed_at
+        transform_fn: parse_datetime
+      - source_field: category
+        kmflow_attribute: category
+
+  - name: change_request
+    description: "ServiceNow Change Request table (change_request)"
+    correlation_keys:
+      - number
+      - sys_id
+    lifecycle_states:
+      "-5": "new"
+      "-4": "assess"
+      "-3": "authorize"
+      "-2": "scheduled"
+      "-1": "implement"
+      "0": "review"
+      "3": "closed"
+      "4": "cancelled"
+    fields:
+      - source_field: number
+        kmflow_attribute: case_id
+      - source_field: short_description
+        kmflow_attribute: title
+      - source_field: description
+        kmflow_attribute: description
+      - source_field: state
+        kmflow_attribute: lifecycle_phase
+        transform_fn: map_lifecycle_state
+      - source_field: type
+        kmflow_attribute: change_type
+      - source_field: risk
+        kmflow_attribute: risk_level
+      - source_field: assigned_to
+        kmflow_attribute: assignee
+      - source_field: opened_at
+        kmflow_attribute: created_at
+        transform_fn: parse_datetime
+
+  - name: problem
+    description: "ServiceNow Problem table (problem)"
+    correlation_keys:
+      - number
+      - sys_id
+    lifecycle_states:
+      "1": "new"
+      "2": "assess"
+      "3": "root_cause_analysis"
+      "4": "fix_in_progress"
+      "5": "resolved"
+      "6": "closed"
+    fields:
+      - source_field: number
+        kmflow_attribute: case_id
+      - source_field: short_description
+        kmflow_attribute: title
+      - source_field: state
+        kmflow_attribute: lifecycle_phase
+        transform_fn: map_lifecycle_state
+      - source_field: assigned_to
+        kmflow_attribute: assignee
+      - source_field: opened_at
+        kmflow_attribute: created_at
+        transform_fn: parse_datetime
