@@ -6,6 +6,8 @@ process models created by the LCD algorithm.
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 import logging
 import uuid
@@ -14,6 +16,7 @@ from typing import Any, Literal
 
 import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +27,7 @@ from src.api.services.illumination_planner import IlluminationPlannerService
 from src.core.audit import log_audit
 from src.core.models import (
     AuditAction,
+    BrightnessClassification,
     Contradiction,
     EngagementMember,
     EvidenceGap,
@@ -1185,7 +1189,7 @@ async def get_confidence_summary(
     output_format: str = Query(default="json", alias="format", pattern="^(json|csv)$"),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("pov:read")),
-) -> Any:
+) -> dict[str, Any] | Response:
     """Get summary statistics of confidence distribution for export.
 
     Returns counts and percentages for each brightness tier plus
@@ -1227,9 +1231,9 @@ async def get_confidence_summary(
     elements = list(elements_result.scalars().all())
 
     total = len(elements) or 1
-    bright = sum(1 for e in elements if str(e.brightness_classification) == "bright")
-    dim = sum(1 for e in elements if str(e.brightness_classification) == "dim")
-    dark = sum(1 for e in elements if str(e.brightness_classification) == "dark")
+    bright = sum(1 for e in elements if e.brightness_classification == BrightnessClassification.BRIGHT)
+    dim = sum(1 for e in elements if e.brightness_classification == BrightnessClassification.DIM)
+    dark = sum(1 for e in elements if e.brightness_classification == BrightnessClassification.DARK)
 
     summary_data = {
         "engagement_id": engagement_id,
@@ -1245,9 +1249,6 @@ async def get_confidence_summary(
     }
 
     if output_format == "csv":
-        import csv
-        import io
-
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow(["Metric", "Value"])
@@ -1261,8 +1262,6 @@ async def get_confidence_summary(
         writer.writerow(["Dark Count", dark])
         writer.writerow(["Dark %", summary_data["dark_percentage"]])
         writer.writerow(["Overall Confidence", model.confidence_score])
-
-        from fastapi.responses import Response
 
         return Response(
             content=output.getvalue(),
