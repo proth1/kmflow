@@ -33,6 +33,7 @@ from src.api.middleware.security import (
 )
 from src.api.routes import (
     admin,
+    assumptions,
     audit_logs,
     camunda,
     claim_write_back,
@@ -347,6 +348,9 @@ def create_app() -> FastAPI:
 
     # -- Claim Write-Back Routes (Story #324) ---
     app.include_router(claim_write_back.router)
+
+    # -- Financial Assumption Routes (Story #354) ---
+    app.include_router(assumptions.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)
