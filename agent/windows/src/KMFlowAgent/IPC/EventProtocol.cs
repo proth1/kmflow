@@ -13,60 +13,73 @@ namespace KMFlowAgent.IPC;
 /// <summary>
 /// Desktop event types — mirrors src/core/models/taskmining.py DesktopEventType
 /// and agent/python/kmflow_agent/ipc/protocol.py DesktopEventType.
+///
+/// JSON serialization uses snake_case strings via DesktopEventTypeConverter.
 /// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter<DesktopEventType>))]
+[JsonConverter(typeof(DesktopEventTypeConverter))]
 public enum DesktopEventType
 {
-    [JsonStringEnumMemberName("app_switch")]
     AppSwitch,
-
-    [JsonStringEnumMemberName("window_focus")]
     WindowFocus,
-
-    [JsonStringEnumMemberName("mouse_click")]
     MouseClick,
-
-    [JsonStringEnumMemberName("mouse_double_click")]
     MouseDoubleClick,
-
-    [JsonStringEnumMemberName("mouse_drag")]
     MouseDrag,
-
-    [JsonStringEnumMemberName("keyboard_action")]
     KeyboardAction,
-
-    [JsonStringEnumMemberName("keyboard_shortcut")]
     KeyboardShortcut,
-
-    [JsonStringEnumMemberName("copy_paste")]
     CopyPaste,
-
-    [JsonStringEnumMemberName("scroll")]
     Scroll,
-
-    [JsonStringEnumMemberName("tab_switch")]
     TabSwitch,
-
-    [JsonStringEnumMemberName("file_open")]
     FileOpen,
-
-    [JsonStringEnumMemberName("file_save")]
     FileSave,
-
-    [JsonStringEnumMemberName("url_navigation")]
     UrlNavigation,
-
-    [JsonStringEnumMemberName("screen_capture")]
     ScreenCapture,
-
-    [JsonStringEnumMemberName("ui_element_interaction")]
     UiElementInteraction,
-
-    [JsonStringEnumMemberName("idle_start")]
     IdleStart,
-
-    [JsonStringEnumMemberName("idle_end")]
     IdleEnd,
+}
+
+/// <summary>
+/// Custom JSON converter for DesktopEventType that serializes to/from snake_case strings.
+/// Compatible with .NET 8 and NativeAOT (no reflection).
+/// </summary>
+public sealed class DesktopEventTypeConverter : JsonConverter<DesktopEventType>
+{
+    private static readonly Dictionary<DesktopEventType, string> EnumToString = new()
+    {
+        [DesktopEventType.AppSwitch] = "app_switch",
+        [DesktopEventType.WindowFocus] = "window_focus",
+        [DesktopEventType.MouseClick] = "mouse_click",
+        [DesktopEventType.MouseDoubleClick] = "mouse_double_click",
+        [DesktopEventType.MouseDrag] = "mouse_drag",
+        [DesktopEventType.KeyboardAction] = "keyboard_action",
+        [DesktopEventType.KeyboardShortcut] = "keyboard_shortcut",
+        [DesktopEventType.CopyPaste] = "copy_paste",
+        [DesktopEventType.Scroll] = "scroll",
+        [DesktopEventType.TabSwitch] = "tab_switch",
+        [DesktopEventType.FileOpen] = "file_open",
+        [DesktopEventType.FileSave] = "file_save",
+        [DesktopEventType.UrlNavigation] = "url_navigation",
+        [DesktopEventType.ScreenCapture] = "screen_capture",
+        [DesktopEventType.UiElementInteraction] = "ui_element_interaction",
+        [DesktopEventType.IdleStart] = "idle_start",
+        [DesktopEventType.IdleEnd] = "idle_end",
+    };
+
+    private static readonly Dictionary<string, DesktopEventType> StringToEnum =
+        EnumToString.ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
+
+    public override DesktopEventType Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        var str = reader.GetString();
+        if (str is not null && StringToEnum.TryGetValue(str, out var value))
+            return value;
+        throw new JsonException($"Unknown DesktopEventType: {str}");
+    }
+
+    public override void Write(Utf8JsonWriter writer, DesktopEventType value, JsonSerializerOptions options)
+    {
+        writer.WriteStringValue(EnumToString[value]);
+    }
 }
 
 /// <summary>

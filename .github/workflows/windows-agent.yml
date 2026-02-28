@@ -29,10 +29,10 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore dependencies
-        run: dotnet restore agent/windows/KMFlowAgent.sln
+        run: dotnet restore agent/windows/src/KMFlowAgent/KMFlowAgent.csproj
 
       - name: Build (Debug)
-        run: dotnet build agent/windows/KMFlowAgent.sln --configuration Debug --no-restore
+        run: dotnet build agent/windows/src/KMFlowAgent/KMFlowAgent.csproj --configuration Debug --no-restore
 
       - name: Build NativeAOT (Release)
         run: |

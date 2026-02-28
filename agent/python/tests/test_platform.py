@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -50,6 +51,7 @@ class TestMacOSPlatform:
         addr = platform.get_ipc_address()
         assert addr.endswith("agent.sock")
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="POSIX permissions not supported on Windows")
     def test_set_owner_only_permissions(self, tmp_path: Path) -> None:
         from kmflow_agent.platform._macos import MacOSPlatform
 
@@ -86,7 +88,9 @@ class TestWindowsPlatform:
         from kmflow_agent.platform._windows import WindowsPlatform
 
         platform = WindowsPlatform()
-        with patch.dict("os.environ", {}, clear=True):
+        # Only clear LOCALAPPDATA; keep HOME/USERPROFILE so Path.home() works
+        env_overrides = {"LOCALAPPDATA": ""}
+        with patch.dict("os.environ", env_overrides):
             data_dir = platform.get_data_dir()
             assert "KMFlowAgent" in str(data_dir)
 
