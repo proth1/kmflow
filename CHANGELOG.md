@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.185] - 2026-02-28
+### Added
+- Confidence heatmap API: per-element confidence map, brightness distribution summary with CSV export, enum-based comparison, 14 tests (Part of #341)
+
 ## [2026.02.184] - 2026-02-28
 ### Added
 - BPMN viewer API: latest model with BPMN XML, element evidence detail, engagement dashboard KPIs, engagement access control, 19 tests (#338)
