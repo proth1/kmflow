@@ -35,6 +35,7 @@ from src.api.routes import (
     admin,
     audit_logs,
     camunda,
+    claim_write_back,
     cohort,
     conflicts,
     conformance,
@@ -343,6 +344,9 @@ def create_app() -> FastAPI:
 
     # -- Data Classification & GDPR Compliance Routes (Story #317) ---
     app.include_router(data_classification.router)
+
+    # -- Claim Write-Back Routes (Story #324) ---
+    app.include_router(claim_write_back.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)
