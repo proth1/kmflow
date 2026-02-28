@@ -200,13 +200,44 @@ class FinancialAssumption(Base):
     source_evidence_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("evidence_items.id", ondelete="SET NULL"), nullable=True
     )
+    confidence_explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    confidence_range: Mapped[float | None] = mapped_column(Float, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     engagement: Mapped["Engagement"] = relationship("Engagement")
 
     def __repr__(self) -> str:
         return f"<FinancialAssumption(id={self.id}, name='{self.name}', type={self.assumption_type})>"
+
+
+class FinancialAssumptionVersion(Base):
+    """Version history entry for a financial assumption."""
+
+    __tablename__ = "financial_assumption_versions"
+    __table_args__ = (Index("ix_fa_versions_assumption_id", "assumption_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    assumption_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("financial_assumptions.id", ondelete="CASCADE"), nullable=False
+    )
+    value: Mapped[float] = mapped_column(Float, nullable=False)
+    unit: Mapped[str] = mapped_column(String(50), nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    confidence_range: Mapped[float | None] = mapped_column(Float, nullable=True)
+    source_evidence_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    confidence_explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    changed_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    assumption: Mapped[FinancialAssumption] = relationship("FinancialAssumption")
+
+    def __repr__(self) -> str:
+        return f"<FinancialAssumptionVersion(id={self.id}, assumption={self.assumption_id})>"
 
 
 class AlternativeSuggestion(Base):
