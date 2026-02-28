@@ -1,0 +1,85 @@
+platform: salesforce
+version: "1.0"
+description: "Salesforce CRM schema template covering Opportunity and Case objects"
+
+tables:
+  - name: Opportunity
+    description: "Salesforce Opportunity object"
+    correlation_keys:
+      - Id
+      - Name
+    lifecycle_states:
+      Prospecting: "prospecting"
+      Qualification: "qualification"
+      Needs Analysis: "needs_analysis"
+      Value Proposition: "value_proposition"
+      Perception Analysis: "perception_analysis"
+      Proposal/Price Quote: "proposal"
+      Negotiation/Review: "negotiation"
+      Closed Won: "closed_won"
+      Closed Lost: "closed_lost"
+    fields:
+      - source_field: Id
+        kmflow_attribute: case_id
+      - source_field: Name
+        kmflow_attribute: title
+      - source_field: StageName
+        kmflow_attribute: lifecycle_phase
+        transform_fn: map_lifecycle_state
+      - source_field: Amount
+        kmflow_attribute: amount
+        transform_fn: parse_decimal
+      - source_field: CloseDate
+        kmflow_attribute: close_date
+        transform_fn: parse_datetime
+      - source_field: OwnerId
+        kmflow_attribute: assignee
+      - source_field: AccountId
+        kmflow_attribute: account_id
+      - source_field: Type
+        kmflow_attribute: opportunity_type
+      - source_field: Probability
+        kmflow_attribute: probability
+      - source_field: CreatedDate
+        kmflow_attribute: created_at
+        transform_fn: parse_datetime
+      - source_field: LastModifiedDate
+        kmflow_attribute: updated_at
+        transform_fn: parse_datetime
+
+  - name: Case
+    description: "Salesforce Case object"
+    correlation_keys:
+      - Id
+      - CaseNumber
+    lifecycle_states:
+      New: "new"
+      Working: "in_progress"
+      Escalated: "escalated"
+      Closed: "closed"
+    fields:
+      - source_field: Id
+        kmflow_attribute: case_id
+      - source_field: CaseNumber
+        kmflow_attribute: case_number
+      - source_field: Subject
+        kmflow_attribute: title
+      - source_field: Description
+        kmflow_attribute: description
+      - source_field: Status
+        kmflow_attribute: lifecycle_phase
+        transform_fn: map_lifecycle_state
+      - source_field: Priority
+        kmflow_attribute: priority
+      - source_field: OwnerId
+        kmflow_attribute: assignee
+      - source_field: ContactId
+        kmflow_attribute: contact_id
+      - source_field: CreatedDate
+        kmflow_attribute: created_at
+        transform_fn: parse_datetime
+      - source_field: ClosedDate
+        kmflow_attribute: closed_at
+        transform_fn: parse_datetime
+      - source_field: Origin
+        kmflow_attribute: channel
