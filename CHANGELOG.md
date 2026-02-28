@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.190] - 2026-02-28
+### Added
+- Confidence heatmap overlay: Bright/Dim/Dark toggle on BPMN viewer, hover tooltip (score, brightness, grade), JSON/CSV summary export, UUID validation, memoized rendering, 20 tests (#341)
+
 ## [2026.02.189] - 2026-02-28
 ### Added
 - Financial Impact Dashboard: side-by-side scenario cost comparison with CostRangeDisplay, AssumptionTable (inline edit), ScenarioDeltaHighlight (delta with color coding), parallel scenario loading, SSR-safe routing, 16 tests (#369)
