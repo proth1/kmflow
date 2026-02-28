@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.189] - 2026-02-28
+### Added
+- Financial Impact Dashboard: side-by-side scenario cost comparison with CostRangeDisplay, AssumptionTable (inline edit), ScenarioDeltaHighlight (delta with color coding), parallel scenario loading, SSR-safe routing, 16 tests (#369)
+
 ## [2026.02.188] - 2026-02-28
 ### Added
 - Persona-specific dashboard APIs: Engagement Lead (7 KPIs), Process Analyst (processing status, conflict queue), SME (review stats, decision history), Client Stakeholder (read-only findings), role-based access control, 23 tests (#362)
