@@ -1,8 +1,10 @@
-"""Validation API endpoints (Stories #349, #370).
+"""Validation API endpoints (Stories #349, #353, #357, #370).
 
 Provides:
 - POST /api/v1/validation/review-packs — Trigger async review pack generation
 - GET  /api/v1/validation/review-packs — Retrieve generated packs by pov_version_id
+- POST /api/v1/validation/review-packs/{id}/decisions — Submit reviewer decision
+- GET  /api/v1/validation/grading-progression — Evidence grade progression data
 - GET  /api/v1/validation/dark-room-shrink — Dark-Room Shrink Rate dashboard data
 """
 
@@ -16,7 +18,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,13 +30,21 @@ from src.core.models import (
     ProcessModel,
     User,
 )
+from src.core.models.grading_snapshot import GradingSnapshot
 from src.core.models.validation import ReviewPack, ReviewPackStatus
+from src.core.models.validation_decision import ReviewerAction
 from src.core.permissions import require_engagement_access
+from src.core.services.reviewer_actions_service import ReviewerActionsService
+from src.semantic.graph import KnowledgeGraphService
 from src.validation.dark_room import (
     DEFAULT_SHRINK_RATE_TARGET,
     compute_illumination_timeline,
     compute_shrink_rates,
     generate_alerts,
+)
+from src.validation.grading_progression import (
+    DEFAULT_IMPROVEMENT_TARGET,
+    compute_grade_distributions,
 )
 from src.validation.pack_generator import ActivityInfo, generate_packs
 
@@ -80,6 +90,24 @@ class PaginatedReviewPackResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class DecisionRequest(BaseModel):
+    """Request body for submitting a reviewer decision."""
+
+    element_id: str = Field(..., description="ID of the graph element being reviewed")
+    action: ReviewerAction = Field(..., description="Reviewer action: confirm/correct/reject/defer")
+    payload: dict[str, Any] | None = Field(None, description="Action-specific payload")
+
+
+class DecisionResponse(BaseModel):
+    """Response from submitting a reviewer decision."""
+
+    decision_id: str
+    action: str
+    element_id: str
+    graph_write_back: dict[str, Any]
+    decision_at: str
 
 
 class GenerateRequest(BaseModel):
@@ -185,6 +213,65 @@ async def list_review_packs(
         "limit": limit,
         "offset": offset,
     }
+
+
+# ---------------------------------------------------------------------------
+# Submit Reviewer Decision (Story #353)
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/review-packs/{review_pack_id}/decisions",
+    response_model=DecisionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def submit_decision(
+    review_pack_id: uuid.UUID,
+    body: DecisionRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Submit a structured reviewer decision on a review pack item.
+
+    Persists a ValidationDecision and triggers the corresponding
+    knowledge graph write-back (CONFIRM/CORRECT/REJECT/DEFER).
+    """
+    # Verify review pack exists and get its engagement_id
+    pack_result = await session.execute(
+        select(ReviewPack).where(ReviewPack.id == review_pack_id)
+    )
+    pack = pack_result.scalar_one_or_none()
+    if pack is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Review pack not found",
+        )
+
+    # SEC-02: Validate element_id belongs to this review pack
+    pack_element_ids = {
+        a["id"] for a in (pack.segment_activities or []) if isinstance(a, dict) and "id" in a
+    }
+    if pack_element_ids and body.element_id not in pack_element_ids:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Element not found in this review pack",
+        )
+
+    graph = KnowledgeGraphService(request.app.state.neo4j_driver)
+    service = ReviewerActionsService(graph=graph, session=session)
+
+    result = await service.submit_decision(
+        engagement_id=pack.engagement_id,
+        review_pack_id=review_pack_id,
+        element_id=body.element_id,
+        action=body.action,
+        reviewer_id=current_user.id,
+        payload=body.payload,
+    )
+    await session.commit()
+
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -462,4 +549,87 @@ async def get_dark_room_shrink(
             for a in alerts
         ],
         "illumination_timeline": illumination_timeline,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Grading Progression Dashboard (Story #357)
+# ---------------------------------------------------------------------------
+
+
+class VersionGradeResponse(BaseModel):
+    """Per-version grade distribution data."""
+
+    version_number: int
+    pov_version_id: str
+    grade_counts: dict[str, int]
+    total_elements: int
+    improvement_pct: float | None
+    snapshot_at: str
+
+
+class GradingProgressionResponse(BaseModel):
+    """Complete grading progression dashboard data."""
+
+    engagement_id: str
+    improvement_target: float
+    versions: list[VersionGradeResponse]
+
+
+@router.get("/grading-progression", response_model=GradingProgressionResponse)
+async def get_grading_progression(
+    engagement_id: UUID = Query(..., description="Engagement UUID"),
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Get evidence grading progression data across POV versions.
+
+    Returns per-version grade distributions (U/D/C/B/A counts),
+    improvement percentages, and the target KPI threshold.
+    """
+    snapshot_query = (
+        select(GradingSnapshot)
+        .where(GradingSnapshot.engagement_id == engagement_id)
+        .order_by(GradingSnapshot.version_number.asc())
+    )
+    result = await session.execute(snapshot_query)
+    snapshots = result.scalars().all()
+
+    snapshot_dicts = [
+        {
+            "version_number": s.version_number,
+            "pov_version_id": str(s.pov_version_id),
+            "grade_u": s.grade_u,
+            "grade_d": s.grade_d,
+            "grade_c": s.grade_c,
+            "grade_b": s.grade_b,
+            "grade_a": s.grade_a,
+            "total_elements": s.total_elements,
+            "snapshot_at": s.snapshot_at.isoformat() if s.snapshot_at else "",
+        }
+        for s in snapshots
+    ]
+
+    distributions = compute_grade_distributions(snapshot_dicts)
+
+    return {
+        "engagement_id": str(engagement_id),
+        "improvement_target": DEFAULT_IMPROVEMENT_TARGET,
+        "versions": [
+            {
+                "version_number": d.version_number,
+                "pov_version_id": d.pov_version_id,
+                "grade_counts": {
+                    "U": d.grade_u,
+                    "D": d.grade_d,
+                    "C": d.grade_c,
+                    "B": d.grade_b,
+                    "A": d.grade_a,
+                },
+                "total_elements": d.total_elements,
+                "improvement_pct": d.improvement_pct,
+                "snapshot_at": d.snapshot_at,
+            }
+            for d in distributions
+        ],
     }

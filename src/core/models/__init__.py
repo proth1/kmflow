@@ -204,6 +204,10 @@ from src.core.models.validation import (
     ReviewPack,
     ReviewPackStatus,
 )
+from src.core.models.validation_decision import (
+    ReviewerAction,
+    ValidationDecision,
+)
 from src.security.consent.models import EndpointConsentRecord, EndpointConsentType, PolicyBundle
 
 __all__ = [
@@ -371,6 +375,9 @@ __all__ = [
     # validation
     "ReviewPack",
     "ReviewPackStatus",
+    # validation_decision
+    "ReviewerAction",
+    "ValidationDecision",
     # tom
     "MATURITY_LEVEL_NUMBER",
     "AlignmentRunStatus",
