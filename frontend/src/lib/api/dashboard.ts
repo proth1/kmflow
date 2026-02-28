@@ -110,10 +110,13 @@ export interface GapData {
 
 // -- Confidence Heatmap types -------------------------------------------------
 
+export type BrightnessLevel = "bright" | "dim" | "dark";
+export type EvidenceGrade = "A" | "B" | "C" | "D" | "F";
+
 export interface ElementConfidenceEntry {
   score: number;
-  brightness: string;
-  grade: string;
+  brightness: BrightnessLevel;
+  grade: EvidenceGrade;
 }
 
 export interface ConfidenceMapData {

@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ComponentErrorBoundary } from "@/components/ComponentErrorBoundary";
 import ConfidenceHeatmapOverlay, {
-  brightnessToOverlayColor,
   type HeatmapElementData,
 } from "@/components/ConfidenceHeatmapOverlay";
 import {
@@ -20,6 +19,8 @@ import {
   type ConfidenceSummaryData,
 } from "@/lib/api";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const BPMNViewer = dynamic(() => import("@/components/BPMNViewer"), {
   ssr: false,
   loading: () => (
@@ -28,6 +29,9 @@ const BPMNViewer = dynamic(() => import("@/components/BPMNViewer"), {
     </div>
   ),
 });
+
+// Stable no-op to prevent BPMNViewer re-initialization
+const noop = () => {};
 
 export default function HeatmapPage() {
   const params = useParams();
@@ -47,10 +51,14 @@ export default function HeatmapPage() {
   const [hoveredElement, setHoveredElement] = useState<HeatmapElementData | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastHoveredId = useRef<string | null>(null);
+
+  // Validate engagement ID format
+  const isValidEngagementId = engagementId !== "" && UUID_RE.test(engagementId);
 
   // Load all data
   useEffect(() => {
-    if (!modelId || !engagementId) return;
+    if (!modelId || !isValidEngagementId) return;
     let cancelled = false;
 
     async function load() {
@@ -80,39 +88,38 @@ export default function HeatmapPage() {
     load();
 
     return () => { cancelled = true; };
-  }, [modelId, engagementId]);
+  }, [modelId, engagementId, isValidEngagementId]);
 
-  // Build element confidences map for BPMNViewer (keyed by element name)
-  // When heatmap is active, use brightness-based coloring via custom scores
-  const elementConfidences: Record<string, number> = {};
-  if (heatmapActive && confidenceMap && elements.length > 0) {
+  // Memoize element confidences map for BPMNViewer (keyed by element name)
+  const elementConfidences = useMemo(() => {
+    if (!heatmapActive || !confidenceMap || elements.length === 0) return {};
+    const map: Record<string, number> = {};
     for (const elem of elements) {
-      // Map element name to its confidence entry via element ID
       const entry = confidenceMap.elements[elem.id];
       if (entry) {
-        elementConfidences[elem.name] = entry.score;
+        map[elem.name] = entry.score;
       }
     }
-  }
+    return map;
+  }, [heatmapActive, confidenceMap, elements]);
 
-  // Build name->elementId lookup for hover
-  const nameToElementId: Record<string, string> = {};
-  for (const elem of elements) {
-    nameToElementId[elem.name] = elem.id;
-  }
-
-  // Handle element hover for tooltip
+  // Handle element hover for tooltip — deduplicate by element ID
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
       if (!heatmapActive || !confidenceMap) return;
 
       const target = e.target as SVGElement;
-      // Find the closest BPMN element by traversing up the SVG tree
       const gElement = target.closest("[data-element-id]") as SVGElement | null;
 
       if (gElement) {
         const elementId = gElement.getAttribute("data-element-id");
         if (elementId && confidenceMap.elements[elementId]) {
+          // Skip re-render if same element
+          if (lastHoveredId.current === elementId) {
+            setTooltipPosition({ x: e.clientX, y: e.clientY });
+            return;
+          }
+          lastHoveredId.current = elementId;
           const entry = confidenceMap.elements[elementId];
           setHoveredElement({
             elementId,
@@ -125,14 +132,17 @@ export default function HeatmapPage() {
         }
       }
 
-      // No element under cursor
-      setHoveredElement(null);
-      setTooltipPosition(null);
+      if (lastHoveredId.current !== null) {
+        lastHoveredId.current = null;
+        setHoveredElement(null);
+        setTooltipPosition(null);
+      }
     },
     [heatmapActive, confidenceMap],
   );
 
   const handleMouseLeave = useCallback(() => {
+    lastHoveredId.current = null;
     setHoveredElement(null);
     setTooltipPosition(null);
   }, []);
@@ -142,6 +152,17 @@ export default function HeatmapPage() {
       <div className="max-w-7xl mx-auto p-8">
         <div className="text-center text-muted-foreground py-12">
           No engagement selected. Add <code>?engagement_id=UUID</code> to the URL.
+        </div>
+      </div>
+    );
+  }
+
+  if (engagementId && !isValidEngagementId) {
+    return (
+      <div className="max-w-7xl mx-auto p-8">
+        <div className="text-center text-red-600 py-12 bg-red-50 rounded-xl border border-red-200">
+          <h2 className="text-xl font-semibold mb-2">Invalid Engagement ID</h2>
+          <p>The engagement_id must be a valid UUID.</p>
         </div>
       </div>
     );
@@ -199,7 +220,7 @@ export default function HeatmapPage() {
               bpmnXml={bpmnData.bpmn_xml}
               elementConfidences={heatmapActive ? elementConfidences : {}}
               showConfidenceOverlay={heatmapActive}
-              onElementClick={() => {}}
+              onElementClick={noop}
             />
           </ComponentErrorBoundary>
         )}

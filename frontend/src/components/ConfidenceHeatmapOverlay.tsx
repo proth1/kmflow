@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type {
+  BrightnessLevel,
+  EvidenceGrade,
   ElementConfidenceEntry,
   ConfidenceSummaryData,
 } from "@/lib/api/dashboard";
@@ -36,8 +38,8 @@ function brightnessLabel(brightness: string): string {
 export interface HeatmapElementData {
   elementId: string;
   score: number;
-  brightness: string;
-  grade: string;
+  brightness: BrightnessLevel;
+  grade: EvidenceGrade;
 }
 
 interface ConfidenceHeatmapOverlayProps {
