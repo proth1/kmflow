@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.167] - 2026-02-27
+### Added
+- Schema intelligence library: YAML-based templates for ServiceNow, SAP, Salesforce, case-insensitive table lookup, manual fallback mode, 4 API endpoints, 34 tests (#335)
+
 ## [2026.02.166] - 2026-02-27
 ### Added
 - Transformation templates library: 4 analysis templates (consolidate tasks, automate gateway, shift decision, remove control), Literal action validation, max 500 elements, IDOR-safe, 35 tests (#376)
