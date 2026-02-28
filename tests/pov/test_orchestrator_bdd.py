@@ -20,37 +20,6 @@ from src.pov.orchestrator import (
     get_step_info,
 )
 
-# --- Helper: fake task queue for testing orchestrator -----------------------
-
-class FakeRedis:
-    """Minimal fake Redis for TaskQueue tests."""
-
-    def __init__(self) -> None:
-        self._hashes: dict[str, dict[str, str]] = {}
-        self._streams: dict[str, list[tuple[str, dict[str, str]]]] = {}
-        self._msg_counter = 0
-
-    async def hset(self, key: str, mapping: dict[str, str]) -> int:
-        if key not in self._hashes:
-            self._hashes[key] = {}
-        self._hashes[key].update(mapping)
-        return len(mapping)
-
-    async def hgetall(self, key: str) -> dict[str, str]:
-        return dict(self._hashes.get(key, {}))
-
-    async def expire(self, key: str, seconds: int) -> bool:
-        return True
-
-    async def xadd(self, stream: str, fields: dict[str, str], maxlen: int = 0, approximate: bool = False) -> str:
-        self._msg_counter += 1
-        msg_id = f"{self._msg_counter}-0"
-        if stream not in self._streams:
-            self._streams[stream] = []
-        self._streams[stream].append((msg_id, fields))
-        return msg_id
-
-
 # --- Scenario 1: Async POV generation task creation -------------------------
 
 

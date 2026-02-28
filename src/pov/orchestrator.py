@@ -190,8 +190,7 @@ class PovGenerationWorker(TaskWorker):
         pipeline_start = time.monotonic()
 
         # Execute each step with progress tracking
-        steps = list(LCD_STEPS)
-        for i, step_def in enumerate(steps):
+        for i, step_def in enumerate(LCD_STEPS):
             step_num = i + 1
             step_name = step_def["name"]
             step_start = time.monotonic()
