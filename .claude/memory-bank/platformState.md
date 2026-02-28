@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.190
+**Version**: 2026.02.191
 **Last Updated**: 2026-02-28
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.191 | 2026-02-28 | Security & quality: cryptography 46.0.5 bump (#253), frontend dep hardening (#265), agent capture privacy audit remediation (#268) |
 | 2026.02.190 | 2026-02-28 | Confidence heatmap overlay: Bright/Dim/Dark toggle, hover tooltip, JSON/CSV export, UUID validation, 20 tests (#341) |
 | 2026.02.189 | 2026-02-28 | Financial Impact Dashboard: side-by-side scenario cost comparison, inline assumption editing, delta highlighting, 16 tests (#369) |
 | 2026.02.188 | 2026-02-28 | Persona-specific dashboard APIs: Engagement Lead, Process Analyst, SME, Client Stakeholder with RBAC, 23 tests (#362) |

@@ -8,6 +8,7 @@ All 106 stories (18 epics) from PRD v2.1 decomposition are complete. No remainin
 
 ## Recently Completed
 
+- **PRs #253, #265, #268 merged** — Security & quality cleanup: cryptography 46.0.5, frontend dep hardening, agent capture privacy audit remediation (v2026.02.191)
 - **PR #507 merged** — Confidence heatmap overlay: Bright/Dim/Dark toggle, hover tooltip, JSON/CSV export, UUID validation, 20 tests (#341) (v2026.02.190)
 - **PR #506 merged** — Financial Impact Dashboard: side-by-side scenario cost comparison, inline assumption editing, delta highlighting, 16 tests (#369) (v2026.02.189)
 - **PR #505 merged** — Persona-specific dashboard APIs: Engagement Lead, Process Analyst, SME, Client Stakeholder with RBAC, 23 tests (#362) (v2026.02.188)

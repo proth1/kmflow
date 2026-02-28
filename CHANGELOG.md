@@ -3,6 +3,14 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.191] - 2026-02-28
+### Security
+- Bump cryptography to 46.0.5 (CVE fixes) (#253)
+
+### Changed
+- Frontend quality: strict dependency ranges, unused dep removal, page component hardening (#265)
+- Agent capture layer privacy: consent version tracking, HMAC re-consent, strict CSPRNG (no UUID fallback), MDM onboarding pre-population, legacy record migration, BufferEncryptionManager extraction, strict decryption error handling (#268)
+
 ## [2026.02.190] - 2026-02-28
 ### Added
 - Confidence heatmap overlay: Bright/Dim/Dark toggle on BPMN viewer, hover tooltip (score, brightness, grade), JSON/CSV summary export, UUID validation, memoized rendering, 20 tests (#341)
