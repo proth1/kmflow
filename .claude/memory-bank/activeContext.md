@@ -8,6 +8,7 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #503 merged** — Evidence mapping overlay API: reverse evidence lookup, dark elements with suggestions, 19 tests (#343) (v2026.02.186)
 - **PR #502 merged** — Confidence heatmap API: per-element confidence map, brightness distribution summary, CSV export, 14 tests (Part of #341) (v2026.02.185)
 - **PR #501 merged** — BPMN viewer API: latest model, element evidence, dashboard KPIs, 19 tests (#338) (v2026.02.184)
 - **PR #500 merged** — Executive report generation: 5-section assembly, evidence appendix citations, Redis job tracking, HTML/PDF download, 32 tests (#356) (v2026.02.183)
