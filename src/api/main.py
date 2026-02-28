@@ -42,8 +42,8 @@ from src.api.routes import (
     conformance,
     consent,
     consistency,
-    cost_modeling,
     copilot,
+    cost_modeling,
     dashboard,
     data_classification,
     deviations,
@@ -88,6 +88,7 @@ from src.api.routes import (
     taskmining,
     tom,
     transfer_controls,
+    transformation_templates,
     users,
     validation,
     websocket,
@@ -371,6 +372,9 @@ def create_app() -> FastAPI:
 
     # -- Suggestion Feedback Routes (Story #390) ---
     app.include_router(suggestion_feedback.router)
+
+    # -- Transformation Templates Routes (Story #376) ---
+    app.include_router(transformation_templates.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)
