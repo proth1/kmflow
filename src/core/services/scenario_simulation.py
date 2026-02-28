@@ -8,11 +8,14 @@ Integrates the simulation engine with scenario modifications to compute:
 
 from __future__ import annotations
 
+import logging
 import time
 from dataclasses import dataclass, field
 from typing import Any
 
 from src.core.models.simulation import ModificationType
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -136,6 +139,9 @@ class ScenarioSimulationAdapter:
                 # Controls affect compliance, minimal cycle impact
                 cycle_delta = change_data.get("cycle_time_delta_hrs", 0.0)
                 confidence = "DIM" if mod_type == ModificationType.CONTROL_ADD else "DARK"
+
+            else:
+                logger.warning("Unrecognized modification_type: %s for element %s", mod_type, element_id)
 
             total_cycle_delta += cycle_delta
             total_fte_delta += fte_delta

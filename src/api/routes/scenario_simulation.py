@@ -12,17 +12,19 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.api.deps import get_session
 from src.core.models import (
+    EngagementMember,
     ScenarioModification,
     SimulationResult,
     SimulationScenario,
     SimulationStatus,
     User,
+    UserRole,
 )
 from src.core.permissions import require_permission
 from src.core.services.scenario_simulation import (
@@ -34,6 +36,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["scenario-simulation"])
 
+# Strong references to background tasks to prevent GC
+_background_tasks: set[asyncio.Task[None]] = set()
+
 
 @router.post(
     "/scenarios/{scenario_id}/simulate",
@@ -41,15 +46,17 @@ router = APIRouter(prefix="/api/v1", tags=["scenario-simulation"])
 )
 async def trigger_simulation(
     scenario_id: UUID,
+    request: Request,
     session: AsyncSession = Depends(get_session),
-    _user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("simulation:run")),
 ) -> dict[str, Any]:
     """Trigger async simulation for a scenario.
 
     Creates a SimulationResult in PENDING state and launches background task.
     Returns 202 with task_id for polling.
     """
-    await _get_scenario(session, scenario_id)
+    scenario = await _get_scenario(session, scenario_id)
+    await _check_engagement_member(session, user, scenario.engagement_id)
 
     # Create pending simulation result
     sim_result = SimulationResult(
@@ -61,10 +68,13 @@ async def trigger_simulation(
     await session.commit()
     await session.refresh(sim_result)
 
-    # Launch simulation in background
-    asyncio.create_task(
-        _run_simulation_task(scenario_id, sim_result.id)
+    # Launch simulation in background with session factory from app state
+    session_factory = request.app.state.db_session_factory
+    task = asyncio.create_task(
+        _run_simulation_task(scenario_id, sim_result.id, session_factory)
     )
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
 
     return {
         "task_id": str(sim_result.id),
@@ -77,9 +87,12 @@ async def trigger_simulation(
 async def get_simulation_status(
     scenario_id: UUID,
     session: AsyncSession = Depends(get_session),
-    _user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """Get the latest simulation status for a scenario."""
+    scenario = await _get_scenario(session, scenario_id)
+    await _check_engagement_member(session, user, scenario.engagement_id)
+
     result = await session.execute(
         select(SimulationResult)
         .where(SimulationResult.scenario_id == scenario_id)
@@ -99,9 +112,12 @@ async def get_simulation_status(
 async def get_simulation_results(
     scenario_id: UUID,
     session: AsyncSession = Depends(get_session),
-    _user: User = Depends(require_permission("engagement:read")),
+    user: User = Depends(require_permission("simulation:read")),
 ) -> dict[str, Any]:
     """Get completed simulation results with per-element impacts."""
+    scenario = await _get_scenario(session, scenario_id)
+    await _check_engagement_member(session, user, scenario.engagement_id)
+
     result = await session.execute(
         select(SimulationResult)
         .where(SimulationResult.scenario_id == scenario_id)
@@ -121,15 +137,16 @@ async def get_simulation_results(
 # -- Background Task -----------------------------------------------------------
 
 
-async def _run_simulation_task(scenario_id: UUID, result_id: UUID) -> None:
+async def _run_simulation_task(
+    scenario_id: UUID,
+    result_id: UUID,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
     """Background task to run the scenario simulation.
 
     Loads modifications, runs the adapter, stores results.
-    This is fire-and-forget; errors are captured in the SimulationResult.
+    Errors are captured in the SimulationResult.
     """
-    from src.core.database import get_session_factory
-
-    session_factory = get_session_factory()
     async with session_factory() as session:
         try:
             # Mark as running
@@ -163,7 +180,8 @@ async def _run_simulation_task(scenario_id: UUID, result_id: UUID) -> None:
             adapter = ScenarioSimulationAdapter()
             output = adapter.simulate(mod_dicts)
 
-            # Apply confidence overlay
+            # Apply confidence overlay (existing_confidence loaded per-element
+            # when a confidence store is available; empty dict until then)
             overlay = apply_confidence_overlay(output.per_element_results, {})
 
             # Store results
@@ -208,6 +226,25 @@ async def _get_scenario(session: AsyncSession, scenario_id: UUID) -> SimulationS
             detail="Scenario not found",
         )
     return scenario
+
+
+async def _check_engagement_member(
+    session: AsyncSession, user: User, engagement_id: UUID
+) -> None:
+    """Verify user is a member of the engagement. Platform admins bypass."""
+    if user.role == UserRole.PLATFORM_ADMIN:
+        return
+    result = await session.execute(
+        select(EngagementMember).where(
+            EngagementMember.engagement_id == engagement_id,
+            EngagementMember.user_id == user.id,
+        )
+    )
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not a member of this engagement",
+        )
 
 
 def _result_to_dict(r: SimulationResult) -> dict[str, Any]:
