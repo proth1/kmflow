@@ -39,7 +39,7 @@
     "tailwindcss-animate": "1.0.7"
   },
   "overrides": {
-    "minimatch": "^10.2.1"
+    "minimatch": "^10.2.3"
   },
   "devDependencies": {
     "@playwright/test": "1.58.2",
