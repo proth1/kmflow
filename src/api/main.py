@@ -76,6 +76,7 @@ from src.api.routes import (
     regulatory,
     reports,
     scenario_comparison,
+    scenario_simulation,
     scenarios,
     seed_lists,
     sensitivity,
@@ -363,6 +364,9 @@ def create_app() -> FastAPI:
 
     # -- Sensitivity Analysis Routes (Story #364) ---
     app.include_router(sensitivity.router)
+
+    # -- Scenario Simulation Routes (Story #380) ---
+    app.include_router(scenario_simulation.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)
