@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.169] - 2026-02-27
+### Added
+- Connector framework: CredentialProvider (env var + secrets manager), @with_retry decorator with exponential backoff and jitter, TransformPipeline with FieldMappingStep, rate limit header parsing, Credential repr masking, 34 tests (#323)
+
 ## [2026.02.168] - 2026-02-27
 ### Added
 - Replay API endpoints: 5 async task endpoints (single-case, aggregate, variant-comparison, status, paginated frames), date-typed time ranges, Literal granularity, 1000-task eviction cap, schemas in src/api/schemas/, 30 tests (#345)
