@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.157] - 2026-02-27
+### Added
+- Best practices library and industry benchmarking: BestPractice model extension (title, maturity_level 1-5), migration 074-075, percentile ranking with linear interpolation, gap-to-practice matching by domain/dimension/keyword, domain filter on best-practices search, engagement metadata_json, 36 tests (#363)
+
 ## [2026.02.156] - 2026-02-27
 ### Added
 - Republish cycle and version diff with BPMN color-coding: apply validation decisions (CONFIRM/CORRECT/REJECT/DEFER) to produce new POV versions, structured diff with green/red/yellow color hints, dark-room shrink rate, rename collision detection, corrected fields persistence fix, 31 tests (#361)
