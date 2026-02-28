@@ -21,6 +21,7 @@ import uuid
 from collections import defaultdict
 from dataclasses import dataclass, field
 
+from neo4j.exceptions import Neo4jError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -226,7 +227,7 @@ class KnowledgeGraphBuilder:
                 for props in props_list:
                     # Find the entity whose node_id matches and record the mapping
                     entity_to_node[props["id"]] = props["id"]
-            except Exception as e:
+            except Neo4jError as e:
                 logger.warning("Failed to batch-create nodes for label %s: %s", label, e)
 
         # Build the entity.id -> node_id mapping for callers
@@ -287,7 +288,7 @@ class KnowledgeGraphBuilder:
                 await self._graph.batch_create_nodes(
                     "Evidence", list(evidence_props.values())
                 )
-            except Exception as e:
+            except Neo4jError as e:
                 logger.warning("Failed to batch-create Evidence nodes: %s", e)
 
         # Batch-create all SUPPORTED_BY edges in one UNWIND round-trip
@@ -297,7 +298,7 @@ class KnowledgeGraphBuilder:
         ]
         try:
             count = await self._graph.batch_create_relationships("SUPPORTED_BY", rels)
-        except Exception as e:
+        except Neo4jError as e:
             logger.warning("Failed to batch-create SUPPORTED_BY relationships: %s", e)
             count = 0
 
@@ -361,7 +362,7 @@ class KnowledgeGraphBuilder:
 
         try:
             count = await self._graph.batch_create_relationships("CO_OCCURS_WITH", rels)
-        except Exception as e:
+        except Neo4jError as e:
             logger.warning("Failed to batch-create CO_OCCURS_WITH relationships: %s", e)
             count = 0
 
@@ -433,10 +434,12 @@ class KnowledgeGraphBuilder:
             try:
                 created = await self._graph.batch_create_relationships(rel_type, rels)
                 count += created
-            except Exception as e:
+            except Neo4jError as e:
                 logger.debug("Batch relationship creation skipped for %s: %s", rel_type, e)
 
         return count
+
+    _EMBEDDING_BATCH_SIZE = 100  # Max embeddings per DB round-trip (C3-H2)
 
     async def _generate_and_store_embeddings(
         self,
@@ -445,6 +448,10 @@ class KnowledgeGraphBuilder:
     ) -> tuple[int, list[str]]:
         """Generate and store embeddings for fragments.
 
+        Generates embeddings individually (each may call the embedding model),
+        then stores them in batches of _EMBEDDING_BATCH_SIZE to avoid N+1
+        database writes (C3-H2).
+
         Args:
             session: Database session.
             fragments: List of (fragment_id, content, evidence_id) tuples.
@@ -452,19 +459,28 @@ class KnowledgeGraphBuilder:
         Returns:
             Tuple of (count of embeddings stored, list of error messages).
         """
-        count = 0
         errors: list[str] = []
+        pending: list[tuple[str, list[float]]] = []
+
         for fragment_id, content, _ in fragments:
             try:
                 embedding = await self._embeddings.generate_embedding_async(content)
-                await self._embeddings.store_embedding(session, fragment_id, embedding)
-                count += 1
-            except Exception as e:
+                pending.append((fragment_id, embedding))
+            except (ValueError, RuntimeError) as e:
                 msg = f"Embedding failed for fragment {fragment_id}: {e}"
                 errors.append(msg)
                 logger.warning("Failed to generate embedding for fragment %s: %s", fragment_id, e)
 
-        return count, errors
+            # Flush batch when it reaches the size limit
+            if len(pending) >= self._EMBEDDING_BATCH_SIZE:
+                await self._embeddings.store_embeddings_batch(session, pending)
+                pending = []
+
+        # Flush any remaining embeddings
+        if pending:
+            await self._embeddings.store_embeddings_batch(session, pending)
+
+        return len(fragments) - len(errors), errors
 
     async def build_knowledge_graph(
         self,
@@ -514,7 +530,7 @@ class KnowledgeGraphBuilder:
             return result
 
         # Step 4: Resolve entities
-        resolved_entities = resolve_entities(all_entities)
+        resolved_entities, _ = resolve_entities(all_entities)
         result.entities_resolved = len(resolved_entities)
 
         # Step 5: Create nodes

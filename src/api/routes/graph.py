@@ -169,7 +169,7 @@ async def build_graph(
             "entities_resolved": result.entities_resolved,
             "errors": result.errors,
         }
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.exception("Graph build failed for engagement %s", payload.engagement_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -403,7 +403,7 @@ async def run_bridges(
             "relationships_created": result["relationships_created"],
             "errors": result.get("errors", []),
         }
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.exception("Bridge execution failed for engagement %s", engagement_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

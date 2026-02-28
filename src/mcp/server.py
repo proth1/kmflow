@@ -83,7 +83,7 @@ async def call_tool(
             "success": True,
             "result": result,
         }
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.exception("MCP tool execution failed: %s", tool_name)
         return {
             "request_id": payload.request_id,
@@ -107,7 +107,7 @@ async def call_tool_stream(
         try:
             result = await _execute_tool(payload.tool_name, payload.arguments, request)
             yield f"data: {json.dumps({'type': 'result', 'data': result})}\n\n"
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: SSE generator must catch all errors to send done event
             yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
 
         yield f"data: {json.dumps({'type': 'done'})}\n\n"

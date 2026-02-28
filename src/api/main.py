@@ -20,6 +20,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from neo4j.exceptions import Neo4jError
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -32,35 +33,73 @@ from src.api.middleware.security import (
 )
 from src.api.routes import (
     admin,
-    auth as auth_routes,
+    assumptions,
+    audit_logs,
     camunda,
+    claim_write_back,
+    cohort,
+    conflicts,
     conformance,
+    consent,
+    consistency,
     copilot,
+    cost_modeling,
     dashboard,
+    data_classification,
+    deviations,
     engagements,
+    event_spine,
     evidence,
+    evidence_coverage,
+    evidence_gap_ranking,
+    exports,
+    gap_probes,
     gdpr,
     governance,
+    governance_flags,
+    governance_overlay,
     graph,
     health,
+    incidents,
     integrations,
+    knowledge_forms,
     lineage,
+    llm_audit,
     metrics,
+    micro_surveys,
     monitoring,
     patterns,
+    pdp,
     portal,
     pov,
+    raci,
     regulatory,
+    replay,
     reports,
+    scenario_comparison,
+    scenario_simulation,
+    scenarios,
+    schema_library,
+    seed_lists,
+    sensitivity,
     shelf_requests,
     simulations,
+    suggestion_feedback,
+    survey_claims,
+    survey_sessions,
     taskmining,
     tom,
+    transfer_controls,
+    transformation_templates,
     users,
+    validation,
     websocket,
 )
 from src.api.routes import (
     annotations as annotations_routes,
+)
+from src.api.routes import (
+    auth as auth_routes,
 )
 from src.api.routes.auth import limiter
 from src.api.version import API_VERSION
@@ -97,7 +136,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("Neo4j connection verified")
         try:
             await setup_neo4j_constraints(neo4j_driver)
-        except Exception:
+        except Neo4jError:
             logger.warning("Failed to setup Neo4j constraints (non-fatal)")
     else:
         logger.warning("Neo4j is not reachable; starting in degraded mode")
@@ -137,9 +176,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         from src.taskmining.worker import run_worker as run_tm_worker
 
         for i in range(settings.taskmining_worker_count):
-            task = asyncio.create_task(
-                run_tm_worker(redis_client, f"tm-worker-{i}", shutdown_event)
-            )
+            task = asyncio.create_task(run_tm_worker(redis_client, f"tm-worker-{i}", shutdown_event))
             worker_tasks.append(task)
         logger.info("Started %d task mining workers", settings.taskmining_worker_count)
 
@@ -220,6 +257,8 @@ def create_app() -> FastAPI:
     app.include_router(websocket.router)
     app.include_router(patterns.router)
     app.include_router(simulations.router)
+    app.include_router(scenario_comparison.router)  # Must precede scenarios (static /compare before /{id})
+    app.include_router(scenarios.router)
     app.include_router(portal.router)
     app.include_router(mcp_router)
     app.include_router(camunda.router)
@@ -231,12 +270,14 @@ def create_app() -> FastAPI:
     # -- Phase 8 Routes ---
     app.include_router(metrics.router)
     app.include_router(annotations_routes.router)
+    app.include_router(raci.router)
 
     # -- Phase C: Data Layer Evolution ---
     app.include_router(lineage.router)
 
     # -- Phase D: Data Governance Framework ---
     app.include_router(governance.router)
+    app.include_router(governance_overlay.router)
 
     # -- Phase 5 Routes ---
     app.include_router(admin.router)
@@ -246,6 +287,102 @@ def create_app() -> FastAPI:
 
     # -- Task Mining Routes ---
     app.include_router(taskmining.router)
+
+    # -- Audit Log Query Routes (Story #314) ---
+    app.include_router(audit_logs.router)
+
+    # -- Deviation Detection Routes (Story #350) ---
+    app.include_router(deviations.router)
+
+    # -- Review Pack Validation Routes (Story #349) ---
+    app.include_router(validation.router)
+
+    # -- Conflict Resolution Routes (Story #388) ---
+    app.include_router(conflicts.router)
+
+    # -- Consistency Reporting Routes (Story #392) ---
+    app.include_router(consistency.router)
+
+    # -- Knowledge Forms Coverage Routes (Story #316) ---
+    app.include_router(knowledge_forms.router)
+
+    # -- Event Spine Routes (Story #334) ---
+    app.include_router(event_spine.router)
+
+    # -- Gap Probe Routes (Story #327) ---
+    app.include_router(gap_probes.router)
+
+    # -- Evidence Gap Ranking Routes (Story #393) ---
+    app.include_router(evidence_gap_ranking.router)
+
+    # -- Micro-Survey Routes (Story #398) ---
+    app.include_router(micro_surveys.router)
+
+    # -- Seed List Routes (Story #321) ---
+    app.include_router(seed_lists.router)
+
+    # -- Survey Claim Routes (Story #322) ---
+    app.include_router(survey_claims.router)
+
+    # -- Survey Session Routes (Story #319) ---
+    app.include_router(survey_sessions.router)
+
+    # -- Incident Response Routes (Story #397) ---
+    app.include_router(incidents.router)
+
+    # -- Transfer Control Routes (Story #395) ---
+    app.include_router(transfer_controls.router)
+
+    # -- PDP Routes (Story #377) ---
+    app.include_router(pdp.router)
+
+    # -- Cohort Suppression Routes (Story #391) ---
+    app.include_router(cohort.router)
+
+    # -- LLM Audit Trail Routes (Story #386) ---
+    app.include_router(llm_audit.router)
+
+    # -- Evidence Coverage Routes (Story #385) ---
+    app.include_router(evidence_coverage.router)
+
+    # -- Export Watermarking Routes (Story #387) ---
+    app.include_router(exports.router)
+
+    # -- Consent Architecture Routes (Story #382) ---
+    app.include_router(consent.router)
+
+    # -- Data Classification & GDPR Compliance Routes (Story #317) ---
+    app.include_router(data_classification.router)
+
+    # -- Claim Write-Back Routes (Story #324) ---
+    app.include_router(claim_write_back.router)
+
+    # -- Financial Assumption Routes (Story #354) ---
+    app.include_router(assumptions.router)
+
+    # -- Cost Modeling Routes (Story #359) ---
+    app.include_router(cost_modeling.router)
+
+    # -- Governance Flag Detection Routes (Story #381) ---
+    app.include_router(governance_flags.router)
+
+    # -- Sensitivity Analysis Routes (Story #364) ---
+    app.include_router(sensitivity.router)
+
+    # -- Scenario Simulation Routes (Story #380) ---
+    app.include_router(scenario_simulation.router)
+
+    # -- Suggestion Feedback Routes (Story #390) ---
+    app.include_router(suggestion_feedback.router)
+
+    # -- Transformation Templates Routes (Story #376) ---
+    app.include_router(transformation_templates.router)
+
+    # -- Schema Intelligence Library Routes (Story #335) ---
+    app.include_router(schema_library.router)
+
+    # -- Replay API Routes (Story #345) ---
+    app.include_router(replay.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)
@@ -257,7 +394,7 @@ def create_app() -> FastAPI:
             content={"detail": str(exc), "request_id": request_id},
         )
 
-    @app.exception_handler(Exception)
+    @app.exception_handler(Exception)  # Intentionally broad: top-level global error handler
     async def generic_error_handler(request: Request, exc: Exception) -> JSONResponse:
         request_id = getattr(request.state, "request_id", "unknown")
         logger.exception("Unhandled error [%s]: %s", request_id, exc)

@@ -20,7 +20,7 @@ model: sonnet
 
 ## Purpose
 Execute the full CI/CD pipeline locally using Claude Code as the execution engine.
-This replaces the GitHub Actions workflow at `.github/workflows/ci.yml`.
+This is the sole CI/CD mechanism for KMFlow — there is no GitHub Actions CI workflow.
 
 Pipeline steps run sequentially (fail-fast):
 1. Backend lint (ruff check)

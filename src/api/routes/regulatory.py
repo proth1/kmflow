@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -206,8 +207,8 @@ async def list_policies(
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """List policies for an engagement."""
-    query = select(Policy).where(Policy.engagement_id == engagement_id)
-    count_query = select(func.count()).select_from(Policy).where(Policy.engagement_id == engagement_id)
+    query = select(Policy).where(Policy.engagement_id == engagement_id, Policy.deleted_at.is_(None))
+    count_query = select(func.count()).select_from(Policy).where(Policy.engagement_id == engagement_id, Policy.deleted_at.is_(None))
 
     if policy_type is not None:
         query = query.where(Policy.policy_type == policy_type)
@@ -228,11 +229,50 @@ async def get_policy(
     user: User = Depends(require_permission("engagement:read")),
 ) -> Policy:
     """Get a specific policy by ID."""
-    result = await session.execute(select(Policy).where(Policy.id == policy_id))
+    result = await session.execute(select(Policy).where(Policy.id == policy_id, Policy.deleted_at.is_(None)))
     policy = result.scalar_one_or_none()
     if not policy:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Policy {policy_id} not found")
     return policy
+
+
+@router.patch("/policies/{policy_id}", response_model=PolicyResponse)
+async def update_policy(
+    policy_id: UUID,
+    payload: PolicyUpdate,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
+) -> Policy:
+    """Update a policy's fields (partial update)."""
+    result = await session.execute(select(Policy).where(Policy.id == policy_id, Policy.deleted_at.is_(None)))
+    policy = result.scalar_one_or_none()
+    if not policy:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Policy {policy_id} not found")
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for field_name, value in update_data.items():
+        setattr(policy, field_name, value)
+
+    await session.commit()
+    await session.refresh(policy)
+    return policy
+
+
+@router.delete("/policies/{policy_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_policy(
+    policy_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
+) -> None:
+    """Soft-delete a policy (sets deleted_at, does not hard delete)."""
+    result = await session.execute(select(Policy).where(Policy.id == policy_id, Policy.deleted_at.is_(None)))
+    policy = result.scalar_one_or_none()
+    if not policy:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Policy {policy_id} not found")
+
+    policy.deleted_at = datetime.now(UTC)
+    await log_audit(session, policy.engagement_id, AuditAction.POLICY_DELETED, json.dumps({"id": str(policy_id), "name": policy.name}))
+    await session.commit()
 
 
 # -- Control Routes -----------------------------------------------------------
@@ -273,8 +313,8 @@ async def list_controls(
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """List controls for an engagement."""
-    query = select(Control).where(Control.engagement_id == engagement_id)
-    count_query = select(func.count()).select_from(Control).where(Control.engagement_id == engagement_id)
+    query = select(Control).where(Control.engagement_id == engagement_id, Control.deleted_at.is_(None))
+    count_query = select(func.count()).select_from(Control).where(Control.engagement_id == engagement_id, Control.deleted_at.is_(None))
     query = query.offset(offset).limit(limit)
     result = await session.execute(query)
     controls = list(result.scalars().all())
@@ -290,11 +330,69 @@ async def get_control(
     user: User = Depends(require_permission("engagement:read")),
 ) -> Control:
     """Get a specific control by ID."""
-    result = await session.execute(select(Control).where(Control.id == control_id))
+    result = await session.execute(select(Control).where(Control.id == control_id, Control.deleted_at.is_(None)))
     control = result.scalar_one_or_none()
     if not control:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Control {control_id} not found")
     return control
+
+
+@router.patch("/controls/{control_id}", response_model=ControlResponse)
+async def update_control(
+    control_id: UUID,
+    payload: ControlUpdate,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
+) -> Control:
+    """Update a control's fields (partial update)."""
+    result = await session.execute(select(Control).where(Control.id == control_id, Control.deleted_at.is_(None)))
+    control = result.scalar_one_or_none()
+    if not control:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Control {control_id} not found")
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for field_name, value in update_data.items():
+        setattr(control, field_name, value)
+
+    await session.commit()
+    await session.refresh(control)
+    return control
+
+
+@router.delete("/controls/{control_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_control(
+    control_id: UUID,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
+) -> None:
+    """Soft-delete a control and remove its ENFORCED_BY edges from Neo4j."""
+    result = await session.execute(select(Control).where(Control.id == control_id, Control.deleted_at.is_(None)))
+    control = result.scalar_one_or_none()
+    if not control:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Control {control_id} not found")
+
+    # Remove ENFORCED_BY edges from Neo4j
+    try:
+        from src.semantic.graph import KnowledgeGraphService
+
+        driver = request.app.state.neo4j_driver
+        graph_service = KnowledgeGraphService(driver)
+        await graph_service.run_write_query(
+            "MATCH (:Activity)-[r:ENFORCED_BY]->(c:Control {id: $control_id}) DELETE r",
+            {"control_id": str(control_id)},
+        )
+    except Exception:
+        logger.warning("Failed to remove ENFORCED_BY edges for control %s from Neo4j", control_id)
+
+    control.deleted_at = datetime.now(UTC)
+    await log_audit(
+        session,
+        control.engagement_id,
+        AuditAction.CONTROL_DELETED,
+        json.dumps({"id": str(control_id), "name": control.name}),
+    )
+    await session.commit()
 
 
 # -- Regulation Routes --------------------------------------------------------
@@ -330,18 +428,39 @@ async def list_regulations(
     engagement_id: UUID,
     limit: int = Query(default=20, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
+    framework: str | None = None,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
-    """List regulations for an engagement."""
-    query = select(Regulation).where(Regulation.engagement_id == engagement_id)
-    count_query = select(func.count()).select_from(Regulation).where(Regulation.engagement_id == engagement_id)
+    """List regulations for an engagement, optionally filtered by framework."""
+    query = select(Regulation).where(Regulation.engagement_id == engagement_id, Regulation.deleted_at.is_(None))
+    count_query = select(func.count()).select_from(Regulation).where(Regulation.engagement_id == engagement_id, Regulation.deleted_at.is_(None))
+
+    if framework is not None:
+        query = query.where(Regulation.framework == framework)
+        count_query = count_query.where(Regulation.framework == framework)
     query = query.offset(offset).limit(limit)
     result = await session.execute(query)
     regulations = list(result.scalars().all())
     count_result = await session.execute(count_query)
     total = count_result.scalar() or 0
     return {"items": regulations, "total": total}
+
+
+@router.get("/regulations/{regulation_id}", response_model=RegulationResponse)
+async def get_regulation(
+    regulation_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+) -> Regulation:
+    """Get a specific regulation by ID."""
+    result = await session.execute(
+        select(Regulation).where(Regulation.id == regulation_id, Regulation.deleted_at.is_(None))
+    )
+    regulation = result.scalar_one_or_none()
+    if not regulation:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Regulation {regulation_id} not found")
+    return regulation
 
 
 @router.patch("/regulations/{regulation_id}", response_model=RegulationResponse)
@@ -352,7 +471,7 @@ async def update_regulation(
     user: User = Depends(require_permission("engagement:update")),
 ) -> Regulation:
     """Update a regulation's fields (partial update)."""
-    result = await session.execute(select(Regulation).where(Regulation.id == regulation_id))
+    result = await session.execute(select(Regulation).where(Regulation.id == regulation_id, Regulation.deleted_at.is_(None)))
     regulation = result.scalar_one_or_none()
     if not regulation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Regulation {regulation_id} not found")
@@ -364,6 +483,81 @@ async def update_regulation(
     await session.commit()
     await session.refresh(regulation)
     return regulation
+
+
+@router.delete("/regulations/{regulation_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_regulation(
+    regulation_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
+) -> None:
+    """Soft-delete a regulation (sets deleted_at, does not hard delete)."""
+    result = await session.execute(select(Regulation).where(Regulation.id == regulation_id, Regulation.deleted_at.is_(None)))
+    regulation = result.scalar_one_or_none()
+    if not regulation:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Regulation {regulation_id} not found")
+
+    regulation.deleted_at = datetime.now(UTC)
+    await log_audit(session, regulation.engagement_id, AuditAction.REGULATION_DELETED, json.dumps({"id": str(regulation_id), "name": regulation.name}))
+    await session.commit()
+
+
+# -- Governance Chain Traversal -----------------------------------------------
+
+
+class GovernanceChainLink(BaseModel):
+    """A single link in the governance chain."""
+
+    entity_id: str
+    entity_type: str
+    name: str
+    relationship_type: str | None = None
+
+
+class GovernanceChainResponse(BaseModel):
+    """Response for governance chain traversal."""
+
+    activity_id: str
+    chain: list[GovernanceChainLink]
+
+
+@router.get("/activities/{activity_id}/governance-chain", response_model=GovernanceChainResponse)
+async def get_governance_chain(
+    activity_id: UUID,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+) -> dict[str, Any]:
+    """Traverse the full governance chain for a process activity.
+
+    Returns: Activity -> Control -> Policy -> Regulation chain from Neo4j.
+    """
+    from src.semantic.graph import KnowledgeGraphService
+
+    driver = request.app.state.neo4j_driver
+    graph_service = KnowledgeGraphService(driver)
+
+    query = (
+        "MATCH (a:Activity {id: $activity_id})-[:ENFORCED_BY]->(c:Control)"
+        "-[:ENFORCES]->(p:Policy)-[:GOVERNED_BY]->(r:Regulation) "
+        "RETURN a.id AS activity_id, a.name AS activity_name, "
+        "c.id AS control_id, c.name AS control_name, "
+        "p.id AS policy_id, p.name AS policy_name, "
+        "r.id AS regulation_id, r.name AS regulation_name"
+    )
+    records = await graph_service.run_query(query, {"activity_id": str(activity_id)})
+
+    chain: list[dict[str, Any]] = []
+    if records:
+        rec = records[0]
+        chain = [
+            {"entity_id": rec.get("activity_id", ""), "entity_type": "Activity", "name": rec.get("activity_name", ""), "relationship_type": None},
+            {"entity_id": rec.get("control_id", ""), "entity_type": "Control", "name": rec.get("control_name", ""), "relationship_type": "ENFORCED_BY"},
+            {"entity_id": rec.get("policy_id", ""), "entity_type": "Policy", "name": rec.get("policy_name", ""), "relationship_type": "ENFORCES"},
+            {"entity_id": rec.get("regulation_id", ""), "entity_type": "Regulation", "name": rec.get("regulation_name", ""), "relationship_type": "GOVERNED_BY"},
+        ]
+
+    return {"activity_id": str(activity_id), "chain": chain}
 
 
 # -- Overlay Engine Routes (Story #29) ----------------------------------------

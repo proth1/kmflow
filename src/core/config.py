@@ -67,6 +67,7 @@ class Settings(BaseSettings):
     jwt_refresh_token_expire_minutes: int = 10080  # 7 days
     auth_dev_mode: bool = False  # Allow local dev tokens
     encryption_key: str = "dev-encryption-key-change-in-production"
+    watermark_signing_key: str = "dev-watermark-key-change-in-production"
 
     # ── Cookie Auth (Issue #156) ──────────────────────────────────
     # cookie_domain: Set to the shared domain (e.g. ".example.com") for
@@ -159,6 +160,9 @@ class Settings(BaseSettings):
     taskmining_pii_quarantine_hours: int = 24
     taskmining_batch_max_size: int = 1000
 
+    # ── Cohort Suppression (Story #391) ──────────────────────────
+    cohort_minimum_size: int = 5
+
     @property
     def jwt_verification_keys(self) -> list[str]:
         """Return list of keys to try for JWT verification (supports rotation).
@@ -207,10 +211,25 @@ class Settings(BaseSettings):
             return self
         has_default_jwt = "dev-secret-key" in self.jwt_secret_key
         has_default_enc = "dev-encryption-key" in self.encryption_key
-        if has_default_jwt or has_default_enc or self.auth_dev_mode:
+        has_default_pg = self.postgres_password == "kmflow_dev_password"
+        has_default_neo4j = self.neo4j_password == "neo4j_dev_password"
+        problems: list[str] = []
+        if has_default_jwt:
+            problems.append("JWT_SECRET_KEY")
+        if has_default_enc:
+            problems.append("ENCRYPTION_KEY")
+        if has_default_pg:
+            problems.append("POSTGRES_PASSWORD")
+        if has_default_neo4j:
+            problems.append("NEO4J_PASSWORD")
+        if self.auth_dev_mode:
+            problems.append("AUTH_DEV_MODE=false")
+        if self.debug:
+            problems.append("DEBUG=false")
+        if problems:
             raise ValueError(
                 "FATAL: Default development secrets detected in non-development environment. "
-                "Set JWT_SECRET_KEY, ENCRYPTION_KEY, and AUTH_DEV_MODE=false"
+                f"Set: {', '.join(problems)}"
             )
         return self
 

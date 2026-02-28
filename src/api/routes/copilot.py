@@ -7,6 +7,7 @@ and Claude API generation. Persists chat history per engagement.
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncGenerator
 from typing import Any
 from uuid import UUID
 
@@ -17,7 +18,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
-from src.core.models import CopilotMessage, User
+from src.core.audit import log_audit
+from src.core.models import AuditAction, CopilotMessage, User
 from src.core.permissions import require_engagement_access, require_permission
 from src.core.rate_limiter import copilot_rate_limit
 
@@ -103,7 +105,7 @@ async def copilot_chat(
             query_type=payload.query_type,
             history=payload.history,
         )
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.exception("Copilot chat failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -141,6 +143,10 @@ async def copilot_chat(
         context_tokens_used=response.context_tokens_used,
     )
     session.add(assistant_msg)
+    await log_audit(
+        session, payload.engagement_id, AuditAction.DATA_ACCESS,
+        f"Copilot query: {payload.query_type}", actor=str(user.id),
+    )
     await session.commit()
 
     return {
@@ -209,7 +215,7 @@ async def copilot_chat_stream(
     neo4j_driver = getattr(request.app.state, "neo4j_driver", None)
     orchestrator = CopilotOrchestrator(neo4j_driver=neo4j_driver)
 
-    async def event_generator():
+    async def event_generator() -> AsyncGenerator[str, None]:
         try:
             async for chunk in orchestrator.chat_streaming(
                 query=payload.query,
@@ -219,7 +225,7 @@ async def copilot_chat_stream(
                 history=payload.history,
             ):
                 yield chunk
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: SSE generator must catch all errors to send DONE event
             logger.exception("Copilot streaming failed: %s", e)
             yield "data: Error: An error occurred. Please try again.\n\n"
             yield "data: [DONE]\n\n"

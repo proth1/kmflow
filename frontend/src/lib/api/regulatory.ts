@@ -34,17 +34,21 @@ export interface ReportResponse {
 
 export async function fetchComplianceState(
   engagementId: string,
+  signal?: AbortSignal,
 ): Promise<ComplianceStateData> {
   return apiGet<ComplianceStateData>(
     `/api/v1/regulatory/overlay/${engagementId}/compliance`,
+    signal,
   );
 }
 
 export async function fetchUngovernedProcesses(
   engagementId: string,
+  signal?: AbortSignal,
 ): Promise<{ ungoverned: UngovernedProcess[]; count: number }> {
   return apiGet<{ ungoverned: UngovernedProcess[]; count: number }>(
     `/api/v1/regulatory/overlay/${engagementId}/ungoverned`,
+    signal,
   );
 }
 

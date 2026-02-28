@@ -30,6 +30,15 @@ const KMFLOW_LOGO_SVG = `<svg viewBox="0 0 120 36" xmlns="http://www.w3.org/2000
   <text x="0" y="28" font-family="'Open Sans Condensed', Arial, sans-serif" font-size="32" font-weight="700" fill="#00338D" letter-spacing="1">KMFlow</text>
 </svg>`;
 
+function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -185,7 +194,7 @@ function renderUnauthorizedPage(email: string | undefined): Response {
     </div>
     <h1>Access Denied</h1>
     <p>You have authenticated successfully, but your email is not authorized to view this content.</p>
-    ${email ? `<p>Signed in as: <span class="email">${email}</span></p>` : ''}
+    ${email ? `<p>Signed in as: <span class="email">${escapeHtml(email)}</span></p>` : ''}
     <div class="allowed">
       <p>Access is restricted to:</p>
       <p>Authorized email addresses only</p>
@@ -625,11 +634,11 @@ function renderLoginPage(env: Env, url: URL, request: Request): Response {
     </div>
     <p class="subtitle">Sign in to access the KMFlow platform presentation</p>
 
-    ${error ? `<div class="error">${error}</div>` : ''}
+    ${error ? `<div class="error">${escapeHtml(error)}</div>` : ''}
 
     <div id="email-view" class="${step === 'email' ? 'active' : ''}">
       <form action="/auth/send-otp" method="POST">
-        <input type="hidden" name="redirect" value="${redirect}">
+        <input type="hidden" name="redirect" value="${escapeHtml(redirect)}">
         <div class="form-group">
           <label for="email">Email Address</label>
           <input type="email" id="email" name="email" required placeholder="you@company.com" autofocus>
@@ -644,10 +653,10 @@ function renderLoginPage(env: Env, url: URL, request: Request): Response {
     <div id="verify-view" class="${step === 'verify' ? 'active' : ''}">
       <div class="info-box">
         We sent a 6-digit code to<br>
-        <span class="email">${pendingEmail}</span>
+        <span class="email">${escapeHtml(pendingEmail)}</span>
       </div>
       <form action="/auth/verify-otp" method="POST">
-        <input type="hidden" name="redirect" value="${redirect}">
+        <input type="hidden" name="redirect" value="${escapeHtml(redirect)}">
         <div class="form-group">
           <label for="code">Verification Code</label>
           <input type="text" id="code" name="code" class="otp-input" required
@@ -657,8 +666,8 @@ function renderLoginPage(env: Env, url: URL, request: Request): Response {
         <button type="submit" class="btn">Verify &amp; Sign In</button>
       </form>
       <form action="/auth/send-otp" method="POST">
-        <input type="hidden" name="redirect" value="${redirect}">
-        <input type="hidden" name="email" value="${pendingEmail}">
+        <input type="hidden" name="redirect" value="${escapeHtml(redirect)}">
+        <input type="hidden" name="email" value="${escapeHtml(pendingEmail)}">
         <button type="submit" class="btn btn-secondary">Resend Code</button>
       </form>
       <a href="${LOGIN_PATH}?redirect=${encodeURIComponent(redirect)}" class="btn btn-secondary" style="display: block; text-align: center; text-decoration: none;">

@@ -166,7 +166,7 @@ class CopilotOrchestrator:
         except ImportError:
             logger.warning("anthropic package not installed, using stub response")
             return self._stub_response(user_prompt)
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: anthropic SDK error hierarchy is not stable
             logger.error("Claude API call failed: %s", e)
             return self._stub_response(user_prompt)
 
@@ -250,7 +250,7 @@ class CopilotOrchestrator:
         except ImportError:
             logger.warning("anthropic package not installed, yielding stub response")
             yield f"data: {self._stub_response(user_prompt)}\n\n"
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: anthropic SDK error hierarchy is not stable
             logger.error("Claude streaming failed: %s", e)
             yield f"data: {self._stub_response(user_prompt)}\n\n"
 

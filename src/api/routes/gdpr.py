@@ -39,7 +39,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.deps import get_session
 from src.core.auth import get_current_user
 from src.core.config import get_settings
-from src.core.models import Annotation, AuditLog, EngagementMember, User, UserConsent, UserRole
+from src.core.models import Annotation, AuditLog, CopilotMessage, EngagementMember, User, UserConsent, UserRole
 from src.core.permissions import has_role_level
 
 logger = logging.getLogger(__name__)
@@ -66,6 +66,8 @@ class DataExportResponse(BaseModel):
     memberships: list[dict[str, Any]]
     audit_entries: list[dict[str, Any]]
     annotations: list[dict[str, Any]]
+    user_consents: list[dict[str, Any]]
+    copilot_messages: list[dict[str, Any]]
 
 
 class ErasureRequestResponse(BaseModel):
@@ -210,11 +212,45 @@ async def export_user_data(
     )
     annotations = [_annotation_to_dict(a) for a in annotation_result.scalars().all()]
 
+    # User consent records
+    consent_result = await session.execute(
+        select(UserConsent).where(UserConsent.user_id == current_user.id)
+    )
+    user_consents = [
+        {
+            "id": str(c.id),
+            "consent_type": c.consent_type,
+            "granted": c.granted,
+            "granted_at": c.granted_at.isoformat() if c.granted_at else None,
+            "revoked_at": c.revoked_at.isoformat() if c.revoked_at else None,
+            "ip_address": c.ip_address,
+        }
+        for c in consent_result.scalars().all()
+    ]
+
+    # Copilot chat messages for the user
+    copilot_result = await session.execute(
+        select(CopilotMessage).where(CopilotMessage.user_id == current_user.id)
+    )
+    copilot_messages = [
+        {
+            "id": str(m.id),
+            "engagement_id": str(m.engagement_id),
+            "role": m.role,
+            "content": m.content,
+            "query_type": m.query_type,
+            "created_at": m.created_at.isoformat() if m.created_at else None,
+        }
+        for m in copilot_result.scalars().all()
+    ]
+
     return DataExportResponse(
         user_profile=_user_to_dict(current_user),
         memberships=memberships,
         audit_entries=audit_entries,
         annotations=annotations,
+        user_consents=user_consents,
+        copilot_messages=copilot_messages,
     )
 
 

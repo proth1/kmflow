@@ -7,7 +7,6 @@ A .vsdx file is a ZIP archive containing XML files.
 from __future__ import annotations
 
 import logging
-import os
 import zipfile
 from pathlib import Path
 
@@ -71,8 +70,8 @@ class VisioParser(BaseParser):
                     # Normalize the path and confirm it does not escape the
                     # archive root — reject any entry that contains ".." after
                     # normalization or that is an absolute path.
-                    normalized = os.path.normpath(page_file)
-                    if os.path.isabs(normalized) or normalized.startswith(".."):
+                    normalized = str(Path(page_file))
+                    if Path(normalized).is_absolute() or normalized.startswith(".."):
                         logger.warning("Zip-slip attempt rejected for entry: %s", page_file)
                         continue
                     page_num = self._extract_page_number(page_file)
@@ -130,7 +129,7 @@ class VisioParser(BaseParser):
             result.error = f"Corrupted .vsdx file: {file_name}"
         except etree.XMLSyntaxError as e:
             result.error = f"Invalid XML in .vsdx file: {e}"
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: parser library exceptions vary by format
             logger.exception("Failed to parse Visio file: %s", file_name)
             result.error = f"Visio parse error: {e}"
 

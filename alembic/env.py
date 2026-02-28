@@ -15,43 +15,7 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from src.core.database import Base
-from src.core.models import (  # noqa: F401
-    Annotation,
-    AuditLog,
-    Benchmark,
-    BestPractice,
-    ConformanceResult,
-    Contradiction,
-    Control,
-    CopilotMessage,
-    Engagement,
-    EngagementMember,
-    EvidenceFragment,
-    EvidenceGap,
-    EvidenceItem,
-    GapAnalysisResult,
-    IntegrationConnection,
-    MCPAPIKey,
-    MetricReading,
-    MonitoringAlert,
-    MonitoringJob,
-    PatternAccessRule,
-    PatternLibraryEntry,
-    Policy,
-    ProcessBaseline,
-    ProcessDeviation,
-    ProcessElement,
-    ProcessModel,
-    ReferenceProcessModel,
-    Regulation,
-    ShelfDataRequest,
-    ShelfDataRequestItem,
-    SimulationResult,
-    SimulationScenario,
-    SuccessMetric,
-    TargetOperatingModel,
-    User,
-)
+import src.core.models  # noqa: F401 — import the package to auto-register all models with Base.metadata
 
 # Alembic Config object
 config = context.config

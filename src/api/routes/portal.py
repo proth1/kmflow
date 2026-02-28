@@ -331,7 +331,7 @@ async def portal_upload(
             "fragments_extracted": len(parse_result.fragments),
             "status": "uploaded",
         }
-    except Exception as e:
+    except (ValueError, RuntimeError, OSError) as e:
         logger.exception("Portal upload failed for %s", file.filename)
         raise HTTPException(status_code=500, detail="Upload processing failed") from e
     finally:

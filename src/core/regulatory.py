@@ -6,10 +6,12 @@ Calculates compliance state and detects ungoverned processes.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from dataclasses import dataclass, field
 from typing import Any
 
+from neo4j.exceptions import Neo4jError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -115,7 +117,7 @@ class RegulatoryOverlayEngine:
                             "policy_type": str(policy.policy_type),
                         },
                     )
-            except Exception as e:
+            except Neo4jError as e:
                 logger.warning("Failed to create Policy node: %s", e)
 
         # Create Control nodes and ENFORCED_BY edges
@@ -135,18 +137,16 @@ class RegulatoryOverlayEngine:
                     )
 
                 # Link control to its policies
-                import contextlib
-
                 for pid in control.linked_policy_ids or []:
                     policy_node_id = f"policy-{pid}"
-                    with contextlib.suppress(Exception):
+                    with contextlib.suppress(Neo4jError):
                         await self._graph.create_relationship(
                             from_id=policy_node_id,
                             to_id=control_node_id,
                             relationship_type="GOVERNED_BY",
                             properties={"source": "regulatory_overlay"},
                         )
-            except Exception as e:
+            except Neo4jError as e:
                 logger.warning("Failed to create Control node: %s", e)
 
         # Create Regulation nodes
@@ -164,7 +164,7 @@ class RegulatoryOverlayEngine:
                             "framework": regulation.framework or "",
                         },
                     )
-            except Exception as e:
+            except Neo4jError as e:
                 logger.warning("Failed to create Regulation node: %s", e)
 
         # Build chains for each process node

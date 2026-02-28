@@ -55,7 +55,7 @@ async def verify_redis_connectivity(client: aioredis.Redis) -> bool:
     """
     try:
         return bool(await client.ping())
-    except Exception:
+    except aioredis.RedisError:
         logger.exception("Failed to connect to Redis")
         return False
 

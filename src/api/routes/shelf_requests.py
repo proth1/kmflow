@@ -26,6 +26,7 @@ from src.core.models import (
     ShelfDataRequest,
     ShelfDataRequestItem,
     ShelfRequestItemPriority,
+    ShelfRequestItemSource,
     ShelfRequestItemStatus,
     ShelfRequestStatus,
     User,
@@ -81,6 +82,8 @@ class ShelfRequestItemResponse(BaseModel):
     priority: ShelfRequestItemPriority
     status: ShelfRequestItemStatus
     matched_evidence_id: UUID | None = None
+    epistemic_action_id: UUID | None = None
+    source: ShelfRequestItemSource = ShelfRequestItemSource.MANUAL
 
 
 class ShelfRequestResponse(BaseModel):
@@ -212,6 +215,7 @@ async def create_shelf_request(
 async def list_shelf_requests(
     engagement_id: UUID | None = None,
     status_filter: ShelfRequestStatus | None = None,
+    source: ShelfRequestItemSource | None = None,
     limit: int = Query(default=20, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
@@ -222,6 +226,7 @@ async def list_shelf_requests(
     Query parameters:
     - engagement_id: Filter by engagement
     - status_filter: Filter by request status
+    - source: Filter by item source (planner/manual) — returns requests containing matching items
     - limit: Maximum results (default 20)
     - offset: Number of results to skip (default 0)
     """
@@ -236,6 +241,21 @@ async def list_shelf_requests(
     if status_filter is not None:
         query = query.where(ShelfDataRequest.status == status_filter)
         count_query = count_query.where(ShelfDataRequest.status == status_filter)
+    if source is not None:
+        query = query.where(
+            ShelfDataRequest.id.in_(
+                select(ShelfDataRequestItem.request_id).where(
+                    ShelfDataRequestItem.source == source
+                )
+            )
+        )
+        count_query = count_query.where(
+            ShelfDataRequest.id.in_(
+                select(ShelfDataRequestItem.request_id).where(
+                    ShelfDataRequestItem.source == source
+                )
+            )
+        )
 
     query = query.offset(offset).limit(limit).order_by(ShelfDataRequest.created_at.desc())
 
@@ -246,6 +266,34 @@ async def list_shelf_requests(
     total = count_result.scalar() or 0
 
     return {"items": items, "total": total}
+
+
+class FollowThroughRateResponse(BaseModel):
+    """Schema for follow-through rate response."""
+
+    engagement_id: UUID
+    total_epistemic_actions: int
+    linked_shelf_items: int
+    follow_through_rate: float
+    target_rate: float
+    meets_target: bool
+
+
+@router.get("/follow-through-rate", response_model=FollowThroughRateResponse)
+async def get_follow_through_rate(
+    engagement_id: UUID = Query(...),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+) -> dict[str, Any]:
+    """Get follow-through rate for planner-driven shelf requests.
+
+    Follow-through rate = shelf items linked to epistemic actions /
+    total epistemic actions. Target: >50%.
+    """
+    from src.api.services.shelf_integration import ShelfIntegrationService
+
+    service = ShelfIntegrationService(session)
+    return await service.get_follow_through_rate(engagement_id)
 
 
 @router.get("/{request_id}", response_model=ShelfRequestResponse)

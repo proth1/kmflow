@@ -18,6 +18,7 @@ from uuid import UUID
 
 import bcrypt
 import jwt
+import redis.asyncio as _aioredis
 from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import PyJWTError
@@ -153,10 +154,10 @@ async def is_token_blacklisted(request: Request, token: str) -> bool:
     Returns True if Redis is unavailable (fail-closed for security).
     """
     try:
-        redis = request.app.state.redis_client
-        result = await redis.get(f"token:blacklist:{token}")
+        redis_client = request.app.state.redis_client
+        result = await redis_client.get(f"token:blacklist:{token}")
         return result is not None
-    except Exception:
+    except _aioredis.RedisError:
         logger.warning("Redis unavailable for token blacklist check — failing closed")
         return True
 
@@ -170,9 +171,9 @@ async def blacklist_token(request: Request, token: str, expires_in: int = 1800) 
         expires_in: TTL in seconds (should match remaining token life).
     """
     try:
-        redis = request.app.state.redis_client
-        await redis.setex(f"token:blacklist:{token}", expires_in, "1")
-    except Exception:
+        redis_client = request.app.state.redis_client
+        await redis_client.setex(f"token:blacklist:{token}", expires_in, "1")
+    except _aioredis.RedisError:
         logger.warning("Redis unavailable for token blacklisting")
 
 

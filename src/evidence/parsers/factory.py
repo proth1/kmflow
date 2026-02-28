@@ -55,6 +55,8 @@ EXTENSION_TO_CATEGORY: dict[str, str] = {
     ".doc": "documents",
     ".pptx": "documents",
     ".txt": "documents",
+    ".html": "documents",
+    ".htm": "documents",
     # Structured Data
     ".xlsx": "structured_data",
     ".xls": "structured_data",
@@ -123,6 +125,7 @@ MIME_TO_EXTENSION: dict[str, str] = {
     "text/csv": ".csv",
     "application/json": ".json",
     "text/plain": ".txt",
+    "text/html": ".html",
     "text/xml": ".xml",
     "application/xml": ".xml",
 }

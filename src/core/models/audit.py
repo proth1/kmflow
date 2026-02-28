@@ -6,8 +6,8 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, Index, String, Text, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.database import Base
@@ -29,8 +29,11 @@ class AuditAction(enum.StrEnum):
     DATA_ACCESS = "data_access"
     POV_GENERATED = "pov_generated"
     POLICY_CREATED = "policy_created"
+    POLICY_DELETED = "policy_deleted"
     CONTROL_CREATED = "control_created"
+    CONTROL_DELETED = "control_deleted"
     REGULATION_CREATED = "regulation_created"
+    REGULATION_DELETED = "regulation_deleted"
     TOM_CREATED = "tom_created"
     GAP_ANALYSIS_RUN = "gap_analysis_run"
     REPORT_GENERATED = "report_generated"
@@ -86,25 +89,50 @@ class AuditAction(enum.StrEnum):
     PII_QUARANTINED = "pii_quarantined"
     PII_QUARANTINE_RELEASED = "pii_quarantine_released"
     PII_QUARANTINE_AUTO_DELETED = "pii_quarantine_auto_deleted"
+    # -- Conflict resolution workflow (Story #388) --------------------------------
+    CONFLICT_ASSIGNED = "conflict_assigned"
+    CONFLICT_RESOLVED = "conflict_resolved"
+    CONFLICT_ESCALATED = "conflict_escalated"
+    # -- Cohort suppression (Story #391) -------------------------------------------
+    EXPORT_BLOCKED = "export_blocked"
 
 
 class AuditLog(Base):
-    """Audit log for tracking engagement mutation operations."""
+    """Audit log for tracking engagement mutation operations.
+
+    Append-only: a PostgreSQL trigger prevents UPDATE and DELETE on this table.
+    """
 
     __tablename__ = "audit_logs"
-    __table_args__ = (Index("ix_audit_logs_engagement_id", "engagement_id"),)
+    __table_args__ = (
+        Index("ix_audit_logs_engagement_id", "engagement_id"),
+        Index("ix_audit_logs_user_id_created_at", "user_id", "created_at"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     engagement_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="SET NULL"), nullable=True
     )
-    action: Mapped[AuditAction] = mapped_column(Enum(AuditAction, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    action: Mapped[AuditAction] = mapped_column(
+        Enum(AuditAction, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
     actor: Mapped[str] = mapped_column(String(255), nullable=False, default="system")
     details: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # --- Columns added by Story #314 ---
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    resource_type: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    resource_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    before_value: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    after_value: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    result_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
-    engagement: Mapped["Engagement | None"] = relationship("Engagement", back_populates="audit_logs")
+    engagement: Mapped[Engagement | None] = relationship("Engagement", back_populates="audit_logs")  # noqa: F821
 
     def __repr__(self) -> str:
         return f"<AuditLog(id={self.id}, action={self.action}, engagement_id={self.engagement_id})>"

@@ -197,7 +197,7 @@ async def migrate_engagement(
                     result=result,
                     dry_run=dry_run,
                 )
-        except Exception as exc:
+        except Exception as exc:  # Intentionally broad: Databricks/Unity Catalog SDK has no specific base exception
             error_msg = f"Failed to migrate evidence item {item_id_str}: {exc!r}"
             logger.warning(error_msg)
             result.errors.append(error_msg)

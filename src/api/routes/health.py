@@ -7,11 +7,17 @@ for PostgreSQL, Neo4j, and Redis.
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 from typing import Any
 
+import redis.asyncio as aioredis
 from fastapi import APIRouter, Request
+from neo4j.exceptions import Neo4jError
+from sqlalchemy.exc import SQLAlchemyError
 
-router = APIRouter()
+from src.api.version import API_VERSION
+
+router = APIRouter(tags=["health"])
 logger = logging.getLogger(__name__)
 
 
@@ -28,7 +34,8 @@ async def health_check(request: Request) -> dict[str, Any]:
                 "neo4j": "up" | "down",
                 "redis": "up" | "down"
             },
-            "version": "0.1.0"
+            "version": API_VERSION,
+            "timestamp": "<ISO 8601 UTC>"
         }
     """
     services: dict[str, str] = {}
@@ -40,7 +47,7 @@ async def health_check(request: Request) -> dict[str, Any]:
             result = await session.execute(__import__("sqlalchemy").text("SELECT 1"))
             result.scalar()
             services["postgres"] = "up"
-    except Exception:
+    except (SQLAlchemyError, ConnectionError, OSError):
         logger.warning("PostgreSQL health check failed")
         services["postgres"] = "down"
 
@@ -49,7 +56,7 @@ async def health_check(request: Request) -> dict[str, Any]:
         neo4j_driver = request.app.state.neo4j_driver
         await neo4j_driver.verify_connectivity()
         services["neo4j"] = "up"
-    except Exception:
+    except (Neo4jError, OSError, AttributeError):
         logger.warning("Neo4j health check failed")
         services["neo4j"] = "down"
 
@@ -58,7 +65,7 @@ async def health_check(request: Request) -> dict[str, Any]:
         redis_client = request.app.state.redis_client
         await redis_client.ping()
         services["redis"] = "up"
-    except Exception:
+    except (aioredis.RedisError, ConnectionError, OSError):
         logger.warning("Redis health check failed")
         services["redis"] = "down"
 
@@ -69,7 +76,7 @@ async def health_check(request: Request) -> dict[str, Any]:
             services["camunda"] = "up"
         else:
             services["camunda"] = "down"
-    except Exception:
+    except (ConnectionError, OSError):
         logger.warning("Camunda health check failed")
         services["camunda"] = "down"
 
@@ -85,5 +92,6 @@ async def health_check(request: Request) -> dict[str, Any]:
     return {
         "status": status,
         "services": services,
-        "version": "0.1.0",
+        "version": API_VERSION,
+        "timestamp": datetime.now(UTC).isoformat(),
     }

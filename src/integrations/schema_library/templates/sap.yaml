@@ -1,0 +1,95 @@
+platform: sap
+version: "1.0"
+description: "SAP ERP schema templates for FI-AP (Accounts Payable) and SD (Sales & Distribution) modules"
+
+tables:
+  - name: BKPF
+    description: "SAP Accounting Document Header (FI-AP)"
+    correlation_keys:
+      - BUKRS
+      - BELNR
+      - GJAHR
+    lifecycle_states:
+      "V": "posted"
+      "A": "parked"
+      "D": "reversed"
+    fields:
+      - source_field: BELNR
+        kmflow_attribute: document_number
+      - source_field: BUKRS
+        kmflow_attribute: company_code
+      - source_field: GJAHR
+        kmflow_attribute: fiscal_year
+      - source_field: BLART
+        kmflow_attribute: document_type
+      - source_field: BUDAT
+        kmflow_attribute: posting_date
+        transform_fn: parse_sap_date
+      - source_field: BLDAT
+        kmflow_attribute: document_date
+        transform_fn: parse_sap_date
+      - source_field: WAERS
+        kmflow_attribute: currency
+      - source_field: USNAM
+        kmflow_attribute: created_by
+      - source_field: CPUDT
+        kmflow_attribute: created_at
+        transform_fn: parse_sap_date
+      - source_field: BSTAT
+        kmflow_attribute: lifecycle_phase
+        transform_fn: map_lifecycle_state
+
+  - name: BSEG
+    description: "SAP Accounting Document Line Item (FI-AP)"
+    correlation_keys:
+      - BUKRS
+      - BELNR
+      - GJAHR
+      - BUZEI
+    fields:
+      - source_field: BUZEI
+        kmflow_attribute: line_item
+      - source_field: HKONT
+        kmflow_attribute: gl_account
+      - source_field: LIFNR
+        kmflow_attribute: vendor_number
+      - source_field: DMBTR
+        kmflow_attribute: amount_local
+        transform_fn: parse_decimal
+      - source_field: WRBTR
+        kmflow_attribute: amount_document
+        transform_fn: parse_decimal
+      - source_field: SHKZG
+        kmflow_attribute: debit_credit
+        transform_fn: map_debit_credit
+
+  - name: VBAK
+    description: "SAP Sales Document Header (SD)"
+    correlation_keys:
+      - VBELN
+    lifecycle_states:
+      "A": "not_yet_processed"
+      "B": "partially_processed"
+      "C": "fully_processed"
+    fields:
+      - source_field: VBELN
+        kmflow_attribute: sales_order
+      - source_field: AUART
+        kmflow_attribute: order_type
+      - source_field: VKORG
+        kmflow_attribute: sales_org
+      - source_field: KUNNR
+        kmflow_attribute: customer_number
+      - source_field: ERDAT
+        kmflow_attribute: created_at
+        transform_fn: parse_sap_date
+      - source_field: ERNAM
+        kmflow_attribute: created_by
+      - source_field: NETWR
+        kmflow_attribute: net_value
+        transform_fn: parse_decimal
+      - source_field: WAERK
+        kmflow_attribute: currency
+      - source_field: GBSTK
+        kmflow_attribute: lifecycle_phase
+        transform_fn: map_lifecycle_state

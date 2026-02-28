@@ -135,6 +135,13 @@ class ScenarioModification(Base):
     element_name: Mapped[str] = mapped_column(String(512), nullable=False)
     change_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     template_key: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    template_source: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    suggestion_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("alternative_suggestions.id", ondelete="SET NULL"), nullable=True
+    )
+    original_suggestion_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("alternative_suggestions.id", ondelete="SET NULL"), nullable=True
+    )
     applied_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     scenario: Mapped[SimulationScenario] = relationship("SimulationScenario", back_populates="modifications")
@@ -193,13 +200,44 @@ class FinancialAssumption(Base):
     source_evidence_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("evidence_items.id", ondelete="SET NULL"), nullable=True
     )
+    confidence_explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    confidence_range: Mapped[float | None] = mapped_column(Float, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     engagement: Mapped["Engagement"] = relationship("Engagement")
 
     def __repr__(self) -> str:
         return f"<FinancialAssumption(id={self.id}, name='{self.name}', type={self.assumption_type})>"
+
+
+class FinancialAssumptionVersion(Base):
+    """Version history entry for a financial assumption."""
+
+    __tablename__ = "financial_assumption_versions"
+    __table_args__ = (Index("ix_fa_versions_assumption_id", "assumption_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    assumption_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("financial_assumptions.id", ondelete="CASCADE"), nullable=False
+    )
+    value: Mapped[float] = mapped_column(Float, nullable=False)
+    unit: Mapped[str] = mapped_column(String(50), nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    confidence_range: Mapped[float | None] = mapped_column(Float, nullable=True)
+    source_evidence_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    confidence_explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    changed_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    assumption: Mapped[FinancialAssumption] = relationship("FinancialAssumption")
+
+    def __repr__(self) -> str:
+        return f"<FinancialAssumptionVersion(id={self.id}, assumption={self.assumption_id})>"
 
 
 class AlternativeSuggestion(Base):
@@ -226,6 +264,11 @@ class AlternativeSuggestion(Base):
         Enum(SuggestionDisposition, values_callable=lambda e: [x.value for x in e]), default=SuggestionDisposition.PENDING, nullable=False
     )
     disposition_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    modified_content: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    disposed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    disposed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     llm_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     llm_response: Mapped[str] = mapped_column(Text, nullable=False)
     created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
@@ -235,3 +278,27 @@ class AlternativeSuggestion(Base):
 
     def __repr__(self) -> str:
         return f"<AlternativeSuggestion(id={self.id}, disposition={self.disposition})>"
+
+
+class RejectionFeedback(Base):
+    """Stores rejected suggestion patterns to prevent repeat suggestions.
+
+    When a consultant rejects an LLM suggestion, the pattern is summarized
+    and stored so future suggestion prompts can exclude similar ideas.
+    """
+
+    __tablename__ = "rejection_feedback"
+    __table_args__ = (
+        Index("ix_rejection_feedback_engagement_id", "engagement_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    suggestion_pattern_summary: Mapped[str] = mapped_column(Text, nullable=False)
+    rejected_suggestion_ids: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<RejectionFeedback(id={self.id}, engagement_id={self.engagement_id})>"

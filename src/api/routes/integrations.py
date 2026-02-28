@@ -17,7 +17,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
-from src.core.models import IntegrationConnection, User
+from src.core.audit import log_audit
+from src.core.encryption import decrypt_dict, encrypt_dict
+from src.core.models import AuditAction, IntegrationConnection, User
 from src.core.permissions import require_permission
 from src.integrations.base import ConnectionConfig, ConnectorRegistry
 from src.integrations.field_mapping import get_default_mapping
@@ -95,6 +97,16 @@ class FieldMappingResponse(BaseModel):
     available_fields: list[str]
 
 
+def _decrypt_config(conn: IntegrationConnection) -> dict[str, Any]:
+    """Decrypt connection config from encrypted_config, falling back to config_json."""
+    if conn.encrypted_config:
+        try:
+            return decrypt_dict(conn.encrypted_config)
+        except Exception:
+            logger.warning("Failed to decrypt config for connection %s, falling back to config_json", conn.id)
+    return conn.config_json or {}
+
+
 def _conn_to_response(conn: IntegrationConnection) -> dict[str, Any]:
     """Convert an IntegrationConnection model to response dict."""
     return {
@@ -103,7 +115,7 @@ def _conn_to_response(conn: IntegrationConnection) -> dict[str, Any]:
         "connector_type": conn.connector_type,
         "name": conn.name,
         "status": conn.status,
-        "config": conn.config_json or {},
+        "config": _decrypt_config(conn),
         "field_mappings": conn.field_mappings,
         "last_sync": conn.last_sync_at.isoformat() if conn.last_sync_at else None,
         "last_sync_records": conn.last_sync_records,
@@ -144,15 +156,23 @@ async def create_connection(
     if mappings is None:
         mappings = get_default_mapping(payload.connector_type)
 
+    # Encrypt sensitive config before persisting
+    encrypted = encrypt_dict(payload.config) if payload.config else None
+
     conn = IntegrationConnection(
         engagement_id=payload.engagement_id,
         connector_type=payload.connector_type,
         name=payload.name,
         status="configured",
-        config_json=payload.config,
+        config_json=None,  # Plaintext cleared; use encrypted_config only
+        encrypted_config=encrypted,
         field_mappings=mappings if mappings else None,
     )
     session.add(conn)
+    await log_audit(
+        session, payload.engagement_id, AuditAction.INTEGRATION_CONNECTED,
+        f"Created connection: {payload.name} ({payload.connector_type})", actor=str(user.id),
+    )
     await session.commit()
     await session.refresh(conn)
     return _conn_to_response(conn)
@@ -211,9 +231,14 @@ async def update_connection(
         conn.name = payload.name
     if payload.config is not None:
         conn.config_json = payload.config
+        conn.encrypted_config = encrypt_dict(payload.config)
     if payload.field_mappings is not None:
         conn.field_mappings = payload.field_mappings
 
+    await log_audit(
+        session, conn.engagement_id, AuditAction.INTEGRATION_CONNECTED,
+        f"Updated connection: {conn.name}", actor=str(user.id),
+    )
     await session.commit()
     await session.refresh(conn)
     return _conn_to_response(conn)
@@ -230,6 +255,10 @@ async def delete_connection(
     conn = result.scalar_one_or_none()
     if not conn:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Connection {connection_id} not found")
+    await log_audit(
+        session, conn.engagement_id, AuditAction.INTEGRATION_CONNECTED,
+        f"Deleted connection: {conn.name}", actor=str(user.id),
+    )
     await session.delete(conn)
     await session.commit()
 
@@ -250,10 +279,11 @@ async def test_connection(
     if not connector_cls:
         return {"connection_id": str(connection_id), "success": False, "message": "Connector type not found"}
 
+    decrypted_config = _decrypt_config(conn)
     config = ConnectionConfig(
-        base_url=(conn.config_json or {}).get("base_url", ""),
-        api_key=(conn.config_json or {}).get("api_key"),
-        extra=conn.config_json or {},
+        base_url=decrypted_config.get("base_url", ""),
+        api_key=decrypted_config.get("api_key"),
+        extra=decrypted_config,
     )
     connector = connector_cls(config)
     try:
@@ -265,7 +295,7 @@ async def test_connection(
             "success": success,
             "message": "Connection successful" if success else "Connection failed",
         }
-    except Exception as e:
+    except (ConnectionError, OSError, ValueError) as e:
         conn.status = "error"
         conn.error_message = str(e)
         await session.commit()
@@ -288,10 +318,11 @@ async def sync_connection(
     if not connector_cls:
         return {"connection_id": str(connection_id), "records_synced": 0, "errors": ["Connector type not found"]}
 
+    decrypted_config = _decrypt_config(conn)
     config = ConnectionConfig(
-        base_url=(conn.config_json or {}).get("base_url", ""),
-        api_key=(conn.config_json or {}).get("api_key"),
-        extra=conn.config_json or {},
+        base_url=decrypted_config.get("base_url", ""),
+        api_key=decrypted_config.get("api_key"),
+        extra=decrypted_config,
     )
     connector = connector_cls(config)
     try:
@@ -303,13 +334,18 @@ async def sync_connection(
         conn.last_sync_records = sync_result.get("records_synced", 0)
         conn.status = "connected"
         conn.error_message = None
+        await log_audit(
+            session, conn.engagement_id, AuditAction.INTEGRATION_SYNCED,
+            f"Synced connection: {conn.name} ({sync_result.get('records_synced', 0)} records)",
+            actor=str(user.id),
+        )
         await session.commit()
         return {
             "connection_id": str(connection_id),
             "records_synced": sync_result.get("records_synced", 0),
             "errors": sync_result.get("errors", []),
         }
-    except Exception as e:
+    except (ConnectionError, OSError, ValueError) as e:
         conn.status = "error"
         conn.error_message = str(e)
         await session.commit()
@@ -331,10 +367,11 @@ async def get_field_mapping(
     connector_cls = ConnectorRegistry.get(conn.connector_type)
     available_fields: list[str] = []
     if connector_cls:
+        decrypted_config = _decrypt_config(conn)
         config = ConnectionConfig(
-            base_url=(conn.config_json or {}).get("base_url", ""),
-            api_key=(conn.config_json or {}).get("api_key"),
-            extra=conn.config_json or {},
+            base_url=decrypted_config.get("base_url", ""),
+            api_key=decrypted_config.get("api_key"),
+            extra=decrypted_config,
         )
         connector = connector_cls(config)
         available_fields = await connector.get_schema()
@@ -367,10 +404,11 @@ async def update_field_mapping(
     connector_cls = ConnectorRegistry.get(conn.connector_type)
     available_fields: list[str] = []
     if connector_cls:
+        decrypted_config = _decrypt_config(conn)
         config = ConnectionConfig(
-            base_url=(conn.config_json or {}).get("base_url", ""),
-            api_key=(conn.config_json or {}).get("api_key"),
-            extra=conn.config_json or {},
+            base_url=decrypted_config.get("base_url", ""),
+            api_key=decrypted_config.get("api_key"),
+            extra=decrypted_config,
         )
         connector = connector_cls(config)
         available_fields = await connector.get_schema()

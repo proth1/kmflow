@@ -1,22 +1,304 @@
 # Active Context
 
-**Last Updated**: 2026-02-26
+**Last Updated**: 2026-02-28
 
 ## Current Focus
 
-**Audit Remediation** — ALL PHASES COMPLETE. REMEDIATION DONE.
-- Phase 0 (docs): PRs #245, #251
-- Phase 1 (critical security): PRs #246, #247, #248, #251
-- Phase 2 (HIGH findings): PRs #249, #252, #255, #256
-- Phase 3 (MEDIUM improvements): PR #258
-- Phase 4 (consent lifecycle): PR #260
-- Phase 5 (final MEDIUM): PR #262
-- Re-audit: All 20 agents + manual verification
-- **Result**: 0 CRITICAL, 0 HIGH vulnerabilities remain (security AND code quality)
-- Remaining: 1 MEDIUM (broad exceptions — 119 occurrences)
+All 106 stories (18 epics) from PRD v2.1 decomposition are complete. No remaining open stories.
 
 ## Recently Completed
 
+- **PR #507 merged** — Confidence heatmap overlay: Bright/Dim/Dark toggle, hover tooltip, JSON/CSV export, UUID validation, 20 tests (#341) (v2026.02.190)
+- **PR #506 merged** — Financial Impact Dashboard: side-by-side scenario cost comparison, inline assumption editing, delta highlighting, 16 tests (#369) (v2026.02.189)
+- **PR #505 merged** — Persona-specific dashboard APIs: Engagement Lead, Process Analyst, SME, Client Stakeholder with RBAC, 23 tests (#362) (v2026.02.188)
+- **PR #504 merged** — Gap analysis dashboard API: gap counts by type/severity, TOM dimension alignment scores, prioritized recommendations, maturity heatmap, 16 tests (#347) (v2026.02.187)
+- **PR #503 merged** — Evidence mapping overlay API: reverse evidence lookup, dark elements with suggestions, 19 tests (#343) (v2026.02.186)
+- **PR #502 merged** — Confidence heatmap API: per-element confidence map, brightness distribution summary, CSV export, 14 tests (Part of #341) (v2026.02.185)
+- **PR #501 merged** — BPMN viewer API: latest model, element evidence, dashboard KPIs, 19 tests (#338) (v2026.02.184)
+- **PR #500 merged** — Executive report generation: 5-section assembly, evidence appendix citations, Redis job tracking, HTML/PDF download, 32 tests (#356) (v2026.02.183)
+- **PR #499 merged** — POV orchestrator API: progress tracking, version history with diff, engagement access control, 23 tests (#318) (v2026.02.182)
+- **PR #498 merged** — Desktop task mining: SourceType/Brightness StrEnums, canonical event dict, PII docs, 44 tests (#355) (v2026.02.181)
+- **PR #497 merged** — Alerting engine: severity routing, configurable channels, escalation rules, 24 tests (#366) (v2026.02.180)
+- **PR #496 merged** — Variant comparison replay: LCS alignment, divergence detection, cycle time deltas, evidence linking, 39 tests (#342) (v2026.02.179)
+- **PR #495 merged** — Aggregate volume replay: per-interval flow metrics, bottleneck detection, gateway distribution, heat map, 36 tests (#339) (v2026.02.178)
+- **PR #494 merged** — Single-case timeline replay: brightness classification, paginated frames, evidence linking, 48 tests (#337) (v2026.02.177)
+- **PR #493 merged** — POV generation orchestrator: 8-step LCD pipeline tracking, FAILED_PARTIAL preservation, version diff, 38 tests (Part of #318) (v2026.02.176)
+- **PR #492 merged** — Async task architecture: Redis Streams TaskQueue, TaskWorker ABC, consumer groups, retry logic, concurrency control, 33 tests (#320) (v2026.02.175)
+- **PR #491 merged** — Celonis EMS integration: event log, process model, conformance mappers, idempotent dedup, severity scoring, 45 tests (#325) (v2026.02.174)
+- **PR #490 merged** — Soroco Scout Work Graph integration: ScoutActivity parser, Activity node mapping with telemetric epistemic frames, SUPPORTED_BY evidence edges, 30 tests (#326) (v2026.02.173)
+- **PR #489 merged** — ARIS AML and Visio VSDX process model importers: ModelImporter ABC, ImportedModel, defusedxml XXE protection, 28 tests (#328) (v2026.02.172)
+- **PR #488 merged** — SaaS connector incremental sync: SyncCheckpointStore, SyncLog, async coordinator, SAP timestamp conversion, 34 tests (#330) (v2026.02.171)
+- **PR #487 merged** — XES event log importer: streaming parser, defusedxml XXE protection, batch processing, .xes.gz, 25 tests (#332) (v2026.02.170)
+- **PR #486 merged** — Connector framework: CredentialProvider, @with_retry, TransformPipeline, rate limit parsing, Credential masking, 34 tests (#323) (v2026.02.169)
+- **PR #485 merged** — Replay API endpoints: 5 async task endpoints, date-typed ranges, Literal granularity, eviction cap, 30 tests (#345) (v2026.02.168)
+- **PR #484 merged** — Schema intelligence library: YAML templates for ServiceNow/SAP/Salesforce, case-insensitive lookup, manual fallback, 34 tests (#335) (v2026.02.167)
+- **PR #483 merged** — Transformation templates library: 4 analysis templates, Literal validation, IDOR-safe, 35 tests (#376) (v2026.02.166)
+- **PR #482 merged** — LLM suggestion feedback loop: RejectionFeedback model, traceability chain, exclusion prompt, IDOR-safe, LIMIT 50 patterns, 25 tests (#390) (v2026.02.165)
+- **PR #481 merged** — Per-scenario simulation engine: 7 modification types, confidence overlay, async trigger, IDOR-safe, task lifecycle, 31 tests (#380) (v2026.02.164)
+- **PR #480 merged** — Sensitivity analysis engine: OAT ranking, tornado chart data, P10/P50/P90 percentiles, custom cost functions, negative value support, 24 tests (#364) (v2026.02.163)
+- **PR #479 merged** — Governance flag detection: SoD checks, regulatory compliance, authorization changes, knowledge boundary templates, IDOR fix, engagement:update permission, 19 tests (#381) (v2026.02.162)
+- **PR #478 merged** — Cost-per-role and volume forecast modeling: RoleRateAssumption/VolumeForecast models, staffing/volume/quarterly/FTE computation, typed TaskAssignment payloads, seasonal factor validation, unique constraint, migration 078, 25 tests (#359) (v2026.02.161)
+- **PR #477 merged** — Financial assumption management: engagement-scoped CRUD, version history audit trail, CHECK constraint, IDOR fix, efficient count, 16 tests (#354) (v2026.02.160)
+- **PR #476 merged** — Suggestion review workflow: ACCEPT/MODIFY/REJECT, ScenarioModification linkage, row-level lock, 409 Conflict, 20 tests (#379) (v2026.02.159)
+- **PR #475 merged** — Seed list coverage and dark room backlog: coverage report, uplift-ranked dark segments, evidence actions, SQL-filtered threshold, related seed terms, 26 tests (#367) (v2026.02.158)
+- **PR #474 merged** — Best practices library: percentile ranking, gap-to-practice matching, domain filter, maturity validation, engagement metadata_json, 36 tests (#363) (v2026.02.157)
+- **PR #473 merged** — Republish cycle and version diff: CONFIRM/CORRECT/REJECT/DEFER decisions, BPMN color-coding, dark-room shrink rate, rename collision guard, 31 tests (#361) (v2026.02.156)
+- **PR #472 merged** — Validation APIs: pack detail, decision listing, reviewer routing via RoleActivityMapping, IDOR fix, unique constraint, 14 tests (#365) (v2026.02.155)
+- **PR #471 merged** — Evidence grading progression: per-version grade distributions, improvement rate with 100% cap, multi-cycle trend data, GradingSnapshot model, 19 tests (#357) (v2026.02.154)
+- **PR #470 merged** — Structured reviewer actions: CONFIRM/CORRECT/REJECT/DEFER with graph write-back, ValidationDecision model, :Assertion labels, element pack validation, 30 tests (#353) (v2026.02.153)
+- **PR #469 merged** — Claim write-back: Neo4j graph integration, SUPPORTS/CONTRADICTS edges, EpistemicFrame, ConflictObject auto-creation, confidence recomputation, 27 tests (#324) (v2026.02.152)
+- **PR #468 merged** — Survey bot with 8 probe types: session lifecycle, fatigue-optimized probes, claim creation, conflict flagging, certainty summaries, 23 tests (#319) (v2026.02.151)
+- **PR #467 merged** — Seed list pipeline: 4-stage workflow, consultant upload, NLP refinement, probe generation, extraction targeting, 25 tests (#321) (v2026.02.150)
+- **PR #466 merged** — Certainty tier tracking: SurveyClaimHistory audit trail, tier promotion, shelf data auto-generation, IDOR-safe endpoints, 24 tests (#322) (v2026.02.149)
+- **PR #465 merged** — Data classification + GDPR compliance: 4-tier classification, retention enforcement, ROPA tracking, compliance reporting, 31 tests (#317) (v2026.02.148)
+- **PR #464 merged** — Scenario comparison dashboard: 5-metric comparison, best/worst flagging, governance heuristic, 13 tests (#383) (v2026.02.147)
+- **PR #463 merged** — Consent architecture: 3 consent modes, policy bundles, immutability triggers, RESTRICT FK, 23 tests (#382) (v2026.02.146)
+- **PR #462 merged** — Export watermarking: HMAC-SHA256 invisible watermarks, append-only log, forensic extractor, 20 tests (#387) (v2026.02.145)
+- **PR #461 merged** — Evidence confidence overlay: per-element brightness, dark-area warnings, risk score, 19 tests (#385) (v2026.02.144)
+- **PR #460 merged** — LLM audit trail: hallucination flagging, immutability enforcement, disposition stats, 21 tests (#386) (v2026.02.143)
+- **PR #459 merged** — Cohort suppression: privacy enforcement, export blocking, audit logging, 21 tests (#391) (v2026.02.142)
+- **PR #458 merged** — PDP service: ABAC policy evaluation, obligation framework, audit trail, conditions validation, default policy seeding, 25 tests (#377) (v2026.02.141)
+- **PR #457 merged** — Cross-border transfer controls: GDPR transfer evaluation, TIA/SCC workflow, jurisdiction registry, role permissions, 20 tests (#395) (v2026.02.140)
+- **PR #456 merged** — Incident response automation: P1-P4 classification, GDPR 72h deadline, containment, escalation, timeline, 16 tests (#397) (v2026.02.139)
+- **PR #455 merged** — Telemetry micro-surveys: MicroSurvey model, deviation-to-probe mapping, anomaly threshold gate, SurveyClaim linkage, API endpoints, ORM relationships, 16 tests (#398) (v2026.02.138)
+- **PR #454 merged** — Shelf-epistemic integration: auto-create shelf items from epistemic actions, follow-through rate endpoint, source filter, 11 tests (#399) (v2026.02.137)
+- **PR #453 merged** — Epistemic Action Planner: GET endpoint, shelf linkage, IDOR guard, pagination, shelf_request_id in response, 10 tests (#389) (v2026.02.136)
+- **PR #452 merged** — Illumination Planner: targeted evidence acquisition, 9-form action mapping, idempotency guard, progress tracking, segment completion, 11 tests (#396) (v2026.02.135)
+- **PR #451 merged** — Dark Room backlog: prioritized Dark segments, missing knowledge forms, Neo4j form coverage, engagement authz, configurable threshold, 12 tests (#394) (v2026.02.134)
+- **PR #450 merged** — Evidence gap ranking: per-gap uplift projection, cross-scenario shared gaps (correlated subquery), Pearson correlation tracking, audit logging, 12 tests (#393) (v2026.02.133)
+- **PR #449 merged** — Governance overlay API: per-activity status (governed/partial/ungoverned), ontology-aligned Cypher, IDOR-safe engagement access, 10 tests (#331) (v2026.02.132)
+- **PR #448 merged** — Gap-targeted probe generation: brightness uplift scoring, consolidated mapping, pagination, 12 tests (#327) (v2026.02.131)
+- **PR #447 merged** — CanonicalActivityEvent + Event Spine Builder: canonicalization, dedup, FK constraint, timezone safety, 17 tests (#334) (v2026.02.130)
+- **PR #446 merged** — Nine Universal Knowledge Forms: coverage computation, gap detection, ontology-validated edge types, 12 tests (#316) (v2026.02.129)
+- **PR #445 merged** — Governance CRUD APIs: soft-delete, Neo4j write transactions, GET regulation (#329) (v2026.02.128)
+- **PR #444 merged** — Process maturity scoring: CMMI levels 1-5, heatmap, MaturityScoringService (#358) (v2026.02.127)
+- **PR #443 merged** — Governance gap detection: GapFinding, regulation-aware resolution (#340) (v2026.02.126)
+- **PR #442 merged** — Control effectiveness scoring: execution rate thresholds, trend analysis (#336) (v2026.02.125)
+- **PR #441 merged** — Compliance state machine: coverage percentage, state transitions (#333) (v2026.02.124)
+- **PR #440 merged** — Per-activity TOM alignment scoring + gap rationale (#348, #352) (v2026.02.123)
+- **PR #438 merged** — TOM definition management APIs with structured dimensions (#344) (v2026.02.122)
+  - TOMDimensionRecord, TOMVersion models + migration 050
+  - Structured DimensionInput with maturity 1-5, version snapshotting on PATCH
+  - Atomic version increment (SELECT FOR UPDATE + SQL expression), duplicate dim validation
+  - Import/export endpoints, 18 BDD tests
+- **PR #437 merged** — Cross-source consistency reporting (#392) (v2026.02.121)
+  - Disagreement report, consistency metrics with agreement rate, POV version trend
+  - Pydantic response schemas, auth, HTML-escaped PDF template, pagination
+  - 13 BDD tests
+- **PR #432 merged** — LLM suggestion engine with audit logging (#374) (v2026.02.116)
+  - generate_audited_suggestions() with audit in try/except finally block
+  - LLMAuditLog model + migration 046, governance enrichment, consideration framing
+  - PR review: REQUEST CHANGES → public method delegators, flush safety, docstring fix
+  - 14 BDD tests
+- **PR #431 merged** — Scenario Comparison Workbench CRUD (#373) (v2026.02.115)
+  - Dedicated /api/v1/scenarios with max-5 enforcement (SELECT FOR UPDATE)
+  - Engagement membership authorization, ScenarioStatus enum, DRAFT-only modification restriction
+  - PR review: REQUEST CHANGES → router registration, IDOR fix, race condition fix, enum usage
+  - 20 BDD tests
+- **PR #430 merged** — Sequence and role conflict detection engine (#372) (v2026.02.114)
+  - SequenceConflictDetector, RoleConflictDetector with Cypher queries
+  - Severity scoring: weight differential × recency factor
+  - Idempotent ConflictObject persistence, public run_query() on KnowledgeGraphService
+  - PR review: APPROVE WITH CONDITIONS → LIMIT on Cypher queries, public run_query(), counter renames
+  - 26 BDD tests
+- **PR #429 merged** — Gap-prioritized transformation roadmap generator (#368) (v2026.02.113)
+  - Topological sort (Kahn's algorithm) for dependency resolution
+  - Threshold-based phase bucketing into 3-4 phases (Quick Wins→Foundation→Transformation→Optimization)
+  - HTML export with XSS-safe rendering via html.escape()
+  - TransformationRoadmapModel with JSONB phases, remediation_cost/depends_on_ids columns
+  - PR review: REQUEST CHANGES → IDOR fix (engagement membership check), format param rename, type annotation fix, cycle detection test
+  - Alembic migration 045, 31 BDD tests
+- **PR #428 merged** — Monitoring agent framework (#346) (v2026.02.112)
+  - BaseMonitoringAgent ABC with lifecycle management, health state machine, exponential backoff
+  - Circuit breaker stops polling after max failures, bounded event deque (maxlen=1000)
+  - AgentRegistry for multi-agent lifecycle management and health aggregation
+  - GET /api/v1/monitoring/agents/health endpoint
+  - PR review: REQUEST CHANGES → addressed circuit breaker, bounded events, repr security, asyncio-safe docs, stop_all error handling
+  - 42 BDD tests
+- **PR #427 merged** — Monitoring dashboard aggregation endpoint (#371) (v2026.02.111)
+  - Dashboard aggregation service with trend computation, deviation aggregation
+  - GET /api/v1/monitoring/dashboard/{engagement_id} with date range filtering
+  - Agent statuses, deviation counts by severity, evidence flow rate, alert summary, compliance trend
+  - PR review: APPROVE (no critical/high findings, only medium suggestions)
+  - 29 BDD tests
+- **PR #426 merged** — Dark-Room Shrink Rate tracking dashboard (#370) (v2026.02.110)
+  - DarkRoomSnapshot model with unique constraint on (engagement_id, version_number)
+  - Per-version shrink rate computation, below-target alert generation with dark segment names
+  - Illumination timeline tracking dark→dim/bright transitions with evidence links
+  - GET /api/v1/validation/dark-room-shrink with Depends(require_engagement_access)
+  - PR review: REQUEST CHANGES → CRITICAL fixed (auth pattern), HIGH fixed (integration tests), MEDIUM fixed (unique constraint, unused dataclass)
+  - Alembic migration 044, 42 BDD tests
+- **PR #425 merged** — Continuous evidence collection pipeline (#360) (v2026.02.109)
+  - Async Redis stream consumer with quality scoring, knowledge graph updates, contradiction detection hook
+  - Time-based per-engagement quality threshold monitoring (10-min window)
+  - MetricsCollector: rolling window with processing rate, p99 latency, queue depth, errors, avg quality
+  - GET /api/v1/monitoring/pipeline/metrics endpoint with monitoring:read auth
+  - submit_evidence_to_pipeline() helper for Redis stream publishing
+  - PR review: REQUEST CHANGES → HIGH fixed (auth, Request type, behavioral tests), MEDIUM fixed (per-engagement quality, time-based window)
+  - 33 BDD tests
+- **PR #424 merged** — Review pack generation engine (#349) (v2026.02.108)
+  - Segments POV activities into 3-8 activity review packs
+  - Aggregates evidence, confidence scores, conflict flags, seed terms per pack
+  - SME routing by primary performing role
+  - Async POST (HTTP 202 with task_id), paginated GET
+  - PR review: REQUEST CHANGES → HIGH fixed (task retention, failure sentinel), MEDIUM fixed (engagement validation, response types)
+  - Alembic migration 043, 36 BDD tests
+- **PR #423 merged** — RACI matrix derivation from knowledge graph edges (#351) (v2026.02.107)
+  - PERFORMED_BY→R, GOVERNED_BY→A, CONSULTED_BY/REVIEWS→C, NOTIFIED_BY→I
+  - Dedup on (activity_id, role_id, assignment), engagement-scoped
+  - SME validation endpoint with engagement access check and audit trail
+  - CSV export (rows=activities, cols=roles), paginated GET, derive POST
+  - PR review: REQUEST CHANGES → HIGH fixed (auth bypass on validate), MEDIUM fixed (audit trail, unused schema, server_default)
+  - Alembic migration 042, 41 BDD tests
+- **PR #422 merged** — Process deviation detection engine with severity scoring (#350) (v2026.02.106)
+  - Skipped activity, timing anomaly, undocumented activity detection
+  - Importance-weighted severity formula: importance_score * magnitude_coefficient
+  - DeviationSeverity enum (CRITICAL/HIGH/MEDIUM/LOW/INFO), threshold classification
+  - GET /api/v1/deviations with type/severity/date filters and pagination
+  - PR review: REQUEST CHANGES → MEDIUM fixes (unified enum, ORM/migration alignment, timing constants)
+  - Alembic migration 041, 45 BDD tests
+- **PR #421 merged** — BPMN model assembly with evidence citations and 3D confidence (#315) (v2026.02.105)
+  - Three-dimensional confidence: score + brightness + evidence grade
+  - Gap markers on DARK elements below MVC threshold, variant annotations
+  - B/C grade distinction: B requires 2+ planes, C is single-plane
+  - 67 tests (54 BDD + 13 existing)
+- **PR #420 merged** — Audit logging middleware with query API and append-only trigger (#314) (v2026.02.104)
+  - Fire-and-forget async persistence via asyncio.create_task()
+  - IP extraction (X-Forwarded-For aware), user agent capture, resource type inference
+  - Admin-only GET /api/v1/audit-logs with filters and pagination
+  - JSONB before/after change tracking for evidence modifications
+  - PostgreSQL append-only trigger (BEFORE UPDATE/DELETE raises exception)
+  - Alembic migration 040, 77 BDD tests (58 BDD + 19 existing)
+- **PR #419 merged** — OAuth2/OIDC auth and RBAC BDD tests (#313) (v2026.02.103)
+  - 47 BDD tests: JWT validation, token rejection, role boundaries for all 5 roles
+  - Permission matrix completeness, engagement access control, key rotation
+- **PR #418 merged** — PostgreSQL RLS for engagement data isolation (#311) (v2026.02.102)
+  - RLS policies on 32 engagement-scoped tables with FORCE ROW LEVEL SECURITY
+  - Table name validation regex (SQL injection prevention)
+  - WITH CHECK on UPDATE policy (prevents engagement_id mutation)
+  - SET LOCAL app.current_engagement_id (transaction-scoped)
+  - Admin bypass: SET LOCAL row_security = off
+  - Alembic migration 039, 50 BDD tests
+  - PR review: REQUEST CHANGES → 2 CRITICAL fixed (wrong table names, missing tables), 2 HIGH fixed (validation, WITH CHECK)
+- **PR #417 merged** — Client evidence submission portal with token-based intake (#308) (v2026.02.101)
+  - ShelfDataRequestToken model with UUID token, expiry, usage count
+  - Levenshtein auto-matching for filenames to request items (threshold 0.8)
+  - Intake API: generate-intake-link (auth'd), upload (no auth), progress (no auth)
+  - Expired tokens return HTTP 410 Gone
+  - 41 BDD tests
+- **PR #416 merged** — Cross-source triangulation engine (#306) (v2026.02.100)
+  - Evidence plane classification: 4 planes from 13 evidence categories
+  - evidence_coverage = supporting_planes / available_planes
+  - evidence_agreement = agreeing/total with cross-plane bonus (0.15)
+  - Single-source flagging, conflict detection
+  - PR review: REQUEST CHANGES → HIGH fixed (agreement calc, dead guard), MEDIUM fixed (task_mining comment, unused constant)
+  - 33 BDD tests
+- **PR #415 merged** — Evidence aggregation and entity extraction for LCD Steps 1-2 (#303) (v2026.02.099)
+  - Seed term guided extraction with SEED_TERM_CONFIDENCE_BOOST = 0.15
+  - DuplicateCandidate detection: containment, acronym, word overlap (smaller >= 2)
+  - ExtractionSummary with entity_to_evidence/entity_to_fragments provenance maps
+  - PR review: REQUEST CHANGES → HIGH fixed (word overlap threshold), MEDIUM fixed (seed containment, test guards)
+  - 62 BDD tests (30 new aggregation + 32 entity extraction)
+- **PR #414 merged** — Contradiction resolution with three-way distinction classifier (#312) (v2026.02.098)
+  - Naming variant: edit distance ≤2 to seed terms, entities merged, no ConflictObject
+  - Temporal shift: ≥2-year gap between document-class sources, bitemporal validity stamps
+  - Genuine disagreement: ConflictObject with epistemic frame annotations (authority scope + frame kind)
+  - Severity scoring: criticality * 0.6 + weight_diff * 0.4 for six mismatch types
+  - Persistence bridge: DetectedContradiction + flatten_to_detected_contradictions() for ORM
+  - PR review: REQUEST CHANGES → 2 CRITICAL fixed (generator.py API, old tests), M2 fixed (representative evidence)
+  - 58 BDD tests (48 domain logic + 10 persistence bridge)
+- **PR #413 merged** — Weighted consensus building with LCD algorithm (#310) (v2026.02.097)
+  - Per-engagement configurable weight map, exponential decay recency bias (half-life 3yr)
+  - Variant detection for structurally divergent paths (coverage threshold 0.4)
+  - ConflictStub forwarding for downstream contradiction resolution
+  - ConsensusResult dataclass, brightness hints (bright/dim/dark), 45 BDD tests
+  - PR review: REQUEST CHANGES → 2 CRITICAL fixed (breaking API, existing tests), 2 HIGH fixed (recency constants, blend ratio)
+- **PR #411 merged** — Evidence cataloging with metadata extraction (#304) (v2026.02.096)
+  - MetadataExtractor base with PDF + Excel implementations, language detection
+  - Catalog API: GET /catalog with category, date range, language, q filters (LIKE-safe)
+  - JSONB metadata column, migration 038, 38 BDD tests
+  - PR review fixes: LIKE wildcard escape, langdetect deps, deduplicate clean_string
+- **PR #412 merged** — Database infrastructure BDD tests (#309) (v2026.02.095)
+  - 35 BDD tests validating Docker Compose, pgvector, Neo4j APOC, Alembic, async session
+  - PR review: APPROVE with LOW suggestions only
+- **PR #410 merged** — API gateway BDD tests and health endpoint enhancements (#307) (v2026.02.094)
+  - Health endpoint: timestamp (UTC ISO), API_VERSION constant, router tags
+  - 33 tests: 5 BDD scenario classes + structural tests
+  - PR review: APPROVE, MEDIUM fixes (error handler behavioral tests, CORS assertion tightened)
+- **PR #409 merged** — Evidence lifecycle state machine (#301) (v2026.02.093)
+  - State machine: PENDING → VALIDATED → ACTIVE → EXPIRED → ARCHIVED
+  - SHA-256 hashing, audit builder, auto-classification, retention expiry
+  - 52 BDD tests, review findings addressed (UTC datetimes, docstring, typing)
+- **PR #408 merged** — Evidence quality scoring engine (#300) (v2026.02.092)
+  - Hill function freshness: >=0.96 at 12mo, 0.5 at 3yr, <0.5 beyond
+  - PRIMARY/SECONDARY reliability, configurable engagement-level weights
+  - validate_weights() with sum-to-1.0, score_evidence() with weight validation
+  - 57 BDD tests, PR review findings addressed (consistency formula, completeness tests)
+- **PR #407 merged** — Shelf data request workflow (#298) (v2026.02.091)
+  - ShelfRequestStatus: OPEN, COMPLETE, CANCELLED; FollowUpReminder model
+  - 53 BDD tests, PR review findings addressed (enum docs, server_default, priority enum)
+- **PR #406 merged** — Evidence parsers with factory dispatch (#296) (v2026.02.090)
+  - DocumentParser: PDF (pdfplumber), HTML (lxml with script/style stripping), TXT
+  - StructuredDataParser: Excel (openpyxl), CSV, JSON
+  - BpmnParser: BPMN XML (activities, flows, gateways, lanes, participants)
+  - Factory dispatch by extension + MIME type, auto-classification by evidence category
+  - 74 BDD tests (17 document + 15 structured + 14 BPMN + 27 factory + 1 script/style)
+  - PR review: APPROVE with 2 MEDIUM fixed (script/style leakage, text/html MIME)
+- **PR #405 merged** — SemanticRelationship bitemporal validity (#305) (v2026.02.089)
+  - 5 bitemporal columns: asserted_at, retracted_at, valid_from, valid_to, superseded_by
+  - Partial index on active relationships, CheckConstraint valid_to >= valid_from
+  - 42 tests, PR review REQUEST CHANGES addressed (partial index, check constraint, field limits)
+- **PR #404 merged** — SeedTerm entity schema and vocabulary store (#302) (v2026.02.088)
+  - 5 term categories, 3 sources, 3 lifecycle states, self-referential merge FK
+  - Unique constraint on (engagement_id, term, domain), GIN FTS index on term
+  - 41 tests, PR review APPROVED (0 critical, 0 high)
+- **PR #403 merged** — ConflictObject and disagreement taxonomy (#299) (v2026.02.087)
+  - 6 mismatch types (sequence, role, rule, existence, io, control_gap), 3 resolution types, 3 lifecycle states
+  - Composite index on (engagement_id, resolution_status), severity bounds [0.0, 1.0]
+  - 39 tests, PR review APPROVED (0 critical, 0 high)
+- **PR #402 merged** — EpistemicFrame and SurveyClaim entity schemas (#297) (v2026.02.086)
+  - SurveyClaim: 8 probe types, 4 certainty tiers, engagement-scoped with session tracking
+  - EpistemicFrame: 6 frame kinds, controlled vocabulary of 12 authority_scope roles
+  - 46 tests, 100% coverage, PR review findings addressed (import ordering, engagement_id on frame)
+- **PR #401 merged** — Controlled edge vocabulary with constraint validation (#295) (v2026.02.085)
+  - 12 typed edge kinds (PRECEDES, TRIGGERS, etc.), source/target label constraints via ontology
+  - Atomic bidirectional creation for CONTRADICTS/VARIANT_OF, acyclicity enforcement for PRECEDES/DEPENDS_ON
+  - Ontology v2.0.0: 20 node types, 26 relationship types; validation CLI updated
+  - 31 tests, PR review findings addressed (Cypher injection guard, atomic txn, validate.py counts)
+- **PR #400 merged** — Three-dimensional confidence model schema (#294) (v2026.02.084)
+  - Two-stage formula: strength/quality → min; Evidence grades A-U; Brightness BRIGHT/DIM/DARK with coherence constraint
+  - 32 tests, 99% coverage, PR review APPROVED (0 critical, 0 high)
+- **PRs #271-#275 merged** — Audit Phase 8: 10 CRITICALs + 28 HIGHs (v2026.02.083)
+  - PR #271: Security hardening — Cypher injection, event loop, prod secrets, localStorage XSS, CF Worker XSS, DB passwords, auth scoping
+  - PR #272: Data layer/API — FK indexes, Alembic imports, Neo4j deletes, rate limiting, pagination, response models
+  - PR #273: N+1 performance — Batch Neo4j nodes, batch embeddings, Redis rate limiter
+  - PR #274: Test/compliance — 33 new tests, GDPR erasure, audit logging, PII masking, credential encryption, CVE upgrades
+  - PR #275: Frontend — ErrorBoundary, AbortControllers, stub audit, type hints
+  - PR review findings addressed: plaintext config_json dual-write fixed, Neo4j delete engagement-scoped
+- **PR #270 merged** — Fix macOS agent build scripts (v2026.02.078)
+  - bash 3.2 compat: replaced `declare -A`, `mapfile`, subshell EXIT traps
+  - Ad-hoc codesign: strip pre-existing signatures, sign outside .app context, no --timestamp
+  - `@rpath` → `@loader_path` (pre-built Python binary lacks header padding for LC_RPATH)
+  - CommonCrypto → CryptoKit AES.GCM (Command Line Tools SDK compat)
+  - InMemoryConsentStore actor→class, optional chaining fix
+  - Agent builds and launches successfully (~63 MB bundle, Python 3.12.7 embedded)
+- **PR #263 merged** — Agent Swift Quality & Error Handling (v2026.02.077)
+  - Converted IntegrityChecker from `@unchecked Sendable` + NSLock to Swift actor
+  - Replaced fputs/NSLog with structured os.Logger/AgentLogger
+  - Converted 5 IUOs to optionals in AppDelegate
+  - Fixed PermissionsView timer closure (captures state ref, not self struct)
+  - Added 128-char MDM engagementId validation
+  - Moved MockPermissionsProvider to test target
+  - Added @MainActor to AppSwitchMonitor
+  - PR review: APPROVE with 2 MEDIUM (missing MDM test, pre-existing mock issue) — follow-up items
+- **Import ordering fix** — stdlib before third-party in 5 bridge/taskmining files
+- **PR #269 merged** — Audit Phase 6: Python Exception Handling (v2026.02.076)
+  - Replaced ~58 broad `except Exception` with specific types (Neo4jError, SQLAlchemyError, RedisError, httpx.HTTPError, etc.)
+  - Annotated ~55 intentionally broad handlers with `# Intentionally broad: <reason>` comments
+  - Widened health check handlers for TCP-level connectivity errors
+  - Added httpx.HTTPError to Camunda route handlers
+  - Replaced os.path with pathlib.Path in pipeline + Visio parser
+  - PR review: APPROVE — all medium suggestions addressed before merge
 - **PR #262 merged** — Audit Phase 5: Final MEDIUM Remediation (v2026.02.075)
   - Fixed N+1 query in governance SLA health dashboard and alerting
   - `check_quality_sla()` now accepts optional pre-fetched `evidence_items`

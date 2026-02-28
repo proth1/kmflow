@@ -14,7 +14,6 @@ from src.core.models import (
     SuggestionDisposition,
 )
 
-
 # -- Scenario Schemas ---------------------------------------------------------
 
 
@@ -146,6 +145,7 @@ class EpistemicActionResponse(BaseModel):
     information_gain_score: float
     recommended_evidence_category: str
     priority: str
+    shelf_request_id: str | None = None
 
 
 class EpistemicPlanAggregates(BaseModel):
@@ -219,6 +219,8 @@ class SuggestionListResponse(BaseModel):
 class SuggestionDispositionUpdate(BaseModel):
     disposition: SuggestionDisposition
     disposition_notes: str | None = None
+    modified_content: dict[str, Any] | None = None
+    rejection_reason: str | None = None
 
 
 # -- Financial Impact Schemas -------------------------------------------------

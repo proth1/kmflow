@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 
 import numpy as np
+from neo4j.exceptions import Neo4jError
 
 from src.semantic.graph import KnowledgeGraphService
 
@@ -87,7 +88,7 @@ class ProcessEvidenceBridge:
             try:
                 proc_embeddings = await self._embedding_service.embed_texts_async(proc_names)
                 ev_embeddings = await self._embedding_service.embed_texts_async(ev_names)
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning("Embedding failed, falling back to word-overlap: %s", e)
                 use_embeddings = False
 
@@ -116,7 +117,7 @@ class ProcessEvidenceBridge:
                             },
                         )
                         result.relationships_created += 1
-                    except Exception as e:
+                    except Neo4jError as e:
                         result.errors.append(str(e))
 
         return result

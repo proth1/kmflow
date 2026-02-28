@@ -33,7 +33,7 @@ from src.core.models import (
 from src.pov.aggregation import aggregate_evidence
 from src.pov.assembly import assemble_bpmn
 from src.pov.consensus import build_consensus
-from src.pov.contradiction import detect_contradictions
+from src.pov.contradiction import flatten_to_detected_contradictions, resolve_contradictions
 from src.pov.extraction import extract_from_evidence
 from src.pov.gaps import detect_gaps
 from src.pov.scoring import classify_confidence, score_all_elements
@@ -144,10 +144,15 @@ async def generate_pov(
         )
 
         # Step 4: Build consensus
-        consensus = build_consensus(triangulated, aggregated.evidence_items)
+        consensus_result = build_consensus(triangulated, aggregated.evidence_items)
+        consensus = consensus_result.elements
 
         # Step 5: Detect and resolve contradictions
-        contradictions = detect_contradictions(consensus, aggregated.evidence_items)
+        contradiction_result = resolve_contradictions(
+            consensus_result.conflict_stubs,
+            aggregated.evidence_items,
+        )
+        contradictions = flatten_to_detected_contradictions(contradiction_result)
 
         # Step 6: Score confidence
         scored = score_all_elements(consensus, aggregated.evidence_items)
@@ -258,7 +263,7 @@ async def generate_pov(
             },
         )
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.exception("POV generation failed for engagement %s", engagement_id)
         model.status = ProcessModelStatus.FAILED
         model.metadata_json = {"error": str(e)}

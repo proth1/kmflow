@@ -102,11 +102,6 @@ export default function EvidenceUploader({ engagementId, onUploadComplete }: Evi
     const formData = new FormData();
     formData.append("file", file);
 
-    // Mirror the auth strategy from api.ts: cookie via credentials + optional
-    // legacy localStorage token for backward compatibility.
-    const token = typeof window !== "undefined" ? localStorage.getItem("kmflow_token") : null;
-    const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
-
     try {
       // Simulate progress while the request is in-flight
       const progressInterval = setInterval(() => {
@@ -121,7 +116,7 @@ export default function EvidenceUploader({ engagementId, onUploadComplete }: Evi
 
       const response = await fetch(
         `${API_BASE}/api/v1/portal/${eid}/upload`,
-        { method: "POST", headers, credentials: "include", body: formData },
+        { method: "POST", credentials: "include", body: formData },
       );
 
       clearInterval(progressInterval);

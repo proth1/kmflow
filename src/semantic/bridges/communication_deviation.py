@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import logging
 
+from neo4j.exceptions import Neo4jError
+
 from src.semantic.bridges.process_evidence import BridgeResult
 from src.semantic.graph import KnowledgeGraphService
 
@@ -78,7 +80,7 @@ class CommunicationDeviationBridge:
                             properties={"source": "communication_deviation_bridge"},
                         )
                         result.relationships_created += 1
-                    except Exception as e:
+                    except Neo4jError as e:
                         result.errors.append(str(e))
 
         return result

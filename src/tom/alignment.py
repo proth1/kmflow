@@ -110,7 +110,7 @@ class TOMAlignmentEngine:
         # Assess each dimension
         for dimension in TOMDimension:
             target = (tom.maturity_targets or {}).get(dimension, "defined")
-            current_score = self._assess_dimension_maturity(dimension, stats)
+            current_score = self.assess_dimension_maturity(dimension, stats)
             target_score = MATURITY_SCORES.get(target, 3.0)
 
             result.maturity_scores[dimension] = current_score
@@ -175,7 +175,7 @@ class TOMAlignmentEngine:
         await session.flush()
         return persisted
 
-    def _assess_dimension_maturity(
+    def assess_dimension_maturity(
         self,
         dimension: str,
         stats: Any,

@@ -10,6 +10,7 @@ import logging
 from collections.abc import AsyncGenerator
 
 from neo4j import AsyncDriver, AsyncGraphDatabase, AsyncSession
+from neo4j.exceptions import Neo4jError
 
 from src.core.config import Settings
 
@@ -41,7 +42,7 @@ async def verify_neo4j_connectivity(driver: AsyncDriver) -> bool:
     try:
         await driver.verify_connectivity()
         return True
-    except Exception:
+    except (Neo4jError, OSError):
         logger.exception("Failed to connect to Neo4j")
         return False
 

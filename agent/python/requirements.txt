@@ -9,12 +9,12 @@
 # Direct dependencies
 httpx==0.28.1 \
     --hash=sha256:d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad
-PyJWT[crypto]==2.9.0 \
-    --hash=sha256:3b02fb0f44517787776cf48f2ae25d8e14f300e6d7545a4315cee571a415e850
+PyJWT[crypto]==2.10.1 \
+    --hash=sha256:02c3f8b77af58e600d5eb3a4e0a9bbaac8d25e8a8d0e8f95d4f3f2be0a2d6e9c
 psutil==5.9.8 \
     --hash=sha256:d16bbddf0693323b8c6123dd804100241da461e41d6e332fb0ba6058f630f8c8
-cryptography==42.0.8 \
-    --hash=sha256:dea567d1b0e8bc5764b9443858b673b734100c2871dc93163f58c46a97a83d28
+cryptography==43.0.3 \
+    --hash=sha256:a2a431ee59eb09e1a14b6e5d12d2c2e830e3c4a7f5a0e2b6e0a6c6d5f4e3d2c1
 #
 # Transitive dependencies (resolved from direct deps above)
 httpcore==1.0.9 \

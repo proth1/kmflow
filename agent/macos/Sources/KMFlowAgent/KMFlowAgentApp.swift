@@ -138,6 +138,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func startPythonSubprocess() {
         pythonManager = PythonProcessManager()
-        Task { await pythonManager.start() }
+        Task { await pythonManager?.start() }
     }
 }

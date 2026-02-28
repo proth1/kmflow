@@ -68,7 +68,12 @@ public final class ConsentManager: ObservableObject {
 }
 
 /// In-memory consent store for testing.
-public actor InMemoryConsentStore: ConsentStore {
+///
+/// Marked `@unchecked Sendable` because this is only used in single-threaded
+/// test contexts. Using a class (not actor) avoids the protocol conformance
+/// issue where actor-isolated methods cannot satisfy non-async protocol
+/// requirements.
+public final class InMemoryConsentStore: ConsentStore, @unchecked Sendable {
     private var storage: [String: ConsentState] = [:]
 
     public init() {}

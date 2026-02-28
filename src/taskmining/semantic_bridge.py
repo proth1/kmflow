@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
+from neo4j.exceptions import Neo4jError
 
 from src.semantic.graph import KnowledgeGraphService
 
@@ -161,7 +162,7 @@ async def _link_actions_to_activities(
                 result.supports_confirmed += 1
             else:
                 result.supports_suggested += 1
-        except Exception as e:
+        except Neo4jError as e:
             result.errors.append(f"SUPPORTS link failed: {e}")
 
 
@@ -203,5 +204,5 @@ async def _link_apps_to_systems(
                 },
             )
             result.maps_to_created += 1
-        except Exception as e:
+        except Neo4jError as e:
             result.errors.append(f"MAPS_TO link failed: {e}")

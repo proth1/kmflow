@@ -6,8 +6,11 @@ best practices, and benchmarks.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import uuid as _uuid
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -15,27 +18,42 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.api.deps import get_session
 from src.core.audit import log_audit
 from src.core.models import (
+    AlignmentRunStatus,
     AuditAction,
     Benchmark,
     BestPractice,
     Engagement,
     EngagementMember,
     GapAnalysisResult,
+    MaturityScore,
+    ProcessMaturity,
+    ProcessModel,
     TargetOperatingModel,
+    TOMAlignmentResult,
+    TOMAlignmentRun,
     TOMDimension,
+    TOMDimensionRecord,
     TOMGapType,
+    TOMVersion,
     User,
     UserRole,
 )
 from src.core.permissions import require_engagement_access, require_permission
+from src.tom.benchmarking import match_gaps_to_practices
+from src.tom.benchmarking import rank_client as _rank_client
+from src.tom.maturity_scorer import MaturityScoringService
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/tom", tags=["tom"])
+
+# Background task references to prevent GC from cancelling them
+_background_tasks: set[asyncio.Task[None]] = set()
 
 
 async def _check_engagement_member(session: AsyncSession, user: User, engagement_id: UUID) -> None:
@@ -58,12 +76,20 @@ async def _check_engagement_member(session: AsyncSession, user: User, engagement
 # -- Request/Response Schemas ------------------------------------------------
 
 
+class DimensionInput(BaseModel):
+    """Schema for a single TOM dimension input."""
+
+    dimension_type: TOMDimension
+    maturity_target: int = Field(..., ge=1, le=5)
+    description: str | None = None
+
+
 class TOMCreate(BaseModel):
     """Schema for creating a target operating model."""
 
     engagement_id: UUID
     name: str = Field(..., min_length=1, max_length=512)
-    dimensions: dict[str, Any] | None = None
+    dimensions: list[DimensionInput] | None = None
     maturity_targets: dict[str, Any] | None = None
 
 
@@ -71,8 +97,18 @@ class TOMUpdate(BaseModel):
     """Schema for updating a TOM (PATCH)."""
 
     name: str | None = Field(None, min_length=1, max_length=512)
-    dimensions: dict[str, Any] | None = None
+    dimensions: list[DimensionInput] | None = None
     maturity_targets: dict[str, Any] | None = None
+
+
+class DimensionResponse(BaseModel):
+    """Schema for a TOM dimension in responses."""
+
+    model_config = {"from_attributes": True}
+
+    dimension_type: TOMDimension
+    maturity_target: int
+    description: str | None
 
 
 class TOMResponse(BaseModel):
@@ -83,10 +119,11 @@ class TOMResponse(BaseModel):
     id: UUID
     engagement_id: UUID
     name: str
-    dimensions: dict[str, Any] | None
+    version: int
+    dimensions: list[DimensionResponse] | None = None
     maturity_targets: dict[str, Any] | None
-    created_at: Any
-    updated_at: Any
+    created_at: datetime
+    updated_at: datetime
 
 
 class TOMList(BaseModel):
@@ -94,6 +131,25 @@ class TOMList(BaseModel):
 
     items: list[TOMResponse]
     total: int
+
+
+class TOMVersionResponse(BaseModel):
+    """Schema for a TOM version history entry."""
+
+    model_config = {"from_attributes": True}
+
+    version_number: int
+    snapshot: dict[str, Any]
+    changed_by: str | None
+    created_at: datetime
+
+
+class TOMVersionList(BaseModel):
+    """Schema for listing TOM versions."""
+
+    tom_id: UUID
+    current_version: int
+    versions: list[TOMVersionResponse]
 
 
 class GapCreate(BaseModel):
@@ -107,6 +163,10 @@ class GapCreate(BaseModel):
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     rationale: str | None = None
     recommendation: str | None = None
+    business_criticality: int | None = Field(None, ge=1, le=5)
+    risk_exposure: int | None = Field(None, ge=1, le=5)
+    regulatory_impact: int | None = Field(None, ge=1, le=5)
+    remediation_cost: int | None = Field(None, ge=1, le=5)
 
 
 class GapResponse(BaseModel):
@@ -124,6 +184,11 @@ class GapResponse(BaseModel):
     rationale: str | None
     recommendation: str | None
     priority_score: float
+    composite_score: float
+    business_criticality: int | None
+    risk_exposure: int | None
+    regulatory_impact: int | None
+    remediation_cost: int | None
     created_at: Any
 
 
@@ -137,11 +202,13 @@ class GapList(BaseModel):
 class BestPracticeCreate(BaseModel):
     """Schema for creating a best practice."""
 
+    title: str = Field("", max_length=512)
     domain: str = Field(..., min_length=1, max_length=255)
     industry: str = Field(..., min_length=1, max_length=255)
     description: str
     source: str | None = None
     tom_dimension: TOMDimension
+    maturity_level_applicable: int | None = Field(None, ge=1, le=5)
 
 
 class BestPracticeResponse(BaseModel):
@@ -150,11 +217,13 @@ class BestPracticeResponse(BaseModel):
     model_config = {"from_attributes": True}
 
     id: UUID
+    title: str
     domain: str
     industry: str
     description: str
     source: str | None
     tom_dimension: TOMDimension
+    maturity_level_applicable: int | None
     created_at: Any
 
 
@@ -189,29 +258,90 @@ class BenchmarkResponse(BaseModel):
 # -- TOM Routes ---------------------------------------------------------------
 
 
+def _tom_to_response(tom: TargetOperatingModel) -> dict[str, Any]:
+    """Convert TOM ORM instance to response dict with embedded dimensions."""
+    dim_list = [
+        {
+            "dimension_type": dr.dimension_type,
+            "maturity_target": dr.maturity_target,
+            "description": dr.description,
+        }
+        for dr in (tom.dimension_records or [])
+    ]
+    return {
+        "id": tom.id,
+        "engagement_id": tom.engagement_id,
+        "name": tom.name,
+        "version": tom.version,
+        "dimensions": dim_list if dim_list else None,
+        "maturity_targets": tom.maturity_targets,
+        "created_at": tom.created_at,
+        "updated_at": tom.updated_at,
+    }
+
+
+def _snapshot_dimensions(tom: TargetOperatingModel) -> dict[str, Any]:
+    """Create a JSON-serialisable snapshot of the TOM's current state."""
+    return {
+        "name": tom.name,
+        "maturity_targets": tom.maturity_targets,
+        "dimensions": [
+            {
+                "dimension_type": dr.dimension_type.value if hasattr(dr.dimension_type, "value") else str(dr.dimension_type),
+                "maturity_target": dr.maturity_target,
+                "description": dr.description,
+            }
+            for dr in (tom.dimension_records or [])
+        ],
+    }
+
+
 @router.post("/models", response_model=TOMResponse, status_code=status.HTTP_201_CREATED)
 async def create_tom(
     payload: TOMCreate,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:update")),
-) -> TargetOperatingModel:
+) -> dict[str, Any]:
     """Create a new target operating model."""
     await _check_engagement_member(session, user, payload.engagement_id)
     eng_result = await session.execute(select(Engagement).where(Engagement.id == payload.engagement_id))
     if not eng_result.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found"
+        )
+    # Validate no duplicate dimension types
+    if payload.dimensions:
+        dim_types = [d.dimension_type for d in payload.dimensions]
+        if len(dim_types) != len(set(dim_types)):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Duplicate dimension_type values are not allowed",
+            )
+
     tom = TargetOperatingModel(
         engagement_id=payload.engagement_id,
         name=payload.name,
-        dimensions=payload.dimensions,
+        version=1,
         maturity_targets=payload.maturity_targets,
     )
     session.add(tom)
     await session.flush()
+
+    # Create structured dimension records
+    if payload.dimensions:
+        for dim_input in payload.dimensions:
+            dim_record = TOMDimensionRecord(
+                tom_id=tom.id,
+                dimension_type=dim_input.dimension_type,
+                maturity_target=dim_input.maturity_target,
+                description=dim_input.description,
+            )
+            session.add(dim_record)
+
     await log_audit(session, payload.engagement_id, AuditAction.TOM_CREATED, json.dumps({"name": payload.name}))
     await session.commit()
-    await session.refresh(tom)
-    return tom
+    await session.refresh(tom, attribute_names=["dimension_records"])
+    return _tom_to_response(tom)
 
 
 @router.get("/models", response_model=TOMList)
@@ -224,7 +354,12 @@ async def list_toms(
 ) -> dict[str, Any]:
     """List target operating models for an engagement."""
     await _check_engagement_member(session, user, engagement_id)
-    query = select(TargetOperatingModel).where(TargetOperatingModel.engagement_id == engagement_id)
+
+    query = (
+        select(TargetOperatingModel)
+        .where(TargetOperatingModel.engagement_id == engagement_id)
+        .options(selectinload(TargetOperatingModel.dimension_records))
+    )
     count_query = (
         select(func.count())
         .select_from(TargetOperatingModel)
@@ -235,7 +370,7 @@ async def list_toms(
     toms = list(result.scalars().all())
     count_result = await session.execute(count_query)
     total = count_result.scalar() or 0
-    return {"items": toms, "total": total}
+    return {"items": [_tom_to_response(t) for t in toms], "total": total}
 
 
 @router.get("/models/{tom_id}", response_model=TOMResponse)
@@ -243,14 +378,19 @@ async def get_tom(
     tom_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
-) -> TargetOperatingModel:
-    """Get a specific TOM by ID."""
-    result = await session.execute(select(TargetOperatingModel).where(TargetOperatingModel.id == tom_id))
+) -> dict[str, Any]:
+    """Get a specific TOM by ID with embedded dimensions."""
+
+    result = await session.execute(
+        select(TargetOperatingModel)
+        .where(TargetOperatingModel.id == tom_id)
+        .options(selectinload(TargetOperatingModel.dimension_records))
+    )
     tom = result.scalar_one_or_none()
     if not tom:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"TOM {tom_id} not found")
     await _check_engagement_member(session, user, tom.engagement_id)
-    return tom
+    return _tom_to_response(tom)
 
 
 @router.patch("/models/{tom_id}", response_model=TOMResponse)
@@ -259,21 +399,196 @@ async def update_tom(
     payload: TOMUpdate,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:update")),
-) -> TargetOperatingModel:
-    """Update a TOM (partial update)."""
+) -> dict[str, Any]:
+    """Update a TOM (partial update). Creates a version snapshot before applying changes."""
+
+    result = await session.execute(
+        select(TargetOperatingModel)
+        .where(TargetOperatingModel.id == tom_id)
+        .options(selectinload(TargetOperatingModel.dimension_records))
+    )
+    tom = result.scalar_one_or_none()
+    if not tom:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"TOM {tom_id} not found")
+    await _check_engagement_member(session, user, tom.engagement_id)
+
+    # Snapshot current state before changes
+    snapshot = _snapshot_dimensions(tom)
+    version_record = TOMVersion(
+        tom_id=tom.id,
+        version_number=tom.version,
+        snapshot=snapshot,
+        changed_by=str(user.id) if user else None,
+    )
+    session.add(version_record)
+
+    # Apply scalar updates (name, maturity_targets)
+    update_data = payload.model_dump(exclude_unset=True, exclude={"dimensions"})
+    for field_name, value in update_data.items():
+        setattr(tom, field_name, value)
+
+    # Apply dimension updates if provided
+    if payload.dimensions is not None:
+        # Update or create dimension records
+        existing = {dr.dimension_type: dr for dr in tom.dimension_records}
+        for dim_input in payload.dimensions:
+            if dim_input.dimension_type in existing:
+                existing[dim_input.dimension_type].maturity_target = dim_input.maturity_target
+                existing[dim_input.dimension_type].description = dim_input.description
+            else:
+                dim_record = TOMDimensionRecord(
+                    tom_id=tom.id,
+                    dimension_type=dim_input.dimension_type,
+                    maturity_target=dim_input.maturity_target,
+                    description=dim_input.description,
+                )
+                session.add(dim_record)
+
+    # Bump version atomically via SQL expression to prevent race conditions
+    await session.execute(
+        select(TargetOperatingModel)
+        .where(TargetOperatingModel.id == tom.id)
+        .with_for_update()
+    )
+    tom.version = TargetOperatingModel.version + 1  # type: ignore[assignment]  # SA SQL expression
+
+    await session.commit()
+    await session.refresh(tom, attribute_names=["dimension_records"])
+    return _tom_to_response(tom)
+
+
+# -- Version History Routes ----------------------------------------------------
+
+
+@router.get("/models/{tom_id}/versions", response_model=TOMVersionList)
+async def get_tom_versions(
+    tom_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+) -> dict[str, Any]:
+    """Get version history for a TOM."""
     result = await session.execute(select(TargetOperatingModel).where(TargetOperatingModel.id == tom_id))
     tom = result.scalar_one_or_none()
     if not tom:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"TOM {tom_id} not found")
     await _check_engagement_member(session, user, tom.engagement_id)
 
-    update_data = payload.model_dump(exclude_unset=True)
-    for field_name, value in update_data.items():
-        setattr(tom, field_name, value)
+    versions_result = await session.execute(
+        select(TOMVersion)
+        .where(TOMVersion.tom_id == tom_id)
+        .order_by(TOMVersion.version_number.asc())
+    )
+    versions = list(versions_result.scalars().all())
 
+    return {
+        "tom_id": tom.id,
+        "current_version": tom.version,
+        "versions": [
+            {
+                "version_number": v.version_number,
+                "snapshot": v.snapshot,
+                "changed_by": v.changed_by,
+                "created_at": v.created_at,
+            }
+            for v in versions
+        ],
+    }
+
+
+# -- Import/Export Routes -----------------------------------------------------
+
+
+@router.get("/models/{tom_id}/export")
+async def export_tom(
+    tom_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+) -> dict[str, Any]:
+    """Export a TOM as a portable JSON document."""
+
+    result = await session.execute(
+        select(TargetOperatingModel)
+        .where(TargetOperatingModel.id == tom_id)
+        .options(selectinload(TargetOperatingModel.dimension_records))
+    )
+    tom = result.scalar_one_or_none()
+    if not tom:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"TOM {tom_id} not found")
+    await _check_engagement_member(session, user, tom.engagement_id)
+
+    return {
+        "name": tom.name,
+        "version": tom.version,
+        "maturity_targets": tom.maturity_targets,
+        "dimensions": [
+            {
+                "dimension_type": dr.dimension_type.value if hasattr(dr.dimension_type, "value") else str(dr.dimension_type),
+                "maturity_target": dr.maturity_target,
+                "description": dr.description,
+            }
+            for dr in (tom.dimension_records or [])
+        ],
+    }
+
+
+class TOMImport(BaseModel):
+    """Schema for importing a TOM."""
+
+    engagement_id: UUID
+    name: str = Field(..., min_length=1, max_length=512)
+    dimensions: list[DimensionInput] | None = None
+    maturity_targets: dict[str, Any] | None = None
+
+
+@router.post("/models/import", response_model=TOMResponse, status_code=status.HTTP_201_CREATED)
+async def import_tom(
+    payload: TOMImport,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
+) -> dict[str, Any]:
+    """Import a TOM from a portable JSON document."""
+    await _check_engagement_member(session, user, payload.engagement_id)
+    eng_result = await session.execute(select(Engagement).where(Engagement.id == payload.engagement_id))
+    if not eng_result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found"
+        )
+
+    # Validate no duplicate dimension types
+    if payload.dimensions:
+        dim_types = [d.dimension_type for d in payload.dimensions]
+        if len(dim_types) != len(set(dim_types)):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Duplicate dimension_type values are not allowed",
+            )
+
+    tom = TargetOperatingModel(
+        engagement_id=payload.engagement_id,
+        name=payload.name,
+        version=1,
+        maturity_targets=payload.maturity_targets,
+    )
+    session.add(tom)
+    await session.flush()
+
+    if payload.dimensions:
+        for dim_input in payload.dimensions:
+            dim_record = TOMDimensionRecord(
+                tom_id=tom.id,
+                dimension_type=dim_input.dimension_type,
+                maturity_target=dim_input.maturity_target,
+                description=dim_input.description,
+            )
+            session.add(dim_record)
+
+    await log_audit(
+        session, payload.engagement_id, AuditAction.TOM_CREATED,
+        json.dumps({"name": payload.name, "source": "import"}),
+    )
     await session.commit()
-    await session.refresh(tom)
-    return tom
+    await session.refresh(tom, attribute_names=["dimension_records"])
+    return _tom_to_response(tom)
 
 
 # -- Gap Analysis Routes ------------------------------------------------------
@@ -289,7 +604,9 @@ async def create_gap(
     await _check_engagement_member(session, user, payload.engagement_id)
     eng_result = await session.execute(select(Engagement).where(Engagement.id == payload.engagement_id))
     if not eng_result.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found"
+        )
     gap = GapAnalysisResult(
         engagement_id=payload.engagement_id,
         tom_id=payload.tom_id,
@@ -299,6 +616,10 @@ async def create_gap(
         confidence=payload.confidence,
         rationale=payload.rationale,
         recommendation=payload.recommendation,
+        business_criticality=payload.business_criticality,
+        risk_exposure=payload.risk_exposure,
+        regulatory_impact=payload.regulatory_impact,
+        remediation_cost=payload.remediation_cost,
     )
     session.add(gap)
     await session.flush()
@@ -318,12 +639,16 @@ async def list_gaps(
     engagement_id: UUID,
     tom_id: UUID | None = None,
     dimension: TOMDimension | None = None,
+    sort: str | None = Query(None, description="Sort order: 'priority' for composite_score desc"),
     limit: int = Query(default=20, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
-    """List gap analysis results for an engagement."""
+    """List gap analysis results for an engagement.
+
+    Use sort=priority to order by composite_score descending.
+    """
     await _check_engagement_member(session, user, engagement_id)
     query = select(GapAnalysisResult).where(GapAnalysisResult.engagement_id == engagement_id)
     count_query = (
@@ -337,12 +662,120 @@ async def list_gaps(
         query = query.where(GapAnalysisResult.dimension == dimension)
         count_query = count_query.where(GapAnalysisResult.dimension == dimension)
 
-    query = query.offset(offset).limit(limit)
-    result = await session.execute(query)
-    gaps = list(result.scalars().all())
     count_result = await session.execute(count_query)
     total = count_result.scalar() or 0
+
+    if sort == "priority":
+        # Priority sort requires loading all gaps for Python-side sort
+        # (composite_score is a computed property, not a DB column).
+        # Cap at 1000 to prevent excessive memory usage.
+        max_sort_rows = 1000
+        result = await session.execute(query.limit(max_sort_rows))
+        gaps = list(result.scalars().all())
+        gaps.sort(key=lambda g: g.composite_score, reverse=True)
+        gaps = gaps[offset : offset + limit]
+    else:
+        result = await session.execute(query.offset(offset).limit(limit))
+        gaps = list(result.scalars().all())
+
     return {"items": gaps, "total": total}
+
+
+# -- Gap Rationale Generation Routes (Story #352) ----------------------------
+
+
+class RationaleResponse(BaseModel):
+    """Response for a single gap rationale generation."""
+
+    gap_id: UUID
+    rationale: str
+    recommendation: str
+
+
+class BulkRationaleResponse(BaseModel):
+    """Response for bulk rationale generation."""
+
+    engagement_id: UUID
+    gaps_processed: int
+    results: list[RationaleResponse]
+
+
+@router.post("/gaps/{gap_id}/generate-rationale", response_model=RationaleResponse)
+async def generate_gap_rationale(
+    gap_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
+) -> dict[str, Any]:
+    """Generate LLM-powered rationale for a single gap."""
+    from src.tom.rationale_generator import RationaleGeneratorService
+
+    result = await session.execute(
+        select(GapAnalysisResult).where(GapAnalysisResult.id == gap_id)
+    )
+    gap = result.scalar_one_or_none()
+    if not gap:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Gap {gap_id} not found")
+
+    await _check_engagement_member(session, user, gap.engagement_id)
+
+    # Get TOM specification for context
+    tom_spec = None
+    if gap.tom_id:
+        tom_result = await session.execute(
+            select(TargetOperatingModel)
+            .where(TargetOperatingModel.id == gap.tom_id)
+            .options(selectinload(TargetOperatingModel.dimension_records))
+        )
+        tom = tom_result.scalar_one_or_none()
+        if tom and tom.dimension_records:
+            for dr in tom.dimension_records:
+                if str(dr.dimension_type) == str(gap.dimension):
+                    tom_spec = dr.description
+                    break
+
+    generator = RationaleGeneratorService()
+    rationale_data = await generator.generate_rationale(gap, tom_spec)
+
+    gap.rationale = rationale_data["rationale"]
+    gap.recommendation = rationale_data["recommendation"]
+    await session.commit()
+
+    return {
+        "gap_id": gap.id,
+        "rationale": rationale_data["rationale"],
+        "recommendation": rationale_data["recommendation"],
+    }
+
+
+@router.post(
+    "/gaps/engagement/{engagement_id}/generate-rationales",
+    response_model=BulkRationaleResponse,
+)
+async def generate_bulk_rationales(
+    engagement_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
+    _engagement_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Generate LLM-powered rationales for all gaps without rationale in an engagement."""
+    from src.tom.rationale_generator import RationaleGeneratorService
+
+    generator = RationaleGeneratorService()
+    results = await generator.generate_bulk_rationales(session, str(engagement_id))
+    await session.commit()
+
+    return {
+        "engagement_id": engagement_id,
+        "gaps_processed": len(results),
+        "results": [
+            {
+                "gap_id": r["gap_id"],
+                "rationale": r["rationale"],
+                "recommendation": r["recommendation"],
+            }
+            for r in results
+        ],
+    }
 
 
 # -- Best Practices Routes ----------------------------------------------------
@@ -362,6 +795,105 @@ class BenchmarkList(BaseModel):
     total: int
 
 
+class SeedResponse(BaseModel):
+    """Schema for seed operation response."""
+
+    best_practices_seeded: int
+    benchmarks_seeded: int
+
+
+class AlignmentResponse(BaseModel):
+    """Schema for alignment analysis response."""
+
+    engagement_id: str
+    tom_id: str
+    overall_alignment: float
+    maturity_scores: dict[str, float]
+    gaps_detected: int
+    gaps_persisted: int
+    gaps: list[dict[str, Any]]
+
+
+class MaturityScoresResponse(BaseModel):
+    """Schema for maturity scores response."""
+
+    engagement_id: str
+    maturity_scores: dict[str, float]
+
+
+class PrioritizedGapsResponse(BaseModel):
+    """Schema for prioritized gaps response."""
+
+    engagement_id: str
+    gaps: list[dict[str, Any]]
+    total: int
+
+
+class ConformanceDeviationResponse(BaseModel):
+    """Schema for a single conformance deviation."""
+
+    element_name: str
+    deviation_type: str
+    severity: float
+    description: str
+
+
+class ConformanceCheckResponse(BaseModel):
+    """Schema for conformance check response."""
+
+    pov_model_id: str
+    reference_model_id: str
+    fitness_score: float
+    matching_elements: int
+    total_reference_elements: int
+    deviations: list[ConformanceDeviationResponse]
+
+
+class ConformanceModelSummary(BaseModel):
+    """Schema for a model in the conformance summary."""
+
+    id: str
+    scope: str
+    confidence_score: float
+    element_count: int
+
+
+class ConformanceSummaryResponse(BaseModel):
+    """Schema for conformance summary response."""
+
+    engagement_id: str
+    completed_models: int
+    models: list[ConformanceModelSummary]
+
+
+class RoadmapPhaseResponse(BaseModel):
+    """Schema for a roadmap phase."""
+
+    phase_number: int
+    name: str
+    duration_months: int
+    initiative_count: int
+    initiatives: list[dict[str, Any]]
+
+
+class RoadmapResponse(BaseModel):
+    """Schema for roadmap generation response."""
+
+    engagement_id: str
+    tom_id: str
+    total_initiatives: int
+    estimated_duration_months: int
+    phases: list[RoadmapPhaseResponse]
+
+
+class RoadmapSummaryResponse(BaseModel):
+    """Schema for roadmap summary response."""
+
+    engagement_id: str
+    total_gaps: int
+    gaps_by_dimension: dict[str, int]
+
+
 @router.post("/best-practices", response_model=BestPracticeResponse, status_code=status.HTTP_201_CREATED)
 async def create_best_practice(
     payload: BestPracticeCreate,
@@ -370,11 +902,13 @@ async def create_best_practice(
 ) -> BestPractice:
     """Create a best practice entry."""
     bp = BestPractice(
+        title=payload.title,
         domain=payload.domain,
         industry=payload.industry,
         description=payload.description,
         source=payload.source,
         tom_dimension=payload.tom_dimension,
+        maturity_level_applicable=payload.maturity_level_applicable,
     )
     session.add(bp)
     await session.commit()
@@ -385,6 +919,7 @@ async def create_best_practice(
 @router.get("/best-practices", response_model=BestPracticeList)
 async def list_best_practices(
     industry: str | None = None,
+    domain: str | None = None,
     dimension: TOMDimension | None = None,
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
@@ -395,6 +930,7 @@ async def list_best_practices(
 
     Args:
         industry: Filter by industry name.
+        domain: Filter by domain name.
         dimension: Filter by TOM dimension.
         limit: Max results.
         offset: Pagination offset.
@@ -405,6 +941,9 @@ async def list_best_practices(
     if industry is not None:
         query = query.where(BestPractice.industry == industry)
         count_query = count_query.where(BestPractice.industry == industry)
+    if domain is not None:
+        query = query.where(BestPractice.domain == domain)
+        count_query = count_query.where(BestPractice.domain == domain)
     if dimension is not None:
         query = query.where(BestPractice.tom_dimension == dimension)
         count_query = count_query.where(BestPractice.tom_dimension == dimension)
@@ -500,7 +1039,7 @@ async def get_benchmark(
     return bm
 
 
-@router.post("/seed", status_code=status.HTTP_201_CREATED)
+@router.post("/seed", response_model=SeedResponse, status_code=status.HTTP_201_CREATED)
 async def seed_best_practices_and_benchmarks(
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:update")),
@@ -527,10 +1066,201 @@ async def seed_best_practices_and_benchmarks(
     return {"best_practices_seeded": bp_count, "benchmarks_seeded": bm_count}
 
 
+# -- Benchmarking & Recommendations (Story #363) --------------------------------
+
+
+class PercentileRankingResponse(BaseModel):
+    """Percentile ranking of a client metric against industry benchmarks."""
+
+    metric_name: str
+    client_value: float
+    percentile: float
+    percentile_label: str
+    distribution: dict[str, float]
+
+
+class BenchmarkRankingResponse(BaseModel):
+    """Response containing one or more percentile rankings."""
+
+    engagement_id: str
+    rankings: list[PercentileRankingResponse]
+
+
+class PracticeMatchResponse(BaseModel):
+    """A best practice matched to a gap finding."""
+
+    practice_id: str
+    practice_title: str
+    practice_domain: str
+    practice_industry: str
+    gap_id: str
+    relevance_score: float
+    match_reason: str
+
+
+class GapRecommendationsResponse(BaseModel):
+    """Recommendations for a gap finding."""
+
+    gap_id: str
+    gap_dimension: str
+    recommendations: list[PracticeMatchResponse]
+
+
+@router.get("/engagements/{engagement_id}/benchmarks", response_model=BenchmarkRankingResponse)
+async def get_engagement_benchmarks(
+    engagement_id: UUID,
+    metric: str | None = None,
+    industry: str | None = None,
+    domain: str | None = None,
+    session: AsyncSession = Depends(get_session),
+    _engagement_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Compute client percentile ranking against industry benchmarks.
+
+    Args:
+        engagement_id: The engagement to rank.
+        metric: Optional metric name filter (e.g. "processing_time").
+        industry: Optional industry filter.
+        domain: Optional domain filter (unused for now, reserved for future).
+    """
+    # Load engagement to verify access (already done by require_engagement_access)
+    eng_result = await session.execute(
+        select(Engagement).where(Engagement.id == engagement_id)
+    )
+    engagement = eng_result.scalar_one_or_none()
+    if not engagement:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Engagement not found")
+
+    # Load benchmarks
+    bm_query = select(Benchmark)
+    if metric is not None:
+        bm_query = bm_query.where(Benchmark.metric_name == metric)
+    if industry is not None:
+        bm_query = bm_query.where(Benchmark.industry == industry)
+    bm_result = await session.execute(bm_query)
+    benchmarks = list(bm_result.scalars().all())
+
+    if not benchmarks:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No benchmarks found for the specified filters",
+        )
+
+    # Load engagement metrics from metadata or latest POV confidence
+    # For now, use engagement metadata_json for client metric values
+    metadata = engagement.metadata_json or {}
+    client_metrics: dict[str, float] = metadata.get("client_metrics", {})
+
+    rankings = []
+    for bm in benchmarks:
+        client_value = client_metrics.get(bm.metric_name)
+        if client_value is None:
+            continue
+        ranking = _rank_client(
+            metric_name=bm.metric_name,
+            client_value=float(client_value),
+            p25=bm.p25,
+            p50=bm.p50,
+            p75=bm.p75,
+            p90=bm.p90,
+        )
+        rankings.append({
+            "metric_name": ranking.metric_name,
+            "client_value": ranking.client_value,
+            "percentile": ranking.percentile,
+            "percentile_label": ranking.percentile_label,
+            "distribution": ranking.distribution,
+        })
+
+    return {
+        "engagement_id": str(engagement_id),
+        "rankings": rankings,
+    }
+
+
+@router.get("/gap-findings/{gap_id}/recommendations", response_model=GapRecommendationsResponse)
+async def get_gap_recommendations(
+    gap_id: UUID,
+    engagement_id: UUID = Query(...),
+    limit: int = Query(default=10, ge=1, le=50),
+    session: AsyncSession = Depends(get_session),
+    _engagement_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Get best practice recommendations for a specific gap finding.
+
+    Matches the gap to relevant best practices by domain, dimension, and keyword overlap.
+
+    Args:
+        gap_id: The gap finding to recommend practices for.
+        engagement_id: The engagement owning the gap (for IDOR protection).
+        limit: Maximum recommendations to return.
+    """
+    # Load gap with engagement scope
+    gap_result = await session.execute(
+        select(GapAnalysisResult).where(
+            GapAnalysisResult.id == gap_id,
+            GapAnalysisResult.engagement_id == engagement_id,
+        )
+    )
+    gap = gap_result.scalar_one_or_none()
+    if not gap:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Gap finding {gap_id} not found in engagement {engagement_id}",
+        )
+
+    # Load best practices pre-filtered by dimension for performance
+    bp_query = select(BestPractice)
+    if gap.dimension:
+        bp_query = bp_query.where(BestPractice.tom_dimension == gap.dimension)
+    bp_result = await session.execute(bp_query)
+    practices = list(bp_result.scalars().all())
+
+    # Build gap dict for matching
+    gap_dict = {
+        "id": str(gap.id),
+        "description": gap.rationale or "",
+        "domain": "",  # GapAnalysisResult doesn't have domain; use dimension as proxy
+        "tom_dimension": gap.dimension.value if gap.dimension else "",
+    }
+
+    # Build practice dicts for matching
+    practice_dicts = [
+        {
+            "id": str(bp.id),
+            "title": bp.title,
+            "description": bp.description,
+            "domain": bp.domain,
+            "industry": bp.industry,
+            "tom_dimension": bp.tom_dimension.value if bp.tom_dimension else "",
+        }
+        for bp in practices
+    ]
+
+    matches = match_gaps_to_practices([gap_dict], practice_dicts)
+
+    return {
+        "gap_id": str(gap.id),
+        "gap_dimension": gap.dimension.value if gap.dimension else "",
+        "recommendations": [
+            {
+                "practice_id": m.practice_id,
+                "practice_title": m.practice_title,
+                "practice_domain": m.practice_domain,
+                "practice_industry": m.practice_industry,
+                "gap_id": m.gap_id,
+                "relevance_score": m.relevance_score,
+                "match_reason": m.match_reason,
+            }
+            for m in matches[:limit]
+        ],
+    }
+
+
 # -- Alignment Engine Routes (Story #30) --------------------------------------
 
 
-@router.post("/alignment/{engagement_id}/{tom_id}")
+@router.post("/alignment/{engagement_id}/{tom_id}", response_model=AlignmentResponse)
 async def run_alignment(
     engagement_id: UUID,
     tom_id: UUID,
@@ -564,7 +1294,7 @@ async def run_alignment(
     }
 
 
-@router.get("/alignment/{engagement_id}/maturity")
+@router.get("/alignment/{engagement_id}/maturity", response_model=MaturityScoresResponse)
 async def get_maturity_scores(
     engagement_id: UUID,
     request: Request,
@@ -584,12 +1314,12 @@ async def get_maturity_scores(
 
     scores = {}
     for dim in TomDimension:
-        scores[dim] = engine._assess_dimension_maturity(dim, stats)
+        scores[dim] = engine.assess_dimension_maturity(dim, stats)
 
     return {"engagement_id": str(engagement_id), "maturity_scores": scores}
 
 
-@router.post("/alignment/{engagement_id}/prioritize")
+@router.post("/alignment/{engagement_id}/prioritize", response_model=PrioritizedGapsResponse)
 async def prioritize_gaps(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -622,10 +1352,169 @@ async def prioritize_gaps(
     return {"engagement_id": str(engagement_id), "gaps": prioritized, "total": len(prioritized)}
 
 
+# -- Gap Analysis Dashboard Constants -----------------------------------------
+
+SEVERITY_THRESHOLD_CRITICAL = 0.9
+SEVERITY_THRESHOLD_HIGH = 0.7
+SEVERITY_THRESHOLD_MEDIUM = 0.4
+ALIGNMENT_THRESHOLD = 0.6
+
+# -- Gap Analysis Dashboard (Story #347) --------------------------------------
+
+
+class GapCountByType(BaseModel):
+    """Gap count for a specific gap type, broken down by severity buckets."""
+
+    gap_type: str
+    total: int
+    critical: int
+    high: int
+    medium: int
+    low: int
+
+
+class DimensionAlignmentScore(BaseModel):
+    """Alignment score for a single TOM dimension."""
+
+    dimension: str
+    score: float
+    below_threshold: bool
+
+
+class RecommendationEntry(BaseModel):
+    """A prioritized recommendation from gap analysis."""
+
+    gap_id: str
+    title: str
+    gap_type: str
+    dimension: str
+    severity: float
+    priority_score: float
+    recommendation: str | None
+    rationale: str | None
+
+
+class GapDashboardResponse(BaseModel):
+    """Aggregated gap analysis dashboard data."""
+
+    engagement_id: str
+    total_gaps: int
+    gap_counts: list[GapCountByType]
+    dimension_scores: list[DimensionAlignmentScore]
+    recommendations: list[RecommendationEntry]
+    maturity_heatmap: dict[str, dict[str, int]]
+
+
+@router.get(
+    "/dashboard/{engagement_id}/gap-analysis",
+    response_model=GapDashboardResponse,
+)
+async def get_gap_analysis_dashboard(
+    engagement_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+) -> dict[str, Any]:
+    """Get aggregated gap analysis dashboard data.
+
+    Returns gap counts by type/severity, TOM dimension alignment scores,
+    prioritized recommendations, and a maturity heatmap.
+
+    Args:
+        engagement_id: The engagement UUID.
+    """
+    await _check_engagement_member(session, user, engagement_id)
+
+    # Get all gaps for the engagement
+    gap_result = await session.execute(
+        select(GapAnalysisResult).where(GapAnalysisResult.engagement_id == engagement_id)
+    )
+    gaps = list(gap_result.scalars().all())
+
+    # --- Gap counts by type and severity ---
+    gap_type_counts: dict[str, dict[str, int]] = {}
+    for gap_type in TOMGapType:
+        if gap_type == TOMGapType.NO_GAP:
+            continue
+        gap_type_counts[gap_type.value] = {"total": 0, "critical": 0, "high": 0, "medium": 0, "low": 0}
+
+    for gap in gaps:
+        gt = str(gap.gap_type)
+        if gt not in gap_type_counts:
+            continue
+        gap_type_counts[gt]["total"] += 1
+        if gap.severity >= SEVERITY_THRESHOLD_CRITICAL:
+            gap_type_counts[gt]["critical"] += 1
+        elif gap.severity >= SEVERITY_THRESHOLD_HIGH:
+            gap_type_counts[gt]["high"] += 1
+        elif gap.severity >= SEVERITY_THRESHOLD_MEDIUM:
+            gap_type_counts[gt]["medium"] += 1
+        else:
+            gap_type_counts[gt]["low"] += 1
+
+    gap_counts_list = [
+        GapCountByType(gap_type=gt, **counts)
+        for gt, counts in gap_type_counts.items()
+    ]
+
+    # --- TOM dimension alignment scores ---
+    # Alignment = 1.0 - avg(severity): higher score = better aligned.
+    # No gaps in a dimension = fully aligned (1.0).
+    dim_severities: dict[str, list[float]] = {dim.value: [] for dim in TOMDimension}
+    for gap in gaps:
+        dim_severities[str(gap.dimension)].append(gap.severity)
+
+    dimension_scores = []
+    for dim in TOMDimension:
+        sev_values = dim_severities[dim.value]
+        avg_severity = sum(sev_values) / len(sev_values) if sev_values else 0.0
+        score = round(1.0 - avg_severity, 3)
+        dimension_scores.append(DimensionAlignmentScore(
+            dimension=dim.value,
+            score=score,
+            below_threshold=score < ALIGNMENT_THRESHOLD,
+        ))
+
+    # --- Prioritized recommendations ---
+    recommendations = []
+    for gap in gaps:
+        title = gap.recommendation[:80] if gap.recommendation else f"{gap.gap_type} in {gap.dimension}"
+        recommendations.append(RecommendationEntry(
+            gap_id=str(gap.id),
+            title=title,
+            gap_type=str(gap.gap_type),
+            dimension=str(gap.dimension),
+            severity=gap.severity,
+            priority_score=gap.priority_score,
+            recommendation=gap.recommendation,
+            rationale=gap.rationale,
+        ))
+    recommendations.sort(key=lambda r: r.priority_score, reverse=True)
+
+    # --- Maturity heatmap (dimension × gap type counts) ---
+    # Each cell: {dimension: {gap_type: count}} for grid visualization.
+    heatmap: dict[str, dict[str, int]] = {}
+    for dim in TOMDimension:
+        heatmap[dim.value] = {"full_gap": 0, "partial_gap": 0, "deviation": 0}
+    for gap in gaps:
+        dim_key = str(gap.dimension)
+        gt = str(gap.gap_type)
+        if dim_key in heatmap and gt in heatmap[dim_key]:
+            heatmap[dim_key][gt] += 1
+
+    return {
+        "engagement_id": str(engagement_id),
+        "total_gaps": len(gaps),
+        "gap_counts": [gc.model_dump() for gc in gap_counts_list],
+        "dimension_scores": [ds.model_dump() for ds in dimension_scores],
+        "recommendations": [r.model_dump() for r in recommendations],
+        "maturity_heatmap": heatmap,
+    }
+
+
 # -- Conformance Routes (Story #32) -------------------------------------------
 
 
-@router.post("/conformance/check")
+@router.post("/conformance/check", response_model=ConformanceCheckResponse)
 async def check_conformance(
     pov_model_id: UUID,
     reference_model_id: UUID,
@@ -656,7 +1545,7 @@ async def check_conformance(
     }
 
 
-@router.get("/conformance/{engagement_id}/summary")
+@router.get("/conformance/{engagement_id}/summary", response_model=ConformanceSummaryResponse)
 async def get_conformance_summary(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -691,7 +1580,7 @@ async def get_conformance_summary(
 # -- Roadmap Routes (Story #34) -----------------------------------------------
 
 
-@router.post("/roadmap/{engagement_id}/{tom_id}")
+@router.post("/roadmap/{engagement_id}/{tom_id}", response_model=RoadmapResponse)
 async def generate_roadmap(
     engagement_id: UUID,
     tom_id: UUID,
@@ -723,7 +1612,7 @@ async def generate_roadmap(
     }
 
 
-@router.get("/roadmap/{engagement_id}")
+@router.get("/roadmap/{engagement_id}", response_model=RoadmapSummaryResponse)
 async def get_roadmap_summary(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -746,3 +1635,636 @@ async def get_roadmap_summary(
         "total_gaps": len(gaps),
         "gaps_by_dimension": by_dimension,
     }
+
+
+# -- Gap-Prioritized Roadmap Routes (Story #368) -----------------------------
+
+
+class RoadmapRecommendationDetail(BaseModel):
+    """A recommendation within a roadmap phase."""
+
+    gap_id: str
+    title: str
+    dimension: str
+    gap_type: str
+    composite_score: float
+    effort_weeks: float
+    remediation_cost: int
+    rationale_summary: str
+    depends_on: list[str] = Field(default_factory=list)
+
+
+class PrioritizedPhaseResponse(BaseModel):
+    """A phase in the prioritized roadmap."""
+
+    phase_number: int
+    name: str
+    duration_weeks_estimate: int
+    recommendation_count: int
+    recommendation_ids: list[str]
+    recommendations: list[RoadmapRecommendationDetail]
+
+
+class PrioritizedRoadmapResponse(BaseModel):
+    """Full prioritized roadmap response."""
+
+    model_config = {"from_attributes": True}
+
+    id: UUID
+    engagement_id: UUID
+    status: str
+    total_initiatives: int
+    estimated_duration_weeks: int
+    phases: list[PrioritizedPhaseResponse]
+    generated_at: Any
+
+
+class GenerateRoadmapResponse(BaseModel):
+    """Response for roadmap generation."""
+
+    roadmap_id: UUID
+    engagement_id: UUID
+    status: str
+    total_initiatives: int
+    estimated_duration_weeks: int
+    phase_count: int
+
+
+@router.post(
+    "/roadmaps/{engagement_id}/generate",
+    response_model=GenerateRoadmapResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def generate_prioritized_roadmap(
+    engagement_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
+    _engagement_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Generate a prioritized transformation roadmap from gap analysis.
+
+    Groups gaps into 3-4 phases based on composite_score and effort_estimate,
+    resolves dependencies via topological sort, and persists the roadmap.
+    """
+    from src.tom.roadmap_generator import generate_roadmap as gen_roadmap
+
+    # Verify engagement exists
+    eng_result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
+    if not eng_result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Engagement {engagement_id} not found",
+        )
+
+    roadmap = await gen_roadmap(session, engagement_id)
+    await session.commit()
+
+    return {
+        "roadmap_id": roadmap.id,
+        "engagement_id": roadmap.engagement_id,
+        "status": roadmap.status.value,
+        "total_initiatives": roadmap.total_initiatives,
+        "estimated_duration_weeks": roadmap.estimated_duration_weeks,
+        "phase_count": len(roadmap.phases or []),
+    }
+
+
+@router.get("/roadmaps/{roadmap_id}", response_model=PrioritizedRoadmapResponse)
+async def get_prioritized_roadmap(
+    roadmap_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+) -> dict[str, Any]:
+    """Retrieve a generated roadmap by ID (structured JSON)."""
+    from src.core.models import TransformationRoadmapModel
+
+    result = await session.execute(
+        select(TransformationRoadmapModel).where(TransformationRoadmapModel.id == roadmap_id)
+    )
+    roadmap = result.scalar_one_or_none()
+    if not roadmap:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Roadmap {roadmap_id} not found",
+        )
+
+    await _check_engagement_member(session, user, roadmap.engagement_id)
+
+    return {
+        "id": roadmap.id,
+        "engagement_id": roadmap.engagement_id,
+        "status": roadmap.status.value,
+        "total_initiatives": roadmap.total_initiatives,
+        "estimated_duration_weeks": roadmap.estimated_duration_weeks,
+        "phases": roadmap.phases or [],
+        "generated_at": roadmap.generated_at,
+    }
+
+
+@router.get("/roadmaps/{roadmap_id}/export")
+async def export_roadmap(
+    roadmap_id: UUID,
+    export_format: str = Query(default="html", alias="format", description="Export format: html"),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+) -> Any:
+    """Export a roadmap as client-ready HTML document."""
+    from fastapi.responses import HTMLResponse
+
+    from src.core.models import TransformationRoadmapModel
+    from src.tom.roadmap_exporter import export_roadmap_html
+
+    result = await session.execute(
+        select(TransformationRoadmapModel).where(TransformationRoadmapModel.id == roadmap_id)
+    )
+    roadmap = result.scalar_one_or_none()
+    if not roadmap:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Roadmap {roadmap_id} not found",
+        )
+
+    await _check_engagement_member(session, user, roadmap.engagement_id)
+
+    # Fetch engagement name
+    eng_result = await session.execute(select(Engagement).where(Engagement.id == roadmap.engagement_id))
+    engagement = eng_result.scalar_one_or_none()
+    eng_name = engagement.name if engagement else "Unknown Engagement"
+
+    roadmap_data = {
+        "phases": roadmap.phases or [],
+        "total_initiatives": roadmap.total_initiatives,
+        "estimated_duration_weeks": roadmap.estimated_duration_weeks,
+        "generated_at": roadmap.generated_at.isoformat() if roadmap.generated_at else "",
+    }
+
+    if export_format != "html":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported export format: {export_format}. Supported: html",
+        )
+
+    html_content = export_roadmap_html(roadmap_data, eng_name)
+
+    # Update exported_at
+    from datetime import UTC, datetime
+
+    roadmap.exported_at = datetime.now(UTC)
+    await session.commit()
+
+    return HTMLResponse(content=html_content)
+
+
+# ---------------------------------------------------------------------------
+# Maturity Scoring schemas
+# ---------------------------------------------------------------------------
+
+
+class MaturityComputeRequest(BaseModel):
+    """Request body for computing maturity scores."""
+
+    governance_map: dict[str, dict[str, Any]] | None = None
+
+
+class MaturityScoreResponse(BaseModel):
+    """Response for a single maturity score."""
+
+    model_config = {"from_attributes": True}
+
+    id: UUID
+    process_model_id: UUID
+    process_area_name: str
+    maturity_level: ProcessMaturity
+    level_number: int
+    evidence_dimensions: dict[str, Any] | None
+    recommendations: list[str] | None
+    scored_at: datetime
+
+
+class MaturityComputeResponse(BaseModel):
+    """Response for a batch maturity computation."""
+
+    engagement_id: UUID
+    scores_computed: int
+    scores: list[MaturityScoreResponse]
+
+
+class MaturityHeatmapEntry(BaseModel):
+    """A single entry in the maturity heatmap."""
+
+    process_model_id: UUID
+    process_area_name: str
+    maturity_level: ProcessMaturity
+    level_number: int
+
+
+class MaturityHeatmapResponse(BaseModel):
+    """Full maturity heatmap response."""
+
+    engagement_id: UUID
+    process_areas: list[MaturityHeatmapEntry]
+    overall_engagement_maturity: float
+    process_area_count: int
+
+
+# -- Per-Activity Alignment Scoring Routes (Story #348) ----------------------
+
+
+class AlignmentRunTriggerResponse(BaseModel):
+    """Response for triggering an alignment scoring run."""
+
+    run_id: UUID
+    status: str
+    message: str
+
+
+class AlignmentResultEntry(BaseModel):
+    """A single per-activity, per-dimension alignment result."""
+
+    model_config = {"from_attributes": True}
+
+    id: UUID
+    activity_id: UUID
+    dimension_type: TOMDimension
+    gap_type: TOMGapType
+    deviation_score: float
+    alignment_evidence: dict[str, Any] | None
+
+
+class AlignmentRunResultsResponse(BaseModel):
+    """Paginated results for an alignment run."""
+
+    run_id: UUID
+    status: str
+    items: list[AlignmentResultEntry]
+    total: int
+
+
+# ---------------------------------------------------------------------------
+# Maturity Scoring routes
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/engagements/{engagement_id}/maturity-scores/compute",
+    response_model=MaturityComputeResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def compute_maturity_scores(
+    engagement_id: UUID,
+    body: MaturityComputeRequest,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
+    _engagement_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Compute maturity scores for all process areas in an engagement.
+
+    Evaluates evidence coverage, governance linkages, and metric
+    availability to assign a CMMI-aligned maturity level (1-5).
+    """
+    # Verify engagement exists
+    eng_result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
+    engagement = eng_result.scalar_one_or_none()
+    if not engagement:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Engagement not found")
+
+    # Fetch all process models for this engagement
+    pm_result = await session.execute(
+        select(ProcessModel).where(ProcessModel.engagement_id == engagement_id)
+    )
+    process_models = list(pm_result.scalars().all())
+
+    if not process_models:
+        return {
+            "engagement_id": engagement_id,
+            "scores_computed": 0,
+            "scores": [],
+        }
+
+    # Build process model dicts with form_coverage from metadata
+    pm_dicts = []
+    for pm in process_models:
+        meta = pm.metadata_json or {}
+        pm_dicts.append({
+            "id": str(pm.id),
+            "engagement_id": str(engagement_id),
+            "scope": pm.scope,
+            "form_coverage": meta.get("form_coverage", 0.0),
+        })
+
+    # Use governance_map from request body, or default to empty
+    governance_map = body.governance_map or {}
+
+    scorer = MaturityScoringService()
+    score_results = await scorer.score_engagement(pm_dicts, governance_map)
+
+    # Persist scores
+    now = datetime.now(UTC)
+    score_responses = []
+    for sr in score_results:
+        score_id = _uuid.uuid4()
+        ms = MaturityScore(
+            id=score_id,
+            engagement_id=engagement_id,
+            process_model_id=UUID(sr["process_model_id"]),
+            maturity_level=sr["maturity_level"],
+            level_number=sr["level_number"],
+            evidence_dimensions=sr["evidence_dimensions"],
+            recommendations=sr["recommendations"],
+        )
+        session.add(ms)
+
+        # Find process area name
+        pm_name = next(
+            (p["scope"] for p in pm_dicts if p["id"] == sr["process_model_id"]),
+            "Unknown",
+        )
+        score_responses.append({
+            "id": score_id,
+            "process_model_id": UUID(sr["process_model_id"]),
+            "process_area_name": pm_name,
+            "maturity_level": sr["maturity_level"],
+            "level_number": sr["level_number"],
+            "evidence_dimensions": sr["evidence_dimensions"],
+            "recommendations": sr["recommendations"],
+            "scored_at": now,
+        })
+
+    await session.commit()
+
+    await log_audit(
+        session, engagement_id, AuditAction.ENGAGEMENT_UPDATED,
+        f"Computed maturity scores for {len(score_results)} process areas",
+        actor=str(user.id),
+    )
+
+    return {
+        "engagement_id": engagement_id,
+        "scores_computed": len(score_results),
+        "scores": score_responses,
+    }
+
+
+@router.get(
+    "/engagements/{engagement_id}/maturity-heatmap",
+    response_model=MaturityHeatmapResponse,
+)
+async def get_maturity_heatmap(
+    engagement_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Return the maturity heatmap for all process areas in an engagement.
+
+    Returns the most recent maturity score per process area, plus
+    the overall engagement maturity as the average of all level numbers.
+    """
+    # Verify engagement exists
+    eng_result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
+    if not eng_result.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Engagement not found")
+
+    # Get latest maturity scores per process model using a subquery
+    latest_scores_subq = (
+        select(
+            MaturityScore.process_model_id,
+            func.max(MaturityScore.scored_at).label("latest_scored_at"),
+        )
+        .where(MaturityScore.engagement_id == engagement_id)
+        .group_by(MaturityScore.process_model_id)
+        .subquery()
+    )
+
+    score_result = await session.execute(
+        select(MaturityScore)
+        .join(
+            latest_scores_subq,
+            (MaturityScore.process_model_id == latest_scores_subq.c.process_model_id)
+            & (MaturityScore.scored_at == latest_scores_subq.c.latest_scored_at),
+        )
+        .where(MaturityScore.engagement_id == engagement_id)
+    )
+    scores = list(score_result.scalars().all())
+
+    if not scores:
+        return {
+            "engagement_id": engagement_id,
+            "process_areas": [],
+            "overall_engagement_maturity": 0.0,
+            "process_area_count": 0,
+        }
+
+    # Fetch process model names
+    pm_ids = [s.process_model_id for s in scores]
+    pm_result = await session.execute(
+        select(ProcessModel).where(ProcessModel.id.in_(pm_ids))
+    )
+    pm_map = {pm.id: pm.scope for pm in pm_result.scalars().all()}
+
+    areas = []
+    total_level = 0
+    for s in scores:
+        areas.append({
+            "process_model_id": s.process_model_id,
+            "process_area_name": pm_map.get(s.process_model_id, "Unknown"),
+            "maturity_level": s.maturity_level,
+            "level_number": s.level_number,
+        })
+        total_level += s.level_number
+
+    overall = round(total_level / len(scores), 2) if scores else 0.0
+
+    return {
+        "engagement_id": engagement_id,
+        "process_areas": areas,
+        "overall_engagement_maturity": overall,
+        "process_area_count": len(scores),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Alignment Scoring routes
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/scoring/{engagement_id}/run",
+    response_model=AlignmentRunTriggerResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def trigger_alignment_scoring(
+    engagement_id: UUID,
+    request: Request,
+    tom_id: UUID = Query(..., description="TOM to score against"),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:update")),
+    _engagement_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Trigger asynchronous per-activity TOM alignment scoring.
+
+    Creates a TOMAlignmentRun in PENDING status and kicks off background
+    scoring. Returns the run_id immediately.
+    """
+    # Verify engagement exists
+    eng_result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
+    if not eng_result.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {engagement_id} not found")
+
+    # Verify TOM exists and belongs to this engagement
+    tom_result = await session.execute(
+        select(TargetOperatingModel).where(
+            TargetOperatingModel.id == tom_id,
+            TargetOperatingModel.engagement_id == engagement_id,
+        )
+    )
+    if not tom_result.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"TOM {tom_id} not found for this engagement")
+
+    # Check for existing active run (prevent duplicates)
+    existing_run_result = await session.execute(
+        select(TOMAlignmentRun).where(
+            TOMAlignmentRun.engagement_id == engagement_id,
+            TOMAlignmentRun.tom_id == tom_id,
+            TOMAlignmentRun.status.in_([AlignmentRunStatus.PENDING, AlignmentRunStatus.RUNNING]),
+        )
+    )
+    if existing_run_result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An alignment scoring run is already in progress for this engagement and TOM",
+        )
+
+    # Create alignment run record
+    run = TOMAlignmentRun(engagement_id=engagement_id, tom_id=tom_id)
+    session.add(run)
+    await session.flush()
+    run_id = run.id
+
+    await log_audit(
+        session,
+        engagement_id,
+        AuditAction.GAP_ANALYSIS_RUN,
+        json.dumps({"tom_id": str(tom_id), "run_id": str(run_id)}),
+    )
+    await session.commit()
+
+    # Launch async scoring with reference retention
+    task = asyncio.create_task(
+        _run_alignment_scoring_async(
+            run_id=run_id,
+            session_factory=request.app.state.db_session_factory,
+            neo4j_driver=request.app.state.neo4j_driver,
+        )
+    )
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+
+    return {
+        "run_id": run_id,
+        "status": AlignmentRunStatus.PENDING.value,
+        "message": "Alignment scoring started",
+    }
+
+
+@router.get(
+    "/scoring/runs/{run_id}/results",
+    response_model=AlignmentRunResultsResponse,
+)
+async def get_alignment_run_results(
+    run_id: UUID,
+    limit: int = Query(50, ge=1, le=500, description="Items per page"),
+    offset: int = Query(0, ge=0, description="Offset for pagination"),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+) -> dict[str, Any]:
+    """Retrieve paginated results for an alignment scoring run."""
+    # Fetch the run
+    run_result = await session.execute(
+        select(TOMAlignmentRun).where(TOMAlignmentRun.id == run_id)
+    )
+    run = run_result.scalar_one_or_none()
+    if not run:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Alignment run {run_id} not found")
+
+    await _check_engagement_member(session, user, run.engagement_id)
+
+    # Count total results
+    count_result = await session.execute(
+        select(func.count()).select_from(TOMAlignmentResult).where(TOMAlignmentResult.run_id == run_id)
+    )
+    total = count_result.scalar() or 0
+
+    # Fetch paginated results
+    results_query = (
+        select(TOMAlignmentResult)
+        .where(TOMAlignmentResult.run_id == run_id)
+        .order_by(TOMAlignmentResult.activity_id, TOMAlignmentResult.dimension_type)
+        .limit(limit)
+        .offset(offset)
+    )
+    result = await session.execute(results_query)
+    items = list(result.scalars().all())
+
+    return {
+        "run_id": run_id,
+        "status": run.status.value,
+        "items": items,
+        "total": total,
+    }
+
+
+async def _run_alignment_scoring_async(
+    run_id: UUID,
+    session_factory: Any,
+    neo4j_driver: Any,
+) -> None:
+    """Background task to execute alignment scoring."""
+    from src.semantic.graph import KnowledgeGraphService
+    from src.tom.alignment_scoring import AlignmentScoringService
+
+    try:
+        async with session_factory() as session:
+            # Re-fetch the run record within this session
+            run_result = await session.execute(
+                select(TOMAlignmentRun).where(TOMAlignmentRun.id == run_id)
+            )
+            run = run_result.scalar_one_or_none()
+            if not run:
+                logger.error("Alignment run %s not found in background task", run_id)
+                return
+
+            graph_service = KnowledgeGraphService(neo4j_driver)
+
+            # Try to get embedding service (optional)
+            embedding_service = None
+            try:
+                from src.rag.embeddings import EmbeddingService
+
+                embedding_service = EmbeddingService()
+            except Exception:
+                logger.info("Embedding service not available, using graph-only scoring")
+
+            scoring_service = AlignmentScoringService(
+                graph_service=graph_service,
+                embedding_service=embedding_service,
+            )
+
+            await scoring_service.run_scoring(session, run)
+            await session.commit()
+
+    except Exception:
+        logger.exception("Background alignment scoring failed for run %s", run_id)
+        try:
+            async with session_factory() as session:
+                run_result = await session.execute(
+                    select(TOMAlignmentRun).where(TOMAlignmentRun.id == run_id)
+                )
+                run = run_result.scalar_one_or_none()
+                if run and run.status != AlignmentRunStatus.FAILED:
+                    run.status = AlignmentRunStatus.FAILED
+                    run.completed_at = datetime.now(UTC)
+                    run.error_message = "Background scoring task failed"
+                    await session.commit()
+        except Exception:
+            logger.exception("Failed to update run %s status to FAILED", run_id)

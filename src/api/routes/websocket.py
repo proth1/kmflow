@@ -12,7 +12,7 @@ import json
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
 
 from src.core.auth import decode_token, get_current_user, is_token_blacklisted
@@ -53,7 +53,7 @@ class ConnectionManager:
         for ws in self._connections[engagement_id]:
             try:
                 await ws.send_json(message)
-            except Exception:
+            except (WebSocketDisconnect, RuntimeError):
                 dead.append(ws)
         for ws in dead:
             self._connections[engagement_id].remove(ws)
@@ -103,7 +103,7 @@ async def _check_engagement_membership(
         if member is None:
             await websocket.close(code=1008, reason="Not a member of this engagement")
             return False
-    except Exception:
+    except Exception:  # Intentionally broad: fail-closed security check
         logger.warning("Engagement membership check failed for WebSocket — failing closed")
         await websocket.close(code=1008, reason="Authorization check failed")
         return False
@@ -166,7 +166,7 @@ async def monitoring_websocket(
     try:
         settings = get_settings()
         payload = decode_token(token, settings)
-    except Exception as e:
+    except (HTTPException, ValueError) as e:
         logger.warning("WebSocket authentication failed: %s", e)
         await websocket.close(code=1008, reason="Invalid or expired token")
         return
@@ -181,7 +181,7 @@ async def monitoring_websocket(
         if await is_token_blacklisted(websocket, token):
             await websocket.close(code=1008, reason="Token has been revoked")
             return
-    except Exception:
+    except Exception:  # Intentionally broad: fail-closed security check
         logger.warning("Token blacklist check failed for WebSocket — failing closed")
         await websocket.close(code=1008, reason="Authentication check failed")
         return
@@ -232,7 +232,7 @@ async def monitoring_websocket(
                 await websocket.send_json({"type": "heartbeat"})
     except WebSocketDisconnect:
         logger.debug("WebSocket client disconnected for engagement %s", engagement_id)
-    except Exception:
+    except Exception:  # Intentionally broad: WebSocket event loop must not crash
         logger.exception("WebSocket error for engagement %s", engagement_id)
     finally:
         shutdown.set()
@@ -263,7 +263,7 @@ async def alerts_websocket(
     try:
         settings = get_settings()
         payload = decode_token(token, settings)
-    except Exception as e:
+    except (HTTPException, ValueError) as e:
         logger.warning("WebSocket authentication failed: %s", e)
         await websocket.close(code=1008, reason="Invalid or expired token")
         return
@@ -278,7 +278,7 @@ async def alerts_websocket(
         if await is_token_blacklisted(websocket, token):
             await websocket.close(code=1008, reason="Token has been revoked")
             return
-    except Exception:
+    except Exception:  # Intentionally broad: fail-closed security check
         logger.warning("Token blacklist check failed for WebSocket — failing closed")
         await websocket.close(code=1008, reason="Authentication check failed")
         return
@@ -336,7 +336,7 @@ async def alerts_websocket(
                 pass
     except WebSocketDisconnect:
         logger.debug("Alert WebSocket client disconnected for engagement %s", engagement_id)
-    except Exception:
+    except Exception:  # Intentionally broad: WebSocket event loop must not crash
         logger.exception("Alert WebSocket error")
     finally:
         shutdown.set()

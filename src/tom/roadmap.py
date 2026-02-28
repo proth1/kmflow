@@ -108,7 +108,7 @@ class RoadmapGenerator:
             try:
                 matcher = bp_cls(embedding_service=embedding_service)
                 bp_matches = await matcher.match_gaps_to_practices(session, engagement_id, tom_id)
-            except Exception as e:
+            except (ConnectionError, RuntimeError, ValueError) as e:
                 logger.warning("Best practice matching failed: %s", e)
 
         roadmap = TransformationRoadmap(

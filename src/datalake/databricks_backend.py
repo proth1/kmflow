@@ -197,7 +197,7 @@ class DatabricksBackend:
                 statement=ddl.strip(),
             )
             logger.debug("Ensured metadata table: %s", self._metadata_table)
-        except Exception as exc:
+        except Exception as exc:  # Intentionally broad: Databricks SDK has no specific base exception
             logger.warning(
                 "Could not ensure metadata table %s: %s",
                 self._metadata_table,
@@ -219,7 +219,7 @@ class DatabricksBackend:
                 if getattr(wh, "state", None) in ("RUNNING", "STOPPED"):
                     self._warehouse_id = str(wh.id)
                     return self._warehouse_id
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: Databricks SDK has no specific base exception
             logger.warning("Warehouse discovery failed: %s", e)
         return ""
 
@@ -273,7 +273,7 @@ class DatabricksBackend:
         # Upload to Databricks Volumes via Files API
         try:
             w.files.upload(volume_path, io.BytesIO(content), overwrite=True)
-        except Exception as exc:
+        except Exception as exc:  # Intentionally broad: Databricks SDK has no specific base exception
             logger.error("Failed to upload file to Volumes: %s", exc)
             raise
 
@@ -305,7 +305,7 @@ VALUES
                     statement=insert_sql.strip(),
                     parameters=params,
                 )
-        except Exception as exc:
+        except Exception as exc:  # Intentionally broad: Databricks SDK has no specific base exception
             logger.warning("Failed to write metadata row: %s", exc)
 
         return StorageMetadata(
@@ -346,7 +346,7 @@ VALUES
             # The Files API returns a response object with a `contents` stream
             content: bytes = response.contents.read()
             return content
-        except Exception as exc:
+        except Exception as exc:  # Intentionally broad: Databricks SDK has no specific base exception
             error_str = str(exc).lower()
             if "not found" in error_str or "does not exist" in error_str or "404" in error_str:
                 raise FileNotFoundError(f"Evidence file not found in Volumes: {path}") from exc
@@ -367,7 +367,7 @@ VALUES
         try:
             w.files.get_metadata(path)
             return True
-        except Exception as exc:
+        except Exception as exc:  # Intentionally broad: Databricks SDK has no specific base exception
             error_str = str(exc).lower()
             if "not found" in error_str or "does not exist" in error_str or "404" in error_str:
                 return False
@@ -414,7 +414,7 @@ VALUES
                         original_name = base_name.split("_", 1)[-1] if "_" in base_name else base_name
                         if original_name.startswith(prefix):
                             paths.append(entry_path)
-        except Exception as exc:
+        except Exception as exc:  # Intentionally broad: Databricks SDK has no specific base exception
             error_str = str(exc).lower()
             if "not found" in error_str or "does not exist" in error_str or "404" in error_str:
                 return []
@@ -444,7 +444,7 @@ VALUES
         try:
             w.files.delete(path)
             deleted = True
-        except Exception as exc:
+        except Exception as exc:  # Intentionally broad: Databricks SDK has no specific base exception
             error_str = str(exc).lower()
             if "not found" in error_str or "does not exist" in error_str or "404" in error_str:
                 return False
@@ -466,7 +466,7 @@ WHERE volume_path = :volume_path
                     statement=delete_sql.strip(),
                     parameters=params,
                 )
-        except Exception as exc:
+        except Exception as exc:  # Intentionally broad: Databricks SDK has no specific base exception
             logger.warning("Failed to remove metadata row for %s: %s", path, exc)
 
         return deleted

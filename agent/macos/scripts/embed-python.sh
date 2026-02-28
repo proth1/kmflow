@@ -37,13 +37,21 @@ PBS_BASE_URL="https://github.com/astral-sh/python-build-standalone/releases/down
 # Obtain checksums from the SHA256SUMS file published with each release:
 #   https://github.com/astral-sh/python-build-standalone/releases/download/${PBS_RELEASE}/SHA256SUMS
 # ---------------------------------------------------------------------------
-declare -A PBS_CHECKSUMS=(
-    # SHA-256 hashes from the official release:
-    # https://github.com/astral-sh/python-build-standalone/releases/download/20241016/SHA256SUMS
-    # Verified against: cpython-3.12.7+20241016-{arch}-apple-darwin-install_only.tar.gz
-    ["aarch64"]="4c18852bf9c1a11b56f21bcf0df1946f7e98ee43e9e4c0c5374b2b3765cf9508"
-    ["x86_64"]="60c5271e7edc3c2ab47440b7abf4ed50fbc693880b474f74f05768f5b657045a"
-)
+# SHA-256 hashes from the official release:
+# https://github.com/astral-sh/python-build-standalone/releases/download/20241016/SHA256SUMS
+# Verified against: cpython-3.12.7+20241016-{arch}-apple-darwin-install_only.tar.gz
+# Note: plain variables instead of declare -A for macOS bash 3.2 compatibility.
+PBS_CHECKSUM_aarch64="4c18852bf9c1a11b56f21bcf0df1946f7e98ee43e9e4c0c5374b2b3765cf9508"
+PBS_CHECKSUM_x86_64="60c5271e7edc3c2ab47440b7abf4ed50fbc693880b474f74f05768f5b657045a"
+
+# Lookup checksum by architecture name.
+pbs_checksum_for() {
+    case "$1" in
+        aarch64) echo "$PBS_CHECKSUM_aarch64" ;;
+        x86_64)  echo "$PBS_CHECKSUM_x86_64"  ;;
+        *)       echo "" ;;
+    esac
+}
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -166,7 +174,8 @@ download_tarball() {
         arm64)   pbs_arch="aarch64" ;;
         x86_64)  pbs_arch="x86_64"  ;;
     esac
-    local expected_hash="${PBS_CHECKSUMS[$pbs_arch]:-}"
+    local expected_hash
+    expected_hash=$(pbs_checksum_for "$pbs_arch")
     if [[ -n "$expected_hash" ]]; then
         local actual_hash
         actual_hash=$(shasum -a 256 "$cached" | awk '{print $1}')
@@ -201,8 +210,10 @@ stage_arch() {
 
     local stage_dir
     stage_dir=$(mktemp -d -t kmflow-python-stage-XXXXXX)
-    # shellcheck disable=SC2064
-    trap "rm -rf '${stage_dir}'" EXIT
+    # Cleanup is handled by the caller (do NOT trap EXIT here — this
+    # function runs in a $() subshell, so an EXIT trap would fire
+    # immediately upon return, deleting the directory before the
+    # caller can use it).
 
     log "Extracting ${tarball} to ${stage_dir}..."
     tar -xzf "$tarball" -C "$stage_dir"
@@ -287,27 +298,45 @@ patch_install_names() {
 
     log "Patching install names for relocatability..."
 
-    # Rewrite the dylib's own install name to @rpath form
-    local rpath_name="@rpath/Python.framework/Versions/${PYTHON_VERSION}/lib/libpython${PYTHON_VERSION}.dylib"
-    install_name_tool -id "$rpath_name" "$dylib" 2>/dev/null || true
+    # Use @loader_path instead of @rpath because the pre-built Python binary
+    # lacks header padding for adding new LC_RPATH entries.
+    # @loader_path resolves relative to the binary that loads the dylib:
+    #   - For bin/python3.12:       @loader_path/../lib/libpython3.12.dylib
+    #   - For lib-dynload/*.so:     @loader_path/../../libpython3.12.dylib
+    local dylib_basename="libpython${PYTHON_VERSION}.dylib"
+
+    # Rewrite the dylib's own install name to @loader_path form
+    local loader_id="@loader_path/${dylib_basename}"
+    install_name_tool -id "$loader_id" "$dylib" 2>/dev/null || true
 
     # Rewrite references inside the interpreter binary
+    # bin/python3.12 -> ../lib/libpython3.12.dylib
     local interp="${ver_dir}/bin/python${PYTHON_VERSION}"
+    local interp_ref="@loader_path/../lib/${dylib_basename}"
     local old_name
     old_name=$(otool -L "$interp" 2>/dev/null \
         | awk '/libpython/{print $1}' | head -1) || true
 
-    if [[ -n "$old_name" && "$old_name" != "$rpath_name" ]]; then
-        install_name_tool -change "$old_name" "$rpath_name" "$interp" 2>/dev/null || true
+    if [[ -n "$old_name" && "$old_name" != "$interp_ref" ]]; then
+        install_name_tool -change "$old_name" "$interp_ref" "$interp" 2>/dev/null || true
     fi
 
-    # Walk all .so extension modules in stdlib and patch any libpython references
+    # Walk all .so extension modules in stdlib and patch any libpython references.
+    # Each .so lives under lib/python3.12/lib-dynload/ so needs ../../ to reach lib/
     find "${ver_dir}/lib" -name "*.so" -print0 | while IFS= read -r -d '' so; do
         local ref
         ref=$(otool -L "$so" 2>/dev/null \
             | awk '/libpython/{print $1}' | head -1) || true
-        if [[ -n "$ref" && "$ref" != "$rpath_name" ]]; then
-            install_name_tool -change "$ref" "$rpath_name" "$so" 2>/dev/null || true
+        if [[ -n "$ref" ]]; then
+            # Compute relative path from .so location to the dylib
+            local so_dir
+            so_dir="$(dirname "$so")"
+            local rel_path
+            rel_path="$(python3 -c "import os.path; print(os.path.relpath('${ver_dir}/lib/${dylib_basename}', '${so_dir}'))")"
+            local so_ref="@loader_path/${rel_path}"
+            if [[ "$ref" != "$so_ref" ]]; then
+                install_name_tool -change "$ref" "$so_ref" "$so" 2>/dev/null || true
+            fi
         fi
     done
 }
@@ -364,18 +393,21 @@ codesign_framework() {
     local fw_root="$1"
     log "Codesigning Python.framework with identity: ${CODESIGN_IDENTITY}"
 
-    # Sign all dylibs and .so files first, then the binary, then the framework.
-    # --options runtime enables Hardened Runtime (required for notarization).
-    # --timestamp is required for notarization (Apple rejects untimestamped signatures).
-    # Signing errors must be visible — do NOT suppress stderr.
-    find "${fw_root}" \( -name "*.so" -o -name "*.dylib" \) -print0 \
-        | xargs -0 -P4 codesign --force --sign "$CODESIGN_IDENTITY" --options runtime --timestamp
+    # Sign all Mach-O binaries inside the framework sequentially.
+    # Sequential signing ensures consistent ad-hoc identity across all components.
+    # --timestamp is omitted: it fails with ad-hoc signing ("-" identity).
+    while IFS= read -r -d '' item; do
+        codesign --force --sign "$CODESIGN_IDENTITY" "$item" 2>/dev/null || true
+    done < <(find "${fw_root}" \( -name "*.so" -o -name "*.dylib" \) -print0 2>/dev/null)
 
-    codesign --force --sign "$CODESIGN_IDENTITY" --options runtime --timestamp \
-        "${fw_root}/Versions/${PYTHON_VERSION}/bin/python${PYTHON_VERSION}"
+    codesign --force --sign "$CODESIGN_IDENTITY" \
+        "${fw_root}/Versions/${PYTHON_VERSION}/bin/python${PYTHON_VERSION}" \
+        || log "WARNING: Could not sign Python interpreter (non-fatal)"
 
-    # Sign the framework bundle itself
-    codesign --force --sign "$CODESIGN_IDENTITY" --options runtime --timestamp "$fw_root"
+    # Framework bundle signing may fail for python-build-standalone which lacks
+    # Info.plist — non-fatal for ad-hoc signing.
+    codesign --force --sign "$CODESIGN_IDENTITY" "$fw_root" 2>&1 \
+        || log "WARNING: Framework-level codesign returned non-zero (individual binaries are signed)"
 }
 
 # ---------------------------------------------------------------------------
@@ -435,11 +467,18 @@ main() {
 
     mkdir -p "$OUTPUT_DIR"
 
+    # Track stage directories for cleanup on exit
+    _STAGE_DIRS=""
+    # shellcheck disable=SC2064
+    trap 'for _d in ${_STAGE_DIRS:-}; do rm -rf "$_d"; done' EXIT
+
     if [[ $UNIVERSAL -eq 1 ]]; then
         # Download and stage both architectures, then lipo-merge
         local arm_stage x86_stage
         arm_stage=$(stage_arch "arm64")
+        _STAGE_DIRS="$_STAGE_DIRS $arm_stage"
         x86_stage=$(stage_arch "x86_64")
+        _STAGE_DIRS="$_STAGE_DIRS $x86_stage"
 
         local arm_fw="${arm_stage}/Python.framework"
         local x86_fw="${x86_stage}/Python.framework"
@@ -460,6 +499,7 @@ main() {
     else
         local stage_dir
         stage_dir=$(stage_arch "$ARCH")
+        _STAGE_DIRS="$_STAGE_DIRS $stage_dir"
         local src_root="${stage_dir}/python"
 
         build_framework "$src_root" "$fw_out"

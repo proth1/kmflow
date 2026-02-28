@@ -6,12 +6,14 @@ including scenario modifications, evidence coverage, and comparison.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,7 +40,6 @@ from src.api.schemas.simulations import (
     SuggestionCreate,
     SuggestionDispositionUpdate,
     SuggestionListResponse,
-    SuggestionResponse,
 )
 from src.core.audit import log_audit
 from src.core.models import (
@@ -46,6 +47,7 @@ from src.core.models import (
     AuditAction,
     EpistemicAction,
     FinancialAssumption,
+    LLMAuditLog,
     ScenarioModification,
     SimulationResult,
     SimulationScenario,
@@ -63,6 +65,7 @@ from src.simulation.service import (
     scenario_to_response,
     suggestion_to_response,
 )
+from src.simulation.suggestion_review import review_suggestion
 
 logger = logging.getLogger(__name__)
 
@@ -72,41 +75,51 @@ VALID_TEMPLATE_KEYS = frozenset(
     {"consolidate_adjacent", "automate_gateway", "shift_decision_boundary", "remove_control"}
 )
 
-# In-memory rate limiter for LLM endpoints (per-user, 5 requests/minute).
-# NOTE: This is per-process only. In multi-worker deployments (uvicorn --workers N),
-# the effective limit becomes N * _LLM_RATE_LIMIT. For production multi-worker
-# deployments, replace with Redis-based rate limiting.
+# Redis-backed sliding-window rate limiter for LLM suggestion endpoint (C3-H3).
+# Replaces the previous in-process dict that was not shared across uvicorn workers.
 _LLM_RATE_LIMIT = 5
 _LLM_RATE_WINDOW = 60  # seconds
-_LLM_MAX_TRACKED_USERS = 10_000
-_llm_request_log: dict[str, list[float]] = {}
 
 
-def _check_llm_rate_limit(user_id: str) -> None:
+async def _check_llm_rate_limit(request: Request, user_id: str) -> None:
     """Raise 429 if the user exceeds LLM request rate limit.
 
-    This is an in-memory, single-process rate limiter. It does not share
-    state across multiple uvicorn workers. For multi-worker deployments,
-    use Redis-based rate limiting instead.
+    Uses a Redis sorted-set sliding window so the limit is enforced across all
+    worker processes.  Falls back to allowing the request (with a warning) if
+    Redis is unavailable, preserving availability over strict enforcement.
     """
-    now = time.monotonic()
+    redis_client: aioredis.Redis | None = getattr(request.app.state, "redis_client", None)
+    if not redis_client:
+        logger.warning("Redis unavailable; skipping LLM rate limit check for user %s", user_id)
+        return
+
+    key = f"llm_rate:{user_id}"
+    now = time.time()
     window_start = now - _LLM_RATE_WINDOW
-    # Evict stale users to prevent unbounded memory growth
-    if len(_llm_request_log) > _LLM_MAX_TRACKED_USERS:
-        stale = [uid for uid, ts in _llm_request_log.items() if not ts or ts[-1] < window_start]
-        for uid in stale:
-            del _llm_request_log[uid]
-    # Prune old entries for this user
-    user_log = _llm_request_log.get(user_id, [])
-    user_log = [t for t in user_log if t > window_start]
-    if len(user_log) >= _LLM_RATE_LIMIT:
-        _llm_request_log[user_id] = user_log
-        raise HTTPException(
-            status_code=429,
-            detail=f"Rate limit exceeded: max {_LLM_RATE_LIMIT} LLM requests per {_LLM_RATE_WINDOW}s",
-        )
-    user_log.append(now)
-    _llm_request_log[user_id] = user_log
+
+    try:
+        pipe = redis_client.pipeline()
+        # Remove timestamps older than the sliding window
+        pipe.zremrangebyscore(key, 0, window_start)
+        # Count remaining requests within the window (before adding current)
+        pipe.zcard(key)
+        # Record this request
+        pipe.zadd(key, {str(now): now})
+        # Expire the key one window after the last request
+        pipe.expire(key, _LLM_RATE_WINDOW + 1)
+        results = await pipe.execute()
+
+        request_count = results[1]
+        if request_count >= _LLM_RATE_LIMIT:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Rate limit exceeded: max {_LLM_RATE_LIMIT} LLM requests per {_LLM_RATE_WINDOW}s",
+                headers={"Retry-After": str(_LLM_RATE_WINDOW)},
+            )
+    except HTTPException:
+        raise
+    except aioredis.RedisError as e:
+        logger.warning("Redis error in LLM rate limiter (allowing request): %s", e)
 
 
 # -- Scenario Routes ----------------------------------------------------------
@@ -200,7 +213,8 @@ async def run_scenario(
 
     try:
         process_graph = scenario.parameters or {}
-        engine_result = run_simulation(
+        engine_result = await asyncio.to_thread(
+            run_simulation,
             process_graph=process_graph.get("process_graph", {"elements": [], "connections": []}),
             parameters=scenario.parameters or {},
             simulation_type=scenario.simulation_type.value
@@ -221,7 +235,7 @@ async def run_scenario(
             impact = calculate_cascading_impact(changed, process_graph.get("process_graph", {"connections": []}))
             sim_result.impact_analysis = impact
 
-    except Exception as e:
+    except (ValueError, RuntimeError, KeyError) as e:
         sim_result.status = SimulationStatus.FAILED
         sim_result.error_message = str(e)
         sim_result.completed_at = datetime.now(UTC)
@@ -611,6 +625,7 @@ async def generate_epistemic_plan(
     await session.execute(sql_delete(EpistemicAction).where(EpistemicAction.scenario_id == scenario_id))
 
     # Persist epistemic actions
+    persisted_actions: list[EpistemicAction] = []
     for action in plan.actions[:limit]:
         ea = EpistemicAction(
             scenario_id=scenario_id,
@@ -625,6 +640,8 @@ async def generate_epistemic_plan(
             priority=action.priority,
         )
         session.add(ea)
+        persisted_actions.append(ea)
+    await session.flush()
 
     # Optionally create shelf request from high-priority actions
     if create_shelf_request and plan.high_priority_count > 0:
@@ -638,16 +655,17 @@ async def generate_epistemic_plan(
         session.add(shelf)
         await session.flush()
 
-        for action in plan.actions[:limit]:
-            if action.priority == "high":
+        for ea in persisted_actions:
+            if ea.priority == "high":
                 item = ShelfDataRequestItem(
                     request_id=shelf.id,
-                    category=action.recommended_evidence_category,
-                    item_name=f"Evidence for: {action.target_element_name}",
-                    description=action.evidence_gap_description,
+                    category=ea.recommended_evidence_category,
+                    item_name=f"Evidence for: {ea.target_element_name}",
+                    description=ea.evidence_gap_description,
                     priority="high",
                 )
                 session.add(item)
+                ea.shelf_request_id = shelf.id
 
     await log_audit(
         session,
@@ -678,6 +696,61 @@ async def generate_epistemic_plan(
             "total": plan.total_actions,
             "high_priority_count": plan.high_priority_count,
             "estimated_aggregate_uplift": plan.estimated_aggregate_uplift,
+        },
+    }
+
+
+@router.get("/scenarios/{scenario_id}/epistemic-plan", response_model=EpistemicPlanResponse)
+async def get_epistemic_plan(
+    scenario_id: UUID,
+    request: Request,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:read")),
+) -> dict[str, Any]:
+    """Retrieve the cached epistemic action plan for a scenario.
+
+    Returns previously generated actions ranked by information gain.
+    """
+    scenario = await get_scenario_or_404(session, scenario_id)
+
+    # IDOR check: verify user has access to this engagement
+    await require_engagement_access(scenario.engagement_id, request, user)
+
+    result = await session.execute(
+        select(EpistemicAction)
+        .where(EpistemicAction.scenario_id == scenario_id)
+        .order_by(EpistemicAction.information_gain_score.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    actions = list(result.scalars().all())
+
+    high_count = sum(1 for a in actions if a.priority == "high")
+    total_uplift = sum(a.estimated_confidence_uplift for a in actions)
+
+    return {
+        "scenario_id": str(scenario_id),
+        "actions": [
+            {
+                "target_element_id": a.target_element_id,
+                "target_element_name": a.target_element_name,
+                "evidence_gap_description": a.evidence_gap_description,
+                "current_confidence": a.current_confidence,
+                "estimated_confidence_uplift": a.estimated_confidence_uplift,
+                "projected_confidence": a.projected_confidence,
+                "information_gain_score": a.information_gain_score,
+                "recommended_evidence_category": a.recommended_evidence_category,
+                "priority": a.priority,
+                "shelf_request_id": str(a.shelf_request_id) if a.shelf_request_id else None,
+            }
+            for a in actions
+        ],
+        "aggregated_view": {
+            "total": len(actions),
+            "high_priority_count": high_count,
+            "estimated_aggregate_uplift": round(total_uplift, 4),
         },
     }
 
@@ -790,7 +863,7 @@ async def request_suggestions(
     user: User = Depends(require_permission("simulation:create")),
 ) -> dict[str, Any]:
     """Request LLM-generated alternative suggestions for a scenario."""
-    _check_llm_rate_limit(str(user.id))
+    await _check_llm_rate_limit(request, str(user.id))
 
     result = await session.execute(
         select(SimulationScenario)
@@ -865,7 +938,6 @@ async def list_suggestions(
 
 @router.patch(
     "/scenarios/{scenario_id}/suggestions/{suggestion_id}",
-    response_model=SuggestionResponse,
 )
 async def update_suggestion_disposition(
     scenario_id: UUID,
@@ -874,27 +946,46 @@ async def update_suggestion_disposition(
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:create")),
 ) -> dict[str, Any]:
-    """Accept, modify, or reject a suggestion."""
-    scenario = await get_scenario_or_404(session, scenario_id)
-    result = await session.execute(
-        select(AlternativeSuggestion).where(
-            AlternativeSuggestion.id == suggestion_id,
-            AlternativeSuggestion.scenario_id == scenario_id,
+    """Accept, modify, or reject a suggestion.
+
+    - ACCEPTED: creates a ScenarioModification from the suggestion content
+    - MODIFIED: creates a ScenarioModification from modified_content (required)
+    - REJECTED: stores rejection_reason (required), no modification created
+    """
+    # Validate conditional required fields
+    if payload.disposition == SuggestionDisposition.MODIFIED and not payload.modified_content:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="modified_content is required when disposition is MODIFIED",
         )
-    )
-    suggestion = result.scalar_one_or_none()
-    if not suggestion:
-        raise HTTPException(status_code=404, detail=f"Suggestion {suggestion_id} not found")
+    if payload.disposition == SuggestionDisposition.REJECTED and not payload.rejection_reason:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="rejection_reason is required when disposition is REJECTED",
+        )
 
-    suggestion.disposition = payload.disposition
-    suggestion.disposition_notes = payload.disposition_notes
+    scenario = await get_scenario_or_404(session, scenario_id)
 
-    if payload.disposition == SuggestionDisposition.ACCEPTED:
-        action = AuditAction.SUGGESTION_ACCEPTED
-    elif payload.disposition == SuggestionDisposition.REJECTED:
+    try:
+        result = await review_suggestion(
+            session=session,
+            scenario_id=scenario_id,
+            suggestion_id=suggestion_id,
+            disposition=payload.disposition,
+            user_id=user.id,
+            modified_content=payload.modified_content,
+            rejection_reason=payload.rejection_reason,
+            disposition_notes=payload.disposition_notes,
+        )
+    except ValueError as e:
+        error_msg = str(e)
+        if "already" in error_msg:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=error_msg) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error_msg) from e
+
+    if payload.disposition == SuggestionDisposition.REJECTED:
         action = AuditAction.SUGGESTION_REJECTED
     else:
-        # MODIFIED is a form of acceptance with changes
         action = AuditAction.SUGGESTION_ACCEPTED
     await log_audit(
         session,
@@ -904,8 +995,56 @@ async def update_suggestion_disposition(
         actor=str(user.id),
     )
     await session.commit()
-    await session.refresh(suggestion)
-    return suggestion_to_response(suggestion)
+
+    return result
+
+
+# -- LLM Audit Route ----------------------------------------------------------
+
+
+@router.get("/scenarios/{scenario_id}/llm-audit")
+async def get_llm_audit(
+    scenario_id: UUID,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("simulation:read")),
+) -> dict[str, Any]:
+    """Retrieve LLM audit trail for a scenario."""
+
+    await get_scenario_or_404(session, scenario_id)
+
+    query = (
+        select(LLMAuditLog)
+        .where(LLMAuditLog.scenario_id == scenario_id)
+        .order_by(LLMAuditLog.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    result = await session.execute(query)
+    logs = result.scalars().all()
+
+    count_result = await session.execute(
+        select(func.count(LLMAuditLog.id)).where(LLMAuditLog.scenario_id == scenario_id)
+    )
+    total = count_result.scalar() or 0
+
+    items = [
+        {
+            "id": str(log.id),
+            "scenario_id": str(log.scenario_id),
+            "user_id": str(log.user_id) if log.user_id else None,
+            "prompt_tokens": log.prompt_tokens,
+            "completion_tokens": log.completion_tokens,
+            "model_name": log.model_name,
+            "error_message": log.error_message,
+            "evidence_ids": log.evidence_ids,
+            "created_at": log.created_at.isoformat() if log.created_at else "",
+        }
+        for log in logs
+    ]
+
+    return {"items": items, "total": total}
 
 
 # -- Financial Impact ---------------------------------------------------------
