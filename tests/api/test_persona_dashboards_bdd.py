@@ -16,6 +16,7 @@ from src.api.routes.dashboard import (
     ClientStakeholderDashboard,
     ConflictQueueItem,
     EngagementLeadDashboard,
+    GapFindingSummary,
     ProcessAnalystDashboard,
     ProcessingStatusCounts,
     SmeDashboard,
@@ -42,21 +43,47 @@ def _make_mock_user(
     return user
 
 
+def _engagement_exists_result() -> MagicMock:
+    """Mock result for engagement existence check (returns a UUID)."""
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = uuid.uuid4()
+    return result
+
+
+def _engagement_not_found_result() -> MagicMock:
+    """Mock result for engagement not found (returns None)."""
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = None
+    return result
+
+
 def _mock_member_session(role_in_engagement: str) -> AsyncMock:
-    """Create session mock that returns user as engagement member with given role."""
+    """Create session mock that returns user as engagement member with given role.
+
+    First query: engagement existence check (returns UUID).
+    Second query: member role lookup (returns role string).
+    """
     session = AsyncMock()
     member_result = MagicMock()
     member_result.scalar_one_or_none.return_value = role_in_engagement
-    session.execute = AsyncMock(return_value=member_result)
+    session.execute = AsyncMock(
+        side_effect=[_engagement_exists_result(), member_result]
+    )
     return session
 
 
 def _mock_non_member_session() -> AsyncMock:
-    """Create session mock that returns no engagement membership."""
+    """Create session mock that returns no engagement membership.
+
+    First query: engagement existence check (returns UUID).
+    Second query: member role lookup (returns None).
+    """
     session = AsyncMock()
     member_result = MagicMock()
     member_result.scalar_one_or_none.return_value = None
-    session.execute = AsyncMock(return_value=member_result)
+    session.execute = AsyncMock(
+        side_effect=[_engagement_exists_result(), member_result]
+    )
     return session
 
 
@@ -70,14 +97,16 @@ class TestRoleDetection:
 
     @pytest.mark.asyncio
     async def test_platform_admin_returns_platform_admin_role(self) -> None:
-        """Platform admins bypass membership check."""
+        """Platform admins bypass membership check but engagement must exist."""
         user = _make_mock_user(role=UserRole.PLATFORM_ADMIN)
         session = AsyncMock()
+        session.execute = AsyncMock(return_value=_engagement_exists_result())
 
         role = await _get_user_engagement_role(uuid.uuid4(), user, session)
 
         assert role == "platform_admin"
-        session.execute.assert_not_called()
+        # Exactly one call: engagement existence check
+        assert session.execute.call_count == 1
 
     @pytest.mark.asyncio
     async def test_member_returns_role(self) -> None:
@@ -102,6 +131,20 @@ class TestRoleDetection:
 
         assert exc_info.value.status_code == 403
 
+    @pytest.mark.asyncio
+    async def test_nonexistent_engagement_gets_404(self) -> None:
+        """Request for nonexistent engagement returns 404, not 403."""
+        from fastapi import HTTPException
+
+        user = _make_mock_user(role=UserRole.ENGAGEMENT_LEAD)
+        session = AsyncMock()
+        session.execute = AsyncMock(return_value=_engagement_not_found_result())
+
+        with pytest.raises(HTTPException) as exc_info:
+            await _get_user_engagement_role(uuid.uuid4(), user, session)
+
+        assert exc_info.value.status_code == 404
+
 
 # ============================================================
 # Scenario 1: Engagement Lead dashboard with full KPI suite
@@ -120,7 +163,9 @@ class TestEngagementLeadDashboard:
         # Build mock session with sequential query responses
         session = AsyncMock()
 
-        # 1. Role check (admin bypassed)
+        # 1. Engagement existence check (inside _get_user_engagement_role)
+        eng_exists_result = _engagement_exists_result()
+
         # 2. Shelf coverage: total=10, received=7
         shelf_row = MagicMock()
         shelf_row.total = 10
@@ -135,11 +180,7 @@ class TestEngagementLeadDashboard:
         model_result = MagicMock()
         model_result.scalar_one_or_none.return_value = latest_model
 
-        # 4. Brightness distribution (model_id query)
-        brightness_model_result = MagicMock()
-        brightness_model_result.scalar_one_or_none.return_value = latest_model.id
-
-        # 5. Brightness counts
+        # 4. Brightness counts (model_id passed directly, no extra lookup)
         bright_row = MagicMock()
         bright_row.brightness_classification = "bright"
         bright_row.cnt = 6
@@ -152,22 +193,22 @@ class TestEngagementLeadDashboard:
         brightness_result = MagicMock()
         brightness_result.all.return_value = [bright_row, dim_row, dark_row]
 
-        # 6. Gaps for TOM alignment
+        # 5. Gaps for TOM alignment (now returns row tuples, not ORM objects)
         gaps_result = MagicMock()
-        gaps_result.scalars.return_value.all.return_value = []
+        gaps_result.all.return_value = []
 
-        # 7. Gap severity counts
+        # 6. Gap severity counts
         gap_sev_result = MagicMock()
         gap_sev_result.all.return_value = []
 
-        # 8. Seed term counts
+        # 7. Seed term counts
         seed_row = MagicMock()
         seed_row.total = 20
         seed_row.active = 15
         seed_result = MagicMock()
         seed_result.one.return_value = seed_row
 
-        # 9. Dark room snapshots
+        # 8. Dark room snapshots
         snap1 = MagicMock()
         snap1.dark_count = 5
         snap1.version_number = 2
@@ -179,9 +220,9 @@ class TestEngagementLeadDashboard:
 
         session.execute = AsyncMock(
             side_effect=[
+                eng_exists_result,
                 shelf_result,
                 model_result,
-                brightness_model_result,
                 brightness_result,
                 gaps_result,
                 gap_sev_result,
@@ -221,6 +262,9 @@ class TestEngagementLeadDashboard:
         user = _make_mock_user()
         session = AsyncMock()
 
+        # 1. Engagement existence check
+        eng_exists_result = _engagement_exists_result()
+
         # Shelf: no items
         shelf_row = MagicMock()
         shelf_row.total = 0
@@ -232,13 +276,13 @@ class TestEngagementLeadDashboard:
         model_result = MagicMock()
         model_result.scalar_one_or_none.return_value = None
 
-        # Brightness: no model
+        # Brightness: no model (model_id=None triggers internal lookup)
         brightness_model_result = MagicMock()
         brightness_model_result.scalar_one_or_none.return_value = None
 
         # No gaps
         gaps_result = MagicMock()
-        gaps_result.scalars.return_value.all.return_value = []
+        gaps_result.all.return_value = []
 
         # No seeds
         seed_row = MagicMock()
@@ -253,6 +297,7 @@ class TestEngagementLeadDashboard:
 
         session.execute = AsyncMock(
             side_effect=[
+                eng_exists_result,
                 shelf_result,
                 model_result,
                 brightness_model_result,
@@ -285,6 +330,9 @@ class TestProcessAnalystDashboard:
         user = _make_mock_user()
         session = AsyncMock()
 
+        # 1. Engagement existence check
+        eng_exists_result = _engagement_exists_result()
+
         # Evidence status counts
         pending_row = MagicMock()
         pending_row.validation_status = "pending"
@@ -307,7 +355,7 @@ class TestProcessAnalystDashboard:
         mapped_elem_result = MagicMock()
         mapped_elem_result.scalar.return_value = 7
 
-        # Unresolved conflicts
+        # Unresolved conflicts (capped at 50)
         conflict1 = MagicMock()
         conflict1.id = uuid.uuid4()
         conflict1.mismatch_type = "sequence_mismatch"
@@ -321,14 +369,20 @@ class TestProcessAnalystDashboard:
         total_count_result = MagicMock()
         total_count_result.scalar.return_value = 5
 
+        # Unresolved conflicts count (separate query)
+        unresolved_count_result = MagicMock()
+        unresolved_count_result.scalar.return_value = 3
+
         session.execute = AsyncMock(
             side_effect=[
+                eng_exists_result,
                 status_result,
                 model_id_result,
                 total_elem_result,
                 mapped_elem_result,
                 conflict_result,
                 total_count_result,
+                unresolved_count_result,
             ]
         )
 
@@ -337,7 +391,7 @@ class TestProcessAnalystDashboard:
         assert result["processing_status"].pending == 5
         assert result["processing_status"].active == 15
         assert result["relationship_mapping_pct"] == 70.0
-        assert result["unresolved_conflicts"] == 1
+        assert result["unresolved_conflicts"] == 3
         assert result["total_conflicts"] == 5
         assert len(result["conflict_queue"]) == 1
 
@@ -371,15 +425,19 @@ class TestClientStakeholderDashboard:
         user = _make_mock_user()
         session = AsyncMock()
 
+        # 1. Engagement existence check
+        eng_exists_result = _engagement_exists_result()
+
         # Latest model
         latest_model = MagicMock()
+        latest_model.id = uuid.uuid4()
         latest_model.confidence_score = 0.72
         model_result = MagicMock()
         model_result.scalar_one_or_none.return_value = latest_model
 
-        # Brightness model id
-        brightness_model_result = MagicMock()
-        brightness_model_result.scalar_one_or_none.return_value = None
+        # Brightness counts (model_id passed directly, no extra lookup)
+        brightness_result = MagicMock()
+        brightness_result.all.return_value = []
 
         # Gap findings
         gap1 = MagicMock()
@@ -398,7 +456,7 @@ class TestClientStakeholderDashboard:
         gaps_result.scalars.return_value.all.return_value = [gap1, gap2]
 
         session.execute = AsyncMock(
-            side_effect=[model_result, brightness_model_result, gaps_result]
+            side_effect=[eng_exists_result, model_result, brightness_result, gaps_result]
         )
 
         result = await get_client_dashboard(eng_id, session, user)
@@ -407,9 +465,10 @@ class TestClientStakeholderDashboard:
         assert len(result["gap_findings"]) == 2
         assert result["total_recommendations"] == 1
 
-        # Verify no severity scores in client view
+        # Verify GapFindingSummary schema excludes severity field
         finding = result["gap_findings"][0]
-        assert "severity" not in finding.__dict__ if hasattr(finding, "__dict__") else True
+        assert isinstance(finding, GapFindingSummary)
+        assert "severity" not in finding.model_fields
 
     @pytest.mark.asyncio
     async def test_wrong_role_gets_403(self) -> None:
@@ -442,6 +501,9 @@ class TestSmeDashboard:
         user = _make_mock_user(user_id=user_id)
         session = AsyncMock()
 
+        # 1. Engagement existence check
+        eng_exists_result = _engagement_exists_result()
+
         # Total annotations
         total_result = MagicMock()
         total_result.scalar.return_value = 12
@@ -457,17 +519,18 @@ class TestSmeDashboard:
         # Decision history
         decision1 = MagicMock()
         decision1.id = uuid.uuid4()
-        decision1.action = "CONFIRM"
+        decision1.action = "confirm"
         decision1.decision_at = None
         decision2 = MagicMock()
         decision2.id = uuid.uuid4()
-        decision2.action = "REJECT"
+        decision2.action = "reject"
         decision2.decision_at = None
         history_result = MagicMock()
         history_result.scalars.return_value.all.return_value = [decision1, decision2]
 
         session.execute = AsyncMock(
             side_effect=[
+                eng_exists_result,
                 total_result,
                 defer_result,
                 confirm_result,
@@ -489,6 +552,9 @@ class TestSmeDashboard:
         user = _make_mock_user()
         session = AsyncMock()
 
+        # 1. Engagement existence check
+        eng_exists_result = _engagement_exists_result()
+
         total_result = MagicMock()
         total_result.scalar.return_value = 0
         defer_result = MagicMock()
@@ -499,7 +565,7 @@ class TestSmeDashboard:
         history_result.scalars.return_value.all.return_value = []
 
         session.execute = AsyncMock(
-            side_effect=[total_result, defer_result, confirm_result, history_result]
+            side_effect=[eng_exists_result, total_result, defer_result, confirm_result, history_result]
         )
 
         result = await get_sme_dashboard(eng_id, session, user)
@@ -604,3 +670,15 @@ class TestPersonaDashboardSchemas:
             total_recommendations=0,
         )
         assert resp.total_recommendations == 0
+
+    def test_gap_finding_summary_excludes_severity(self) -> None:
+        """GapFindingSummary schema must not expose severity."""
+        assert "severity" not in GapFindingSummary.model_fields
+        finding = GapFindingSummary(
+            id="g-1",
+            gap_type="full_gap",
+            dimension="process_architecture",
+            recommendation="Fix it",
+        )
+        serialized = finding.model_dump()
+        assert "severity" not in serialized

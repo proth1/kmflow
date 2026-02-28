@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import time
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -30,10 +31,12 @@ from src.core.models import (
     ProcessModel,
     ProcessModelStatus,
     ResolutionStatus,
+    ReviewerAction,
     SeedTerm,
     ShelfDataRequest,
     ShelfDataRequestItem,
     ShelfRequestItemStatus,
+    TermStatus,
     TOMDimension,
     User,
     UserRole,
@@ -514,7 +517,7 @@ class ConflictQueueItem(BaseModel):
     mismatch_type: str
     severity: float
     resolution_status: str
-    created_at: Any | None = None
+    created_at: datetime | None = None
 
 
 class ProcessAnalystDashboard(BaseModel):
@@ -533,7 +536,7 @@ class DecisionHistoryItem(BaseModel):
 
     id: str
     decision: str
-    created_at: Any | None = None
+    created_at: datetime | None = None
 
 
 class SmeDashboard(BaseModel):
@@ -568,12 +571,30 @@ class ClientStakeholderDashboard(BaseModel):
 # -- Persona Helpers ----------------------------------------------------------
 
 
+async def _verify_engagement_exists(
+    engagement_id: UUID,
+    session: AsyncSession,
+) -> None:
+    """Raise 404 if the engagement does not exist."""
+    result = await session.execute(select(Engagement.id).where(Engagement.id == engagement_id))
+    if not result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Engagement {engagement_id} not found",
+        )
+
+
 async def _get_user_engagement_role(
     engagement_id: UUID,
     user: User,
     session: AsyncSession,
 ) -> str:
-    """Get user's role on an engagement. Raises 403 if not a member."""
+    """Get user's role on an engagement.
+
+    Raises 404 if engagement doesn't exist, 403 if user is not a member.
+    """
+    await _verify_engagement_exists(engagement_id, session)
+
     if user.role == UserRole.PLATFORM_ADMIN:
         return "platform_admin"
 
@@ -595,18 +616,24 @@ async def _get_user_engagement_role(
 async def _get_brightness_distribution(
     engagement_id: UUID,
     session: AsyncSession,
+    *,
+    model_id: UUID | None = None,
 ) -> BrightnessDistribution:
-    """Compute brightness distribution for the latest completed model."""
-    model_result = await session.execute(
-        select(ProcessModel.id)
-        .where(
-            ProcessModel.engagement_id == engagement_id,
-            ProcessModel.status == ProcessModelStatus.COMPLETED,
+    """Compute brightness distribution for the latest completed model.
+
+    If *model_id* is provided the extra model lookup is skipped.
+    """
+    if model_id is None:
+        model_result = await session.execute(
+            select(ProcessModel.id)
+            .where(
+                ProcessModel.engagement_id == engagement_id,
+                ProcessModel.status == ProcessModelStatus.COMPLETED,
+            )
+            .order_by(ProcessModel.created_at.desc())
+            .limit(1)
         )
-        .order_by(ProcessModel.created_at.desc())
-        .limit(1)
-    )
-    model_id = model_result.scalar_one_or_none()
+        model_id = model_result.scalar_one_or_none()
     if model_id is None:
         return BrightnessDistribution()
 
@@ -688,20 +715,23 @@ async def get_engagement_lead_dashboard(
     latest_model = latest_model_result.scalar_one_or_none()
     overall_confidence = latest_model.confidence_score if latest_model else 0.0
 
-    # Brightness distribution
-    brightness = await _get_brightness_distribution(eng_uuid, session)
-
-    # TOM alignment per dimension (1.0 - avg_severity)
-    gaps_result = await session.execute(
-        select(GapAnalysisResult).where(GapAnalysisResult.engagement_id == eng_uuid)
+    # Brightness distribution (pass model_id to avoid redundant lookup)
+    brightness = await _get_brightness_distribution(
+        eng_uuid, session, model_id=latest_model.id if latest_model else None,
     )
-    gaps = list(gaps_result.scalars().all())
+
+    # TOM alignment per dimension (1.0 - avg_severity) — project only needed columns
+    gaps_result = await session.execute(
+        select(GapAnalysisResult.dimension, GapAnalysisResult.severity)
+        .where(GapAnalysisResult.engagement_id == eng_uuid)
+    )
+    gap_rows = gaps_result.all()
 
     dim_severities: dict[str, list[float]] = {dim.value: [] for dim in TOMDimension}
-    for gap in gaps:
-        dim_key = str(gap.dimension)
+    for row in gap_rows:
+        dim_key = str(row.dimension)
         if dim_key in dim_severities:
-            dim_severities[dim_key].append(gap.severity)
+            dim_severities[dim_key].append(row.severity)
 
     tom_alignment = []
     for dim in TOMDimension:
@@ -735,7 +765,7 @@ async def get_engagement_lead_dashboard(
     seed_result = await session.execute(
         select(
             func.count().label("total"),
-            func.count().filter(SeedTerm.status == "active").label("active"),
+            func.count().filter(SeedTerm.status == TermStatus.ACTIVE).label("active"),
         ).where(SeedTerm.engagement_id == eng_uuid)
     )
     seed_row = seed_result.one()
@@ -864,12 +894,21 @@ async def get_analyst_dashboard(
         for c in unresolved_conflicts_list
     ]
 
-    # Total conflicts count
+    # Conflict counts (separate count queries for accurate totals)
     total_count_result = await session.execute(
         select(func.count()).select_from(ConflictObject).where(ConflictObject.engagement_id == eng_uuid)
     )
     total_conflicts = total_count_result.scalar() or 0
-    unresolved_conflicts = len(unresolved_conflicts_list)
+
+    unresolved_count_result = await session.execute(
+        select(func.count())
+        .select_from(ConflictObject)
+        .where(
+            ConflictObject.engagement_id == eng_uuid,
+            ConflictObject.resolution_status == ResolutionStatus.UNRESOLVED,
+        )
+    )
+    unresolved_conflicts = unresolved_count_result.scalar() or 0
 
     return {
         "engagement_id": str(eng_uuid),
@@ -919,7 +958,7 @@ async def get_sme_dashboard(
         .where(
             ValidationDecision.engagement_id == eng_uuid,
             ValidationDecision.reviewer_id == user_id,
-            ValidationDecision.action == "DEFER",
+            ValidationDecision.action == ReviewerAction.DEFER,
         )
     )
     pending_review_count = defer_result.scalar() or 0
@@ -931,7 +970,7 @@ async def get_sme_dashboard(
         .where(
             ValidationDecision.engagement_id == eng_uuid,
             ValidationDecision.reviewer_id == user_id,
-            ValidationDecision.action == "CONFIRM",
+            ValidationDecision.action == ReviewerAction.CONFIRM,
         )
     )
     confirm_count = confirm_result.scalar() or 0
@@ -1003,8 +1042,10 @@ async def get_client_dashboard(
     latest_model = latest_model_result.scalar_one_or_none()
     overall_confidence = latest_model.confidence_score if latest_model else 0.0
 
-    # Brightness distribution
-    brightness = await _get_brightness_distribution(eng_uuid, session)
+    # Brightness distribution (pass model_id to avoid redundant lookup)
+    brightness = await _get_brightness_distribution(
+        eng_uuid, session, model_id=latest_model.id if latest_model else None,
+    )
 
     # Gap findings (without internal severity scores — client-friendly view)
     gaps_result = await session.execute(
