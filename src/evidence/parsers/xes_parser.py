@@ -54,9 +54,7 @@ class XesParser(BaseParser):
 
         return result
 
-    def _stream_parse(
-        self, file_path: str, file_name: str
-    ) -> tuple[list[ParsedFragment], dict]:
+    def _stream_parse(self, file_path: str, file_name: str) -> tuple[list[ParsedFragment], dict]:
         """Stream-parse the XES file using iterparse.
 
         Processes one <trace> element at a time so the full document is
@@ -120,9 +118,7 @@ class XesParser(BaseParser):
                 event_summaries.append(" ".join(parts))
 
             if event_summaries:
-                content = f"Trace: {trace_name}\n" + "\n".join(
-                    f"  {i + 1}. {s}" for i, s in enumerate(event_summaries)
-                )
+                content = f"Trace: {trace_name}\n" + "\n".join(f"  {i + 1}. {s}" for i, s in enumerate(event_summaries))
                 meta: dict = {
                     "trace_index": trace_count,
                     "trace_name": trace_name,

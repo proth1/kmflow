@@ -21,22 +21,17 @@ Endpoints:
 from __future__ import annotations
 
 import logging
-import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
-from src.core.auth import get_current_user
-from src.core.models import User
-from src.core.permissions import require_permission
 from src.api.schemas.taskmining import (
     ActionListResponse,
-    ActionResponse,
     AgentApproveRequest,
     AgentListResponse,
     AgentRegisterRequest,
@@ -54,9 +49,7 @@ from src.api.schemas.taskmining import (
     QuarantineItemResponse,
     QuarantineListResponse,
     SessionListResponse,
-    SessionResponse,
     SwitchingTraceListResponse,
-    SwitchingTraceResponse,
     TransitionMatrixResponse,
     VCEBatchRequest,
     VCEBatchResponse,
@@ -66,6 +59,7 @@ from src.api.schemas.taskmining import (
     VCEResponse,
     VCETriggerSummaryResponse,
 )
+from src.core.models import User
 from src.core.models.taskmining import (
     AgentStatus,
     PIIQuarantine,
@@ -81,6 +75,7 @@ from src.core.models.taskmining import (
     VCETriggerReason,
     VisualContextEvent,
 )
+from src.core.permissions import require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -300,9 +295,7 @@ async def ingest_events(
     High-confidence PII events are quarantined.
     """
     # Verify agent exists and is active
-    result = await session.execute(
-        select(TaskMiningAgent).where(TaskMiningAgent.id == payload.agent_id)
-    )
+    result = await session.execute(select(TaskMiningAgent).where(TaskMiningAgent.id == payload.agent_id))
     agent = result.scalar_one_or_none()
     if agent is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
@@ -326,9 +319,7 @@ async def ingest_events(
         agent.status = AgentStatus.ACTIVE
 
     # Verify session exists
-    sess_result = await session.execute(
-        select(TaskMiningSession).where(TaskMiningSession.id == payload.session_id)
-    )
+    sess_result = await session.execute(select(TaskMiningSession).where(TaskMiningSession.id == payload.session_id))
     mining_session = sess_result.scalar_one_or_none()
     if mining_session is None:
         # Auto-create session if it doesn't exist
@@ -384,9 +375,7 @@ async def get_agent_config(
 
     Agents poll this endpoint to get updated capture policies.
     """
-    result = await session.execute(
-        select(TaskMiningAgent).where(TaskMiningAgent.id == agent_id)
-    )
+    result = await session.execute(select(TaskMiningAgent).where(TaskMiningAgent.id == agent_id))
     agent = result.scalar_one_or_none()
     if agent is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
@@ -418,9 +407,7 @@ async def agent_heartbeat(
     current_user: User = Depends(require_permission("taskmining:write")),
 ) -> dict[str, Any]:
     """Accept a heartbeat from an agent and return status/config updates."""
-    result = await session.execute(
-        select(TaskMiningAgent).where(TaskMiningAgent.id == payload.agent_id)
-    )
+    result = await session.execute(select(TaskMiningAgent).where(TaskMiningAgent.id == payload.agent_id))
     agent = result.scalar_one_or_none()
     if agent is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
@@ -577,9 +564,7 @@ async def quarantine_action(
             detail="Action must be 'release' or 'delete'",
         )
 
-    result = await session.execute(
-        select(PIIQuarantine).where(PIIQuarantine.id == quarantine_id)
-    )
+    result = await session.execute(select(PIIQuarantine).where(PIIQuarantine.id == quarantine_id))
     item = result.scalar_one_or_none()
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quarantine item not found")
@@ -619,9 +604,7 @@ async def get_dashboard_stats(
 
     # Agent counts
     total_agents_q = select(func.count(TaskMiningAgent.id))
-    active_agents_q = select(func.count(TaskMiningAgent.id)).where(
-        TaskMiningAgent.status == AgentStatus.ACTIVE
-    )
+    active_agents_q = select(func.count(TaskMiningAgent.id)).where(TaskMiningAgent.status == AgentStatus.ACTIVE)
     if filters:
         total_agents_q = total_agents_q.where(*filters)
         active_agents_q = active_agents_q.where(*filters)
@@ -635,9 +618,7 @@ async def get_dashboard_stats(
         session_filters.append(TaskMiningSession.engagement_id == engagement_id)
 
     total_sessions_q = select(func.count(TaskMiningSession.id))
-    active_sessions_q = select(func.count(TaskMiningSession.id)).where(
-        TaskMiningSession.status == SessionStatus.ACTIVE
-    )
+    active_sessions_q = select(func.count(TaskMiningSession.id)).where(TaskMiningSession.status == SessionStatus.ACTIVE)
     if session_filters:
         total_sessions_q = total_sessions_q.where(*session_filters)
         active_sessions_q = active_sessions_q.where(*session_filters)
@@ -670,9 +651,7 @@ async def get_dashboard_stats(
         pii_filters.append(PIIQuarantine.engagement_id == engagement_id)
 
     total_pii_q = select(func.count(PIIQuarantine.id))
-    pending_pii_q = select(func.count(PIIQuarantine.id)).where(
-        PIIQuarantine.status == QuarantineStatus.PENDING_REVIEW
-    )
+    pending_pii_q = select(func.count(PIIQuarantine.id)).where(PIIQuarantine.status == QuarantineStatus.PENDING_REVIEW)
     if pii_filters:
         total_pii_q = total_pii_q.where(*pii_filters)
         pending_pii_q = pending_pii_q.where(*pii_filters)
@@ -682,9 +661,7 @@ async def get_dashboard_stats(
 
     # Events in last 24h
     cutoff_24h = datetime.now(UTC) - timedelta(hours=24)
-    events_24h_q = select(func.count(TaskMiningEvent.id)).where(
-        TaskMiningEvent.created_at >= cutoff_24h
-    )
+    events_24h_q = select(func.count(TaskMiningEvent.id)).where(TaskMiningEvent.created_at >= cutoff_24h)
     if event_filters:
         events_24h_q = events_24h_q.where(*event_filters)
     events_24h = (await session.execute(events_24h_q)).scalar() or 0
@@ -704,10 +681,7 @@ async def get_dashboard_stats(
         app_usage_q = app_usage_q.where(*event_filters)
 
     app_usage_result = await session.execute(app_usage_q)
-    app_usage = [
-        {"application": row[0], "event_count": row[1]}
-        for row in app_usage_result.all()
-    ]
+    app_usage = [{"application": row[0], "event_count": row[1]} for row in app_usage_result.all()]
 
     return {
         "total_agents": total_agents,
@@ -845,9 +819,7 @@ async def get_vce_event(
     current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
     """Get a single VCE event by ID."""
-    result = await session.execute(
-        select(VisualContextEvent).where(VisualContextEvent.id == vce_id)
-    )
+    result = await session.execute(select(VisualContextEvent).where(VisualContextEvent.id == vce_id))
     vce = result.scalar_one_or_none()
     if vce is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="VCE event not found")

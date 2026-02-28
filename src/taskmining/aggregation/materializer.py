@@ -16,7 +16,7 @@ import hashlib
 import json
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from src.core.models.evidence import (
@@ -25,7 +25,7 @@ from src.core.models.evidence import (
     EvidenceItem,
     ValidationStatus,
 )
-from src.core.models.taskmining import ActionCategory, TaskMiningAction
+from src.core.models.taskmining import ActionCategory
 from src.taskmining.aggregation.classifier import ClassificationResult
 from src.taskmining.aggregation.session import AggregatedSession
 
@@ -72,9 +72,7 @@ class EvidenceMaterializer:
             return None
 
         metadata = self._build_metadata(session, classification, action_id)
-        content_hash = hashlib.sha256(
-            json.dumps(metadata, sort_keys=True, default=str).encode()
-        ).hexdigest()
+        content_hash = hashlib.sha256(json.dumps(metadata, sort_keys=True, default=str).encode()).hexdigest()
 
         item = EvidenceItem(
             engagement_id=engagement_id,
@@ -105,7 +103,7 @@ class EvidenceMaterializer:
             action_ids = [None] * len(sessions)
 
         items = []
-        for session, classification, aid in zip(sessions, classifications, action_ids):
+        for session, classification, aid in zip(sessions, classifications, action_ids, strict=False):
             item = self.materialize_action(session, classification, aid)
             if item is not None:
                 items.append(item)
@@ -119,9 +117,7 @@ class EvidenceMaterializer:
         """Check if a session should be materialized (pre-filter)."""
         if session.total_event_count < MIN_EVENTS_FOR_MATERIALIZATION:
             return False
-        if not session.engagement_id:
-            return False
-        return True
+        return bool(session.engagement_id)
 
     def _build_metadata(
         self,
@@ -169,14 +165,16 @@ class EvidenceMaterializer:
             score += 0.15
 
         # Multiple interaction types indicate richer data
-        active_types = sum([
-            session.keyboard_event_count > 0,
-            session.mouse_event_count > 0,
-            session.scroll_count > 0,
-            session.copy_paste_count > 0,
-            session.file_operation_count > 0,
-            session.url_navigation_count > 0,
-        ])
+        active_types = sum(
+            [
+                session.keyboard_event_count > 0,
+                session.mouse_event_count > 0,
+                session.scroll_count > 0,
+                session.copy_paste_count > 0,
+                session.file_operation_count > 0,
+                session.url_navigation_count > 0,
+            ]
+        )
         if active_types >= 2:
             score += 0.10
         if active_types >= 4:
@@ -189,9 +187,9 @@ class EvidenceMaterializer:
 
         Score degrades linearly: 1.0 at capture time, 0.5 at 30 days, 0.0 at 365 days.
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if end_time.tzinfo is None:
-            end_time = end_time.replace(tzinfo=timezone.utc)
+            end_time = end_time.replace(tzinfo=UTC)
         age_days = (now - end_time).total_seconds() / 86400
 
         if age_days <= 0:

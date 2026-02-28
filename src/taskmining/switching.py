@@ -8,9 +8,8 @@ from desktop event data.
 from __future__ import annotations
 
 import logging
-import uuid
 from collections import defaultdict
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -108,24 +107,13 @@ def compute_friction_score(
     switch_rate_component = rapid_count / max(len(dwell_durations), 1)
 
     # Component 2: ping-pong severity (0 if absent, scaled by alternation count)
-    if is_ping_pong and ping_pong_count > 0:
-        # Cap at 10 alternations = max severity
-        ping_pong_component = min(ping_pong_count / 10.0, 1.0)
-    else:
-        ping_pong_component = 0.0
+    ping_pong_component = min(ping_pong_count / 10.0, 1.0) if is_ping_pong and ping_pong_count > 0 else 0.0
 
     # Component 3: context diversity (unique apps / total switches)
     unique_apps = len(set(trace_sequence))
-    if n_switches > 0:
-        context_diversity_component = min(unique_apps / max(n_switches, 1), 1.0)
-    else:
-        context_diversity_component = 0.0
+    context_diversity_component = min(unique_apps / max(n_switches, 1), 1.0) if n_switches > 0 else 0.0
 
-    score = (
-        0.40 * switch_rate_component
-        + 0.40 * ping_pong_component
-        + 0.20 * context_diversity_component
-    )
+    score = 0.40 * switch_rate_component + 0.40 * ping_pong_component + 0.20 * context_diversity_component
     return round(min(max(score, 0.0), 1.0), 4)
 
 

@@ -28,20 +28,36 @@ class TestRepublishFromDecisions:
     def _make_elements(self) -> list[ElementSnapshot]:
         return [
             ElementSnapshot(
-                element_id="e1", name="Login", element_type="activity",
-                confidence_score=0.8, evidence_grade="C", brightness_classification="DIM",
+                element_id="e1",
+                name="Login",
+                element_type="activity",
+                confidence_score=0.8,
+                evidence_grade="C",
+                brightness_classification="DIM",
             ),
             ElementSnapshot(
-                element_id="e2", name="Validate Input", element_type="activity",
-                confidence_score=0.6, evidence_grade="D", brightness_classification="DARK",
+                element_id="e2",
+                name="Validate Input",
+                element_type="activity",
+                confidence_score=0.6,
+                evidence_grade="D",
+                brightness_classification="DARK",
             ),
             ElementSnapshot(
-                element_id="e3", name="Process Order", element_type="activity",
-                confidence_score=0.4, evidence_grade="U", brightness_classification="DARK",
+                element_id="e3",
+                name="Process Order",
+                element_type="activity",
+                confidence_score=0.4,
+                evidence_grade="U",
+                brightness_classification="DARK",
             ),
             ElementSnapshot(
-                element_id="e4", name="Send Notification", element_type="activity",
-                confidence_score=0.7, evidence_grade="C", brightness_classification="DIM",
+                element_id="e4",
+                name="Send Notification",
+                element_type="activity",
+                confidence_score=0.7,
+                evidence_grade="C",
+                brightness_classification="DIM",
             ),
         ]
 
@@ -65,11 +81,13 @@ class TestRepublishFromDecisions:
     def test_correct_updates_element(self) -> None:
         """CORRECT decisions apply payload corrections."""
         elements = self._make_elements()
-        decisions = [{
-            "element_id": "e2",
-            "action": "correct",
-            "payload": {"confidence_score": 0.9},
-        }]
+        decisions = [
+            {
+                "element_id": "e2",
+                "action": "correct",
+                "payload": {"confidence_score": 0.9},
+            }
+        ]
         result = apply_decisions_to_elements(elements, decisions)
         corrected = next(e for e in result if e.name == "Validate Input")
         assert corrected.confidence_score == 0.9
@@ -105,11 +123,13 @@ class TestRepublishFromDecisions:
     def test_correct_with_name_change(self) -> None:
         """CORRECT decision can rename an element."""
         elements = self._make_elements()
-        decisions = [{
-            "element_id": "e2",
-            "action": "correct",
-            "payload": {"name": "Validate User Input"},
-        }]
+        decisions = [
+            {
+                "element_id": "e2",
+                "action": "correct",
+                "payload": {"name": "Validate User Input"},
+            }
+        ]
         result = apply_decisions_to_elements(elements, decisions)
         names = {e.name for e in result}
         assert "Validate User Input" in names
@@ -118,11 +138,13 @@ class TestRepublishFromDecisions:
     def test_correct_rename_collision_raises(self) -> None:
         """CORRECT rename to an existing element name raises ValueError."""
         elements = self._make_elements()
-        decisions = [{
-            "element_id": "e2",
-            "action": "correct",
-            "payload": {"name": "Login"},  # e1 already named "Login"
-        }]
+        decisions = [
+            {
+                "element_id": "e2",
+                "action": "correct",
+                "payload": {"name": "Login"},  # e1 already named "Login"
+            }
+        ]
         with pytest.raises(ValueError, match="element with that name already exists"):
             apply_decisions_to_elements(elements, decisions)
 
@@ -250,21 +272,27 @@ class TestDarkRoomShrinkRate:
     def test_shrink_rate_computation(self) -> None:
         v1 = [
             ElementSnapshot(
-                element_id=f"e{i}", name=f"Task {i}", element_type="activity",
+                element_id=f"e{i}",
+                name=f"Task {i}",
+                element_type="activity",
                 brightness_classification="DARK",
             )
             for i in range(15)
         ]
         v2_dark = [
             ElementSnapshot(
-                element_id=f"e{i}", name=f"Task {i}", element_type="activity",
+                element_id=f"e{i}",
+                name=f"Task {i}",
+                element_type="activity",
                 brightness_classification="DARK",
             )
             for i in range(10)
         ]
         v2_bright = [
             ElementSnapshot(
-                element_id=f"e{i}", name=f"Task {i}", element_type="activity",
+                element_id=f"e{i}",
+                name=f"Task {i}",
+                element_type="activity",
                 brightness_classification="BRIGHT",
             )
             for i in range(10, 15)
@@ -300,7 +328,14 @@ class TestFieldComparison:
     """Verify the set of compared fields is correct."""
 
     def test_compared_fields_set(self) -> None:
-        expected = {"name", "confidence_score", "evidence_grade", "brightness_classification", "element_type", "evidence_count"}
+        expected = {
+            "name",
+            "confidence_score",
+            "evidence_grade",
+            "brightness_classification",
+            "element_type",
+            "evidence_count",
+        }
         assert expected == COMPARED_FIELDS
 
     def test_modified_tracks_changed_values(self) -> None:

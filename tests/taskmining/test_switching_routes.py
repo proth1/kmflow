@@ -15,7 +15,6 @@ from httpx import AsyncClient
 
 from src.core.models.taskmining import SwitchingTrace, TransitionMatrix
 
-
 # ---------------------------------------------------------------------------
 # Helper factories
 # ---------------------------------------------------------------------------
@@ -68,9 +67,7 @@ def _make_matrix_orm(engagement_id: uuid.UUID | None = None) -> MagicMock:
 
 class TestGetSwitchingTraces:
     @pytest.mark.asyncio
-    async def test_returns_traces_for_engagement(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_returns_traces_for_engagement(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         engagement_id = uuid.uuid4()
         trace = _make_trace_orm(engagement_id=engagement_id)
 
@@ -94,9 +91,7 @@ class TestGetSwitchingTraces:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_empty_list_when_no_traces(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_empty_list_when_no_traces(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         result_mock = MagicMock()
         result_mock.scalars.return_value.all.return_value = []
         result_mock.scalar.return_value = 0
@@ -112,9 +107,7 @@ class TestGetSwitchingTraces:
         assert data["total"] == 0
 
     @pytest.mark.asyncio
-    async def test_min_friction_filter_accepted(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_min_friction_filter_accepted(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         result_mock = MagicMock()
         result_mock.scalars.return_value.all.return_value = []
         result_mock.scalar.return_value = 0
@@ -134,9 +127,7 @@ class TestGetSwitchingTraces:
 
 class TestGetTransitionMatrix:
     @pytest.mark.asyncio
-    async def test_returns_existing_matrix(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_returns_existing_matrix(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         engagement_id = uuid.uuid4()
         matrix = _make_matrix_orm(engagement_id=engagement_id)
 
@@ -167,9 +158,7 @@ class TestGetTransitionMatrix:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_computes_matrix_when_none_exists(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_computes_matrix_when_none_exists(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         engagement_id = uuid.uuid4()
         computed_matrix = _make_matrix_orm(engagement_id=engagement_id)
 
@@ -212,9 +201,7 @@ class TestGetTransitionMatrix:
 
 class TestGetFrictionAnalysis:
     @pytest.mark.asyncio
-    async def test_returns_friction_summary(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_returns_friction_summary(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         engagement_id = uuid.uuid4()
 
         expected_result = {
@@ -244,9 +231,7 @@ class TestGetFrictionAnalysis:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_returns_zeros_for_empty_engagement(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_returns_zeros_for_empty_engagement(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         empty_result = {
             "avg_friction_score": 0.0,
             "high_friction_traces": [],
@@ -275,9 +260,7 @@ class TestGetFrictionAnalysis:
 
 class TestAssembleSwitching:
     @pytest.mark.asyncio
-    async def test_assemble_triggers_trace_assembly(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_assemble_triggers_trace_assembly(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         engagement_id = uuid.uuid4()
 
         mock_trace = _make_trace_orm(engagement_id=engagement_id)
@@ -296,9 +279,7 @@ class TestAssembleSwitching:
         assert data["status"] == "ok"
 
     @pytest.mark.asyncio
-    async def test_assemble_with_session_id(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_assemble_with_session_id(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         engagement_id = uuid.uuid4()
         session_id = uuid.uuid4()
 

@@ -98,9 +98,7 @@ class TestGetSeedList:
         mock_session.execute = AsyncMock(side_effect=[count_result, list_result])
 
         client = _make_app(mock_session)
-        resp = client.get(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/seed-lists"
-        )
+        resp = client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/seed-lists")
         assert resp.status_code == 200
         data = resp.json()
         assert data["total_count"] == 1
@@ -146,9 +144,7 @@ class TestGenerateProbes:
         mock_session.execute = AsyncMock(return_value=result_mock)
 
         client = _make_app(mock_session)
-        resp = client.post(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/seed-lists/generate-probes"
-        )
+        resp = client.post(f"/api/v1/engagements/{ENGAGEMENT_ID}/seed-lists/generate-probes")
         assert resp.status_code == 200
         data = resp.json()
         assert data["probes_generated"] == 4
@@ -171,9 +167,7 @@ class TestExtractionTargets:
         mock_session.execute = AsyncMock(return_value=result_mock)
 
         client = _make_app(mock_session)
-        resp = client.get(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/seed-lists/extraction-targets"
-        )
+        resp = client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/seed-lists/extraction-targets")
         assert resp.status_code == 200
         data = resp.json()
         assert data["active_term_count"] == 1

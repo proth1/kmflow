@@ -14,7 +14,6 @@ import re
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.models.canonical_event import CanonicalActivityEvent

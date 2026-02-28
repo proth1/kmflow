@@ -231,6 +231,7 @@ class TestDashboardEndpointIntegration:
         dep = eng_param.default
         assert hasattr(dep, "dependency")
         from src.core.permissions import require_engagement_access
+
         assert dep.dependency is require_engagement_access
 
     @pytest.mark.asyncio
@@ -254,14 +255,14 @@ class TestDashboardEndpointIntegration:
         # Calls: agents, severity, evidence_count, open_alerts, new_alerts,
         #        ack_alerts, crit_alerts, compliance_readings
         mock_session.execute.side_effect = [
-            empty_result,      # agents
-            empty_result,      # severity counts
-            scalar_result,     # evidence count
-            scalar_result,     # open alerts
-            scalar_result,     # new alerts
-            scalar_result,     # ack alerts
-            scalar_result,     # critical open alerts
-            empty_result,      # compliance readings
+            empty_result,  # agents
+            empty_result,  # severity counts
+            scalar_result,  # evidence count
+            scalar_result,  # open alerts
+            scalar_result,  # new alerts
+            scalar_result,  # ack alerts
+            scalar_result,  # critical open alerts
+            empty_result,  # compliance readings
         ]
 
         mock_user = MagicMock()
@@ -302,8 +303,13 @@ class TestDashboardEndpointIntegration:
         scalar_result.scalar.return_value = 0
 
         mock_session.execute.side_effect = [
-            empty_result, empty_result, scalar_result,
-            scalar_result, scalar_result, scalar_result, scalar_result,
+            empty_result,
+            empty_result,
+            scalar_result,
+            scalar_result,
+            scalar_result,
+            scalar_result,
+            scalar_result,
             empty_result,
         ]
 
@@ -339,8 +345,13 @@ class TestDashboardEndpointIntegration:
         scalar_result.scalar.return_value = 0
 
         mock_session.execute.side_effect = [
-            empty_result, empty_result, scalar_result,
-            scalar_result, scalar_result, scalar_result, scalar_result,
+            empty_result,
+            empty_result,
+            scalar_result,
+            scalar_result,
+            scalar_result,
+            scalar_result,
+            scalar_result,
             empty_result,
         ]
 
@@ -374,8 +385,13 @@ class TestDashboardEndpointIntegration:
         scalar_result = MagicMock()
         scalar_result.scalar.return_value = 0
         mock_session.execute.side_effect = [
-            empty_result, empty_result, scalar_result,
-            scalar_result, scalar_result, scalar_result, scalar_result,
+            empty_result,
+            empty_result,
+            scalar_result,
+            scalar_result,
+            scalar_result,
+            scalar_result,
+            scalar_result,
             empty_result,
         ]
         mock_user = MagicMock()
@@ -411,6 +427,7 @@ class TestDashboardServiceModule:
             DashboardData,
             DeviationSummary,
         )
+
         assert DashboardData is not None
         assert AgentStatusSummary is not None
         assert DeviationSummary is not None
@@ -447,6 +464,7 @@ class TestDashboardServiceModule:
     def test_deviation_summary_defaults(self) -> None:
         """DeviationSummary defaults all counts to 0."""
         from src.monitoring.dashboard import DeviationSummary
+
         summary = DeviationSummary()
         assert summary.total == 0
         assert summary.critical == 0
@@ -455,6 +473,7 @@ class TestDashboardServiceModule:
     def test_alert_summary_defaults(self) -> None:
         """AlertSummary defaults all counts to 0."""
         from src.monitoring.dashboard import AlertSummary
+
         summary = AlertSummary()
         assert summary.total_open == 0
         assert summary.new == 0
@@ -462,6 +481,7 @@ class TestDashboardServiceModule:
     def test_compliance_trend_defaults(self) -> None:
         """ComplianceTrend defaults to flat with score 0."""
         from src.monitoring.dashboard import ComplianceTrend
+
         trend = ComplianceTrend()
         assert trend.current_score == 0.0
         assert trend.trend_direction == "flat"

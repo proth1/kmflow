@@ -144,8 +144,11 @@ async def copilot_chat(
     )
     session.add(assistant_msg)
     await log_audit(
-        session, payload.engagement_id, AuditAction.DATA_ACCESS,
-        f"Copilot query: {payload.query_type}", actor=str(user.id),
+        session,
+        payload.engagement_id,
+        AuditAction.DATA_ACCESS,
+        f"Copilot query: {payload.query_type}",
+        actor=str(user.id),
     )
     await session.commit()
 

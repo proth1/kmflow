@@ -65,9 +65,7 @@ class TestListSurveyClaims:
         mock_session.execute = AsyncMock(side_effect=[count_result, list_result])
 
         client = _make_app(mock_session)
-        resp = client.get(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims"
-        )
+        resp = client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims")
         assert resp.status_code == 200
         data = resp.json()
         assert data["total_count"] == 1
@@ -87,9 +85,7 @@ class TestListSurveyClaims:
         mock_session.execute = AsyncMock(side_effect=[count_result, list_result])
 
         client = _make_app(mock_session)
-        resp = client.get(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims?certainty_tier=unknown"
-        )
+        resp = client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims?certainty_tier=unknown")
         assert resp.status_code == 200
         assert resp.json()["total_count"] == 0
 
@@ -114,9 +110,7 @@ class TestGetSurveyClaim:
         mock_session.execute = AsyncMock(return_value=result)
 
         client = _make_app(mock_session)
-        resp = client.get(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims/{CLAIM_ID}"
-        )
+        resp = client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims/{CLAIM_ID}")
         assert resp.status_code == 200
         data = resp.json()
         assert data["id"] == str(CLAIM_ID)
@@ -134,9 +128,7 @@ class TestGetSurveyClaim:
         mock_session.execute = AsyncMock(return_value=result)
 
         client = _make_app(mock_session)
-        resp = client.get(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims/{CLAIM_ID}"
-        )
+        resp = client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims/{CLAIM_ID}")
         assert resp.status_code == 404
 
 
@@ -194,9 +186,7 @@ class TestCreateShelfDataRequest:
         mock_session.execute = AsyncMock(return_value=result)
 
         client = _make_app(mock_session)
-        resp = client.post(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims/{CLAIM_ID}/shelf-data-request"
-        )
+        resp = client.post(f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims/{CLAIM_ID}/shelf-data-request")
         assert resp.status_code == 201
 
     def test_returns_422_for_non_suspected_claim(self) -> None:
@@ -212,9 +202,7 @@ class TestCreateShelfDataRequest:
         mock_session.execute = AsyncMock(return_value=result)
 
         client = _make_app(mock_session)
-        resp = client.post(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims/{CLAIM_ID}/shelf-data-request"
-        )
+        resp = client.post(f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims/{CLAIM_ID}/shelf-data-request")
         assert resp.status_code == 422
 
 
@@ -235,14 +223,10 @@ class TestGetClaimHistory:
         history_scalars.all.return_value = []
         history_result.scalars.return_value = history_scalars
 
-        mock_session.execute = AsyncMock(
-            side_effect=[claim_result, history_result]
-        )
+        mock_session.execute = AsyncMock(side_effect=[claim_result, history_result])
 
         client = _make_app(mock_session)
-        resp = client.get(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims/{CLAIM_ID}/history"
-        )
+        resp = client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims/{CLAIM_ID}/history")
         assert resp.status_code == 200
         data = resp.json()
         assert data["claim_id"] == str(CLAIM_ID)
@@ -260,7 +244,5 @@ class TestGetClaimHistory:
         mock_session.execute = AsyncMock(return_value=result)
 
         client = _make_app(mock_session)
-        resp = client.get(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims/{CLAIM_ID}/history"
-        )
+        resp = client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-claims/{CLAIM_ID}/history")
         assert resp.status_code == 404

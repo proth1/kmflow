@@ -68,10 +68,12 @@ class MicroSurveyService:
         probes: list[dict[str, str]] = []
         for pt in probe_types:
             question = _generate_probe_question(pt, anomaly_description)
-            probes.append({
-                "probe_type": pt.value,
-                "question": question,
-            })
+            probes.append(
+                {
+                    "probe_type": pt.value,
+                    "question": question,
+                }
+            )
 
         return probes
 
@@ -140,9 +142,7 @@ class MicroSurveyService:
         Returns:
             List of created claim summaries.
         """
-        result = await self._session.execute(
-            select(MicroSurvey).where(MicroSurvey.id == survey_id)
-        )
+        result = await self._session.execute(select(MicroSurvey).where(MicroSurvey.id == survey_id))
         survey = result.scalar_one_or_none()
         if survey is None:
             raise ValueError(f"Micro-survey {survey_id} not found")
@@ -159,12 +159,14 @@ class MicroSurveyService:
                 micro_survey_id=survey_id,
             )
             self._session.add(claim)
-            claims.append({
-                "probe_type": resp["probe_type"],
-                "claim_text": resp["claim_text"],
-                "certainty_tier": resp["certainty_tier"],
-                "micro_survey_id": str(survey_id),
-            })
+            claims.append(
+                {
+                    "probe_type": resp["probe_type"],
+                    "claim_text": resp["claim_text"],
+                    "certainty_tier": resp["certainty_tier"],
+                    "micro_survey_id": str(survey_id),
+                }
+            )
 
         survey.status = MicroSurveyStatus.RESPONDED
         survey.responded_at = datetime.now(UTC)

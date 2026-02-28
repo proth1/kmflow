@@ -24,6 +24,21 @@
             "timeout": 2000
           }
         ]
+      },
+      {
+        "matcher": "Bash(gh pr merge:*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/detect-merge-to-main.sh\"",
+            "timeout": 5000
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/validate-cdd-evidence.sh\"",
+            "timeout": 10000
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -49,11 +64,6 @@
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-merge-hook.sh\"",
             "timeout": 10000
-          },
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/detect-merge-to-main.sh\"",
-            "timeout": 5000
           }
         ]
       },

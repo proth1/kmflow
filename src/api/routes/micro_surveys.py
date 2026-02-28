@@ -105,9 +105,7 @@ async def generate_micro_survey(
     from src.api.services.micro_survey import MicroSurveyService
     from src.core.models import ProcessDeviation
 
-    result = await session.execute(
-        select(ProcessDeviation).where(ProcessDeviation.id == body.deviation_id)
-    )
+    result = await session.execute(select(ProcessDeviation).where(ProcessDeviation.id == body.deviation_id))
     deviation = result.scalar_one_or_none()
     if deviation is None:
         raise HTTPException(

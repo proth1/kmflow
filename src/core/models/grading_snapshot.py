@@ -28,14 +28,13 @@ class GradingSnapshot(Base):
         Index("ix_grading_snapshots_engagement_id", "engagement_id"),
         Index("ix_grading_snapshots_pov_version_id", "pov_version_id"),
         UniqueConstraint(
-            "engagement_id", "version_number",
+            "engagement_id",
+            "version_number",
             name="uq_grading_snapshots_engagement_version",
         ),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     engagement_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("engagements.id", ondelete="CASCADE"),
@@ -53,12 +52,8 @@ class GradingSnapshot(Base):
     grade_b: Mapped[int] = mapped_column(Integer, server_default="0", nullable=False)
     grade_a: Mapped[int] = mapped_column(Integer, server_default="0", nullable=False)
     total_elements: Mapped[int] = mapped_column(Integer, server_default="0", nullable=False)
-    improvement_pct: Mapped[float | None] = mapped_column(
-        Float, nullable=True
-    )
-    snapshot_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    improvement_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    snapshot_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     pov_version = relationship("ProcessModel")
 

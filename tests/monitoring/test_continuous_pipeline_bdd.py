@@ -458,9 +458,10 @@ class TestPipelineMetricsAPI:
                         d.call.__name__ if hasattr(d, "call") and hasattr(d.call, "__name__") else ""
                         for d in deps.dependencies
                     ]
-                    assert any("require_permission" in n or "permission" in str(d) for n, d in zip(dep_names, deps.dependencies, strict=False)), (
-                        "Pipeline metrics endpoint should have require_permission dependency"
-                    )
+                    assert any(
+                        "require_permission" in n or "permission" in str(d)
+                        for n, d in zip(dep_names, deps.dependencies, strict=False)
+                    ), "Pipeline metrics endpoint should have require_permission dependency"
                 break
 
 

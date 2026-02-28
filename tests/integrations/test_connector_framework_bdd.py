@@ -235,10 +235,12 @@ class TestRateLimitParsing:
 
     def test_retry_after_takes_precedence(self) -> None:
         """Retry-After is checked before X-RateLimit-Reset."""
-        result = parse_rate_limit_headers({
-            "Retry-After": "5",
-            "X-RateLimit-Reset": str(time.time() + 100),
-        })
+        result = parse_rate_limit_headers(
+            {
+                "Retry-After": "5",
+                "X-RateLimit-Reset": str(time.time() + 100),
+            }
+        )
         assert result == 5.0
 
 
@@ -304,17 +306,19 @@ class TestTransformPipeline:
 
     def test_to_canonical_events(self) -> None:
         """Pipeline produces valid CanonicalActivityEvent objects."""
-        pipeline = TransformPipeline([
-            FieldMappingStep(
-                field_map={
-                    "action": "activity_name",
-                    "when": "timestamp",
-                    "who": "actor",
-                    "ticket": "case_id",
-                },
-                source_system="jira",
-            )
-        ])
+        pipeline = TransformPipeline(
+            [
+                FieldMappingStep(
+                    field_map={
+                        "action": "activity_name",
+                        "when": "timestamp",
+                        "who": "actor",
+                        "ticket": "case_id",
+                    },
+                    source_system="jira",
+                )
+            ]
+        )
 
         records = [
             {

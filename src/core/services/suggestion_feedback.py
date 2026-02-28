@@ -93,9 +93,7 @@ async def build_traceability_chain(
         }
 
     # Load linked suggestion
-    sugg_result = await session.execute(
-        select(AlternativeSuggestion).where(AlternativeSuggestion.id == suggestion_id)
-    )
+    sugg_result = await session.execute(select(AlternativeSuggestion).where(AlternativeSuggestion.id == suggestion_id))
     suggestion = sugg_result.scalar_one_or_none()
 
     # Load matching audit log (by scenario_id and matching prompt text)

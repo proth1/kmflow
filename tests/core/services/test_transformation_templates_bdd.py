@@ -28,16 +28,28 @@ class TestConsolidateAdjacentTasks:
         """3 adjacent tasks in the same lane performed by the same role → 2 pairs."""
         elements = [
             ProcessElement(
-                id="t1", name="Review Application", element_type="task",
-                lane="Processing", performer="Analyst", sequence_position=1,
+                id="t1",
+                name="Review Application",
+                element_type="task",
+                lane="Processing",
+                performer="Analyst",
+                sequence_position=1,
             ),
             ProcessElement(
-                id="t2", name="Validate Documents", element_type="task",
-                lane="Processing", performer="Analyst", sequence_position=2,
+                id="t2",
+                name="Validate Documents",
+                element_type="task",
+                lane="Processing",
+                performer="Analyst",
+                sequence_position=2,
             ),
             ProcessElement(
-                id="t3", name="Check References", element_type="task",
-                lane="Processing", performer="Analyst", sequence_position=3,
+                id="t3",
+                name="Check References",
+                element_type="task",
+                lane="Processing",
+                performer="Analyst",
+                sequence_position=3,
             ),
         ]
 
@@ -53,12 +65,20 @@ class TestConsolidateAdjacentTasks:
         """Each candidate is returned with element_ids and rationale."""
         elements = [
             ProcessElement(
-                id="t1", name="Task A", element_type="task",
-                lane="Lane1", performer="Role1", sequence_position=1,
+                id="t1",
+                name="Task A",
+                element_type="task",
+                lane="Lane1",
+                performer="Role1",
+                sequence_position=1,
             ),
             ProcessElement(
-                id="t2", name="Task B", element_type="task",
-                lane="Lane1", performer="Role1", sequence_position=2,
+                id="t2",
+                name="Task B",
+                element_type="task",
+                lane="Lane1",
+                performer="Role1",
+                sequence_position=2,
             ),
         ]
 
@@ -76,12 +96,20 @@ class TestConsolidateAdjacentTasks:
         """Tasks in different lanes should not be consolidated."""
         elements = [
             ProcessElement(
-                id="t1", name="Task A", element_type="task",
-                lane="Lane1", performer="Analyst", sequence_position=1,
+                id="t1",
+                name="Task A",
+                element_type="task",
+                lane="Lane1",
+                performer="Analyst",
+                sequence_position=1,
             ),
             ProcessElement(
-                id="t2", name="Task B", element_type="task",
-                lane="Lane2", performer="Analyst", sequence_position=2,
+                id="t2",
+                name="Task B",
+                element_type="task",
+                lane="Lane2",
+                performer="Analyst",
+                sequence_position=2,
             ),
         ]
 
@@ -92,12 +120,20 @@ class TestConsolidateAdjacentTasks:
         """Tasks with different performers should not be consolidated."""
         elements = [
             ProcessElement(
-                id="t1", name="Task A", element_type="task",
-                lane="Lane1", performer="Analyst", sequence_position=1,
+                id="t1",
+                name="Task A",
+                element_type="task",
+                lane="Lane1",
+                performer="Analyst",
+                sequence_position=1,
             ),
             ProcessElement(
-                id="t2", name="Task B", element_type="task",
-                lane="Lane1", performer="Manager", sequence_position=2,
+                id="t2",
+                name="Task B",
+                element_type="task",
+                lane="Lane1",
+                performer="Manager",
+                sequence_position=2,
             ),
         ]
 
@@ -108,12 +144,20 @@ class TestConsolidateAdjacentTasks:
         """Only task elements are considered for consolidation."""
         elements = [
             ProcessElement(
-                id="g1", name="Check", element_type="gateway",
-                lane="Lane1", performer="Analyst", sequence_position=1,
+                id="g1",
+                name="Check",
+                element_type="gateway",
+                lane="Lane1",
+                performer="Analyst",
+                sequence_position=1,
             ),
             ProcessElement(
-                id="t1", name="Task A", element_type="task",
-                lane="Lane1", performer="Analyst", sequence_position=2,
+                id="t1",
+                name="Task A",
+                element_type="task",
+                lane="Lane1",
+                performer="Analyst",
+                sequence_position=2,
             ),
         ]
 
@@ -124,12 +168,20 @@ class TestConsolidateAdjacentTasks:
         """Elements are sorted by sequence_position before analysis."""
         elements = [
             ProcessElement(
-                id="t2", name="Task B", element_type="task",
-                lane="Lane1", performer="Analyst", sequence_position=3,
+                id="t2",
+                name="Task B",
+                element_type="task",
+                lane="Lane1",
+                performer="Analyst",
+                sequence_position=3,
             ),
             ProcessElement(
-                id="t1", name="Task A", element_type="task",
-                lane="Lane1", performer="Analyst", sequence_position=1,
+                id="t1",
+                name="Task A",
+                element_type="task",
+                lane="Lane1",
+                performer="Analyst",
+                sequence_position=1,
             ),
         ]
 
@@ -150,7 +202,9 @@ class TestAutomateGateway:
         """Gateway with all system inputs is an automation candidate."""
         elements = [
             ProcessElement(
-                id="gw1", name="Route Decision", element_type="gateway",
+                id="gw1",
+                name="Route Decision",
+                element_type="gateway",
                 input_sources=["System API", "Database Query"],
             ),
         ]
@@ -168,7 +222,9 @@ class TestAutomateGateway:
         """Gateway with both human and system inputs is NOT a candidate."""
         elements = [
             ProcessElement(
-                id="gw1", name="Approval", element_type="gateway",
+                id="gw1",
+                name="Approval",
+                element_type="gateway",
                 input_sources=["System API", "Manager judgment"],
             ),
         ]
@@ -180,7 +236,9 @@ class TestAutomateGateway:
         """Gateway with no input sources is skipped."""
         elements = [
             ProcessElement(
-                id="gw1", name="Merge", element_type="gateway",
+                id="gw1",
+                name="Merge",
+                element_type="gateway",
                 input_sources=[],
             ),
         ]
@@ -192,7 +250,9 @@ class TestAutomateGateway:
         """All system indicator keywords are recognized."""
         elements = [
             ProcessElement(
-                id="gw1", name="Check", element_type="gateway",
+                id="gw1",
+                name="Check",
+                element_type="gateway",
                 input_sources=["Automated check", "Integration feed"],
             ),
         ]
@@ -204,7 +264,9 @@ class TestAutomateGateway:
         """Only gateway elements are analyzed."""
         elements = [
             ProcessElement(
-                id="t1", name="Task", element_type="task",
+                id="t1",
+                name="Task",
+                element_type="task",
                 input_sources=["System API"],
             ),
         ]
@@ -223,7 +285,9 @@ class TestShiftDecisionBoundary:
         """Human decision point with system inputs recommends shift."""
         elements = [
             ProcessElement(
-                id="gw1", name="Risk Assessment", element_type="gateway",
+                id="gw1",
+                name="Risk Assessment",
+                element_type="gateway",
                 autonomy_level="human",
                 input_sources=["System risk model", "Database score"],
             ),
@@ -241,7 +305,9 @@ class TestShiftDecisionBoundary:
         """Already autonomous elements are not suggested."""
         elements = [
             ProcessElement(
-                id="gw1", name="Auto Route", element_type="gateway",
+                id="gw1",
+                name="Auto Route",
+                element_type="gateway",
                 autonomy_level="autonomous",
                 input_sources=["System API"],
             ),
@@ -254,7 +320,9 @@ class TestShiftDecisionBoundary:
         """Tasks (not just gateways) at human level are candidates."""
         elements = [
             ProcessElement(
-                id="t1", name="Manual Review", element_type="task",
+                id="t1",
+                name="Manual Review",
+                element_type="task",
                 autonomy_level="human",
                 input_sources=["API data feed"],
             ),
@@ -267,7 +335,9 @@ class TestShiftDecisionBoundary:
         """Event elements are not considered for decision shift."""
         elements = [
             ProcessElement(
-                id="e1", name="Timer", element_type="event",
+                id="e1",
+                name="Timer",
+                element_type="event",
                 autonomy_level="human",
             ),
         ]
@@ -286,8 +356,11 @@ class TestRemoveControl:
         """Low compliance risk controls are candidates for removal."""
         elements = [
             ProcessElement(
-                id="c1", name="Duplicate Check", element_type="control",
-                is_control=True, compliance_risk="low",
+                id="c1",
+                name="Duplicate Check",
+                element_type="control",
+                is_control=True,
+                compliance_risk="low",
             ),
         ]
 
@@ -303,8 +376,11 @@ class TestRemoveControl:
         """High compliance risk controls are NOT candidates."""
         elements = [
             ProcessElement(
-                id="c1", name="SOX Control", element_type="control",
-                is_control=True, compliance_risk="high",
+                id="c1",
+                name="SOX Control",
+                element_type="control",
+                is_control=True,
+                compliance_risk="high",
             ),
         ]
 
@@ -315,8 +391,11 @@ class TestRemoveControl:
         """Medium compliance risk controls are NOT candidates."""
         elements = [
             ProcessElement(
-                id="c1", name="Audit Check", element_type="control",
-                is_control=True, compliance_risk="medium",
+                id="c1",
+                name="Audit Check",
+                element_type="control",
+                is_control=True,
+                compliance_risk="medium",
             ),
         ]
 
@@ -327,8 +406,11 @@ class TestRemoveControl:
         """Elements that are not controls are excluded regardless of risk."""
         elements = [
             ProcessElement(
-                id="t1", name="Task", element_type="task",
-                is_control=False, compliance_risk="low",
+                id="t1",
+                name="Task",
+                element_type="task",
+                is_control=False,
+                compliance_risk="low",
             ),
         ]
 
@@ -347,22 +429,35 @@ class TestApplyAllTemplates:
         elements = [
             # Consolidation candidates
             ProcessElement(
-                id="t1", name="Review", element_type="task",
-                lane="Ops", performer="Analyst", sequence_position=1,
+                id="t1",
+                name="Review",
+                element_type="task",
+                lane="Ops",
+                performer="Analyst",
+                sequence_position=1,
             ),
             ProcessElement(
-                id="t2", name="Validate", element_type="task",
-                lane="Ops", performer="Analyst", sequence_position=2,
+                id="t2",
+                name="Validate",
+                element_type="task",
+                lane="Ops",
+                performer="Analyst",
+                sequence_position=2,
             ),
             # Automate gateway candidate
             ProcessElement(
-                id="gw1", name="Auto Route", element_type="gateway",
+                id="gw1",
+                name="Auto Route",
+                element_type="gateway",
                 input_sources=["System API", "Database"],
             ),
             # Low-risk control
             ProcessElement(
-                id="c1", name="Low Check", element_type="control",
-                is_control=True, compliance_risk="low",
+                id="c1",
+                name="Low Check",
+                element_type="control",
+                is_control=True,
+                compliance_risk="low",
             ),
         ]
 

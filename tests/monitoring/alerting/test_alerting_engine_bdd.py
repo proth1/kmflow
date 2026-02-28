@@ -211,10 +211,12 @@ class TestAlertRuleFiring:
         base_ts = datetime(2026, 2, 15, 10, 0, 0, tzinfo=UTC)
 
         for i in range(2):
-            engine.process_event(_make_event(
-                source_id=f"dev-{i}",
-                timestamp=base_ts + timedelta(minutes=i * 5),
-            ))
+            engine.process_event(
+                _make_event(
+                    source_id=f"dev-{i}",
+                    timestamp=base_ts + timedelta(minutes=i * 5),
+                )
+            )
 
         rule_alerts = [a for a in engine.alerts if a.rule_id == rule.id]
         assert len(rule_alerts) == 1
@@ -237,10 +239,12 @@ class TestAlertRuleFiring:
         base_ts = datetime(2026, 2, 15, 10, 0, 0, tzinfo=UTC)
 
         engine.process_event(_make_event(source_id="dev-A", timestamp=base_ts))
-        engine.process_event(_make_event(
-            source_id="dev-B",
-            timestamp=base_ts + timedelta(minutes=5),
-        ))
+        engine.process_event(
+            _make_event(
+                source_id="dev-B",
+                timestamp=base_ts + timedelta(minutes=5),
+            )
+        )
 
         rule_alerts = [a for a in engine.alerts if a.rule_id == rule.id]
         assert len(rule_alerts) == 1
@@ -259,10 +263,12 @@ class TestAlertRuleFiring:
 
         engine = AlertEngine(rules=[rule])
         for i in range(4):
-            engine.process_event(_make_event(
-                source_id=f"dev-{i}",
-                timestamp=datetime(2026, 2, 15, 10, i, 0, tzinfo=UTC),
-            ))
+            engine.process_event(
+                _make_event(
+                    source_id=f"dev-{i}",
+                    timestamp=datetime(2026, 2, 15, 10, i, 0, tzinfo=UTC),
+                )
+            )
 
         rule_alerts = [a for a in engine.alerts if a.rule_id == rule.id]
         assert len(rule_alerts) == 0
@@ -283,15 +289,19 @@ class TestAlertRuleFiring:
         # First event at T=0
         engine.process_event(_make_event(source_id="d-1", timestamp=base_ts))
         # Second at T=20 (within window)
-        engine.process_event(_make_event(
-            source_id="d-2",
-            timestamp=base_ts + timedelta(minutes=20),
-        ))
+        engine.process_event(
+            _make_event(
+                source_id="d-2",
+                timestamp=base_ts + timedelta(minutes=20),
+            )
+        )
         # Third at T=50 (T=0 is now outside 30-min window)
-        engine.process_event(_make_event(
-            source_id="d-3",
-            timestamp=base_ts + timedelta(minutes=50),
-        ))
+        engine.process_event(
+            _make_event(
+                source_id="d-3",
+                timestamp=base_ts + timedelta(minutes=50),
+            )
+        )
 
         # Rule shouldn't fire: only d-2 and d-3 are within window at T=50
         rule_alerts = [a for a in engine.alerts if a.rule_id == rule.id]
@@ -325,18 +335,22 @@ class TestAlertRuleFiring:
         engine = AlertEngine(rules=[rule])
 
         # Non-matching event
-        engine.process_event(_make_event(
-            metadata={"category": "control_bypass"},
-            source_id="d-1",
-        ))
+        engine.process_event(
+            _make_event(
+                metadata={"category": "control_bypass"},
+                source_id="d-1",
+            )
+        )
         rule_alerts = [a for a in engine.alerts if a.rule_id == rule.id]
         assert len(rule_alerts) == 0
 
         # Matching event
-        engine.process_event(_make_event(
-            metadata={"category": "timing_anomaly"},
-            source_id="d-2",
-        ))
+        engine.process_event(
+            _make_event(
+                metadata={"category": "timing_anomaly"},
+                source_id="d-2",
+            )
+        )
         rule_alerts = [a for a in engine.alerts if a.rule_id == rule.id]
         assert len(rule_alerts) == 1
 
@@ -385,12 +399,9 @@ class TestDuplicateAlertAggregation:
         key = "eng-1:PROCESS_DEVIATION:ReviewLoan"
 
         alerts = [
-            Alert(dedup_key=key, engagement_id="eng-1",
-                  created_at=base_ts),
-            Alert(dedup_key=key, engagement_id="eng-1",
-                  created_at=base_ts + timedelta(minutes=15)),
-            Alert(dedup_key=key, engagement_id="eng-1",
-                  created_at=base_ts + timedelta(minutes=45)),
+            Alert(dedup_key=key, engagement_id="eng-1", created_at=base_ts),
+            Alert(dedup_key=key, engagement_id="eng-1", created_at=base_ts + timedelta(minutes=15)),
+            Alert(dedup_key=key, engagement_id="eng-1", created_at=base_ts + timedelta(minutes=45)),
         ]
 
         results = [deduplicator.check_and_deduplicate(a) for a in alerts]
@@ -406,10 +417,8 @@ class TestDuplicateAlertAggregation:
         base_ts = datetime(2026, 2, 15, 10, 0, 0, tzinfo=UTC)
         key = "eng-1:dedup-test"
 
-        alert1 = Alert(dedup_key=key, engagement_id="eng-1",
-                       created_at=base_ts)
-        alert2 = Alert(dedup_key=key, engagement_id="eng-1",
-                       created_at=base_ts + timedelta(minutes=30))
+        alert1 = Alert(dedup_key=key, engagement_id="eng-1", created_at=base_ts)
+        alert2 = Alert(dedup_key=key, engagement_id="eng-1", created_at=base_ts + timedelta(minutes=30))
 
         deduplicator.check_and_deduplicate(alert1)
         deduplicator.check_and_deduplicate(alert2)
@@ -425,10 +434,12 @@ class TestDuplicateAlertAggregation:
         base_ts = datetime(2026, 2, 15, 10, 0, 0, tzinfo=UTC)
 
         for i in range(3):
-            engine.process_event(_make_event(
-                source_id=f"dev-{i}",
-                timestamp=base_ts + timedelta(minutes=i * 10),
-            ))
+            engine.process_event(
+                _make_event(
+                    source_id=f"dev-{i}",
+                    timestamp=base_ts + timedelta(minutes=i * 10),
+                )
+            )
 
         log = engine.get_notification_log()
         # Only the first event triggers a notification
@@ -440,10 +451,8 @@ class TestDuplicateAlertAggregation:
         base_ts = datetime(2026, 2, 15, 10, 0, 0, tzinfo=UTC)
         key = "eng-1:expired-test"
 
-        alert1 = Alert(dedup_key=key, engagement_id="eng-1",
-                       created_at=base_ts)
-        alert2 = Alert(dedup_key=key, engagement_id="eng-1",
-                       created_at=base_ts + timedelta(hours=2))
+        alert1 = Alert(dedup_key=key, engagement_id="eng-1", created_at=base_ts)
+        alert2 = Alert(dedup_key=key, engagement_id="eng-1", created_at=base_ts + timedelta(hours=2))
 
         result1 = deduplicator.check_and_deduplicate(alert1)
         result2 = deduplicator.check_and_deduplicate(alert2)
@@ -470,8 +479,7 @@ class TestDuplicateAlertAggregation:
         old_ts = datetime(2026, 2, 15, 8, 0, 0, tzinfo=UTC)
         now = datetime(2026, 2, 15, 10, 0, 0, tzinfo=UTC)
 
-        alert = Alert(dedup_key="old-key", engagement_id="eng-1",
-                      created_at=old_ts)
+        alert = Alert(dedup_key="old-key", engagement_id="eng-1", created_at=old_ts)
         deduplicator.check_and_deduplicate(alert)
 
         removed = deduplicator.clear_expired(now=now)
@@ -494,22 +502,46 @@ class TestAlertQueryFiltering:
         base_ts = datetime(2026, 2, 15, 10, 0, 0, tzinfo=UTC)
 
         test_alerts = [
-            Alert(id="a1", alert_type=AlertType.PROCESS_DEVIATION,
-                  engagement_id="eng-1", severity="high",
-                  acknowledged=False, created_at=base_ts),
-            Alert(id="a2", alert_type=AlertType.PROCESS_DEVIATION,
-                  engagement_id="eng-1", severity="medium",
-                  acknowledged=True, created_at=base_ts + timedelta(hours=1)),
-            Alert(id="a3", alert_type=AlertType.SLA_BREACH,
-                  engagement_id="eng-2", severity="critical",
-                  acknowledged=False, created_at=base_ts + timedelta(hours=2)),
-            Alert(id="a4", alert_type=AlertType.EVIDENCE_QUALITY_DROP,
-                  engagement_id="eng-1", severity="high",
-                  acknowledged=False, created_at=base_ts + timedelta(hours=3)),
-            Alert(id="a5", alert_type=AlertType.PROCESS_DEVIATION,
-                  engagement_id="eng-2", severity="low",
-                  acknowledged=False,
-                  created_at=datetime(2026, 1, 15, 10, 0, 0, tzinfo=UTC)),
+            Alert(
+                id="a1",
+                alert_type=AlertType.PROCESS_DEVIATION,
+                engagement_id="eng-1",
+                severity="high",
+                acknowledged=False,
+                created_at=base_ts,
+            ),
+            Alert(
+                id="a2",
+                alert_type=AlertType.PROCESS_DEVIATION,
+                engagement_id="eng-1",
+                severity="medium",
+                acknowledged=True,
+                created_at=base_ts + timedelta(hours=1),
+            ),
+            Alert(
+                id="a3",
+                alert_type=AlertType.SLA_BREACH,
+                engagement_id="eng-2",
+                severity="critical",
+                acknowledged=False,
+                created_at=base_ts + timedelta(hours=2),
+            ),
+            Alert(
+                id="a4",
+                alert_type=AlertType.EVIDENCE_QUALITY_DROP,
+                engagement_id="eng-1",
+                severity="high",
+                acknowledged=False,
+                created_at=base_ts + timedelta(hours=3),
+            ),
+            Alert(
+                id="a5",
+                alert_type=AlertType.PROCESS_DEVIATION,
+                engagement_id="eng-2",
+                severity="low",
+                acknowledged=False,
+                created_at=datetime(2026, 1, 15, 10, 0, 0, tzinfo=UTC),
+            ),
         ]
         engine.alerts = test_alerts
         return engine
@@ -578,8 +610,13 @@ class TestAlertQueryFiltering:
         engine = self._build_engine_with_alerts()
         result = engine.query_alerts()
         required_fields = {
-            "id", "alert_type", "severity", "acknowledged",
-            "occurrence_count", "created_at", "last_occurred_at",
+            "id",
+            "alert_type",
+            "severity",
+            "acknowledged",
+            "occurrence_count",
+            "created_at",
+            "last_occurred_at",
         }
         for alert_dict in result["alerts"]:
             assert required_fields.issubset(alert_dict.keys())

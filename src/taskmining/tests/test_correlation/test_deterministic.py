@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.core.models.canonical_event import CanonicalActivityEvent
-from src.taskmining.correlation.deterministic import DEFAULT_PATTERNS, DeterministicLinker
-
+from src.taskmining.correlation.deterministic import DeterministicLinker
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -25,7 +24,7 @@ def _make_event(
     event.id = uuid.uuid4()
     event.engagement_id = engagement_id or uuid.uuid4()
     event.raw_payload = {"window_title": window_title} if window_title else {}
-    event.timestamp_utc = datetime(2026, 1, 15, 10, 0, tzinfo=timezone.utc)
+    event.timestamp_utc = datetime(2026, 1, 15, 10, 0, tzinfo=UTC)
     event.source_system = "taskmining"
     event.performer_role_ref = "analyst"
     return event

@@ -194,10 +194,7 @@ class TestVersionDiff:
 
         session = self._setup_session(v1_pov, v2_pov, v1_els, v2_els)
         client = _make_app(session)
-        resp = client.get(
-            f"/api/v1/validation/diff?v1={POV_V1_ID}&v2={POV_V2_ID}"
-            f"&engagement_id={ENGAGEMENT_ID}"
-        )
+        resp = client.get(f"/api/v1/validation/diff?v1={POV_V1_ID}&v2={POV_V2_ID}&engagement_id={ENGAGEMENT_ID}")
         assert resp.status_code == 200
         data = resp.json()
         assert "added" in data
@@ -210,20 +207,14 @@ class TestVersionDiff:
     def test_returns_404_for_missing_v1(self) -> None:
         session = self._setup_session(v1_pov=None)
         client = _make_app(session)
-        resp = client.get(
-            f"/api/v1/validation/diff?v1={uuid.uuid4()}&v2={POV_V2_ID}"
-            f"&engagement_id={ENGAGEMENT_ID}"
-        )
+        resp = client.get(f"/api/v1/validation/diff?v1={uuid.uuid4()}&v2={POV_V2_ID}&engagement_id={ENGAGEMENT_ID}")
         assert resp.status_code == 404
 
     def test_returns_404_for_missing_v2(self) -> None:
         v1_pov = _mock_pov(POV_V1_ID)
         session = self._setup_session(v1_pov=v1_pov, v2_pov=None)
         client = _make_app(session)
-        resp = client.get(
-            f"/api/v1/validation/diff?v1={POV_V1_ID}&v2={uuid.uuid4()}"
-            f"&engagement_id={ENGAGEMENT_ID}"
-        )
+        resp = client.get(f"/api/v1/validation/diff?v1={POV_V1_ID}&v2={uuid.uuid4()}&engagement_id={ENGAGEMENT_ID}")
         assert resp.status_code == 404
 
     def test_diff_includes_color_coding(self) -> None:
@@ -235,10 +226,7 @@ class TestVersionDiff:
 
         session = self._setup_session(v1_pov, v2_pov, v1_els, v2_els)
         client = _make_app(session)
-        resp = client.get(
-            f"/api/v1/validation/diff?v1={POV_V1_ID}&v2={POV_V2_ID}"
-            f"&engagement_id={ENGAGEMENT_ID}"
-        )
+        resp = client.get(f"/api/v1/validation/diff?v1={POV_V1_ID}&v2={POV_V2_ID}&engagement_id={ENGAGEMENT_ID}")
         assert resp.status_code == 200
         data = resp.json()
         assert len(data["added"]) == 1

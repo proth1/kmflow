@@ -182,7 +182,9 @@ class TestGapToPracticeMatching:
     def test_no_match_different_domain(self) -> None:
         """Practices with no domain overlap may not match."""
         gap = self._make_gap(domain="KYC", tom_dimension="governance", description="unique gap xyz")
-        practice = self._make_practice(domain="Trade Settlement", tom_dimension="technology", description="unique practice abc")
+        practice = self._make_practice(
+            domain="Trade Settlement", tom_dimension="technology", description="unique practice abc"
+        )
         matches = match_gaps_to_practices([gap], [practice])
         assert len(matches) == 0
 
@@ -190,7 +192,12 @@ class TestGapToPracticeMatching:
         """Multiple matches are sorted by relevance descending."""
         gap = self._make_gap()
         p1 = self._make_practice(practice_id="bp1", domain="Loan Origination", tom_dimension="process_architecture")
-        p2 = self._make_practice(practice_id="bp2", domain="Loan Origination", tom_dimension="governance", description="general governance improvement")
+        p2 = self._make_practice(
+            practice_id="bp2",
+            domain="Loan Origination",
+            tom_dimension="governance",
+            description="general governance improvement",
+        )
         matches = match_gaps_to_practices([gap], [p1, p2])
         assert len(matches) >= 1
         # p1 should rank higher (domain + dimension match)

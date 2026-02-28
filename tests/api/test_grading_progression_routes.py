@@ -73,9 +73,7 @@ class TestGradingProgression:
         mock_session.execute = AsyncMock(return_value=mock_result)
 
         client = _make_app(mock_session)
-        resp = client.get(
-            f"/api/v1/validation/grading-progression?engagement_id={ENGAGEMENT_ID}"
-        )
+        resp = client.get(f"/api/v1/validation/grading-progression?engagement_id={ENGAGEMENT_ID}")
         assert resp.status_code == 200
         data = resp.json()
         assert len(data["versions"]) == 2
@@ -95,9 +93,7 @@ class TestGradingProgression:
         mock_session.execute = AsyncMock(return_value=mock_result)
 
         client = _make_app(mock_session)
-        resp = client.get(
-            f"/api/v1/validation/grading-progression?engagement_id={ENGAGEMENT_ID}"
-        )
+        resp = client.get(f"/api/v1/validation/grading-progression?engagement_id={ENGAGEMENT_ID}")
         assert resp.status_code == 200
         assert resp.json()["versions"] == []
 
@@ -111,9 +107,7 @@ class TestGradingProgression:
         mock_session.execute = AsyncMock(return_value=mock_result)
 
         client = _make_app(mock_session)
-        resp = client.get(
-            f"/api/v1/validation/grading-progression?engagement_id={ENGAGEMENT_ID}"
-        )
+        resp = client.get(f"/api/v1/validation/grading-progression?engagement_id={ENGAGEMENT_ID}")
         v = resp.json()["versions"][0]
         assert v["grade_counts"] == {"U": 2, "D": 3, "C": 3, "B": 1, "A": 1}
         assert v["total_elements"] == 10

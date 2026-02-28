@@ -64,13 +64,15 @@ class TestSubmitDecision:
         mock_session.execute = AsyncMock(return_value=mock_result)
 
         mock_service = AsyncMock()
-        mock_service.submit_decision = AsyncMock(return_value={
-            "decision_id": "dec_001",
-            "action": "confirm",
-            "element_id": "elem_001",
-            "graph_write_back": {"new_grade": "B"},
-            "decision_at": "2026-02-27T10:00:00Z",
-        })
+        mock_service.submit_decision = AsyncMock(
+            return_value={
+                "decision_id": "dec_001",
+                "action": "confirm",
+                "element_id": "elem_001",
+                "graph_write_back": {"new_grade": "B"},
+                "decision_at": "2026-02-27T10:00:00Z",
+            }
+        )
         mock_service_cls.return_value = mock_service
 
         client = _make_app(mock_session)
@@ -113,13 +115,15 @@ class TestSubmitDecision:
         mock_session.execute = AsyncMock(return_value=mock_result)
 
         mock_service = AsyncMock()
-        mock_service.submit_decision = AsyncMock(return_value={
-            "decision_id": "dec_002",
-            "action": "reject",
-            "element_id": "elem_002",
-            "graph_write_back": {"conflict_id": "cf_001"},
-            "decision_at": "2026-02-27T10:00:00Z",
-        })
+        mock_service.submit_decision = AsyncMock(
+            return_value={
+                "decision_id": "dec_002",
+                "action": "reject",
+                "element_id": "elem_002",
+                "graph_write_back": {"conflict_id": "cf_001"},
+                "decision_at": "2026-02-27T10:00:00Z",
+            }
+        )
         mock_service_cls.return_value = mock_service
 
         client = _make_app(mock_session)
@@ -148,13 +152,15 @@ class TestSubmitDecision:
         mock_session.execute = AsyncMock(return_value=mock_result)
 
         mock_service = AsyncMock()
-        mock_service.submit_decision = AsyncMock(return_value={
-            "decision_id": "dec_003",
-            "action": "defer",
-            "element_id": "elem_003",
-            "graph_write_back": {"deferred_to_dark_room": True},
-            "decision_at": "2026-02-27T10:00:00Z",
-        })
+        mock_service.submit_decision = AsyncMock(
+            return_value={
+                "decision_id": "dec_003",
+                "action": "defer",
+                "element_id": "elem_003",
+                "graph_write_back": {"deferred_to_dark_room": True},
+                "decision_at": "2026-02-27T10:00:00Z",
+            }
+        )
         mock_service_cls.return_value = mock_service
 
         client = _make_app(mock_session)

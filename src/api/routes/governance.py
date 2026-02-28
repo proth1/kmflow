@@ -189,7 +189,8 @@ async def list_catalog_entries(
     Optionally filter by engagement_id. Supports pagination via
     ``limit`` and ``offset`` query parameters.
     """
-    from sqlalchemy import func, select as sa_select
+    from sqlalchemy import func
+    from sqlalchemy import select as sa_select
 
     svc = DataCatalogService(session)
     items = await svc.list_entries(
@@ -231,8 +232,11 @@ async def create_catalog_entry(
     )
     if body.engagement_id:
         await log_audit(
-            session, body.engagement_id, AuditAction.ENGAGEMENT_UPDATED,
-            f"Created catalog entry: {body.dataset_name}", actor=str(user.id),
+            session,
+            body.engagement_id,
+            AuditAction.ENGAGEMENT_UPDATED,
+            f"Created catalog entry: {body.dataset_name}",
+            actor=str(user.id),
         )
     await session.commit()
     return entry
@@ -276,8 +280,11 @@ async def update_catalog_entry(
         )
     if entry.engagement_id:
         await log_audit(
-            session, entry.engagement_id, AuditAction.ENGAGEMENT_UPDATED,
-            f"Updated catalog entry: {entry.dataset_name}", actor=str(user.id),
+            session,
+            entry.engagement_id,
+            AuditAction.ENGAGEMENT_UPDATED,
+            f"Updated catalog entry: {entry.dataset_name}",
+            actor=str(user.id),
         )
     await session.commit()
     return entry
@@ -300,8 +307,11 @@ async def delete_catalog_entry(
         )
     if entry.engagement_id:
         await log_audit(
-            session, entry.engagement_id, AuditAction.ENGAGEMENT_UPDATED,
-            f"Deleted catalog entry: {entry.dataset_name}", actor=str(user.id),
+            session,
+            entry.engagement_id,
+            AuditAction.ENGAGEMENT_UPDATED,
+            f"Deleted catalog entry: {entry.dataset_name}",
+            actor=str(user.id),
         )
     deleted = await svc.delete_entry(entry_id)
     if not deleted:
@@ -748,9 +758,7 @@ async def detect_governance_gaps(
     Optionally auto-generates shelf data request items for detected gaps.
     """
     # Verify engagement exists
-    eng_result = await session.execute(
-        select(Engagement).where(Engagement.id == engagement_id)
-    )
+    eng_result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
     if not eng_result.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -758,9 +766,7 @@ async def detect_governance_gaps(
         )
 
     # Fetch regulations for this engagement
-    reg_result = await session.execute(
-        select(Regulation).where(Regulation.engagement_id == engagement_id)
-    )
+    reg_result = await session.execute(select(Regulation).where(Regulation.engagement_id == engagement_id))
     regulations = list(reg_result.scalars().all())
 
     reg_dicts = [
@@ -788,15 +794,10 @@ async def detect_governance_gaps(
     )
     existing_open = list(existing_result.scalars().all())
 
-    existing_open_dicts = [
-        {"id": str(g.id), "activity_id": str(g.activity_id)}
-        for g in existing_open
-    ]
+    existing_open_dicts = [{"id": str(g.id), "activity_id": str(g.activity_id)} for g in existing_open]
 
     # Resolve gaps that are now covered
-    resolved_ids = await detector.resolve_covered_gaps(
-        str(engagement_id), existing_open_dicts
-    )
+    resolved_ids = await detector.resolve_covered_gaps(str(engagement_id), existing_open_dicts)
     resolved_count = 0
     now = datetime.now(UTC)
     for gap in existing_open:
@@ -806,9 +807,7 @@ async def detect_governance_gaps(
             resolved_count += 1
 
     # Deduplicate: don't re-create gaps for activities that already have open findings
-    existing_activity_ids = {
-        str(g.activity_id) for g in existing_open if g.status == GovernanceGapStatus.OPEN
-    }
+    existing_activity_ids = {str(g.activity_id) for g in existing_open if g.status == GovernanceGapStatus.OPEN}
     new_findings: list[GapFinding] = []
     for gd in new_gap_data:
         if gd["activity_id"] in existing_activity_ids:
@@ -889,9 +888,7 @@ async def list_governance_gaps(
     Filter by status (OPEN/RESOLVED) or return all. Paginated.
     """
     # Verify engagement exists
-    eng_result = await session.execute(
-        select(Engagement).where(Engagement.id == engagement_id)
-    )
+    eng_result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
     if not eng_result.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -899,11 +896,7 @@ async def list_governance_gaps(
         )
 
     # Build query
-    query = (
-        select(GapFinding)
-        .where(GapFinding.engagement_id == engagement_id)
-        .order_by(GapFinding.created_at.desc())
-    )
+    query = select(GapFinding).where(GapFinding.engagement_id == engagement_id).order_by(GapFinding.created_at.desc())
 
     if gap_status:
         normalized = gap_status.lower()
@@ -913,11 +906,7 @@ async def list_governance_gaps(
     # Count total
     from sqlalchemy import func as sa_func
 
-    count_query = (
-        select(sa_func.count())
-        .select_from(GapFinding)
-        .where(GapFinding.engagement_id == engagement_id)
-    )
+    count_query = select(sa_func.count()).select_from(GapFinding).where(GapFinding.engagement_id == engagement_id)
     if gap_status:
         normalized = gap_status.lower()
         if normalized in ("open", "resolved"):
@@ -967,9 +956,7 @@ async def trigger_compliance_assessment(
     user: User = Depends(require_permission("governance:write")),
 ) -> dict[str, Any]:
     """Trigger a compliance assessment for a process activity."""
-    act_result = await session.execute(
-        select(ProcessElement).where(ProcessElement.id == activity_id)
-    )
+    act_result = await session.execute(select(ProcessElement).where(ProcessElement.id == activity_id))
     activity = act_result.scalar_one_or_none()
     if not activity:
         raise HTTPException(
@@ -979,9 +966,7 @@ async def trigger_compliance_assessment(
 
     from src.core.models import ProcessModel
 
-    model_result = await session.execute(
-        select(ProcessModel).where(ProcessModel.id == activity.model_id)
-    )
+    model_result = await session.execute(select(ProcessModel).where(ProcessModel.id == activity.model_id))
     process_model = model_result.scalar_one_or_none()
     if not process_model:
         raise HTTPException(
@@ -1008,9 +993,7 @@ async def trigger_compliance_assessment(
 
     graph_service = KnowledgeGraphService(request.app.state.neo4j_driver)
     compliance_service = ComplianceAssessmentService(graph_service)
-    assessment_data = await compliance_service.assess_activity(
-        str(activity_id), str(engagement_id)
-    )
+    assessment_data = await compliance_service.assess_activity(str(activity_id), str(engagement_id))
 
     record = ComplianceAssessment(
         activity_id=activity_id,
@@ -1061,9 +1044,7 @@ async def get_compliance_trend(
     user: User = Depends(require_permission("governance:read")),
 ) -> dict[str, Any]:
     """Get compliance assessment trend for a process activity."""
-    act_result = await session.execute(
-        select(ProcessElement).where(ProcessElement.id == activity_id)
-    )
+    act_result = await session.execute(select(ProcessElement).where(ProcessElement.id == activity_id))
     activity = act_result.scalar_one_or_none()
     if not activity:
         raise HTTPException(
@@ -1073,9 +1054,7 @@ async def get_compliance_trend(
 
     from src.core.models import ProcessModel
 
-    model_result = await session.execute(
-        select(ProcessModel).where(ProcessModel.id == activity.model_id)
-    )
+    model_result = await session.execute(select(ProcessModel).where(ProcessModel.id == activity.model_id))
     pm = model_result.scalar_one_or_none()
     if pm and user.role != UserRole.PLATFORM_ADMIN:
         member_result = await session.execute(
@@ -1142,9 +1121,7 @@ async def score_control_effectiveness(
     user: User = Depends(require_permission("governance:write")),
 ) -> dict[str, Any]:
     """Score a control's effectiveness based on execution evidence."""
-    ctrl_result = await session.execute(
-        select(Control).where(Control.id == control_id)
-    )
+    ctrl_result = await session.execute(select(Control).where(Control.id == control_id))
     control = ctrl_result.scalar_one_or_none()
     if not control:
         raise HTTPException(
@@ -1171,9 +1148,7 @@ async def score_control_effectiveness(
 
     graph_service = KnowledgeGraphService(request.app.state.neo4j_driver)
     scoring_service = ControlEffectivenessScoringService(graph_service)
-    score_data = await scoring_service.score_control(
-        str(control_id), control.name, str(engagement_id)
-    )
+    score_data = await scoring_service.score_control(str(control_id), control.name, str(engagement_id))
 
     record = ControlEffectivenessScore(
         control_id=control_id,
@@ -1225,9 +1200,7 @@ async def get_effectiveness_score_history(
     user: User = Depends(require_permission("governance:read")),
 ) -> dict[str, Any]:
     """Get historical effectiveness scores for a control."""
-    ctrl_result = await session.execute(
-        select(Control).where(Control.id == control_id)
-    )
+    ctrl_result = await session.execute(select(Control).where(Control.id == control_id))
     control = ctrl_result.scalar_one_or_none()
     if not control:
         raise HTTPException(

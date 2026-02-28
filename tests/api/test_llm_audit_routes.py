@@ -146,18 +146,18 @@ async def test_get_stats_returns_rates(mock_session: AsyncMock) -> None:
 
     sugg_result = MagicMock()
     sugg_result.__iter__ = MagicMock(
-        return_value=iter([
-            (SuggestionDisposition.ACCEPTED, 3),
-            (SuggestionDisposition.REJECTED, 2),
-        ])
+        return_value=iter(
+            [
+                (SuggestionDisposition.ACCEPTED, 3),
+                (SuggestionDisposition.REJECTED, 2),
+            ]
+        )
     )
 
     halluc_result = MagicMock()
     halluc_result.scalar.return_value = 1
 
-    mock_session.execute = AsyncMock(
-        side_effect=[count_result, sugg_result, halluc_result]
-    )
+    mock_session.execute = AsyncMock(side_effect=[count_result, sugg_result, halluc_result])
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:

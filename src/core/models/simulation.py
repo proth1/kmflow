@@ -6,12 +6,16 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Enum, Float, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.database import Base
+
+if TYPE_CHECKING:
+    from src.core.models.engagement import Engagement
 
 
 class SimulationStatus(enum.StrEnum):
@@ -76,14 +80,16 @@ class SimulationScenario(Base):
         UUID(as_uuid=True), ForeignKey("process_models.id", ondelete="SET NULL"), nullable=True
     )
     name: Mapped[str] = mapped_column(String(512), nullable=False)
-    simulation_type: Mapped[SimulationType] = mapped_column(Enum(SimulationType, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    simulation_type: Mapped[SimulationType] = mapped_column(
+        Enum(SimulationType, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
     parameters: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str | None] = mapped_column(String(50), nullable=True, server_default="draft")
     evidence_confidence_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
     modifications: Mapped[list[ScenarioModification]] = relationship(
         "ScenarioModification", back_populates="scenario", cascade="all, delete-orphan"
     )
@@ -103,7 +109,9 @@ class SimulationResult(Base):
         UUID(as_uuid=True), ForeignKey("simulation_scenarios.id", ondelete="CASCADE"), nullable=False
     )
     status: Mapped[SimulationStatus] = mapped_column(
-        Enum(SimulationStatus, values_callable=lambda e: [x.value for x in e]), default=SimulationStatus.PENDING, nullable=False
+        Enum(SimulationStatus, values_callable=lambda e: [x.value for x in e]),
+        default=SimulationStatus.PENDING,
+        nullable=False,
     )
     metrics: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     impact_analysis: Mapped[dict | None] = mapped_column(JSON, nullable=True)
@@ -130,7 +138,9 @@ class ScenarioModification(Base):
     scenario_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("simulation_scenarios.id", ondelete="CASCADE"), nullable=False
     )
-    modification_type: Mapped[ModificationType] = mapped_column(Enum(ModificationType, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    modification_type: Mapped[ModificationType] = mapped_column(
+        Enum(ModificationType, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
     element_id: Mapped[str] = mapped_column(String(512), nullable=False)
     element_name: Mapped[str] = mapped_column(String(512), nullable=False)
     change_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
@@ -192,7 +202,9 @@ class FinancialAssumption(Base):
     engagement_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
     )
-    assumption_type: Mapped[FinancialAssumptionType] = mapped_column(Enum(FinancialAssumptionType, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    assumption_type: Mapped[FinancialAssumptionType] = mapped_column(
+        Enum(FinancialAssumptionType, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
     name: Mapped[str] = mapped_column(String(256), nullable=False)
     value: Mapped[float] = mapped_column(Float, nullable=False)
     unit: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -206,7 +218,7 @@ class FinancialAssumption(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
 
     def __repr__(self) -> str:
         return f"<FinancialAssumption(id={self.id}, name='{self.name}', type={self.assumption_type})>"
@@ -261,7 +273,9 @@ class AlternativeSuggestion(Base):
     governance_flags: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     evidence_gaps: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     disposition: Mapped[SuggestionDisposition] = mapped_column(
-        Enum(SuggestionDisposition, values_callable=lambda e: [x.value for x in e]), default=SuggestionDisposition.PENDING, nullable=False
+        Enum(SuggestionDisposition, values_callable=lambda e: [x.value for x in e]),
+        default=SuggestionDisposition.PENDING,
+        nullable=False,
     )
     disposition_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     modified_content: Mapped[dict | None] = mapped_column(JSON, nullable=True)
@@ -271,7 +285,9 @@ class AlternativeSuggestion(Base):
     )
     llm_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     llm_response: Mapped[str] = mapped_column(Text, nullable=False)
-    created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     scenario: Mapped[SimulationScenario] = relationship("SimulationScenario")
@@ -288,9 +304,7 @@ class RejectionFeedback(Base):
     """
 
     __tablename__ = "rejection_feedback"
-    __table_args__ = (
-        Index("ix_rejection_feedback_engagement_id", "engagement_id"),
-    )
+    __table_args__ = (Index("ix_rejection_feedback_engagement_id", "engagement_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     engagement_id: Mapped[uuid.UUID] = mapped_column(

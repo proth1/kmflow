@@ -57,9 +57,7 @@ def _setup_coverage_query(mock_session: AsyncMock) -> None:
     brightness_result = MagicMock()
     brightness_result.all.return_value = [("elem-1", BrightnessClassification.BRIGHT)]
 
-    mock_session.execute = AsyncMock(
-        side_effect=[scenario_result, mods_result, brightness_result]
-    )
+    mock_session.execute = AsyncMock(side_effect=[scenario_result, mods_result, brightness_result])
 
 
 class TestGetEvidenceCoverage:

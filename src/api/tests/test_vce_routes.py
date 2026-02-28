@@ -3,16 +3,14 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
 
 from src.api.routes.taskmining import router
 from src.core.models.taskmining import ScreenStateClass, VCETriggerReason
-
 
 # ---------------------------------------------------------------------------
 # App fixture (minimal FastAPI app with the taskmining router)
@@ -21,7 +19,6 @@ from src.core.models.taskmining import ScreenStateClass, VCETriggerReason
 
 @pytest.fixture
 def app():
-    from fastapi import FastAPI
 
     test_app = FastAPI()
     test_app.include_router(router)
@@ -47,7 +44,7 @@ def _vce_dict(**overrides):
         "engagement_id": engagement_id,
         "session_id": None,
         "agent_id": None,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "screen_state_class": "queue",
         "system_guess": None,
         "module_guess": None,
@@ -61,7 +58,7 @@ def _vce_dict(**overrides):
         "snapshot_ref": None,
         "ocr_text_redacted": None,
         "classification_method": "rule_based",
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
     }
     base.update(overrides)
     return base
@@ -84,7 +81,7 @@ class TestPostVCEEvents:
             "events": [
                 {
                     "engagement_id": engagement_id,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "screen_state_class": "queue",
                     "confidence": 0.85,
                     "trigger_reason": "high_dwell",
@@ -130,7 +127,7 @@ class TestGetVCEList:
         vce.engagement_id = uuid.uuid4()
         vce.session_id = None
         vce.agent_id = None
-        vce.timestamp = datetime.now(timezone.utc)
+        vce.timestamp = datetime.now(UTC)
         vce.screen_state_class = ScreenStateClass.QUEUE
         vce.system_guess = None
         vce.module_guess = None
@@ -144,7 +141,7 @@ class TestGetVCEList:
         vce.snapshot_ref = None
         vce.ocr_text_redacted = None
         vce.classification_method = "rule_based"
-        vce.created_at = datetime.now(timezone.utc)
+        vce.created_at = datetime.now(UTC)
 
         response = _vce_to_response(vce)
 

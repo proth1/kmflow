@@ -438,7 +438,7 @@ async def build_fragment_graph(
         ]
         try:
             node_ids = await graph_service.batch_create_nodes(label, props_list)
-            for entity, node_id in zip(entities, node_ids):
+            for entity, node_id in zip(entities, node_ids, strict=False):
                 entity_to_node[entity.id] = node_id
             node_count += len(node_ids)
         except (ConnectionError, RuntimeError, ValueError) as e:

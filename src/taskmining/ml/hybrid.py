@@ -14,7 +14,6 @@ from dataclasses import dataclass
 from src.core.models.taskmining import ActionCategory
 from src.taskmining.aggregation.classifier import (
     ActionClassifier,
-    ClassificationResult,
 )
 from src.taskmining.aggregation.session import AggregatedSession
 from src.taskmining.ml.classifier import GradientBoostingTaskClassifier
@@ -81,7 +80,7 @@ class HybridClassifier:
                 source="ml",
                 rule_name="ml_model",
                 description=f"ML classified as {ml_prediction.category.value} "
-                            f"(confidence: {ml_prediction.confidence:.2f})",
+                f"(confidence: {ml_prediction.confidence:.2f})",
                 ml_confidence=ml_prediction.confidence,
                 ml_category=ml_prediction.category.value,
             )
@@ -99,8 +98,6 @@ class HybridClassifier:
             ml_category=ml_prediction.category.value if ml_prediction else None,
         )
 
-    def classify_batch(
-        self, sessions: list[AggregatedSession]
-    ) -> list[HybridResult]:
+    def classify_batch(self, sessions: list[AggregatedSession]) -> list[HybridResult]:
         """Classify multiple sessions."""
         return [self.classify(s) for s in sessions]

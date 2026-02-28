@@ -17,13 +17,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.models.taskmining import (
     PIIQuarantine,
-    PIIType,
     QuarantineStatus,
     TaskMiningEvent,
     TaskMiningSession,
 )
 from src.core.redis import TASK_MINING_STREAM, stream_add
-from src.taskmining.pii.filter import FilterResult, PIIDetection, filter_event, redact_text
+from src.taskmining.pii.filter import PIIDetection, filter_event, redact_text
 
 logger = logging.getLogger(__name__)
 
@@ -68,9 +67,7 @@ async def process_event_batch(
             idempotency_key = event_data.get("idempotency_key")
             if idempotency_key:
                 existing = await session.execute(
-                    select(TaskMiningEvent.id).where(
-                        TaskMiningEvent.idempotency_key == idempotency_key
-                    ).limit(1)
+                    select(TaskMiningEvent.id).where(TaskMiningEvent.idempotency_key == idempotency_key).limit(1)
                 )
                 if existing.scalar_one_or_none() is not None:
                     duplicates += 1
@@ -81,9 +78,7 @@ async def process_event_batch(
 
             # 3. Quarantine if high-confidence PII detected
             if filter_result.quarantine_recommended:
-                await _quarantine_event(
-                    session, engagement_id, event_data, filter_result.detections
-                )
+                await _quarantine_event(session, engagement_id, event_data, filter_result.detections)
                 pii_quarantined += 1
                 continue
 

@@ -170,8 +170,11 @@ async def create_connection(
     )
     session.add(conn)
     await log_audit(
-        session, payload.engagement_id, AuditAction.INTEGRATION_CONNECTED,
-        f"Created connection: {payload.name} ({payload.connector_type})", actor=str(user.id),
+        session,
+        payload.engagement_id,
+        AuditAction.INTEGRATION_CONNECTED,
+        f"Created connection: {payload.name} ({payload.connector_type})",
+        actor=str(user.id),
     )
     await session.commit()
     await session.refresh(conn)
@@ -236,8 +239,11 @@ async def update_connection(
         conn.field_mappings = payload.field_mappings
 
     await log_audit(
-        session, conn.engagement_id, AuditAction.INTEGRATION_CONNECTED,
-        f"Updated connection: {conn.name}", actor=str(user.id),
+        session,
+        conn.engagement_id,
+        AuditAction.INTEGRATION_CONNECTED,
+        f"Updated connection: {conn.name}",
+        actor=str(user.id),
     )
     await session.commit()
     await session.refresh(conn)
@@ -256,8 +262,11 @@ async def delete_connection(
     if not conn:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Connection {connection_id} not found")
     await log_audit(
-        session, conn.engagement_id, AuditAction.INTEGRATION_CONNECTED,
-        f"Deleted connection: {conn.name}", actor=str(user.id),
+        session,
+        conn.engagement_id,
+        AuditAction.INTEGRATION_CONNECTED,
+        f"Deleted connection: {conn.name}",
+        actor=str(user.id),
     )
     await session.delete(conn)
     await session.commit()
@@ -335,7 +344,9 @@ async def sync_connection(
         conn.status = "connected"
         conn.error_message = None
         await log_audit(
-            session, conn.engagement_id, AuditAction.INTEGRATION_SYNCED,
+            session,
+            conn.engagement_id,
+            AuditAction.INTEGRATION_SYNCED,
             f"Synced connection: {conn.name} ({sync_result.get('records_synced', 0)} records)",
             actor=str(user.id),
         )

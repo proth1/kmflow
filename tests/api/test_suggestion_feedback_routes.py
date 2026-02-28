@@ -67,9 +67,7 @@ class TestTraceabilityRoute:
         }
 
         client = _make_client(session)
-        resp = client.get(
-            f"/api/v1/scenarios/{SCENARIO_ID}/modifications/{MODIFICATION_ID}/traceability"
-        )
+        resp = client.get(f"/api/v1/scenarios/{SCENARIO_ID}/modifications/{MODIFICATION_ID}/traceability")
 
         assert resp.status_code == 200
         data = resp.json()
@@ -85,9 +83,7 @@ class TestTraceabilityRoute:
         mock_chain.return_value = None
 
         client = _make_client(session)
-        resp = client.get(
-            f"/api/v1/scenarios/{SCENARIO_ID}/modifications/{uuid.uuid4()}/traceability"
-        )
+        resp = client.get(f"/api/v1/scenarios/{SCENARIO_ID}/modifications/{uuid.uuid4()}/traceability")
 
         assert resp.status_code == 404
 
@@ -98,9 +94,7 @@ class TestTraceabilityRoute:
         session.execute.return_value = mock_result
 
         client = _make_client(session)
-        resp = client.get(
-            f"/api/v1/scenarios/{uuid.uuid4()}/modifications/{MODIFICATION_ID}/traceability"
-        )
+        resp = client.get(f"/api/v1/scenarios/{uuid.uuid4()}/modifications/{MODIFICATION_ID}/traceability")
 
         assert resp.status_code == 404
 
@@ -144,9 +138,7 @@ class TestExclusionPromptRoute:
         mock_patterns.return_value = ["Automate using RPA", "Remove quality checks"]
 
         client = _make_client(session)
-        resp = client.get(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/rejection-feedback/exclusion-prompt"
-        )
+        resp = client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/rejection-feedback/exclusion-prompt")
 
         assert resp.status_code == 200
         data = resp.json()
@@ -159,9 +151,7 @@ class TestExclusionPromptRoute:
         mock_patterns.return_value = []
 
         client = _make_client(session)
-        resp = client.get(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/rejection-feedback/exclusion-prompt"
-        )
+        resp = client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/rejection-feedback/exclusion-prompt")
 
         assert resp.status_code == 200
         data = resp.json()
@@ -228,7 +218,5 @@ class TestEngagementAccessControl:
         app.dependency_overrides[get_current_user] = lambda: non_admin
         client = TestClient(app)
 
-        resp = client.get(
-            f"/api/v1/scenarios/{SCENARIO_ID}/modifications/{MODIFICATION_ID}/traceability"
-        )
+        resp = client.get(f"/api/v1/scenarios/{SCENARIO_ID}/modifications/{MODIFICATION_ID}/traceability")
         assert resp.status_code == 403

@@ -25,7 +25,7 @@ fi
 cat <<EOF
 {
   "hookSpecificOutput": {
-    "additionalContext": "PR CREATED HOOK TRIGGERED. PR #${PR_NUMBER:-unknown} created at ${PR_URL:-unknown}. Related issue: #${ISSUE_NUMBER:-unknown}.\n\nMANDATORY: You MUST now launch the pr-orchestrator agent (opus, background) for comprehensive PR review. Use:\n\nTask(subagent_type='pr-orchestrator', model='opus', run_in_background=true, prompt='Comprehensive review of PR #${PR_NUMBER:-unknown} in proth1/kmflow. PR URL: ${PR_URL:-unknown}')\n\nAlso update the issue #${ISSUE_NUMBER:-unknown} status label from status:in-progress to status:in-review.\n\nREMINDER: PR requires human approval before merge. Do not merge without explicit user confirmation."
+    "additionalContext": "PR CREATED HOOK TRIGGERED. PR #${PR_NUMBER:-unknown} created at ${PR_URL:-unknown}. Related issue: #${ISSUE_NUMBER:-unknown}.\n\nMANDATORY: You MUST now:\n1. Launch the pr-orchestrator agent (opus, background) for comprehensive PR review:\n   Task(subagent_type='pr-orchestrator', model='opus', run_in_background=true, prompt='Comprehensive review of PR #${PR_NUMBER:-unknown} in proth1/kmflow. PR URL: ${PR_URL:-unknown}')\n2. Update issue #${ISSUE_NUMBER:-unknown} labels: add status:in-review, remove status:in-progress\n3. Ensure issue #${ISSUE_NUMBER:-unknown} has cdd:evidence-required label (add if missing)\n\nREMINDER: PR requires human approval before merge. Do not merge without explicit user confirmation."
   }
 }
 EOF

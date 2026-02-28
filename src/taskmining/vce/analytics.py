@@ -191,13 +191,7 @@ async def get_dwell_analysis(
             "count": n,
         }
 
-    per_app = [
-        {"application_name": app, **_stats(dwells)}
-        for app, dwells in sorted(app_dwells.items())
-    ]
-    per_class = [
-        {"screen_state_class": cls, **_stats(dwells)}
-        for cls, dwells in sorted(class_dwells.items())
-    ]
+    per_app = [{"application_name": app, **_stats(dwells)} for app, dwells in sorted(app_dwells.items())]
+    per_class = [{"screen_state_class": cls, **_stats(dwells)} for cls, dwells in sorted(class_dwells.items())]
 
     return {"per_app": per_app, "per_class": per_class}

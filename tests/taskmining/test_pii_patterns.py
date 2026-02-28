@@ -11,7 +11,6 @@ from src.core.models.taskmining import PIIType
 from src.taskmining.pii.filter import filter_event, redact_text, scan_text
 from src.taskmining.pii.patterns import ALL_PATTERNS, get_patterns_for_type
 
-
 # ---------------------------------------------------------------------------
 # SSN Tests
 # ---------------------------------------------------------------------------

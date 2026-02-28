@@ -84,14 +84,10 @@ class TestMultiScenarioComparison:
         removals_result.__iter__ = MagicMock(return_value=iter([]))
         removals_result.__len__ = MagicMock(return_value=0)
 
-        mock_session.execute = AsyncMock(
-            side_effect=[scenarios_result, results_result, removals_result]
-        )
+        mock_session.execute = AsyncMock(side_effect=[scenarios_result, results_result, removals_result])
 
         service = ScenarioComparisonService(mock_session)
-        comparison = await service.compare_scenarios(
-            [sid_a, sid_b, sid_c], ENGAGEMENT_ID
-        )
+        comparison = await service.compare_scenarios([sid_a, sid_b, sid_c], ENGAGEMENT_ID)
 
         assert comparison["count"] == 3
         assert len(comparison["scenarios"]) == 3
@@ -130,14 +126,10 @@ class TestMultiScenarioComparison:
         removals_result = MagicMock()
         removals_result.__iter__ = MagicMock(return_value=iter([]))
 
-        mock_session.execute = AsyncMock(
-            side_effect=[scenarios_result, results_result, removals_result]
-        )
+        mock_session.execute = AsyncMock(side_effect=[scenarios_result, results_result, removals_result])
 
         service = ScenarioComparisonService(mock_session)
-        comparison = await service.compare_scenarios(
-            [sid_a, sid_b], ENGAGEMENT_ID
-        )
+        comparison = await service.compare_scenarios([sid_a, sid_b], ENGAGEMENT_ID)
         assert comparison["count"] == 2
 
 
@@ -169,14 +161,10 @@ class TestBestWorstFlags:
         removals_result = MagicMock()
         removals_result.__iter__ = MagicMock(return_value=iter([]))
 
-        mock_session.execute = AsyncMock(
-            side_effect=[scenarios_result, results_result, removals_result]
-        )
+        mock_session.execute = AsyncMock(side_effect=[scenarios_result, results_result, removals_result])
 
         service = ScenarioComparisonService(mock_session)
-        comparison = await service.compare_scenarios(
-            [sid_a, sid_b], ENGAGEMENT_ID
-        )
+        comparison = await service.compare_scenarios([sid_a, sid_b], ENGAGEMENT_ID)
 
         entries = comparison["scenarios"]
         a_entry = next(e for e in entries if e["scenario_id"] == str(sid_a))
@@ -211,14 +199,10 @@ class TestBestWorstFlags:
         removals_result = MagicMock()
         removals_result.__iter__ = MagicMock(return_value=iter([]))
 
-        mock_session.execute = AsyncMock(
-            side_effect=[scenarios_result, results_result, removals_result]
-        )
+        mock_session.execute = AsyncMock(side_effect=[scenarios_result, results_result, removals_result])
 
         service = ScenarioComparisonService(mock_session)
-        comparison = await service.compare_scenarios(
-            [sid_a, sid_b], ENGAGEMENT_ID
-        )
+        comparison = await service.compare_scenarios([sid_a, sid_b], ENGAGEMENT_ID)
 
         for entry in comparison["scenarios"]:
             flags = entry["metrics"].get("flags", {})
@@ -259,14 +243,10 @@ class TestComplianceImpact:
         removals_result = MagicMock()
         removals_result.__iter__ = MagicMock(return_value=iter([removal_row_a]))
 
-        mock_session.execute = AsyncMock(
-            side_effect=[scenarios_result, results_result, removals_result]
-        )
+        mock_session.execute = AsyncMock(side_effect=[scenarios_result, results_result, removals_result])
 
         service = ScenarioComparisonService(mock_session)
-        comparison = await service.compare_scenarios(
-            [sid_a, sid_b], ENGAGEMENT_ID
-        )
+        comparison = await service.compare_scenarios([sid_a, sid_b], ENGAGEMENT_ID)
 
         entries = comparison["scenarios"]
         a_entry = next(e for e in entries if e["scenario_id"] == str(sid_a))
@@ -307,9 +287,7 @@ class TestIncompleteSimulation:
         results_scalars.all.return_value = [result_a]  # B missing
         results_result.scalars.return_value = results_scalars
 
-        mock_session.execute = AsyncMock(
-            side_effect=[scenarios_result, results_result]
-        )
+        mock_session.execute = AsyncMock(side_effect=[scenarios_result, results_result])
 
         service = ScenarioComparisonService(mock_session)
         with pytest.raises(ValueError, match="without completed simulation"):
@@ -358,9 +336,7 @@ class TestCompare5Scenarios:
         removals_result = MagicMock()
         removals_result.__iter__ = MagicMock(return_value=iter([]))
 
-        mock_session.execute = AsyncMock(
-            side_effect=[scenarios_result, results_result, removals_result]
-        )
+        mock_session.execute = AsyncMock(side_effect=[scenarios_result, results_result, removals_result])
 
         service = ScenarioComparisonService(mock_session)
         comparison = await service.compare_scenarios(sids, ENGAGEMENT_ID)

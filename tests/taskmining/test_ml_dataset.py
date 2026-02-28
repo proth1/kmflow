@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import json
 import tempfile
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 
 import pytest
 
@@ -26,7 +25,7 @@ def _make_session(
     keyboard: int = 50,
     mouse: int = 30,
 ) -> AggregatedSession:
-    start = datetime(2026, 1, 6, 14, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2026, 1, 6, 14, 0, 0, tzinfo=UTC)
     total = keyboard + mouse
     return AggregatedSession(
         app_bundle_id=app,

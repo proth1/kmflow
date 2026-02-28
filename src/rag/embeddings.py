@@ -21,13 +21,13 @@ EMBEDDING_DIMENSION = 768
 # Module-level singleton instances keyed by (model_name, dimension).
 # Avoids reloading the SentenceTransformer model for each call site that
 # constructs EmbeddingService() independently.
-_instances: dict[tuple[str, int], "EmbeddingService"] = {}
+_instances: dict[tuple[str, int], EmbeddingService] = {}
 
 
 def get_embedding_service(
     model_name: str = "all-mpnet-base-v2",
     dimension: int = EMBEDDING_DIMENSION,
-) -> "EmbeddingService":
+) -> EmbeddingService:
     """Return a cached EmbeddingService singleton for the given config.
 
     Call sites that previously did ``EmbeddingService()`` should use this

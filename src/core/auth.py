@@ -306,12 +306,7 @@ async def get_current_user(
     """
     token: str | None = None
 
-    if credentials is not None:
-        # 1. Bearer header takes precedence (API / MCP clients)
-        token = credentials.credentials
-    else:
-        # 2. Fall back to HttpOnly cookie (browser sessions)
-        token = request.cookies.get(ACCESS_COOKIE_NAME)
+    token = credentials.credentials if credentials is not None else request.cookies.get(ACCESS_COOKIE_NAME)
 
     if token is None:
         raise HTTPException(

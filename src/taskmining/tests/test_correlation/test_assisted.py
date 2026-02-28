@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -19,12 +19,11 @@ from src.taskmining.correlation.assisted import (
     _time_proximity_score,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-BASE_TS = datetime(2026, 1, 15, 10, 0, tzinfo=timezone.utc)
+BASE_TS = datetime(2026, 1, 15, 10, 0, tzinfo=UTC)
 
 
 def _make_event(

@@ -690,17 +690,13 @@ async def get_engagement_lead_dashboard(
     shelf_result = await session.execute(
         select(
             func.count().label("total"),
-            func.count()
-            .filter(ShelfDataRequestItem.status == ShelfRequestItemStatus.RECEIVED)
-            .label("received"),
+            func.count().filter(ShelfDataRequestItem.status == ShelfRequestItemStatus.RECEIVED).label("received"),
         )
         .join(ShelfDataRequest)
         .where(ShelfDataRequest.engagement_id == eng_uuid)
     )
     shelf_row = shelf_result.one()
-    evidence_coverage_pct = (
-        round(shelf_row.received / shelf_row.total * 100, 1) if shelf_row.total > 0 else 0.0
-    )
+    evidence_coverage_pct = round(shelf_row.received / shelf_row.total * 100, 1) if shelf_row.total > 0 else 0.0
 
     # Overall confidence from latest completed model
     latest_model_result = await session.execute(
@@ -717,13 +713,16 @@ async def get_engagement_lead_dashboard(
 
     # Brightness distribution (pass model_id to avoid redundant lookup)
     brightness = await _get_brightness_distribution(
-        eng_uuid, session, model_id=latest_model.id if latest_model else None,
+        eng_uuid,
+        session,
+        model_id=latest_model.id if latest_model else None,
     )
 
     # TOM alignment per dimension (1.0 - avg_severity) — project only needed columns
     gaps_result = await session.execute(
-        select(GapAnalysisResult.dimension, GapAnalysisResult.severity)
-        .where(GapAnalysisResult.engagement_id == eng_uuid)
+        select(GapAnalysisResult.dimension, GapAnalysisResult.severity).where(
+            GapAnalysisResult.engagement_id == eng_uuid
+        )
     )
     gap_rows = gaps_result.all()
 
@@ -769,9 +768,7 @@ async def get_engagement_lead_dashboard(
         ).where(SeedTerm.engagement_id == eng_uuid)
     )
     seed_row = seed_result.one()
-    seed_list_coverage_pct = (
-        round(seed_row.active / seed_row.total * 100, 1) if seed_row.total > 0 else 0.0
-    )
+    seed_list_coverage_pct = round(seed_row.active / seed_row.total * 100, 1) if seed_row.total > 0 else 0.0
 
     # Dark room shrink rate (compare last two snapshots)
     snapshots_result = await session.execute(
@@ -974,11 +971,7 @@ async def get_sme_dashboard(
         )
     )
     confirm_count = confirm_result.scalar() or 0
-    confidence_impact = (
-        round(confirm_count / total_annotation_count, 2)
-        if total_annotation_count > 0
-        else 0.0
-    )
+    confidence_impact = round(confirm_count / total_annotation_count, 2) if total_annotation_count > 0 else 0.0
 
     # Recent decision history (last 20)
     history_result = await session.execute(
@@ -1044,7 +1037,9 @@ async def get_client_dashboard(
 
     # Brightness distribution (pass model_id to avoid redundant lookup)
     brightness = await _get_brightness_distribution(
-        eng_uuid, session, model_id=latest_model.id if latest_model else None,
+        eng_uuid,
+        session,
+        model_id=latest_model.id if latest_model else None,
     )
 
     # Gap findings (without internal severity scores — client-friendly view)

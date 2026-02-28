@@ -16,7 +16,6 @@ import pytest
 
 from src.core.auth import blacklist_token, is_token_blacklisted
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -147,7 +146,7 @@ class TestBlacklistToken:
             stored[key] = value
 
         async def fake_get(key: str) -> bytes | None:
-            return stored.get(key, None)  # type: ignore[return-value]
+            return stored.get(key)  # type: ignore[return-value]
 
         redis = AsyncMock()
         redis.setex = fake_setex

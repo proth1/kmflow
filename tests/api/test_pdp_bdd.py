@@ -59,6 +59,7 @@ def _setup_policies(session: AsyncMock, policies: list[dict]) -> None:
 def _invalidate_cache() -> None:
     """Force cache refresh for test isolation."""
     import src.api.services.pdp as pdp_mod
+
     pdp_mod._cache_loaded_at = 0.0
     pdp_mod._policy_cache.clear()
 
@@ -675,7 +676,6 @@ async def test_abac_data_residency_check_permit_different_region() -> None:
 @pytest.mark.asyncio
 async def test_policy_bundle_versioning_publish() -> None:
     """Publishing a bundle creates an active bundle record."""
-    from src.core.models.pdp import PDPPolicyBundle
 
     session = _mock_session()
 

@@ -22,21 +22,23 @@ class ChangeType(StrEnum):
 
 # CSS color hints for BPMN diff visualization
 DIFF_COLORS: dict[str, str] = {
-    ChangeType.ADDED: "#28a745",      # green
-    ChangeType.REMOVED: "#dc3545",    # red
-    ChangeType.MODIFIED: "#ffc107",   # yellow
+    ChangeType.ADDED: "#28a745",  # green
+    ChangeType.REMOVED: "#dc3545",  # red
+    ChangeType.MODIFIED: "#ffc107",  # yellow
     ChangeType.UNCHANGED: "none",
 }
 
 # Fields compared for modification detection
-COMPARED_FIELDS = frozenset({
-    "name",
-    "confidence_score",
-    "evidence_grade",
-    "brightness_classification",
-    "element_type",
-    "evidence_count",
-})
+COMPARED_FIELDS = frozenset(
+    {
+        "name",
+        "confidence_score",
+        "evidence_grade",
+        "brightness_classification",
+        "element_type",
+        "evidence_count",
+    }
+)
 
 
 @dataclass
@@ -115,24 +117,28 @@ def compute_diff(
     # Added elements: in v2 but not v1
     for name in sorted(v2_names - v1_names):
         el = v2_by_name[name]
-        diff.added.append(ElementChange(
-            element_id=el.element_id,
-            element_name=name,
-            change_type=ChangeType.ADDED,
-            color=DIFF_COLORS[ChangeType.ADDED],
-            css_class="diff-added",
-        ))
+        diff.added.append(
+            ElementChange(
+                element_id=el.element_id,
+                element_name=name,
+                change_type=ChangeType.ADDED,
+                color=DIFF_COLORS[ChangeType.ADDED],
+                css_class="diff-added",
+            )
+        )
 
     # Removed elements: in v1 but not v2
     for name in sorted(v1_names - v2_names):
         el = v1_by_name[name]
-        diff.removed.append(ElementChange(
-            element_id=el.element_id,
-            element_name=name,
-            change_type=ChangeType.REMOVED,
-            color=DIFF_COLORS[ChangeType.REMOVED],
-            css_class="diff-removed",
-        ))
+        diff.removed.append(
+            ElementChange(
+                element_id=el.element_id,
+                element_name=name,
+                change_type=ChangeType.REMOVED,
+                color=DIFF_COLORS[ChangeType.REMOVED],
+                css_class="diff-removed",
+            )
+        )
 
     # Modified or unchanged: in both
     for name in sorted(v1_names & v2_names):
@@ -152,16 +158,18 @@ def compute_diff(
                 current_values[field_name] = v2_val
 
         if changed_fields:
-            diff.modified.append(ElementChange(
-                element_id=v2_el.element_id,
-                element_name=name,
-                change_type=ChangeType.MODIFIED,
-                changed_fields=sorted(changed_fields),
-                color=DIFF_COLORS[ChangeType.MODIFIED],
-                css_class="diff-modified",
-                prior_values=prior_values,
-                current_values=current_values,
-            ))
+            diff.modified.append(
+                ElementChange(
+                    element_id=v2_el.element_id,
+                    element_name=name,
+                    change_type=ChangeType.MODIFIED,
+                    changed_fields=sorted(changed_fields),
+                    color=DIFF_COLORS[ChangeType.MODIFIED],
+                    css_class="diff-modified",
+                    prior_values=prior_values,
+                    current_values=current_values,
+                )
+            )
         else:
             diff.unchanged_count += 1
 

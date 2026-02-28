@@ -18,12 +18,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.deps import get_session
 from src.api.schemas.correlation import (
     CaseLinkListResponse,
-    CaseLinkResponse,
     CorrelationLinkRequest,
     CorrelationLinkResponse,
     DiagnosticsResponse,
     UnlinkedEventListResponse,
-    UnlinkedEventResponse,
 )
 from src.core.models import Engagement, User
 from src.core.models.canonical_event import CanonicalActivityEvent
@@ -63,9 +61,7 @@ async def run_correlation(
 
     # Fetch all events for the engagement
     events_result = await session.execute(
-        select(CanonicalActivityEvent).where(
-            CanonicalActivityEvent.engagement_id == engagement_id
-        )
+        select(CanonicalActivityEvent).where(CanonicalActivityEvent.engagement_id == engagement_id)
     )
     all_events = list(events_result.scalars().all())
 
@@ -152,14 +148,10 @@ async def list_links(
     if method:
         filters.append(CaseLinkEdge.method == method)
 
-    count_result = await session.execute(
-        select(func.count()).select_from(CaseLinkEdge).where(*filters)
-    )
+    count_result = await session.execute(select(func.count()).select_from(CaseLinkEdge).where(*filters))
     total = count_result.scalar() or 0
 
-    result = await session.execute(
-        select(CaseLinkEdge).where(*filters).limit(limit).offset(offset)
-    )
+    result = await session.execute(select(CaseLinkEdge).where(*filters).limit(limit).offset(offset))
     links = list(result.scalars().all())
 
     return {
@@ -219,12 +211,9 @@ async def list_unlinked_events(
 ) -> dict[str, Any]:
     """List canonical events that have no real case link (excluding role aggregates)."""
     # Subquery: event IDs with a real (non-role-aggregate) link
-    linked_subq = (
-        select(CaseLinkEdge.event_id)
-        .where(
-            CaseLinkEdge.engagement_id == engagement_id,
-            ~CaseLinkEdge.case_id.startswith(ROLE_AGGREGATE_PREFIX),
-        )
+    linked_subq = select(CaseLinkEdge.event_id).where(
+        CaseLinkEdge.engagement_id == engagement_id,
+        ~CaseLinkEdge.case_id.startswith(ROLE_AGGREGATE_PREFIX),
     )
 
     count_result = await session.execute(

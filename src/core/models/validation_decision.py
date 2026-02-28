@@ -9,12 +9,16 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Index, String, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.database import Base
+
+if TYPE_CHECKING:
+    from src.core.models.validation import ReviewPack
 
 
 class ReviewerAction(enum.StrEnum):
@@ -40,9 +44,7 @@ class ValidationDecision(Base):
         Index("ix_validation_decisions_reviewer_id", "reviewer_id"),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     engagement_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("engagements.id", ondelete="CASCADE"),
@@ -53,43 +55,22 @@ class ValidationDecision(Base):
         ForeignKey("review_packs.id", ondelete="CASCADE"),
         nullable=False,
     )
-    element_id: Mapped[str] = mapped_column(
-        String(255), nullable=False
-    )
-    action: Mapped[str] = mapped_column(
-        String(20), nullable=False
-    )
+    element_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    action: Mapped[str] = mapped_column(String(20), nullable=False)
     reviewer_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
-    payload: Mapped[dict | None] = mapped_column(
-        JSON, nullable=True
-    )
-    graph_write_back_result: Mapped[dict | None] = mapped_column(
-        JSON, nullable=True
-    )
-    reasoning: Mapped[str | None] = mapped_column(
-        String(2000), nullable=True
-    )
-    evidence_refs: Mapped[list | None] = mapped_column(
-        JSON, nullable=True
-    )
-    confidence_before: Mapped[float | None] = mapped_column(
-        nullable=True
-    )
-    confidence_after: Mapped[float | None] = mapped_column(
-        nullable=True
-    )
-    decision_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    graph_write_back_result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    reasoning: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    evidence_refs: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    confidence_before: Mapped[float | None] = mapped_column(nullable=True)
+    confidence_after: Mapped[float | None] = mapped_column(nullable=True)
+    decision_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    review_pack: Mapped["ReviewPack"] = relationship("ReviewPack")  # noqa: F821, UP037
+    review_pack: Mapped[ReviewPack] = relationship("ReviewPack")
 
     def __repr__(self) -> str:
-        return (
-            f"<ValidationDecision(id={self.id}, action={self.action}, "
-            f"element={self.element_id})>"
-        )
+        return f"<ValidationDecision(id={self.id}, action={self.action}, element={self.element_id})>"

@@ -23,11 +23,19 @@ class AuditLogImmutableError(Exception):
 
 
 # Fields that cannot be modified after creation
-_IMMUTABLE_FIELDS = frozenset({
-    "prompt_text", "response_text", "evidence_ids",
-    "prompt_tokens", "completion_tokens", "model_name",
-    "scenario_id", "user_id", "created_at",
-})
+_IMMUTABLE_FIELDS = frozenset(
+    {
+        "prompt_text",
+        "response_text",
+        "evidence_ids",
+        "prompt_tokens",
+        "completion_tokens",
+        "model_name",
+        "scenario_id",
+        "user_id",
+        "created_at",
+    }
+)
 
 
 @event.listens_for(Session, "before_flush")
@@ -40,9 +48,7 @@ def _enforce_immutability(session: Session, flush_context: Any, instances: Any) 
         for field in _IMMUTABLE_FIELDS:
             hist = insp.attrs[field].history
             if hist.has_changes():
-                raise AuditLogImmutableError(
-                    f"Cannot modify immutable field '{field}' on LLMAuditLog"
-                )
+                raise AuditLogImmutableError(f"Cannot modify immutable field '{field}' on LLMAuditLog")
 
 
 class LLMAuditService:
@@ -75,13 +81,9 @@ class LLMAuditService:
             Paginated list with total count.
         """
         # Get scenario IDs for this engagement
-        scenario_ids_query = select(SimulationScenario.id).where(
-            SimulationScenario.engagement_id == engagement_id
-        )
+        scenario_ids_query = select(SimulationScenario.id).where(SimulationScenario.engagement_id == engagement_id)
 
-        base = select(LLMAuditLog).where(
-            LLMAuditLog.scenario_id.in_(scenario_ids_query)
-        )
+        base = select(LLMAuditLog).where(LLMAuditLog.scenario_id.in_(scenario_ids_query))
 
         if from_date:
             base = base.where(LLMAuditLog.created_at >= from_date)
@@ -122,17 +124,13 @@ class LLMAuditService:
         Raises:
             ValueError: If audit log not found.
         """
-        result = await self._session.execute(
-            select(LLMAuditLog).where(LLMAuditLog.id == audit_log_id)
-        )
+        result = await self._session.execute(select(LLMAuditLog).where(LLMAuditLog.id == audit_log_id))
         log = result.scalar_one_or_none()
         if log is None:
             raise ValueError(f"LLM audit log {audit_log_id} not found")
 
         if log.hallucination_flagged:
-            raise ValueError(
-                f"LLM audit log {audit_log_id} is already flagged as a hallucination"
-            )
+            raise ValueError(f"LLM audit log {audit_log_id} is already flagged as a hallucination")
 
         log.hallucination_flagged = True
         log.hallucination_reason = reason
@@ -161,14 +159,10 @@ class LLMAuditService:
             Stats dict with counts and rates.
         """
         # Get scenario IDs for this engagement
-        scenario_ids_query = select(SimulationScenario.id).where(
-            SimulationScenario.engagement_id == engagement_id
-        )
+        scenario_ids_query = select(SimulationScenario.id).where(SimulationScenario.engagement_id == engagement_id)
 
         # Get audit log IDs in range
-        audit_base = select(LLMAuditLog.id).where(
-            LLMAuditLog.scenario_id.in_(scenario_ids_query)
-        )
+        audit_base = select(LLMAuditLog.id).where(LLMAuditLog.scenario_id.in_(scenario_ids_query))
         if from_date:
             audit_base = audit_base.where(LLMAuditLog.created_at >= from_date)
         if to_date:
@@ -200,12 +194,9 @@ class LLMAuditService:
         rejected = disposition_counts.get(SuggestionDisposition.REJECTED.value, 0)
 
         # Hallucination count (with same date filter)
-        halluc_base = (
-            select(LLMAuditLog.id)
-            .where(
-                LLMAuditLog.scenario_id.in_(scenario_ids_query),
-                LLMAuditLog.hallucination_flagged.is_(True),
-            )
+        halluc_base = select(LLMAuditLog.id).where(
+            LLMAuditLog.scenario_id.in_(scenario_ids_query),
+            LLMAuditLog.hallucination_flagged.is_(True),
         )
         if from_date:
             halluc_base = halluc_base.where(LLMAuditLog.created_at >= from_date)

@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -30,7 +30,7 @@ def _make_action(
     action.application_name = app_name
     action.category = category
     action.description = description
-    action.started_at = started_at or datetime(2026, 1, 1, 10, 0, 0, tzinfo=timezone.utc)
+    action.started_at = started_at or datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC)
     action.duration_seconds = duration_seconds
     action.event_count = event_count
     return action
@@ -119,15 +119,17 @@ class TestIngestActionsToGraph:
         summary = await ingest_actions_to_graph(mock_db_session, mock_graph_service, "eng-1")
 
         assert summary["performed_in"] == 1
-        rel_calls = [c for c in mock_graph_service.batch_create_relationships.call_args_list if c[0][0] == "PERFORMED_IN"]
+        rel_calls = [
+            c for c in mock_graph_service.batch_create_relationships.call_args_list if c[0][0] == "PERFORMED_IN"
+        ]
         assert len(rel_calls) == 1
 
     @pytest.mark.asyncio
     async def test_creates_preceded_by_chains(self, mock_db_session, mock_graph_service):
         sid = uuid.uuid4()
-        a1 = _make_action(session_id=sid, started_at=datetime(2026, 1, 1, 10, 0, 0, tzinfo=timezone.utc))
-        a2 = _make_action(session_id=sid, started_at=datetime(2026, 1, 1, 10, 5, 0, tzinfo=timezone.utc))
-        a3 = _make_action(session_id=sid, started_at=datetime(2026, 1, 1, 10, 10, 0, tzinfo=timezone.utc))
+        a1 = _make_action(session_id=sid, started_at=datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC))
+        a2 = _make_action(session_id=sid, started_at=datetime(2026, 1, 1, 10, 5, 0, tzinfo=UTC))
+        a3 = _make_action(session_id=sid, started_at=datetime(2026, 1, 1, 10, 10, 0, tzinfo=UTC))
         result_mock = MagicMock()
         result_mock.scalars.return_value.all.return_value = [a1, a2, a3]
         mock_db_session.execute = AsyncMock(return_value=result_mock)
@@ -136,17 +138,21 @@ class TestIngestActionsToGraph:
         summary = await ingest_actions_to_graph(mock_db_session, mock_graph_service, "eng-1")
 
         assert summary["preceded_by"] == 2
-        prec_calls = [c for c in mock_graph_service.batch_create_relationships.call_args_list if c[0][0] == "PRECEDED_BY"]
+        prec_calls = [
+            c for c in mock_graph_service.batch_create_relationships.call_args_list if c[0][0] == "PRECEDED_BY"
+        ]
         assert len(prec_calls) == 1
         assert len(prec_calls[0][0][1]) == 2  # 2 PRECEDED_BY links for 3 actions
 
     @pytest.mark.asyncio
     async def test_idempotent_skips_existing_apps(self, mock_db_session, mock_graph_service):
         existing_app = _make_graph_node(node_id="existing-app", props={"name": "Excel"})
-        mock_graph_service.find_nodes = AsyncMock(side_effect=[
-            [existing_app],  # existing Application nodes
-            [],              # existing UserAction nodes
-        ])
+        mock_graph_service.find_nodes = AsyncMock(
+            side_effect=[
+                [existing_app],  # existing Application nodes
+                [],  # existing UserAction nodes
+            ]
+        )
 
         a1 = _make_action(app_name="Excel")
         a2 = _make_action(app_name="Chrome")
@@ -170,10 +176,12 @@ class TestIngestActionsToGraph:
             label="UserAction",
             props={"source_action_id": str(a1.id)},
         )
-        mock_graph_service.find_nodes = AsyncMock(side_effect=[
-            [],            # existing Application nodes
-            [existing_ua], # existing UserAction nodes
-        ])
+        mock_graph_service.find_nodes = AsyncMock(
+            side_effect=[
+                [],  # existing Application nodes
+                [existing_ua],  # existing UserAction nodes
+            ]
+        )
 
         result_mock = MagicMock()
         result_mock.scalars.return_value.all.return_value = [a1]
@@ -197,34 +205,37 @@ class TestIngestActionsToGraph:
 
 
 class TestDetectAppCategory:
-    @pytest.mark.parametrize("app_name,expected", [
-        ("Microsoft Excel", "spreadsheet"),
-        ("Google Sheets", "spreadsheet"),
-        ("Google Chrome", "browser"),
-        ("Firefox", "browser"),
-        ("Safari", "browser"),
-        ("Microsoft Edge", "browser"),
-        ("Outlook", "email"),
-        ("Gmail", "email"),
-        ("Thunderbird", "email"),
-        ("Slack", "communication"),
-        ("Microsoft Teams", "communication"),
-        ("Zoom", "communication"),
-        ("Microsoft Word", "document"),
-        ("Google Docs", "document"),
-        ("Notepad", "document"),
-        ("Salesforce", "crm"),
-        ("HubSpot", "crm"),
-        ("Jira", "project_management"),
-        ("Trello", "project_management"),
-        ("Asana", "project_management"),
-        ("Terminal", "development"),
-        ("iTerm", "development"),
-        ("VS Code", "development"),
-        ("IntelliJ IDEA", "development"),
-        ("PyCharm", "development"),
-        ("Calculator", "other"),
-        ("Custom App", "other"),
-    ])
+    @pytest.mark.parametrize(
+        "app_name,expected",
+        [
+            ("Microsoft Excel", "spreadsheet"),
+            ("Google Sheets", "spreadsheet"),
+            ("Google Chrome", "browser"),
+            ("Firefox", "browser"),
+            ("Safari", "browser"),
+            ("Microsoft Edge", "browser"),
+            ("Outlook", "email"),
+            ("Gmail", "email"),
+            ("Thunderbird", "email"),
+            ("Slack", "communication"),
+            ("Microsoft Teams", "communication"),
+            ("Zoom", "communication"),
+            ("Microsoft Word", "document"),
+            ("Google Docs", "document"),
+            ("Notepad", "document"),
+            ("Salesforce", "crm"),
+            ("HubSpot", "crm"),
+            ("Jira", "project_management"),
+            ("Trello", "project_management"),
+            ("Asana", "project_management"),
+            ("Terminal", "development"),
+            ("iTerm", "development"),
+            ("VS Code", "development"),
+            ("IntelliJ IDEA", "development"),
+            ("PyCharm", "development"),
+            ("Calculator", "other"),
+            ("Custom App", "other"),
+        ],
+    )
     def test_categorizes_app(self, app_name: str, expected: str):
         assert _detect_app_category(app_name) == expected

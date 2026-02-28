@@ -25,13 +25,9 @@ class SurveySession(Base):
     """A structured survey session for process knowledge elicitation."""
 
     __tablename__ = "survey_sessions"
-    __table_args__ = (
-        Index("ix_survey_sessions_engagement_id", "engagement_id"),
-    )
+    __table_args__ = (Index("ix_survey_sessions_engagement_id", "engagement_id"),)
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     engagement_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("engagements.id", ondelete="CASCADE"),
@@ -46,12 +42,8 @@ class SurveySession(Base):
     )
     claims_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     summary: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-    completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     claims: Mapped[list] = relationship(
@@ -61,7 +53,4 @@ class SurveySession(Base):
     )
 
     def __repr__(self) -> str:
-        return (
-            f"<SurveySession(id={self.id}, status={self.status}, "
-            f"claims={self.claims_count})>"
-        )
+        return f"<SurveySession(id={self.id}, status={self.status}, claims={self.claims_count})>"

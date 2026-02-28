@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -15,7 +15,7 @@ from src.taskmining.vce.processor import process_vce_batch, process_vce_event
 def _minimal_event(**overrides) -> dict:
     base = {
         "engagement_id": str(uuid.uuid4()),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "screen_state_class": "queue",
         "confidence": 0.85,
         "trigger_reason": "high_dwell",

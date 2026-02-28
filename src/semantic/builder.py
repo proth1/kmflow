@@ -149,22 +149,17 @@ class KnowledgeGraphBuilder:
         """
         sem = asyncio.Semaphore(10)
 
-        async def _extract_with_sem(
-            fragment_id: str, content: str
-        ):
+        async def _extract_with_sem(fragment_id: str, content: str):
             async with sem:
                 return await extract_entities(content, fragment_id=fragment_id)
 
-        tasks = [
-            _extract_with_sem(fragment_id, content)
-            for fragment_id, content, _ in fragments
-        ]
+        tasks = [_extract_with_sem(fragment_id, content) for fragment_id, content, _ in fragments]
         raw_results = await asyncio.gather(*tasks, return_exceptions=True)
 
         all_entities: list[ExtractedEntity] = []
         entity_evidence_map: dict[str, list[str]] = {}
 
-        for (fragment_id, _content, evidence_id), result in zip(fragments, raw_results):
+        for (fragment_id, _content, evidence_id), result in zip(fragments, raw_results, strict=False):
             if isinstance(result, Exception):
                 logger.warning("Entity extraction failed for fragment %s: %s", fragment_id, result)
                 continue
@@ -285,9 +280,7 @@ class KnowledgeGraphBuilder:
         # Batch-upsert Evidence nodes (MERGE avoids duplicates without pre-check)
         if evidence_props:
             try:
-                await self._graph.batch_create_nodes(
-                    "Evidence", list(evidence_props.values())
-                )
+                await self._graph.batch_create_nodes("Evidence", list(evidence_props.values()))
             except Neo4jError as e:
                 logger.warning("Failed to batch-create Evidence nodes: %s", e)
 

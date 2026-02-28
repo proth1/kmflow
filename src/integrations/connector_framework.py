@@ -395,11 +395,7 @@ class TransformPipeline:
         events = []
 
         for i, record in enumerate(transformed):
-            missing = [
-                f
-                for f in ("activity_name", "timestamp", "actor", "source_system")
-                if not record.get(f)
-            ]
+            missing = [f for f in ("activity_name", "timestamp", "actor", "source_system") if not record.get(f)]
             if missing:
                 msg = f"Record {i}: missing required fields: {', '.join(missing)}"
                 raise ValueError(msg)

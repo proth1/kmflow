@@ -89,9 +89,7 @@ async def get_governance_overlay(
     ungoverned) with full governance chain details and gap summary.
     """
     # Verify process model exists and get engagement_id
-    pm_result = await session.execute(
-        select(ProcessModel).where(ProcessModel.id == process_model_id)
-    )
+    pm_result = await session.execute(select(ProcessModel).where(ProcessModel.id == process_model_id))
     pm = pm_result.scalar_one_or_none()
     if not pm:
         raise HTTPException(
@@ -116,8 +114,6 @@ async def get_governance_overlay(
     graph_service = KnowledgeGraphService(request.app.state.neo4j_driver)
     overlay_service = GovernanceOverlayService(graph_service)
 
-    result = await overlay_service.compute_overlay(
-        str(process_model_id), str(pm.engagement_id)
-    )
+    result = await overlay_service.compute_overlay(str(process_model_id), str(pm.engagement_id))
 
     return result

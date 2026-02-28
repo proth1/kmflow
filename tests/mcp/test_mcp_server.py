@@ -10,9 +10,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from tests.conftest import MockSessionFactory
-
-
 # ---------------------------------------------------------------------------
 # Shared fixture: configure mock DB to pass MCP auth for all tests here
 # ---------------------------------------------------------------------------
@@ -295,7 +292,7 @@ class TestMCPToolCallStream:
         content = response.text
         # Parse the first SSE event
         first_line = next(line for line in content.splitlines() if line.startswith("data:"))
-        event = json.loads(first_line[len("data: "):].strip())
+        event = json.loads(first_line[len("data: ") :].strip())
         assert event["type"] == "start"
 
     async def test_stream_contains_done_event(self, client) -> None:
@@ -306,7 +303,7 @@ class TestMCPToolCallStream:
         )
         content = response.text
         data_lines = [line for line in content.splitlines() if line.startswith("data:")]
-        last_event = json.loads(data_lines[-1][len("data: "):].strip())
+        last_event = json.loads(data_lines[-1][len("data: ") :].strip())
         assert last_event["type"] == "done"
 
     async def test_stream_no_auth_rejected(self, client) -> None:

@@ -128,10 +128,7 @@ class ClaimWriteBackService:
 
         # 3. Link claim to target activity
         if target_activity_id is not None:
-            if claim.certainty_tier == CertaintyTier.CONTRADICTED:
-                edge_type = "CONTRADICTS"
-            else:
-                edge_type = "SUPPORTS"
+            edge_type = "CONTRADICTS" if claim.certainty_tier == CertaintyTier.CONTRADICTED else "SUPPORTS"
 
             # Validate edge_type to prevent Cypher injection
             if edge_type not in ("SUPPORTS", "CONTRADICTS"):
@@ -161,9 +158,7 @@ class ClaimWriteBackService:
 
             # 4. Auto-create ConflictObject for contradicted claims
             if claim.certainty_tier == CertaintyTier.CONTRADICTED:
-                conflict = await self._create_conflict_object(
-                    claim, target_activity_id
-                )
+                conflict = await self._create_conflict_object(claim, target_activity_id)
                 result["conflict_id"] = str(conflict.id)
 
         logger.info(
@@ -215,10 +210,7 @@ class ClaimWriteBackService:
         total_weight = row.get("total_weight", 0.0)
 
         # Normalize to 0-1 range: sigmoid-style bounded by claim count
-        if claim_count > 0:
-            claim_confidence = min(1.0, max(0.0, total_weight / claim_count))
-        else:
-            claim_confidence = 0.0
+        claim_confidence = min(1.0, max(0.0, total_weight / claim_count)) if claim_count > 0 else 0.0
 
         # Update activity node with claim-derived confidence component
         await self._graph.run_write_query(
@@ -274,17 +266,13 @@ class ClaimWriteBackService:
         engagement_id = claims[0].engagement_id if claims else None
         for activity_id in affected_activities:
             if engagement_id:
-                conf = await self.recompute_activity_confidence(
-                    activity_id, engagement_id
-                )
+                conf = await self.recompute_activity_confidence(activity_id, engagement_id)
                 recomputed.append(conf)
 
         return {
             "claims_ingested": len(results),
             "edges_created": sum(1 for r in results if r["edge_type"]),
-            "conflicts_created": sum(
-                1 for r in results if r["conflict_id"]
-            ),
+            "conflicts_created": sum(1 for r in results if r["conflict_id"]),
             "activities_recomputed": len(recomputed),
             "recomputation_results": recomputed,
         }

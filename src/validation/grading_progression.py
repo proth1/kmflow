@@ -58,7 +58,8 @@ def compute_improvement_rate(
         if total == 0:
             return 0.0
         promoted = sum(
-            1 for _, prior, current in element_grade_pairs
+            1
+            for _, prior, current in element_grade_pairs
             if GRADE_ORDINAL.get(current, 0) > GRADE_ORDINAL.get(prior, 0)
         )
         return (promoted / total) * 100
@@ -69,12 +70,8 @@ def compute_improvement_rate(
         return 0.0
 
     # Compute weighted grade score for each version
-    prior_score = sum(
-        GRADE_ORDINAL.get(g, 0) * count for g, count in prior_grades.items()
-    )
-    current_score = sum(
-        GRADE_ORDINAL.get(g, 0) * count for g, count in current_grades.items()
-    )
+    prior_score = sum(GRADE_ORDINAL.get(g, 0) * count for g, count in prior_grades.items())
+    current_score = sum(GRADE_ORDINAL.get(g, 0) * count for g, count in current_grades.items())
 
     # Improvement = net upward shifts / total elements
     max_possible = prior_total * 4  # All elements at A

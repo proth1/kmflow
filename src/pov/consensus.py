@@ -383,9 +383,7 @@ def build_consensus(
 
             # Apply recency bias: weight * (base + factor * recency)
             ev_item = evidence_map.get(ev_id)
-            recency = compute_recency_factor(
-                getattr(ev_item, "source_date", None) if ev_item else None
-            )
+            recency = compute_recency_factor(getattr(ev_item, "source_date", None) if ev_item else None)
 
             adjusted_weight = weight * (RECENCY_BLEND_BASE + RECENCY_BLEND_FACTOR * recency)
             weighted_sum += adjusted_weight

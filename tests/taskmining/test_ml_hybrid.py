@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -11,12 +11,12 @@ from src.core.models.taskmining import ActionCategory
 from src.taskmining.aggregation.classifier import ClassificationResult
 from src.taskmining.aggregation.session import AggregatedSession
 from src.taskmining.ml.classifier import MLPrediction
-from src.taskmining.ml.hybrid import HybridClassifier, HybridResult
+from src.taskmining.ml.hybrid import HybridClassifier
 from src.taskmining.ml.sequence_mining import mine_sequences
 
 
 def _make_session(app: str = "Excel", keyboard: int = 50) -> AggregatedSession:
-    start = datetime(2026, 1, 6, 14, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2026, 1, 6, 14, 0, 0, tzinfo=UTC)
     return AggregatedSession(
         app_bundle_id=app,
         window_title_sample="Test",
@@ -43,9 +43,7 @@ class TestHybridClassifier:
 
         rule_clf = MagicMock()
 
-        hybrid = HybridClassifier(
-            ml_classifier=ml_clf, rule_classifier=rule_clf, ml_threshold=0.75
-        )
+        hybrid = HybridClassifier(ml_classifier=ml_clf, rule_classifier=rule_clf, ml_threshold=0.75)
         result = hybrid.classify(_make_session())
 
         assert result.source == "ml"
@@ -70,9 +68,7 @@ class TestHybridClassifier:
             description="Data entry in Excel",
         )
 
-        hybrid = HybridClassifier(
-            ml_classifier=ml_clf, rule_classifier=rule_clf, ml_threshold=0.75
-        )
+        hybrid = HybridClassifier(ml_classifier=ml_clf, rule_classifier=rule_clf, ml_threshold=0.75)
         result = hybrid.classify(_make_session())
 
         assert result.source == "rule_based"
@@ -130,9 +126,7 @@ class TestHybridClassifier:
             description="Nav",
         )
 
-        hybrid = HybridClassifier(
-            ml_classifier=ml_clf, rule_classifier=rule_clf, ml_threshold=0.75
-        )
+        hybrid = HybridClassifier(ml_classifier=ml_clf, rule_classifier=rule_clf, ml_threshold=0.75)
         result = hybrid.classify(_make_session())
 
         assert result.source == "rule_based"

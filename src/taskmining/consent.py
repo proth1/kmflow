@@ -12,7 +12,7 @@ import hashlib
 import hmac
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, String, func, select
 from sqlalchemy.dialects.postgresql import UUID
@@ -151,13 +151,13 @@ class ConsentManager:
             logger.warning("No active consent found for agent %s", agent_id)
             return None
 
-        record.revoked_at = datetime.now(timezone.utc)
+        record.revoked_at = datetime.now(UTC)
 
         # Transition agent status
         agent = await session.get(TaskMiningAgent, agent_id)
         if agent:
             agent.status = AgentStatus.REVOKED
-            agent.revoked_at = datetime.now(timezone.utc)
+            agent.revoked_at = datetime.now(UTC)
 
         logger.info("Consent revoked for agent %s", agent_id)
         return record

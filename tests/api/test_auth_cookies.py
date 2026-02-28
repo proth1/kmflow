@@ -25,12 +25,10 @@ from src.core.auth import (
     REFRESH_COOKIE_NAME,
     create_access_token,
     create_refresh_token,
-    get_current_user,
     hash_password,
 )
 from src.core.config import Settings, get_settings
 from src.core.models import User, UserRole
-
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -93,7 +91,7 @@ class MockSessionFactory:
     def __init__(self, session: AsyncMock) -> None:
         self._session = session
 
-    def __call__(self) -> "MockSessionFactory":
+    def __call__(self) -> MockSessionFactory:
         return self
 
     async def __aenter__(self) -> AsyncMock:
@@ -121,11 +119,11 @@ async def auth_app(
     from fastapi.middleware.cors import CORSMiddleware
 
     from src.api.deps import get_session
-    from src.api.routes import auth, users
     from src.api.middleware.security import (
         RequestIDMiddleware,
         SecurityHeadersMiddleware,
     )
+    from src.api.routes import auth, users
 
     mock_user = _make_mock_user()
 
@@ -173,8 +171,10 @@ async def auth_app(
 
 def _make_session_override(mock_session: AsyncMock):
     """Return a FastAPI dependency override that yields the mock session."""
+
     async def _override():
         yield mock_session
+
     return _override
 
 
@@ -585,9 +585,7 @@ def test_set_auth_cookies_attaches_both_cookies(auth_test_settings: Settings) ->
 
     # FastAPI sets one Set-Cookie header per cookie; join all of them for a
     # single string to make assertions easy. raw_headers contains bytes tuples.
-    all_set_cookie = " | ".join(
-        v.decode() for k, v in response.raw_headers if k == b"set-cookie"
-    )
+    all_set_cookie = " | ".join(v.decode() for k, v in response.raw_headers if k == b"set-cookie")
 
     assert ACCESS_COOKIE_NAME in all_set_cookie
     assert REFRESH_COOKIE_NAME in all_set_cookie

@@ -192,7 +192,11 @@ class TestPartialResultPreservation:
 
         class FailAtStep3Worker(PovGenerationWorker):
             async def _execute_step(
-                self, step_number: int, engagement_id: str, scope: str, state: PovGenerationState,
+                self,
+                step_number: int,
+                engagement_id: str,
+                scope: str,
+                state: PovGenerationState,
             ) -> dict[str, Any]:
                 if step_number == 3:
                     raise RuntimeError("Triangulation engine error")
@@ -209,7 +213,11 @@ class TestPartialResultPreservation:
 
         class FailAtStep3Worker(PovGenerationWorker):
             async def _execute_step(
-                self, step_number: int, engagement_id: str, scope: str, state: PovGenerationState,
+                self,
+                step_number: int,
+                engagement_id: str,
+                scope: str,
+                state: PovGenerationState,
             ) -> dict[str, Any]:
                 if step_number == 3:
                     raise RuntimeError("Triangulation engine error")
@@ -228,7 +236,11 @@ class TestPartialResultPreservation:
 
         class FailAtStep3Worker(PovGenerationWorker):
             async def _execute_step(
-                self, step_number: int, engagement_id: str, scope: str, state: PovGenerationState,
+                self,
+                step_number: int,
+                engagement_id: str,
+                scope: str,
+                state: PovGenerationState,
             ) -> dict[str, Any]:
                 if step_number == 3:
                     raise RuntimeError("Triangulation engine error")
@@ -248,7 +260,11 @@ class TestPartialResultPreservation:
 
         class FailAtStep5Worker(PovGenerationWorker):
             async def _execute_step(
-                self, step_number: int, engagement_id: str, scope: str, state: PovGenerationState,
+                self,
+                step_number: int,
+                engagement_id: str,
+                scope: str,
+                state: PovGenerationState,
             ) -> dict[str, Any]:
                 if step_number == 5:
                     raise RuntimeError("Contradiction resolver timeout")
@@ -270,7 +286,11 @@ class TestPartialResultPreservation:
 
         class FailAtStep1Worker(PovGenerationWorker):
             async def _execute_step(
-                self, step_number: int, engagement_id: str, scope: str, state: PovGenerationState,
+                self,
+                step_number: int,
+                engagement_id: str,
+                scope: str,
+                state: PovGenerationState,
             ) -> dict[str, Any]:
                 if step_number == 1:
                     raise RuntimeError("No evidence found")

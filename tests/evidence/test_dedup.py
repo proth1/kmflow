@@ -33,9 +33,7 @@ class TestFindDuplicatesByHash:
     """Tests for hash-based duplicate detection."""
 
     @pytest.mark.asyncio
-    async def test_find_duplicates_returns_matching_items(
-        self, engagement_id: uuid.UUID
-    ) -> None:
+    async def test_find_duplicates_returns_matching_items(self, engagement_id: uuid.UUID) -> None:
         """Should return evidence items with the same content hash."""
         item1 = MagicMock()
         item1.id = uuid.uuid4()
@@ -60,9 +58,7 @@ class TestFindDuplicatesByHash:
         session.execute.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_find_duplicates_excludes_specified_id(
-        self, engagement_id: uuid.UUID
-    ) -> None:
+    async def test_find_duplicates_excludes_specified_id(self, engagement_id: uuid.UUID) -> None:
         """Should exclude the specified evidence item from results."""
         exclude_id = uuid.uuid4()
 
@@ -82,9 +78,7 @@ class TestFindDuplicatesByHash:
         session.execute.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_find_duplicates_no_matches(
-        self, engagement_id: uuid.UUID
-    ) -> None:
+    async def test_find_duplicates_no_matches(self, engagement_id: uuid.UUID) -> None:
         """Should return empty list when no duplicates exist."""
         session = AsyncMock()
         mock_result = MagicMock()
@@ -109,9 +103,7 @@ class TestCheckIsDuplicate:
     """Tests for single-item duplicate check."""
 
     @pytest.mark.asyncio
-    async def test_check_is_duplicate_found(
-        self, engagement_id: uuid.UUID
-    ) -> None:
+    async def test_check_is_duplicate_found(self, engagement_id: uuid.UUID) -> None:
         """Should return the UUID of existing evidence when hash matches."""
         existing_id = uuid.uuid4()
         session = AsyncMock()
@@ -128,9 +120,7 @@ class TestCheckIsDuplicate:
         assert result == existing_id
 
     @pytest.mark.asyncio
-    async def test_check_is_duplicate_not_found(
-        self, engagement_id: uuid.UUID
-    ) -> None:
+    async def test_check_is_duplicate_not_found(self, engagement_id: uuid.UUID) -> None:
         """Should return None when hash does not exist."""
         session = AsyncMock()
         mock_result = MagicMock()
@@ -155,9 +145,7 @@ class TestGetDuplicateGroups:
     """Tests for grouping duplicates across an engagement."""
 
     @pytest.mark.asyncio
-    async def test_get_duplicate_groups_with_duplicates(
-        self, engagement_id: uuid.UUID
-    ) -> None:
+    async def test_get_duplicate_groups_with_duplicates(self, engagement_id: uuid.UUID) -> None:
         """Should return groups of 2+ items sharing a hash."""
         id1, id2, id3 = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
 
@@ -186,9 +174,7 @@ class TestGetDuplicateGroups:
         assert "hash-b" not in groups
 
     @pytest.mark.asyncio
-    async def test_get_duplicate_groups_no_duplicates(
-        self, engagement_id: uuid.UUID
-    ) -> None:
+    async def test_get_duplicate_groups_no_duplicates(self, engagement_id: uuid.UUID) -> None:
         """Should return empty dict when no duplicates exist."""
         id1, id2 = uuid.uuid4(), uuid.uuid4()
         rows = [
@@ -209,9 +195,7 @@ class TestGetDuplicateGroups:
         assert groups == {}
 
     @pytest.mark.asyncio
-    async def test_get_duplicate_groups_multiple_groups(
-        self, engagement_id: uuid.UUID
-    ) -> None:
+    async def test_get_duplicate_groups_multiple_groups(self, engagement_id: uuid.UUID) -> None:
         """Should return multiple groups when several hashes have duplicates."""
         ids = [uuid.uuid4() for _ in range(5)]
         rows = [

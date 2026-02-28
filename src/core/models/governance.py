@@ -6,12 +6,17 @@ import enum
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Enum, Float, ForeignKey, Index, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import ARRAY, JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.database import Base
+
+if TYPE_CHECKING:
+    from src.core.models.engagement import Engagement
+    from src.core.models.pov import ProcessElement
 
 
 class PolicyType(enum.StrEnum):
@@ -74,7 +79,9 @@ class Policy(Base):
         UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(512), nullable=False)
-    policy_type: Mapped[PolicyType] = mapped_column(Enum(PolicyType, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    policy_type: Mapped[PolicyType] = mapped_column(
+        Enum(PolicyType, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
     source_evidence_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("evidence_items.id", ondelete="SET NULL"), nullable=True
     )
@@ -87,7 +94,7 @@ class Policy(Base):
     )
 
     # Relationships
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
 
     def __repr__(self) -> str:
         return f"<Policy(id={self.id}, name='{self.name}', type={self.policy_type})>"
@@ -106,7 +113,9 @@ class Control(Base):
     name: Mapped[str] = mapped_column(String(512), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     effectiveness: Mapped[ControlEffectiveness] = mapped_column(
-        Enum(ControlEffectiveness, values_callable=lambda e: [x.value for x in e]), default=ControlEffectiveness.EFFECTIVE, nullable=False
+        Enum(ControlEffectiveness, values_callable=lambda e: [x.value for x in e]),
+        default=ControlEffectiveness.EFFECTIVE,
+        nullable=False,
     )
     effectiveness_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     linked_policy_ids: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
@@ -117,7 +126,7 @@ class Control(Base):
     )
 
     # Relationships
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
 
     def __repr__(self) -> str:
         return f"<Control(id={self.id}, name='{self.name}', effectiveness={self.effectiveness})>"
@@ -144,7 +153,7 @@ class Regulation(Base):
     )
 
     # Relationships
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
 
     def __repr__(self) -> str:
         return f"<Regulation(id={self.id}, name='{self.name}', framework='{self.framework}')>"
@@ -197,9 +206,9 @@ class GapFinding(Base):
     )
 
     # Relationships
-    engagement: Mapped["Engagement"] = relationship("Engagement")
-    activity: Mapped["ProcessElement"] = relationship("ProcessElement")
-    regulation: Mapped["Regulation"] = relationship("Regulation")
+    engagement: Mapped[Engagement] = relationship("Engagement")
+    activity: Mapped[ProcessElement] = relationship("ProcessElement")
+    regulation: Mapped[Regulation] = relationship("Regulation")
 
     def __repr__(self) -> str:
         return f"<GapFinding(id={self.id}, activity_id={self.activity_id}, type={self.gap_type}, status={self.status})>"
@@ -231,9 +240,7 @@ class ComplianceAssessment(Base):
         default=ComplianceLevel.NOT_ASSESSED,
         nullable=False,
     )
-    control_coverage_percentage: Mapped[Decimal] = mapped_column(
-        Numeric(5, 2), default=Decimal("0.00"), nullable=False
-    )
+    control_coverage_percentage: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0.00"), nullable=False)
     total_required_controls: Mapped[int] = mapped_column(default=0, nullable=False)
     controls_with_evidence: Mapped[int] = mapped_column(default=0, nullable=False)
     gaps: Mapped[dict | None] = mapped_column(JSON, nullable=True)
@@ -245,8 +252,8 @@ class ComplianceAssessment(Base):
     )
 
     # Relationships
-    activity: Mapped["ProcessElement"] = relationship("ProcessElement")
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    activity: Mapped[ProcessElement] = relationship("ProcessElement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
 
     def __repr__(self) -> str:
         return f"<ComplianceAssessment(id={self.id}, activity_id={self.activity_id}, state={self.state})>"
@@ -283,9 +290,7 @@ class ControlEffectivenessScore(Base):
         Enum(ControlEffectiveness, values_callable=lambda e: [x.value for x in e]),
         nullable=False,
     )
-    execution_rate: Mapped[Decimal] = mapped_column(
-        Numeric(5, 2), default=Decimal("0.00"), nullable=False
-    )
+    execution_rate: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0.00"), nullable=False)
     evidence_source_ids: Mapped[list | None] = mapped_column(ARRAY(UUID(as_uuid=True)), nullable=True)
     recommendation: Mapped[str | None] = mapped_column(Text, nullable=True)
     scored_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -294,7 +299,7 @@ class ControlEffectivenessScore(Base):
 
     # Relationships
     control: Mapped[Control] = relationship("Control")
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
 
     def __repr__(self) -> str:
         return (

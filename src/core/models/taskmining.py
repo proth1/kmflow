@@ -9,6 +9,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ARRAY, Boolean, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
@@ -16,6 +17,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.database import Base
 
+if TYPE_CHECKING:
+    from src.core.models.engagement import Engagement
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -140,11 +143,17 @@ class TaskMiningAgent(Base):
     agent_version: Mapped[str] = mapped_column(String(50), nullable=False)
     machine_id: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     status: Mapped[AgentStatus] = mapped_column(
-        Enum(AgentStatus, values_callable=lambda e: [x.value for x in e]), default=AgentStatus.PENDING_APPROVAL, nullable=False
+        Enum(AgentStatus, values_callable=lambda e: [x.value for x in e]),
+        default=AgentStatus.PENDING_APPROVAL,
+        nullable=False,
     )
-    deployment_mode: Mapped[DeploymentMode] = mapped_column(Enum(DeploymentMode, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    deployment_mode: Mapped[DeploymentMode] = mapped_column(
+        Enum(DeploymentMode, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
     capture_granularity: Mapped[CaptureGranularity] = mapped_column(
-        Enum(CaptureGranularity, values_callable=lambda e: [x.value for x in e]), default=CaptureGranularity.ACTION_LEVEL, nullable=False
+        Enum(CaptureGranularity, values_callable=lambda e: [x.value for x in e]),
+        default=CaptureGranularity.ACTION_LEVEL,
+        nullable=False,
     )
     config_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     last_heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -157,7 +166,7 @@ class TaskMiningAgent(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
     sessions: Mapped[list[TaskMiningSession]] = relationship("TaskMiningSession", back_populates="agent")
 
     def __repr__(self) -> str:
@@ -185,7 +194,9 @@ class TaskMiningSession(Base):
         UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
     )
     status: Mapped[SessionStatus] = mapped_column(
-        Enum(SessionStatus, values_callable=lambda e: [x.value for x in e]), default=SessionStatus.ACTIVE, nullable=False
+        Enum(SessionStatus, values_callable=lambda e: [x.value for x in e]),
+        default=SessionStatus.ACTIVE,
+        nullable=False,
     )
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -222,7 +233,9 @@ class TaskMiningEvent(Base):
     engagement_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
     )
-    event_type: Mapped[DesktopEventType] = mapped_column(Enum(DesktopEventType, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    event_type: Mapped[DesktopEventType] = mapped_column(
+        Enum(DesktopEventType, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     application_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     window_title: Mapped[str | None] = mapped_column(String(512), nullable=True)
@@ -257,7 +270,9 @@ class TaskMiningAction(Base):
     engagement_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
     )
-    category: Mapped[ActionCategory] = mapped_column(Enum(ActionCategory, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    category: Mapped[ActionCategory] = mapped_column(
+        Enum(ActionCategory, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
     application_name: Mapped[str] = mapped_column(String(255), nullable=False)
     window_title: Mapped[str | None] = mapped_column(String(512), nullable=True)
     description: Mapped[str] = mapped_column(Text, nullable=False)
@@ -295,11 +310,15 @@ class PIIQuarantine(Base):
         UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
     )
     original_event_data: Mapped[dict] = mapped_column(JSON, nullable=False)
-    pii_type: Mapped[PIIType] = mapped_column(Enum(PIIType, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    pii_type: Mapped[PIIType] = mapped_column(
+        Enum(PIIType, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
     pii_field: Mapped[str] = mapped_column(String(255), nullable=False)
     detection_confidence: Mapped[float] = mapped_column(Float, nullable=False)
     status: Mapped[QuarantineStatus] = mapped_column(
-        Enum(QuarantineStatus, values_callable=lambda e: [x.value for x in e]), default=QuarantineStatus.PENDING_REVIEW, nullable=False
+        Enum(QuarantineStatus, values_callable=lambda e: [x.value for x in e]),
+        default=QuarantineStatus.PENDING_REVIEW,
+        nullable=False,
     )
     reviewed_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -390,9 +409,9 @@ class VisualContextEvent(Base):
     classification_method: Mapped[str | None] = mapped_column(String(50), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    engagement: Mapped["Engagement"] = relationship("Engagement")
-    session: Mapped["TaskMiningSession | None"] = relationship("TaskMiningSession")
-    agent: Mapped["TaskMiningAgent | None"] = relationship("TaskMiningAgent")
+    engagement: Mapped[Engagement] = relationship("Engagement")
+    session: Mapped[TaskMiningSession | None] = relationship("TaskMiningSession")
+    agent: Mapped[TaskMiningAgent | None] = relationship("TaskMiningAgent")
 
     def __repr__(self) -> str:
         return (
@@ -441,8 +460,8 @@ class SwitchingTrace(Base):
     ended_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    engagement: Mapped["Engagement"] = relationship("Engagement")
-    session: Mapped["TaskMiningSession | None"] = relationship("TaskMiningSession")
+    engagement: Mapped[Engagement] = relationship("Engagement")
+    session: Mapped[TaskMiningSession | None] = relationship("TaskMiningSession")
 
     def __repr__(self) -> str:
         return (
@@ -478,7 +497,7 @@ class TransitionMatrix(Base):
     top_transitions: Mapped[list | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
 
     def __repr__(self) -> str:
         return (

@@ -157,18 +157,20 @@ async def test_scenario_2_governance_chain_traversal() -> None:
 
     # Mock the KnowledgeGraphService
     mock_graph = AsyncMock()
-    mock_graph.run_query = AsyncMock(return_value=[
-        {
-            "activity_id": str(ACTIVITY_ID),
-            "activity_name": "Wire Transfer Review",
-            "control_id": str(CONTROL_ID),
-            "control_name": "Transaction Monitoring",
-            "policy_id": str(POLICY_ID),
-            "policy_name": "AML Policy",
-            "regulation_id": str(REGULATION_ID),
-            "regulation_name": "BSA",
-        }
-    ])
+    mock_graph.run_query = AsyncMock(
+        return_value=[
+            {
+                "activity_id": str(ACTIVITY_ID),
+                "activity_name": "Wire Transfer Review",
+                "control_id": str(CONTROL_ID),
+                "control_name": "Transaction Monitoring",
+                "policy_id": str(POLICY_ID),
+                "policy_name": "AML Policy",
+                "regulation_id": str(REGULATION_ID),
+                "regulation_name": "BSA",
+            }
+        ]
+    )
 
     APP.state.neo4j_driver = MagicMock()
 

@@ -105,12 +105,14 @@ class GovernanceFlagDetector:
             role_set = {r.lower() for r in roles}
             for role_a, role_b in self.sod_pairs:
                 if role_a.lower() in role_set and role_b.lower() in role_set:
-                    flags.append(GovernanceFlag(
-                        flag_type="segregation_of_duties",
-                        description=SOD_DESCRIPTION.format(role_a=roles[0], role_b=roles[1]),
-                        regulation_reference=None,
-                        knowledge_boundary=SOD_KNOWLEDGE_BOUNDARY,
-                    ))
+                    flags.append(
+                        GovernanceFlag(
+                            flag_type="segregation_of_duties",
+                            description=SOD_DESCRIPTION.format(role_a=roles[0], role_b=roles[1]),
+                            regulation_reference=None,
+                            knowledge_boundary=SOD_KNOWLEDGE_BOUNDARY,
+                        )
+                    )
                     break
 
         return flags
@@ -131,15 +133,17 @@ class GovernanceFlagDetector:
             element_name = change.get("element_name", element_id)
             regulations = self.regulated_elements.get(element_id, [])
             for reg in regulations:
-                flags.append(GovernanceFlag(
-                    flag_type="regulatory_compliance",
-                    description=REGULATORY_DESCRIPTION.format(
-                        element_name=element_name,
-                        regulation=reg,
-                    ),
-                    regulation_reference=reg,
-                    knowledge_boundary=REGULATORY_KNOWLEDGE_BOUNDARY,
-                ))
+                flags.append(
+                    GovernanceFlag(
+                        flag_type="regulatory_compliance",
+                        description=REGULATORY_DESCRIPTION.format(
+                            element_name=element_name,
+                            regulation=reg,
+                        ),
+                        regulation_reference=reg,
+                        knowledge_boundary=REGULATORY_KNOWLEDGE_BOUNDARY,
+                    )
+                )
 
         # Check affected elements for regulatory tags
         for eid in affected_element_ids:
@@ -147,15 +151,17 @@ class GovernanceFlagDetector:
             for reg in regulations:
                 # Avoid duplicate if already flagged via role change
                 if not any(f.regulation_reference == reg and f.flag_type == "regulatory_compliance" for f in flags):
-                    flags.append(GovernanceFlag(
-                        flag_type="regulatory_compliance",
-                        description=REGULATORY_DESCRIPTION.format(
-                            element_name=eid,
-                            regulation=reg,
-                        ),
-                        regulation_reference=reg,
-                        knowledge_boundary=REGULATORY_KNOWLEDGE_BOUNDARY,
-                    ))
+                    flags.append(
+                        GovernanceFlag(
+                            flag_type="regulatory_compliance",
+                            description=REGULATORY_DESCRIPTION.format(
+                                element_name=eid,
+                                regulation=reg,
+                            ),
+                            regulation_reference=reg,
+                            knowledge_boundary=REGULATORY_KNOWLEDGE_BOUNDARY,
+                        )
+                    )
 
         return flags
 
@@ -169,15 +175,17 @@ class GovernanceFlagDetector:
             new_role = change.get("new_role", "")
             if original_role.lower() in self.approval_roles and new_role.lower() not in self.approval_roles:
                 element_name = change.get("element_name", change.get("element_id", ""))
-                flags.append(GovernanceFlag(
-                    flag_type="authorization_change",
-                    description=AUTHORIZATION_DESCRIPTION.format(
-                        element_name=element_name,
-                        original_role=original_role,
-                        new_role=new_role,
-                    ),
-                    regulation_reference=None,
-                    knowledge_boundary=AUTHORIZATION_KNOWLEDGE_BOUNDARY,
-                ))
+                flags.append(
+                    GovernanceFlag(
+                        flag_type="authorization_change",
+                        description=AUTHORIZATION_DESCRIPTION.format(
+                            element_name=element_name,
+                            original_role=original_role,
+                            new_role=new_role,
+                        ),
+                        regulation_reference=None,
+                        knowledge_boundary=AUTHORIZATION_KNOWLEDGE_BOUNDARY,
+                    )
+                )
 
         return flags

@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
-import pytest
-
-from src.taskmining.aggregation.session import AggregatedSession, SessionAggregator
+from src.taskmining.aggregation.session import SessionAggregator
 
 
 def _ts(minutes: int = 0, seconds: int = 0) -> str:
     """Helper: generate ISO timestamp offset from a base time."""
-    base = datetime(2026, 2, 25, 10, 0, 0, tzinfo=timezone.utc)
+    base = datetime(2026, 2, 25, 10, 0, 0, tzinfo=UTC)
     return (base + timedelta(minutes=minutes, seconds=seconds)).isoformat()
 
 

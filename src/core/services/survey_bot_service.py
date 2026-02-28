@@ -115,9 +115,7 @@ class SurveyBotService:
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def complete_session(
-        self, session_id: uuid.UUID
-    ) -> dict[str, Any]:
+    async def complete_session(self, session_id: uuid.UUID) -> dict[str, Any]:
         """Mark a session as complete and generate summary."""
         session_obj = await self.get_session(session_id)
         if session_obj is None:
@@ -130,9 +128,7 @@ class SurveyBotService:
             }
 
         # Get claims for this session
-        claims_stmt = select(SurveyClaim).where(
-            SurveyClaim.session_id == session_id
-        )
+        claims_stmt = select(SurveyClaim).where(SurveyClaim.session_id == session_id)
         claims_result = await self._session.execute(claims_stmt)
         claims = claims_result.scalars().all()
 
@@ -180,14 +176,16 @@ class SurveyBotService:
                 continue
             template = PROBE_TEMPLATES[probe_type]
             for term in terms:
-                probes.append({
-                    "session_id": str(session_id),
-                    "seed_term_id": term["id"],
-                    "seed_term": term["term"],
-                    "probe_type": probe_type.value,
-                    "question": template["question"].replace("{term}", term["term"]),
-                    "expected_response": template["expected_response"],
-                })
+                probes.append(
+                    {
+                        "session_id": str(session_id),
+                        "seed_term_id": term["id"],
+                        "seed_term": term["term"],
+                        "probe_type": probe_type.value,
+                        "question": template["question"].replace("{term}", term["term"]),
+                        "expected_response": template["expected_response"],
+                    }
+                )
 
         return probes
 
@@ -348,38 +346,44 @@ class SurveyBotService:
 
             if len(unique_tiers) == 1:
                 # Full agreement
-                consensus_items.append({
-                    "topic": group_key,
-                    "agreement": "full",
-                    "certainty_tier": tiers[0].value,
-                    "respondent_count": len(group_claims),
-                    "respondent_roles": roles,
-                })
+                consensus_items.append(
+                    {
+                        "topic": group_key,
+                        "agreement": "full",
+                        "certainty_tier": tiers[0].value,
+                        "respondent_count": len(group_claims),
+                        "respondent_roles": roles,
+                    }
+                )
             elif CertaintyTier.CONTRADICTED in unique_tiers:
                 # Active contradiction
-                conflicts.append({
-                    "topic": group_key,
-                    "conflict_type": "contradiction",
-                    "tiers": [t.value for t in tiers],
-                    "respondent_roles": roles,
-                    "claims": [
-                        {
-                            "role": c.respondent_role,
-                            "tier": c.certainty_tier.value,
-                            "text_preview": c.claim_text[:100],
-                        }
-                        for c in group_claims
-                    ],
-                })
+                conflicts.append(
+                    {
+                        "topic": group_key,
+                        "conflict_type": "contradiction",
+                        "tiers": [t.value for t in tiers],
+                        "respondent_roles": roles,
+                        "claims": [
+                            {
+                                "role": c.respondent_role,
+                                "tier": c.certainty_tier.value,
+                                "text_preview": c.claim_text[:100],
+                            }
+                            for c in group_claims
+                        ],
+                    }
+                )
             else:
                 # Partial agreement (different tiers but no contradiction)
-                consensus_items.append({
-                    "topic": group_key,
-                    "agreement": "partial",
-                    "tiers": sorted(t.value for t in unique_tiers),
-                    "respondent_count": len(group_claims),
-                    "respondent_roles": roles,
-                })
+                consensus_items.append(
+                    {
+                        "topic": group_key,
+                        "agreement": "partial",
+                        "tiers": sorted(t.value for t in unique_tiers),
+                        "respondent_count": len(group_claims),
+                        "respondent_roles": roles,
+                    }
+                )
 
         # Compute agreement score
         total_groups = len(consensus_items) + len(conflicts)
@@ -412,11 +416,7 @@ class SurveyBotService:
         if status is not None:
             base_filter.append(SurveySession.status == status)
 
-        count_stmt = (
-            select(sa_func.count())
-            .select_from(SurveySession)
-            .where(*base_filter)
-        )
+        count_stmt = select(sa_func.count()).select_from(SurveySession).where(*base_filter)
         count_result = await self._session.execute(count_stmt)
         total = count_result.scalar() or 0
 
@@ -439,9 +439,7 @@ class SurveyBotService:
                     "status": s.status.value,
                     "claims_count": s.claims_count,
                     "created_at": s.created_at.isoformat(),
-                    "completed_at": s.completed_at.isoformat()
-                    if s.completed_at
-                    else None,
+                    "completed_at": s.completed_at.isoformat() if s.completed_at else None,
                 }
                 for s in sessions
             ],

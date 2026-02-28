@@ -94,11 +94,14 @@ async def test_generate_micro_survey_success() -> None:
     ):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            resp = await client.post("/api/v1/micro-surveys", json={
-                "engagement_id": str(ENGAGEMENT_ID),
-                "deviation_id": str(DEVIATION_ID),
-                "target_sme_role": "process_owner",
-            })
+            resp = await client.post(
+                "/api/v1/micro-surveys",
+                json={
+                    "engagement_id": str(ENGAGEMENT_ID),
+                    "deviation_id": str(DEVIATION_ID),
+                    "target_sme_role": "process_owner",
+                },
+            )
 
     assert resp.status_code == 201
     data = resp.json()
@@ -118,10 +121,13 @@ async def test_generate_micro_survey_deviation_not_found() -> None:
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.post("/api/v1/micro-surveys", json={
-            "engagement_id": str(ENGAGEMENT_ID),
-            "deviation_id": str(DEVIATION_ID),
-        })
+        resp = await client.post(
+            "/api/v1/micro-surveys",
+            json={
+                "engagement_id": str(ENGAGEMENT_ID),
+                "deviation_id": str(DEVIATION_ID),
+            },
+        )
 
     assert resp.status_code == 404
 
@@ -143,10 +149,13 @@ async def test_generate_micro_survey_below_threshold() -> None:
     ):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            resp = await client.post("/api/v1/micro-surveys", json={
-                "engagement_id": str(ENGAGEMENT_ID),
-                "deviation_id": str(DEVIATION_ID),
-            })
+            resp = await client.post(
+                "/api/v1/micro-surveys",
+                json={
+                    "engagement_id": str(ENGAGEMENT_ID),
+                    "deviation_id": str(DEVIATION_ID),
+                },
+            )
 
     assert resp.status_code == 422
 
@@ -179,16 +188,19 @@ async def test_submit_response_success() -> None:
     ):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            resp = await client.post(f"/api/v1/micro-surveys/{survey_id}/respond", json={
-                "responses": [
-                    {
-                        "probe_type": "existence",
-                        "claim_text": "Yes, this still occurs",
-                        "certainty_tier": "known",
-                    },
-                ],
-                "respondent_role": "process_owner",
-            })
+            resp = await client.post(
+                f"/api/v1/micro-surveys/{survey_id}/respond",
+                json={
+                    "responses": [
+                        {
+                            "probe_type": "existence",
+                            "claim_text": "Yes, this still occurs",
+                            "certainty_tier": "known",
+                        },
+                    ],
+                    "respondent_role": "process_owner",
+                },
+            )
 
     assert resp.status_code == 200
     data = resp.json()
@@ -210,10 +222,13 @@ async def test_submit_response_survey_not_found() -> None:
     ):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            resp = await client.post(f"/api/v1/micro-surveys/{survey_id}/respond", json={
-                "responses": [],
-                "respondent_role": "process_owner",
-            })
+            resp = await client.post(
+                f"/api/v1/micro-surveys/{survey_id}/respond",
+                json={
+                    "responses": [],
+                    "respondent_role": "process_owner",
+                },
+            )
 
     assert resp.status_code == 404
 

@@ -103,8 +103,12 @@ class TestProgressTrackingEndpoint:
         """Progress response includes the task_id."""
         job_data = {
             "status": "running",
-            "progress": {"current_step": 1, "step_name": "Evidence Aggregation",
-                         "completion_percentage": 12, "total_steps": 8},
+            "progress": {
+                "current_step": 1,
+                "step_name": "Evidence Aggregation",
+                "completion_percentage": 12,
+                "total_steps": 8,
+            },
         }
         request = _make_mock_request(job_data)
         user = _make_mock_user()
@@ -228,10 +232,8 @@ class TestVersionHistoryEndpoint:
     async def test_version_history_returns_all_versions(self) -> None:
         """All versions returned ordered by version descending."""
         eng_id = uuid.uuid4()
-        model_v2 = _make_mock_model(engagement_id=eng_id, version=2,
-                                     confidence_score=0.85, element_count=10)
-        model_v1 = _make_mock_model(engagement_id=eng_id, version=1,
-                                     confidence_score=0.7, element_count=8)
+        model_v2 = _make_mock_model(engagement_id=eng_id, version=2, confidence_score=0.85, element_count=10)
+        model_v1 = _make_mock_model(engagement_id=eng_id, version=1, confidence_score=0.7, element_count=8)
 
         session = AsyncMock()
         mock_result = MagicMock()
@@ -309,8 +311,10 @@ class TestVersionHistoryEndpoint:
         """Each version summary has required fields."""
         eng_id = uuid.uuid4()
         model = _make_mock_model(
-            engagement_id=eng_id, version=3,
-            confidence_score=0.88, element_count=12,
+            engagement_id=eng_id,
+            version=3,
+            confidence_score=0.88,
+            element_count=12,
         )
 
         session = AsyncMock()
@@ -335,10 +339,8 @@ class TestVersionHistoryEndpoint:
         from unittest.mock import patch
 
         eng_id = uuid.uuid4()
-        model_v2 = _make_mock_model(engagement_id=eng_id, version=2,
-                                     confidence_score=0.85, element_count=10)
-        model_v1 = _make_mock_model(engagement_id=eng_id, version=1,
-                                     confidence_score=0.7, element_count=8)
+        model_v2 = _make_mock_model(engagement_id=eng_id, version=2, confidence_score=0.85, element_count=10)
+        model_v1 = _make_mock_model(engagement_id=eng_id, version=1, confidence_score=0.7, element_count=8)
 
         session = AsyncMock()
         mock_result = MagicMock()
@@ -357,13 +359,16 @@ class TestVersionHistoryEndpoint:
             "changed": [],
         }
 
-        with patch(
-            "src.api.routes.pov._get_elements_for_model",
-            new_callable=AsyncMock,
-            return_value=[{"name": "A", "confidence_score": 0.8}],
-        ), patch(
-            "src.api.routes.pov.compute_version_diff",
-            return_value=fake_diff,
+        with (
+            patch(
+                "src.api.routes.pov._get_elements_for_model",
+                new_callable=AsyncMock,
+                return_value=[{"name": "A", "confidence_score": 0.8}],
+            ),
+            patch(
+                "src.api.routes.pov.compute_version_diff",
+                return_value=fake_diff,
+            ),
         ):
             result = await get_version_history(str(eng_id), True, session, user)
 
@@ -436,8 +441,11 @@ class TestProgressResponseSchema:
     def test_progress_response_defaults(self) -> None:
         """ProgressResponse has sensible defaults."""
         resp = ProgressResponse(
-            task_id="x", status="pending",
-            current_step=0, step_name="", completion_percentage=0,
+            task_id="x",
+            status="pending",
+            current_step=0,
+            step_name="",
+            completion_percentage=0,
         )
         assert resp.total_steps == 8
         assert resp.total_duration_ms == 0
@@ -463,9 +471,13 @@ class TestVersionHistoryResponseSchema:
         from src.api.routes.pov import VersionDiffResponse
 
         diff = VersionDiffResponse(
-            added_count=2, removed_count=1,
-            changed_count=3, unchanged_count=4,
-            added=["X", "Y"], removed=["Z"], changed=["A", "B", "C"],
+            added_count=2,
+            removed_count=1,
+            changed_count=3,
+            unchanged_count=4,
+            added=["X", "Y"],
+            removed=["Z"],
+            changed=["A", "B", "C"],
         )
         assert diff.added_count == 2
         assert len(diff.changed) == 3

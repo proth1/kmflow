@@ -63,26 +63,17 @@ class GapProbeGenerator:
         self._graph = graph_service
         self._coverage_service = KnowledgeFormsCoverageService(graph_service)
 
-    async def _get_activity_brightness(
-        self, engagement_id: str, activity_ids: list[str]
-    ) -> dict[str, str]:
+    async def _get_activity_brightness(self, engagement_id: str, activity_ids: list[str]) -> dict[str, str]:
         """Fetch brightness classification for activities from Neo4j."""
         query = (
             "MATCH (a:Activity) "
             "WHERE a.id IN $activity_ids AND a.engagement_id = $engagement_id "
             "RETURN a.id AS activity_id, a.brightness AS brightness"
         )
-        records = await self._graph.run_query(
-            query, {"engagement_id": engagement_id, "activity_ids": activity_ids}
-        )
-        return {
-            r["activity_id"]: r.get("brightness", BrightnessClassification.DIM)
-            for r in records
-        }
+        records = await self._graph.run_query(query, {"engagement_id": engagement_id, "activity_ids": activity_ids})
+        return {r["activity_id"]: r.get("brightness", BrightnessClassification.DIM) for r in records}
 
-    async def _get_activity_centrality(
-        self, engagement_id: str, activity_ids: list[str]
-    ) -> dict[str, float]:
+    async def _get_activity_centrality(self, engagement_id: str, activity_ids: list[str]) -> dict[str, float]:
         """Compute centrality (degree count) per activity as a proxy for importance."""
         query = (
             "MATCH (a:Activity) "
@@ -90,14 +81,9 @@ class GapProbeGenerator:
             "OPTIONAL MATCH (a)-[r]-() "
             "RETURN a.id AS activity_id, count(r) AS degree"
         )
-        records = await self._graph.run_query(
-            query, {"engagement_id": engagement_id, "activity_ids": activity_ids}
-        )
+        records = await self._graph.run_query(query, {"engagement_id": engagement_id, "activity_ids": activity_ids})
         max_degree = max((r["degree"] for r in records), default=1) or 1
-        return {
-            r["activity_id"]: r["degree"] / max_degree
-            for r in records
-        }
+        return {r["activity_id"]: r["degree"] / max_degree for r in records}
 
     def _compute_uplift(
         self,
@@ -118,9 +104,7 @@ class GapProbeGenerator:
         }.get(brightness, 0.5)
         return round(weight * centrality * brightness_multiplier, 4)
 
-    async def generate_probes(
-        self, engagement_id: str
-    ) -> list[dict[str, Any]]:
+    async def generate_probes(self, engagement_id: str) -> list[dict[str, Any]]:
         """Generate gap-targeted probes for an engagement.
 
         Returns probes sorted by estimated confidence uplift (descending).
@@ -137,9 +121,7 @@ class GapProbeGenerator:
         # Compute coverage per form
         form_coverage: dict[KnowledgeForm, set[str]] = {}
         for form in KnowledgeForm:
-            covered = await self._coverage_service.compute_form_coverage(
-                engagement_id, activity_ids, form
-            )
+            covered = await self._coverage_service.compute_form_coverage(engagement_id, activity_ids, form)
             form_coverage[form] = covered
 
         probes: list[dict[str, Any]] = []
@@ -173,23 +155,27 @@ class GapProbeGenerator:
 
                 probe_text = PROBE_TEMPLATES.get(probe_type, "").format(activity=aid)
 
-                probes.append({
-                    "id": str(uuid.uuid4()),
-                    "activity_id": aid,
-                    "form_number": FORM_NUMBERS[form],
-                    "form_name": form.value,
-                    "probe_type": probe_type.value,
-                    "probe_text": probe_text,
-                    "brightness": brightness,
-                    "estimated_uplift": uplift,
-                })
+                probes.append(
+                    {
+                        "id": str(uuid.uuid4()),
+                        "activity_id": aid,
+                        "form_number": FORM_NUMBERS[form],
+                        "form_name": form.value,
+                        "probe_type": probe_type.value,
+                        "probe_text": probe_text,
+                        "brightness": brightness,
+                        "estimated_uplift": uplift,
+                    }
+                )
 
         # Sort by uplift descending
         probes.sort(key=lambda p: p["estimated_uplift"], reverse=True)
 
         logger.info(
             "Generated %d probes for engagement %s (%d activities skipped as fully covered)",
-            len(probes), engagement_id, skipped_count,
+            len(probes),
+            engagement_id,
+            skipped_count,
         )
 
         return probes

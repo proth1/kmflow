@@ -5,12 +5,17 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.database import Base
+
+if TYPE_CHECKING:
+    from src.core.models.engagement import Engagement
+    from src.core.models.pov import ProcessModel
 
 
 class TOMDimension(enum.StrEnum):
@@ -78,8 +83,8 @@ class MaturityScore(Base):
     scored_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
-    engagement: Mapped["Engagement"] = relationship("Engagement")
-    process_model: Mapped["ProcessModel"] = relationship("ProcessModel")
+    engagement: Mapped[Engagement] = relationship("Engagement")
+    process_model: Mapped[ProcessModel] = relationship("ProcessModel")
 
     def __repr__(self) -> str:
         return f"<MaturityScore(id={self.id}, level={self.maturity_level}, level_number={self.level_number})>"
@@ -105,12 +110,15 @@ class TargetOperatingModel(Base):
     )
 
     # Relationships
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
     gap_results: Mapped[list[GapAnalysisResult]] = relationship(
         "GapAnalysisResult", back_populates="tom", cascade="all, delete-orphan"
     )
     dimension_records: Mapped[list[TOMDimensionRecord]] = relationship(
-        "TOMDimensionRecord", back_populates="tom", cascade="all, delete-orphan", order_by="TOMDimensionRecord.dimension_type"
+        "TOMDimensionRecord",
+        back_populates="tom",
+        cascade="all, delete-orphan",
+        order_by="TOMDimensionRecord.dimension_type",
     )
     versions: Mapped[list[TOMVersion]] = relationship(
         "TOMVersion", back_populates="tom", cascade="all, delete-orphan", order_by="TOMVersion.version_number"
@@ -191,8 +199,12 @@ class GapAnalysisResult(Base):
     tom_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("target_operating_models.id", ondelete="CASCADE"), nullable=False
     )
-    gap_type: Mapped[TOMGapType] = mapped_column(Enum(TOMGapType, values_callable=lambda e: [x.value for x in e]), nullable=False)
-    dimension: Mapped[TOMDimension] = mapped_column(Enum(TOMDimension, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    gap_type: Mapped[TOMGapType] = mapped_column(
+        Enum(TOMGapType, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
+    dimension: Mapped[TOMDimension] = mapped_column(
+        Enum(TOMDimension, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
     severity: Mapped[float] = mapped_column(Float, default=0.5, nullable=False)
     confidence: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -205,7 +217,7 @@ class GapAnalysisResult(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
     tom: Mapped[TargetOperatingModel] = relationship("TargetOperatingModel", back_populates="gap_results")
 
     @property
@@ -239,7 +251,9 @@ class BestPractice(Base):
     """An industry best practice for TOM alignment benchmarking."""
 
     __tablename__ = "best_practices"
-    __table_args__ = (UniqueConstraint("domain", "industry", "tom_dimension", name="uq_best_practice_domain_industry_dimension"),)
+    __table_args__ = (
+        UniqueConstraint("domain", "industry", "tom_dimension", name="uq_best_practice_domain_industry_dimension"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title: Mapped[str] = mapped_column(String(512), server_default="", nullable=False)
@@ -248,7 +262,9 @@ class BestPractice(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     source: Mapped[str | None] = mapped_column(String(512), nullable=True)
     maturity_level_applicable: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    tom_dimension: Mapped[TOMDimension] = mapped_column(Enum(TOMDimension, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    tom_dimension: Mapped[TOMDimension] = mapped_column(
+        Enum(TOMDimension, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     def __repr__(self) -> str:
@@ -311,9 +327,9 @@ class TOMAlignmentRun(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
     tom: Mapped[TargetOperatingModel] = relationship("TargetOperatingModel")
-    results: Mapped[list["TOMAlignmentResult"]] = relationship(
+    results: Mapped[list[TOMAlignmentResult]] = relationship(
         "TOMAlignmentResult", back_populates="run", cascade="all, delete-orphan"
     )
 
@@ -363,9 +379,7 @@ class TransformationRoadmapModel(Base):
     """A persisted transformation roadmap generated from gap analysis."""
 
     __tablename__ = "transformation_roadmaps"
-    __table_args__ = (
-        Index("ix_transformation_roadmaps_engagement_id", "engagement_id"),
-    )
+    __table_args__ = (Index("ix_transformation_roadmaps_engagement_id", "engagement_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     engagement_id: Mapped[uuid.UUID] = mapped_column(
@@ -384,7 +398,7 @@ class TransformationRoadmapModel(Base):
     finalized: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # Relationships
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
 
     def __repr__(self) -> str:
         return f"<TransformationRoadmapModel(id={self.id}, status={self.status})>"

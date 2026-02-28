@@ -15,7 +15,6 @@ from src.core.models.taskmining import PIIType
 from src.taskmining.pii.filter import filter_event, redact_text, scan_text
 from src.taskmining.pii.patterns import ALL_PATTERNS, get_patterns_for_type
 
-
 # ---------------------------------------------------------------------------
 # Helper
 # ---------------------------------------------------------------------------
@@ -33,10 +32,7 @@ def _count_type(text: str, pii_type: PIIType) -> int:
 
 def _high_confidence(text: str, pii_type: PIIType, threshold: float = 0.80) -> bool:
     """Return True if any detection of the given type exceeds threshold."""
-    return any(
-        d.pii_type == pii_type and d.confidence >= threshold
-        for d in scan_text(text, "test")
-    )
+    return any(d.pii_type == pii_type and d.confidence >= threshold for d in scan_text(text, "test"))
 
 
 # ===================================================================
@@ -596,9 +592,16 @@ class TestRecallMetrics:
     def test_ssn_recall(self) -> None:
         """SSN patterns detect at least 99% of true positives."""
         positives = [
-            "123-45-6789", "SSN: 234-56-7890", "my ssn is 345-67-8901",
-            "SSN 456-78-9012", "ssn 567-89-0123", "Tax ID: 678-90-1234",
-            "SSN: 789-01-2345", "890-12-3456", "901-23-4567", "012-34-5678",
+            "123-45-6789",
+            "SSN: 234-56-7890",
+            "my ssn is 345-67-8901",
+            "SSN 456-78-9012",
+            "ssn 567-89-0123",
+            "Tax ID: 678-90-1234",
+            "SSN: 789-01-2345",
+            "890-12-3456",
+            "901-23-4567",
+            "012-34-5678",
         ]
         detected = sum(1 for t in positives if _has_type(t, PIIType.SSN))
         recall = detected / len(positives)
@@ -606,9 +609,15 @@ class TestRecallMetrics:
 
     def test_credit_card_recall(self) -> None:
         positives = [
-            "4111111111111111", "4111-1111-1111-1111", "5500000000000004",
-            "5500-0000-0000-0004", "340000000000009", "370000000000002",
-            "6011000000000004", "6011-0000-0000-0004", "378282246310005",
+            "4111111111111111",
+            "4111-1111-1111-1111",
+            "5500000000000004",
+            "5500-0000-0000-0004",
+            "340000000000009",
+            "370000000000002",
+            "6011000000000004",
+            "6011-0000-0000-0004",
+            "378282246310005",
             "5105105105105100",
         ]
         detected = sum(1 for t in positives if _has_type(t, PIIType.CREDIT_CARD))
@@ -617,9 +626,15 @@ class TestRecallMetrics:
 
     def test_email_recall(self) -> None:
         positives = [
-            "john@example.com", "JANE@COMPANY.CO.UK", "user+tag@domain.org",
-            "admin@test.io", "first.last@sub.example.com", "a@b.co",
-            "user123@numbers.net", "contact@company.com.au", "name@my-co.org",
+            "john@example.com",
+            "JANE@COMPANY.CO.UK",
+            "user+tag@domain.org",
+            "admin@test.io",
+            "first.last@sub.example.com",
+            "a@b.co",
+            "user123@numbers.net",
+            "contact@company.com.au",
+            "name@my-co.org",
             "test@gov.uk",
         ]
         detected = sum(1 for t in positives if _has_type(t, PIIType.EMAIL))
@@ -628,9 +643,15 @@ class TestRecallMetrics:
 
     def test_phone_recall(self) -> None:
         positives = [
-            "555-123-4567", "(555) 123-4567", "555.123.4567",
-            "+1-555-123-4567", "+1 (555) 123-4567", "+44 7911123456",
-            "(800) 555-0100", "888-555-0199", "+61 412345678",
+            "555-123-4567",
+            "(555) 123-4567",
+            "555.123.4567",
+            "+1-555-123-4567",
+            "+1 (555) 123-4567",
+            "+44 7911123456",
+            "(800) 555-0100",
+            "888-555-0199",
+            "+61 412345678",
             "+33 612345678",
         ]
         detected = sum(1 for t in positives if _has_type(t, PIIType.PHONE))
@@ -639,9 +660,15 @@ class TestRecallMetrics:
 
     def test_dob_recall(self) -> None:
         positives = [
-            "DOB: 01/15/1990", "DOB: 3/22/85", "Date of Birth: 12-01-1975",
-            "Born 07/04/2000", "Birthday: 12/25/1995", "DOB: 6/1/99",
-            "Born: 2/28/1988", "DOB: 10/31/1965", "Birthday 9/9/99",
+            "DOB: 01/15/1990",
+            "DOB: 3/22/85",
+            "Date of Birth: 12-01-1975",
+            "Born 07/04/2000",
+            "Birthday: 12/25/1995",
+            "DOB: 6/1/99",
+            "Born: 2/28/1988",
+            "DOB: 10/31/1965",
+            "Birthday 9/9/99",
             "Date of Birth:05/05/1955",
         ]
         detected = sum(1 for t in positives if _has_type(t, PIIType.DATE_OF_BIRTH))
@@ -650,9 +677,15 @@ class TestRecallMetrics:
 
     def test_address_recall(self) -> None:
         positives = [
-            "123 Main Street", "456 Oak Ave", "789 Elm Boulevard",
-            "1 Park Drive", "42 Maple Lane", "1600 Pennsylvania Ave",
-            "350 Fifth Avenue", "100 Broadway", "77 Massachusetts Avenue",
+            "123 Main Street",
+            "456 Oak Ave",
+            "789 Elm Boulevard",
+            "1 Park Drive",
+            "42 Maple Lane",
+            "1600 Pennsylvania Ave",
+            "350 Fifth Avenue",
+            "100 Broadway",
+            "77 Massachusetts Avenue",
             "55 Water St",
         ]
         detected = sum(1 for t in positives if _has_type(t, PIIType.ADDRESS))
@@ -661,9 +694,15 @@ class TestRecallMetrics:
 
     def test_financial_recall(self) -> None:
         positives = [
-            "Account #12345678", "Acct: 1234567890123", "account 87654321",
-            "Account: 99887766", "Acct #: 11223344556", "ACCOUNT 12345678901234567",
-            "acct number: 55443322", "Account# 66778899", "ACCT: 98765432",
+            "Account #12345678",
+            "Acct: 1234567890123",
+            "account 87654321",
+            "Account: 99887766",
+            "Acct #: 11223344556",
+            "ACCOUNT 12345678901234567",
+            "acct number: 55443322",
+            "Account# 66778899",
+            "ACCT: 98765432",
             "account: 11111111",
         ]
         detected = sum(1 for t in positives if _has_type(t, PIIType.FINANCIAL))
@@ -749,9 +788,15 @@ class TestPatternCoverage:
         assert len(ALL_PATTERNS) >= 12
 
     def test_each_detection_type_has_patterns(self) -> None:
-        required = [PIIType.SSN, PIIType.CREDIT_CARD, PIIType.EMAIL,
-                    PIIType.PHONE, PIIType.ADDRESS, PIIType.DATE_OF_BIRTH,
-                    PIIType.FINANCIAL]
+        required = [
+            PIIType.SSN,
+            PIIType.CREDIT_CARD,
+            PIIType.EMAIL,
+            PIIType.PHONE,
+            PIIType.ADDRESS,
+            PIIType.DATE_OF_BIRTH,
+            PIIType.FINANCIAL,
+        ]
         for pii_type in required:
             patterns = get_patterns_for_type(pii_type)
             assert len(patterns) >= 1, f"No patterns for {pii_type}"

@@ -98,8 +98,8 @@ class TestGapCountsByTypeAndSeverity:
         gaps = [
             _make_mock_gap(eng_id, TOMGapType.FULL_GAP, severity=0.95),  # critical
             _make_mock_gap(eng_id, TOMGapType.FULL_GAP, severity=0.75),  # high
-            _make_mock_gap(eng_id, TOMGapType.FULL_GAP, severity=0.5),   # medium
-            _make_mock_gap(eng_id, TOMGapType.FULL_GAP, severity=0.2),   # low
+            _make_mock_gap(eng_id, TOMGapType.FULL_GAP, severity=0.5),  # medium
+            _make_mock_gap(eng_id, TOMGapType.FULL_GAP, severity=0.2),  # low
         ]
 
         session = AsyncMock()

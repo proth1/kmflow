@@ -44,6 +44,7 @@ from src.core.models import (
     UserRole,
 )
 from src.core.permissions import require_engagement_access, require_permission
+from src.core.rls import set_engagement_context
 from src.tom.benchmarking import match_gaps_to_practices
 from src.tom.benchmarking import rank_client as _rank_client
 from src.tom.maturity_scorer import MaturityScoringService
@@ -57,7 +58,13 @@ _background_tasks: set[asyncio.Task[None]] = set()
 
 
 async def _check_engagement_member(session: AsyncSession, user: User, engagement_id: UUID) -> None:
-    """Verify user is a member of the engagement. Platform admins bypass."""
+    """Verify user is a member of the engagement and set RLS context.
+
+    Sets the RLS session variable so subsequent queries on engagement-scoped
+    tables (with Row-Level Security policies) are properly filtered.
+    Platform admins bypass the membership check but still need the RLS context.
+    """
+    await set_engagement_context(session, engagement_id)
     if user.role == UserRole.PLATFORM_ADMIN:
         return
     result = await session.execute(
@@ -287,7 +294,9 @@ def _snapshot_dimensions(tom: TargetOperatingModel) -> dict[str, Any]:
         "maturity_targets": tom.maturity_targets,
         "dimensions": [
             {
-                "dimension_type": dr.dimension_type.value if hasattr(dr.dimension_type, "value") else str(dr.dimension_type),
+                "dimension_type": dr.dimension_type.value
+                if hasattr(dr.dimension_type, "value")
+                else str(dr.dimension_type),
                 "maturity_target": dr.maturity_target,
                 "description": dr.description,
             }
@@ -445,11 +454,7 @@ async def update_tom(
                 session.add(dim_record)
 
     # Bump version atomically via SQL expression to prevent race conditions
-    await session.execute(
-        select(TargetOperatingModel)
-        .where(TargetOperatingModel.id == tom.id)
-        .with_for_update()
-    )
+    await session.execute(select(TargetOperatingModel).where(TargetOperatingModel.id == tom.id).with_for_update())
     tom.version = TargetOperatingModel.version + 1  # type: ignore[assignment]  # SA SQL expression
 
     await session.commit()
@@ -474,9 +479,7 @@ async def get_tom_versions(
     await _check_engagement_member(session, user, tom.engagement_id)
 
     versions_result = await session.execute(
-        select(TOMVersion)
-        .where(TOMVersion.tom_id == tom_id)
-        .order_by(TOMVersion.version_number.asc())
+        select(TOMVersion).where(TOMVersion.tom_id == tom_id).order_by(TOMVersion.version_number.asc())
     )
     versions = list(versions_result.scalars().all())
 
@@ -522,7 +525,9 @@ async def export_tom(
         "maturity_targets": tom.maturity_targets,
         "dimensions": [
             {
-                "dimension_type": dr.dimension_type.value if hasattr(dr.dimension_type, "value") else str(dr.dimension_type),
+                "dimension_type": dr.dimension_type.value
+                if hasattr(dr.dimension_type, "value")
+                else str(dr.dimension_type),
                 "maturity_target": dr.maturity_target,
                 "description": dr.description,
             }
@@ -583,7 +588,9 @@ async def import_tom(
             session.add(dim_record)
 
     await log_audit(
-        session, payload.engagement_id, AuditAction.TOM_CREATED,
+        session,
+        payload.engagement_id,
+        AuditAction.TOM_CREATED,
         json.dumps({"name": payload.name, "source": "import"}),
     )
     await session.commit()
@@ -709,9 +716,7 @@ async def generate_gap_rationale(
     """Generate LLM-powered rationale for a single gap."""
     from src.tom.rationale_generator import RationaleGeneratorService
 
-    result = await session.execute(
-        select(GapAnalysisResult).where(GapAnalysisResult.id == gap_id)
-    )
+    result = await session.execute(select(GapAnalysisResult).where(GapAnalysisResult.id == gap_id))
     gap = result.scalar_one_or_none()
     if not gap:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Gap {gap_id} not found")
@@ -1124,9 +1129,7 @@ async def get_engagement_benchmarks(
         domain: Optional domain filter (unused for now, reserved for future).
     """
     # Load engagement to verify access (already done by require_engagement_access)
-    eng_result = await session.execute(
-        select(Engagement).where(Engagement.id == engagement_id)
-    )
+    eng_result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
     engagement = eng_result.scalar_one_or_none()
     if not engagement:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Engagement not found")
@@ -1164,13 +1167,15 @@ async def get_engagement_benchmarks(
             p75=bm.p75,
             p90=bm.p90,
         )
-        rankings.append({
-            "metric_name": ranking.metric_name,
-            "client_value": ranking.client_value,
-            "percentile": ranking.percentile,
-            "percentile_label": ranking.percentile_label,
-            "distribution": ranking.distribution,
-        })
+        rankings.append(
+            {
+                "metric_name": ranking.metric_name,
+                "client_value": ranking.client_value,
+                "percentile": ranking.percentile,
+                "percentile_label": ranking.percentile_label,
+                "distribution": ranking.distribution,
+            }
+        )
 
     return {
         "engagement_id": str(engagement_id),
@@ -1451,10 +1456,7 @@ async def get_gap_analysis_dashboard(
         else:
             gap_type_counts[gt]["low"] += 1
 
-    gap_counts_list = [
-        GapCountByType(gap_type=gt, **counts)
-        for gt, counts in gap_type_counts.items()
-    ]
+    gap_counts_list = [GapCountByType(gap_type=gt, **counts) for gt, counts in gap_type_counts.items()]
 
     # --- TOM dimension alignment scores ---
     # Alignment = 1.0 - avg(severity): higher score = better aligned.
@@ -1468,26 +1470,30 @@ async def get_gap_analysis_dashboard(
         sev_values = dim_severities[dim.value]
         avg_severity = sum(sev_values) / len(sev_values) if sev_values else 0.0
         score = round(1.0 - avg_severity, 3)
-        dimension_scores.append(DimensionAlignmentScore(
-            dimension=dim.value,
-            score=score,
-            below_threshold=score < ALIGNMENT_THRESHOLD,
-        ))
+        dimension_scores.append(
+            DimensionAlignmentScore(
+                dimension=dim.value,
+                score=score,
+                below_threshold=score < ALIGNMENT_THRESHOLD,
+            )
+        )
 
     # --- Prioritized recommendations ---
     recommendations = []
     for gap in gaps:
         title = gap.recommendation[:80] if gap.recommendation else f"{gap.gap_type} in {gap.dimension}"
-        recommendations.append(RecommendationEntry(
-            gap_id=str(gap.id),
-            title=title,
-            gap_type=str(gap.gap_type),
-            dimension=str(gap.dimension),
-            severity=gap.severity,
-            priority_score=gap.priority_score,
-            recommendation=gap.recommendation,
-            rationale=gap.rationale,
-        ))
+        recommendations.append(
+            RecommendationEntry(
+                gap_id=str(gap.id),
+                title=title,
+                gap_type=str(gap.gap_type),
+                dimension=str(gap.dimension),
+                severity=gap.severity,
+                priority_score=gap.priority_score,
+                recommendation=gap.recommendation,
+                rationale=gap.rationale,
+            )
+        )
     recommendations.sort(key=lambda r: r.priority_score, reverse=True)
 
     # --- Maturity heatmap (dimension × gap type counts) ---
@@ -1929,9 +1935,7 @@ async def compute_maturity_scores(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Engagement not found")
 
     # Fetch all process models for this engagement
-    pm_result = await session.execute(
-        select(ProcessModel).where(ProcessModel.engagement_id == engagement_id)
-    )
+    pm_result = await session.execute(select(ProcessModel).where(ProcessModel.engagement_id == engagement_id))
     process_models = list(pm_result.scalars().all())
 
     if not process_models:
@@ -1945,12 +1949,14 @@ async def compute_maturity_scores(
     pm_dicts = []
     for pm in process_models:
         meta = pm.metadata_json or {}
-        pm_dicts.append({
-            "id": str(pm.id),
-            "engagement_id": str(engagement_id),
-            "scope": pm.scope,
-            "form_coverage": meta.get("form_coverage", 0.0),
-        })
+        pm_dicts.append(
+            {
+                "id": str(pm.id),
+                "engagement_id": str(engagement_id),
+                "scope": pm.scope,
+                "form_coverage": meta.get("form_coverage", 0.0),
+            }
+        )
 
     # Use governance_map from request body, or default to empty
     governance_map = body.governance_map or {}
@@ -1979,21 +1985,25 @@ async def compute_maturity_scores(
             (p["scope"] for p in pm_dicts if p["id"] == sr["process_model_id"]),
             "Unknown",
         )
-        score_responses.append({
-            "id": score_id,
-            "process_model_id": UUID(sr["process_model_id"]),
-            "process_area_name": pm_name,
-            "maturity_level": sr["maturity_level"],
-            "level_number": sr["level_number"],
-            "evidence_dimensions": sr["evidence_dimensions"],
-            "recommendations": sr["recommendations"],
-            "scored_at": now,
-        })
+        score_responses.append(
+            {
+                "id": score_id,
+                "process_model_id": UUID(sr["process_model_id"]),
+                "process_area_name": pm_name,
+                "maturity_level": sr["maturity_level"],
+                "level_number": sr["level_number"],
+                "evidence_dimensions": sr["evidence_dimensions"],
+                "recommendations": sr["recommendations"],
+                "scored_at": now,
+            }
+        )
 
     await session.commit()
 
     await log_audit(
-        session, engagement_id, AuditAction.ENGAGEMENT_UPDATED,
+        session,
+        engagement_id,
+        AuditAction.ENGAGEMENT_UPDATED,
         f"Computed maturity scores for {len(score_results)} process areas",
         actor=str(user.id),
     )
@@ -2057,20 +2067,20 @@ async def get_maturity_heatmap(
 
     # Fetch process model names
     pm_ids = [s.process_model_id for s in scores]
-    pm_result = await session.execute(
-        select(ProcessModel).where(ProcessModel.id.in_(pm_ids))
-    )
+    pm_result = await session.execute(select(ProcessModel).where(ProcessModel.id.in_(pm_ids)))
     pm_map = {pm.id: pm.scope for pm in pm_result.scalars().all()}
 
     areas = []
     total_level = 0
     for s in scores:
-        areas.append({
-            "process_model_id": s.process_model_id,
-            "process_area_name": pm_map.get(s.process_model_id, "Unknown"),
-            "maturity_level": s.maturity_level,
-            "level_number": s.level_number,
-        })
+        areas.append(
+            {
+                "process_model_id": s.process_model_id,
+                "process_area_name": pm_map.get(s.process_model_id, "Unknown"),
+                "maturity_level": s.maturity_level,
+                "level_number": s.level_number,
+            }
+        )
         total_level += s.level_number
 
     overall = round(total_level / len(scores), 2) if scores else 0.0
@@ -2180,9 +2190,7 @@ async def get_alignment_run_results(
 ) -> dict[str, Any]:
     """Retrieve paginated results for an alignment scoring run."""
     # Fetch the run
-    run_result = await session.execute(
-        select(TOMAlignmentRun).where(TOMAlignmentRun.id == run_id)
-    )
+    run_result = await session.execute(select(TOMAlignmentRun).where(TOMAlignmentRun.id == run_id))
     run = run_result.scalar_one_or_none()
     if not run:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Alignment run {run_id} not found")
@@ -2226,9 +2234,7 @@ async def _run_alignment_scoring_async(
     try:
         async with session_factory() as session:
             # Re-fetch the run record within this session
-            run_result = await session.execute(
-                select(TOMAlignmentRun).where(TOMAlignmentRun.id == run_id)
-            )
+            run_result = await session.execute(select(TOMAlignmentRun).where(TOMAlignmentRun.id == run_id))
             run = run_result.scalar_one_or_none()
             if not run:
                 logger.error("Alignment run %s not found in background task", run_id)
@@ -2257,9 +2263,7 @@ async def _run_alignment_scoring_async(
         logger.exception("Background alignment scoring failed for run %s", run_id)
         try:
             async with session_factory() as session:
-                run_result = await session.execute(
-                    select(TOMAlignmentRun).where(TOMAlignmentRun.id == run_id)
-                )
+                run_result = await session.execute(select(TOMAlignmentRun).where(TOMAlignmentRun.id == run_id))
                 run = run_result.scalar_one_or_none()
                 if run and run.status != AlignmentRunStatus.FAILED:
                     run.status = AlignmentRunStatus.FAILED

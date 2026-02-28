@@ -190,7 +190,7 @@ class SchemaDriftDetector:
             return {}
 
         schema: dict[str, str] = {}
-        sample = records[:min(100, len(records))]
+        sample = records[: min(100, len(records))]
 
         for record in sample:
             for key, value in record.items():

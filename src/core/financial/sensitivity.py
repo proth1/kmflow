@@ -125,15 +125,17 @@ def compute_sensitivity(
             low_cost, high_cost = high_cost, low_cost
 
         swing = high_cost - low_cost
-        entries.append({
-            "assumption_name": assumption.name,
-            "baseline_cost": round(baseline_cost, 2),
-            "low_cost": round(low_cost, 2),
-            "high_cost": round(high_cost, 2),
-            "swing_magnitude": round(swing, 2),
-            "impact_amount_low": round(low_cost - baseline_cost, 2),
-            "impact_amount_high": round(high_cost - baseline_cost, 2),
-        })
+        entries.append(
+            {
+                "assumption_name": assumption.name,
+                "baseline_cost": round(baseline_cost, 2),
+                "low_cost": round(low_cost, 2),
+                "high_cost": round(high_cost, 2),
+                "swing_magnitude": round(swing, 2),
+                "impact_amount_low": round(low_cost - baseline_cost, 2),
+                "impact_amount_high": round(high_cost - baseline_cost, 2),
+            }
+        )
 
     # Rank by descending swing magnitude
     entries.sort(key=lambda e: e["swing_magnitude"], reverse=True)
@@ -217,7 +219,7 @@ def compute_percentile_estimates(
         effective_range = cost_range * confidence_weight
 
         # Model as uniform distribution: variance = range^2 / 12
-        total_variance += (effective_range ** 2) / 12.0
+        total_variance += (effective_range**2) / 12.0
 
     std_dev = math.sqrt(total_variance)
 

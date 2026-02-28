@@ -62,9 +62,7 @@ async def list_assumptions(
     if assumption_type:
         query = query.where(FinancialAssumption.assumption_type == assumption_type)
 
-    count_query = select(func.count()).select_from(
-        query.with_only_columns(FinancialAssumption.id).subquery()
-    )
+    count_query = select(func.count()).select_from(query.with_only_columns(FinancialAssumption.id).subquery())
     count_result = await session.execute(count_query)
     total = count_result.scalar_one()
 
@@ -112,7 +110,16 @@ async def update_assumption(
     session.add(version)
 
     # Apply updates
-    for field in ("value", "unit", "confidence", "confidence_range", "source_evidence_id", "confidence_explanation", "notes", "name"):
+    for field in (
+        "value",
+        "unit",
+        "confidence",
+        "confidence_range",
+        "source_evidence_id",
+        "confidence_explanation",
+        "notes",
+        "name",
+    ):
         if field in data:
             setattr(assumption, field, data[field])
 

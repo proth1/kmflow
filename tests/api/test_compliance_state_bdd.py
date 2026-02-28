@@ -279,9 +279,7 @@ class TestTriggerComplianceAssessment:
         mock_session.refresh = _fake_refresh
 
         with (
-            mock.patch(
-                "src.api.routes.governance.ComplianceAssessmentService"
-            ) as mock_svc_cls,
+            mock.patch("src.api.routes.governance.ComplianceAssessmentService") as mock_svc_cls,
             mock.patch("src.api.routes.governance.log_audit", new_callable=AsyncMock),
         ):
             mock_svc = AsyncMock()

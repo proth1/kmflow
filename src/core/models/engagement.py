@@ -5,6 +5,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import BigInteger, Date, DateTime, Enum, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
@@ -12,6 +13,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.database import Base
 from src.core.models.evidence import EvidenceCategory
+
+if TYPE_CHECKING:
+    from src.core.models.audit import AuditLog
+    from src.core.models.evidence import EvidenceItem
 
 
 class EngagementStatus(enum.StrEnum):
@@ -103,10 +108,10 @@ class Engagement(Base):
     )
 
     # Relationships
-    evidence_items: Mapped[list["EvidenceItem"]] = relationship(  # noqa: F821, UP037
+    evidence_items: Mapped[list[EvidenceItem]] = relationship(  # noqa: F821, UP037
         "EvidenceItem", back_populates="engagement", cascade="all, delete-orphan"
     )
-    audit_logs: Mapped[list["AuditLog"]] = relationship(  # noqa: F821, UP037
+    audit_logs: Mapped[list[AuditLog]] = relationship(  # noqa: F821, UP037
         "AuditLog", back_populates="engagement", passive_deletes=True
     )
     shelf_data_requests: Mapped[list[ShelfDataRequest]] = relationship(

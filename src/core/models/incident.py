@@ -115,9 +115,7 @@ class IncidentEvent(Base):
     """An event in an incident's timeline."""
 
     __tablename__ = "incident_events"
-    __table_args__ = (
-        Index("ix_incident_events_incident_id", "incident_id"),
-    )
+    __table_args__ = (Index("ix_incident_events_incident_id", "incident_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     incident_id: Mapped[uuid.UUID] = mapped_column(

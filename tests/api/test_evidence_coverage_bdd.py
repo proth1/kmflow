@@ -67,9 +67,7 @@ def _setup_multi_execute(
     brightness_result = MagicMock()
     brightness_result.all.return_value = brightness_rows
 
-    mock_session.execute = AsyncMock(
-        side_effect=[scenario_result, mods_result, brightness_result]
-    )
+    mock_session.execute = AsyncMock(side_effect=[scenario_result, mods_result, brightness_result])
 
 
 class TestDarkAreaModificationWarning:
@@ -162,13 +160,11 @@ class TestPerElementBrightnessCoverage:
         scenario = _mock_scenario(SCENARIO_A_ID, ENGAGEMENT_ID)
 
         # 8 modifications: 3 bright, 3 dim, 2 dark
-        mods = [
-            _mock_modification(f"bright-{i}", f"Bright Task {i}") for i in range(3)
-        ] + [
-            _mock_modification(f"dim-{i}", f"Dim Task {i}") for i in range(3)
-        ] + [
-            _mock_modification(f"dark-{i}", f"Dark Task {i}") for i in range(2)
-        ]
+        mods = (
+            [_mock_modification(f"bright-{i}", f"Bright Task {i}") for i in range(3)]
+            + [_mock_modification(f"dim-{i}", f"Dim Task {i}") for i in range(3)]
+            + [_mock_modification(f"dark-{i}", f"Dark Task {i}") for i in range(2)]
+        )
 
         brightness_rows = (
             [(f"bright-{i}", BrightnessClassification.BRIGHT) for i in range(3)]
@@ -195,7 +191,9 @@ class TestPerElementBrightnessCoverage:
         mods = [_mock_modification("elem-1", "Task 1")]
 
         _setup_multi_execute(
-            mock_session, scenario, mods,
+            mock_session,
+            scenario,
+            mods,
             [("elem-1", BrightnessClassification.BRIGHT)],
         )
 
@@ -262,25 +260,21 @@ class TestComparativeRiskAssessment:
 
         # Scenario A: 6 bright, 2 dark -> risk = 6/8 = 0.75
         scenario_a = _mock_scenario(SCENARIO_A_ID, ENGAGEMENT_ID)
-        mods_a = (
-            [_mock_modification(f"a-bright-{i}", f"A Bright {i}") for i in range(6)]
-            + [_mock_modification(f"a-dark-{i}", f"A Dark {i}") for i in range(2)]
-        )
-        brightness_a = (
-            [(f"a-bright-{i}", BrightnessClassification.BRIGHT) for i in range(6)]
-            + [(f"a-dark-{i}", BrightnessClassification.DARK) for i in range(2)]
-        )
+        mods_a = [_mock_modification(f"a-bright-{i}", f"A Bright {i}") for i in range(6)] + [
+            _mock_modification(f"a-dark-{i}", f"A Dark {i}") for i in range(2)
+        ]
+        brightness_a = [(f"a-bright-{i}", BrightnessClassification.BRIGHT) for i in range(6)] + [
+            (f"a-dark-{i}", BrightnessClassification.DARK) for i in range(2)
+        ]
 
         # Scenario B: 3 bright, 5 dark -> risk = 3/8 = 0.375
         scenario_b = _mock_scenario(SCENARIO_B_ID, ENGAGEMENT_ID)
-        mods_b = (
-            [_mock_modification(f"b-bright-{i}", f"B Bright {i}") for i in range(3)]
-            + [_mock_modification(f"b-dark-{i}", f"B Dark {i}") for i in range(5)]
-        )
-        brightness_b = (
-            [(f"b-bright-{i}", BrightnessClassification.BRIGHT) for i in range(3)]
-            + [(f"b-dark-{i}", BrightnessClassification.DARK) for i in range(5)]
-        )
+        mods_b = [_mock_modification(f"b-bright-{i}", f"B Bright {i}") for i in range(3)] + [
+            _mock_modification(f"b-dark-{i}", f"B Dark {i}") for i in range(5)
+        ]
+        brightness_b = [(f"b-bright-{i}", BrightnessClassification.BRIGHT) for i in range(3)] + [
+            (f"b-dark-{i}", BrightnessClassification.DARK) for i in range(5)
+        ]
 
         # Set up mock for two get_scenario_coverage calls (6 execute calls total)
         scenario_a_result = MagicMock()
@@ -301,15 +295,19 @@ class TestComparativeRiskAssessment:
         brightness_b_result = MagicMock()
         brightness_b_result.all.return_value = brightness_b
 
-        mock_session.execute = AsyncMock(side_effect=[
-            scenario_a_result, mods_a_result, brightness_a_result,
-            scenario_b_result, mods_b_result, brightness_b_result,
-        ])
+        mock_session.execute = AsyncMock(
+            side_effect=[
+                scenario_a_result,
+                mods_a_result,
+                brightness_a_result,
+                scenario_b_result,
+                mods_b_result,
+                brightness_b_result,
+            ]
+        )
 
         service = EvidenceCoverageService(mock_session)
-        results = await service.compare_scenarios(
-            [SCENARIO_A_ID, SCENARIO_B_ID], ENGAGEMENT_ID
-        )
+        results = await service.compare_scenarios([SCENARIO_A_ID, SCENARIO_B_ID], ENGAGEMENT_ID)
 
         assert len(results) == 2
         # Sorted by risk_score descending, so A (0.75) first, B (0.375) second

@@ -4,12 +4,16 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Float, ForeignKey, Index, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.database import Base
+
+if TYPE_CHECKING:
+    from src.core.models.engagement import Engagement
 
 
 class UpliftProjection(Base):
@@ -38,9 +42,7 @@ class UpliftProjection(Base):
     projected_uplift: Mapped[float] = mapped_column(Float, nullable=False)
     actual_uplift: Mapped[float | None] = mapped_column(Float, nullable=True)
     brightness: Mapped[str] = mapped_column(String(50), nullable=False)
-    projected_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    projected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     engagement: Mapped[Engagement] = relationship("Engagement")  # noqa: F821 — forward ref

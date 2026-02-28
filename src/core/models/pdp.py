@@ -75,9 +75,7 @@ class PDPPolicy(Base):
     """A policy rule evaluated by the PDP service."""
 
     __tablename__ = "pdp_policies"
-    __table_args__ = (
-        Index("ix_pdp_policies_active", "is_active"),
-    )
+    __table_args__ = (Index("ix_pdp_policies_active", "is_active"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)

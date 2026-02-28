@@ -27,15 +27,15 @@ logger = logging.getLogger(__name__)
 
 # Form number → action type mapping (from technical notes in issue #396)
 FORM_ACTION_TYPE_MAP: dict[int, IlluminationActionType] = {
-    1: IlluminationActionType.SYSTEM_EXTRACT,   # Activities
-    2: IlluminationActionType.SYSTEM_EXTRACT,   # Sequences
-    3: IlluminationActionType.SYSTEM_EXTRACT,   # Dependencies
-    4: IlluminationActionType.SHELF_REQUEST,    # Inputs/Outputs
-    5: IlluminationActionType.SHELF_REQUEST,    # Rules
-    6: IlluminationActionType.PERSONA_PROBE,    # Personas
-    7: IlluminationActionType.SHELF_REQUEST,    # Controls
-    8: IlluminationActionType.SHELF_REQUEST,    # Evidence
-    9: IlluminationActionType.SHELF_REQUEST,    # Uncertainty
+    1: IlluminationActionType.SYSTEM_EXTRACT,  # Activities
+    2: IlluminationActionType.SYSTEM_EXTRACT,  # Sequences
+    3: IlluminationActionType.SYSTEM_EXTRACT,  # Dependencies
+    4: IlluminationActionType.SHELF_REQUEST,  # Inputs/Outputs
+    5: IlluminationActionType.SHELF_REQUEST,  # Rules
+    6: IlluminationActionType.PERSONA_PROBE,  # Personas
+    7: IlluminationActionType.SHELF_REQUEST,  # Controls
+    8: IlluminationActionType.SHELF_REQUEST,  # Evidence
+    9: IlluminationActionType.SHELF_REQUEST,  # Uncertainty
 }
 
 
@@ -83,24 +83,24 @@ class IlluminationPlannerService:
             )
             records.append(record)
 
-            actions.append({
-                "id": str(action_id),
-                "element_id": element_id,
-                "element_name": element_name,
-                "action_type": action_type,
-                "target_knowledge_form": form_num,
-                "target_form_name": form_name,
-                "status": IlluminationActionStatus.PENDING,
-                "linked_item_id": None,
-            })
+            actions.append(
+                {
+                    "id": str(action_id),
+                    "element_id": element_id,
+                    "element_name": element_name,
+                    "action_type": action_type,
+                    "target_knowledge_form": form_num,
+                    "target_form_name": form_name,
+                    "status": IlluminationActionStatus.PENDING,
+                    "linked_item_id": None,
+                }
+            )
 
         self._session.add_all(records)
         await self._session.flush()
         return actions
 
-    async def get_progress(
-        self, engagement_id: str, element_id: str
-    ) -> dict[str, Any]:
+    async def get_progress(self, engagement_id: str, element_id: str) -> dict[str, Any]:
         """Get illumination progress for a specific segment.
 
         Returns total/completed/pending counts and per-action status.
@@ -143,15 +143,17 @@ class IlluminationPlannerService:
             else:
                 pending += 1
 
-            actions.append({
-                "id": str(row.id),
-                "action_type": row.action_type,
-                "target_knowledge_form": row.target_knowledge_form,
-                "target_form_name": row.target_form_name,
-                "status": status,
-                "linked_item_id": row.linked_item_id,
-                "completed_at": row.completed_at.isoformat() if row.completed_at else None,
-            })
+            actions.append(
+                {
+                    "id": str(row.id),
+                    "action_type": row.action_type,
+                    "target_knowledge_form": row.target_knowledge_form,
+                    "target_form_name": row.target_form_name,
+                    "status": status,
+                    "linked_item_id": row.linked_item_id,
+                    "completed_at": row.completed_at.isoformat() if row.completed_at else None,
+                }
+            )
 
         total = len(rows)
         return {
@@ -176,9 +178,7 @@ class IlluminationPlannerService:
         Returns the updated action dict, or None if not found.
         """
         action_uuid = uuid.UUID(action_id)
-        result = await self._session.execute(
-            select(IlluminationAction).where(IlluminationAction.id == action_uuid)
-        )
+        result = await self._session.execute(select(IlluminationAction).where(IlluminationAction.id == action_uuid))
         action = result.scalar_one_or_none()
         if not action:
             return None
@@ -199,9 +199,7 @@ class IlluminationPlannerService:
             "linked_item_id": action.linked_item_id,
         }
 
-    async def check_segment_completion(
-        self, engagement_id: str, element_id: str
-    ) -> dict[str, Any]:
+    async def check_segment_completion(self, engagement_id: str, element_id: str) -> dict[str, Any]:
         """Check if all actions for a segment are complete.
 
         Returns completion status and whether confidence recalculation

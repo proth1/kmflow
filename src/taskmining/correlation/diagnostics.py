@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import uuid
 from collections import defaultdict
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,8 +31,8 @@ _CONFIDENCE_BUCKETS = [
 
 
 def _utc_day_bounds(target_date: date) -> tuple[datetime, datetime]:
-    start = datetime(target_date.year, target_date.month, target_date.day, tzinfo=timezone.utc)
-    end = datetime(target_date.year, target_date.month, target_date.day, 23, 59, 59, tzinfo=timezone.utc)
+    start = datetime(target_date.year, target_date.month, target_date.day, tzinfo=UTC)
+    end = datetime(target_date.year, target_date.month, target_date.day, 23, 59, 59, tzinfo=UTC)
     return start, end
 
 
@@ -140,17 +140,21 @@ class CorrelationDiagnostics:
         unlinked = total_events - linked_events - role_linked_events
         causes = []
         if role_linked_events > 0:
-            causes.append({
-                "cause": "role_aggregate_only",
-                "event_count": role_linked_events,
-                "description": "Events attributed to role cohort; no specific case match found.",
-            })
+            causes.append(
+                {
+                    "cause": "role_aggregate_only",
+                    "event_count": role_linked_events,
+                    "description": "Events attributed to role cohort; no specific case match found.",
+                }
+            )
         if unlinked > 0:
-            causes.append({
-                "cause": "no_link",
-                "event_count": unlinked,
-                "description": "Events with no case link and no role association.",
-            })
+            causes.append(
+                {
+                    "cause": "no_link",
+                    "event_count": unlinked,
+                    "description": "Events with no case link and no role association.",
+                }
+            )
         return causes
 
     async def _generate_uncertainty_items(
@@ -185,13 +189,15 @@ class CorrelationDiagnostics:
                 continue
             unlinked_pct = stats["unlinked"] / stats["total"] * 100
             if unlinked_pct >= 50:
-                uncertainty_items.append({
-                    "hour": hour,
-                    "total_events": stats["total"],
-                    "unlinked_events": stats["unlinked"],
-                    "unlinked_pct": round(unlinked_pct, 1),
-                    "recommendation": "Review activities in this hour for manual case assignment.",
-                })
+                uncertainty_items.append(
+                    {
+                        "hour": hour,
+                        "total_events": stats["total"],
+                        "unlinked_events": stats["unlinked"],
+                        "unlinked_pct": round(unlinked_pct, 1),
+                        "recommendation": "Review activities in this hour for manual case assignment.",
+                    }
+                )
 
         return uncertainty_items
 

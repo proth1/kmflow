@@ -44,13 +44,9 @@ class DataProcessingActivity(Base):
     """
 
     __tablename__ = "data_processing_activities"
-    __table_args__ = (
-        Index("ix_data_processing_activities_engagement_id", "engagement_id"),
-    )
+    __table_args__ = (Index("ix_data_processing_activities_engagement_id", "engagement_id"),)
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     engagement_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("engagements.id", ondelete="RESTRICT"),
@@ -58,15 +54,9 @@ class DataProcessingActivity(Base):
     )
     name: Mapped[str] = mapped_column(String(256), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    lawful_basis: Mapped[LawfulBasis] = mapped_column(
-        Enum(LawfulBasis), nullable=False
-    )
-    article_6_basis: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="Art. 6(1)(f)"
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    lawful_basis: Mapped[LawfulBasis] = mapped_column(Enum(LawfulBasis), nullable=False)
+    article_6_basis: Mapped[str] = mapped_column(String(50), nullable=False, default="Art. 6(1)(f)")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     created_by: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="RESTRICT"),
@@ -86,36 +76,23 @@ class RetentionPolicy(Base):
     """
 
     __tablename__ = "retention_policies"
-    __table_args__ = (
-        Index("ix_retention_policies_engagement_id", "engagement_id", unique=True),
-    )
+    __table_args__ = (Index("ix_retention_policies_engagement_id", "engagement_id", unique=True),)
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     engagement_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("engagements.id", ondelete="CASCADE"),
         nullable=False,
     )
-    retention_days: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=365
-    )
+    retention_days: Mapped[int] = mapped_column(Integer, nullable=False, default=365)
     action: Mapped[RetentionAction] = mapped_column(
         Enum(RetentionAction), nullable=False, default=RetentionAction.ARCHIVE
     )
-    created_by: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), nullable=True
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
     def __repr__(self) -> str:
-        return (
-            f"<RetentionPolicy(engagement={self.engagement_id}, "
-            f"days={self.retention_days}, action={self.action})>"
-        )
+        return f"<RetentionPolicy(engagement={self.engagement_id}, days={self.retention_days}, action={self.action})>"

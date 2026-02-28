@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from httpx import AsyncClient
@@ -30,7 +30,6 @@ from src.core.models import (
     UserConsent,
     UserRole,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -194,9 +193,9 @@ class TestDataExport:
         # Simulate DB returning empty results (i.e., no other-user data leaks in)
         mock_db_session.execute = AsyncMock(
             side_effect=[
-                _scalars_result([]),   # memberships
-                _scalars_result([]),   # audit_logs
-                _scalars_result([]),   # annotations
+                _scalars_result([]),  # memberships
+                _scalars_result([]),  # audit_logs
+                _scalars_result([]),  # annotations
             ]
         )
 
@@ -271,9 +270,7 @@ class TestAdminAnonymize:
     """POST /api/v1/gdpr/admin/anonymize/{user_id}"""
 
     @pytest.mark.asyncio
-    async def test_admin_can_anonymize_user(
-        self, client: AsyncClient, mock_db_session: AsyncMock, test_app
-    ) -> None:
+    async def test_admin_can_anonymize_user(self, client: AsyncClient, mock_db_session: AsyncMock, test_app) -> None:
         """Platform admin should be able to immediately anonymise a user."""
         from src.core.auth import get_current_user
 
@@ -302,9 +299,7 @@ class TestAdminAnonymize:
         mock_db_session.commit.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_non_admin_cannot_anonymize(
-        self, client: AsyncClient, mock_db_session: AsyncMock, test_app
-    ) -> None:
+    async def test_non_admin_cannot_anonymize(self, client: AsyncClient, mock_db_session: AsyncMock, test_app) -> None:
         """A non-admin user must receive 403 when attempting to anonymise."""
         from src.core.auth import get_current_user
 
@@ -378,9 +373,7 @@ class TestConsentGet:
         newer_analytics = _make_consent(user_id, "analytics", granted=False)
         newer_analytics.granted_at = datetime(2025, 6, 1, tzinfo=UTC)
 
-        mock_db_session.execute = AsyncMock(
-            return_value=_scalars_result([newer_analytics, older_analytics])
-        )
+        mock_db_session.execute = AsyncMock(return_value=_scalars_result([newer_analytics, older_analytics]))
 
         response = await client.get("/api/v1/gdpr/consent")
         assert response.status_code == 200
@@ -400,9 +393,7 @@ class TestConsentPost:
     """POST /api/v1/gdpr/consent"""
 
     @pytest.mark.asyncio
-    async def test_consent_post_stores_consent(
-        self, client: AsyncClient, mock_db_session: AsyncMock, test_app
-    ) -> None:
+    async def test_consent_post_stores_consent(self, client: AsyncClient, mock_db_session: AsyncMock, test_app) -> None:
         """Posting a consent update should commit a new UserConsent row."""
         from src.core.auth import get_current_user
 

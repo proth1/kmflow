@@ -125,7 +125,7 @@ async def list_gap_probes(
     generator = GapProbeGenerator(graph_service)
 
     all_probes = await generator.generate_probes(str(engagement_id))
-    paginated = all_probes[offset: offset + limit]
+    paginated = all_probes[offset : offset + limit]
 
     return {
         "engagement_id": engagement_id,

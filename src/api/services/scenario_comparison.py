@@ -54,13 +54,9 @@ class ScenarioComparisonService:
 
         # Load simulation results
         results = await self._load_simulation_results(scenario_ids)
-        incomplete = [
-            str(sid) for sid in scenario_ids if sid not in results
-        ]
+        incomplete = [str(sid) for sid in scenario_ids if sid not in results]
         if incomplete:
-            raise ValueError(
-                f"Scenarios without completed simulation: {', '.join(incomplete)}"
-            )
+            raise ValueError(f"Scenarios without completed simulation: {', '.join(incomplete)}")
 
         # Load modification counts for compliance impact
         compliance_removals = await self._count_control_removals(scenario_ids)
@@ -80,17 +76,19 @@ class ScenarioComparisonService:
             # at which point the true ratio (remaining/total) should be used.
             governance_coverage = max(0.0, 100.0 - (removals * 10.0))
 
-            entries.append({
-                "scenario_id": str(scenario.id),
-                "name": scenario.name,
-                "metrics": {
-                    "cycle_time_delta_pct": cycle_time_delta,
-                    "fte_delta": fte_delta,
-                    "avg_confidence": avg_confidence,
-                    "governance_coverage_pct": governance_coverage,
-                    "compliance_flags": removals,
-                },
-            })
+            entries.append(
+                {
+                    "scenario_id": str(scenario.id),
+                    "name": scenario.name,
+                    "metrics": {
+                        "cycle_time_delta_pct": cycle_time_delta,
+                        "fte_delta": fte_delta,
+                        "avg_confidence": avg_confidence,
+                        "governance_coverage_pct": governance_coverage,
+                        "compliance_flags": removals,
+                    },
+                }
+            )
 
         # Compute best/worst flags
         self._annotate_best_worst(entries)
@@ -103,12 +101,9 @@ class ScenarioComparisonService:
         engagement_id: uuid.UUID,
     ) -> list[SimulationScenario]:
         """Load scenarios by IDs, scoped to engagement."""
-        stmt = (
-            select(SimulationScenario)
-            .where(
-                SimulationScenario.id.in_(scenario_ids),
-                SimulationScenario.engagement_id == engagement_id,
-            )
+        stmt = select(SimulationScenario).where(
+            SimulationScenario.id.in_(scenario_ids),
+            SimulationScenario.engagement_id == engagement_id,
         )
         result = await self._session.execute(stmt)
         return list(result.scalars().all())

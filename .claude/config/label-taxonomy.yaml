@@ -141,9 +141,9 @@ compliance:
 
 # Automation Rules
 automation:
-  # When branch is created from issue, add in-progress label
+  # When branch is created from issue, add in-progress and CDD labels
   on_branch_create:
-    add_labels: ["status:in-progress"]
+    add_labels: ["status:in-progress", "cdd:evidence-required"]
     remove_labels: ["status:backlog", "status:ready"]
 
   # When PR is created, add in-review label
@@ -151,8 +151,8 @@ automation:
     add_labels: ["status:in-review"]
     remove_labels: ["status:in-progress"]
 
-  # When PR is merged, add done label and close issue
+  # When PR is merged, add done and CDD verified labels, close issue
   on_pr_merge:
-    add_labels: ["status:done"]
-    remove_labels: ["status:in-review", "status:in-progress"]
+    add_labels: ["status:done", "cdd:verified"]
+    remove_labels: ["status:in-review", "status:in-progress", "cdd:evidence-required"]
     close_issue: true

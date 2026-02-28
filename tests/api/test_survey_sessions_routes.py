@@ -85,9 +85,7 @@ class TestListSessions:
         mock_session.execute = AsyncMock(side_effect=[count_result, list_result])
 
         client = _make_app(mock_session)
-        resp = client.get(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-sessions"
-        )
+        resp = client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-sessions")
         assert resp.status_code == 200
         assert resp.json()["total_count"] == 1
 
@@ -111,9 +109,7 @@ class TestGetSession:
         mock_session.execute = AsyncMock(return_value=result_mock)
 
         client = _make_app(mock_session)
-        resp = client.get(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-sessions/{SESSION_ID}"
-        )
+        resp = client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-sessions/{SESSION_ID}")
         assert resp.status_code == 200
         assert resp.json()["respondent_role"] == "operations_team"
 
@@ -129,9 +125,7 @@ class TestGetSession:
         mock_session.execute = AsyncMock(return_value=result_mock)
 
         client = _make_app(mock_session)
-        resp = client.get(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-sessions/{SESSION_ID}"
-        )
+        resp = client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-sessions/{SESSION_ID}")
         assert resp.status_code == 404
 
 
@@ -153,14 +147,10 @@ class TestCompleteSession:
         claims_scalars.all.return_value = []
         claims_result.scalars.return_value = claims_scalars
 
-        mock_session.execute = AsyncMock(
-            side_effect=[session_result, session_result, claims_result]
-        )
+        mock_session.execute = AsyncMock(side_effect=[session_result, session_result, claims_result])
 
         client = _make_app(mock_session)
-        resp = client.patch(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-sessions/{SESSION_ID}/complete"
-        )
+        resp = client.patch(f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-sessions/{SESSION_ID}/complete")
         assert resp.status_code == 200
         assert resp.json()["status"] == "completed"
 
@@ -189,14 +179,10 @@ class TestGenerateProbes:
         terms_scalars.all.return_value = [term]
         terms_result.scalars.return_value = terms_scalars
 
-        mock_session.execute = AsyncMock(
-            side_effect=[session_result, terms_result]
-        )
+        mock_session.execute = AsyncMock(side_effect=[session_result, terms_result])
 
         client = _make_app(mock_session)
-        resp = client.post(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-sessions/{SESSION_ID}/generate-probes"
-        )
+        resp = client.post(f"/api/v1/engagements/{ENGAGEMENT_ID}/survey-sessions/{SESSION_ID}/generate-probes")
         assert resp.status_code == 200
         data = resp.json()
         assert data["terms_used"] == 1

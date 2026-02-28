@@ -199,7 +199,10 @@ class PovGenerationWorker(TaskWorker):
 
             try:
                 step_data = await self._execute_step(
-                    step_num, engagement_id, scope, state,
+                    step_num,
+                    engagement_id,
+                    scope,
+                    state,
                 )
                 duration = int((time.monotonic() - step_start) * 1000)
 
@@ -226,7 +229,10 @@ class PovGenerationWorker(TaskWorker):
 
                 logger.warning(
                     "POV generation failed at step %d (%s) for engagement %s: %s",
-                    step_num, step_name, engagement_id, exc,
+                    step_num,
+                    step_name,
+                    engagement_id,
+                    exc,
                 )
                 # Preserve partial data from completed steps
                 return state.to_dict()
@@ -236,7 +242,9 @@ class PovGenerationWorker(TaskWorker):
 
         logger.info(
             "POV generation completed for engagement %s (v%d) in %dms",
-            engagement_id, version, state.total_duration_ms,
+            engagement_id,
+            version,
+            state.total_duration_ms,
         )
 
         return state.to_dict()

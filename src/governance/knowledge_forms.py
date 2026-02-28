@@ -91,10 +91,7 @@ class KnowledgeFormsCoverageService:
 
     async def get_activity_ids(self, engagement_id: str) -> list[str]:
         """Return all activity IDs in an engagement."""
-        query = (
-            "MATCH (a:Activity {engagement_id: $engagement_id}) "
-            "RETURN a.id AS activity_id"
-        )
+        query = "MATCH (a:Activity {engagement_id: $engagement_id}) RETURN a.id AS activity_id"
         records = await self._graph.run_query(query, {"engagement_id": engagement_id})
         return [r["activity_id"] for r in records]
 
@@ -142,9 +139,7 @@ class KnowledgeFormsCoverageService:
 
         return covered
 
-    async def compute_engagement_coverage(
-        self, engagement_id: str
-    ) -> dict[str, Any]:
+    async def compute_engagement_coverage(self, engagement_id: str) -> dict[str, Any]:
         """Compute full coverage across all 9 forms for an engagement.
 
         Returns per-form and per-activity coverage data, plus an overall
@@ -174,13 +169,15 @@ class KnowledgeFormsCoverageService:
             covered = form_results[form]
             covered_count = len(covered)
             pct = round(covered_count / total * 100, 2) if total > 0 else 0.0
-            forms_data.append({
-                "form_number": FORM_NUMBERS[form],
-                "form_name": form.value,
-                "covered_count": covered_count,
-                "total_count": total,
-                "coverage_percentage": pct,
-            })
+            forms_data.append(
+                {
+                    "form_number": FORM_NUMBERS[form],
+                    "form_name": form.value,
+                    "covered_count": covered_count,
+                    "total_count": total,
+                    "coverage_percentage": pct,
+                }
+            )
 
         # Build per-activity response
         per_activity = []
@@ -191,17 +188,21 @@ class KnowledgeFormsCoverageService:
                 if aid in form_results[form]:
                     forms_present.append(FORM_NUMBERS[form])
                 else:
-                    gaps.append({
-                        "form_number": FORM_NUMBERS[form],
-                        "form_name": form.value,
-                    })
+                    gaps.append(
+                        {
+                            "form_number": FORM_NUMBERS[form],
+                            "form_name": form.value,
+                        }
+                    )
             score = round(len(forms_present) / 9 * 100, 2)
-            per_activity.append({
-                "activity_id": aid,
-                "forms_present": forms_present,
-                "gaps": gaps,
-                "completeness_score": score,
-            })
+            per_activity.append(
+                {
+                    "activity_id": aid,
+                    "forms_present": forms_present,
+                    "gaps": gaps,
+                    "completeness_score": score,
+                }
+            )
 
         # Overall engagement completeness
         total_cells = total * 9
@@ -216,9 +217,7 @@ class KnowledgeFormsCoverageService:
             "overall_completeness": overall,
         }
 
-    async def compute_knowledge_gaps(
-        self, engagement_id: str
-    ) -> list[dict[str, Any]]:
+    async def compute_knowledge_gaps(self, engagement_id: str) -> list[dict[str, Any]]:
         """Return a flat list of all missing form coverage entries.
 
         Each entry includes activity_id, form_number, form_name, and a
@@ -233,12 +232,14 @@ class KnowledgeFormsCoverageService:
             covered = await self.compute_form_coverage(engagement_id, activity_ids, form)
             uncovered = set(activity_ids) - covered
             for aid in uncovered:
-                gaps.append({
-                    "activity_id": aid,
-                    "form_number": FORM_NUMBERS[form],
-                    "form_name": form.value,
-                    "gap_type": "missing_evidence",
-                    "suggested_probe_type": FORM_PROBE_TYPE_MAP[form],
-                })
+                gaps.append(
+                    {
+                        "activity_id": aid,
+                        "form_number": FORM_NUMBERS[form],
+                        "form_name": form.value,
+                        "gap_type": "missing_evidence",
+                        "suggested_probe_type": FORM_PROBE_TYPE_MAP[form],
+                    }
+                )
 
         return gaps

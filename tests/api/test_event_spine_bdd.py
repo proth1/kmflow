@@ -205,9 +205,24 @@ class TestEventSpineAssembly:
         builder = EventSpineBuilder()
         base = datetime(2025, 1, 1, tzinfo=UTC)
         events = [
-            {"case_id": "C1", "activity_name": "C", "timestamp_utc": base + timedelta(hours=3), "confidence_score": 0.8},
-            {"case_id": "C1", "activity_name": "A", "timestamp_utc": base + timedelta(hours=1), "confidence_score": 0.9},
-            {"case_id": "C1", "activity_name": "B", "timestamp_utc": base + timedelta(hours=2), "confidence_score": 0.7},
+            {
+                "case_id": "C1",
+                "activity_name": "C",
+                "timestamp_utc": base + timedelta(hours=3),
+                "confidence_score": 0.8,
+            },
+            {
+                "case_id": "C1",
+                "activity_name": "A",
+                "timestamp_utc": base + timedelta(hours=1),
+                "confidence_score": 0.9,
+            },
+            {
+                "case_id": "C1",
+                "activity_name": "B",
+                "timestamp_utc": base + timedelta(hours=2),
+                "confidence_score": 0.7,
+            },
         ]
         spine = builder.build_spine(events)
         assert len(spine) == 3
@@ -221,7 +236,12 @@ class TestEventSpineAssembly:
         ts = datetime(2025, 1, 1, 10, 0, tzinfo=UTC)
         events = [
             {"case_id": "C1", "activity_name": "A", "timestamp_utc": ts, "confidence_score": 0.5},
-            {"case_id": "C1", "activity_name": "A", "timestamp_utc": ts + timedelta(seconds=10), "confidence_score": 0.9},
+            {
+                "case_id": "C1",
+                "activity_name": "A",
+                "timestamp_utc": ts + timedelta(seconds=10),
+                "confidence_score": 0.9,
+            },
             {"case_id": "C1", "activity_name": "B", "timestamp_utc": ts + timedelta(hours=1), "confidence_score": 0.8},
         ]
         spine = builder.build_spine(events)
@@ -331,9 +351,7 @@ async def test_get_event_spine_returns_ordered_events() -> None:
     app = _make_app(session)
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp = await client.get(
-            f"/api/v1/cases/CASE-001/event-spine?engagement_id={ENGAGEMENT_ID}"
-        )
+        resp = await client.get(f"/api/v1/cases/CASE-001/event-spine?engagement_id={ENGAGEMENT_ID}")
 
     assert resp.status_code == 200
     data = resp.json()

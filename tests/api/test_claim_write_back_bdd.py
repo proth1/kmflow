@@ -18,6 +18,7 @@ from src.semantic.claim_write_back import CERTAINTY_WEIGHTS, ClaimWriteBackServi
 
 # ── Helpers ──────────────────────────────────────────────────────────
 
+
 def _make_claim(
     *,
     certainty_tier: CertaintyTier = CertaintyTier.KNOWN,
@@ -169,9 +170,7 @@ class TestContradictsEdgeCreation:
         assert result["conflict_id"] is not None
         # Verify session.add was called with ConflictObject
         add_calls = session.add.call_args_list
-        conflict_added = any(
-            isinstance(call[0][0], ConflictObject) for call in add_calls
-        )
+        conflict_added = any(isinstance(call[0][0], ConflictObject) for call in add_calls)
         assert conflict_added
 
     @pytest.mark.asyncio
@@ -282,18 +281,20 @@ class TestConfidenceRecomputation:
     async def test_recomputes_from_claim_weights(self) -> None:
         """Confidence is computed as average of claim weights."""
         graph = AsyncMock()
-        graph.run_query = AsyncMock(return_value=[{
-            "claim_count": 5,
-            "total_weight": 4.0,
-            "weights": [1.0, 1.0, 0.6, 0.6, 0.8],
-        }])
+        graph.run_query = AsyncMock(
+            return_value=[
+                {
+                    "claim_count": 5,
+                    "total_weight": 4.0,
+                    "weights": [1.0, 1.0, 0.6, 0.6, 0.8],
+                }
+            ]
+        )
         graph.run_write_query = AsyncMock(return_value=None)
         session = AsyncMock()
 
         service = ClaimWriteBackService(graph=graph, session=session)
-        result = await service.recompute_activity_confidence(
-            "act_001", uuid.uuid4()
-        )
+        result = await service.recompute_activity_confidence("act_001", uuid.uuid4())
 
         assert result["claim_count"] == 5
         assert result["aggregate_weight"] == 4.0
@@ -303,18 +304,20 @@ class TestConfidenceRecomputation:
     async def test_confidence_bounded_zero_to_one(self) -> None:
         """Confidence is clamped to [0.0, 1.0]."""
         graph = AsyncMock()
-        graph.run_query = AsyncMock(return_value=[{
-            "claim_count": 2,
-            "total_weight": 5.0,
-            "weights": [3.0, 2.0],
-        }])
+        graph.run_query = AsyncMock(
+            return_value=[
+                {
+                    "claim_count": 2,
+                    "total_weight": 5.0,
+                    "weights": [3.0, 2.0],
+                }
+            ]
+        )
         graph.run_write_query = AsyncMock(return_value=None)
         session = AsyncMock()
 
         service = ClaimWriteBackService(graph=graph, session=session)
-        result = await service.recompute_activity_confidence(
-            "act_002", uuid.uuid4()
-        )
+        result = await service.recompute_activity_confidence("act_002", uuid.uuid4())
 
         assert result["claim_confidence"] == 1.0  # Clamped to max
 
@@ -326,9 +329,7 @@ class TestConfidenceRecomputation:
         session = AsyncMock()
 
         service = ClaimWriteBackService(graph=graph, session=session)
-        result = await service.recompute_activity_confidence(
-            "act_003", uuid.uuid4()
-        )
+        result = await service.recompute_activity_confidence("act_003", uuid.uuid4())
 
         assert result["claim_count"] == 0
         assert result["claim_confidence"] == 0.0
@@ -337,11 +338,15 @@ class TestConfidenceRecomputation:
     async def test_updates_activity_node_with_confidence(self) -> None:
         """Activity node is updated with claim_confidence in Neo4j."""
         graph = AsyncMock()
-        graph.run_query = AsyncMock(return_value=[{
-            "claim_count": 3,
-            "total_weight": 2.4,
-            "weights": [1.0, 0.6, 0.8],
-        }])
+        graph.run_query = AsyncMock(
+            return_value=[
+                {
+                    "claim_count": 3,
+                    "total_weight": 2.4,
+                    "weights": [1.0, 0.6, 0.8],
+                }
+            ]
+        )
         graph.run_write_query = AsyncMock(return_value=None)
         session = AsyncMock()
 
@@ -365,11 +370,15 @@ class TestBatchIngest:
         """Batch ingest returns correct counts."""
         graph = AsyncMock()
         graph.run_write_query = AsyncMock(return_value=None)
-        graph.run_query = AsyncMock(return_value=[{
-            "claim_count": 2,
-            "total_weight": 1.6,
-            "weights": [1.0, 0.6],
-        }])
+        graph.run_query = AsyncMock(
+            return_value=[
+                {
+                    "claim_count": 2,
+                    "total_weight": 1.6,
+                    "weights": [1.0, 0.6],
+                }
+            ]
+        )
         session = AsyncMock()
         session.flush = AsyncMock()
 
@@ -399,11 +408,15 @@ class TestBatchIngest:
         """Batch ingest creates conflict for contradicted claim."""
         graph = AsyncMock()
         graph.run_write_query = AsyncMock(return_value=None)
-        graph.run_query = AsyncMock(return_value=[{
-            "claim_count": 2,
-            "total_weight": 0.5,
-            "weights": [1.0, -0.5],
-        }])
+        graph.run_query = AsyncMock(
+            return_value=[
+                {
+                    "claim_count": 2,
+                    "total_weight": 0.5,
+                    "weights": [1.0, -0.5],
+                }
+            ]
+        )
         session = AsyncMock()
         session.flush = AsyncMock()
         session.add = MagicMock()

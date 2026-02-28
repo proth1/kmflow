@@ -73,9 +73,7 @@ def _make_bulk_events(
         month = 1 + (total_day // 28)  # 28 days per month
         day = 1 + (total_day % 28)
         hour = 10 + (i % 12)
-        events.extend(
-            _make_case_events(f"case-{i:03d}", activities, base_hour=hour, day=day, month=month)
-        )
+        events.extend(_make_case_events(f"case-{i:03d}", activities, base_hour=hour, day=day, month=month))
     return events
 
 
@@ -161,11 +159,13 @@ class TestBottleneckDetection:
         # Average = (10+2+2)/3 = 4.67, threshold = 9.33
         events = []
         for i in range(10):
-            events.append(_make_event(case_id=f"c{i}", activity="Submit", timestamp=f"2026-01-15T{10+i}:00:00+00:00"))
+            events.append(_make_event(case_id=f"c{i}", activity="Submit", timestamp=f"2026-01-15T{10 + i}:00:00+00:00"))
         for i in range(2):
-            events.append(_make_event(case_id=f"c{i}", activity="Review", timestamp=f"2026-01-15T{10+i}:00:00+00:00"))
+            events.append(_make_event(case_id=f"c{i}", activity="Review", timestamp=f"2026-01-15T{10 + i}:00:00+00:00"))
         for i in range(2):
-            events.append(_make_event(case_id=f"c{i}", activity="Approve", timestamp=f"2026-01-15T{10+i}:00:00+00:00"))
+            events.append(
+                _make_event(case_id=f"c{i}", activity="Approve", timestamp=f"2026-01-15T{10 + i}:00:00+00:00")
+            )
 
         metrics = compute_activity_flow(events, "daily")
         bottlenecks = detect_bottlenecks(metrics, multiplier=2.0)
@@ -230,9 +230,9 @@ class TestBottleneckDetection:
         # Submit (4) < 6, so NOT a bottleneck
         events = []
         for i in range(4):
-            events.append(_make_event(case_id=f"c{i}", activity="Submit", timestamp=f"2026-01-15T{10+i}:00:00+00:00"))
+            events.append(_make_event(case_id=f"c{i}", activity="Submit", timestamp=f"2026-01-15T{10 + i}:00:00+00:00"))
         for i in range(2):
-            events.append(_make_event(case_id=f"c{i}", activity="Review", timestamp=f"2026-01-15T{10+i}:00:00+00:00"))
+            events.append(_make_event(case_id=f"c{i}", activity="Review", timestamp=f"2026-01-15T{10 + i}:00:00+00:00"))
         metrics = compute_activity_flow(events, "daily")
         bottlenecks = detect_bottlenecks(metrics, multiplier=2.0)
         assert bottlenecks == []

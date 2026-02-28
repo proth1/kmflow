@@ -6,8 +6,8 @@ Story #212 — Part of Epic #210 (Privacy and Compliance).
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -27,7 +27,7 @@ def _quarantine_record(
 ) -> PIIQuarantine:
     """Build a quarantine record with a relative auto_delete_at."""
     if now is None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
     return PIIQuarantine(
         id=uuid.uuid4(),
         engagement_id=uuid.uuid4(),
@@ -108,7 +108,7 @@ class TestCleanupJobUnit:
         delete_result.rowcount = 0
         session.execute.return_value = delete_result
 
-        custom_now = datetime(2026, 6, 1, 12, 0, tzinfo=timezone.utc)
+        custom_now = datetime(2026, 6, 1, 12, 0, tzinfo=UTC)
         summary = await run_quarantine_cleanup(session, now=custom_now)
         assert summary["run_at"] == custom_now.isoformat()
 

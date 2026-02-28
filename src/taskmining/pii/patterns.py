@@ -112,14 +112,18 @@ _PATTERNS: list[PIIPattern] = [
     # -- Date of Birth --------------------------------------------------------
     PIIPattern(
         pii_type=PIIType.DATE_OF_BIRTH,
-        pattern=re.compile(r"\b(?:DOB|Date of Birth|Born|Birthday)[\s:]*\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b", re.IGNORECASE),
+        pattern=re.compile(
+            r"\b(?:DOB|Date of Birth|Born|Birthday)[\s:]*\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b", re.IGNORECASE
+        ),
         description="Date of birth with label",
         confidence=0.95,
     ),
     # -- Financial ------------------------------------------------------------
     PIIPattern(
         pii_type=PIIType.FINANCIAL,
-        pattern=re.compile(r"\b(?:account|acct)[\s#:]*(?:number[\s#:]*|no[\s#:]*|num[\s#:]*)?\d{8,17}\b", re.IGNORECASE),
+        pattern=re.compile(
+            r"\b(?:account|acct)[\s#:]*(?:number[\s#:]*|no[\s#:]*|num[\s#:]*)?\d{8,17}\b", re.IGNORECASE
+        ),
         description="Bank account number",
         confidence=0.85,
     ),

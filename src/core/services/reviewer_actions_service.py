@@ -99,9 +99,7 @@ class ReviewerActionsService:
             "action": action.value,
             "element_id": element_id,
             "graph_write_back": write_back_result,
-            "decision_at": decision.decision_at.isoformat()
-            if decision.decision_at
-            else datetime.now(UTC).isoformat(),
+            "decision_at": decision.decision_at.isoformat() if decision.decision_at else datetime.now(UTC).isoformat(),
         }
 
     async def _handle_confirm(
@@ -187,14 +185,20 @@ class ReviewerActionsService:
         new_assertion_id = str(uuid.uuid4()).replace("-", "")[:16]
 
         # Validate corrected_data keys (prevent Cypher injection via property names)
-        allowed_properties = frozenset({
-            "name", "description", "performing_role", "process_area",
-            "frequency", "duration", "inputs", "outputs", "notes",
-        })
-        safe_data = {
-            k: v for k, v in corrected_data.items()
-            if k in allowed_properties
-        }
+        allowed_properties = frozenset(
+            {
+                "name",
+                "description",
+                "performing_role",
+                "process_area",
+                "frequency",
+                "duration",
+                "inputs",
+                "outputs",
+                "notes",
+            }
+        )
+        safe_data = {k: v for k, v in corrected_data.items() if k in allowed_properties}
 
         # Create new assertion and SUPERSEDES edge, retract original (scoped)
         await self._graph.run_write_query(
@@ -222,9 +226,7 @@ class ReviewerActionsService:
 
         # Apply corrected data properties to new assertion
         if safe_data:
-            set_clauses = ", ".join(
-                f"a.{k} = ${k}" for k in safe_data
-            )
+            set_clauses = ", ".join(f"a.{k} = ${k}" for k in safe_data)
             await self._graph.run_write_query(
                 f"""
                 MATCH (a:Assertion {{id: $new_id, engagement_id: $engagement_id}})

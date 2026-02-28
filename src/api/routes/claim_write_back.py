@@ -133,9 +133,7 @@ async def batch_ingest_claims(
     # Build target mapping: claim UUID -> activity_id
     target_map: dict[uuid.UUID, str] | None = None
     if payload.target_activity_ids:
-        target_map = {
-            uuid.UUID(k): v for k, v in payload.target_activity_ids.items()
-        }
+        target_map = {uuid.UUID(k): v for k, v in payload.target_activity_ids.items()}
 
     graph = KnowledgeGraphService(request.app.state.neo4j_driver)
     service = ClaimWriteBackService(graph=graph, session=session)

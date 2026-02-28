@@ -113,15 +113,11 @@ async def get_survey_session(
         "claims_count": session_obj.claims_count,
         "summary": session_obj.summary,
         "created_at": session_obj.created_at.isoformat(),
-        "completed_at": session_obj.completed_at.isoformat()
-        if session_obj.completed_at
-        else None,
+        "completed_at": session_obj.completed_at.isoformat() if session_obj.completed_at else None,
     }
 
 
-@router.patch(
-    "/engagements/{engagement_id}/survey-sessions/{session_id}/complete"
-)
+@router.patch("/engagements/{engagement_id}/survey-sessions/{session_id}/complete")
 async def complete_survey_session(
     engagement_id: UUID,
     session_id: UUID,
@@ -152,9 +148,7 @@ async def complete_survey_session(
 # ── Probe Generation ──────────────────────────────────────────────────
 
 
-@router.post(
-    "/engagements/{engagement_id}/survey-sessions/{session_id}/generate-probes"
-)
+@router.post("/engagements/{engagement_id}/survey-sessions/{session_id}/generate-probes")
 async def generate_session_probes(
     engagement_id: UUID,
     session_id: UUID,
@@ -185,14 +179,9 @@ async def generate_session_probes(
     result = await session.execute(stmt)
     terms = result.scalars().all()
 
-    term_dicts = [
-        {"id": str(t.id), "term": t.term, "domain": t.domain, "category": t.category.value}
-        for t in terms
-    ]
+    term_dicts = [{"id": str(t.id), "term": t.term, "domain": t.domain, "category": t.category.value} for t in terms]
 
-    probes = service.generate_probes_for_terms(
-        term_dicts, session_id=session_id
-    )
+    probes = service.generate_probes_for_terms(term_dicts, session_id=session_id)
 
     return {
         "session_id": str(session_id),

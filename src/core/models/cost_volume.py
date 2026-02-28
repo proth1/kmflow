@@ -8,12 +8,16 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.database import Base
+
+if TYPE_CHECKING:
+    from src.core.models.engagement import Engagement
 
 
 class RoleRateAssumption(Base):
@@ -35,7 +39,7 @@ class RoleRateAssumption(Base):
     rate_variance_pct: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
 
     def __repr__(self) -> str:
         return f"<RoleRateAssumption(id={self.id}, role='{self.role_name}', rate={self.hourly_rate})>"
@@ -45,9 +49,7 @@ class VolumeForecast(Base):
     """Transaction volume forecast with seasonal adjustment factors."""
 
     __tablename__ = "volume_forecasts"
-    __table_args__ = (
-        Index("ix_volume_forecasts_engagement_id", "engagement_id"),
-    )
+    __table_args__ = (Index("ix_volume_forecasts_engagement_id", "engagement_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     engagement_id: Mapped[uuid.UUID] = mapped_column(
@@ -59,7 +61,7 @@ class VolumeForecast(Base):
     seasonal_factors: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
 
     def __repr__(self) -> str:
         return f"<VolumeForecast(id={self.id}, name='{self.name}', baseline={self.baseline_volume})>"

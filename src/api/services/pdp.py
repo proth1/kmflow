@@ -25,7 +25,6 @@ from src.core.models.pdp import (
     PDPDecisionType,
     PDPPolicy,
     PDPPolicyBundle,
-    PolicyObligation,
 )
 
 logger = logging.getLogger(__name__)
@@ -197,9 +196,8 @@ class PDPService:
 
         # ABAC attribute conditions — exact match for string attributes
         for abac_key in _ABAC_STRING_CONDITION_KEYS:
-            if abac_key in conditions:
-                if attrs.get(abac_key) != conditions[abac_key]:
-                    return False
+            if abac_key in conditions and attrs.get(abac_key) != conditions[abac_key]:
+                return False
 
         # ABAC numeric threshold conditions
         if "cohort_size_lt" in conditions:
@@ -231,9 +229,7 @@ class PDPService:
                 return
 
             result = await self._session.execute(
-                select(PDPPolicy)
-                .where(PDPPolicy.is_active.is_(True))
-                .order_by(PDPPolicy.priority)
+                select(PDPPolicy).where(PDPPolicy.is_active.is_(True)).order_by(PDPPolicy.priority)
             )
             policies = result.scalars().all()
 
@@ -323,9 +319,7 @@ class PDPService:
     async def list_rules(self) -> list[PDPPolicy]:
         """List all active policy rules ordered by priority."""
         result = await self._session.execute(
-            select(PDPPolicy)
-            .where(PDPPolicy.is_active.is_(True))
-            .order_by(PDPPolicy.priority)
+            select(PDPPolicy).where(PDPPolicy.is_active.is_(True)).order_by(PDPPolicy.priority)
         )
         return list(result.scalars().all())
 
@@ -351,9 +345,7 @@ class PDPService:
             The newly created and activated PDPPolicyBundle.
         """
         # Deactivate all current bundles
-        existing = await self._session.execute(
-            select(PDPPolicyBundle).where(PDPPolicyBundle.is_active.is_(True))
-        )
+        existing = await self._session.execute(select(PDPPolicyBundle).where(PDPPolicyBundle.is_active.is_(True)))
         for bundle in existing.scalars().all():
             bundle.is_active = False
 
@@ -391,8 +383,7 @@ class PDPService:
         unknown = set(conditions.keys()) - cls.ALLOWED_CONDITION_KEYS
         if unknown:
             raise ValueError(
-                f"Unknown condition keys: {sorted(unknown)}. "
-                f"Allowed: {sorted(cls.ALLOWED_CONDITION_KEYS)}"
+                f"Unknown condition keys: {sorted(unknown)}. Allowed: {sorted(cls.ALLOWED_CONDITION_KEYS)}"
             )
 
     @staticmethod

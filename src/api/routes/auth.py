@@ -15,14 +15,13 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr, Field
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from fastapi.responses import JSONResponse
 
 from src.api.deps import get_session
 from src.core.auth import (
@@ -34,7 +33,6 @@ from src.core.auth import (
     create_refresh_token,
     decode_token,
     get_current_user,
-    is_token_blacklisted,
     set_auth_cookies,
     verify_password,
 )
@@ -360,10 +358,7 @@ async def logout(
     """
     token: str | None = None
 
-    if credentials is not None:
-        token = credentials.credentials
-    else:
-        token = request.cookies.get(ACCESS_COOKIE_NAME)
+    token = credentials.credentials if credentials is not None else request.cookies.get(ACCESS_COOKIE_NAME)
 
     if token is None:
         raise HTTPException(

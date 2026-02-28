@@ -66,9 +66,7 @@ def _mock_member_session(role_in_engagement: str) -> AsyncMock:
     session = AsyncMock()
     member_result = MagicMock()
     member_result.scalar_one_or_none.return_value = role_in_engagement
-    session.execute = AsyncMock(
-        side_effect=[_engagement_exists_result(), member_result]
-    )
+    session.execute = AsyncMock(side_effect=[_engagement_exists_result(), member_result])
     return session
 
 
@@ -81,9 +79,7 @@ def _mock_non_member_session() -> AsyncMock:
     session = AsyncMock()
     member_result = MagicMock()
     member_result.scalar_one_or_none.return_value = None
-    session.execute = AsyncMock(
-        side_effect=[_engagement_exists_result(), member_result]
-    )
+    session.execute = AsyncMock(side_effect=[_engagement_exists_result(), member_result])
     return session
 
 
@@ -455,9 +451,7 @@ class TestClientStakeholderDashboard:
         gaps_result = MagicMock()
         gaps_result.scalars.return_value.all.return_value = [gap1, gap2]
 
-        session.execute = AsyncMock(
-            side_effect=[eng_exists_result, model_result, brightness_result, gaps_result]
-        )
+        session.execute = AsyncMock(side_effect=[eng_exists_result, model_result, brightness_result, gaps_result])
 
         result = await get_client_dashboard(eng_id, session, user)
 
@@ -598,9 +592,7 @@ class TestPersonaDashboardSchemas:
 
     def test_brightness_distribution_validates(self) -> None:
         """BrightnessDistribution schema is valid."""
-        entry = BrightnessDistribution(
-            bright_pct=60.0, dim_pct=30.0, dark_pct=10.0, total_elements=10
-        )
+        entry = BrightnessDistribution(bright_pct=60.0, dim_pct=30.0, dark_pct=10.0, total_elements=10)
         assert entry.bright_pct + entry.dim_pct + entry.dark_pct == 100.0
 
     def test_tom_alignment_entry_validates(self) -> None:

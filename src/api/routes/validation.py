@@ -277,9 +277,7 @@ async def submit_decision(
     knowledge graph write-back (CONFIRM/CORRECT/REJECT/DEFER).
     """
     # Verify review pack exists and get its engagement_id
-    pack_result = await session.execute(
-        select(ReviewPack).where(ReviewPack.id == review_pack_id)
-    )
+    pack_result = await session.execute(select(ReviewPack).where(ReviewPack.id == review_pack_id))
     pack = pack_result.scalar_one_or_none()
     if pack is None:
         raise HTTPException(
@@ -288,9 +286,7 @@ async def submit_decision(
         )
 
     # SEC-02: Validate element_id belongs to this review pack
-    pack_element_ids = {
-        a["id"] for a in (pack.segment_activities or []) if isinstance(a, dict) and "id" in a
-    }
+    pack_element_ids = {a["id"] for a in (pack.segment_activities or []) if isinstance(a, dict) and "id" in a}
     if pack_element_ids and body.element_id not in pack_element_ids:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -358,13 +354,9 @@ async def list_decisions(
 
     Results are ordered by decision_at descending (most recent first).
     """
-    query = select(ValidationDecision).where(
-        ValidationDecision.engagement_id == engagement_id
-    )
+    query = select(ValidationDecision).where(ValidationDecision.engagement_id == engagement_id)
     count_query = (
-        select(func.count())
-        .select_from(ValidationDecision)
-        .where(ValidationDecision.engagement_id == engagement_id)
+        select(func.count()).select_from(ValidationDecision).where(ValidationDecision.engagement_id == engagement_id)
     )
 
     if action is not None:
@@ -430,14 +422,10 @@ async def route_review_packs(
     """
     # Load role-activity mappings for this engagement
     mapping_result = await session.execute(
-        select(RoleActivityMapping).where(
-            RoleActivityMapping.engagement_id == body.engagement_id
-        )
+        select(RoleActivityMapping).where(RoleActivityMapping.engagement_id == body.engagement_id)
     )
     mappings = mapping_result.scalars().all()
-    role_to_reviewer: dict[str, uuid.UUID] = {
-        m.role_name: m.reviewer_id for m in mappings
-    }
+    role_to_reviewer: dict[str, uuid.UUID] = {m.role_name: m.reviewer_id for m in mappings}
 
     # Load unassigned packs for this engagement
     pack_result = await session.execute(
@@ -453,12 +441,14 @@ async def route_review_packs(
         reviewer_id = role_to_reviewer.get(pack.assigned_role) if pack.assigned_role else None
         if reviewer_id is not None:
             pack.assigned_sme_id = reviewer_id
-        routed.append({
-            "pack_id": str(pack.id),
-            "assigned_role": pack.assigned_role,
-            "assigned_sme_id": str(pack.assigned_sme_id) if pack.assigned_sme_id else None,
-            "status": "routed" if reviewer_id else "unassigned",
-        })
+        routed.append(
+            {
+                "pack_id": str(pack.id),
+                "assigned_role": pack.assigned_role,
+                "assigned_sme_id": str(pack.assigned_sme_id) if pack.assigned_sme_id else None,
+                "status": "routed" if reviewer_id else "unassigned",
+            }
+        )
 
     await session.commit()
 
@@ -514,9 +504,7 @@ async def republish_pov(
 
     # Load source elements
     elements_result = await session.execute(
-        select(ProcessElement)
-        .where(ProcessElement.model_id == body.pov_version_id)
-        .order_by(ProcessElement.created_at)
+        select(ProcessElement).where(ProcessElement.model_id == body.pov_version_id).order_by(ProcessElement.created_at)
     )
     source_elements = elements_result.scalars().all()
 
@@ -674,14 +662,10 @@ async def get_version_diff(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Version 2 not found")
 
     # Load elements for both
-    v1_els_result = await session.execute(
-        select(ProcessElement).where(ProcessElement.model_id == v1)
-    )
+    v1_els_result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == v1))
     v1_elements = v1_els_result.scalars().all()
 
-    v2_els_result = await session.execute(
-        select(ProcessElement).where(ProcessElement.model_id == v2)
-    )
+    v2_els_result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == v2))
     v2_elements = v2_els_result.scalars().all()
 
     def to_snapshot(el: Any) -> ElementSnapshot:
@@ -778,9 +762,7 @@ async def _generate_packs_async(
                     engagement_id=engagement_id,
                     pov_version_id=pov_version_id,
                     segment_index=pack_data.segment_index,
-                    segment_activities=[
-                        {"id": a.id, "name": a.name} for a in pack_data.activities
-                    ],
+                    segment_activities=[{"id": a.id, "name": a.name} for a in pack_data.activities],
                     activity_count=len(pack_data.activities),
                     evidence_list=pack_data.evidence_ids,
                     confidence_scores=pack_data.confidence_scores,
@@ -914,12 +896,9 @@ async def get_dark_room_shrink(
     dark_segment_names: list[str] = []
     if snapshots:
         latest = snapshots[-1]
-        dark_elements_query = (
-            select(ProcessElement.name)
-            .where(
-                ProcessElement.model_id == latest.pov_version_id,
-                ProcessElement.brightness_classification == BrightnessClassification.DARK,
-            )
+        dark_elements_query = select(ProcessElement.name).where(
+            ProcessElement.model_id == latest.pov_version_id,
+            ProcessElement.brightness_classification == BrightnessClassification.DARK,
         )
         dark_result = await session.execute(dark_elements_query)
         dark_segment_names = list(dark_result.scalars().all())

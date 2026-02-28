@@ -17,9 +17,7 @@ class SurveyClaimHistory(Base):
     """Audit trail for certainty tier transitions on survey claims."""
 
     __tablename__ = "survey_claim_history"
-    __table_args__ = (
-        Index("ix_survey_claim_history_claim_id", "claim_id"),
-    )
+    __table_args__ = (Index("ix_survey_claim_history_claim_id", "claim_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     claim_id: Mapped[uuid.UUID] = mapped_column(
@@ -32,6 +30,4 @@ class SurveyClaimHistory(Base):
         Enum(CertaintyTier, values_callable=lambda e: [x.value for x in e]), nullable=False
     )
     changed_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
-    changed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

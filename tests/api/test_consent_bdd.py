@@ -235,7 +235,9 @@ class TestOrgScopeUpdate:
 
         service = ConsentService(mock_session)
         result = await service.update_org_scope(
-            ENGAGEMENT_ID, "screen-content-capture", updated_by=RECORDER_ID,
+            ENGAGEMENT_ID,
+            "screen-content-capture",
+            updated_by=RECORDER_ID,
         )
 
         assert result["new_scope"] == "screen-content-capture"

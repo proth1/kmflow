@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from src.core.models.taskmining import ActionCategory
@@ -62,9 +62,7 @@ class TrainingDataset:
     version: int = 1
     feature_schema_version: int = FEATURE_SCHEMA_VERSION
     feature_names: list[str] = field(default_factory=lambda: list(FEATURE_NAMES))
-    created_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     @property
     def size(self) -> int:
@@ -87,9 +85,7 @@ class TrainingDataset:
         self.samples.extend(samples)
         self.version += 1
 
-    def stratified_split(
-        self, test_ratio: float = 0.2, seed: int = 42
-    ) -> DatasetSplit:
+    def stratified_split(self, test_ratio: float = 0.2, seed: int = 42) -> DatasetSplit:
         """Split dataset into train/test with stratified sampling.
 
         Ensures each label has proportional representation in both sets.
@@ -112,7 +108,7 @@ class TrainingDataset:
 
         split = DatasetSplit()
 
-        for label, samples in sorted(by_label.items()):
+        for _label, samples in sorted(by_label.items()):
             shuffled = list(samples)
             rng.shuffle(shuffled)
             n_test = max(1, int(len(shuffled) * test_ratio))
@@ -150,20 +146,19 @@ class DatasetBuilder:
             TrainingDataset ready for splitting and training.
         """
         if len(sessions) != len(labels):
-            raise ValueError(
-                f"Sessions ({len(sessions)}) and labels ({len(labels)}) "
-                f"must have same length"
-            )
+            raise ValueError(f"Sessions ({len(sessions)}) and labels ({len(labels)}) must have same length")
 
         dataset = TrainingDataset()
-        for session, label in zip(sessions, labels):
+        for session, label in zip(sessions, labels, strict=False):
             features = extract_features(session)
-            dataset.add_sample(LabeledSample(
-                features=features,
-                label=label.value,
-                session_id=session.session_id,
-                source=source,
-            ))
+            dataset.add_sample(
+                LabeledSample(
+                    features=features,
+                    label=label.value,
+                    session_id=session.session_id,
+                    source=source,
+                )
+            )
 
         logger.info(
             "Built dataset with %d samples, distribution: %s",
@@ -223,11 +218,13 @@ def import_dataset(path: str | Path) -> TrainingDataset:
         created_at=data["created_at"],
     )
     for s in data["samples"]:
-        dataset.add_sample(LabeledSample(
-            features=s["features"],
-            label=s["label"],
-            session_id=s.get("session_id"),
-            source=s.get("source", "imported"),
-        ))
+        dataset.add_sample(
+            LabeledSample(
+                features=s["features"],
+                label=s["label"],
+                session_id=s.get("session_id"),
+                source=s.get("source", "imported"),
+            )
+        )
     logger.info("Imported dataset v%d (%d samples) from %s", dataset.version, dataset.size, path)
     return dataset

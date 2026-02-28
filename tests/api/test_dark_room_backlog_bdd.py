@@ -74,9 +74,7 @@ def _make_graph_mock(
     form_coverage_out = form_coverage_out or {}
     form_coverage_in = form_coverage_in or {}
 
-    async def mock_run_query(
-        query: str, params: dict[str, Any] | None = None
-    ) -> list[dict[str, Any]]:
+    async def mock_run_query(query: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
         # Dark elements query
         if "a.confidence < $threshold" in query:
             return dark_elements
@@ -194,9 +192,7 @@ async def test_scenario_3_api_response() -> None:
         patch("src.api.routes.pov.KnowledgeGraphService", return_value=MagicMock()),
         patch("src.api.routes.pov.DarkRoomBacklogService", return_value=_make_service_returning(elements)),
     ):
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.get(f"/api/v1/pov/{MODEL_ID}/dark-room")
 
     assert resp.status_code == 200
@@ -216,29 +212,34 @@ def _make_service_returning(elements: list[dict[str, Any]]) -> DarkRoomBacklogSe
     """Create a mock DarkRoomBacklogService that returns predictable results."""
     service = MagicMock(spec=DarkRoomBacklogService)
 
-    async def mock_get_dark_segments(
-        engagement_id: str, limit: int = 50, offset: int = 0
-    ) -> dict[str, Any]:
+    async def mock_get_dark_segments(engagement_id: str, limit: int = 50, offset: int = 0) -> dict[str, Any]:
         items = []
         for elem in elements:
-            items.append({
-                "element_id": elem["element_id"],
-                "element_name": elem["element_name"],
-                "current_confidence": elem["confidence"],
-                "brightness": elem.get("brightness", "dark"),
-                "estimated_confidence_uplift": round((1.0 - elem["confidence"]) * 0.4, 4),
-                "missing_knowledge_forms": [
-                    {"form_number": 3, "form_name": "dependencies", "recommended_probes": ["dependency mapping workshop"], "probe_type": "dependency"},
-                ],
-                "missing_form_count": 5,
-                "covered_form_count": 4,
-            })
+            items.append(
+                {
+                    "element_id": elem["element_id"],
+                    "element_name": elem["element_name"],
+                    "current_confidence": elem["confidence"],
+                    "brightness": elem.get("brightness", "dark"),
+                    "estimated_confidence_uplift": round((1.0 - elem["confidence"]) * 0.4, 4),
+                    "missing_knowledge_forms": [
+                        {
+                            "form_number": 3,
+                            "form_name": "dependencies",
+                            "recommended_probes": ["dependency mapping workshop"],
+                            "probe_type": "dependency",
+                        },
+                    ],
+                    "missing_form_count": 5,
+                    "covered_form_count": 4,
+                }
+            )
         items.sort(key=lambda x: x["estimated_confidence_uplift"], reverse=True)
         return {
             "engagement_id": engagement_id,
             "dark_threshold": DEFAULT_DARK_THRESHOLD,
             "total_count": len(items),
-            "items": items[offset:offset + limit],
+            "items": items[offset : offset + limit],
         }
 
     service.get_dark_segments = AsyncMock(side_effect=mock_get_dark_segments)
@@ -294,9 +295,7 @@ async def test_model_not_found_returns_404() -> None:
     session = _mock_session_with_model(None)
     app = _make_app(session)
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.get(f"/api/v1/pov/{uuid.uuid4()}/dark-room")
 
     assert resp.status_code == 404

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,17 +40,14 @@ async def run_quarantine_cleanup(
         Dict with keys: rows_deleted, run_at, duration_ms
     """
     if now is None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
     start = time.monotonic()
 
     # Atomic delete — no TOCTOU gap between count and delete
-    delete_stmt = (
-        delete(PIIQuarantine)
-        .where(
-            PIIQuarantine.auto_delete_at < now,
-            PIIQuarantine.status.in_(_CLEANUP_STATUSES),
-        )
+    delete_stmt = delete(PIIQuarantine).where(
+        PIIQuarantine.auto_delete_at < now,
+        PIIQuarantine.status.in_(_CLEANUP_STATUSES),
     )
     result = await session.execute(delete_stmt)
     rows_deleted = result.rowcount or 0
@@ -81,7 +78,7 @@ async def run_quarantine_cleanup(
 async def count_expired(session: AsyncSession, now: datetime | None = None) -> int:
     """Count expired quarantine records without deleting them."""
     if now is None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
     stmt = (
         select(func.count())
         .select_from(PIIQuarantine)

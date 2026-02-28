@@ -129,9 +129,7 @@ class TestListAssumptions:
         mock_list.return_value = {"items": [], "total": 0}
         session = AsyncMock()
         client = _make_client(session)
-        resp = client.get(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/assumptions?assumption_type=technology_cost"
-        )
+        resp = client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/assumptions?assumption_type=technology_cost")
         assert resp.status_code == 200
         mock_list.assert_called_once()
         call_args = mock_list.call_args

@@ -107,9 +107,7 @@ class ReportGenerationService:
             report.error = f"Invalid engagement ID: {engagement_id}"
             return report
 
-        eng_result = await session.execute(
-            select(Engagement).where(Engagement.id == eng_uuid)
-        )
+        eng_result = await session.execute(select(Engagement).where(Engagement.id == eng_uuid))
         engagement = eng_result.scalar_one_or_none()
         if not engagement:
             report.error = "Engagement not found"
@@ -123,52 +121,54 @@ class ReportGenerationService:
         citations: list[CitedEvidence] = []
 
         # 1. Executive Summary section
-        summary_data = await self._engine.generate_engagement_summary(
-            session, engagement_id
+        summary_data = await self._engine.generate_engagement_summary(session, engagement_id)
+        sections.append(
+            ReportSection(
+                title="Executive Summary",
+                content_html=self._render_executive_summary(summary_data.data),
+                order=1,
+            )
         )
-        sections.append(ReportSection(
-            title="Executive Summary",
-            content_html=self._render_executive_summary(summary_data.data),
-            order=1,
-        ))
 
         # 2. Process Model section
-        process_section = await self._build_process_model_section(
-            session, eng_uuid
+        process_section = await self._build_process_model_section(session, eng_uuid)
+        sections.append(
+            ReportSection(
+                title="Process Model",
+                content_html=process_section,
+                order=2,
+            )
         )
-        sections.append(ReportSection(
-            title="Process Model",
-            content_html=process_section,
-            order=2,
-        ))
 
         # 3. Gap Analysis Findings
-        gap_data = await self._engine.generate_gap_report(
-            session, engagement_id, tom_id
+        gap_data = await self._engine.generate_gap_report(session, engagement_id, tom_id)
+        gap_html, gap_citations = await self._build_gap_section_with_citations(session, eng_uuid, gap_data.data)
+        sections.append(
+            ReportSection(
+                title="Gap Analysis Findings",
+                content_html=gap_html,
+                order=3,
+            )
         )
-        gap_html, gap_citations = await self._build_gap_section_with_citations(
-            session, eng_uuid, gap_data.data
-        )
-        sections.append(ReportSection(
-            title="Gap Analysis Findings",
-            content_html=gap_html,
-            order=3,
-        ))
         citations.extend(gap_citations)
 
         # 4. Recommendations section
-        sections.append(ReportSection(
-            title="Recommendations",
-            content_html=self._build_recommendations(gap_data.data),
-            order=4,
-        ))
+        sections.append(
+            ReportSection(
+                title="Recommendations",
+                content_html=self._build_recommendations(gap_data.data),
+                order=4,
+            )
+        )
 
         # 5. Evidence Appendix
-        sections.append(ReportSection(
-            title="Evidence Appendix",
-            content_html=self._build_evidence_appendix(citations),
-            order=5,
-        ))
+        sections.append(
+            ReportSection(
+                title="Evidence Appendix",
+                content_html=self._build_evidence_appendix(citations),
+                order=5,
+            )
+        )
 
         report.sections = sections
         report.citations = citations
@@ -198,9 +198,7 @@ class ReportGenerationService:
             f"</div>"
         )
 
-    async def _build_process_model_section(
-        self, session: AsyncSession, engagement_id: uuid.UUID
-    ) -> str:
+    async def _build_process_model_section(self, session: AsyncSession, engagement_id: uuid.UUID) -> str:
         """Build process model section with confidence overlay."""
         result = await session.execute(
             select(ProcessModel)
@@ -214,9 +212,7 @@ class ReportGenerationService:
             return "<p>No process model available for this engagement.</p>"
 
         confidence_class = (
-            "high" if model.confidence_score >= 0.8
-            else "medium" if model.confidence_score >= 0.5
-            else "low"
+            "high" if model.confidence_score >= 0.8 else "medium" if model.confidence_score >= 0.5 else "low"
         )
 
         html = (
@@ -228,11 +224,7 @@ class ReportGenerationService:
         )
 
         if model.bpmn_xml:
-            html += (
-                "<div class='bpmn-viewer' data-bpmn='embedded'>"
-                "<p><em>Process diagram embedded below</em></p>"
-                "</div>"
-            )
+            html += "<div class='bpmn-viewer' data-bpmn='embedded'><p><em>Process diagram embedded below</em></p></div>"
 
         html += "</div>"
         return html
@@ -253,14 +245,8 @@ class ReportGenerationService:
         citation_counter = 1
 
         # Fetch evidence items for citation linking
-        evidence_result = await session.execute(
-            select(EvidenceItem).where(
-                EvidenceItem.engagement_id == engagement_id
-            )
-        )
-        evidence_items = {
-            str(e.id): e for e in evidence_result.scalars().all()
-        }
+        evidence_result = await session.execute(select(EvidenceItem).where(EvidenceItem.engagement_id == engagement_id))
+        evidence_items = {str(e.id): e for e in evidence_result.scalars().all()}
 
         # Build maturity radar
         radar_svg = _build_maturity_radar_svg(gaps)
@@ -285,18 +271,18 @@ class ReportGenerationService:
             if gap_id and gap_id in evidence_items:
                 ev = evidence_items[gap_id]
                 citation_key = f"E{citation_counter}"
-                citations.append(CitedEvidence(
-                    citation_key=citation_key,
-                    title=ev.title if hasattr(ev, "title") else str(ev.id),
-                    category=str(ev.category) if hasattr(ev, "category") else "",
-                    grade=str(ev.grade) if hasattr(ev, "grade") else "N/A",
-                    date=str(ev.created_at) if hasattr(ev, "created_at") else "",
-                    source=str(ev.source) if hasattr(ev, "source") else "",
-                    evidence_id=str(ev.id),
-                ))
-                citation_refs.append(
-                    f"<a href='#evidence-{citation_key}' class='citation'>[{citation_key}]</a>"
+                citations.append(
+                    CitedEvidence(
+                        citation_key=citation_key,
+                        title=ev.title if hasattr(ev, "title") else str(ev.id),
+                        category=str(ev.category) if hasattr(ev, "category") else "",
+                        grade=str(ev.grade) if hasattr(ev, "grade") else "N/A",
+                        date=str(ev.created_at) if hasattr(ev, "created_at") else "",
+                        source=str(ev.source) if hasattr(ev, "source") else "",
+                        evidence_id=str(ev.id),
+                    )
                 )
+                citation_refs.append(f"<a href='#evidence-{citation_key}' class='citation'>[{citation_key}]</a>")
                 citation_counter += 1
 
             sev = float(gap.get("severity", 0) or 0)
@@ -325,11 +311,7 @@ class ReportGenerationService:
             rec = gap.get("recommendation", "")
             if rec:
                 priority = float(gap.get("priority_score", 0) or 0)
-                priority_label = (
-                    "High" if priority > 0.7
-                    else "Medium" if priority > 0.4
-                    else "Low"
-                )
+                priority_label = "High" if priority > 0.7 else "Medium" if priority > 0.4 else "Low"
                 html_parts.append(
                     f"<li><strong>[{priority_label}]</strong> {rec} "
                     f"<em>(Dimension: {gap.get('dimension', '')})</em></li>"
@@ -367,10 +349,7 @@ class ReportGenerationService:
         sections_html = ""
         for section in sorted(report.sections, key=lambda s: s.order):
             sections_html += (
-                f"<section class='report-section'>"
-                f"<h2>{section.title}</h2>"
-                f"{section.content_html}"
-                f"</section>\n"
+                f"<section class='report-section'><h2>{section.title}</h2>{section.content_html}</section>\n"
             )
 
         return (
@@ -419,6 +398,7 @@ class ReportGenerationService:
         """
         try:
             from weasyprint import HTML
+
             return HTML(string=html_content).write_pdf()
         except ImportError:
             logger.warning("WeasyPrint not installed, PDF generation unavailable")

@@ -44,15 +44,17 @@ class TestShrinkRateComputation:
         snapshots = []
         for i, (d, dim, b) in enumerate(zip(dark_counts, dim_counts, bright_counts, strict=True)):
             total = d + dim + b
-            snapshots.append({
-                "version_number": i + 1,
-                "pov_version_id": str(uuid.uuid4()),
-                "dark_count": d,
-                "dim_count": dim,
-                "bright_count": b,
-                "total_elements": total,
-                "snapshot_at": f"2026-02-{20 + i}T12:00:00Z",
-            })
+            snapshots.append(
+                {
+                    "version_number": i + 1,
+                    "pov_version_id": str(uuid.uuid4()),
+                    "dark_count": d,
+                    "dim_count": dim,
+                    "bright_count": b,
+                    "total_elements": total,
+                    "snapshot_at": f"2026-02-{20 + i}T12:00:00Z",
+                }
+            )
         return snapshots
 
     def test_three_versions_shrink_rates(self) -> None:
@@ -133,12 +135,20 @@ class TestBelowTargetAlert:
         """Alert with severity='warning' is generated when rate < target."""
         versions = [
             VersionShrinkData(
-                version_number=1, pov_version_id="pov-1",
-                dark_count=20, dim_count=5, bright_count=15, total_elements=40,
+                version_number=1,
+                pov_version_id="pov-1",
+                dark_count=20,
+                dim_count=5,
+                bright_count=15,
+                total_elements=40,
             ),
             VersionShrinkData(
-                version_number=2, pov_version_id="pov-2",
-                dark_count=18, dim_count=7, bright_count=15, total_elements=40,
+                version_number=2,
+                pov_version_id="pov-2",
+                dark_count=18,
+                dim_count=7,
+                bright_count=15,
+                total_elements=40,
                 reduction_pct=10.0,  # 10% < 15% target
             ),
         ]
@@ -154,8 +164,12 @@ class TestBelowTargetAlert:
         """Alert message recommends targeted evidence acquisition."""
         versions = [
             VersionShrinkData(
-                version_number=2, pov_version_id="pov-2",
-                dark_count=18, dim_count=7, bright_count=15, total_elements=40,
+                version_number=2,
+                pov_version_id="pov-2",
+                dark_count=18,
+                dim_count=7,
+                bright_count=15,
+                total_elements=40,
                 reduction_pct=8.0,
             ),
         ]
@@ -168,8 +182,12 @@ class TestBelowTargetAlert:
         """Alert lists the specific Dark segments contributing to low rate."""
         versions = [
             VersionShrinkData(
-                version_number=2, pov_version_id="pov-2",
-                dark_count=18, dim_count=7, bright_count=15, total_elements=40,
+                version_number=2,
+                pov_version_id="pov-2",
+                dark_count=18,
+                dim_count=7,
+                bright_count=15,
+                total_elements=40,
                 reduction_pct=8.0,
             ),
         ]
@@ -182,8 +200,12 @@ class TestBelowTargetAlert:
         """No alert when shrink rate is above target."""
         versions = [
             VersionShrinkData(
-                version_number=2, pov_version_id="pov-2",
-                dark_count=10, dim_count=10, bright_count=20, total_elements=40,
+                version_number=2,
+                pov_version_id="pov-2",
+                dark_count=10,
+                dim_count=10,
+                bright_count=20,
+                total_elements=40,
                 reduction_pct=20.0,  # Above 15% target
             ),
         ]
@@ -194,8 +216,12 @@ class TestBelowTargetAlert:
         """No alert when shrink rate is exactly at the target boundary."""
         versions = [
             VersionShrinkData(
-                version_number=2, pov_version_id="pov-2",
-                dark_count=17, dim_count=10, bright_count=13, total_elements=40,
+                version_number=2,
+                pov_version_id="pov-2",
+                dark_count=17,
+                dim_count=10,
+                bright_count=13,
+                total_elements=40,
                 reduction_pct=15.0,  # Exactly at target
             ),
         ]
@@ -206,8 +232,12 @@ class TestBelowTargetAlert:
         """First version (no reduction_pct) should not trigger an alert."""
         versions = [
             VersionShrinkData(
-                version_number=1, pov_version_id="pov-1",
-                dark_count=20, dim_count=5, bright_count=15, total_elements=40,
+                version_number=1,
+                pov_version_id="pov-1",
+                dark_count=20,
+                dim_count=5,
+                bright_count=15,
+                total_elements=40,
             ),
         ]
         alerts = generate_alerts(versions)
@@ -217,8 +247,12 @@ class TestBelowTargetAlert:
         """Custom target rate should be respected."""
         versions = [
             VersionShrinkData(
-                version_number=2, pov_version_id="pov-2",
-                dark_count=16, dim_count=10, bright_count=14, total_elements=40,
+                version_number=2,
+                pov_version_id="pov-2",
+                dark_count=16,
+                dim_count=10,
+                bright_count=14,
+                total_elements=40,
                 reduction_pct=20.0,  # Above 15% but below 25%
             ),
         ]
@@ -230,17 +264,29 @@ class TestBelowTargetAlert:
         """Multiple versions below target each generate an alert."""
         versions = [
             VersionShrinkData(
-                version_number=1, pov_version_id="pov-1",
-                dark_count=20, dim_count=5, bright_count=15, total_elements=40,
+                version_number=1,
+                pov_version_id="pov-1",
+                dark_count=20,
+                dim_count=5,
+                bright_count=15,
+                total_elements=40,
             ),
             VersionShrinkData(
-                version_number=2, pov_version_id="pov-2",
-                dark_count=19, dim_count=6, bright_count=15, total_elements=40,
+                version_number=2,
+                pov_version_id="pov-2",
+                dark_count=19,
+                dim_count=6,
+                bright_count=15,
+                total_elements=40,
                 reduction_pct=5.0,
             ),
             VersionShrinkData(
-                version_number=3, pov_version_id="pov-3",
-                dark_count=18, dim_count=7, bright_count=15, total_elements=40,
+                version_number=3,
+                pov_version_id="pov-3",
+                dark_count=18,
+                dim_count=7,
+                bright_count=15,
+                total_elements=40,
                 reduction_pct=5.3,
             ),
         ]
@@ -360,12 +406,47 @@ class TestIlluminationTimeline:
         """Multiple elements illuminated across versions."""
         elements = [
             # Element A: dark → dim in v2
-            {"element_name": "A", "element_id": "a1", "brightness_classification": "dark", "version_number": 1, "pov_version_id": "pov-1", "evidence_ids": []},
-            {"element_name": "A", "element_id": "a2", "brightness_classification": "dim", "version_number": 2, "pov_version_id": "pov-2", "evidence_ids": ["ev-a"]},
+            {
+                "element_name": "A",
+                "element_id": "a1",
+                "brightness_classification": "dark",
+                "version_number": 1,
+                "pov_version_id": "pov-1",
+                "evidence_ids": [],
+            },
+            {
+                "element_name": "A",
+                "element_id": "a2",
+                "brightness_classification": "dim",
+                "version_number": 2,
+                "pov_version_id": "pov-2",
+                "evidence_ids": ["ev-a"],
+            },
             # Element B: dark → dark in v2, dark → bright in v3
-            {"element_name": "B", "element_id": "b1", "brightness_classification": "dark", "version_number": 1, "pov_version_id": "pov-1", "evidence_ids": []},
-            {"element_name": "B", "element_id": "b2", "brightness_classification": "dark", "version_number": 2, "pov_version_id": "pov-2", "evidence_ids": []},
-            {"element_name": "B", "element_id": "b3", "brightness_classification": "bright", "version_number": 3, "pov_version_id": "pov-3", "evidence_ids": ["ev-b1", "ev-b2"]},
+            {
+                "element_name": "B",
+                "element_id": "b1",
+                "brightness_classification": "dark",
+                "version_number": 1,
+                "pov_version_id": "pov-1",
+                "evidence_ids": [],
+            },
+            {
+                "element_name": "B",
+                "element_id": "b2",
+                "brightness_classification": "dark",
+                "version_number": 2,
+                "pov_version_id": "pov-2",
+                "evidence_ids": [],
+            },
+            {
+                "element_name": "B",
+                "element_id": "b3",
+                "brightness_classification": "bright",
+                "version_number": 3,
+                "pov_version_id": "pov-3",
+                "evidence_ids": ["ev-b1", "ev-b2"],
+            },
         ]
         events = compute_illumination_timeline(elements)
 
@@ -383,8 +464,22 @@ class TestIlluminationTimeline:
     def test_evidence_links_in_timeline(self) -> None:
         """Evidence acquisitions that contributed to illumination are linked."""
         elements = [
-            {"element_name": "Verify", "element_id": "v1", "brightness_classification": "dark", "version_number": 1, "pov_version_id": "pov-1", "evidence_ids": []},
-            {"element_name": "Verify", "element_id": "v2", "brightness_classification": "dim", "version_number": 2, "pov_version_id": "pov-2", "evidence_ids": ["ev-x", "ev-y", "ev-z"]},
+            {
+                "element_name": "Verify",
+                "element_id": "v1",
+                "brightness_classification": "dark",
+                "version_number": 1,
+                "pov_version_id": "pov-1",
+                "evidence_ids": [],
+            },
+            {
+                "element_name": "Verify",
+                "element_id": "v2",
+                "brightness_classification": "dim",
+                "version_number": 2,
+                "pov_version_id": "pov-2",
+                "evidence_ids": ["ev-x", "ev-y", "ev-z"],
+            },
         ]
         events = compute_illumination_timeline(elements)
 
@@ -397,8 +492,22 @@ class TestIlluminationTimeline:
     def test_none_evidence_ids_handled(self) -> None:
         """None evidence_ids should be handled gracefully."""
         elements = [
-            {"element_name": "X", "element_id": "x1", "brightness_classification": "dark", "version_number": 1, "pov_version_id": "pov-1", "evidence_ids": None},
-            {"element_name": "X", "element_id": "x2", "brightness_classification": "dim", "version_number": 2, "pov_version_id": "pov-2", "evidence_ids": None},
+            {
+                "element_name": "X",
+                "element_id": "x1",
+                "brightness_classification": "dark",
+                "version_number": 1,
+                "pov_version_id": "pov-1",
+                "evidence_ids": None,
+            },
+            {
+                "element_name": "X",
+                "element_id": "x2",
+                "brightness_classification": "dim",
+                "version_number": 2,
+                "pov_version_id": "pov-2",
+                "evidence_ids": None,
+            },
         ]
         events = compute_illumination_timeline(elements)
 
@@ -480,9 +589,7 @@ class TestMigration044:
         import importlib
         import importlib.util
 
-        spec = importlib.util.spec_from_file_location(
-            "m044", "alembic/versions/044_dark_room_snapshots.py"
-        )
+        spec = importlib.util.spec_from_file_location("m044", "alembic/versions/044_dark_room_snapshots.py")
         m044 = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(m044)
 
@@ -494,9 +601,7 @@ class TestMigration044:
         import importlib
         import importlib.util
 
-        spec = importlib.util.spec_from_file_location(
-            "m044", "alembic/versions/044_dark_room_snapshots.py"
-        )
+        spec = importlib.util.spec_from_file_location("m044", "alembic/versions/044_dark_room_snapshots.py")
         m044 = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(m044)
 
@@ -561,8 +666,11 @@ class TestDarkRoomEndpointIntegration:
         from src.api.routes.validation import get_dark_room_shrink
 
         # Check the dependency injection params
-        params = get_dark_room_shrink.__wrapped__ if hasattr(get_dark_room_shrink, "__wrapped__") else get_dark_room_shrink
+        params = (
+            get_dark_room_shrink.__wrapped__ if hasattr(get_dark_room_shrink, "__wrapped__") else get_dark_room_shrink
+        )
         import inspect
+
         sig = inspect.signature(params)
         current_user_param = sig.parameters.get("current_user")
         assert current_user_param is not None
@@ -570,6 +678,7 @@ class TestDarkRoomEndpointIntegration:
         dep = current_user_param.default
         assert hasattr(dep, "dependency")
         from src.core.permissions import require_engagement_access
+
         assert dep.dependency is require_engagement_access
 
     def test_endpoint_does_not_use_require_permission(self) -> None:
@@ -577,6 +686,7 @@ class TestDarkRoomEndpointIntegration:
         import inspect
 
         from src.api.routes.validation import get_dark_room_shrink
+
         source = inspect.getsource(get_dark_room_shrink)
         assert "require_permission" not in source
 

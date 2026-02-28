@@ -180,9 +180,7 @@ async def list_volume_forecasts(
 ) -> dict[str, Any]:
     """List volume forecasts for an engagement."""
     result = await session.execute(
-        select(VolumeForecast)
-        .where(VolumeForecast.engagement_id == engagement_id)
-        .order_by(VolumeForecast.name)
+        select(VolumeForecast).where(VolumeForecast.engagement_id == engagement_id).order_by(VolumeForecast.name)
     )
     items = list(result.scalars().all())
     return {"items": [_forecast_to_dict(f) for f in items], "total": len(items)}
@@ -200,9 +198,7 @@ async def compute_staffing(
     _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Compute staffing cost range from role rates and task assignments."""
-    result = await session.execute(
-        select(RoleRateAssumption).where(RoleRateAssumption.engagement_id == engagement_id)
-    )
+    result = await session.execute(select(RoleRateAssumption).where(RoleRateAssumption.engagement_id == engagement_id))
     rates = list(result.scalars().all())
     if not rates:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No role rates defined")
@@ -224,9 +220,7 @@ async def compute_volume(
 ) -> dict[str, Any]:
     """Compute processing cost range from volume forecast variance."""
     forecast = await _get_forecast(session, payload.forecast_id, engagement_id)
-    return compute_volume_cost(
-        forecast.baseline_volume, forecast.variance_pct, payload.per_transaction_cost
-    )
+    return compute_volume_cost(forecast.baseline_volume, forecast.variance_pct, payload.per_transaction_cost)
 
 
 @router.post("/engagements/{engagement_id}/cost-modeling/quarterly")
@@ -258,9 +252,7 @@ async def compute_fte(
     _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Compute FTE savings delta between as-is and to-be task sets."""
-    result = await session.execute(
-        select(RoleRateAssumption).where(RoleRateAssumption.engagement_id == engagement_id)
-    )
+    result = await session.execute(select(RoleRateAssumption).where(RoleRateAssumption.engagement_id == engagement_id))
     rates = list(result.scalars().all())
     if not rates:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No role rates defined")

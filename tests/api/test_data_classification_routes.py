@@ -81,9 +81,7 @@ class TestGetRetentionPolicy:
         mock_session.execute = AsyncMock(return_value=result)
 
         client = _make_app(mock_session, UserRole.ENGAGEMENT_LEAD)
-        resp = client.get(
-            f"/api/v1/data-classification/retention/{ENGAGEMENT_ID}"
-        )
+        resp = client.get(f"/api/v1/data-classification/retention/{ENGAGEMENT_ID}")
         assert resp.status_code == 200
         data = resp.json()
         assert data["retention_days"] == 90
@@ -95,9 +93,7 @@ class TestGetRetentionPolicy:
         mock_session.execute = AsyncMock(return_value=result)
 
         client = _make_app(mock_session, UserRole.ENGAGEMENT_LEAD)
-        resp = client.get(
-            f"/api/v1/data-classification/retention/{ENGAGEMENT_ID}"
-        )
+        resp = client.get(f"/api/v1/data-classification/retention/{ENGAGEMENT_ID}")
         assert resp.status_code == 404
 
 

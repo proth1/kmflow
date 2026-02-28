@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-
-import pytest
+from datetime import UTC, datetime
 
 from src.core.models.evidence import EvidenceCategory, ValidationStatus
 from src.core.models.taskmining import ActionCategory
@@ -21,8 +19,8 @@ def _session(**kwargs) -> AggregatedSession:
     defaults = {
         "app_bundle_id": "com.microsoft.Excel",
         "window_title_sample": "Budget.xlsx",
-        "started_at": datetime(2026, 2, 25, 10, 0, tzinfo=timezone.utc),
-        "ended_at": datetime(2026, 2, 25, 10, 8, tzinfo=timezone.utc),
+        "started_at": datetime(2026, 2, 25, 10, 0, tzinfo=UTC),
+        "ended_at": datetime(2026, 2, 25, 10, 8, tzinfo=UTC),
         "duration_ms": 480_000,
         "active_duration_ms": 480_000,
         "keyboard_event_count": 150,
@@ -175,7 +173,7 @@ class TestQualityScores:
 
     def test_freshness_recent_is_high(self):
         materializer = EvidenceMaterializer()
-        session = _session(ended_at=datetime.now(timezone.utc))
+        session = _session(ended_at=datetime.now(UTC))
         item = materializer.materialize_action(session, _classification())
         assert item is not None
         assert item.freshness_score >= 0.95
@@ -183,7 +181,8 @@ class TestQualityScores:
     def test_freshness_old_is_low(self):
         materializer = EvidenceMaterializer()
         from datetime import timedelta
-        old = datetime.now(timezone.utc) - timedelta(days=200)
+
+        old = datetime.now(UTC) - timedelta(days=200)
         session = _session(ended_at=old)
         item = materializer.materialize_action(session, _classification())
         assert item is not None

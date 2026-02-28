@@ -150,6 +150,7 @@ class SyncCheckpointStore:
             return None
         # Deserialize from JSON string
         import json
+
         data = json.loads(raw)
         return WatermarkState(**data)
 

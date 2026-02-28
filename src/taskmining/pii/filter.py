@@ -43,16 +43,18 @@ class FilterResult:
 
 # -- Fields to scan in event payloads -----------------------------------------
 
-_SCANNABLE_FIELDS = frozenset({
-    "window_title",
-    "application_name",
-    "url",
-    "file_path",
-    "text_content",
-    "clipboard_content",
-    "field_value",
-    "field_label",
-})
+_SCANNABLE_FIELDS = frozenset(
+    {
+        "window_title",
+        "application_name",
+        "url",
+        "file_path",
+        "text_content",
+        "clipboard_content",
+        "field_value",
+        "field_label",
+    }
+)
 
 # Confidence threshold for quarantine (Layer 3)
 QUARANTINE_THRESHOLD = 0.80

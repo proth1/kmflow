@@ -9,11 +9,8 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any
 
-import pytest
-
 from src.api.services.obligation_enforcer import ObligationEnforcer
 from src.core.models.pdp import ObligationType
-
 
 # ---------------------------------------------------------------------------
 # Helpers

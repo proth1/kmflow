@@ -132,9 +132,7 @@ class TestLatestModelEndpoint:
         """Each element includes brightness_classification and evidence_grade."""
         eng_id = uuid.uuid4()
         model = _make_mock_model(engagement_id=eng_id)
-        elem = _make_mock_element(
-            model_id=model.id, brightness="dark", grade="D", confidence=0.3
-        )
+        elem = _make_mock_element(model_id=model.id, brightness="dark", grade="D", confidence=0.3)
 
         session = AsyncMock()
         model_result = MagicMock()
@@ -364,18 +362,14 @@ class TestDashboardKPIsEndpoint:
         model_result.scalar_one_or_none.return_value = model
 
         elem_result = MagicMock()
-        elem_result.scalars.return_value.all.return_value = [
-            bright_elem, dim_elem1, dim_elem2, dark_elem
-        ]
+        elem_result.scalars.return_value.all.return_value = [bright_elem, dim_elem1, dim_elem2, dark_elem]
 
         gap_count_result = MagicMock()
         gap_count_result.scalar.return_value = 3
         critical_gap_result = MagicMock()
         critical_gap_result.scalar.return_value = 1
 
-        session.execute = AsyncMock(side_effect=[
-            model_result, elem_result, gap_count_result, critical_gap_result
-        ])
+        session.execute = AsyncMock(side_effect=[model_result, elem_result, gap_count_result, critical_gap_result])
         user = _make_mock_user()
 
         result = await get_engagement_dashboard(str(eng_id), session, user)
@@ -409,9 +403,7 @@ class TestDashboardKPIsEndpoint:
         gap_result.scalar.return_value = 0
         crit_result = MagicMock()
         crit_result.scalar.return_value = 0
-        session.execute = AsyncMock(side_effect=[
-            model_result, elem_result, gap_result, crit_result
-        ])
+        session.execute = AsyncMock(side_effect=[model_result, elem_result, gap_result, crit_result])
         user = _make_mock_user()
 
         result = await get_engagement_dashboard(str(eng_id), session, user)

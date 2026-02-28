@@ -40,9 +40,7 @@ class GovernanceOverlayService:
     def __init__(self, graph_service: KnowledgeGraphService) -> None:
         self._graph = graph_service
 
-    async def compute_overlay(
-        self, process_model_id: str, engagement_id: str
-    ) -> dict[str, Any]:
+    async def compute_overlay(self, process_model_id: str, engagement_id: str) -> dict[str, Any]:
         """Compute governance overlay for all activities in a process model.
 
         Queries Neo4j for governance chains and classifies each activity.
@@ -111,16 +109,16 @@ class GovernanceOverlayService:
             overlay_entries.append(entry)
 
             if gov_status == GovernanceStatus.UNGOVERNED:
-                governance_gaps.append({
-                    "activity_id": aid,
-                    "activity_name": activity["activity_name"],
-                    "gap_type": "UNGOVERNED",
-                })
+                governance_gaps.append(
+                    {
+                        "activity_id": aid,
+                        "activity_name": activity["activity_name"],
+                        "gap_type": "UNGOVERNED",
+                    }
+                )
 
         total = len(activities)
-        coverage_pct = round(
-            (governed_count + partially_governed_count) / total * 100, 2
-        ) if total > 0 else 0.0
+        coverage_pct = round((governed_count + partially_governed_count) / total * 100, 2) if total > 0 else 0.0
 
         return {
             "process_model_id": process_model_id,
@@ -134,9 +132,7 @@ class GovernanceOverlayService:
             "ungoverned_count": ungoverned_count,
         }
 
-    async def _get_activities(
-        self, engagement_id: str
-    ) -> list[dict[str, Any]]:
+    async def _get_activities(self, engagement_id: str) -> list[dict[str, Any]]:
         """Get all Activity nodes for an engagement.
 
         Activity nodes in the ontology have engagement_id as a required
@@ -149,13 +145,9 @@ class GovernanceOverlayService:
             "RETURN a.id AS activity_id, a.name AS activity_name "
             "ORDER BY a.name"
         )
-        return await self._graph.run_query(
-            query, {"engagement_id": engagement_id}
-        )
+        return await self._graph.run_query(query, {"engagement_id": engagement_id})
 
-    async def _get_governance_chains(
-        self, activity_ids: list[str], engagement_id: str
-    ) -> dict[str, dict[str, Any]]:
+    async def _get_governance_chains(self, activity_ids: list[str], engagement_id: str) -> dict[str, dict[str, Any]]:
         """Fetch governance chain (policy, control, regulation) for each activity.
 
         Uses Cypher OPTIONAL MATCH per ontology relationship types:
@@ -174,9 +166,7 @@ class GovernanceOverlayService:
             "c.id AS control_id, c.name AS control_name, "
             "r.id AS regulation_id, r.name AS regulation_name"
         )
-        records = await self._graph.run_query(
-            query, {"activity_ids": activity_ids, "engagement_id": engagement_id}
-        )
+        records = await self._graph.run_query(query, {"activity_ids": activity_ids, "engagement_id": engagement_id})
 
         chains: dict[str, dict[str, Any]] = {}
         for r in records:

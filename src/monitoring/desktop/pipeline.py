@@ -356,11 +356,8 @@ def process_batch(
                 result.workarounds.append(activity)
 
         except Exception as exc:
-            result.errors.append(
-                f"Error processing capture {capture.capture_id}: {exc}"
-            )
-            logger.warning("Failed to process capture %s: %s",
-                           capture.capture_id, exc)
+            result.errors.append(f"Error processing capture {capture.capture_id}: {exc}")
+            logger.warning("Failed to process capture %s: %s", capture.capture_id, exc)
 
     result.total_activities = len(result.activities)
     result.total_workarounds = len(result.workarounds)

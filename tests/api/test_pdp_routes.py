@@ -62,9 +62,7 @@ def _setup_policies(session: AsyncMock, policies: list[dict]) -> None:
         policy.id = p.get("id", uuid.uuid4())
         policy.name = p["name"]
         policy.conditions_json = p["conditions_json"]
-        policy.decision = (
-            PDPDecisionType(p["decision"]) if isinstance(p["decision"], str) else p["decision"]
-        )
+        policy.decision = PDPDecisionType(p["decision"]) if isinstance(p["decision"], str) else p["decision"]
         policy.obligations_json = p.get("obligations_json")
         policy.reason = p.get("reason")
         policy.priority = p.get("priority", 100)

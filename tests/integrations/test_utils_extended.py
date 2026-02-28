@@ -17,7 +17,13 @@ from unittest.mock import AsyncMock
 import httpx
 import pytest
 
-from src.integrations.utils import DEFAULT_RETRY_DELAYS, DEFAULT_TIMEOUT, paginate_cursor, paginate_offset, retry_request
+from src.integrations.utils import (
+    DEFAULT_RETRY_DELAYS,
+    DEFAULT_TIMEOUT,
+    paginate_cursor,
+    paginate_offset,
+    retry_request,
+)
 
 
 def _make_response(status_code: int = 200, json_data: dict | None = None) -> httpx.Response:
@@ -317,6 +323,7 @@ class TestPaginateCursorEdgeCases:
 
     async def test_custom_results_key(self) -> None:
         """A non-default results_key is used to extract the page data."""
+
         async def mock_request(method: str, url: str, **kwargs: object) -> httpx.Response:
             return _make_response(200, {"items": [{"id": 1}, {"id": 2}]})
 
@@ -448,6 +455,7 @@ class TestPaginateCursorEdgeCases:
 
     async def test_empty_first_page_yields_nothing(self) -> None:
         """If the very first page has no results, the generator yields nothing."""
+
         async def mock_request(method: str, url: str, **kwargs: object) -> httpx.Response:
             return _make_response(200, {"results": [], "next": "https://api.example.com/data?page=2"})
 
@@ -462,6 +470,7 @@ class TestPaginateCursorEdgeCases:
 
     async def test_missing_results_key_yields_nothing(self) -> None:
         """If the response body doesn't contain the expected results key, iteration stops."""
+
         async def mock_request(method: str, url: str, **kwargs: object) -> httpx.Response:
             # Response uses "data" instead of "results"
             return _make_response(200, {"data": [{"id": 1}], "next": "..."})

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -12,7 +12,6 @@ from src.core.models.canonical_event import CanonicalActivityEvent
 from src.core.models.correlation import CaseLinkEdge
 from src.taskmining.correlation.diagnostics import CorrelationDiagnostics
 from src.taskmining.correlation.role_association import ROLE_AGGREGATE_PREFIX
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -28,7 +27,7 @@ def _make_event(
 ) -> MagicMock:
     event = MagicMock(spec=CanonicalActivityEvent)
     event.id = event_id or uuid.uuid4()
-    event.timestamp_utc = datetime(2026, 1, 15, hour, 0, tzinfo=timezone.utc)
+    event.timestamp_utc = datetime(2026, 1, 15, hour, 0, tzinfo=UTC)
     return event
 
 
@@ -96,9 +95,7 @@ class TestCorrelationDiagnostics:
             _make_link(event_a_id, "CASE-1", "deterministic", 1.0),
         ]
 
-        session = _build_session(
-            total_count=2, links=links, all_events=events
-        )
+        session = _build_session(total_count=2, links=links, all_events=events)
 
         report = await self.diag.generate_daily_report(session, ENGAGEMENT_ID, TARGET_DATE)
 

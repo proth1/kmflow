@@ -103,11 +103,11 @@ def build_rationale_prompt(
     examples_text = ""
     for ex in FEW_SHOT_EXAMPLES:
         examples_text += f"""
-Example ({ex['gap_type'].upper()} in {ex['dimension']}):
-Activity: {ex['activity']}
-TOM Specification: {ex['tom_specification']}
-Rationale: {ex['rationale']}
-Recommendation: {ex['recommendation']}
+Example ({ex["gap_type"].upper()} in {ex["dimension"]}):
+Activity: {ex["activity"]}
+TOM Specification: {ex["tom_specification"]}
+Rationale: {ex["rationale"]}
+Recommendation: {ex["recommendation"]}
 ---"""
 
     safe_activity = _sanitize_xml_content(activity_description)

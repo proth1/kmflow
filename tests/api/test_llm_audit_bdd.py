@@ -57,9 +57,7 @@ def service(mock_session: AsyncMock) -> LLMAuditService:
 
 
 @pytest.mark.asyncio
-async def test_list_by_engagement_returns_paginated(
-    service: LLMAuditService, mock_session: AsyncMock
-) -> None:
+async def test_list_by_engagement_returns_paginated(service: LLMAuditService, mock_session: AsyncMock) -> None:
     """Given audit entries exist for an engagement,
     When I query with defaults,
     Then I get a paginated response with items."""
@@ -83,9 +81,7 @@ async def test_list_by_engagement_returns_paginated(
 
 
 @pytest.mark.asyncio
-async def test_list_by_engagement_with_date_filter(
-    service: LLMAuditService, mock_session: AsyncMock
-) -> None:
+async def test_list_by_engagement_with_date_filter(service: LLMAuditService, mock_session: AsyncMock) -> None:
     """Given audit entries, When I filter by date range,
     Then only entries in range are returned."""
     engagement_id = uuid.uuid4()
@@ -101,17 +97,13 @@ async def test_list_by_engagement_with_date_filter(
 
     mock_session.execute = AsyncMock(side_effect=[count_result, list_result])
 
-    result = await service.list_by_engagement(
-        engagement_id=engagement_id, from_date=from_date, to_date=to_date
-    )
+    result = await service.list_by_engagement(engagement_id=engagement_id, from_date=from_date, to_date=to_date)
     assert result["total"] == 1
     assert len(result["items"]) == 1
 
 
 @pytest.mark.asyncio
-async def test_list_by_engagement_pagination(
-    service: LLMAuditService, mock_session: AsyncMock
-) -> None:
+async def test_list_by_engagement_pagination(service: LLMAuditService, mock_session: AsyncMock) -> None:
     """Given many entries, When I paginate, Then offset/limit are respected."""
     engagement_id = uuid.uuid4()
 
@@ -123,9 +115,7 @@ async def test_list_by_engagement_pagination(
 
     mock_session.execute = AsyncMock(side_effect=[count_result, list_result])
 
-    result = await service.list_by_engagement(
-        engagement_id=engagement_id, limit=10, offset=20
-    )
+    result = await service.list_by_engagement(engagement_id=engagement_id, limit=10, offset=20)
     assert result["total"] == 50
     assert result["limit"] == 10
     assert result["offset"] == 20
@@ -133,9 +123,7 @@ async def test_list_by_engagement_pagination(
 
 
 @pytest.mark.asyncio
-async def test_list_by_engagement_empty(
-    service: LLMAuditService, mock_session: AsyncMock
-) -> None:
+async def test_list_by_engagement_empty(service: LLMAuditService, mock_session: AsyncMock) -> None:
     """Given no entries, When I query, Then I get empty list with total=0."""
     count_result = MagicMock()
     count_result.scalar.return_value = 0
@@ -156,9 +144,7 @@ async def test_list_by_engagement_empty(
 
 
 @pytest.mark.asyncio
-async def test_flag_hallucination_sets_fields(
-    service: LLMAuditService, mock_session: AsyncMock
-) -> None:
+async def test_flag_hallucination_sets_fields(service: LLMAuditService, mock_session: AsyncMock) -> None:
     """Given an audit entry exists, When I flag it as hallucination,
     Then hallucination fields are set."""
     log = _make_audit_log()
@@ -169,9 +155,7 @@ async def test_flag_hallucination_sets_fields(
 
     audit_log_id = log.id
     user_id = uuid.uuid4()
-    await service.flag_hallucination(
-        audit_log_id=audit_log_id, reason="Invented citation", flagged_by=user_id
-    )
+    await service.flag_hallucination(audit_log_id=audit_log_id, reason="Invented citation", flagged_by=user_id)
 
     assert log.hallucination_flagged is True
     assert log.hallucination_reason == "Invented citation"
@@ -182,9 +166,7 @@ async def test_flag_hallucination_sets_fields(
 
 
 @pytest.mark.asyncio
-async def test_flag_hallucination_already_flagged_rejected(
-    service: LLMAuditService, mock_session: AsyncMock
-) -> None:
+async def test_flag_hallucination_already_flagged_rejected(service: LLMAuditService, mock_session: AsyncMock) -> None:
     """Given an already-flagged entry, When I flag again, Then ValueError."""
     log = _make_audit_log(hallucination_flagged=True)
     result_mock = MagicMock()
@@ -200,9 +182,7 @@ async def test_flag_hallucination_already_flagged_rejected(
 
 
 @pytest.mark.asyncio
-async def test_flag_hallucination_not_found(
-    service: LLMAuditService, mock_session: AsyncMock
-) -> None:
+async def test_flag_hallucination_not_found(service: LLMAuditService, mock_session: AsyncMock) -> None:
     """Given no audit entry, When I flag, Then ValueError is raised."""
     result_mock = MagicMock()
     result_mock.scalar_one_or_none.return_value = None
@@ -217,18 +197,14 @@ async def test_flag_hallucination_not_found(
 
 
 @pytest.mark.asyncio
-async def test_flag_hallucination_serializes_response(
-    service: LLMAuditService, mock_session: AsyncMock
-) -> None:
+async def test_flag_hallucination_serializes_response(service: LLMAuditService, mock_session: AsyncMock) -> None:
     """When flagged, the returned dict includes hallucination fields."""
     log = _make_audit_log(hallucination_flagged=False)
     result_mock = MagicMock()
     result_mock.scalar_one_or_none.return_value = log
     mock_session.execute = AsyncMock(return_value=result_mock)
 
-    result = await service.flag_hallucination(
-        audit_log_id=log.id, reason="Bad data", flagged_by=uuid.uuid4()
-    )
+    result = await service.flag_hallucination(audit_log_id=log.id, reason="Bad data", flagged_by=uuid.uuid4())
 
     assert result["hallucination_flagged"] is True
     assert result["hallucination_reason"] == "Bad data"
@@ -240,9 +216,7 @@ async def test_flag_hallucination_serializes_response(
 
 
 @pytest.mark.asyncio
-async def test_get_stats_computes_rates(
-    service: LLMAuditService, mock_session: AsyncMock
-) -> None:
+async def test_get_stats_computes_rates(service: LLMAuditService, mock_session: AsyncMock) -> None:
     """Given suggestions with various dispositions,
     When I get stats, Then acceptance/modification/rejection rates are computed."""
     engagement_id = uuid.uuid4()
@@ -254,20 +228,20 @@ async def test_get_stats_computes_rates(
     # Mock: suggestion disposition counts
     sugg_result = MagicMock()
     sugg_result.__iter__ = MagicMock(
-        return_value=iter([
-            (SuggestionDisposition.ACCEPTED, 6),
-            (SuggestionDisposition.MODIFIED, 2),
-            (SuggestionDisposition.REJECTED, 2),
-        ])
+        return_value=iter(
+            [
+                (SuggestionDisposition.ACCEPTED, 6),
+                (SuggestionDisposition.MODIFIED, 2),
+                (SuggestionDisposition.REJECTED, 2),
+            ]
+        )
     )
 
     # Mock: hallucination count
     halluc_result = MagicMock()
     halluc_result.scalar.return_value = 1
 
-    mock_session.execute = AsyncMock(
-        side_effect=[count_result, sugg_result, halluc_result]
-    )
+    mock_session.execute = AsyncMock(side_effect=[count_result, sugg_result, halluc_result])
 
     result = await service.get_stats(engagement_id=engagement_id)
 
@@ -283,9 +257,7 @@ async def test_get_stats_computes_rates(
 
 
 @pytest.mark.asyncio
-async def test_get_stats_zero_suggestions(
-    service: LLMAuditService, mock_session: AsyncMock
-) -> None:
+async def test_get_stats_zero_suggestions(service: LLMAuditService, mock_session: AsyncMock) -> None:
     """Given no suggestions, rates should be 0.0."""
     count_result = MagicMock()
     count_result.scalar.return_value = 0
@@ -296,9 +268,7 @@ async def test_get_stats_zero_suggestions(
     halluc_result = MagicMock()
     halluc_result.scalar.return_value = 0
 
-    mock_session.execute = AsyncMock(
-        side_effect=[count_result, sugg_result, halluc_result]
-    )
+    mock_session.execute = AsyncMock(side_effect=[count_result, sugg_result, halluc_result])
 
     result = await service.get_stats(engagement_id=uuid.uuid4())
 
@@ -309,24 +279,18 @@ async def test_get_stats_zero_suggestions(
 
 
 @pytest.mark.asyncio
-async def test_get_stats_with_date_range(
-    service: LLMAuditService, mock_session: AsyncMock
-) -> None:
+async def test_get_stats_with_date_range(service: LLMAuditService, mock_session: AsyncMock) -> None:
     """Given date range, stats are filtered accordingly."""
     count_result = MagicMock()
     count_result.scalar.return_value = 5
 
     sugg_result = MagicMock()
-    sugg_result.__iter__ = MagicMock(
-        return_value=iter([(SuggestionDisposition.ACCEPTED, 3)])
-    )
+    sugg_result.__iter__ = MagicMock(return_value=iter([(SuggestionDisposition.ACCEPTED, 3)]))
 
     halluc_result = MagicMock()
     halluc_result.scalar.return_value = 0
 
-    mock_session.execute = AsyncMock(
-        side_effect=[count_result, sugg_result, halluc_result]
-    )
+    mock_session.execute = AsyncMock(side_effect=[count_result, sugg_result, halluc_result])
 
     result = await service.get_stats(
         engagement_id=uuid.uuid4(),

@@ -36,9 +36,7 @@ class EventSpineBuilder:
         self._mapping_rules = mapping_rules or {}
         self._dedup_tolerance = timedelta(seconds=dedup_tolerance_seconds)
 
-    def canonicalize(
-        self, raw_events: list[dict[str, Any]], source_system: str
-    ) -> list[dict[str, Any]]:
+    def canonicalize(self, raw_events: list[dict[str, Any]], source_system: str) -> list[dict[str, Any]]:
         """Normalize raw events from a source system to canonical schema.
 
         Args:
@@ -82,9 +80,7 @@ class EventSpineBuilder:
             "source_system": source_system,
             "performer_role_ref": mapped.get("performer_role_ref") or raw.get("performer_role_ref"),
             "evidence_refs": mapped.get("evidence_refs") or raw.get("evidence_refs"),
-            "confidence_score": float(
-                mapped.get("confidence_score") or raw.get("confidence_score", 0.0)
-            ),
+            "confidence_score": float(mapped.get("confidence_score") or raw.get("confidence_score", 0.0)),
             "brightness": mapped.get("brightness") or raw.get("brightness"),
             "mapping_status": "mapped",
             "process_element_id": mapped.get("process_element_id") or raw.get("process_element_id"),
@@ -102,9 +98,7 @@ class EventSpineBuilder:
 
         return event
 
-    def deduplicate(
-        self, events: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
+    def deduplicate(self, events: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Remove duplicate events, retaining the highest-confidence version.
 
         Duplicates are identified by (case_id, activity_name) where
@@ -114,9 +108,7 @@ class EventSpineBuilder:
             return []
 
         # Sort by timestamp to group nearby events
-        sorted_events = sorted(
-            events, key=lambda e: e.get("timestamp_utc") or datetime.min
-        )
+        sorted_events = sorted(events, key=lambda e: e.get("timestamp_utc") or datetime.min)
 
         deduped: list[dict[str, Any]] = []
         for event in sorted_events:
@@ -133,9 +125,7 @@ class EventSpineBuilder:
 
         return deduped
 
-    def _is_duplicate(
-        self, a: dict[str, Any], b: dict[str, Any]
-    ) -> bool:
+    def _is_duplicate(self, a: dict[str, Any], b: dict[str, Any]) -> bool:
         """Check if two events are duplicates based on key + time tolerance."""
         if a.get("case_id") != b.get("case_id"):
             return False
@@ -161,9 +151,7 @@ class EventSpineBuilder:
 
         return abs(ts_a - ts_b) <= self._dedup_tolerance
 
-    def build_spine(
-        self, events: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
+    def build_spine(self, events: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Build the complete event spine: deduplicate and order by timestamp.
 
         Args:
@@ -173,9 +161,7 @@ class EventSpineBuilder:
             Deduplicated, chronologically ordered event list.
         """
         deduped = self.deduplicate(events)
-        spine = sorted(
-            deduped, key=lambda e: e.get("timestamp_utc") or datetime.min
-        )
+        spine = sorted(deduped, key=lambda e: e.get("timestamp_utc") or datetime.min)
         return spine
 
     def check_unmapped(

@@ -81,9 +81,7 @@ class ControlEffectivenessScoringService:
     def __init__(self, graph_service: Any) -> None:
         self._graph = graph_service
 
-    async def get_execution_evidence(
-        self, control_id: str, engagement_id: str
-    ) -> dict[str, Any]:
+    async def get_execution_evidence(self, control_id: str, engagement_id: str) -> dict[str, Any]:
         """Query SUPPORTED_BY edges to count execution evidence.
 
         Returns dict with: total_required, evidenced_count, evidence_ids.
@@ -94,9 +92,7 @@ class ControlEffectivenessScoringService:
                 "WHERE c.id = $control_id AND c.engagement_id = $engagement_id "
                 "RETURN e.id AS evidence_id, e.has_execution_marker AS has_marker"
             )
-            records = await self._graph.run_query(
-                query, {"control_id": control_id, "engagement_id": engagement_id}
-            )
+            records = await self._graph.run_query(query, {"control_id": control_id, "engagement_id": engagement_id})
 
             evidence_ids = []
             evidenced_count = 0
@@ -115,9 +111,7 @@ class ControlEffectivenessScoringService:
                 "evidence_ids": evidence_ids,
             }
         except Exception:
-            logger.warning(
-                "Failed to query SUPPORTED_BY edges for control %s", control_id
-            )
+            logger.warning("Failed to query SUPPORTED_BY edges for control %s", control_id)
             return {"total_required": 0, "evidenced_count": 0, "evidence_ids": []}
 
     async def score_control(
