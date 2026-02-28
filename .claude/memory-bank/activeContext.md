@@ -4,10 +4,12 @@
 
 ## Current Focus
 
-All 106 stories (18 epics) from PRD v2.1 decomposition are complete. No remaining open stories.
+All 106 stories (18 epics) from PRD v2.1 decomposition are complete. MVP released as v2026.02.191 on GitHub. Presentation updated and deployed to Cloudflare.
 
 ## Recently Completed
 
+- **PR #508 merged** — Presentation: final MVP stats (101K LOC, 5,797 tests, 65 routers, 92 models), Project Stats Dashboard + Presentation Changelog appendix slides, deployed to Cloudflare Pages (v2026.02.192)
+- **GitHub Release v2026.02.191** — Inaugural release: KMFlow Platform MVP Complete with full stats and changelog
 - **PRs #253, #265, #268 merged** — Security & quality cleanup: cryptography 46.0.5, frontend dep hardening, agent capture privacy audit remediation (v2026.02.191)
 - **PR #507 merged** — Confidence heatmap overlay: Bright/Dim/Dark toggle, hover tooltip, JSON/CSV export, UUID validation, 20 tests (#341) (v2026.02.190)
 - **PR #506 merged** — Financial Impact Dashboard: side-by-side scenario cost comparison, inline assumption editing, delta highlighting, 16 tests (#369) (v2026.02.189)

@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.192] - 2026-02-28
+### Changed
+- Presentation: update stats to final MVP metrics (101K LOC, 5,797 tests, 65 routers, 92 models), add Project Stats Dashboard and Presentation Changelog appendix slides (#508)
+
 ## [2026.02.191] - 2026-02-28
 ### Security
 - Bump cryptography to 46.0.5 (CVE fixes) (#253)

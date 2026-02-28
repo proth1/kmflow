@@ -1,15 +1,18 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.191
+**Version**: 2026.02.192
 **Last Updated**: 2026-02-28
 
 ## Quick Stats
 
 | Metric | Value |
 |--------|-------|
-| SQLAlchemy Models | 82+ classes across 12 modules |
-| API Routes | 26+ routers |
-| Test Count | 3302 backend + 242 frontend passing |
+| SQLAlchemy Models | 92 |
+| API Routers | 65 |
+| Test Count | 5,162 backend + 635 frontend (5,797 total) |
+| Total LOC | 101,811 (389 Python / 112 TypeScript / 39 Swift) |
+| Database Migrations | 81 |
+| BPMN Process Models | 44 |
 | Coverage | >80% |
 | Python Version | 3.12+ |
 | FastAPI Version | 0.109+ |
@@ -27,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.192 | 2026-02-28 | Presentation: final MVP stats (101K LOC, 5,797 tests), Project Stats Dashboard + Presentation Changelog appendix slides (#508) |
 | 2026.02.191 | 2026-02-28 | Security & quality: cryptography 46.0.5 bump (#253), frontend dep hardening (#265), agent capture privacy audit remediation (#268) |
 | 2026.02.190 | 2026-02-28 | Confidence heatmap overlay: Bright/Dim/Dark toggle, hover tooltip, JSON/CSV export, UUID validation, 20 tests (#341) |
 | 2026.02.189 | 2026-02-28 | Financial Impact Dashboard: side-by-side scenario cost comparison, inline assumption editing, delta highlighting, 16 tests (#369) |
@@ -171,7 +175,7 @@
 
 ## Platform Health
 
-- All 2510 backend + 206 frontend tests passing
+- All 5,162 backend + 635 frontend tests passing
 - No known critical vulnerabilities
 - Backend lint/format/type checks clean
 
