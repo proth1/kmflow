@@ -17,14 +17,9 @@ depends_on: Union[str, None] = None
 
 
 def upgrade() -> None:
-    # Convert LargeBinary to Vector(768)
-    op.alter_column(
-        "pattern_library_entries",
-        "embedding",
-        type_=Vector(768),
-        postgresql_using="embedding::vector(768)",
-        existing_nullable=True,
-    )
+    # bytea cannot be cast directly to vector, so drop and recreate
+    op.drop_column("pattern_library_entries", "embedding")
+    op.add_column("pattern_library_entries", sa.Column("embedding", Vector(768), nullable=True))
 
 
 def downgrade() -> None:
