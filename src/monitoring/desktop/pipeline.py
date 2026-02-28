@@ -8,6 +8,7 @@ category 7 (Domain Communications), and supports incremental ingestion.
 
 from __future__ import annotations
 
+import enum
 import logging
 import uuid
 from dataclasses import dataclass, field
@@ -15,6 +16,23 @@ from datetime import UTC, datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+class SourceType(enum.StrEnum):
+    """Desktop monitoring agent source types."""
+
+    SOROCO_SCOUT = "soroco_scout"
+    KM4WORK = "km4work"
+    MANUAL_OBSERVATION = "manual_observation"
+
+
+class Brightness(enum.StrEnum):
+    """Confidence-based brightness classification tiers."""
+
+    DARK = "dark"
+    DIM = "dim"
+    BRIGHT = "bright"
+
 
 # Evidence taxonomy category for desktop captures
 EVIDENCE_CATEGORY_DESKTOP = 7
@@ -53,7 +71,9 @@ class DesktopCapture:
         user_id: User who generated the capture.
         engagement_id: Engagement this capture belongs to.
         application_name: Name of the active application.
-        window_title: Title of the active window (PII-filtered).
+        window_title: Title of the active window. Upstream connectors
+            (Soroco Scout, KM4Work) MUST filter PII before populating
+            this field. See macOS Agent L2 PII filter for patterns.
         app_category: Categorized application type.
         action_type: Type of action (app_switch, navigation, input, idle).
         timestamp: When the action occurred.
@@ -117,8 +137,16 @@ class ProcessedActivity:
         if not self.event_id:
             self.event_id = str(uuid.uuid4())
 
-    def to_canonical_event_dict(self) -> dict[str, Any]:
-        """Convert to CanonicalActivityEvent-compatible dict."""
+    def to_canonical_event_dict(self, engagement_id: str = "") -> dict[str, Any]:
+        """Convert to CanonicalActivityEvent-compatible dict.
+
+        Field names align with the CanonicalActivityEvent ORM model.
+        Callers must convert ``id`` to UUID and ``timestamp_utc`` to
+        a timezone-aware datetime before ORM persistence.
+
+        Args:
+            engagement_id: Engagement UUID string (required for DB persistence).
+        """
         return {
             "id": self.event_id,
             "case_id": self.case_id,
@@ -129,7 +157,8 @@ class ProcessedActivity:
             "brightness": self.brightness,
             "evidence_refs": self.evidence_refs,
             "mapping_status": "mapped",
-            "source": self.source_type,
+            "source_system": self.source_type,
+            "engagement_id": engagement_id,
         }
 
 
@@ -178,6 +207,9 @@ def compute_confidence(
     """
     base = TELEMETRIC_CONFIDENCE.get(source_type, 0.5)
 
+    if source_type not in TELEMETRIC_CONFIDENCE:
+        logger.warning("Unknown source_type %r — using default confidence 0.5", source_type)
+
     # Short actions are less reliable
     if duration_ms > 0 and duration_ms < 500:
         base *= 0.8
@@ -196,13 +228,14 @@ def classify_brightness(confidence: float) -> str:
         confidence: Score between 0.0 and 1.0.
 
     Returns:
-        "dark" if < 0.4, "dim" if < 0.7, "bright" otherwise.
+        Brightness.DARK if < 0.4, Brightness.DIM if < 0.7,
+        Brightness.BRIGHT otherwise.
     """
     if confidence < 0.4:
-        return "dark"
+        return Brightness.DARK
     if confidence < 0.7:
-        return "dim"
-    return "bright"
+        return Brightness.DIM
+    return Brightness.BRIGHT
 
 
 def map_to_activity(capture: DesktopCapture) -> str:

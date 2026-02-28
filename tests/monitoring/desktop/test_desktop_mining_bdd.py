@@ -10,6 +10,7 @@ Tests cover all acceptance criteria from the story:
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from unittest.mock import patch
 
 from src.monitoring.desktop.gap_detector import (
     GapItem,
@@ -98,9 +99,9 @@ class TestSorocoScoutMapping:
 
     def test_activity_has_canonical_event_fields(self) -> None:
         """Processed activity can be converted to canonical event dict."""
-        capture = _make_capture()
+        capture = _make_capture(engagement_id="eng-99")
         activity = process_capture(capture)
-        event_dict = activity.to_canonical_event_dict()
+        event_dict = activity.to_canonical_event_dict(engagement_id="eng-99")
 
         assert "case_id" in event_dict
         assert "activity_name" in event_dict
@@ -108,7 +109,8 @@ class TestSorocoScoutMapping:
         assert "timestamp_utc" in event_dict
         assert "confidence_score" in event_dict
         assert "brightness" in event_dict
-        assert event_dict["source"] == "soroco_scout"
+        assert event_dict["source_system"] == "soroco_scout"
+        assert event_dict["engagement_id"] == "eng-99"
 
     def test_session_id_used_as_case_id(self) -> None:
         """Session ID becomes the case_id for the canonical event."""
@@ -551,6 +553,56 @@ class TestGapItem:
     def test_auto_generates_gap_id(self) -> None:
         gap = GapItem()
         assert len(gap.gap_id) == 36
+
+
+class TestProcessBatchErrorHandling:
+    """Tests for error handling in process_batch."""
+
+    def test_bad_capture_produces_error_without_crashing(self) -> None:
+        """A capture that raises an exception is recorded as an error."""
+        good_capture = _make_capture(engagement_id="eng-1")
+        bad_capture = _make_capture(engagement_id="eng-1")
+
+        # Make map_to_activity raise on first call, succeed on second
+        call_count = 0
+        original_map = __import__(
+            "src.monitoring.desktop.pipeline", fromlist=["map_to_activity"]
+        ).map_to_activity
+
+        def flaky_map(capture: DesktopCapture) -> str:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise ValueError("simulated mapping error")
+            return original_map(capture)
+
+        with patch(
+            "src.monitoring.desktop.pipeline.map_to_activity",
+            side_effect=flaky_map,
+        ):
+            result = process_batch([bad_capture, good_capture])
+
+        assert result.total_activities == 1  # good one succeeded
+        assert len(result.errors) == 1
+        assert "Error processing capture" in result.errors[0]
+
+    def test_analysis_window_set_from_desktop_events(self) -> None:
+        """Gap analysis window start/end set from first/last desktop events."""
+        base_ts = datetime(2026, 2, 15, 9, 0, 0, tzinfo=UTC)
+        end_ts = base_ts + timedelta(hours=2)
+
+        desktop_events = [
+            _make_timeline_event(source="desktop", timestamp=base_ts),
+            _make_timeline_event(source="desktop", timestamp=end_ts),
+        ]
+        system_events = [
+            _make_timeline_event(timestamp=base_ts - timedelta(minutes=5)),
+            _make_timeline_event(timestamp=end_ts + timedelta(minutes=5)),
+        ]
+
+        result = detect_gaps(desktop_events, system_events)
+        assert result.analysis_window_start == base_ts
+        assert result.analysis_window_end == end_ts
 
 
 class TestPipelineResult:
