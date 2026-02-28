@@ -229,7 +229,7 @@ class TestReportGenerationTrigger:
         last_call = redis.setex.call_args_list[-1]
         stored = json.loads(last_call[0][2])
         assert stored["status"] == ReportStatus.FAILED
-        assert "DB connection lost" in stored["error"]
+        assert "try again" in stored["error"]
 
 
 # ============================================================
@@ -253,7 +253,7 @@ class TestReportStatusPolling:
         request = _make_mock_request(job_data)
         user = _make_mock_user()
 
-        result = await get_report_status(eng_id, "report-123", request, user)
+        result = await get_report_status(eng_id, "report-123", request, user, user)
 
         assert result["status"] == "pending"
         assert result["progress_percentage"] == 0
@@ -272,7 +272,7 @@ class TestReportStatusPolling:
         request = _make_mock_request(job_data)
         user = _make_mock_user()
 
-        result = await get_report_status(eng_id, "report-456", request, user)
+        result = await get_report_status(eng_id, "report-456", request, user, user)
 
         assert result["status"] == "complete"
         assert result["progress_percentage"] == 100
@@ -289,7 +289,7 @@ class TestReportStatusPolling:
         user = _make_mock_user()
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_report_status(eng_id, "nonexistent", request, user)
+            await get_report_status(eng_id, "nonexistent", request, user, user)
 
         assert exc_info.value.status_code == 404
 
@@ -310,7 +310,7 @@ class TestReportStatusPolling:
         user = _make_mock_user()
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_report_status(eng_id, "report-789", request, user)
+            await get_report_status(eng_id, "report-789", request, user, user)
 
         assert exc_info.value.status_code == 404
 
@@ -328,7 +328,7 @@ class TestReportStatusPolling:
         request = _make_mock_request(job_data)
         user = _make_mock_user()
 
-        result = await get_report_status(eng_id, "report-fail", request, user)
+        result = await get_report_status(eng_id, "report-fail", request, user, user)
 
         assert result["status"] == "failed"
         assert result["error"] == "Database timeout"
@@ -350,7 +350,7 @@ class TestReportDownload:
         request = _make_mock_request(job_data)
         user = _make_mock_user()
 
-        result = await download_report(eng_id, "report-dl", "html", request, user)
+        result = await download_report(eng_id, "report-dl", "html", request, user, user)
 
         assert result.status_code == 200
         assert b"Executive Report" in result.body
@@ -371,7 +371,7 @@ class TestReportDownload:
         request = _make_mock_request(job_data)
         user = _make_mock_user()
 
-        result = await download_report(eng_id, "report-pdf", "pdf", request, user)
+        result = await download_report(eng_id, "report-pdf", "pdf", request, user, user)
 
         assert result.status_code == 200
         assert result.body == pdf_content
@@ -392,7 +392,7 @@ class TestReportDownload:
         user = _make_mock_user()
 
         with pytest.raises(HTTPException) as exc_info:
-            await download_report(eng_id, "report-wip", "html", request, user)
+            await download_report(eng_id, "report-wip", "html", request, user, user)
 
         assert exc_info.value.status_code == 409
 
@@ -406,7 +406,7 @@ class TestReportDownload:
         user = _make_mock_user()
 
         with pytest.raises(HTTPException) as exc_info:
-            await download_report(eng_id, "nonexistent", "html", request, user)
+            await download_report(eng_id, "nonexistent", "html", request, user, user)
 
         assert exc_info.value.status_code == 404
 
@@ -426,7 +426,7 @@ class TestReportDownload:
         user = _make_mock_user()
 
         with pytest.raises(HTTPException) as exc_info:
-            await download_report(eng_id, "report-nopdf", "pdf", request, user)
+            await download_report(eng_id, "report-nopdf", "pdf", request, user, user)
 
         assert exc_info.value.status_code == 404
 

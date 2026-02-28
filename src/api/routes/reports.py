@@ -7,6 +7,7 @@ report generation with status tracking and download.
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import uuid
@@ -14,7 +15,7 @@ from typing import Any
 from uuid import UUID
 
 import redis.asyncio as aioredis
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -216,18 +217,17 @@ async def trigger_report_generation(
             }
             if body.format == ReportFormat.PDF and result.pdf_bytes:
                 # Store PDF as base64 for Redis (production would use S3)
-                import base64
                 job_data["pdf_base64"] = base64.b64encode(result.pdf_bytes).decode()
             await _set_report_job(request, report_id, job_data)
 
     except Exception as e:
-        logger.error("Report generation failed: %s", e)
+        logger.error("Report generation failed for %s: %s", engagement_id, e)
         await _set_report_job(request, report_id, {
             "status": ReportStatus.FAILED,
             "engagement_id": str(engagement_id),
             "format": body.format,
             "progress_percentage": 0,
-            "error": str(e),
+            "error": "Report generation failed. Please try again or contact support.",
             "requested_by": str(user.id),
         })
 
@@ -250,6 +250,7 @@ async def get_report_status(
     report_id: str,
     request: Request,
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Poll the status of an async report generation job.
 
@@ -293,16 +294,17 @@ async def get_report_status(
 async def download_report(
     engagement_id: UUID,
     report_id: str,
-    format: str = "html",
-    request: Request = None,  # type: ignore[assignment]
+    output_format: str = Query(default="html", alias="format", pattern="^(html|pdf)$"),
+    request: Request = None,  # FastAPI injects automatically
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> Any:
     """Download a completed report.
 
     Args:
         engagement_id: The engagement the report belongs to.
         report_id: The report job ID.
-        format: Download format (html or pdf).
+        output_format: Download format (html or pdf).
     """
     job = await _get_report_job(request, report_id)
     if job is None:
@@ -323,14 +325,13 @@ async def download_report(
             detail=f"Report is not complete (status: {job.get('status')})",
         )
 
-    if format == "pdf":
+    if output_format == "pdf":
         pdf_b64 = job.get("pdf_base64")
         if not pdf_b64:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="PDF content not available for this report",
             )
-        import base64
         pdf_bytes = base64.b64decode(pdf_b64)
         return Response(
             content=pdf_bytes,
