@@ -12,6 +12,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
@@ -162,8 +163,6 @@ async def generate_session_probes(
     _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Generate probes for a session from active seed terms."""
-    from sqlalchemy import select
-
     service = SurveyBotService(session)
 
     # Verify session

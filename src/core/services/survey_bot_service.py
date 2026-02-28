@@ -185,7 +185,7 @@ class SurveyBotService:
                     "seed_term_id": term["id"],
                     "seed_term": term["term"],
                     "probe_type": probe_type.value,
-                    "question": template["question"].format(term=term["term"]),
+                    "question": template["question"].replace("{term}", term["term"]),
                     "expected_response": template["expected_response"],
                 })
 
