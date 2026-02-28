@@ -1518,7 +1518,7 @@
       <a href="#slide-45">Workflows</a>
       <a href="#slide-51">Roadmap</a>
     </div>
-    <div class="nav-version">v2.6.0 &mdash; Phase 6 Delivered</div>
+    <div class="nav-version">v2026.02.191 &mdash; MVP Complete</div>
   </nav>
 
   <div class="slide-indicator" id="slideIndicator"></div>
@@ -1559,7 +1559,7 @@
       <div class="section-header">
         <span class="badge badge-blue">Navigation</span>
         <h2>Presentation Roadmap</h2>
-        <p>57 slides across 8 sections</p>
+        <p>59 slides across 9 sections</p>
       </div>
       <div class="cards-grid">
         <div class="card toc-card" onclick="openTocModal(0)">
@@ -1600,7 +1600,12 @@
         <div class="card toc-card" onclick="openTocModal(7)">
           <div class="card-icon">8</div>
           <h3>Roadmap</h3>
-          <p>MVP delivered, Phase 6 changelog, Phase 2 intelligence + data platform, Phase 3 scale, success metrics, launch plan</p>
+          <p>MVP complete (101K LOC, 5,797 tests, 18 epics), what&rsquo;s new, Phase 2 intelligence, Phase 3 scale, success metrics, launch plan</p>
+        </div>
+        <div class="card toc-card" onclick="openTocModal(8)">
+          <div class="card-icon">9</div>
+          <h3>Appendix</h3>
+          <p>Project stats dashboard, codebase metrics, presentation changelog</p>
         </div>
       </div>
       <div class="slide-footer">
@@ -4516,7 +4521,7 @@ confidence = (
         </div>
         <div class="card">
           <h3>Platform Features</h3>
-          <p>178 API endpoints, MCP server (8 tools), client portal, monitoring dashboard, pattern library, annotation system</p>
+          <p>65 API routers, MCP server (8 tools), process replay engine, confidence heatmaps, financial impact analysis, executive report generation</p>
         </div>
         <div class="card">
           <h3>Infrastructure</h3>
@@ -4539,8 +4544,8 @@ confidence = (
           <p>SuccessMetric and MetricReading models with seed data. API operational — tracks evidence accuracy, POV generation time, consultant time savings, and more.</p>
         </div>
         <div class="card">
-          <h3>Phase 6 Frontend</h3>
-          <p>18+ pages with 8 new modules (governance, analytics, simulations, integrations, admin, reports, shelf requests, patterns). Expanded nav, 76 E2E tests, evidence lineage UI.</p>
+          <h3>Full-Stack Frontend</h3>
+          <p>18+ pages with 8 modules (governance, analytics, simulations, integrations, admin, reports, shelf requests, patterns). 635 frontend tests, evidence lineage UI, persona dashboards.</p>
         </div>
       </div>
       <div class="slide-footer">
@@ -4550,49 +4555,51 @@ confidence = (
       </div>
     </section>
 
-    <!-- Slide 52: What's New — February 2026 -->
+    <!-- Slide 52: What's New — MVP Complete -->
     <section id="slide-52" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Changelog</span>
-        <h2>What&rsquo;s New &mdash; February 2026</h2>
+        <h2>What&rsquo;s New &mdash; MVP Complete</h2>
       </div>
       <div class="two-col">
         <div>
-          <h3>Phase 6: Platform Modules</h3>
+          <h3>PRD v2.1 Fully Delivered</h3>
           <ul class="feature-list">
-            <li><strong>8 new pages</strong>: Governance, Reports, Integrations, Simulations, Shelf Requests, Analytics, Patterns, Admin</li>
-            <li>Expanded AppShell navigation with sidebar grouping</li>
-            <li>30+ new API client functions</li>
-            <li>11 new E2E test specs covering all new pages</li>
+            <li><strong>All 106 stories</strong> across 18 epics complete &mdash; 399 issues closed</li>
+            <li><strong>65 API routers</strong> with full RBAC, engagement-scoped access control</li>
+            <li>Process replay engine: single-case timeline, aggregate volume, variant comparison</li>
+            <li>Confidence heatmap overlay with brightness classification on BPMN viewer</li>
+            <li>Executive report generation with evidence appendix and in-text citations</li>
           </ul>
-          <h3 style="margin-top: 1rem;">Evidence Lineage</h3>
+          <h3 style="margin-top: 1rem;">Platform Highlights</h3>
           <ul class="feature-list">
-            <li>Full <code>/lineage</code> page with transformation chain visualization</li>
-            <li>Upstream/downstream provenance graph</li>
-            <li>Impact analysis and version history</li>
+            <li>Desktop task mining pipeline with PII documentation and source classification</li>
+            <li>Celonis EMS, ServiceNow, Jira, and SAP integrations with checkpoint tracking</li>
+            <li>Persona-specific dashboards for 4 roles with role-based KPIs</li>
+            <li>Financial impact analysis with scenario comparison and composite ranking</li>
           </ul>
         </div>
         <div>
           <div style="background: var(--kmflow-blue); color: white; padding: 1.5rem; border-radius: 12px; text-align: center; margin-bottom: 1rem;">
-            <div style="font-size: 2rem; font-weight: 700;">18+</div>
-            <div style="font-size: 0.85rem; opacity: 0.9;">Platform Pages</div>
+            <div style="font-size: 2rem; font-weight: 700;">101,811</div>
+            <div style="font-size: 0.85rem; opacity: 0.9;">Lines of Code</div>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
             <div style="background: var(--kmflow-light-gray); padding: 1rem; border-radius: 8px; text-align: center;">
-              <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-blue);">76</div>
-              <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">E2E Tests</div>
+              <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-blue);">5,797</div>
+              <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">Total Tests</div>
             </div>
             <div style="background: var(--kmflow-light-gray); padding: 1rem; border-radius: 8px; text-align: center;">
-              <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-blue);">36</div>
-              <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">Unit Tests (Lineage)</div>
+              <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-blue);">182</div>
+              <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">Merged PRs</div>
             </div>
             <div style="background: var(--kmflow-light-gray); padding: 1rem; border-radius: 8px; text-align: center;">
-              <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-blue);">169+</div>
-              <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">API Endpoints</div>
+              <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-blue);">65</div>
+              <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">API Routers</div>
             </div>
             <div style="background: var(--kmflow-light-gray); padding: 1rem; border-radius: 8px; text-align: center;">
-              <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-blue);">30+</div>
-              <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">API Client Functions</div>
+              <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-blue);">92</div>
+              <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">DB Models</div>
             </div>
           </div>
         </div>
@@ -6176,7 +6183,163 @@ confidence = (
     </section>
     <!-- WALKTHROUGH-APPENDIX-END -->
 
-        <!-- Slide 121: Final Hero -->
+        <!-- Slide 122: Project Stats Dashboard -->
+    <section id="slide-122" class="slide slide-gray">
+      <div class="section-header">
+        <span class="badge badge-blue">Appendix</span>
+        <h2>Project Stats Dashboard</h2>
+        <p>v2026.02.191 &mdash; MVP Complete</p>
+      </div>
+      <div class="two-col">
+        <div>
+          <div style="background: var(--kmflow-blue); color: white; padding: 1.5rem; border-radius: 12px; text-align: center; margin-bottom: 1.25rem;">
+            <div style="font-size: 2.5rem; font-weight: 700;">101,811</div>
+            <div style="font-size: 0.9rem; opacity: 0.9;">Total Lines of Code</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem;">
+            <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid var(--kmflow-border);">
+              <div style="font-size: 1.3rem; font-weight: 700; color: var(--kmflow-blue);">389</div>
+              <div style="font-size: 0.7rem; color: var(--kmflow-medium-gray);">Python Files</div>
+              <div style="font-size: 0.85rem; font-weight: 600; color: var(--kmflow-dark-gray);">80K LOC</div>
+            </div>
+            <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid var(--kmflow-border);">
+              <div style="font-size: 1.3rem; font-weight: 700; color: var(--kmflow-blue);">112</div>
+              <div style="font-size: 0.7rem; color: var(--kmflow-medium-gray);">TypeScript Files</div>
+              <div style="font-size: 0.85rem; font-weight: 600; color: var(--kmflow-dark-gray);">16K LOC</div>
+            </div>
+            <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid var(--kmflow-border);">
+              <div style="font-size: 1.3rem; font-weight: 700; color: var(--kmflow-blue);">39</div>
+              <div style="font-size: 0.7rem; color: var(--kmflow-medium-gray);">Swift Files</div>
+              <div style="font-size: 0.85rem; font-weight: 600; color: var(--kmflow-dark-gray);">5K LOC</div>
+            </div>
+          </div>
+          <h3 style="margin-bottom: 0.5rem;">Test Coverage</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid var(--kmflow-border);">
+              <div style="font-size: 1.8rem; font-weight: 700; color: var(--kmflow-blue);">5,162</div>
+              <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">Backend Tests</div>
+            </div>
+            <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid var(--kmflow-border);">
+              <div style="font-size: 1.8rem; font-weight: 700; color: var(--kmflow-blue);">635</div>
+              <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">Frontend Tests</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3 style="margin-bottom: 0.75rem;">Platform Surface</h3>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 1.25rem; font-size: 0.9rem;">
+            <tbody>
+              <tr style="border-bottom: 1px solid var(--kmflow-border);">
+                <td style="padding: 0.6rem 0; font-weight: 600;">API Routers</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">65</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--kmflow-border);">
+                <td style="padding: 0.6rem 0; font-weight: 600;">SQLAlchemy Models</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">92</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--kmflow-border);">
+                <td style="padding: 0.6rem 0; font-weight: 600;">Database Migrations</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">81</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--kmflow-border);">
+                <td style="padding: 0.6rem 0; font-weight: 600;">BPMN Process Models</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">44</td>
+              </tr>
+              <tr>
+                <td style="padding: 0.6rem 0; font-weight: 600;">Total Tests</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">5,797</td>
+              </tr>
+            </tbody>
+          </table>
+          <h3 style="margin-bottom: 0.75rem;">Project History</h3>
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+            <tbody>
+              <tr style="border-bottom: 1px solid var(--kmflow-border);">
+                <td style="padding: 0.6rem 0; font-weight: 600;">Commits</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">370</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--kmflow-border);">
+                <td style="padding: 0.6rem 0; font-weight: 600;">Merged PRs</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">182</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--kmflow-border);">
+                <td style="padding: 0.6rem 0; font-weight: 600;">Closed Issues</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">399</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--kmflow-border);">
+                <td style="padding: 0.6rem 0; padding-left: 1rem; color: var(--kmflow-medium-gray);">Stories</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-medium-gray);">214</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--kmflow-border);">
+                <td style="padding: 0.6rem 0; padding-left: 1rem; color: var(--kmflow-medium-gray);">Epics</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-medium-gray);">46</td>
+              </tr>
+              <tr>
+                <td style="padding: 0.6rem 0; padding-left: 1rem; color: var(--kmflow-medium-gray);">Tasks</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-medium-gray);">59</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 122</span>
+      </div>
+    </section>
+
+    <!-- Slide 123: Presentation Changelog -->
+    <section id="slide-123" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Appendix</span>
+        <h2>Presentation Changelog</h2>
+        <p>Evolution of this presentation over time</p>
+      </div>
+      <table style="width: 100%; max-width: 900px; margin: 0 auto; border-collapse: collapse; font-size: 0.9rem;">
+        <thead>
+          <tr style="border-bottom: 2px solid var(--kmflow-blue);">
+            <th style="padding: 0.75rem; text-align: left; width: 15%;">Date</th>
+            <th style="padding: 0.75rem; text-align: left; width: 12%;">Version</th>
+            <th style="padding: 0.75rem; text-align: left;">Changes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom: 1px solid var(--kmflow-border); background: rgba(0,82,204,0.04);">
+            <td style="padding: 0.75rem; font-weight: 600;">2026-02-28</td>
+            <td style="padding: 0.75rem;"><strong>v3.0</strong></td>
+            <td style="padding: 0.75rem;">MVP Complete release &mdash; updated all stats to final (101K LOC, 5,797 tests, 65 routers, 92 models), added Project Stats Dashboard and Presentation Changelog appendix, refreshed What&rsquo;s New slide for full PRD v2.1 delivery, added Appendix section to TOC</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--kmflow-border);">
+            <td style="padding: 0.75rem;">2026-02-22</td>
+            <td style="padding: 0.75rem;">v2.7</td>
+            <td style="padding: 0.75rem;">BPMN SVG diagrams &mdash; embedded 7 SVGs from process models into slides 12, 23, 26b, 30&ndash;33; added embed-diagrams.py build script</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--kmflow-border);">
+            <td style="padding: 0.75rem;">2026-02-19</td>
+            <td style="padding: 0.75rem;">v2.6</td>
+            <td style="padding: 0.75rem;">Phase 6 delivery &mdash; 8 new platform pages, evidence lineage UI, expanded navigation, 76 E2E tests, 169+ API endpoints</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--kmflow-border);">
+            <td style="padding: 0.75rem;">2026-02-17</td>
+            <td style="padding: 0.75rem;">v2.0</td>
+            <td style="padding: 0.75rem;">Architecture rebuild &mdash; complete rewrite as single HTML file, added TOC with modal navigation, section-based layout, slide indicator dots, Cloudflare Workers auth deployment</td>
+          </tr>
+          <tr>
+            <td style="padding: 0.75rem;">2026-02-10</td>
+            <td style="padding: 0.75rem;">v1.0</td>
+            <td style="padding: 0.75rem;">Initial presentation &mdash; platform overview, engagement model, case study, architecture diagrams, first deployment to Cloudflare Pages</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 123</span>
+      </div>
+    </section>
+
+    <!-- Slide 121: Final Hero -->
     <section id="slide-121" class="slide slide-hero">
       <span class="tagline">Let insights reveal new opportunity</span>
       <h1>KMFlow Platform</h1>
@@ -7105,21 +7268,39 @@ confidence = (
         num: "8",
         title: "Roadmap",
         link: "#slide-51",
-        description: "Where KMFlow has been and where it's going — from the MVP foundation delivered through Phase 6 to the Phase 2 intelligence and data platform enhancements, Phase 3 scale and autonomy features, success metrics, and the go-to-market launch plan.",
+        description: "Where KMFlow has been and where it's going — the full MVP is delivered with 101,811 LOC, 5,797 tests, and all 18 epics complete. Next: intelligence enhancements, autonomous agents, and multi-tenant SaaS.",
         highlights: [
-          "MVP (Phase 1): core ingestion pipeline, knowledge graph, LCD algorithm, TOM gap analysis",
-          "Phase 6 delivered: Admin Dashboard, Knowledge Graph Integration, ML Task Segmentation",
+          "MVP Complete: all 106 stories across 18 epics delivered — 399 issues closed, 182 PRs merged",
+          "Full-stack platform: 65 API routers, 92 models, 81 migrations, 44 BPMN process models",
+          "5,797 tests (5,162 backend + 635 frontend) across the entire platform",
           "Phase 2 roadmap: autonomous evidence collection agents, cross-engagement pattern intelligence",
-          "Phase 3 roadmap: multi-tenant SaaS, marketplace for evidence parsers, white-label packaging",
-          "Success metrics: time-to-insight, evidence coverage %, analyst NPS, gap detection recall"
+          "Phase 3 roadmap: multi-tenant SaaS, marketplace for evidence parsers, white-label packaging"
         ],
         slides: [
-          { name: "Foundation Delivered", id: "slide-51" },
-          { name: "Phase 6 Changelog", id: "slide-52" },
+          { name: "MVP Delivered", id: "slide-51" },
+          { name: "What's New", id: "slide-52" },
           { name: "Phase 2: Intelligence", id: "slide-53" },
           { name: "Phase 3: Scale", id: "slide-54" },
           { name: "Measuring Success", id: "slide-55" },
           { name: "Launch Plan", id: "slide-56" }
+        ]
+      }
+      ,
+      {
+        num: "9",
+        title: "Appendix",
+        link: "#slide-122",
+        description: "Project-level metrics, codebase statistics, and a changelog of this presentation itself — documenting what was built and how the story evolved.",
+        highlights: [
+          "101,811 lines of code across Python, TypeScript, and Swift",
+          "5,797 tests (5,162 backend + 635 frontend) for comprehensive coverage",
+          "92 SQLAlchemy models, 65 API routers, 81 migrations, 44 BPMN process models",
+          "370 commits, 182 merged PRs, 399 closed issues across 18 epics",
+          "Presentation changelog tracking 5 major versions from v1.0 to v3.0"
+        ],
+        slides: [
+          { name: "Project Stats Dashboard", id: "slide-122" },
+          { name: "Presentation Changelog", id: "slide-123" }
         ]
       }
     ];
