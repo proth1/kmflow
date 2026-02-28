@@ -1074,6 +1074,217 @@ async def get_engagement_dashboard(
     }
 
 
+# -- Evidence Mapping Schemas ------------------------------------------------
+
+
+class ReverseElementEntry(BaseModel):
+    """A process element that references a given evidence item."""
+
+    element_id: str
+    element_name: str
+    element_type: str
+    confidence_score: float
+    brightness_classification: str
+
+
+class ReverseEvidenceLookupResponse(BaseModel):
+    """Process elements that reference a specific evidence item."""
+
+    evidence_id: str
+    elements: list[ReverseElementEntry]
+    total: int
+
+
+class DarkElementEntry(BaseModel):
+    """A dark (unsupported) process element."""
+
+    element_id: str
+    element_name: str
+    element_type: str
+    confidence_score: float
+    evidence_count: int
+    suggested_actions: list[str]
+
+
+class DarkElementsResponse(BaseModel):
+    """List of process elements with no supporting evidence."""
+
+    engagement_id: str
+    model_version: int
+    dark_elements: list[DarkElementEntry]
+    total: int
+
+
+# -- Evidence Mapping Endpoints ----------------------------------------------
+
+
+@router.get(
+    "/evidence/{evidence_id}/process-elements",
+    response_model=ReverseEvidenceLookupResponse,
+)
+async def get_elements_for_evidence(
+    evidence_id: str,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("pov:read")),
+) -> dict[str, Any]:
+    """Reverse lookup: get all process elements that reference a given evidence item.
+
+    Used for highlighting linked elements when an evidence item is selected.
+
+    Args:
+        evidence_id: The evidence item UUID.
+    """
+    try:
+        ev_uuid = uuid.UUID(evidence_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid evidence ID format",
+        ) from None
+
+    # Verify the evidence item exists and get its engagement for access control
+    ev_result = await session.execute(
+        select(EvidenceItem).where(EvidenceItem.id == ev_uuid)
+    )
+    evidence = ev_result.scalar_one_or_none()
+    if not evidence:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Evidence item {evidence_id} not found",
+        )
+
+    await _check_engagement_member(session, user, evidence.engagement_id)
+
+    # Get the latest model for the engagement
+    model_result = await session.execute(
+        select(ProcessModel)
+        .where(ProcessModel.engagement_id == evidence.engagement_id)
+        .order_by(ProcessModel.version.desc())
+        .limit(1)
+    )
+    model = model_result.scalar_one_or_none()
+
+    matching_elements: list[dict[str, Any]] = []
+    if model:
+        # Get elements for this model and filter by evidence_id
+        elements_result = await session.execute(
+            select(ProcessElement).where(
+                ProcessElement.model_id == model.id,
+                ProcessElement.evidence_ids.isnot(None),
+            )
+        )
+        for elem in elements_result.scalars().all():
+            if elem.evidence_ids and str(ev_uuid) in [str(eid) for eid in elem.evidence_ids]:
+                matching_elements.append({
+                    "element_id": str(elem.id),
+                    "element_name": elem.name,
+                    "element_type": str(elem.element_type),
+                    "confidence_score": elem.confidence_score,
+                    "brightness_classification": str(elem.brightness_classification),
+                })
+
+    return {
+        "evidence_id": evidence_id,
+        "elements": matching_elements,
+        "total": len(matching_elements),
+    }
+
+
+@router.get(
+    "/engagement/{engagement_id}/dark-elements",
+    response_model=DarkElementsResponse,
+)
+async def get_dark_elements(
+    engagement_id: str,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("pov:read")),
+) -> dict[str, Any]:
+    """Get all unsupported (dark) process elements for an engagement.
+
+    Returns elements with no evidence, along with suggested evidence
+    acquisition actions.
+
+    Args:
+        engagement_id: The engagement UUID.
+    """
+    try:
+        eng_uuid = uuid.UUID(engagement_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid engagement ID format",
+        ) from None
+
+    await _check_engagement_member(session, user, eng_uuid)
+
+    # Get latest model
+    model_result = await session.execute(
+        select(ProcessModel)
+        .where(ProcessModel.engagement_id == eng_uuid)
+        .order_by(ProcessModel.version.desc())
+        .limit(1)
+    )
+    model = model_result.scalar_one_or_none()
+
+    if not model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No process model found for engagement {engagement_id}",
+        )
+
+    # Get dark elements (no evidence)
+    elements_result = await session.execute(
+        select(ProcessElement).where(
+            ProcessElement.model_id == model.id,
+            ProcessElement.evidence_count == 0,
+        )
+    )
+    dark_elements = list(elements_result.scalars().all())
+
+    dark_entries: list[dict[str, Any]] = []
+    for elem in dark_elements:
+        suggestions = _suggest_evidence_actions(str(elem.element_type), elem.name)
+        dark_entries.append({
+            "element_id": str(elem.id),
+            "element_name": elem.name,
+            "element_type": str(elem.element_type),
+            "confidence_score": elem.confidence_score,
+            "evidence_count": elem.evidence_count,
+            "suggested_actions": suggestions,
+        })
+
+    return {
+        "engagement_id": engagement_id,
+        "model_version": model.version,
+        "dark_elements": dark_entries,
+        "total": len(dark_entries),
+    }
+
+
+def _suggest_evidence_actions(element_type: str, element_name: str) -> list[str]:
+    """Generate suggested evidence acquisition actions for a dark element."""
+    suggestions: list[str] = []
+
+    if element_type == "activity":
+        suggestions.append(f"Schedule SME interview about '{element_name}'")
+        suggestions.append("Request process documentation or work instructions")
+        suggestions.append("Review system logs for automated steps")
+    elif element_type == "gateway":
+        suggestions.append(f"Clarify decision criteria for '{element_name}'")
+        suggestions.append("Request business rules documentation")
+    elif element_type == "role":
+        suggestions.append(f"Verify role assignment for '{element_name}'")
+        suggestions.append("Request org chart or RACI matrix")
+    elif element_type == "event":
+        suggestions.append(f"Identify trigger conditions for '{element_name}'")
+        suggestions.append("Review event logs or monitoring data")
+    else:
+        suggestions.append(f"Collect supporting evidence for '{element_name}'")
+        suggestions.append("Schedule stakeholder interview")
+
+    return suggestions
+
+
 # -- Engagement Access Check -------------------------------------------------
 
 
