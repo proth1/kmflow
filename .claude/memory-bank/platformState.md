@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.182
+**Version**: 2026.02.183
 **Last Updated**: 2026-02-28
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.183 | 2026-02-28 | Executive report generation: 5-section assembly, evidence appendix citations, Redis job tracking, HTML/PDF download, 32 tests (#356) |
 | 2026.02.182 | 2026-02-28 | POV orchestrator API: progress tracking, version history with diff, engagement access control, 23 tests (#318) |
 | 2026.02.181 | 2026-02-28 | Desktop task mining: SourceType/Brightness StrEnums, canonical event dict, PII docs, 44 tests (#355) |
 | 2026.02.180 | 2026-02-28 | Alerting engine: severity routing, configurable channels, escalation rules, 24 tests (#366) |

@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.183] - 2026-02-28
+### Added
+- Async executive report generation: 5-section assembly with evidence appendix and in-text citations, Redis job tracking, HTML/PDF download, engagement access control, 32 tests (#356)
+
 ## [2026.02.182] - 2026-02-28
 ### Added
 - POV orchestrator API endpoints: progress tracking, version history with diff, engagement access control, TOTAL_STEPS constant, 23 tests (#318)
