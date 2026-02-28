@@ -8,6 +8,7 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #485 merged** — Replay API endpoints: 5 async task endpoints, date-typed ranges, Literal granularity, eviction cap, 30 tests (#345) (v2026.02.168)
 - **PR #484 merged** — Schema intelligence library: YAML templates for ServiceNow/SAP/Salesforce, case-insensitive lookup, manual fallback, 34 tests (#335) (v2026.02.167)
 - **PR #483 merged** — Transformation templates library: 4 analysis templates, Literal validation, IDOR-safe, 35 tests (#376) (v2026.02.166)
 - **PR #482 merged** — LLM suggestion feedback loop: RejectionFeedback model, traceability chain, exclusion prompt, IDOR-safe, LIMIT 50 patterns, 25 tests (#390) (v2026.02.165)

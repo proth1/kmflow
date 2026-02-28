@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.168] - 2026-02-27
+### Added
+- Replay API endpoints: 5 async task endpoints (single-case, aggregate, variant-comparison, status, paginated frames), date-typed time ranges, Literal granularity, 1000-task eviction cap, schemas in src/api/schemas/, 30 tests (#345)
+
 ## [2026.02.167] - 2026-02-27
 ### Added
 - Schema intelligence library: YAML-based templates for ServiceNow, SAP, Salesforce, case-insensitive table lookup, manual fallback mode, 4 API endpoints, 34 tests (#335)

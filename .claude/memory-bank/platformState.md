@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.167
+**Version**: 2026.02.168
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.168 | 2026-02-27 | Replay API endpoints: 5 async task endpoints, date-typed ranges, Literal granularity, eviction cap, schemas, 30 tests (#345) |
 | 2026.02.167 | 2026-02-27 | Schema intelligence library: YAML templates for ServiceNow/SAP/Salesforce, case-insensitive lookup, manual fallback, 34 tests (#335) |
 | 2026.02.166 | 2026-02-27 | Transformation templates library: 4 analysis templates, Literal validation, max 500 elements, IDOR-safe, 35 tests (#376) |
 | 2026.02.165 | 2026-02-27 | LLM suggestion feedback loop: RejectionFeedback, traceability chain, exclusion prompt, IDOR-safe, 25 tests (#390) |
