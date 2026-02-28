@@ -29,6 +29,7 @@ def _mock_user(role: UserRole = UserRole.ENGAGEMENT_LEAD) -> User:
 
 def _make_app(mock_session: AsyncMock) -> TestClient:
     app = create_app()
+    app.state.neo4j_driver = MagicMock()
     app.dependency_overrides[get_session] = lambda: mock_session
     app.dependency_overrides[get_current_user] = lambda: _mock_user()
     app.dependency_overrides[require_engagement_access] = lambda: _mock_user()

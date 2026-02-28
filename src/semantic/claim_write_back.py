@@ -133,10 +133,15 @@ class ClaimWriteBackService:
             else:
                 edge_type = "SUPPORTS"
 
+            # Validate edge_type to prevent Cypher injection
+            if edge_type not in ("SUPPORTS", "CONTRADICTS"):
+                msg = f"Invalid edge_type: {edge_type}"
+                raise ValueError(msg)
+
             await self._graph.run_write_query(
                 f"""
                 MATCH (c:Claim {{id: $claim_id}})
-                MATCH (a {{id: $activity_id}})
+                MATCH (a {{id: $activity_id, engagement_id: $engagement_id}})
                 MERGE (c)-[r:{edge_type}]->(a)
                 SET r.weight = $weight,
                     r.probe_type = $probe_type,
@@ -146,6 +151,7 @@ class ClaimWriteBackService:
                 {
                     "claim_id": claim_node_id,
                     "activity_id": target_activity_id,
+                    "engagement_id": str(claim.engagement_id),
                     "weight": weight,
                     "probe_type": claim.probe_type.value,
                     "claim_uuid": str(claim.id),
@@ -184,12 +190,11 @@ class ClaimWriteBackService:
         """
         result = await self._graph.run_query(
             """
-            MATCH (c:Claim)-[r]->(a {id: $activity_id})
+            MATCH (c:Claim)-[r]->(a {id: $activity_id, engagement_id: $engagement_id})
             WHERE type(r) IN ['SUPPORTS', 'CONTRADICTS']
               AND c.engagement_id = $engagement_id
             RETURN count(c) AS claim_count,
-                   sum(r.weight) AS total_weight,
-                   collect(r.weight) AS weights
+                   sum(r.weight) AS total_weight
             """,
             {
                 "activity_id": activity_id,
@@ -218,13 +223,14 @@ class ClaimWriteBackService:
         # Update activity node with claim-derived confidence component
         await self._graph.run_write_query(
             """
-            MATCH (a {id: $activity_id})
+            MATCH (a {id: $activity_id, engagement_id: $engagement_id})
             SET a.claim_confidence = $claim_confidence,
                 a.claim_count = $claim_count,
                 a.confidence_updated_at = datetime()
             """,
             {
                 "activity_id": activity_id,
+                "engagement_id": str(engagement_id),
                 "claim_confidence": claim_confidence,
                 "claim_count": claim_count,
             },
@@ -320,7 +326,7 @@ class ClaimWriteBackService:
             })
             WITH co
             MATCH (c:Claim {id: $claim_id})
-            MATCH (a {id: $activity_id})
+            MATCH (a {id: $activity_id, engagement_id: $engagement_id})
             MERGE (co)-[:INVOLVES]->(c)
             MERGE (co)-[:INVOLVES]->(a)
             """,

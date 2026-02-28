@@ -10,7 +10,7 @@ import logging
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -63,6 +63,7 @@ class RecomputeConfidencePayload(BaseModel):
 async def ingest_claim(
     engagement_id: uuid.UUID,
     payload: IngestClaimPayload,
+    request: Request,
     session: AsyncSession = Depends(get_session),
     _user: User = Depends(require_permission("engagement:update")),
     _engagement_user: User = Depends(require_engagement_access),
@@ -87,13 +88,14 @@ async def ingest_claim(
             detail="Claim not found in this engagement",
         )
 
-    graph = KnowledgeGraphService()
+    graph = KnowledgeGraphService(request.app.state.neo4j_driver)
     service = ClaimWriteBackService(graph=graph, session=session)
 
     ingest_result = await service.ingest_claim(
         claim,
         target_activity_id=payload.target_activity_id,
     )
+    await session.commit()
 
     return ingest_result
 
@@ -108,6 +110,7 @@ async def ingest_claim(
 async def batch_ingest_claims(
     engagement_id: uuid.UUID,
     payload: BatchIngestPayload,
+    request: Request,
     session: AsyncSession = Depends(get_session),
     _user: User = Depends(require_permission("engagement:update")),
     _engagement_user: User = Depends(require_engagement_access),
@@ -134,10 +137,13 @@ async def batch_ingest_claims(
             uuid.UUID(k): v for k, v in payload.target_activity_ids.items()
         }
 
-    graph = KnowledgeGraphService()
+    graph = KnowledgeGraphService(request.app.state.neo4j_driver)
     service = ClaimWriteBackService(graph=graph, session=session)
 
-    return await service.batch_ingest_claims(claims, target_map)
+    batch_result = await service.batch_ingest_claims(claims, target_map)
+    await session.commit()
+
+    return batch_result
 
 
 # ── Recompute Activity Confidence ────────────────────────────────────
@@ -149,12 +155,13 @@ async def batch_ingest_claims(
 async def recompute_confidence(
     engagement_id: uuid.UUID,
     payload: RecomputeConfidencePayload,
+    request: Request,
     session: AsyncSession = Depends(get_session),
     _user: User = Depends(require_permission("engagement:update")),
     _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Recompute confidence score for an activity based on all claim weights."""
-    graph = KnowledgeGraphService()
+    graph = KnowledgeGraphService(request.app.state.neo4j_driver)
     service = ClaimWriteBackService(graph=graph, session=session)
 
     return await service.recompute_activity_confidence(
