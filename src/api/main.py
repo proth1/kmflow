@@ -74,6 +74,7 @@ from src.api.routes import (
     pov,
     raci,
     regulatory,
+    replay,
     reports,
     scenario_comparison,
     scenario_simulation,
@@ -379,6 +380,9 @@ def create_app() -> FastAPI:
 
     # -- Schema Intelligence Library Routes (Story #335) ---
     app.include_router(schema_library.router)
+
+    # -- Replay API Routes (Story #345) ---
+    app.include_router(replay.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)
