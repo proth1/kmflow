@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.173
+**Version**: 2026.02.174
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.174 | 2026-02-27 | Celonis EMS integration: event log, process model, conformance mappers, idempotent dedup, severity scoring, 45 tests (#325) |
 | 2026.02.173 | 2026-02-27 | Soroco Scout Work Graph integration: ScoutActivity parser, Activity node mapping with telemetric epistemic frames, SUPPORTED_BY evidence edges, 30 tests (#326) |
 | 2026.02.172 | 2026-02-27 | ARIS AML and Visio VSDX process model importers: ModelImporter ABC, ImportedModel, defusedxml XXE protection, 28 tests (#328) |
 | 2026.02.171 | 2026-02-27 | SaaS connector incremental sync: SyncCheckpointStore, SyncLog, async coordinator, SAP timestamp conversion, 34 tests (#330) |

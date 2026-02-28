@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.174] - 2026-02-27
+### Added
+- Celonis EMS integration: event log, process model, and conformance deviation mappers with idempotent dedup, severity scoring, MismatchType mapping, checkpoint tracking, 45 tests (#325)
+
 ## [2026.02.173] - 2026-02-27
 ### Added
 - Soroco Scout Work Graph integration: ScoutActivity parser, Activity node mapping with telemetric epistemic frames, SUPPORTED_BY evidence edges, ProcessElementMapping, WorkGraphImportResult, 30 tests (#326)
