@@ -1,13 +1,15 @@
 # Active Context
 
-**Last Updated**: 2026-02-27
+**Last Updated**: 2026-02-28
 
 ## Current Focus
 
-Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. Currently on Phase 1 Foundation stories.
+Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. Currently on replay and visualization stories.
 
 ## Recently Completed
 
+- **PR #495 merged** — Aggregate volume replay: per-interval flow metrics, bottleneck detection, gateway distribution, heat map, 36 tests (#339) (v2026.02.178)
+- **PR #494 merged** — Single-case timeline replay: brightness classification, paginated frames, evidence linking, 48 tests (#337) (v2026.02.177)
 - **PR #493 merged** — POV generation orchestrator: 8-step LCD pipeline tracking, FAILED_PARTIAL preservation, version diff, 38 tests (Part of #318) (v2026.02.176)
 - **PR #492 merged** — Async task architecture: Redis Streams TaskQueue, TaskWorker ABC, consumer groups, retry logic, concurrency control, 33 tests (#320) (v2026.02.175)
 - **PR #491 merged** — Celonis EMS integration: event log, process model, conformance mappers, idempotent dedup, severity scoring, 45 tests (#325) (v2026.02.174)

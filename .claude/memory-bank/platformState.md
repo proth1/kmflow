@@ -1,7 +1,7 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.176
-**Last Updated**: 2026-02-27
+**Version**: 2026.02.178
+**Last Updated**: 2026-02-28
 
 ## Quick Stats
 
@@ -27,6 +27,8 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.178 | 2026-02-28 | Aggregate volume replay: per-interval flow metrics, bottleneck detection, gateway distribution, heat map, 36 tests (#339) |
+| 2026.02.177 | 2026-02-28 | Single-case timeline replay: brightness classification, paginated frames, evidence linking, 48 tests (#337) |
 | 2026.02.176 | 2026-02-27 | POV generation orchestrator: 8-step LCD pipeline tracking, FAILED_PARTIAL preservation, version diff, 38 tests (Part of #318) |
 | 2026.02.175 | 2026-02-27 | Async task architecture: Redis Streams TaskQueue, TaskWorker ABC, consumer groups, retry logic, concurrency control, 33 tests (#320) |
 | 2026.02.174 | 2026-02-27 | Celonis EMS integration: event log, process model, conformance mappers, idempotent dedup, severity scoring, 45 tests (#325) |

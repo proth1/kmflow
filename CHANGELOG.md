@@ -3,6 +3,14 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.178] - 2026-02-28
+### Added
+- Aggregate volume replay: per-interval flow metrics (hourly/daily/weekly), bottleneck detection with configurable threshold, gateway variant distribution, heat map traceability, 36 tests (#339)
+
+## [2026.02.177] - 2026-02-28
+### Added
+- Single-case timeline replay: brightness classification (bright/dim/dark), paginated frame retrieval, evidence ref linking, 48 tests (#337)
+
 ## [2026.02.176] - 2026-02-27
 ### Added
 - POV generation orchestrator: PovGenerationWorker with 8-step LCD pipeline tracking, PovGenerationState with step progression/completion %, FAILED_PARTIAL preservation, compute_version_diff, 38 tests (Part of #318)
