@@ -41,7 +41,7 @@ async def check_governance_flags(
     suggestion_id: UUID,
     payload: GovernanceCheckRequest,
     session: AsyncSession = Depends(get_session),
-    _user: User = Depends(require_permission("engagement:read")),
+    _user: User = Depends(require_permission("engagement:update")),
     _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Run governance checks on a suggestion and update its governance_flags."""
@@ -49,6 +49,7 @@ async def check_governance_flags(
         select(AlternativeSuggestion)
         .where(AlternativeSuggestion.id == suggestion_id)
         .where(AlternativeSuggestion.scenario_id == scenario_id)
+        .where(AlternativeSuggestion.engagement_id == engagement_id)
     )
     suggestion = result.scalar_one_or_none()
     if not suggestion:
