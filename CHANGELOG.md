@@ -3,6 +3,18 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.02.194] - 2026-02-28
+### Added
+- Windows Task Mining Agent PRD: desktop activity capture, 4-layer PII architecture, Redis Streams event processing (#510)
+
+## [2026.02.193] - 2026-02-28
+### Infrastructure
+- Alembic migration hardening: checkfirst enum creation, RLS bypass, idempotent indexes, drop+recreate for vector column (#509)
+- CalVer documentation fix: YYYY.MM.DDD → YYYY.MM.MICRO across 4 files (#509)
+- Updated CLAUDE.md directory tree and stats table (#509)
+- Added 4 ADRs to decision log (#509)
+- Trimmed activeContext.md from 413 to 57 lines (#509)
+
 ## [2026.02.192] - 2026-02-28
 ### Changed
 - Presentation: update stats to final MVP metrics (101K LOC, 5,797 tests, 65 routers, 92 models), add Project Stats Dashboard and Presentation Changelog appendix slides (#508)

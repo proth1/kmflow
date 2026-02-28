@@ -8,16 +8,13 @@
 
 - **0 open GitHub issues** — clean backlog
 - **0 open PRs** — no in-flight work
-- **Current version**: 2026.02.192
+- **Current version**: 2026.02.194
 - **Presentation**: deployed to kmflow.agentic-innovations.com via Cloudflare Pages
 
-## Uncommitted Changes (3 files)
+## Recently Completed
 
-These are Alembic migration conflict fixes prepared but not yet committed:
-
-1. **alembic/env.py** — Added `checkfirst=True` patch for enum type creation (prevents "type already exists" errors). Added RLS bypass parameter for FK operations during migrations.
-2. **alembic/versions/021_fix_pattern_embedding_type.py** — Changed from `ALTER COLUMN` to `DROP/ADD COLUMN` for embedding type conversion (PostgreSQL can't directly cast `bytea` to `vector`).
-3. **alembic/versions/022_add_missing_indexes_and_constraints.py** — Converted index creation to idempotent `CREATE INDEX IF NOT EXISTS` for safe re-runs.
+- **PR #509**: Alembic hardening + docs refresh (merged 2026-02-28)
+- **PR #510**: Windows Task Mining Agent PRD (merged 2026-02-28)
 
 ## Post-MVP Pending Work
 
