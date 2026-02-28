@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
-from src.core.models import FinancialAssumptionType, User
+from src.core.models import FinancialAssumption, FinancialAssumptionType, User
 from src.core.permissions import require_engagement_access, require_permission
 from src.simulation.assumption_service import (
     create_assumption,
@@ -110,15 +110,17 @@ async def list_engagement_assumptions(
     }
 
 
-@router.patch("/assumptions/{assumption_id}")
+@router.patch("/engagements/{engagement_id}/assumptions/{assumption_id}")
 async def update_engagement_assumption(
+    engagement_id: UUID,
     assumption_id: UUID,
     payload: AssumptionUpdate,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:update")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Update a financial assumption and record version history."""
-    update_data = {k: v for k, v in payload.model_dump().items() if v is not None}
+    update_data = payload.model_dump(exclude_unset=True)
     if not update_data:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -126,7 +128,7 @@ async def update_engagement_assumption(
         )
 
     try:
-        assumption = await update_assumption(session, assumption_id, update_data, user.id)
+        assumption = await update_assumption(session, assumption_id, update_data, user.id, engagement_id)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
@@ -135,14 +137,19 @@ async def update_engagement_assumption(
     return _assumption_to_dict(assumption)
 
 
-@router.get("/assumptions/{assumption_id}/history")
+@router.get("/engagements/{engagement_id}/assumptions/{assumption_id}/history")
 async def get_assumption_version_history(
+    engagement_id: UUID,
     assumption_id: UUID,
     session: AsyncSession = Depends(get_session),
     _user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Get version history for a financial assumption."""
-    versions = await get_assumption_history(session, assumption_id)
+    try:
+        versions = await get_assumption_history(session, assumption_id, engagement_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
     return {
         "assumption_id": str(assumption_id),
         "versions": [
@@ -163,7 +170,7 @@ async def get_assumption_version_history(
     }
 
 
-def _assumption_to_dict(a: Any) -> dict[str, Any]:
+def _assumption_to_dict(a: FinancialAssumption) -> dict[str, Any]:
     """Serialize a FinancialAssumption to response dict."""
     return {
         "id": str(a.id),

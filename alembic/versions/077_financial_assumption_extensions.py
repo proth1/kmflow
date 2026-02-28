@@ -64,8 +64,16 @@ def upgrade() -> None:
     )
     op.create_index("ix_fa_versions_assumption_id", "financial_assumption_versions", ["assumption_id"])
 
+    # Enforce that either source_evidence_id or confidence_explanation is provided
+    op.create_check_constraint(
+        "ck_fa_source_or_explanation",
+        "financial_assumptions",
+        "source_evidence_id IS NOT NULL OR confidence_explanation IS NOT NULL",
+    )
+
 
 def downgrade() -> None:
+    op.drop_constraint("ck_fa_source_or_explanation", "financial_assumptions", type_="check")
     op.drop_index("ix_fa_versions_assumption_id", "financial_assumption_versions")
     op.drop_table("financial_assumption_versions")
     op.drop_column("financial_assumptions", "updated_at")

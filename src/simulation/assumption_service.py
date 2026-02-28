@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.models import FinancialAssumption, FinancialAssumptionType, FinancialAssumptionVersion
@@ -62,9 +62,11 @@ async def list_assumptions(
     if assumption_type:
         query = query.where(FinancialAssumption.assumption_type == assumption_type)
 
-    count_query = query.with_only_columns(FinancialAssumption.id)
+    count_query = select(func.count()).select_from(
+        query.with_only_columns(FinancialAssumption.id).subquery()
+    )
     count_result = await session.execute(count_query)
-    total = len(list(count_result.scalars().all()))
+    total = count_result.scalar_one()
 
     query = query.offset(offset).limit(limit).order_by(FinancialAssumption.created_at.desc())
     result = await session.execute(query)
@@ -78,20 +80,22 @@ async def update_assumption(
     assumption_id: UUID,
     data: dict[str, Any],
     user_id: UUID,
+    engagement_id: UUID | None = None,
 ) -> FinancialAssumption:
     """Update a financial assumption and create version history entry.
 
     Captures the prior state in FinancialAssumptionVersion before applying changes.
 
     Raises:
-        ValueError: If assumption not found.
+        ValueError: If assumption not found or does not belong to engagement.
     """
-    result = await session.execute(
-        select(FinancialAssumption).where(FinancialAssumption.id == assumption_id)
-    )
+    query = select(FinancialAssumption).where(FinancialAssumption.id == assumption_id)
+    if engagement_id is not None:
+        query = query.where(FinancialAssumption.engagement_id == engagement_id)
+    result = await session.execute(query)
     assumption = result.scalar_one_or_none()
     if not assumption:
-        raise ValueError(f"Assumption {assumption_id} not found")
+        raise ValueError("Assumption not found")
 
     # Snapshot current state before update
     version = FinancialAssumptionVersion(
@@ -119,8 +123,21 @@ async def update_assumption(
 async def get_assumption_history(
     session: AsyncSession,
     assumption_id: UUID,
+    engagement_id: UUID | None = None,
 ) -> list[FinancialAssumptionVersion]:
-    """Get version history for an assumption, most recent first."""
+    """Get version history for an assumption, most recent first.
+
+    Raises:
+        ValueError: If assumption not found or does not belong to engagement.
+    """
+    # Verify assumption exists and belongs to engagement
+    verify_query = select(FinancialAssumption.id).where(FinancialAssumption.id == assumption_id)
+    if engagement_id is not None:
+        verify_query = verify_query.where(FinancialAssumption.engagement_id == engagement_id)
+    verify_result = await session.execute(verify_query)
+    if not verify_result.scalar_one_or_none():
+        raise ValueError("Assumption not found")
+
     result = await session.execute(
         select(FinancialAssumptionVersion)
         .where(FinancialAssumptionVersion.assumption_id == assumption_id)

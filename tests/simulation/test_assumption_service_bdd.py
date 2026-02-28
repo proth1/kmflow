@@ -114,10 +114,6 @@ class TestAssumptionFiltering:
         cost_assumption.assumption_type = FinancialAssumptionType.COST_PER_ROLE
         cost_assumption.id = uuid.uuid4()
 
-        tech_assumption = MagicMock(spec=FinancialAssumption)
-        tech_assumption.assumption_type = FinancialAssumptionType.TECHNOLOGY_COST
-        tech_assumption.id = uuid.uuid4()
-
         session = AsyncMock()
         call_count = 0
 
@@ -126,10 +122,8 @@ class TestAssumptionFiltering:
             call_count += 1
             result = AsyncMock()
             if call_count == 1:
-                # Count query
-                mock_scalars = MagicMock()
-                mock_scalars.all = MagicMock(return_value=[cost_assumption.id])
-                result.scalars = MagicMock(return_value=mock_scalars)
+                # Count query (func.count() → scalar_one())
+                result.scalar_one = MagicMock(return_value=1)
             else:
                 # Data query
                 mock_scalars = MagicMock()
@@ -229,18 +223,31 @@ class TestVersionHistory:
     @pytest.mark.asyncio
     async def test_history_retrieval(self) -> None:
         """Version history is retrievable for an assumption."""
+        assumption_id = uuid.uuid4()
         v1 = MagicMock(spec=FinancialAssumptionVersion)
         v1.id = uuid.uuid4()
         v1.value = 150.0
         v1.changed_by = USER_ID
 
         session = AsyncMock()
-        result_mock = AsyncMock()
-        mock_scalars = MagicMock()
-        mock_scalars.all = MagicMock(return_value=[v1])
-        result_mock.scalars = MagicMock(return_value=mock_scalars)
-        session.execute = AsyncMock(return_value=result_mock)
+        call_count = 0
 
-        versions = await get_assumption_history(session, uuid.uuid4())
+        async def mock_execute(query):
+            nonlocal call_count
+            call_count += 1
+            result = AsyncMock()
+            if call_count == 1:
+                # Verify query — assumption exists
+                result.scalar_one_or_none = MagicMock(return_value=assumption_id)
+            else:
+                # Versions query
+                mock_scalars = MagicMock()
+                mock_scalars.all = MagicMock(return_value=[v1])
+                result.scalars = MagicMock(return_value=mock_scalars)
+            return result
+
+        session.execute = mock_execute
+
+        versions = await get_assumption_history(session, assumption_id)
         assert len(versions) == 1
         assert versions[0].value == 150.0

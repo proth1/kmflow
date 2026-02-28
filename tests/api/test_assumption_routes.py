@@ -139,7 +139,7 @@ class TestListAssumptions:
 
 
 class TestUpdateAssumption:
-    """PATCH /api/v1/assumptions/{assumption_id}"""
+    """PATCH /api/v1/engagements/{id}/assumptions/{assumption_id}"""
 
     @patch("src.api.routes.assumptions.update_assumption")
     def test_update_returns_updated(self, mock_update) -> None:
@@ -162,7 +162,7 @@ class TestUpdateAssumption:
         session = AsyncMock()
         client = _make_client(session)
         resp = client.patch(
-            f"/api/v1/assumptions/{ASSUMPTION_ID}",
+            f"/api/v1/engagements/{ENGAGEMENT_ID}/assumptions/{ASSUMPTION_ID}",
             json={"value": 165.0},
         )
         assert resp.status_code == 200
@@ -174,14 +174,14 @@ class TestUpdateAssumption:
         session = AsyncMock()
         client = _make_client(session)
         resp = client.patch(
-            f"/api/v1/assumptions/{uuid.uuid4()}",
+            f"/api/v1/engagements/{ENGAGEMENT_ID}/assumptions/{uuid.uuid4()}",
             json={"value": 100.0},
         )
         assert resp.status_code == 404
 
 
 class TestAssumptionHistory:
-    """GET /api/v1/assumptions/{assumption_id}/history"""
+    """GET /api/v1/engagements/{id}/assumptions/{assumption_id}/history"""
 
     @patch("src.api.routes.assumptions.get_assumption_history")
     def test_history_returns_versions(self, mock_history) -> None:
@@ -200,7 +200,7 @@ class TestAssumptionHistory:
 
         session = AsyncMock()
         client = _make_client(session)
-        resp = client.get(f"/api/v1/assumptions/{ASSUMPTION_ID}/history")
+        resp = client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/assumptions/{ASSUMPTION_ID}/history")
         assert resp.status_code == 200
         data = resp.json()
         assert data["assumption_id"] == str(ASSUMPTION_ID)
