@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.157
+**Version**: 2026.02.158
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.158 | 2026-02-27 | Seed list coverage and dark room backlog: coverage report, uplift-ranked dark segments, evidence actions, SQL-filtered threshold, related seed terms, 26 tests (#367) |
 | 2026.02.157 | 2026-02-27 | Best practices library: percentile ranking, gap-to-practice matching, domain filter, maturity validation, engagement metadata_json, 36 tests (#363) |
 | 2026.02.156 | 2026-02-27 | Republish cycle and version diff: CONFIRM/CORRECT/REJECT/DEFER decisions, BPMN color-coding, dark-room shrink rate, rename collision guard, 31 tests (#361) |
 | 2026.02.155 | 2026-02-27 | Validation APIs: pack detail, decision listing, reviewer routing via RoleActivityMapping, IDOR fix, unique constraint, 14 tests (#365) |

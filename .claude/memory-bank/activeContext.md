@@ -8,6 +8,7 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #475 merged** — Seed list coverage and dark room backlog: coverage report, uplift-ranked dark segments, evidence actions, SQL-filtered threshold, related seed terms, 26 tests (#367) (v2026.02.158)
 - **PR #474 merged** — Best practices library: percentile ranking, gap-to-practice matching, domain filter, maturity validation, engagement metadata_json, 36 tests (#363) (v2026.02.157)
 - **PR #473 merged** — Republish cycle and version diff: CONFIRM/CORRECT/REJECT/DEFER decisions, BPMN color-coding, dark-room shrink rate, rename collision guard, 31 tests (#361) (v2026.02.156)
 - **PR #472 merged** — Validation APIs: pack detail, decision listing, reviewer routing via RoleActivityMapping, IDOR fix, unique constraint, 14 tests (#365) (v2026.02.155)

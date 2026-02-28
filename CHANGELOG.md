@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.158] - 2026-02-27
+### Added
+- Seed list coverage report and dark room backlog: coverage computation with term-to-element name matching, dark segments ranked by uplift, evidence acquisition actions, SQL-filtered threshold, related seed terms cross-reference, thin route handlers delegating to service layer, 26 tests (#367)
+
 ## [2026.02.157] - 2026-02-27
 ### Added
 - Best practices library and industry benchmarking: BestPractice model extension (title, maturity_level 1-5), migration 074-075, percentile ranking with linear interpolation, gap-to-practice matching by domain/dimension/keyword, domain filter on best-practices search, engagement metadata_json, 36 tests (#363)
