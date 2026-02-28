@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.162] - 2026-02-27
+### Added
+- Governance flag detection for LLM suggestions: SoD checks for incompatible role mergers, regulatory compliance flagging for regulated elements, authorization change detection, knowledge boundary templates, engagement-scoped IDOR-safe query, engagement:update permission, 19 tests (#381)
+
 ## [2026.02.161] - 2026-02-27
 ### Added
 - Cost-per-role and volume forecast modeling: RoleRateAssumption and VolumeForecast models, engagement-scoped CRUD, staffing/volume/quarterly/FTE-savings computation with interval arithmetic, typed TaskAssignment payloads, seasonal factor validation, unique constraint on (engagement_id, role_name), migration 078, 25 tests (#359)

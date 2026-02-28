@@ -8,6 +8,7 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #479 merged** — Governance flag detection: SoD checks, regulatory compliance, authorization changes, knowledge boundary templates, IDOR fix, engagement:update permission, 19 tests (#381) (v2026.02.162)
 - **PR #478 merged** — Cost-per-role and volume forecast modeling: RoleRateAssumption/VolumeForecast models, staffing/volume/quarterly/FTE computation, typed TaskAssignment payloads, seasonal factor validation, unique constraint, migration 078, 25 tests (#359) (v2026.02.161)
 - **PR #477 merged** — Financial assumption management: engagement-scoped CRUD, version history audit trail, CHECK constraint, IDOR fix, efficient count, 16 tests (#354) (v2026.02.160)
 - **PR #476 merged** — Suggestion review workflow: ACCEPT/MODIFY/REJECT, ScenarioModification linkage, row-level lock, 409 Conflict, 20 tests (#379) (v2026.02.159)
