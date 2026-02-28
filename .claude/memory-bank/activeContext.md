@@ -4,10 +4,13 @@
 
 ## Current Focus
 
-Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. Currently on replay and visualization stories.
+Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. Currently on executive reports and remaining stories.
 
 ## Recently Completed
 
+- **PR #499 merged** — POV orchestrator API: progress tracking, version history with diff, engagement access control, 23 tests (#318) (v2026.02.182)
+- **PR #498 merged** — Desktop task mining: SourceType/Brightness StrEnums, canonical event dict, PII docs, 44 tests (#355) (v2026.02.181)
+- **PR #497 merged** — Alerting engine: severity routing, configurable channels, escalation rules, 24 tests (#366) (v2026.02.180)
 - **PR #496 merged** — Variant comparison replay: LCS alignment, divergence detection, cycle time deltas, evidence linking, 39 tests (#342) (v2026.02.179)
 - **PR #495 merged** — Aggregate volume replay: per-interval flow metrics, bottleneck detection, gateway distribution, heat map, 36 tests (#339) (v2026.02.178)
 - **PR #494 merged** — Single-case timeline replay: brightness classification, paginated frames, evidence linking, 48 tests (#337) (v2026.02.177)

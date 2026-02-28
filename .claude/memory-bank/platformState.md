@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.179
+**Version**: 2026.02.182
 **Last Updated**: 2026-02-28
 
 ## Quick Stats
@@ -27,6 +27,9 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.182 | 2026-02-28 | POV orchestrator API: progress tracking, version history with diff, engagement access control, 23 tests (#318) |
+| 2026.02.181 | 2026-02-28 | Desktop task mining: SourceType/Brightness StrEnums, canonical event dict, PII docs, 44 tests (#355) |
+| 2026.02.180 | 2026-02-28 | Alerting engine: severity routing, configurable channels, escalation rules, 24 tests (#366) |
 | 2026.02.179 | 2026-02-28 | Variant comparison replay: LCS alignment, divergence detection, cycle time deltas, evidence linking, 39 tests (#342) |
 | 2026.02.178 | 2026-02-28 | Aggregate volume replay: per-interval flow metrics, bottleneck detection, gateway distribution, heat map, 36 tests (#339) |
 | 2026.02.177 | 2026-02-28 | Single-case timeline replay: brightness classification, paginated frames, evidence linking, 48 tests (#337) |

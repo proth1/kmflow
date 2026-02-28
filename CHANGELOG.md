@@ -3,6 +3,18 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.182] - 2026-02-28
+### Added
+- POV orchestrator API endpoints: progress tracking, version history with diff, engagement access control, TOTAL_STEPS constant, 23 tests (#318)
+
+## [2026.02.181] - 2026-02-28
+### Added
+- Desktop task mining pipeline: SourceType/Brightness StrEnums, canonical event dict with source_system/engagement_id, PII documentation, error path tests, 44 tests (#355)
+
+## [2026.02.180] - 2026-02-28
+### Added
+- Alerting engine: severity-based routing, configurable channels, escalation rules, engagement-scoped, 24 tests (#366)
+
 ## [2026.02.179] - 2026-02-28
 ### Added
 - Variant comparison replay: LCS alignment algorithm, divergence detection (activity/performer/one-sided), per-step cycle time deltas, divergence evidence linking, 39 tests (#342)
