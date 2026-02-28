@@ -242,15 +242,17 @@ class BestPractice(Base):
     __table_args__ = (UniqueConstraint("domain", "industry", "tom_dimension", name="uq_best_practice_domain_industry_dimension"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    title: Mapped[str] = mapped_column(String(512), server_default="", nullable=False)
     domain: Mapped[str] = mapped_column(String(255), nullable=False)
     industry: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     source: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    maturity_level_applicable: Mapped[int | None] = mapped_column(Integer, nullable=True)
     tom_dimension: Mapped[TOMDimension] = mapped_column(Enum(TOMDimension, values_callable=lambda e: [x.value for x in e]), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     def __repr__(self) -> str:
-        return f"<BestPractice(id={self.id}, domain='{self.domain}', industry='{self.industry}')>"
+        return f"<BestPractice(id={self.id}, title='{self.title}', domain='{self.domain}')>"
 
 
 class Benchmark(Base):
