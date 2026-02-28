@@ -23,29 +23,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # -- Create enum types --
-    op.execute(
-        "CREATE TYPE monitoringstatus AS ENUM "
-        "('configuring', 'active', 'paused', 'error', 'stopped')"
-    )
-    op.execute(
-        "CREATE TYPE alertseverity AS ENUM "
-        "('critical', 'high', 'medium', 'low', 'info')"
-    )
-    op.execute(
-        "CREATE TYPE alertstatus AS ENUM "
-        "('new', 'acknowledged', 'resolved', 'dismissed')"
-    )
-    op.execute(
-        "CREATE TYPE deviationcategory AS ENUM "
-        "('sequence_change', 'missing_activity', 'new_activity', 'role_change', "
-        "'timing_anomaly', 'frequency_change', 'control_bypass')"
-    )
-    op.execute(
-        "CREATE TYPE monitoringsourcetype AS ENUM "
-        "('event_log', 'task_mining', 'system_api', 'file_watch')"
-    )
-
     # -- integration_connections --
     op.create_table(
         "integration_connections",
@@ -87,8 +64,8 @@ def upgrade() -> None:
         sa.Column("connection_id", sa.UUID(), sa.ForeignKey("integration_connections.id", ondelete="SET NULL"), nullable=True),
         sa.Column("baseline_id", sa.UUID(), sa.ForeignKey("process_baselines.id", ondelete="SET NULL"), nullable=True),
         sa.Column("name", sa.String(255), nullable=False),
-        sa.Column("source_type", sa.Enum("event_log", "task_mining", "system_api", "file_watch", name="monitoringsourcetype", create_type=False), nullable=False),
-        sa.Column("status", sa.Enum("configuring", "active", "paused", "error", "stopped", name="monitoringstatus", create_type=False), nullable=False, server_default="configuring"),
+        sa.Column("source_type", sa.Enum("event_log", "task_mining", "system_api", "file_watch", name="monitoringsourcetype", create_type=True), nullable=False),
+        sa.Column("status", sa.Enum("configuring", "active", "paused", "error", "stopped", name="monitoringstatus", create_type=True), nullable=False, server_default="configuring"),
         sa.Column("schedule_cron", sa.String(100), nullable=False, server_default="0 0 * * *"),
         sa.Column("config_json", sa.JSON(), nullable=True),
         sa.Column("last_run_at", sa.DateTime(timezone=True), nullable=True),
@@ -106,7 +83,7 @@ def upgrade() -> None:
         sa.Column("engagement_id", sa.UUID(), sa.ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False),
         sa.Column("monitoring_job_id", sa.UUID(), sa.ForeignKey("monitoring_jobs.id", ondelete="CASCADE"), nullable=False),
         sa.Column("baseline_id", sa.UUID(), sa.ForeignKey("process_baselines.id", ondelete="SET NULL"), nullable=True),
-        sa.Column("category", sa.Enum("sequence_change", "missing_activity", "new_activity", "role_change", "timing_anomaly", "frequency_change", "control_bypass", name="deviationcategory", create_type=False), nullable=False),
+        sa.Column("category", sa.Enum("sequence_change", "missing_activity", "new_activity", "role_change", "timing_anomaly", "frequency_change", "control_bypass", name="deviationcategory", create_type=True), nullable=False),
         sa.Column("description", sa.Text(), nullable=False),
         sa.Column("affected_element", sa.String(512), nullable=True),
         sa.Column("magnitude", sa.Float(), nullable=False, server_default="0.0"),
@@ -122,8 +99,8 @@ def upgrade() -> None:
         sa.Column("id", sa.UUID(), primary_key=True, server_default=sa.text("gen_random_uuid()")),
         sa.Column("engagement_id", sa.UUID(), sa.ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False),
         sa.Column("monitoring_job_id", sa.UUID(), sa.ForeignKey("monitoring_jobs.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("severity", sa.Enum("critical", "high", "medium", "low", "info", name="alertseverity", create_type=False), nullable=False),
-        sa.Column("status", sa.Enum("new", "acknowledged", "resolved", "dismissed", name="alertstatus", create_type=False), nullable=False, server_default="new"),
+        sa.Column("severity", sa.Enum("critical", "high", "medium", "low", "info", name="alertseverity", create_type=True), nullable=False),
+        sa.Column("status", sa.Enum("new", "acknowledged", "resolved", "dismissed", name="alertstatus", create_type=True), nullable=False, server_default="new"),
         sa.Column("title", sa.String(512), nullable=False),
         sa.Column("description", sa.Text(), nullable=False),
         sa.Column("deviation_ids", sa.JSON(), nullable=True),

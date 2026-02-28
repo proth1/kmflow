@@ -23,27 +23,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # -- Create enum types --
-    op.execute(
-        "CREATE TYPE simulationstatus AS ENUM "
-        "('pending', 'running', 'completed', 'failed')"
-    )
-    op.execute(
-        "CREATE TYPE simulationtype AS ENUM "
-        "('what_if', 'capacity', 'process_change', 'control_removal')"
-    )
-    op.execute(
-        "CREATE TYPE patterncategory AS ENUM "
-        "('process_optimization', 'control_improvement', 'technology_enablement', "
-        "'organizational_change', 'risk_mitigation')"
-    )
-
     # -- pattern_library_entries --
     op.create_table(
         "pattern_library_entries",
         sa.Column("id", sa.UUID(), primary_key=True, server_default=sa.text("gen_random_uuid()")),
         sa.Column("source_engagement_id", sa.UUID(), sa.ForeignKey("engagements.id", ondelete="SET NULL"), nullable=True),
-        sa.Column("category", sa.Enum("process_optimization", "control_improvement", "technology_enablement", "organizational_change", "risk_mitigation", name="patterncategory", create_type=False), nullable=False),
+        sa.Column("category", sa.Enum("process_optimization", "control_improvement", "technology_enablement", "organizational_change", "risk_mitigation", name="patterncategory", create_type=True), nullable=False),
         sa.Column("title", sa.String(512), nullable=False),
         sa.Column("description", sa.Text(), nullable=False),
         sa.Column("anonymized_data", sa.JSON(), nullable=True),
@@ -74,7 +59,7 @@ def upgrade() -> None:
         sa.Column("engagement_id", sa.UUID(), sa.ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False),
         sa.Column("process_model_id", sa.UUID(), sa.ForeignKey("process_models.id", ondelete="SET NULL"), nullable=True),
         sa.Column("name", sa.String(512), nullable=False),
-        sa.Column("simulation_type", sa.Enum("what_if", "capacity", "process_change", "control_removal", name="simulationtype", create_type=False), nullable=False),
+        sa.Column("simulation_type", sa.Enum("what_if", "capacity", "process_change", "control_removal", name="simulationtype", create_type=True), nullable=False),
         sa.Column("parameters", sa.JSON(), nullable=True),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
@@ -86,7 +71,7 @@ def upgrade() -> None:
         "simulation_results",
         sa.Column("id", sa.UUID(), primary_key=True, server_default=sa.text("gen_random_uuid()")),
         sa.Column("scenario_id", sa.UUID(), sa.ForeignKey("simulation_scenarios.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("status", sa.Enum("pending", "running", "completed", "failed", name="simulationstatus", create_type=False), nullable=False, server_default="pending"),
+        sa.Column("status", sa.Enum("pending", "running", "completed", "failed", name="simulationstatus", create_type=True), nullable=False, server_default="pending"),
         sa.Column("metrics", sa.JSON(), nullable=True),
         sa.Column("impact_analysis", sa.JSON(), nullable=True),
         sa.Column("recommendations", sa.JSON(), nullable=True),

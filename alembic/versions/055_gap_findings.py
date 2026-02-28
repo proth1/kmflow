@@ -1,7 +1,7 @@
 """Add gap_findings table for governance gap detection.
 
 Revision ID: 055
-Revises: 050
+Revises: 054
 Create Date: 2026-02-27
 """
 
@@ -12,23 +12,12 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision = "055"
-down_revision = "050"
+down_revision = "054"
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
-    # Create enum types
-    op.execute(
-        "CREATE TYPE governancegaptype AS ENUM ('control_gap')"
-    )
-    op.execute(
-        "CREATE TYPE governancegapseverity AS ENUM ('critical', 'high', 'medium', 'low')"
-    )
-    op.execute(
-        "CREATE TYPE governancegapstatus AS ENUM ('open', 'resolved')"
-    )
-
     op.create_table(
         "gap_findings",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
@@ -52,18 +41,18 @@ def upgrade() -> None:
         ),
         sa.Column(
             "gap_type",
-            sa.Enum("control_gap", name="governancegaptype", create_type=False),
+            sa.Enum("control_gap", name="governancegaptype", create_type=True),
             nullable=False,
             server_default="control_gap",
         ),
         sa.Column(
             "severity",
-            sa.Enum("critical", "high", "medium", "low", name="governancegapseverity", create_type=False),
+            sa.Enum("critical", "high", "medium", "low", name="governancegapseverity", create_type=True),
             nullable=False,
         ),
         sa.Column(
             "status",
-            sa.Enum("open", "resolved", name="governancegapstatus", create_type=False),
+            sa.Enum("open", "resolved", name="governancegapstatus", create_type=True),
             nullable=False,
             server_default="open",
         ),

@@ -22,20 +22,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # -- Create enum types --
-    op.execute(
-        "CREATE TYPE policytype AS ENUM "
-        "('organizational', 'regulatory', 'operational', 'security')"
-    )
-    op.execute(
-        "CREATE TYPE controleffectiveness AS ENUM "
-        "('highly_effective', 'effective', 'moderately_effective', 'ineffective')"
-    )
-    op.execute(
-        "CREATE TYPE compliancelevel AS ENUM "
-        "('fully_compliant', 'partially_compliant', 'non_compliant', 'not_assessed')"
-    )
-
     # -- Create policies table --
     op.create_table(
         "policies",
@@ -53,7 +39,7 @@ def upgrade() -> None:
             "policy_type",
             sa.Enum(
                 "organizational", "regulatory", "operational", "security",
-                name="policytype", create_type=False,
+                name="policytype", create_type=True,
             ),
             nullable=False,
         ),
@@ -94,7 +80,7 @@ def upgrade() -> None:
             "effectiveness",
             sa.Enum(
                 "highly_effective", "effective", "moderately_effective", "ineffective",
-                name="controleffectiveness", create_type=False,
+                name="controleffectiveness", create_type=True,
             ),
             nullable=False,
             server_default="effective",

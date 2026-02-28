@@ -22,21 +22,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # -- Create enum types --
-    op.execute(
-        "CREATE TYPE processmodelstatus AS ENUM ('generating', 'completed', 'failed')"
-    )
-    op.execute(
-        "CREATE TYPE processelementtype AS ENUM "
-        "('activity', 'gateway', 'event', 'role', 'system', 'document')"
-    )
-    op.execute(
-        "CREATE TYPE corroborationlevel AS ENUM ('strongly', 'moderately', 'weakly')"
-    )
-    op.execute("CREATE TYPE gaptype AS ENUM ('missing_data', 'weak_evidence', 'single_source')")
-    op.execute("CREATE TYPE gapseverity AS ENUM ('high', 'medium', 'low')")
-
     # -- Create process_models table --
+    # Enum types are created inline via sa.Enum(..., create_type=True).
     op.create_table(
         "process_models",
         sa.Column(
@@ -57,7 +44,7 @@ def upgrade() -> None:
                 "completed",
                 "failed",
                 name="processmodelstatus",
-                create_type=False,
+                create_type=True,
             ),
             nullable=False,
             server_default="generating",
@@ -118,7 +105,7 @@ def upgrade() -> None:
                 "system",
                 "document",
                 name="processelementtype",
-                create_type=False,
+                create_type=True,
             ),
             nullable=False,
         ),
@@ -136,7 +123,7 @@ def upgrade() -> None:
                 "moderately",
                 "weakly",
                 name="corroborationlevel",
-                create_type=False,
+                create_type=True,
             ),
             nullable=False,
             server_default="weakly",
@@ -201,14 +188,14 @@ def upgrade() -> None:
                 "weak_evidence",
                 "single_source",
                 name="gaptype",
-                create_type=False,
+                create_type=True,
             ),
             nullable=False,
         ),
         sa.Column("description", sa.Text(), nullable=False),
         sa.Column(
             "severity",
-            sa.Enum("high", "medium", "low", name="gapseverity", create_type=False),
+            sa.Enum("high", "medium", "low", name="gapseverity", create_type=True),
             nullable=False,
             server_default="medium",
         ),

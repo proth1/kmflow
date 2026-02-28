@@ -22,21 +22,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # -- Create enum types --
-    op.execute(
-        "CREATE TYPE tomdimension AS ENUM "
-        "('process_architecture', 'people_and_organization', 'technology_and_data', "
-        "'governance_structures', 'performance_management', 'risk_and_compliance')"
-    )
-    op.execute(
-        "CREATE TYPE tomgaptype AS ENUM "
-        "('full_gap', 'partial_gap', 'deviation', 'no_gap')"
-    )
-    op.execute(
-        "CREATE TYPE processmaturity AS ENUM "
-        "('initial', 'managed', 'defined', 'quantitatively_managed', 'optimizing')"
-    )
-
     # -- Create target_operating_models table --
     op.create_table(
         "target_operating_models",
@@ -85,7 +70,7 @@ def upgrade() -> None:
             "gap_type",
             sa.Enum(
                 "full_gap", "partial_gap", "deviation", "no_gap",
-                name="tomgaptype", create_type=False,
+                name="tomgaptype", create_type=True,
             ),
             nullable=False,
         ),
@@ -95,7 +80,7 @@ def upgrade() -> None:
                 "process_architecture", "people_and_organization",
                 "technology_and_data", "governance_structures",
                 "performance_management", "risk_and_compliance",
-                name="tomdimension", create_type=False,
+                name="tomdimension", create_type=True,
             ),
             nullable=False,
         ),

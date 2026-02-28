@@ -17,7 +17,6 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.execute("CREATE TYPE surveysessionstatus AS ENUM ('active', 'completed', 'abandoned')")
     op.create_table(
         "survey_sessions",
         sa.Column("id", UUID(as_uuid=True), primary_key=True),
@@ -30,7 +29,7 @@ def upgrade() -> None:
         sa.Column("respondent_role", sa.String(255), nullable=False),
         sa.Column(
             "status",
-            sa.Enum("active", "completed", "abandoned", name="surveysessionstatus", create_type=False),
+            sa.Enum("active", "completed", "abandoned", name="surveysessionstatus", create_type=True),
             nullable=False,
             server_default="active",
         ),
