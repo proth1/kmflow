@@ -10,14 +10,14 @@ using KMFlowAgent.IPC;
 using FluentAssertions;
 using Xunit;
 
+namespace KMFlowAgent.IntegrationTests;
+
 // Helper to wrap the source-generated serialization call
 file static class EventSerializer
 {
     public static string Serialize(CaptureEvent evt) =>
         JsonSerializer.Serialize(evt, EventProtocolJsonContext.Default.CaptureEvent);
 }
-
-namespace KMFlowAgent.IntegrationTests;
 
 /// <summary>
 /// Skip attribute for non-Windows platforms.
