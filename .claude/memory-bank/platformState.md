@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.172
+**Version**: 2026.02.173
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.173 | 2026-02-27 | Soroco Scout Work Graph integration: ScoutActivity parser, Activity node mapping with telemetric epistemic frames, SUPPORTED_BY evidence edges, 30 tests (#326) |
 | 2026.02.172 | 2026-02-27 | ARIS AML and Visio VSDX process model importers: ModelImporter ABC, ImportedModel, defusedxml XXE protection, 28 tests (#328) |
 | 2026.02.171 | 2026-02-27 | SaaS connector incremental sync: SyncCheckpointStore, SyncLog, async coordinator, SAP timestamp conversion, 34 tests (#330) |
 | 2026.02.170 | 2026-02-27 | XES event log importer: streaming parser, defusedxml XXE protection, batch processing, .xes.gz, 25 tests (#332) |

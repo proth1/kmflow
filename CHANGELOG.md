@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.173] - 2026-02-27
+### Added
+- Soroco Scout Work Graph integration: ScoutActivity parser, Activity node mapping with telemetric epistemic frames, SUPPORTED_BY evidence edges, ProcessElementMapping, WorkGraphImportResult, 30 tests (#326)
+
 ## [2026.02.172] - 2026-02-27
 ### Added
 - ARIS AML and Visio VSDX process model importers: ModelImporter ABC with ImportedModel pre-graph-commit data structure, ARIS ObjDef/CxnDef/Lane parsing, Visio master shape mapping and connector resolution, defusedxml XXE protection, 28 tests (#328)
