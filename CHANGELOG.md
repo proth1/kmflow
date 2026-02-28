@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.159] - 2026-02-27
+### Added
+- Suggestion review workflow: ACCEPT/MODIFY/REJECT disposition for LLM suggestions, ScenarioModification creation with template_source and suggestion linkage, modified_content storage, rejection reason tracking, row-level locking for concurrent disposition safety, 409 Conflict for already-disposed, migration 076, 20 tests (#379)
+
 ## [2026.02.158] - 2026-02-27
 ### Added
 - Seed list coverage report and dark room backlog: coverage computation with term-to-element name matching, dark segments ranked by uplift, evidence acquisition actions, SQL-filtered threshold, related seed terms cross-reference, thin route handlers delegating to service layer, 26 tests (#367)
