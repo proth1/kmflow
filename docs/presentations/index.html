@@ -1518,7 +1518,7 @@
       <a href="#slide-45">Workflows</a>
       <a href="#slide-51">Roadmap</a>
     </div>
-    <div class="nav-version">v2026.02.197 &mdash; MVP + Windows Agent</div>
+    <div class="nav-version">v2026.02.199 &mdash; WGI Platform Alignment</div>
   </nav>
 
   <div class="slide-indicator" id="slideIndicator"></div>
@@ -1595,17 +1595,17 @@
         <div class="card toc-card" onclick="openTocModal(6)">
           <div class="card-icon">7</div>
           <h3>Enterprise Readiness</h3>
-          <p>Security, data isolation, compliance posture</p>
+          <p>Security, data isolation, compliance posture, CDD methodology, 9-agent PR review, pipeline enforcement</p>
         </div>
         <div class="card toc-card" onclick="openTocModal(7)">
           <div class="card-icon">8</div>
           <h3>Roadmap</h3>
-          <p>MVP complete (108K LOC, 5,797+ tests, 26 epics), Windows Agent delivered, Phase 2 intelligence, Phase 3 scale, success metrics</p>
+          <p>MVP complete (113K LOC, 5,797+ tests, 26 epics), Windows Agent delivered, WGI alignment (Switching Sequences, VCE, Correlation, ABAC), Phase 2 intelligence, Phase 3 scale</p>
         </div>
         <div class="card toc-card" onclick="openTocModal(8)">
           <div class="card-icon">9</div>
           <h3>Appendix</h3>
-          <p>Project stats dashboard, codebase metrics, presentation changelog</p>
+          <p>Project stats dashboard (113K+ LOC, 96 models, 68 routers, 84 migrations), codebase metrics, presentation changelog (v1.0&ndash;v6.0)</p>
         </div>
       </div>
       <div class="slide-footer">
@@ -4492,6 +4492,381 @@ confidence = (
       </div>
     </section>
 
+    <!-- Slide 50a: Agentic SDLC — How We Build -->
+    <section id="slide-50a" class="slide slide-dark">
+      <div class="section-header">
+        <span class="badge badge-light">Development Methodology</span>
+        <h2>Agentic SDLC: How We Build</h2>
+        <p>A 4-phase development lifecycle with enforced quality gates at every stage</p>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; margin-bottom: 1.5rem;">
+        <div style="background: rgba(255,255,255,0.1); padding: 1.25rem; border-radius: 12px; border-top: 3px solid #00A3E0;">
+          <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 0.5rem;">Phase 1</div>
+          <h3 style="font-size: 1.1rem; margin-bottom: 0.75rem;">Strategic Intelligence</h3>
+          <ul class="feature-list" style="font-size: 0.8rem;">
+            <li>PRD analysis &amp; work item decomposition</li>
+            <li>Memory Bank initialization</li>
+            <li>Architectural decision records</li>
+          </ul>
+          <div style="margin-top: 0.75rem; padding: 0.5rem; background: rgba(0,163,224,0.15); border-radius: 6px; font-size: 0.7rem; text-align: center;">
+            Gates: prd_exists, work_items_created
+          </div>
+        </div>
+        <div style="background: rgba(255,255,255,0.1); padding: 1.25rem; border-radius: 12px; border-top: 3px solid #00C389;">
+          <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 0.5rem;">Phase 2</div>
+          <h3 style="font-size: 1.1rem; margin-bottom: 0.75rem;">Automated Development</h3>
+          <ul class="feature-list" style="font-size: 0.8rem;">
+            <li>Code generation with TDD/BDD</li>
+            <li>CDD evidence collection</li>
+            <li>80% coverage enforcement</li>
+          </ul>
+          <div style="margin-top: 0.75rem; padding: 0.5rem; background: rgba(0,195,137,0.15); border-radius: 6px; font-size: 0.7rem; text-align: center;">
+            Gates: tests_pass, coverage &gt; 80%
+          </div>
+        </div>
+        <div style="background: rgba(255,255,255,0.1); padding: 1.25rem; border-radius: 12px; border-top: 3px solid #FF6B35;">
+          <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 0.5rem;">Phase 3</div>
+          <h3 style="font-size: 1.1rem; margin-bottom: 0.75rem;">Orchestrated Deployment</h3>
+          <ul class="feature-list" style="font-size: 0.8rem;">
+            <li>PR creation with issue linking</li>
+            <li>9-agent review orchestration</li>
+            <li>Pipeline + evidence validation</li>
+          </ul>
+          <div style="margin-top: 0.75rem; padding: 0.5rem; background: rgba(255,107,53,0.15); border-radius: 6px; font-size: 0.7rem; text-align: center;">
+            Gates: pr_approved, pipeline_green
+          </div>
+        </div>
+        <div style="background: rgba(255,255,255,0.1); padding: 1.25rem; border-radius: 12px; border-top: 3px solid #9B59B6;">
+          <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 0.5rem;">Phase 4</div>
+          <h3 style="font-size: 1.1rem; margin-bottom: 0.75rem;">Lifecycle Management</h3>
+          <ul class="feature-list" style="font-size: 0.8rem;">
+            <li>Memory Bank persistence</li>
+            <li>Pattern learning &amp; handoff</li>
+            <li>Version &amp; changelog updates</li>
+          </ul>
+          <div style="margin-top: 0.75rem; padding: 0.5rem; background: rgba(155,89,182,0.15); border-radius: 6px; font-size: 0.7rem; text-align: center;">
+            Gates: memory_updated, patterns_documented
+          </div>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+        <div style="background: rgba(255,255,255,0.08); padding: 1rem; border-radius: 8px; text-align: center;">
+          <div style="font-size: 2rem; font-weight: 700;">8</div>
+          <div style="font-size: 0.75rem; opacity: 0.8;">Blocking Quality Gates</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.08); padding: 1rem; border-radius: 8px; text-align: center;">
+          <div style="font-size: 2rem; font-weight: 700;">9</div>
+          <div style="font-size: 0.75rem; opacity: 0.8;">Review Agents per PR</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.08); padding: 1rem; border-radius: 8px; text-align: center;">
+          <div style="font-size: 2rem; font-weight: 700;">80%</div>
+          <div style="font-size: 0.75rem; opacity: 0.8;">Coverage Floor</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.08); padding: 1rem; border-radius: 8px; text-align: center;">
+          <div style="font-size: 2rem; font-weight: 700;">100%</div>
+          <div style="font-size: 0.75rem; opacity: 0.8;">Evidence Traceability</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 50a</span>
+      </div>
+    </section>
+
+    <!-- Slide 50b: 7-Phase Development Workflow -->
+    <section id="slide-50b" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Development Methodology</span>
+        <h2>7-Phase Development Workflow</h2>
+        <p>From issue creation to post-merge enforcement &mdash; every step automated or guarded</p>
+      </div>
+      <div style="display: flex; align-items: stretch; gap: 0; margin-bottom: 1.5rem;">
+        <div style="flex: 1; background: var(--kmflow-blue); color: white; padding: 1rem 0.75rem; text-align: center; border-radius: 8px 0 0 8px;">
+          <div style="font-size: 1.5rem; font-weight: 700;">1</div>
+          <div style="font-size: 0.7rem; font-weight: 600; margin-top: 0.25rem;">Work Items</div>
+          <div style="font-size: 0.6rem; opacity: 0.8; margin-top: 0.25rem;">GitHub Issues + BDD</div>
+        </div>
+        <div style="flex: 1; background: var(--kmflow-medium-blue); color: white; padding: 1rem 0.75rem; text-align: center;">
+          <div style="font-size: 1.5rem; font-weight: 700;">2</div>
+          <div style="font-size: 0.7rem; font-weight: 600; margin-top: 0.25rem;">CDD Setup</div>
+          <div style="font-size: 0.6rem; opacity: 0.8; margin-top: 0.25rem;">Evidence types identified</div>
+        </div>
+        <div style="flex: 1; background: var(--kmflow-light-blue); color: white; padding: 1rem 0.75rem; text-align: center;">
+          <div style="font-size: 1.5rem; font-weight: 700;">3</div>
+          <div style="font-size: 0.7rem; font-weight: 600; margin-top: 0.25rem;">Implement</div>
+          <div style="font-size: 0.6rem; opacity: 0.8; margin-top: 0.25rem;">Code + tests (80%+)</div>
+        </div>
+        <div style="flex: 1; background: #00A3E0; color: white; padding: 1rem 0.75rem; text-align: center;">
+          <div style="font-size: 1.5rem; font-weight: 700;">4</div>
+          <div style="font-size: 0.7rem; font-weight: 600; margin-top: 0.25rem;">Commit &amp; PR</div>
+          <div style="font-size: 0.6rem; opacity: 0.8; margin-top: 0.25rem;">Closes # linking</div>
+        </div>
+        <div style="flex: 1; background: #0077B6; color: white; padding: 1rem 0.75rem; text-align: center;">
+          <div style="font-size: 1.5rem; font-weight: 700;">5</div>
+          <div style="font-size: 0.7rem; font-weight: 600; margin-top: 0.25rem;">PR Review</div>
+          <div style="font-size: 0.6rem; opacity: 0.8; margin-top: 0.25rem;">9-agent orchestration</div>
+        </div>
+        <div style="flex: 1; background: #005F8C; color: white; padding: 1rem 0.75rem; text-align: center;">
+          <div style="font-size: 1.5rem; font-weight: 700;">6</div>
+          <div style="font-size: 0.7rem; font-weight: 600; margin-top: 0.25rem;">Fix Findings</div>
+          <div style="font-size: 0.6rem; opacity: 0.8; margin-top: 0.25rem;">Critical/High required</div>
+        </div>
+        <div style="flex: 1; background: var(--kmflow-dark-navy); color: white; padding: 1rem 0.75rem; text-align: center; border-radius: 0 8px 8px 0;">
+          <div style="font-size: 1.5rem; font-weight: 700;">7</div>
+          <div style="font-size: 0.7rem; font-weight: 600; margin-top: 0.25rem;">Post-Merge</div>
+          <div style="font-size: 0.6rem; opacity: 0.8; margin-top: 0.25rem;">CHANGELOG, version, memory</div>
+        </div>
+      </div>
+      <h3 style="margin-bottom: 0.75rem; font-family: var(--font-heading);">Automated Transitions</h3>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+        <div class="card">
+          <h3 style="font-size: 0.95rem;">Branch Creation</h3>
+          <p style="font-size: 0.85rem;">Branch naming (<code>feature/{issue}-{desc}</code>) auto-links to GitHub Issues. Label taxonomy applied: <code>cdd:evidence-required</code> tag triggers compliance tracking.</p>
+        </div>
+        <div class="card">
+          <h3 style="font-size: 0.95rem;">PR Creation</h3>
+          <p style="font-size: 0.85rem;">Hook auto-launches 9-agent PR review orchestrator. Labels synced. CDD evidence types validated against issue requirements.</p>
+        </div>
+        <div class="card">
+          <h3 style="font-size: 0.95rem;">PR Merge</h3>
+          <p style="font-size: 0.85rem;">Blocked until pipeline passes + CDD evidence posted. Post-merge hook enforces CHANGELOG update, version bump, Memory Bank sync, worktree cleanup.</p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 50b</span>
+      </div>
+    </section>
+
+    <!-- Slide 50c: 9-Agent PR Review -->
+    <section id="slide-50c" class="slide slide-gradient">
+      <div class="section-header">
+        <span class="badge badge-light">Development Methodology</span>
+        <h2>9-Agent PR Review</h2>
+        <p>Every pull request is reviewed by 9 specialized AI agents before merge is allowed</p>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.25rem;">
+        <div style="background: rgba(255,255,255,0.12); padding: 1rem; border-radius: 10px; border-left: 3px solid #00C389;">
+          <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7;">Agent 1</div>
+          <div style="font-weight: 700; margin: 0.25rem 0;">Code Quality</div>
+          <div style="font-size: 0.8rem; opacity: 0.85;">Standards compliance, naming, best practices, DRY/SOLID principles</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.12); padding: 1rem; border-radius: 10px; border-left: 3px solid #FF4444;">
+          <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7;">Agent 2</div>
+          <div style="font-weight: 700; margin: 0.25rem 0;">Security</div>
+          <div style="font-size: 0.8rem; opacity: 0.85;">OWASP Top 10, injection vectors, authentication, authorization flaws</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.12); padding: 1rem; border-radius: 10px; border-left: 3px solid #9B59B6;">
+          <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7;">Agent 3</div>
+          <div style="font-weight: 700; margin: 0.25rem 0;">Architecture</div>
+          <div style="font-size: 0.8rem; opacity: 0.85;">Design patterns, structural integrity, coupling, cohesion analysis</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.12); padding: 1rem; border-radius: 10px; border-left: 3px solid #FF6B35;">
+          <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7;">Agent 4</div>
+          <div style="font-weight: 700; margin: 0.25rem 0;">Performance</div>
+          <div style="font-size: 0.8rem; opacity: 0.85;">Bottleneck detection, N+1 queries, memory leaks, optimization opportunities</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.12); padding: 1rem; border-radius: 10px; border-left: 3px solid #F39C12;">
+          <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7;">Agent 5</div>
+          <div style="font-weight: 700; margin: 0.25rem 0;">Dependencies</div>
+          <div style="font-size: 0.8rem; opacity: 0.85;">Supply chain security, CVE scanning, version compatibility, license checks</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.12); padding: 1rem; border-radius: 10px; border-left: 3px solid #00A3E0;">
+          <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7;">Agent 6</div>
+          <div style="font-weight: 700; margin: 0.25rem 0;">Test Coverage</div>
+          <div style="font-size: 0.8rem; opacity: 0.85;">Coverage gaps, test quality, missing edge cases, assertion strength</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.12); padding: 1rem; border-radius: 10px; border-left: 3px solid #E91E63;">
+          <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7;">Agent 7</div>
+          <div style="font-weight: 700; margin: 0.25rem 0;">Design Review</div>
+          <div style="font-size: 0.8rem; opacity: 0.85;">UI/UX patterns, accessibility, responsive layout, visual consistency</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.12); padding: 1rem; border-radius: 10px; border-left: 3px solid #2ECC71;">
+          <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7;">Agent 8</div>
+          <div style="font-weight: 700; margin: 0.25rem 0;">Bundle Analysis</div>
+          <div style="font-size: 0.8rem; opacity: 0.85;">Bundle size budgets, tree-shaking, code splitting, dependency bloat</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.12); padding: 1rem; border-radius: 10px; border-left: 3px solid #3498DB;">
+          <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7;">Agent 9</div>
+          <div style="font-weight: 700; margin: 0.25rem 0;">Critical Thinking</div>
+          <div style="font-size: 0.8rem; opacity: 0.85;">Systematic analysis of approach, trade-offs, assumptions, edge cases</div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 0; border-radius: 8px; overflow: hidden; font-size: 0.8rem; text-align: center;">
+        <div style="flex: 1; background: #FF4444; color: white; padding: 0.6rem;"><strong>Critical</strong> &mdash; Must Fix</div>
+        <div style="flex: 1; background: #FF6B35; color: white; padding: 0.6rem;"><strong>High</strong> &mdash; Must Fix</div>
+        <div style="flex: 1; background: #F39C12; color: white; padding: 0.6rem;"><strong>Medium</strong> &mdash; Should Fix</div>
+        <div style="flex: 1; background: #95A5A6; color: white; padding: 0.6rem;"><strong>Low</strong> &mdash; Informational</div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 50c</span>
+      </div>
+    </section>
+
+    <!-- Slide 50d: Pipeline Enforcement & Evidence Lifecycle -->
+    <section id="slide-50d" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Development Methodology</span>
+        <h2>Pipeline Enforcement &amp; Evidence Lifecycle</h2>
+        <p>Local CI/CD pipeline replaces GitHub Actions &mdash; enforced by hook guards before merge</p>
+      </div>
+      <div class="two-col">
+        <div>
+          <h3 style="font-family: var(--font-heading); margin-bottom: 0.75rem;">6-Step Pipeline</h3>
+          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; background: white; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid #e0e0e0;">
+              <span style="font-size: 1.1rem;">1</span>
+              <div><strong>Lint</strong> <span style="color: var(--kmflow-medium-gray); font-size: 0.85rem;">&mdash; ruff check</span></div>
+              <span style="margin-left: auto; color: #00C389; font-weight: 700;">PASS</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem; background: white; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid #e0e0e0;">
+              <span style="font-size: 1.1rem;">2</span>
+              <div><strong>Format</strong> <span style="color: var(--kmflow-medium-gray); font-size: 0.85rem;">&mdash; ruff format --check</span></div>
+              <span style="margin-left: auto; color: #00C389; font-weight: 700;">PASS</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem; background: white; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid #e0e0e0;">
+              <span style="font-size: 1.1rem;">3</span>
+              <div><strong>Type Check</strong> <span style="color: var(--kmflow-medium-gray); font-size: 0.85rem;">&mdash; mypy</span></div>
+              <span style="margin-left: auto; color: #00C389; font-weight: 700;">PASS</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem; background: white; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid #e0e0e0;">
+              <span style="font-size: 1.1rem;">4</span>
+              <div><strong>Backend Tests</strong> <span style="color: var(--kmflow-medium-gray); font-size: 0.85rem;">&mdash; pytest --cov</span></div>
+              <span style="margin-left: auto; color: #00C389; font-weight: 700;">PASS</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem; background: white; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid #e0e0e0;">
+              <span style="font-size: 1.1rem;">5</span>
+              <div><strong>Frontend Tests</strong> <span style="color: var(--kmflow-medium-gray); font-size: 0.85rem;">&mdash; jest</span></div>
+              <span style="margin-left: auto; color: #00C389; font-weight: 700;">PASS</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem; background: white; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid #e0e0e0;">
+              <span style="font-size: 1.1rem;">6</span>
+              <div><strong>Security Scan</strong> <span style="color: var(--kmflow-medium-gray); font-size: 0.85rem;">&mdash; pip-audit + npm audit</span></div>
+              <span style="margin-left: auto; color: #00C389; font-weight: 700;">PASS</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3 style="font-family: var(--font-heading); margin-bottom: 0.75rem;">Evidence Lifecycle</h3>
+          <div style="position: relative; padding: 1rem;">
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div style="width: 110px; padding: 0.6rem; background: #F39C12; color: white; border-radius: 6px; text-align: center; font-weight: 600; font-size: 0.85rem;">PENDING</div>
+                <div style="color: var(--kmflow-medium-gray);">&rarr;</div>
+                <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">Evidence collected during development</div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div style="width: 110px; padding: 0.6rem; background: var(--kmflow-light-blue); color: white; border-radius: 6px; text-align: center; font-weight: 600; font-size: 0.85rem;">VALIDATED</div>
+                <div style="color: var(--kmflow-medium-gray);">&rarr;</div>
+                <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">Pipeline passes, evidence verified</div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div style="width: 110px; padding: 0.6rem; background: #00C389; color: white; border-radius: 6px; text-align: center; font-weight: 600; font-size: 0.85rem;">ACTIVE</div>
+                <div style="color: var(--kmflow-medium-gray);">&rarr;</div>
+                <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">Posted to GitHub Issue, merged to main</div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div style="width: 110px; padding: 0.6rem; background: #95A5A6; color: white; border-radius: 6px; text-align: center; font-weight: 600; font-size: 0.85rem;">EXPIRED</div>
+                <div style="color: var(--kmflow-medium-gray);">&rarr;</div>
+                <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">Pipeline marker older than 4 hours</div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div style="width: 110px; padding: 0.6rem; background: var(--kmflow-dark-gray); color: white; border-radius: 6px; text-align: center; font-weight: 600; font-size: 0.85rem;">ARCHIVED</div>
+                <div style="color: var(--kmflow-medium-gray);">&rarr;</div>
+                <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">Issue closed, evidence preserved</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+        <div style="flex: 1; background: var(--kmflow-blue); color: white; padding: 0.75rem 1rem; border-radius: 8px; text-align: center; font-size: 0.8rem;">
+          Pipeline marker required within <strong>4 hours</strong> of merge
+        </div>
+        <div style="flex: 1; background: var(--kmflow-blue); color: white; padding: 0.75rem 1rem; border-radius: 8px; text-align: center; font-size: 0.8rem;">
+          Merge <strong>blocked</strong> without <code>.pipeline-passed</code> marker
+        </div>
+        <div style="flex: 1; background: var(--kmflow-blue); color: white; padding: 0.75rem 1rem; border-radius: 8px; text-align: center; font-size: 0.8rem;">
+          Evidence <strong>auto-posted</strong> to GitHub Issues
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 50d</span>
+      </div>
+    </section>
+
+    <!-- Slide 50e: Hook Enforcement System -->
+    <section id="slide-50e" class="slide slide-gray">
+      <div class="section-header">
+        <span class="badge badge-blue">Development Methodology</span>
+        <h2>Hook Enforcement System</h2>
+        <p>8 hook trigger points guard the development lifecycle &mdash; 2 are merge-blocking</p>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.25rem;">
+        <div class="card" style="border-left: 3px solid #00C389;">
+          <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--kmflow-medium-gray);">SessionStart</div>
+          <h3 style="font-size: 0.95rem; margin: 0.25rem 0;">Memory Bank Loaded</h3>
+          <p style="font-size: 0.8rem;">Loads platform state, active context, and decision log from Memory Bank for session continuity</p>
+        </div>
+        <div class="card" style="border-left: 3px solid #F39C12;">
+          <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--kmflow-medium-gray);">PreToolUse &middot; Write/Edit</div>
+          <h3 style="font-size: 0.95rem; margin: 0.25rem 0;">CI/CD Pipeline Guard</h3>
+          <p style="font-size: 0.8rem;">Prevents direct modification of CI/CD config files &mdash; changes must go through pipeline-orchestrator</p>
+        </div>
+        <div class="card" style="border-left: 3px solid #FF4444; background: rgba(255,68,68,0.04);">
+          <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: #FF4444; font-weight: 700;">PreToolUse &middot; gh pr merge &middot; BLOCKING</div>
+          <h3 style="font-size: 0.95rem; margin: 0.25rem 0;">Pipeline Check</h3>
+          <p style="font-size: 0.8rem;">Blocks merge if <code>.pipeline-passed</code> marker is missing or older than 4 hours. Enforces that pipeline ran recently.</p>
+        </div>
+        <div class="card" style="border-left: 3px solid #FF4444; background: rgba(255,68,68,0.04);">
+          <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: #FF4444; font-weight: 700;">PreToolUse &middot; gh pr merge &middot; BLOCKING</div>
+          <h3 style="font-size: 0.95rem; margin: 0.25rem 0;">Evidence Validation</h3>
+          <p style="font-size: 0.8rem;">Blocks merge if no CDD Evidence comment found on the linked GitHub Issue. Ensures traceability.</p>
+        </div>
+        <div class="card" style="border-left: 3px solid var(--kmflow-light-blue);">
+          <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--kmflow-medium-gray);">PostToolUse &middot; gh pr create</div>
+          <h3 style="font-size: 0.95rem; margin: 0.25rem 0;">PR Review Launch</h3>
+          <p style="font-size: 0.8rem;">Auto-launches 9-agent PR review orchestrator and applies label taxonomy to new pull requests</p>
+        </div>
+        <div class="card" style="border-left: 3px solid var(--kmflow-light-blue);">
+          <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--kmflow-medium-gray);">PostToolUse &middot; gh pr merge</div>
+          <h3 style="font-size: 0.95rem; margin: 0.25rem 0;">Post-Merge Enforcement</h3>
+          <p style="font-size: 0.8rem;">Enforces CHANGELOG update, version bump, Memory Bank sync, worktree cleanup, and issue closure</p>
+        </div>
+        <div class="card" style="border-left: 3px solid #9B59B6;">
+          <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--kmflow-medium-gray);">PostToolUse &middot; Write/Edit</div>
+          <h3 style="font-size: 0.95rem; margin: 0.25rem 0;">Architecture Decision Reminder</h3>
+          <p style="font-size: 0.8rem;">Reminds to document architectural decisions when modifying core infrastructure files</p>
+        </div>
+        <div class="card" style="border-left: 3px solid var(--kmflow-dark-gray);">
+          <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--kmflow-medium-gray);">SessionEnd</div>
+          <h3 style="font-size: 0.95rem; margin: 0.25rem 0;">State Capture &amp; Archival</h3>
+          <p style="font-size: 0.8rem;">Persists session state to Memory Bank, archives evidence artifacts, and captures handoff context</p>
+        </div>
+      </div>
+      <div style="background: white; padding: 0.75rem 1.25rem; border-radius: 8px; border: 1px solid #e0e0e0; display: flex; align-items: center; gap: 1rem;">
+        <div style="font-weight: 600; font-size: 0.85rem; white-space: nowrap;">Label Automation:</div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem;">
+          <code style="background: #FFF3CD; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">cdd:evidence-required</code>
+          <span>&rarr;</span>
+          <span style="color: var(--kmflow-medium-gray);">(development &amp; evidence collection)</span>
+          <span>&rarr;</span>
+          <code style="background: #D4EDDA; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">cdd:verified</code>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 50e</span>
+      </div>
+    </section>
+
     <!-- Slide 51: Foundation MVP — Delivered -->
     <section id="slide-51" class="slide slide-light">
       <div class="section-header">
@@ -4525,7 +4900,11 @@ confidence = (
         </div>
         <div class="card">
           <h3>Platform Features</h3>
-          <p>65 API routers, MCP server (8 tools), process replay engine, confidence heatmaps, financial impact analysis, executive report generation</p>
+          <p>68 API routers, MCP server (8 tools), process replay engine, confidence heatmaps, financial impact analysis, executive report generation</p>
+        </div>
+        <div class="card">
+          <h3>WGI Platform Alignment</h3>
+          <p>Switching sequences (friction scoring, transition matrices), Visual Context Events (5 trigger types, 8 screen states), Correlation Engine, ABAC Policy Decision Point with obligation enforcement</p>
         </div>
         <div class="card">
           <h3>Infrastructure</h3>
@@ -4559,34 +4938,31 @@ confidence = (
       </div>
     </section>
 
-    <!-- Slide 52: What's New — MVP + Windows Agent -->
+    <!-- Slide 52: What's New — WGI Platform Alignment -->
     <section id="slide-52" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Changelog</span>
-        <h2>What&rsquo;s New &mdash; MVP + Windows Agent</h2>
+        <h2>What&rsquo;s New &mdash; WGI Platform Alignment</h2>
       </div>
       <div class="two-col">
         <div>
-          <h3>PRD v2.1 Fully Delivered</h3>
+          <h3>WGI Platform Alignment (New)</h3>
+          <ul class="feature-list">
+            <li><strong>Switching Sequences</strong> &mdash; SwitchingTrace + TransitionMatrix models; friction scoring (frequency, duration, PII exposure); deterministic + ML-assisted correlation</li>
+            <li><strong>Visual Context Events (VCE)</strong> &mdash; VisualContextEvent model; 5 trigger types (screenshot, OCR, UI inspection, manual annotation, ML inference); 8 screen state classes</li>
+            <li><strong>Correlation Engine</strong> &mdash; dedicated router; deterministic matching, Claude-assisted disambiguation, role-linkage across agents</li>
+            <li><strong>ABAC / Policy Decision Point</strong> &mdash; PDPPolicyBundle + PolicyObligation models; obligation enforcement before data release; CaseLinkEdge for cross-case graph traversal</li>
+            <li><strong>4 new migrations</strong> (080&ndash;083) &mdash; switching_traces, transition_matrices, visual_context_events, case_link_edges, pdp_policy_bundles, policy_obligations</li>
+          </ul>
+          <h3 style="margin-top: 1rem;">Previously Delivered</h3>
           <ul class="feature-list">
             <li><strong>All 106 platform stories</strong> across 18 epics + <strong>45 Windows Agent stories</strong> across 8 epics</li>
-            <li><strong>65 API routers</strong> with full RBAC, engagement-scoped access control</li>
-            <li>Process replay engine: single-case timeline, aggregate volume, variant comparison</li>
-            <li>Confidence heatmap overlay with brightness classification on BPMN viewer</li>
-            <li>Executive report generation with evidence appendix and in-text citations</li>
-          </ul>
-          <h3 style="margin-top: 1rem;">Windows Agent (New)</h3>
-          <ul class="feature-list">
-            <li><strong>C# .NET 8 NativeAOT</strong> capture layer with C hook DLL for keyboard/mouse</li>
-            <li>WPF system tray app, onboarding wizard, transparency log viewer</li>
-            <li>WiX MSI + MSIX installers, Task Scheduler, Windows Service modes</li>
-            <li>Intune, SCCM, and GPO enterprise deployment with ADMX templates</li>
-            <li>Authenticode signing pipeline, WDAC allowlisting, AV pre-submission</li>
+            <li><strong>Windows Agent</strong> &mdash; C# .NET 8 NativeAOT, WPF tray app, WiX MSI/MSIX, Intune/SCCM/GPO</li>
           </ul>
         </div>
         <div>
           <div style="background: var(--kmflow-blue); color: white; padding: 1.5rem; border-radius: 12px; text-align: center; margin-bottom: 1rem;">
-            <div style="font-size: 2rem; font-weight: 700;">108,700+</div>
+            <div style="font-size: 2rem; font-weight: 700;">113,000+</div>
             <div style="font-size: 0.85rem; opacity: 0.9;">Lines of Code</div>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
@@ -4599,11 +4975,11 @@ confidence = (
               <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">Merged PRs</div>
             </div>
             <div style="background: var(--kmflow-light-gray); padding: 1rem; border-radius: 8px; text-align: center;">
-              <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-blue);">65</div>
+              <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-blue);">68</div>
               <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">API Routers</div>
             </div>
             <div style="background: var(--kmflow-light-gray); padding: 1rem; border-radius: 8px; text-align: center;">
-              <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-blue);">92</div>
+              <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-blue);">96</div>
               <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">DB Models</div>
             </div>
           </div>
@@ -6193,12 +6569,12 @@ confidence = (
       <div class="section-header">
         <span class="badge badge-blue">Appendix</span>
         <h2>Project Stats Dashboard</h2>
-        <p>v2026.02.197 &mdash; MVP + Windows Agent</p>
+        <p>v2026.02.199 &mdash; WGI Platform Alignment</p>
       </div>
       <div class="two-col">
         <div>
           <div style="background: var(--kmflow-blue); color: white; padding: 1.5rem; border-radius: 12px; text-align: center; margin-bottom: 1.25rem;">
-            <div style="font-size: 2.5rem; font-weight: 700;">108,700+</div>
+            <div style="font-size: 2.5rem; font-weight: 700;">113,000+</div>
             <div style="font-size: 0.9rem; opacity: 0.9;">Total Lines of Code</div>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem;">
@@ -6241,15 +6617,15 @@ confidence = (
             <tbody>
               <tr style="border-bottom: 1px solid var(--kmflow-border);">
                 <td style="padding: 0.6rem 0; font-weight: 600;">API Routers</td>
-                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">65</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">68</td>
               </tr>
               <tr style="border-bottom: 1px solid var(--kmflow-border);">
                 <td style="padding: 0.6rem 0; font-weight: 600;">SQLAlchemy Models</td>
-                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">92</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">96</td>
               </tr>
               <tr style="border-bottom: 1px solid var(--kmflow-border);">
                 <td style="padding: 0.6rem 0; font-weight: 600;">Database Migrations</td>
-                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">81</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">84</td>
               </tr>
               <tr style="border-bottom: 1px solid var(--kmflow-border);">
                 <td style="padding: 0.6rem 0; font-weight: 600;">BPMN Process Models</td>
@@ -6317,7 +6693,17 @@ confidence = (
         <tbody>
           <tr style="border-bottom: 1px solid var(--kmflow-border); background: rgba(0,82,204,0.04);">
             <td style="padding: 0.75rem; font-weight: 600;">2026-02-28</td>
-            <td style="padding: 0.75rem;"><strong>v4.0</strong></td>
+            <td style="padding: 0.75rem;"><strong>v6.0</strong></td>
+            <td style="padding: 0.75rem;">WGI Platform Alignment &mdash; added 4 new SQLAlchemy models (SwitchingTrace, TransitionMatrix, VisualContextEvent, CaseLinkEdge, PDPPolicyBundle, PolicyObligation), 3 new API routers (correlation, taskmining update, replay update), 4 migrations (080&ndash;083); updated stats to 113K+ LOC, 96 models, 68 routers, 84 migrations; refreshed What&rsquo;s New slide; updated roadmap with WGI card</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--kmflow-border);">
+            <td style="padding: 0.75rem;">2026-02-28</td>
+            <td style="padding: 0.75rem;">v5.0</td>
+            <td style="padding: 0.75rem;">CDD Methodology &amp; Compliance &mdash; 5 new slides covering Agentic SDLC 4-phase lifecycle, 7-phase development workflow, 9-agent PR review system, pipeline enforcement with evidence lifecycle, and hook enforcement system with 8 trigger points</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--kmflow-border);">
+            <td style="padding: 0.75rem;">2026-02-28</td>
+            <td style="padding: 0.75rem;">v4.0</td>
             <td style="padding: 0.75rem;">Windows Agent release &mdash; cross-platform desktop agents (macOS + Windows), updated stats (108K+ LOC, 188 PRs, 366 issues, 50 C#/C files), updated roadmap with Windows delivery checkmark, refreshed What&rsquo;s New for 45 Windows stories across 8 epics</td>
           </tr>
           <tr style="border-bottom: 1px solid var(--kmflow-border);">
@@ -7266,30 +7652,35 @@ confidence = (
         num: "7",
         title: "Enterprise Readiness",
         link: "#slide-49",
-        description: "KMFlow's security model, data isolation architecture, and compliance posture — designed for consulting engagements handling sensitive client data across regulated industries including banking, healthcare, and financial services.",
+        description: "KMFlow's security model, data isolation architecture, compliance posture, and the Compliance-Driven Development (CDD) methodology — from engagement-level data isolation to the 9-agent PR review system that enforces quality at every stage of development.",
         highlights: [
           "Engagement-scoped data isolation: each client's data is logically and physically separated",
           "AES-256 encryption at rest, TLS 1.3 in transit, with per-engagement key rotation",
-          "OAuth2/OIDC with Descope for authentication; OPA for fine-grained authorization",
-          "Compliance posture covers SOC 2 Type II, ISO 27001, GDPR, and CCPA control requirements",
-          "Full audit trail: every evidence access, analysis run, and deliverable export is logged"
+          "Compliance-Driven Development: 4-phase SDLC with 8 blocking quality gates",
+          "9-agent AI PR review: code quality, security, architecture, performance, dependencies, test coverage, design, bundle, critical thinking",
+          "Hook enforcement system: 8 trigger points including 2 merge-blocking guards for pipeline and evidence validation"
         ],
         slides: [
           { name: "Security & Data Isolation", id: "slide-49" },
-          { name: "Compliance Posture", id: "slide-50" }
+          { name: "Compliance Posture", id: "slide-50" },
+          { name: "Agentic SDLC: How We Build", id: "slide-50a" },
+          { name: "7-Phase Development Workflow", id: "slide-50b" },
+          { name: "9-Agent PR Review", id: "slide-50c" },
+          { name: "Pipeline Enforcement & Evidence", id: "slide-50d" },
+          { name: "Hook Enforcement System", id: "slide-50e" }
         ]
       },
       {
         num: "8",
         title: "Roadmap",
         link: "#slide-51",
-        description: "Where KMFlow has been and where it's going — the full MVP is delivered with 108K+ LOC, 5,797+ tests, and all 26 epics complete including the Windows Agent. Next: intelligence enhancements, autonomous agents, and multi-tenant SaaS.",
+        description: "Where KMFlow has been and where it's going — the full MVP is delivered with 113K+ LOC, 5,797+ tests, and all 26 epics complete including the Windows Agent and WGI alignment. Next: intelligence enhancements, autonomous agents, and multi-tenant SaaS.",
         highlights: [
           "MVP Complete: 106 platform stories (18 epics) + 45 Windows Agent stories (8 epics) — 366 issues closed, 188 PRs merged",
-          "Full-stack platform: 65 API routers, 92 models, 81 migrations, 44 BPMN process models",
+          "WGI Alignment: Switching Sequences, Visual Context Events, Correlation Engine, ABAC/PDP Policy",
+          "Full-stack platform: 68 API routers, 96 models, 84 migrations, 44 BPMN process models",
           "Cross-platform desktop agents: macOS (Swift) + Windows (C# .NET 8 NativeAOT) with shared Python layer",
-          "Phase 2 roadmap: autonomous evidence collection agents, cross-engagement pattern intelligence",
-          "Phase 3 roadmap: multi-tenant SaaS, marketplace for evidence parsers, white-label packaging"
+          "Phase 2 roadmap: autonomous evidence collection agents, cross-engagement pattern intelligence"
         ],
         slides: [
           { name: "MVP Delivered", id: "slide-51" },
@@ -7307,11 +7698,11 @@ confidence = (
         link: "#slide-122",
         description: "Project-level metrics, codebase statistics, and a changelog of this presentation itself — documenting what was built and how the story evolved.",
         highlights: [
-          "108,700+ lines of code across Python, TypeScript, Swift, and C#",
+          "113,000+ lines of code across Python, TypeScript, Swift, and C#",
           "5,797+ tests (5,162 backend + 635 frontend) for comprehensive coverage",
-          "92 SQLAlchemy models, 65 API routers, 81 migrations, 44 BPMN process models",
+          "96 SQLAlchemy models, 68 API routers, 84 migrations, 44 BPMN process models",
           "383 commits, 188 merged PRs, 366 closed issues across 26 epics",
-          "Presentation changelog tracking 6 major versions from v1.0 to v4.0"
+          "Presentation changelog tracking 8 major versions from v1.0 to v6.0"
         ],
         slides: [
           { name: "Project Stats Dashboard", id: "slide-122" },

@@ -64,5 +64,24 @@
     "37881395-72d8-5569-8767-96697ccfe90f",
     "ce51adf9-1a87-546c-bac1-a92b023ed0ed",
     "094f22cf-cf2d-5c01-aeb8-4df02345f9e5"
-  ]
+  ],
+  "switching_trace_ids": [
+    "460e7138-9e07-535b-b276-6fd2943d78b7",
+    "6ecd11eb-12a8-5deb-a747-3c65c2cddfbc",
+    "d4291e13-a816-5ca1-b895-04f6062892b9"
+  ],
+  "vce_ids": [
+    "cf4adadd-101e-55ac-9851-38e967279a09",
+    "58bbd73f-8bef-5aed-b4ca-6eb0e7c9b410",
+    "e329e9f2-7ef0-571f-bcda-2ee9192f73b0",
+    "086fb074-3877-51fd-99e1-39e88f8c4d9b",
+    "9178e3bb-28c9-5ee7-ab74-b2e6062ce8f7"
+  ],
+  "case_link_ids": [
+    "3527cf80-6ab8-5117-b243-d0aa3a72574f",
+    "892f4238-d5d1-5c19-9be5-8f94d1524f79",
+    "43eefcf1-a2a4-5792-b9fc-6353a60c5132",
+    "fc777d38-5b53-5ffb-aaf6-1f88dedd603c"
+  ],
+  "transition_matrix_id": "60aae798-0db6-5804-9a92-3dabe36a1b85"
 }
