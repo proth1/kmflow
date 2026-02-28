@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
+from datetime import datetime
 from typing import Any, Literal
 
 import redis.asyncio as aioredis
@@ -34,6 +35,7 @@ from src.core.models import (
 )
 from src.core.permissions import require_permission
 from src.pov.generator import generate_pov
+from src.pov.orchestrator import TOTAL_STEPS, compute_version_diff
 from src.semantic.graph import KnowledgeGraphService
 
 logger = logging.getLogger(__name__)
@@ -190,7 +192,7 @@ class ProgressResponse(BaseModel):
     current_step: int
     step_name: str
     completion_percentage: int
-    total_steps: int = 8
+    total_steps: int = TOTAL_STEPS
     completed_steps: list[dict[str, Any]] | None = None
     failed_step: dict[str, Any] | None = None
     total_duration_ms: int = 0
@@ -204,7 +206,7 @@ class VersionSummary(BaseModel):
     status: str
     confidence_score: float
     element_count: int
-    generated_at: Any | None = None
+    generated_at: datetime | None = None
 
 
 class VersionDiffResponse(BaseModel):
@@ -513,8 +515,6 @@ async def get_version_history(
         latest_elements = await _get_elements_for_model(session, latest.id)
         previous_elements = await _get_elements_for_model(session, previous.id)
 
-        from src.pov.orchestrator import compute_version_diff
-
         diff = compute_version_diff(previous_elements, latest_elements)
         response["diff"] = diff
 
@@ -522,7 +522,7 @@ async def get_version_history(
 
 
 async def _get_elements_for_model(
-    session: AsyncSession, model_id: Any,
+    session: AsyncSession, model_id: uuid.UUID,
 ) -> list[dict[str, Any]]:
     """Get elements for a model as simple dicts for version comparison."""
     result = await session.execute(

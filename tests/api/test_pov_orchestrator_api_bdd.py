@@ -329,6 +329,89 @@ class TestVersionHistoryEndpoint:
         assert "model_id" in v
         assert "status" in v
 
+    @pytest.mark.asyncio
+    async def test_version_history_include_diff(self) -> None:
+        """include_diff=True computes diff between latest two versions."""
+        from unittest.mock import patch
+
+        eng_id = uuid.uuid4()
+        model_v2 = _make_mock_model(engagement_id=eng_id, version=2,
+                                     confidence_score=0.85, element_count=10)
+        model_v1 = _make_mock_model(engagement_id=eng_id, version=1,
+                                     confidence_score=0.7, element_count=8)
+
+        session = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [model_v2, model_v1]
+        session.execute = AsyncMock(return_value=mock_result)
+
+        user = _make_mock_user(UserRole.PLATFORM_ADMIN)
+
+        fake_diff = {
+            "added_count": 2,
+            "removed_count": 1,
+            "changed_count": 0,
+            "unchanged_count": 5,
+            "added": ["NewTask"],
+            "removed": ["OldTask"],
+            "changed": [],
+        }
+
+        with patch(
+            "src.api.routes.pov._get_elements_for_model",
+            new_callable=AsyncMock,
+            return_value=[{"name": "A", "confidence_score": 0.8}],
+        ), patch(
+            "src.api.routes.pov.compute_version_diff",
+            return_value=fake_diff,
+        ):
+            result = await get_version_history(str(eng_id), True, session, user)
+
+        assert result["diff"] is not None
+        assert result["diff"]["added_count"] == 2
+        assert result["diff"]["removed_count"] == 1
+
+    @pytest.mark.asyncio
+    async def test_version_history_non_member_gets_403(self) -> None:
+        """Non-admin, non-member user receives 403 Forbidden."""
+        from fastapi import HTTPException
+
+        eng_id = uuid.uuid4()
+        session = AsyncMock()
+
+        # First execute call is the membership check — returns None (not a member)
+        membership_result = MagicMock()
+        membership_result.scalar_one_or_none.return_value = None
+        session.execute = AsyncMock(return_value=membership_result)
+
+        user = _make_mock_user(UserRole.ENGAGEMENT_LEAD)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await get_version_history(str(eng_id), False, session, user)
+
+        assert exc_info.value.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_version_history_member_can_access(self) -> None:
+        """Engagement member (non-admin) can access version history."""
+        eng_id = uuid.uuid4()
+        model_v1 = _make_mock_model(engagement_id=eng_id, version=1)
+
+        # Membership check returns a member record; version query returns models
+        membership_result = MagicMock()
+        membership_result.scalar_one_or_none.return_value = MagicMock()  # member exists
+
+        version_result = MagicMock()
+        version_result.scalars.return_value.all.return_value = [model_v1]
+
+        session = AsyncMock()
+        session.execute = AsyncMock(side_effect=[membership_result, version_result])
+
+        user = _make_mock_user(UserRole.ENGAGEMENT_LEAD)
+
+        result = await get_version_history(str(eng_id), False, session, user)
+        assert result["total_versions"] == 1
+
 
 # ============================================================
 # Schema validation tests
