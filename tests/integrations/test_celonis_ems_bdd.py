@@ -547,3 +547,34 @@ class TestCelonisDataStructures:
         assert "expected 'Pack'" in conflict["description"]
         assert "found 'Ship'" in conflict["description"]
         assert "42 cases" in conflict["description"]
+
+    def test_conformance_score_clamps_negative(self) -> None:
+        """Negative conformance score is clamped to HIGH severity."""
+        assert conformance_score_to_severity(-0.5) == SEVERITY_HIGH
+
+    def test_conformance_score_clamps_above_one(self) -> None:
+        """Score > 1.0 is clamped to LOW severity."""
+        assert conformance_score_to_severity(1.5) == SEVERITY_LOW
+
+    def test_malformed_event_triggers_exception_handler(self) -> None:
+        """Malformed event data triggers ValueError exception path."""
+        malformed = {
+            "case_id": "x",
+            "activity": "y",
+            "duration": "not-a-number",
+        }
+        result = import_event_log([malformed], engagement_id=ENGAGEMENT_ID)
+        assert len(result.errors) == 1
+        assert "Failed to parse event" in result.errors[0]
+
+    def test_unknown_deviation_type_uses_default_mismatch(self) -> None:
+        """Unrecognized deviation type falls back to sequence_mismatch."""
+        mapper = CelonisConformanceMapper(engagement_id=ENGAGEMENT_ID)
+        deviation = CelonisDeviation(
+            deviation_id="dev-u1",
+            deviation_type="completely_unknown_type",
+            affected_activity="Task",
+            conformance_score=0.50,
+        )
+        conflict = mapper.map_deviation(deviation)
+        assert conflict["mismatch_type"] == "sequence_mismatch"

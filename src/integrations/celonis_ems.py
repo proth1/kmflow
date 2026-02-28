@@ -38,10 +38,12 @@ def conformance_score_to_severity(score: float) -> float:
 
     Args:
         score: Celonis conformance score between 0.0 and 1.0.
+            Out-of-range values are clamped: negative → HIGH, > 1.0 → LOW.
 
     Returns:
         KMFlow severity value between 0.0 and 1.0.
     """
+    score = max(0.0, min(1.0, score))
     if score < _SEVERITY_HIGH_THRESHOLD:
         return SEVERITY_HIGH
     if score < _SEVERITY_MEDIUM_THRESHOLD:
