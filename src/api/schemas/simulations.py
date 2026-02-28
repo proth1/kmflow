@@ -219,6 +219,8 @@ class SuggestionListResponse(BaseModel):
 class SuggestionDispositionUpdate(BaseModel):
     disposition: SuggestionDisposition
     disposition_notes: str | None = None
+    modified_content: dict[str, Any] | None = None
+    rejection_reason: str | None = None
 
 
 # -- Financial Impact Schemas -------------------------------------------------

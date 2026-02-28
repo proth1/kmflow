@@ -114,5 +114,8 @@ def suggestion_to_response(s: AlternativeSuggestion) -> dict[str, Any]:
         "evidence_gaps": s.evidence_gaps,
         "disposition": s.disposition.value if isinstance(s.disposition, SuggestionDisposition) else s.disposition,
         "disposition_notes": s.disposition_notes,
+        "modified_content": s.modified_content,
+        "disposed_at": s.disposed_at.isoformat() if s.disposed_at else None,
+        "disposed_by_user_id": str(s.disposed_by_user_id) if s.disposed_by_user_id else None,
         "created_at": s.created_at.isoformat() if s.created_at else "",
     }

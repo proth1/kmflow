@@ -40,7 +40,6 @@ from src.api.schemas.simulations import (
     SuggestionCreate,
     SuggestionDispositionUpdate,
     SuggestionListResponse,
-    SuggestionResponse,
 )
 from src.core.audit import log_audit
 from src.core.models import (
@@ -66,6 +65,7 @@ from src.simulation.service import (
     scenario_to_response,
     suggestion_to_response,
 )
+from src.simulation.suggestion_review import review_suggestion
 
 logger = logging.getLogger(__name__)
 
@@ -938,7 +938,6 @@ async def list_suggestions(
 
 @router.patch(
     "/scenarios/{scenario_id}/suggestions/{suggestion_id}",
-    response_model=SuggestionResponse,
 )
 async def update_suggestion_disposition(
     scenario_id: UUID,
@@ -947,27 +946,43 @@ async def update_suggestion_disposition(
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:create")),
 ) -> dict[str, Any]:
-    """Accept, modify, or reject a suggestion."""
-    scenario = await get_scenario_or_404(session, scenario_id)
-    result = await session.execute(
-        select(AlternativeSuggestion).where(
-            AlternativeSuggestion.id == suggestion_id,
-            AlternativeSuggestion.scenario_id == scenario_id,
+    """Accept, modify, or reject a suggestion.
+
+    - ACCEPTED: creates a ScenarioModification from the suggestion content
+    - MODIFIED: creates a ScenarioModification from modified_content (required)
+    - REJECTED: stores rejection_reason (required), no modification created
+    """
+    # Validate conditional required fields
+    if payload.disposition == SuggestionDisposition.MODIFIED and not payload.modified_content:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="modified_content is required when disposition is MODIFIED",
         )
-    )
-    suggestion = result.scalar_one_or_none()
-    if not suggestion:
-        raise HTTPException(status_code=404, detail=f"Suggestion {suggestion_id} not found")
+    if payload.disposition == SuggestionDisposition.REJECTED and not payload.rejection_reason:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="rejection_reason is required when disposition is REJECTED",
+        )
 
-    suggestion.disposition = payload.disposition
-    suggestion.disposition_notes = payload.disposition_notes
+    scenario = await get_scenario_or_404(session, scenario_id)
 
-    if payload.disposition == SuggestionDisposition.ACCEPTED:
-        action = AuditAction.SUGGESTION_ACCEPTED
-    elif payload.disposition == SuggestionDisposition.REJECTED:
+    try:
+        result = await review_suggestion(
+            session=session,
+            scenario_id=scenario_id,
+            suggestion_id=suggestion_id,
+            disposition=payload.disposition,
+            user_id=user.id,
+            modified_content=payload.modified_content,
+            rejection_reason=payload.rejection_reason,
+            disposition_notes=payload.disposition_notes,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+
+    if payload.disposition == SuggestionDisposition.REJECTED:
         action = AuditAction.SUGGESTION_REJECTED
     else:
-        # MODIFIED is a form of acceptance with changes
         action = AuditAction.SUGGESTION_ACCEPTED
     await log_audit(
         session,
@@ -977,8 +992,8 @@ async def update_suggestion_disposition(
         actor=str(user.id),
     )
     await session.commit()
-    await session.refresh(suggestion)
-    return suggestion_to_response(suggestion)
+
+    return result
 
 
 # -- LLM Audit Route ----------------------------------------------------------
