@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.163] - 2026-02-27
+### Added
+- Sensitivity analysis engine: OAT sensitivity ranking, tornado chart data, confidence-weighted P10/P50/P90 percentiles, custom cost functions, negative value support, 24 tests (#364)
+
 ## [2026.02.162] - 2026-02-27
 ### Added
 - Governance flag detection for LLM suggestions: SoD checks for incompatible role mergers, regulatory compliance flagging for regulated elements, authorization change detection, knowledge boundary templates, engagement-scoped IDOR-safe query, engagement:update permission, 19 tests (#381)

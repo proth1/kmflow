@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.162
+**Version**: 2026.02.163
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.163 | 2026-02-27 | Sensitivity analysis engine: OAT ranking, tornado chart, P10/P50/P90 percentiles, custom cost functions, 24 tests (#364) |
 | 2026.02.162 | 2026-02-27 | Governance flag detection: SoD checks, regulatory compliance flagging, authorization change detection, knowledge boundaries, IDOR-safe, 19 tests (#381) |
 | 2026.02.161 | 2026-02-27 | Cost-per-role and volume forecast modeling: RoleRateAssumption/VolumeForecast, staffing/volume/quarterly/FTE computation, typed payloads, seasonal validation, 25 tests (#359) |
 | 2026.02.160 | 2026-02-27 | Financial assumption management: engagement-scoped CRUD, version history, CHECK constraint, IDOR fix, 16 tests (#354) |

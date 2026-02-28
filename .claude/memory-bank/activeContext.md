@@ -8,6 +8,7 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #480 merged** — Sensitivity analysis engine: OAT ranking, tornado chart data, P10/P50/P90 percentiles, custom cost functions, negative value support, 24 tests (#364) (v2026.02.163)
 - **PR #479 merged** — Governance flag detection: SoD checks, regulatory compliance, authorization changes, knowledge boundary templates, IDOR fix, engagement:update permission, 19 tests (#381) (v2026.02.162)
 - **PR #478 merged** — Cost-per-role and volume forecast modeling: RoleRateAssumption/VolumeForecast models, staffing/volume/quarterly/FTE computation, typed TaskAssignment payloads, seasonal factor validation, unique constraint, migration 078, 25 tests (#359) (v2026.02.161)
 - **PR #477 merged** — Financial assumption management: engagement-scoped CRUD, version history audit trail, CHECK constraint, IDOR fix, efficient count, 16 tests (#354) (v2026.02.160)
