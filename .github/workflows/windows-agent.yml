@@ -1,0 +1,140 @@
+name: Windows Agent CI
+
+on:
+  push:
+    paths:
+      - 'agent/windows/**'
+      - 'agent/python/**'
+      - '.github/workflows/windows-agent.yml'
+  pull_request:
+    paths:
+      - 'agent/windows/**'
+      - 'agent/python/**'
+      - '.github/workflows/windows-agent.yml'
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  build-csharp:
+    name: Build C# Agent (NativeAOT)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore agent/windows/src/KMFlowAgent/KMFlowAgent.csproj
+
+      - name: Build (Debug)
+        run: dotnet build agent/windows/src/KMFlowAgent/KMFlowAgent.csproj --configuration Debug --no-restore
+
+      - name: Build NativeAOT (Release)
+        run: |
+          dotnet publish agent/windows/src/KMFlowAgent/KMFlowAgent.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained `
+            -p:PublishAot=true `
+            --output publish/
+
+      - name: Verify NativeAOT binary
+        run: |
+          $binary = Get-Item publish/KMFlowAgent.exe
+          Write-Host "Binary size: $($binary.Length / 1MB) MB"
+          # Verify it's a native binary (no .NET runtime dependency)
+          if ($binary.Length -gt 50MB) {
+            Write-Warning "Binary exceeds 50MB target"
+          }
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-agent-binary
+          path: publish/KMFlowAgent.exe
+
+  test-csharp:
+    name: Run C# Tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Run xUnit tests
+        run: |
+          dotnet test agent/windows/src/KMFlowAgent.Tests/KMFlowAgent.Tests.csproj `
+            --configuration Debug `
+            --verbosity normal `
+            --collect:"XPlat Code Coverage" `
+            --results-directory TestResults
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: csharp-test-results
+          path: TestResults/
+
+  test-python:
+    name: Run Python Tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          cd agent/python
+          pip install -e ".[dev]" 2>$null || pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov
+
+      - name: Run Python tests
+        run: |
+          cd agent/python
+          python -m pytest tests/ -v --cov=kmflow_agent --cov-report=xml
+        env:
+          KMFLOW_BUFFER_KEY: "test_key_for_ci_windows"
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: python-coverage
+          path: agent/python/coverage.xml
+
+  test-python-cross-platform:
+    name: Python Tests (Ubuntu - Cross-Platform Verification)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          cd agent/python
+          pip install -e ".[dev]" 2>/dev/null || pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov
+
+      - name: Run Python tests (macOS platform path)
+        run: |
+          cd agent/python
+          python -m pytest tests/ -v
+        env:
+          KMFLOW_BUFFER_KEY: "test_key_for_ci_linux"

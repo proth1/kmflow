@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <RootNamespace>KMFlowAgent</RootNamespace>
+    <AssemblyName>KMFlowAgent</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Version>1.0.0</Version>
+    <Company>KMFlow Ltd</Company>
+    <Product>KMFlow Task Mining Agent</Product>
+    <Description>Windows desktop agent for KMFlow process intelligence</Description>
+    <Copyright>Copyright (c) 2026 KMFlow Ltd. All rights reserved.</Copyright>
+
+    <!-- NativeAOT settings -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>link</TrimMode>
+    <StripSymbols>false</StripSymbols>
+
+    <!-- Sign output if certificate available -->
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- JSON serialization with source generators for NativeAOT -->
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    <!-- DPAPI for consent record encryption -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+  </ItemGroup>
+
+</Project>
