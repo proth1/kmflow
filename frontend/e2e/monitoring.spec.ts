@@ -1,4 +1,5 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures/base";
+import { ENGAGEMENT_ID, MONITORING_JOB_IDS } from "./fixtures/seed-data";
 
 test.describe("Monitoring Page", () => {
   test("monitoring page loads with heading", async ({ page }) => {
@@ -29,6 +30,20 @@ test.describe("Monitoring Page", () => {
 
   test("monitoring detail page loads", async ({ page }) => {
     await page.goto("/monitoring/test-job-id");
+    await expect(page.locator("main").first()).toBeVisible();
+  });
+
+  test("entering seeded engagement ID shows monitoring data", async ({
+    page,
+  }) => {
+    await page.goto("/monitoring");
+    const input = page.getByPlaceholder(/550e8400/);
+    await input.fill(ENGAGEMENT_ID);
+    await expect(input).toHaveValue(ENGAGEMENT_ID);
+  });
+
+  test("monitoring detail page loads with seeded job ID", async ({ page }) => {
+    await page.goto(`/monitoring/${MONITORING_JOB_IDS[0]}`);
     await expect(page.locator("main").first()).toBeVisible();
   });
 });

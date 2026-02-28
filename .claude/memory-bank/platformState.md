@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.194
+**Version**: 2026.02.195
 **Last Updated**: 2026-02-28
 
 ## Quick Stats
@@ -10,7 +10,7 @@
 | SQLAlchemy Models | 92 |
 | API Routers | 65 |
 | Test Count | 5,162 backend + 635 frontend (5,797 total) |
-| Total LOC | 101,811 (389 Python / 112 TypeScript / 39 Swift) |
+| Total LOC | ~106,200 (389 Python / 112 TypeScript / 39 Swift / 35 C#/C) |
 | Database Migrations | 81 |
 | BPMN Process Models | 44 |
 | Coverage | >80% |
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.195 | 2026-02-28 | Windows Task Mining Agent: C# capture, PII, IPC, consent, security, config — 35 files, 4,398 LOC (#556) |
 | 2026.02.194 | 2026-02-28 | Windows Task Mining Agent PRD (#510) |
 | 2026.02.193 | 2026-02-28 | Alembic hardening, CalVer doc fix, CLAUDE.md refresh, 4 ADRs, activeContext trim (#509) |
 | 2026.02.192 | 2026-02-28 | Presentation: final MVP stats (101K LOC, 5,797 tests), Project Stats Dashboard + Presentation Changelog appendix slides (#508) |

@@ -205,6 +205,7 @@ services:
       SMTP_PORT: 1025
       CORS_ORIGINS: '["http://localhost:3000","http://frontend:3000","http://localhost:3002"]'
       AUTH_DEV_MODE: "true"
+      COOKIE_SECURE: "false"
     ports:
       - "${BACKEND_PORT:-8002}:8000"
     volumes:
@@ -236,14 +237,14 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:8002
+        NEXT_PUBLIC_API_URL: http://localhost:${BACKEND_PORT:-8002}
     container_name: kmflow-frontend
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8002
+      NEXT_PUBLIC_API_URL: http://localhost:${BACKEND_PORT:-8002}
       API_URL: http://backend:8000
     ports:
       - "3002:3000"

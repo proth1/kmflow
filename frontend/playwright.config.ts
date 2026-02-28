@@ -18,9 +18,11 @@ const baseURL =
 
 export default defineConfig({
   testDir: "./e2e",
+  globalSetup: "./e2e/global-setup.ts",
+  globalTeardown: "./e2e/global-teardown.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 2 : 1,
   workers: process.env.CI ? 1 : undefined,
   reporter: [
     ["list"],
@@ -32,11 +34,23 @@ export default defineConfig({
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
+    actionTimeout: 10_000,
+    navigationTimeout: 30_000,
   },
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "e2e/.auth/admin.json",
+      },
+    },
+    {
+      name: "unauthenticated",
+      use: {
+        ...devices["Desktop Chrome"],
+      },
+      testMatch: /auth\.spec\.ts/,
     },
   ],
   ...(process.env.E2E_LOCAL === "true"

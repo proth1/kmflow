@@ -4,17 +4,36 @@
 
 ## Project Status
 
-**MVP COMPLETE** — All 106 stories (18 epics) from PRD v2.1 decomposition have been implemented, tested, and merged. The inaugural GitHub Release v2026.02.191 was published on 2026-02-28.
+**MVP COMPLETE** — Platform MVP done. Now building Windows Task Mining Agent (PRD: `docs/prd/PRD_KMFlow_TaskMining_Windows.md`).
 
-- **0 open GitHub issues** — clean backlog
-- **0 open PRs** — no in-flight work
-- **Current version**: 2026.02.194
+- **Current version**: 2026.02.195
+- **Open issues**: ~37 Windows Agent stories (#519-#555) across 8 epics (#511-#518)
 - **Presentation**: deployed to kmflow.agentic-innovations.com via Cloudflare Pages
+
+## Current Focus
+
+**Windows Task Mining Agent** — C# .NET 8 NativeAOT capture layer + shared Python platform abstraction.
+
+### Completed Epics
+- **Epic #511** (Capture Layer): InputMonitor, AppSwitchMonitor, WindowTitleCapture, IdleDetector, CaptureStateManager, HookDll
+- **Epic #512** (PII L1): CaptureContextFilter, PrivateBrowsingDetector
+- **Epic #513** (IPC & Platform): EventProtocol, NamedPipeClient (dual transport), Python platform abstraction (_windows.py, _macos.py)
+- **Epic #514** (Consent/Config — partial): DPAPIConsentStore, ConsentManager, IntegrityChecker, AgentConfig
+- **Epic #516** (Security — partial): IntegrityChecker (Authenticode verification)
+- **Epic #518** (MDM — partial): AgentConfig (Registry-based, GPO/Intune compatible)
+
+### Remaining Stories
+- **Epic #514**: #537 (SystemTrayApp WPF), #538 (OnboardingWindow), #539 (TransparencyLogWindow)
+- **Epic #515**: #540 (WiX MSI), #541 (MSIX), #542 (Task Scheduler), #543 (Windows Service), #544 (GPO ADMX)
+- **Epic #516**: #545 (Authenticode pipeline), #547 (WDAC policy), #548 (AV pre-submission)
+- **Epic #517**: #550 (Integration tests), #552 (Win 10/11 test matrix)
+- **Epic #518**: #554 (Intune profile), #555 (SCCM docs)
 
 ## Recently Completed
 
-- **PR #509**: Alembic hardening + docs refresh (merged 2026-02-28)
+- **PR #556**: Windows Agent Epics #511-#513 + partial #514/#516/#518 (merged 2026-02-28)
 - **PR #510**: Windows Task Mining Agent PRD (merged 2026-02-28)
+- **PR #509**: Alembic hardening + docs refresh (merged 2026-02-28)
 
 ## Post-MVP Pending Work
 

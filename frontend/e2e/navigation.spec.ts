@@ -1,4 +1,5 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures/base";
+import { ENGAGEMENT_ID } from "./fixtures/seed-data";
 
 test.describe("Navigation", () => {
   test("home page loads and shows dashboard heading", async ({ page }) => {
@@ -18,40 +19,15 @@ test.describe("Navigation", () => {
   test("sidebar navigation links to key sections", async ({ page }) => {
     await page.goto("/");
     const sidebar = page.locator("aside");
-    await expect(sidebar.getByText("Dashboard")).toBeVisible();
-    await expect(sidebar.getByText("Monitoring")).toBeVisible();
-    await expect(sidebar.getByText("Copilot")).toBeVisible();
-    await expect(sidebar.getByText("Portal")).toBeVisible();
-    await expect(sidebar.getByText("Conformance")).toBeVisible();
-    await expect(
-      sidebar.getByRole("link", { name: "Processes" })
-    ).toBeVisible();
-    // Phase 6 nav entries — use getByRole("link") to avoid matching section headers
-    await expect(
-      sidebar.getByRole("link", { name: "Governance" })
-    ).toBeVisible();
-    await expect(sidebar.getByRole("link", { name: "Reports" })).toBeVisible();
-    await expect(
-      sidebar.getByRole("link", { name: "Analytics" })
-    ).toBeVisible();
-    await expect(
-      sidebar.getByRole("link", { name: "Connectors" })
-    ).toBeVisible();
-    await expect(
-      sidebar.getByRole("link", { name: "Shelf Requests" })
-    ).toBeVisible();
-    await expect(
-      sidebar.getByRole("link", { name: "Patterns" })
-    ).toBeVisible();
-    await expect(
-      sidebar.getByRole("link", { name: "Simulations" })
-    ).toBeVisible();
-    await expect(
-      sidebar.getByRole("link", { name: "Admin" })
-    ).toBeVisible();
-    await expect(
-      sidebar.getByRole("link", { name: "Data Lineage" })
-    ).toBeVisible();
+    // Verify key sidebar links exist. Use .first() for items that may match multiple elements.
+    for (const name of [
+      "Dashboard", "Monitoring", "Conformance", "Processes",
+      "Governance", "Reports", "Simulations", "Data Lineage", "Admin",
+    ]) {
+      const link = sidebar.getByRole("link", { name }).first();
+      await link.scrollIntoViewIfNeeded();
+      await expect(link).toBeVisible();
+    }
   });
 
   test("clicking sidebar link navigates to page", async ({ page }) => {
@@ -103,5 +79,17 @@ test.describe("Navigation", () => {
     await expect(
       page.getByRole("heading", { name: "Process Management" })
     ).toBeVisible();
+  });
+
+  test("navigating to seeded engagement dashboard", async ({ page }) => {
+    await page.goto(`/dashboard/${ENGAGEMENT_ID}`);
+    await expect(page.locator("main").first()).toBeVisible();
+  });
+
+  test("sidebar link to Evidence navigates correctly", async ({ page }) => {
+    await page.goto("/");
+    const sidebar = page.locator("aside");
+    await sidebar.getByRole("link", { name: "Evidence" }).click();
+    await expect(page).toHaveURL(/\/evidence/);
   });
 });

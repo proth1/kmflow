@@ -1007,22 +1007,26 @@ def seed_simulations() -> list:
         FinancialAssumption(
             engagement_id=ENG_ID, assumption_type=FinancialAssumptionType.COST_PER_ROLE,
             name="Loan Officer Fully-Loaded Cost", value=95000.0, unit="USD/year",
-            confidence=0.90, notes="Based on Acme HR data (2025 comp review)",
+            confidence=0.90, confidence_explanation="Based on Acme HR data (2025 comp review)",
+            notes="Based on Acme HR data (2025 comp review)",
         ),
         FinancialAssumption(
             engagement_id=ENG_ID, assumption_type=FinancialAssumptionType.TECHNOLOGY_COST,
             name="Credit Decisioning Engine License", value=180000.0, unit="USD/year",
-            confidence=0.75, notes="Vendor quote from FICO; may negotiate lower",
+            confidence=0.75, confidence_explanation="Vendor quote from FICO; may negotiate lower",
+            notes="Vendor quote from FICO; may negotiate lower",
         ),
         FinancialAssumption(
             engagement_id=ENG_ID, assumption_type=FinancialAssumptionType.VOLUME_FORECAST,
             name="Annual Loan Applications", value=45000.0, unit="applications/year",
-            confidence=0.85, notes="Based on 3-year trend with 8% YoY growth",
+            confidence=0.85, confidence_explanation="Based on 3-year trend with 8% YoY growth",
+            notes="Based on 3-year trend with 8% YoY growth",
         ),
         FinancialAssumption(
             engagement_id=ENG_ID, assumption_type=FinancialAssumptionType.IMPLEMENTATION_COST,
             name="STP Implementation Program", value=2_500_000.0, unit="USD",
-            confidence=0.60, notes="Rough estimate; requires detailed scoping",
+            confidence=0.60, confidence_explanation="Rough estimate; requires detailed scoping",
+            notes="Rough estimate; requires detailed scoping",
         ),
     ]
 

@@ -1,4 +1,4 @@
-.PHONY: help install dev up down logs health test lint migrate setup-neo4j clean
+.PHONY: help install dev up down logs health test lint migrate setup-neo4j clean seed-e2e seed-e2e-reset test-e2e test-e2e-report
 
 help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -61,6 +61,18 @@ test-cov: ## Run tests with coverage report
 
 test-frontend: ## Run frontend tests
 	cd frontend && npm test
+
+seed-e2e: ## Seed E2E test data into Docker databases
+	python -m scripts.seed_e2e
+
+seed-e2e-reset: ## Wipe and reseed E2E test data
+	python -m scripts.seed_e2e --reset
+
+test-e2e: ## Run Playwright E2E tests against Docker
+	cd frontend && npx playwright test
+
+test-e2e-report: ## Open Playwright HTML report
+	cd frontend && npx playwright show-report
 
 # ── Linting ──────────────────────────────────────────────────────
 

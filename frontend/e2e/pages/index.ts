@@ -1,0 +1,11 @@
+export { DashboardPage } from "./DashboardPage";
+export { EvidencePage } from "./EvidencePage";
+export { TOMPage } from "./TOMPage";
+export { GovernancePage } from "./GovernancePage";
+export { MonitoringPage } from "./MonitoringPage";
+export { SimulationsPage } from "./SimulationsPage";
+export { CopilotPage } from "./CopilotPage";
+export { ConformancePage } from "./ConformancePage";
+export { ProcessesPage } from "./ProcessesPage";
+export { AdminPage } from "./AdminPage";
+export { PortalPage } from "./PortalPage";

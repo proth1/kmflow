@@ -1,4 +1,5 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures/base";
+import { ENGAGEMENT_ID } from "./fixtures/seed-data";
 
 test.describe("Analytics Page", () => {
   test("analytics page loads with heading", async ({ page }) => {
@@ -32,5 +33,26 @@ test.describe("Analytics Page", () => {
     await expect(
       page.getByText("Enter an engagement ID to view metrics")
     ).toBeVisible();
+  });
+
+  test("entering seeded engagement ID loads analytics data", async ({
+    page,
+  }) => {
+    await page.goto("/analytics");
+    const input = page.getByPlaceholder(/550e8400/);
+    await input.fill(ENGAGEMENT_ID);
+    // After filling a valid engagement ID the empty-state prompt should
+    // disappear as the page attempts to fetch data.
+    await expect(
+      page.getByText("Enter an engagement ID to view metrics")
+    ).not.toBeVisible();
+  });
+
+  test("clicking Metric Definitions tab shows content", async ({ page }) => {
+    await page.goto("/analytics");
+    const tab = page.getByRole("tab", { name: "Metric Definitions" });
+    await tab.click();
+    // The tab should now carry the selected/active aria state.
+    await expect(tab).toHaveAttribute("aria-selected", "true");
   });
 });
