@@ -82,7 +82,16 @@ class ReplayTask:
 
 
 # In-memory task store (production would use Redis)
+_MAX_TASK_STORE_SIZE = 1000
 _task_store: dict[str, ReplayTask] = {}
+
+
+def _store_task(task: ReplayTask) -> None:
+    """Store a task, evicting oldest if at capacity."""
+    if len(_task_store) >= _MAX_TASK_STORE_SIZE:
+        oldest_key = next(iter(_task_store))
+        del _task_store[oldest_key]
+    _task_store[task.id] = task
 
 
 def create_single_case_task(case_id: str) -> ReplayTask:
@@ -102,7 +111,7 @@ def create_single_case_task(case_id: str) -> ReplayTask:
     # Generate sample frames (production: populated by async worker)
     task.frames = _generate_sample_frames(case_id, frame_count=20)
 
-    _task_store[task.id] = task
+    _store_task(task)
     logger.debug("Created single-case replay task %s for case %s", task.id, case_id)
     return task
 
@@ -129,7 +138,7 @@ def create_aggregate_task(
 
     task.frames = _generate_sample_frames(engagement_id, frame_count=15)
 
-    _task_store[task.id] = task
+    _store_task(task)
     logger.debug("Created aggregate replay task %s", task.id)
     return task
 
@@ -152,7 +161,7 @@ def create_variant_comparison_task(
 
     task.frames = _generate_sample_frames(f"{variant_a_id}_vs_{variant_b_id}", frame_count=10)
 
-    _task_store[task.id] = task
+    _store_task(task)
     logger.debug("Created variant comparison task %s", task.id)
     return task
 
@@ -190,16 +199,25 @@ def get_task_frames(
 
 
 def _generate_sample_frames(seed: str, frame_count: int = 10) -> list[ReplayFrame]:
-    """Generate sample replay frames for demonstration."""
+    """Generate sample replay frames for demonstration.
+
+    Args:
+        seed: Prefix for element names in generated frames.
+        frame_count: Number of frames to generate.
+    """
     frames = []
     for i in range(frame_count):
-        frames.append(ReplayFrame(
-            frame_index=i,
-            timestamp=f"2026-01-01T{i:02d}:00:00Z",
-            active_elements=[f"element_{seed}_{i}"],
-            completed_elements=[f"element_{seed}_{j}" for j in range(i)],
-            metrics={"progress": round(i / max(frame_count - 1, 1) * 100, 1)},
-        ))
+        hour = i % 24
+        day = 1 + i // 24
+        frames.append(
+            ReplayFrame(
+                frame_index=i,
+                timestamp=f"2026-01-{day:02d}T{hour:02d}:00:00Z",
+                active_elements=[f"element_{seed}_{i}"],
+                completed_elements=[f"element_{seed}_{j}" for j in range(i)],
+                metrics={"progress": round(i / max(frame_count - 1, 1) * 100, 1)},
+            )
+        )
     return frames
 
 

@@ -13,8 +13,12 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
 
+from src.api.schemas.replay import (
+    AggregateRequest,
+    SingleCaseRequest,
+    VariantComparisonRequest,
+)
 from src.core.models import User
 from src.core.permissions import require_permission
 from src.core.services.replay_service import (
@@ -28,34 +32,6 @@ from src.core.services.replay_service import (
 router = APIRouter(prefix="/api/v1/replay", tags=["replay"])
 
 
-# -- Request schemas ---
-
-
-class SingleCaseRequest(BaseModel):
-    """Request body for single-case replay."""
-
-    case_id: str
-
-
-class AggregateRequest(BaseModel):
-    """Request body for aggregate volume replay."""
-
-    engagement_id: str
-    time_range_start: str
-    time_range_end: str
-    interval_granularity: str = "daily"
-
-
-class VariantComparisonRequest(BaseModel):
-    """Request body for variant comparison replay."""
-
-    variant_a_id: str
-    variant_b_id: str
-
-
-# -- Endpoints ---
-
-
 @router.post("/single-case", status_code=status.HTTP_202_ACCEPTED)
 async def create_single_case_replay(
     body: SingleCaseRequest,
@@ -63,12 +39,12 @@ async def create_single_case_replay(
 ) -> dict[str, Any]:
     """Create a single-case timeline replay task.
 
-    Returns immediately with task_id and status=pending.
+    Returns immediately with task_id and current status.
     """
     task = create_single_case_task(body.case_id)
     return {
         "task_id": task.id,
-        "status": "pending",
+        "status": task.status,
         "replay_type": task.replay_type,
     }
 
@@ -81,13 +57,13 @@ async def create_aggregate_replay(
     """Create an aggregate volume replay task."""
     task = create_aggregate_task(
         engagement_id=body.engagement_id,
-        time_range_start=body.time_range_start,
-        time_range_end=body.time_range_end,
+        time_range_start=body.time_range_start.isoformat(),
+        time_range_end=body.time_range_end.isoformat(),
         interval_granularity=body.interval_granularity,
     )
     return {
         "task_id": task.id,
-        "status": "pending",
+        "status": task.status,
         "replay_type": task.replay_type,
     }
 
@@ -104,7 +80,7 @@ async def create_variant_comparison_replay(
     )
     return {
         "task_id": task.id,
-        "status": "pending",
+        "status": task.status,
         "replay_type": task.replay_type,
     }
 

@@ -47,7 +47,7 @@ class TestSingleCaseReplay:
         assert resp.status_code == 202
         data = resp.json()
         assert "task_id" in data
-        assert data["status"] == "pending"
+        assert data["status"] == "completed"
         assert data["replay_type"] == "single_case"
 
     def test_missing_case_id_returns_422(self) -> None:
@@ -78,6 +78,42 @@ class TestAggregateReplay:
         assert resp.status_code == 202
         data = resp.json()
         assert data["replay_type"] == "aggregate"
+
+    def test_missing_fields_returns_422(self) -> None:
+        client = _make_client()
+        resp = client.post(
+            "/api/v1/replay/aggregate",
+            json={"engagement_id": "eng-1"},
+        )
+
+        assert resp.status_code == 422
+
+    def test_invalid_granularity_returns_422(self) -> None:
+        client = _make_client()
+        resp = client.post(
+            "/api/v1/replay/aggregate",
+            json={
+                "engagement_id": "eng-1",
+                "time_range_start": "2026-01-01",
+                "time_range_end": "2026-01-31",
+                "interval_granularity": "every-5-mins",
+            },
+        )
+
+        assert resp.status_code == 422
+
+    def test_invalid_date_returns_422(self) -> None:
+        client = _make_client()
+        resp = client.post(
+            "/api/v1/replay/aggregate",
+            json={
+                "engagement_id": "eng-1",
+                "time_range_start": "not-a-date",
+                "time_range_end": "2026-01-31",
+            },
+        )
+
+        assert resp.status_code == 422
 
 
 class TestVariantComparisonReplay:
@@ -171,6 +207,21 @@ class TestReplayFrames:
 
         assert resp.status_code == 200
         data = resp.json()
+        assert data["has_more"] is False
+
+    def test_offset_beyond_total_returns_empty(self) -> None:
+        client = _make_client()
+        create_resp = client.post(
+            "/api/v1/replay/single-case",
+            json={"case_id": "CASE-001"},
+        )
+        task_id = create_resp.json()["task_id"]
+
+        resp = client.get(f"/api/v1/replay/{task_id}/frames?limit=10&offset=100")
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["frames"]) == 0
         assert data["has_more"] is False
 
     def test_unknown_task_returns_404(self) -> None:
