@@ -139,13 +139,15 @@ def _parse_template_file(path: Path) -> SchemaTemplate:
             for fm in table_data.get("fields", [])
         ]
 
-        tables.append(TableTemplate(
-            name=table_data["name"],
-            description=table_data.get("description", ""),
-            fields=fields,
-            lifecycle_states=table_data.get("lifecycle_states", {}),
-            correlation_keys=table_data.get("correlation_keys", []),
-        ))
+        tables.append(
+            TableTemplate(
+                name=table_data["name"],
+                description=table_data.get("description", ""),
+                fields=fields,
+                lifecycle_states=table_data.get("lifecycle_states", {}),
+                correlation_keys=table_data.get("correlation_keys", []),
+            )
+        )
 
     return SchemaTemplate(
         platform=data["platform"],

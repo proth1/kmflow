@@ -20,7 +20,7 @@ tables:
       Closed Lost: "closed_lost"
     fields:
       - source_field: Id
-        kmflow_attribute: case_id
+        kmflow_attribute: record_id
       - source_field: Name
         kmflow_attribute: title
       - source_field: StageName
