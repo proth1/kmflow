@@ -77,6 +77,7 @@ from src.api.routes import (
     shelf_requests,
     simulations,
     survey_claims,
+    survey_sessions,
     taskmining,
     tom,
     transfer_controls,
@@ -312,6 +313,9 @@ def create_app() -> FastAPI:
 
     # -- Survey Claim Routes (Story #322) ---
     app.include_router(survey_claims.router)
+
+    # -- Survey Session Routes (Story #319) ---
+    app.include_router(survey_sessions.router)
 
     # -- Incident Response Routes (Story #397) ---
     app.include_router(incidents.router)
