@@ -14,7 +14,7 @@ from src.api.deps import get_session
 from src.api.main import create_app
 from src.api.routes.auth import get_current_user
 from src.core.models import ProcessElement, ProcessModel, ProcessModelStatus, User, UserRole
-from src.core.models.pov import BrightnessClassification, EvidenceGrade, ProcessElementType
+from src.core.models.pov import EvidenceGrade, ProcessElementType
 from src.core.models.seed_term import SeedTerm, TermCategory, TermSource, TermStatus
 from src.core.permissions import require_engagement_access
 
@@ -74,7 +74,6 @@ def _mock_element(
     el.confidence_score = confidence
     el.evidence_count = evidence_count
     el.evidence_grade = evidence_grade
-    el.brightness_classification = BrightnessClassification.DARK
     return el
 
 
@@ -90,6 +89,7 @@ class TestSeedListCoverage:
         pov: MagicMock | None = None,
         elements: list[MagicMock] | None = None,
     ) -> AsyncMock:
+        """Coverage endpoint DB calls: 1) seed terms, 2) latest POV, 3) elements (if POV)."""
         call_count = 0
 
         async def mock_execute(query):
@@ -165,7 +165,9 @@ class TestDarkRoomBacklog:
         self,
         pov: MagicMock | None = None,
         elements: list[MagicMock] | None = None,
+        seed_terms: list[MagicMock] | None = None,
     ) -> AsyncMock:
+        """Dark room endpoint DB calls: 1) latest POV, 2) elements (filtered by threshold), 3) seed terms."""
         call_count = 0
 
         async def mock_execute(query):
@@ -176,9 +178,14 @@ class TestDarkRoomBacklog:
                 # Latest POV
                 result.scalar_one_or_none = MagicMock(return_value=pov)
             elif call_count == 2:
-                # Elements
+                # Elements (threshold-filtered in SQL)
                 mock_scalars = MagicMock()
                 mock_scalars.all = MagicMock(return_value=elements or [])
+                result.scalars = MagicMock(return_value=mock_scalars)
+            elif call_count == 3:
+                # Seed terms for cross-referencing
+                mock_scalars = MagicMock()
+                mock_scalars.all = MagicMock(return_value=seed_terms or [])
                 result.scalars = MagicMock(return_value=mock_scalars)
             return result
 
@@ -189,10 +196,10 @@ class TestDarkRoomBacklog:
     def test_returns_dark_segments_sorted_by_uplift(self) -> None:
         """Dark segments are returned sorted by estimated uplift descending."""
         pov = _mock_pov()
+        # Only pass elements that are below the threshold (SQL filters in real code)
         elements = [
             _mock_element("Task A", confidence=0.1, evidence_count=0),
             _mock_element("Task B", confidence=0.3, evidence_count=1, evidence_grade=EvidenceGrade.D),
-            _mock_element("Task C", confidence=0.8),  # Above threshold, excluded
         ]
         session = self._setup_session(pov, elements)
         client = _make_app(session)
@@ -228,10 +235,10 @@ class TestDarkRoomBacklog:
         assert len(data["segments"]) == 0
 
     def test_returns_empty_when_all_bright(self) -> None:
-        """All elements above threshold → no dark segments."""
+        """All elements above threshold → SQL returns empty set → no dark segments."""
         pov = _mock_pov()
-        elements = [_mock_element("Bright Task", confidence=0.9)]
-        session = self._setup_session(pov, elements)
+        # SQL filter means no elements returned (they're all above threshold)
+        session = self._setup_session(pov, elements=[])
         client = _make_app(session)
         resp = client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/dark-room/backlog")
         assert resp.status_code == 200
@@ -240,14 +247,28 @@ class TestDarkRoomBacklog:
     def test_custom_threshold(self) -> None:
         """Custom threshold changes which elements are dark."""
         pov = _mock_pov()
-        elements = [_mock_element("Mid Task", confidence=0.5)]
-        session = self._setup_session(pov, elements)
-        client = _make_app(session)
-        # Default threshold 0.40 → 0.5 is above, excluded
-        resp1 = client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/dark-room/backlog")
+        mid_element = _mock_element("Mid Task", confidence=0.5)
+
+        # Default threshold 0.40 → SQL returns empty (0.5 >= 0.4)
+        session1 = self._setup_session(pov, elements=[])
+        client1 = _make_app(session1)
+        resp1 = client1.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/dark-room/backlog")
         assert resp1.json()["total_dark"] == 0
-        # Custom threshold 0.60 → 0.5 is below, included
-        session2 = self._setup_session(pov, elements)
+
+        # Custom threshold 0.60 → SQL returns element (0.5 < 0.6)
+        session2 = self._setup_session(pov, elements=[mid_element])
         client2 = _make_app(session2)
         resp2 = client2.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/dark-room/backlog?threshold=0.6")
         assert resp2.json()["total_dark"] == 1
+
+    def test_related_seed_terms_populated(self) -> None:
+        """Dark segments include related seed terms matched by name."""
+        pov = _mock_pov()
+        elements = [_mock_element("Login Process", confidence=0.1, evidence_count=0)]
+        seed_terms = [_mock_seed_term("t1", "Login")]
+        session = self._setup_session(pov, elements, seed_terms)
+        client = _make_app(session)
+        resp = client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/dark-room/backlog")
+        assert resp.status_code == 200
+        seg = resp.json()["segments"][0]
+        assert "Login" in seg["related_seed_terms"]

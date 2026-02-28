@@ -9,6 +9,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
+from uuid import UUID
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.core.models import ProcessElement, ProcessModel, ProcessModelStatus
+from src.core.models.seed_term import SeedTerm, TermStatus
 
 
 @dataclass
@@ -103,7 +110,7 @@ def build_dark_room_backlog(
 
     Args:
         elements: List of element dicts with keys: id, name, element_type,
-            confidence_score, evidence_grade, evidence_count, metadata_json.
+            confidence_score, evidence_grade, evidence_count, related_seed_terms.
         dark_threshold: Confidence threshold for "dark" classification.
 
     Returns:
@@ -140,6 +147,161 @@ def build_dark_room_backlog(
     # Sort by estimated uplift descending (highest value evidence first)
     segments.sort(key=lambda s: s.estimated_uplift, reverse=True)
     return segments
+
+
+async def fetch_coverage_report(
+    session: AsyncSession,
+    engagement_id: UUID,
+) -> dict[str, Any]:
+    """Fetch and compute seed list coverage for an engagement.
+
+    Loads active seed terms, finds the latest completed POV, matches terms
+    to element names, and returns coverage statistics.
+
+    Args:
+        session: Database session.
+        engagement_id: The engagement to analyze.
+
+    Returns:
+        Dict with coverage report fields.
+    """
+    # Load active seed terms
+    terms_result = await session.execute(
+        select(SeedTerm).where(
+            SeedTerm.engagement_id == engagement_id,
+            SeedTerm.status == TermStatus.ACTIVE,
+        )
+    )
+    terms = list(terms_result.scalars().all())
+
+    term_dicts = [
+        {
+            "id": str(t.id),
+            "term": t.term,
+            "domain": t.domain,
+            "category": t.category.value if t.category else "",
+            "status": t.status.value if t.status else "active",
+        }
+        for t in terms
+    ]
+
+    # Find evidence links via element name matching against latest POV
+    latest_pov = await _get_latest_pov(session, engagement_id)
+
+    evidence_links: set[str] = set()
+    if latest_pov:
+        elements_result = await session.execute(
+            select(ProcessElement).where(ProcessElement.model_id == latest_pov.id)
+        )
+        elements = list(elements_result.scalars().all())
+        element_names_lower = {e.name.lower() for e in elements}
+
+        for t in terms:
+            if t.term.lower() in element_names_lower:
+                evidence_links.add(str(t.id))
+
+    report = compute_coverage(term_dicts, evidence_links)
+    return {
+        "total_terms": report.total_terms,
+        "covered_count": report.covered_count,
+        "uncovered_count": report.uncovered_count,
+        "coverage_percentage": report.coverage_percentage,
+        "uncovered_terms": report.uncovered_terms,
+    }
+
+
+async def fetch_dark_room_backlog(
+    session: AsyncSession,
+    engagement_id: UUID,
+    threshold: float = 0.40,
+    limit: int = 50,
+) -> dict[str, Any]:
+    """Fetch dark room backlog for an engagement.
+
+    Loads the latest completed POV, filters elements below confidence threshold
+    in SQL, populates related seed terms, and returns ranked dark segments.
+
+    Args:
+        session: Database session.
+        engagement_id: The engagement to analyze.
+        threshold: Confidence threshold for "dark" classification.
+        limit: Maximum segments to return.
+
+    Returns:
+        Dict with dark room backlog fields.
+    """
+    latest_pov = await _get_latest_pov(session, engagement_id)
+    if not latest_pov:
+        return {"engagement_id": str(engagement_id), "segments": [], "total_dark": 0}
+
+    # Push threshold filter to SQL (P-1 fix)
+    elements_result = await session.execute(
+        select(ProcessElement).where(
+            ProcessElement.model_id == latest_pov.id,
+            ProcessElement.confidence_score < threshold,
+        )
+    )
+    dark_elements = list(elements_result.scalars().all())
+
+    # Load active seed terms for cross-referencing (A-1 fix)
+    terms_result = await session.execute(
+        select(SeedTerm).where(
+            SeedTerm.engagement_id == engagement_id,
+            SeedTerm.status == TermStatus.ACTIVE,
+        )
+    )
+    seed_terms = list(terms_result.scalars().all())
+
+    element_dicts = []
+    for el in dark_elements:
+        # Find related seed terms by name matching
+        related = [
+            t.term for t in seed_terms if t.term.lower() in el.name.lower()
+        ]
+        element_dicts.append({
+            "id": str(el.id),
+            "name": el.name,
+            "element_type": el.element_type.value if el.element_type else "",
+            "confidence_score": el.confidence_score,
+            "evidence_count": el.evidence_count,
+            "evidence_grade": el.evidence_grade.value if el.evidence_grade else "U",
+            "related_seed_terms": related,
+        })
+
+    backlog = build_dark_room_backlog(element_dicts, dark_threshold=threshold)
+
+    return {
+        "engagement_id": str(engagement_id),
+        "pov_version": latest_pov.version,
+        "total_dark": len(backlog),
+        "segments": [
+            {
+                "element_id": seg.element_id,
+                "name": seg.name,
+                "element_type": seg.element_type,
+                "confidence_score": seg.confidence_score,
+                "estimated_uplift": seg.estimated_uplift,
+                "missing_knowledge_forms": seg.missing_knowledge_forms,
+                "recommended_actions": seg.recommended_actions,
+                "related_seed_terms": seg.related_seed_terms,
+            }
+            for seg in backlog[:limit]
+        ],
+    }
+
+
+async def _get_latest_pov(
+    session: AsyncSession,
+    engagement_id: UUID,
+) -> ProcessModel | None:
+    """Get the latest completed POV for an engagement."""
+    result = await session.execute(
+        select(ProcessModel)
+        .where(ProcessModel.engagement_id == engagement_id, ProcessModel.status == ProcessModelStatus.COMPLETED)
+        .order_by(ProcessModel.version.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
 
 
 def _infer_missing_knowledge(evidence_count: int, evidence_grade: str) -> list[str]:
