@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.179] - 2026-02-28
+### Added
+- Variant comparison replay: LCS alignment algorithm, divergence detection (activity/performer/one-sided), per-step cycle time deltas, divergence evidence linking, 39 tests (#342)
+
 ## [2026.02.178] - 2026-02-28
 ### Added
 - Aggregate volume replay: per-interval flow metrics (hourly/daily/weekly), bottleneck detection with configurable threshold, gateway variant distribution, heat map traceability, 36 tests (#339)
