@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
+from datetime import datetime
 from typing import Any, Literal
 
 import redis.asyncio as aioredis
@@ -34,6 +35,7 @@ from src.core.models import (
 )
 from src.core.permissions import require_permission
 from src.pov.generator import generate_pov
+from src.pov.orchestrator import TOTAL_STEPS, compute_version_diff
 from src.semantic.graph import KnowledgeGraphService
 
 logger = logging.getLogger(__name__)
@@ -182,6 +184,52 @@ class JobStatusResponse(BaseModel):
     error: str | None = None
 
 
+class ProgressResponse(BaseModel):
+    """Response for POV generation progress tracking."""
+
+    task_id: str
+    status: str
+    current_step: int
+    step_name: str
+    completion_percentage: int
+    total_steps: int = TOTAL_STEPS
+    completed_steps: list[dict[str, Any]] | None = None
+    failed_step: dict[str, Any] | None = None
+    total_duration_ms: int = 0
+
+
+class VersionSummary(BaseModel):
+    """Summary of a single POV version."""
+
+    model_id: str
+    version: int
+    status: str
+    confidence_score: float
+    element_count: int
+    generated_at: datetime | None = None
+
+
+class VersionDiffResponse(BaseModel):
+    """Version diff between two POV generations."""
+
+    added_count: int = 0
+    removed_count: int = 0
+    changed_count: int = 0
+    unchanged_count: int = 0
+    added: list[str] = []
+    removed: list[str] = []
+    changed: list[str] = []
+
+
+class VersionHistoryResponse(BaseModel):
+    """Response for version history listing."""
+
+    engagement_id: str
+    versions: list[VersionSummary]
+    total_versions: int
+    diff: VersionDiffResponse | None = None
+
+
 # -- Helpers ------------------------------------------------------------------
 
 
@@ -265,8 +313,18 @@ async def trigger_pov_generation(
     """
     job_id = uuid.uuid4().hex
 
-    # Track job as in-progress
-    await _set_job(request, job_id, {"status": "running", "result": None, "error": None})
+    # Track job as in-progress with initial progress
+    await _set_job(request, job_id, {
+        "status": "running",
+        "result": None,
+        "error": None,
+        "progress": {
+            "current_step": 0,
+            "step_name": "Evidence Aggregation",
+            "completion_percentage": 0,
+            "total_steps": 8,
+        },
+    })
 
     job_status = "failed"
     try:
@@ -297,6 +355,12 @@ async def trigger_pov_generation(
                     "stats": result.stats,
                 },
                 "error": None,
+                "progress": {
+                    "current_step": 8,
+                    "step_name": "Complete",
+                    "completion_percentage": 100,
+                    "total_steps": 8,
+                },
             }
             job_status = "completed"
         else:
@@ -306,13 +370,29 @@ async def trigger_pov_generation(
                     "model_id": str(result.process_model.id) if result.process_model else None,
                 },
                 "error": result.error,
+                "progress": {
+                    "current_step": 0,
+                    "step_name": "Failed",
+                    "completion_percentage": 0,
+                    "total_steps": 8,
+                },
             }
 
         await _set_job(request, job_id, job_data)
 
     except (ValueError, RuntimeError) as e:
         logger.exception("POV generation failed")
-        await _set_job(request, job_id, {"status": "failed", "result": None, "error": str(e)})
+        await _set_job(request, job_id, {
+            "status": "failed",
+            "result": None,
+            "error": str(e),
+            "progress": {
+                "current_step": 0,
+                "step_name": "Failed",
+                "completion_percentage": 0,
+                "total_steps": 8,
+            },
+        })
 
     return {
         "job_id": job_id,
@@ -341,6 +421,120 @@ async def get_job_status(
         "result": job.get("result"),
         "error": job.get("error"),
     }
+
+
+@router.get("/job/{job_id}/progress", response_model=ProgressResponse)
+async def get_job_progress(
+    job_id: str,
+    request: Request,
+    user: User = Depends(require_permission("pov:read")),
+) -> dict[str, Any]:
+    """Get detailed progress for a POV generation task.
+
+    Returns current step, step name, completion percentage, and per-step
+    results for monitoring the 8-step LCD algorithm pipeline.
+    """
+    job = await _get_job(request, job_id)
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job {job_id} not found",
+        )
+
+    # Extract progress fields from stored job data (set by PovGenerationWorker)
+    progress = job.get("progress", {})
+    return {
+        "task_id": job_id,
+        "status": job.get("status", "unknown"),
+        "current_step": progress.get("current_step", 0),
+        "step_name": progress.get("step_name", ""),
+        "completion_percentage": progress.get("completion_percentage", 0),
+        "total_steps": progress.get("total_steps", 8),
+        "completed_steps": progress.get("completed_steps"),
+        "failed_step": progress.get("failed_step"),
+        "total_duration_ms": progress.get("total_duration_ms", 0),
+    }
+
+
+@router.get("/engagement/{engagement_id}/versions", response_model=VersionHistoryResponse)
+async def get_version_history(
+    engagement_id: str,
+    include_diff: bool = Query(default=False, description="Include diff between latest two versions"),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("pov:read")),
+) -> dict[str, Any]:
+    """Get version history for an engagement's POV generations.
+
+    Returns all POV versions ordered by version number descending.
+    Optionally includes a diff between the latest two versions.
+    """
+    try:
+        eng_uuid = uuid.UUID(engagement_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid engagement ID format",
+        ) from None
+
+    await _check_engagement_member(session, user, eng_uuid)
+
+    # Get all versions for this engagement ordered by version desc
+    query = (
+        select(ProcessModel)
+        .where(ProcessModel.engagement_id == eng_uuid)
+        .order_by(ProcessModel.version.desc())
+    )
+    result = await session.execute(query)
+    models = list(result.scalars().all())
+
+    versions = [
+        {
+            "model_id": str(m.id),
+            "version": m.version,
+            "status": str(m.status),
+            "confidence_score": m.confidence_score,
+            "element_count": m.element_count,
+            "generated_at": m.generated_at,
+        }
+        for m in models
+    ]
+
+    response: dict[str, Any] = {
+        "engagement_id": engagement_id,
+        "versions": versions,
+        "total_versions": len(versions),
+        "diff": None,
+    }
+
+    # Optionally compute diff between latest two versions
+    if include_diff and len(models) >= 2:
+        latest = models[0]
+        previous = models[1]
+
+        # Get elements for both versions
+        latest_elements = await _get_elements_for_model(session, latest.id)
+        previous_elements = await _get_elements_for_model(session, previous.id)
+
+        diff = compute_version_diff(previous_elements, latest_elements)
+        response["diff"] = diff
+
+    return response
+
+
+async def _get_elements_for_model(
+    session: AsyncSession, model_id: uuid.UUID,
+) -> list[dict[str, Any]]:
+    """Get elements for a model as simple dicts for version comparison."""
+    result = await session.execute(
+        select(ProcessElement).where(ProcessElement.model_id == model_id)
+    )
+    return [
+        {
+            "name": e.name,
+            "confidence_score": e.confidence_score,
+        }
+        for e in result.scalars().all()
+    ]
 
 
 @router.get("/{model_id}", response_model=ProcessModelResponse)
