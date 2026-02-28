@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-16"?>
+<!--
+  Task Scheduler XML for KMFlow Agent engagement mode.
+  Starts KMFlowAgent.exe at user logon with a 30-second delay.
+  Runs as current user with least privilege (no elevation).
+
+  Registration:
+    schtasks /create /tn "KMFlow\KMFlowAgent" /xml KMFlowAgent.ScheduledTask.xml
+
+  Removal:
+    schtasks /delete /tn "KMFlow\KMFlowAgent" /f
+-->
+<Task version="1.4"
+      xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Description>KMFlow Task Mining Agent — starts automatically at user logon during engagement.</Description>
+    <Author>KMFlow Ltd</Author>
+    <URI>\KMFlow\KMFlowAgent</URI>
+  </RegistrationInfo>
+
+  <Triggers>
+    <LogonTrigger>
+      <Enabled>true</Enabled>
+      <!-- Delay 30 seconds after logon to let desktop initialize -->
+      <Delay>PT30S</Delay>
+    </LogonTrigger>
+  </Triggers>
+
+  <Principals>
+    <Principal id="Author">
+      <!-- Run as the logged-in user, not elevated -->
+      <GroupId>S-1-5-4</GroupId> <!-- NT AUTHORITY\INTERACTIVE -->
+      <RunLevel>LeastPrivilege</RunLevel>
+    </Principal>
+  </Principals>
+
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+
+    <IdleSettings>
+      <StopOnIdleEnd>false</StopOnIdleEnd>
+      <RestartOnIdle>false</RestartOnIdle>
+    </IdleSettings>
+
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>false</Hidden>
+    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+    <DisallowStartOnRemoteAppSession>false</DisallowStartOnRemoteAppSession>
+    <UseUnifiedSchedulingEngine>true</UseUnifiedSchedulingEngine>
+    <WakeToRun>false</WakeToRun>
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit> <!-- No timeout — runs until agent exits -->
+    <Priority>6</Priority> <!-- Below Normal priority to avoid impacting user work -->
+
+    <!-- Restart on failure: 3 attempts with 1-minute interval -->
+    <RestartOnFailure>
+      <Interval>PT1M</Interval>
+      <Count>3</Count>
+    </RestartOnFailure>
+  </Settings>
+
+  <Actions Context="Author">
+    <Exec>
+      <Command>"%ProgramFiles%\KMFlowAgent\KMFlowAgent.exe"</Command>
+      <WorkingDirectory>%ProgramFiles%\KMFlowAgent</WorkingDirectory>
+    </Exec>
+  </Actions>
+</Task>

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "Windows Service configuration for KMFlow Agent enterprise mode. Installed via sc.exe or NSSM. Runs as LocalService with minimal privileges.",
+
+  "service": {
+    "name": "KMFlowAgent",
+    "displayName": "KMFlow Task Mining Agent",
+    "description": "KMFlow desktop activity capture agent for process intelligence.",
+    "executablePath": "%ProgramFiles%\\KMFlowAgent\\KMFlowAgent.exe",
+    "arguments": "--service",
+    "startType": "Automatic",
+    "delayedAutoStart": true,
+    "account": "NT AUTHORITY\\LocalService",
+    "failureActions": {
+      "resetPeriod": 86400,
+      "actions": [
+        { "type": "restart", "delay": 60000 },
+        { "type": "restart", "delay": 120000 },
+        { "type": "restart", "delay": 300000 }
+      ]
+    },
+    "dependencies": ["EventLog"],
+    "recoveryEnabled": true
+  },
+
+  "installation": {
+    "createCommand": "sc.exe create KMFlowAgent binPath= \"\\\"%ProgramFiles%\\KMFlowAgent\\KMFlowAgent.exe\\\" --service\" start= delayed-auto obj= \"NT AUTHORITY\\LocalService\" DisplayName= \"KMFlow Task Mining Agent\"",
+    "descriptionCommand": "sc.exe description KMFlowAgent \"KMFlow desktop activity capture agent for process intelligence.\"",
+    "failureCommand": "sc.exe failure KMFlowAgent reset= 86400 actions= restart/60000/restart/120000/restart/300000",
+    "startCommand": "sc.exe start KMFlowAgent",
+    "stopCommand": "sc.exe stop KMFlowAgent",
+    "deleteCommand": "sc.exe delete KMFlowAgent"
+  },
+
+  "notes": {
+    "userSessions": "Enterprise mode captures per-user sessions. The service uses the Session 0 isolation model and communicates with user-session processes via named pipes.",
+    "elevation": "Service installation requires Administrator privileges. The service itself runs as LocalService.",
+    "eventLog": "Agent logs are written to the Windows Event Log under 'Application' source 'KMFlowAgent'."
+  }
+}

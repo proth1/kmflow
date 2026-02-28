@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "OMA-URI settings for Microsoft Intune App Configuration. Push these via Intune > Devices > Configuration profiles > Create > Custom.",
+
+  "profileName": "KMFlow Agent Configuration",
+  "description": "Configures KMFlow Task Mining Agent via registry policies.",
+  "platform": "Windows 10 and later",
+
+  "settings": [
+    {
+      "name": "Backend URL",
+      "description": "KMFlow backend API server URL",
+      "omaUri": "./Device/Vendor/MSFT/Policy/Config/KMFlowAgent~Policy~KMFlowAgent~KMFlowAgent_Connection/BackendUrl",
+      "dataType": "String",
+      "value": "https://api.kmflow.io",
+      "registryPath": "HKLM\\SOFTWARE\\Policies\\KMFlowAgent",
+      "registryValueName": "ServerUrl",
+      "registryValueType": "REG_SZ"
+    },
+    {
+      "name": "Engagement ID",
+      "description": "Engagement identifier for this deployment",
+      "omaUri": "./Device/Vendor/MSFT/Policy/Config/KMFlowAgent~Policy~KMFlowAgent~KMFlowAgent_Connection/EngagementId",
+      "dataType": "String",
+      "value": "",
+      "registryPath": "HKLM\\SOFTWARE\\Policies\\KMFlowAgent",
+      "registryValueName": "EngagementId",
+      "registryValueType": "REG_SZ"
+    },
+    {
+      "name": "Keystroke Capture Mode",
+      "description": "action_level (counts only) or content_level (actual keystrokes)",
+      "omaUri": "./Device/Vendor/MSFT/Policy/Config/KMFlowAgent~Policy~KMFlowAgent~KMFlowAgent_Capture/KeystrokeMode",
+      "dataType": "String",
+      "value": "action_level",
+      "registryPath": "HKLM\\SOFTWARE\\Policies\\KMFlowAgent",
+      "registryValueName": "CaptureScope",
+      "registryValueType": "REG_SZ"
+    },
+    {
+      "name": "Idle Timeout",
+      "description": "Seconds of inactivity before idle detection (60-3600)",
+      "omaUri": "./Device/Vendor/MSFT/Policy/Config/KMFlowAgent~Policy~KMFlowAgent~KMFlowAgent_Capture/IdleThreshold",
+      "dataType": "Integer",
+      "value": 300,
+      "registryPath": "HKLM\\SOFTWARE\\Policies\\KMFlowAgent",
+      "registryValueName": "IdleTimeoutSeconds",
+      "registryValueType": "REG_DWORD"
+    },
+    {
+      "name": "Application Allowlist",
+      "description": "Comma-separated list of allowed process names (empty = all allowed)",
+      "omaUri": "./Device/Vendor/MSFT/Policy/Config/KMFlowAgent~Policy~KMFlowAgent~KMFlowAgent_Capture/AppAllowlist",
+      "dataType": "String",
+      "value": "",
+      "registryPath": "HKLM\\SOFTWARE\\Policies\\KMFlowAgent",
+      "registryValueName": "Allowlist",
+      "registryValueType": "REG_SZ"
+    },
+    {
+      "name": "Agent Enabled",
+      "description": "Enable (1) or disable (0) the agent",
+      "omaUri": "./Device/Vendor/MSFT/Policy/Config/KMFlowAgent~Policy~KMFlowAgent~KMFlowAgent_Capture/AgentEnabled",
+      "dataType": "Integer",
+      "value": 1,
+      "registryPath": "HKLM\\SOFTWARE\\Policies\\KMFlowAgent",
+      "registryValueName": "Enabled",
+      "registryValueType": "REG_DWORD"
+    },
+    {
+      "name": "Require Authenticode Signature",
+      "description": "Require valid code signature at startup (1=yes, 0=no)",
+      "omaUri": "./Device/Vendor/MSFT/Policy/Config/KMFlowAgent~Policy~KMFlowAgent~KMFlowAgent_Security/RequireSignature",
+      "dataType": "Integer",
+      "value": 1,
+      "registryPath": "HKLM\\SOFTWARE\\Policies\\KMFlowAgent",
+      "registryValueName": "RequireSignature",
+      "registryValueType": "REG_DWORD"
+    }
+  ]
+}

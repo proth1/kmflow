@@ -1,0 +1,95 @@
+# Windows 10/11 Test Matrix for KMFlow Agent
+#
+# Runs the test suite across multiple Windows versions to verify
+# compatibility. Triggered on PRs with Windows agent changes.
+
+name: Windows Agent Test Matrix
+
+on:
+  pull_request:
+    paths:
+      - 'agent/windows/**'
+      - 'agent/python/**'
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  test-matrix:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest    # Windows Server 2022 (Windows 11 kernel)
+          - windows-2022      # Windows Server 2022
+          - windows-2019      # Windows Server 2019 (Windows 10 1809 kernel)
+        include:
+          - os: windows-latest
+            display_name: "Windows 11 (Server 2022 latest)"
+          - os: windows-2022
+            display_name: "Windows Server 2022"
+          - os: windows-2019
+            display_name: "Windows Server 2019 (Win 10 kernel)"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Display OS version
+        run: |
+          Write-Host "OS: ${{ matrix.display_name }}"
+          [System.Environment]::OSVersion | Format-List
+          Write-Host "Build: $([System.Environment]::OSVersion.Version.Build)"
+
+      - name: Build C# Agent
+        run: dotnet build agent/windows/src/KMFlowAgent/KMFlowAgent.csproj --configuration Debug
+
+      - name: Run C# unit tests
+        run: |
+          dotnet test agent/windows/src/KMFlowAgent.Tests/KMFlowAgent.Tests.csproj `
+            --configuration Debug `
+            --verbosity normal
+
+      - name: Run C# integration tests
+        run: |
+          dotnet test agent/windows/src/KMFlowAgent.IntegrationTests/KMFlowAgent.IntegrationTests.csproj `
+            --configuration Debug `
+            --verbosity normal
+
+      - name: Install Python dependencies
+        run: |
+          cd agent/python
+          pip install -e ".[dev]" 2>$null || pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov
+
+      - name: Run Python tests
+        run: |
+          cd agent/python
+          python -m pytest tests/ -v
+        env:
+          KMFLOW_BUFFER_KEY: "test_key_matrix_${{ matrix.os }}"
+
+      - name: Verify NativeAOT publish
+        if: matrix.os == 'windows-latest'
+        run: |
+          dotnet publish agent/windows/src/KMFlowAgent/KMFlowAgent.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained `
+            -p:PublishAot=true `
+            --output publish/
+          $size = (Get-Item publish/KMFlowAgent.exe).Length / 1MB
+          Write-Host "NativeAOT binary: $([math]::Round($size, 2)) MB"
