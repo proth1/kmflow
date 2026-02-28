@@ -21,6 +21,7 @@ from src.api.deps import get_session
 from src.core.models import User
 from src.core.models.seed_term import TermCategory, TermSource, TermStatus
 from src.core.permissions import require_engagement_access, require_permission
+from src.core.services.coverage_service import fetch_coverage_report, fetch_dark_room_backlog
 from src.core.services.seed_list_service import SeedListService
 
 logger = logging.getLogger(__name__)
@@ -176,3 +177,33 @@ async def deprecate_seed_term(
             status_code=status.HTTP_404_NOT_FOUND, detail="Seed term not found"
         )
     return result
+
+
+# ── Seed List Coverage Report (Story #367) ────────────────────────────
+
+
+@router.get("/engagements/{engagement_id}/seed-list/coverage")
+async def get_seed_list_coverage(
+    engagement_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    _user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Seed list coverage report showing covered/uncovered terms."""
+    return await fetch_coverage_report(session, engagement_id)
+
+
+# ── Dark Room Backlog (Story #367) ────────────────────────────────────
+
+
+@router.get("/engagements/{engagement_id}/dark-room/backlog")
+async def get_dark_room_backlog(
+    engagement_id: UUID,
+    threshold: float = Query(default=0.40, ge=0.0, le=1.0),
+    limit: int = Query(default=50, ge=1, le=200),
+    session: AsyncSession = Depends(get_session),
+    _user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Dark Room backlog: dark segments ranked by estimated confidence uplift."""
+    return await fetch_dark_room_backlog(session, engagement_id, threshold, limit)
