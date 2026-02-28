@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi.testclient import TestClient
@@ -165,3 +166,69 @@ class TestExclusionPromptRoute:
         assert resp.status_code == 200
         data = resp.json()
         assert data["exclusion_prompt"] == ""
+
+
+class TestEngagementAccessControl:
+    """IDOR protection tests — non-members get 403."""
+
+    @patch("src.api.routes.suggestion_feedback.get_rejection_patterns")
+    def test_non_member_gets_403_on_rejection_feedback(self, mock_patterns: MagicMock) -> None:
+        """Non-admin user who is NOT an engagement member should be denied."""
+        session = AsyncMock()
+        # Membership check returns None → not a member
+        mock_member_result = MagicMock()
+        mock_member_result.scalar_one_or_none.return_value = None
+        session.execute.return_value = mock_member_result
+
+        # Create a non-admin user
+        non_admin = MagicMock(spec=User)
+        non_admin.id = uuid.uuid4()
+        non_admin.email = "analyst@example.com"
+        non_admin.role = UserRole.PROCESS_ANALYST
+
+        app = create_app()
+        app.state.neo4j_driver = MagicMock()
+        app.state.db_session_factory = AsyncMock()
+        app.dependency_overrides[get_session] = lambda: session
+        app.dependency_overrides[get_current_user] = lambda: non_admin
+        client = TestClient(app)
+
+        resp = client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/rejection-feedback")
+        assert resp.status_code == 403
+
+    @patch("src.api.routes.suggestion_feedback.build_traceability_chain")
+    def test_non_member_gets_403_on_traceability(self, mock_chain: MagicMock) -> None:
+        """Non-admin user who is NOT an engagement member should be denied on traceability."""
+        session = AsyncMock()
+        call_count = 0
+
+        async def side_effect(*_args: Any, **_kwargs: Any) -> MagicMock:
+            nonlocal call_count
+            call_count += 1
+            result = MagicMock()
+            if call_count == 1:
+                # First call: load scenario
+                result.scalar_one_or_none.return_value = _mock_scenario()
+            else:
+                # Second call: membership check → not a member
+                result.scalar_one_or_none.return_value = None
+            return result
+
+        session.execute = AsyncMock(side_effect=side_effect)
+
+        non_admin = MagicMock(spec=User)
+        non_admin.id = uuid.uuid4()
+        non_admin.email = "analyst@example.com"
+        non_admin.role = UserRole.PROCESS_ANALYST
+
+        app = create_app()
+        app.state.neo4j_driver = MagicMock()
+        app.state.db_session_factory = AsyncMock()
+        app.dependency_overrides[get_session] = lambda: session
+        app.dependency_overrides[get_current_user] = lambda: non_admin
+        client = TestClient(app)
+
+        resp = client.get(
+            f"/api/v1/scenarios/{SCENARIO_ID}/modifications/{MODIFICATION_ID}/traceability"
+        )
+        assert resp.status_code == 403

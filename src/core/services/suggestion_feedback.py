@@ -7,7 +7,6 @@ is summarized and stored so future prompts can exclude similar ideas.
 
 from __future__ import annotations
 
-import logging
 import uuid
 from typing import Any
 from uuid import UUID
@@ -21,8 +20,6 @@ from src.core.models import (
     RejectionFeedback,
     ScenarioModification,
 )
-
-logger = logging.getLogger(__name__)
 
 
 async def record_rejection_feedback(
@@ -60,6 +57,7 @@ async def get_rejection_patterns(
         select(RejectionFeedback.suggestion_pattern_summary)
         .where(RejectionFeedback.engagement_id == engagement_id)
         .order_by(RejectionFeedback.created_at.desc())
+        .limit(50)
     )
     return list(result.scalars().all())
 

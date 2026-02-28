@@ -27,5 +27,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index("ix_rejection_feedback_engagement_id")
+    op.drop_index("ix_rejection_feedback_engagement_id", table_name="rejection_feedback")
     op.drop_table("rejection_feedback")
