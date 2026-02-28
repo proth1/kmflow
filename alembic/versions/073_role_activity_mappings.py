@@ -46,9 +46,15 @@ def upgrade() -> None:
     )
     op.create_index("ix_role_activity_mappings_engagement_id", "role_activity_mappings", ["engagement_id"])
     op.create_index("ix_role_activity_mappings_role_name", "role_activity_mappings", ["role_name"])
+    op.create_unique_constraint(
+        "uq_role_activity_mappings_engagement_role",
+        "role_activity_mappings",
+        ["engagement_id", "role_name"],
+    )
 
 
 def downgrade() -> None:
+    op.drop_constraint("uq_role_activity_mappings_engagement_role", "role_activity_mappings", type_="unique")
     op.drop_index("ix_role_activity_mappings_role_name", table_name="role_activity_mappings")
     op.drop_index("ix_role_activity_mappings_engagement_id", table_name="role_activity_mappings")
     op.drop_table("role_activity_mappings")

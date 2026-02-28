@@ -99,7 +99,10 @@ class TestGetReviewPack:
         mock_session.execute = AsyncMock(return_value=mock_result)
 
         client = _make_app(mock_session)
-        resp = client.get(f"/api/v1/validation/review-packs/{REVIEW_PACK_ID}")
+        resp = client.get(
+            f"/api/v1/validation/review-packs/{REVIEW_PACK_ID}"
+            f"?engagement_id={ENGAGEMENT_ID}"
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert data["segment_activities"] == [{"id": "act_1", "name": "Activity 1"}]
@@ -113,7 +116,25 @@ class TestGetReviewPack:
         mock_session.execute = AsyncMock(return_value=mock_result)
 
         client = _make_app(mock_session)
-        resp = client.get(f"/api/v1/validation/review-packs/{uuid.uuid4()}")
+        resp = client.get(
+            f"/api/v1/validation/review-packs/{uuid.uuid4()}"
+            f"?engagement_id={ENGAGEMENT_ID}"
+        )
+        assert resp.status_code == 404
+
+    def test_returns_404_for_wrong_engagement(self) -> None:
+        """IDOR test: pack exists but belongs to different engagement."""
+        mock_result = AsyncMock()
+        mock_result.scalar_one_or_none = MagicMock(return_value=None)
+        mock_session = AsyncMock()
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
+        wrong_engagement = uuid.uuid4()
+        client = _make_app(mock_session)
+        resp = client.get(
+            f"/api/v1/validation/review-packs/{REVIEW_PACK_ID}"
+            f"?engagement_id={wrong_engagement}"
+        )
         assert resp.status_code == 404
 
 

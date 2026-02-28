@@ -224,6 +224,7 @@ async def list_review_packs(
 @router.get("/review-packs/{review_pack_id}", response_model=ReviewPackResponse)
 async def get_review_pack(
     review_pack_id: uuid.UUID,
+    engagement_id: uuid.UUID = Query(..., description="Engagement ID for access scoping"),
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
@@ -233,7 +234,10 @@ async def get_review_pack(
     per-element confidence scores, and conflict flags.
     """
     result = await session.execute(
-        select(ReviewPack).where(ReviewPack.id == review_pack_id)
+        select(ReviewPack).where(
+            ReviewPack.id == review_pack_id,
+            ReviewPack.engagement_id == engagement_id,
+        )
     )
     pack = result.scalar_one_or_none()
     if pack is None:
@@ -336,7 +340,7 @@ class PaginatedDecisionResponse(BaseModel):
 @router.get("/decisions", response_model=PaginatedDecisionResponse)
 async def list_decisions(
     engagement_id: uuid.UUID = Query(..., description="Engagement ID"),
-    action: str | None = Query(None, description="Filter by action (confirm/correct/reject/defer)"),
+    action: ReviewerAction | None = Query(None, description="Filter by action"),
     reviewer_id: uuid.UUID | None = Query(None, description="Filter by reviewer"),
     review_pack_id: uuid.UUID | None = Query(None, description="Filter by review pack"),
     limit: int = Query(20, ge=1, le=100, description="Items per page"),
