@@ -1,6 +1,6 @@
 """BDD tests for Soroco Scout Work Graph integration (Story #326).
 
-Tests activity parsing, ProcessElement mapping with telemetric epistemic
+Tests activity parsing, Activity node mapping with telemetric epistemic
 frames, evidence record generation, and cross-source triangulation readiness.
 """
 
@@ -120,14 +120,14 @@ class TestWorkGraphExport:
         assert record["engagement_id"] == ENGAGEMENT_ID
 
 
-# --- Scenario 2: Task mining activities mapped to ProcessElement nodes ---
+# --- Scenario 2: Task mining activities mapped to Activity nodes ---
 
 
-class TestActivityToProcessElementMapping:
-    """Scenario 2: Activity → ProcessElement with telemetric frame."""
+class TestActivityToActivityNodeMapping:
+    """Scenario 2: Activity → Activity node with telemetric frame."""
 
     def test_element_has_telemetric_epistemic_frame(self) -> None:
-        """Each ProcessElement carries epistemic_frame='telemetric'."""
+        """Each Activity node carries epistemic_frame='telemetric'."""
         result = import_work_graph(
             [SAMPLE_ACTIVITY_DATA],
             graph_id=GRAPH_ID,
@@ -139,7 +139,7 @@ class TestActivityToProcessElementMapping:
         assert mapping.epistemic_frame == "telemetric"
 
     def test_element_name_from_activity_name(self) -> None:
-        """ProcessElement name comes from the activity name."""
+        """Activity node name comes from the activity name."""
         result = import_work_graph(
             [SAMPLE_ACTIVITY_DATA],
             graph_id=GRAPH_ID,
@@ -150,7 +150,7 @@ class TestActivityToProcessElementMapping:
         assert mapping.name == "Submit Invoice"
 
     def test_element_id_prefixed_with_scout(self) -> None:
-        """ProcessElement ID uses scout: prefix for namespace."""
+        """Activity node ID uses scout: prefix for namespace."""
         result = import_work_graph(
             [SAMPLE_ACTIVITY_DATA],
             graph_id=GRAPH_ID,
@@ -184,7 +184,7 @@ class TestActivityToProcessElementMapping:
         assert mapping.attributes["duration_ms"] == 300000
 
     def test_multiple_activities_create_multiple_elements(self) -> None:
-        """Each activity creates its own ProcessElement mapping."""
+        """Each activity creates its own Activity node mapping."""
         result = import_work_graph(
             [SAMPLE_ACTIVITY_DATA, SAMPLE_ACTIVITY_DATA_2],
             graph_id=GRAPH_ID,
@@ -201,19 +201,19 @@ class TestActivityToProcessElementMapping:
 
 
 class TestCrossSourceTriangulation:
-    """Scenario 3: Cross-source triangulation via HAS_EVIDENCE edges."""
+    """Scenario 3: Cross-source triangulation via SUPPORTED_BY edges."""
 
-    def test_graph_operations_include_has_evidence_edges(self) -> None:
-        """Graph operations create HAS_EVIDENCE edges for each element."""
+    def test_graph_operations_include_supported_by_edges(self) -> None:
+        """Graph operations create SUPPORTED_BY edges for each element."""
         mapper = SorocoWorkGraphMapper(engagement_id=ENGAGEMENT_ID)
         activity = ScoutActivity.from_api_response(SAMPLE_ACTIVITY_DATA, graph_id=GRAPH_ID)
         mapping = mapper.map_activity(activity)
 
         ops = mapper.build_graph_operations([mapping])
 
-        has_evidence_ops = [op for op in ops if op.get("type") == "HAS_EVIDENCE"]
-        assert len(has_evidence_ops) == 1
-        assert has_evidence_ops[0]["to_properties"]["epistemic_frame"] == "telemetric"
+        supported_by_ops = [op for op in ops if op.get("type") == "SUPPORTED_BY"]
+        assert len(supported_by_ops) == 1
+        assert supported_by_ops[0]["to_properties"]["epistemic_frame"] == "telemetric"
 
     def test_graph_operations_include_performed_by_edges(self) -> None:
         """Graph operations create PERFORMED_BY edges to user roles."""
@@ -227,8 +227,8 @@ class TestCrossSourceTriangulation:
         assert len(performed_by_ops) == 1
         assert performed_by_ops[0]["to_id"] == "role:john.doe"
 
-    def test_graph_operations_merge_process_element_node(self) -> None:
-        """Graph operations merge ProcessElement nodes with correct properties."""
+    def test_graph_operations_merge_activity_node(self) -> None:
+        """Graph operations merge Activity nodes with correct properties."""
         mapper = SorocoWorkGraphMapper(engagement_id=ENGAGEMENT_ID)
         activity = ScoutActivity.from_api_response(SAMPLE_ACTIVITY_DATA, graph_id=GRAPH_ID)
         mapping = mapper.map_activity(activity)
@@ -237,13 +237,13 @@ class TestCrossSourceTriangulation:
 
         node_ops = [op for op in ops if op.get("op") == "merge_node"]
         assert len(node_ops) == 1
-        assert node_ops[0]["label"] == "ProcessElement"
+        assert node_ops[0]["label"] == "Activity"
         assert node_ops[0]["properties"]["epistemic_frame"] == "telemetric"
         assert node_ops[0]["properties"]["engagement_id"] == ENGAGEMENT_ID
         assert node_ops[0]["properties"]["source_system"] == "soroco_scout"
 
     def test_dual_evidence_links_for_same_element(self) -> None:
-        """Two evidence sources on the same element both create HAS_EVIDENCE edges."""
+        """Two evidence sources on the same element both create SUPPORTED_BY edges."""
         mapper = SorocoWorkGraphMapper(engagement_id=ENGAGEMENT_ID)
 
         # First source: telemetric (Scout)
@@ -251,17 +251,17 @@ class TestCrossSourceTriangulation:
         mapping_telemetric = mapper.map_activity(activity)
 
         ops_telemetric = mapper.build_graph_operations([mapping_telemetric])
-        has_ev_telemetric = [op for op in ops_telemetric if op.get("type") == "HAS_EVIDENCE"]
+        supported_by_ops = [op for op in ops_telemetric if op.get("type") == "SUPPORTED_BY"]
 
         # Verify telemetric evidence link
-        assert len(has_ev_telemetric) == 1
-        assert has_ev_telemetric[0]["to_properties"]["epistemic_frame"] == "telemetric"
-        assert has_ev_telemetric[0]["to_properties"]["category"] == EVIDENCE_CATEGORY_KM4WORK
+        assert len(supported_by_ops) == 1
+        assert supported_by_ops[0]["to_properties"]["epistemic_frame"] == "telemetric"
+        assert supported_by_ops[0]["to_properties"]["category"] == EVIDENCE_CATEGORY_KM4WORK
 
         # Second source would be documentary (from document import)
-        # This test verifies the Scout side creates correct HAS_EVIDENCE
-        # that can coexist with documentary sources on the same ProcessElement
-        assert has_ev_telemetric[0]["from_id"] == "scout:act-001"
+        # This test verifies the Scout side creates correct SUPPORTED_BY
+        # that can coexist with documentary sources on the same Activity
+        assert supported_by_ops[0]["from_id"] == "scout:act-001"
 
     def test_evidence_record_epistemic_frame_set(self) -> None:
         """Evidence record carries epistemic_frame for downstream triangulation."""

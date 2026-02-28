@@ -2,8 +2,8 @@
 
 Extends the existing SorocoConnector with Work Graph API support:
 - Fetches desktop activities from ``/v1/workgraphs/{graph_id}/activities``
-- Maps Scout activities to ProcessElement nodes with ``epistemic_frame="telemetric"``
-- Creates HAS_EVIDENCE edges for cross-source triangulation readiness
+- Maps Scout activities to Activity nodes with ``epistemic_frame="telemetric"``
+- Creates SUPPORTED_BY edges for cross-source triangulation readiness
 
 Activities captured by Soroco Scout are imported as KMFlow evidence
 category 7 (KM4Work) and carry telemetric epistemic frames to distinguish
@@ -99,6 +99,7 @@ class WorkGraphImportResult:
         activities: List of imported Scout activities.
         element_mappings: ProcessElement mappings for each activity.
         evidence_records: Evidence records created (category 7).
+        graph_operations: Neo4j graph operations for node/edge merges.
         errors: Any errors encountered during import.
     """
 
@@ -107,6 +108,7 @@ class WorkGraphImportResult:
     activities: list[ScoutActivity] = field(default_factory=list)
     element_mappings: list[ProcessElementMapping] = field(default_factory=list)
     evidence_records: list[dict[str, Any]] = field(default_factory=list)
+    graph_operations: list[dict[str, Any]] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
 
     @property
@@ -123,11 +125,11 @@ class WorkGraphImportResult:
 
 
 class SorocoWorkGraphMapper:
-    """Maps Soroco Scout activities to KMFlow ProcessElement nodes.
+    """Maps Soroco Scout activities to KMFlow Activity nodes.
 
     Handles the transformation from Scout Work Graph activities to
-    ProcessElement nodes with telemetric epistemic frames and
-    PERFORMED_BY / HAS_EVIDENCE edge generation.
+    Activity nodes with telemetric epistemic frames and
+    PERFORMED_BY / SUPPORTED_BY edge generation.
     """
 
     def __init__(self, engagement_id: str) -> None:
@@ -206,9 +208,9 @@ class SorocoWorkGraphMapper:
         """Build Neo4j graph operations for the mapped elements.
 
         Generates operations to:
-        1. MERGE ProcessElement nodes with epistemic_frame="telemetric"
-        2. Create PERFORMED_BY edges to user role nodes
-        3. Create HAS_EVIDENCE edges linking elements to evidence records
+        1. MERGE Activity nodes with epistemic_frame="telemetric"
+        2. Create PERFORMED_BY edges to user Role nodes
+        3. Create SUPPORTED_BY edges linking activities to Evidence records
 
         Args:
             mappings: List of ProcessElement mappings.
@@ -219,10 +221,10 @@ class SorocoWorkGraphMapper:
         operations: list[dict[str, Any]] = []
 
         for mapping in mappings:
-            # Node operation: create/merge ProcessElement
+            # Node operation: create/merge Activity
             operations.append({
                 "op": "merge_node",
-                "label": "ProcessElement",
+                "label": "Activity",
                 "id": mapping.element_id,
                 "properties": {
                     "name": mapping.name,
@@ -248,11 +250,11 @@ class SorocoWorkGraphMapper:
                     },
                 })
 
-            # HAS_EVIDENCE edge to evidence record
+            # SUPPORTED_BY edge to evidence record
             evidence_id = f"evidence:soroco:{mapping.activity.activity_id}"
             operations.append({
                 "op": "merge_edge",
-                "type": "HAS_EVIDENCE",
+                "type": "SUPPORTED_BY",
                 "from_id": mapping.element_id,
                 "to_label": "Evidence",
                 "to_id": evidence_id,
@@ -305,9 +307,10 @@ def import_work_graph(
     mapper = SorocoWorkGraphMapper(engagement_id)
     result.element_mappings = mapper.map_activities(result.activities)
 
-    # Build evidence records
+    # Build evidence records and graph operations
     for mapping in result.element_mappings:
         result.evidence_records.append(mapper.build_evidence_record(mapping))
+    result.graph_operations = mapper.build_graph_operations(result.element_mappings)
 
     logger.info(
         "Work graph import: %d activities, %d elements from graph %s",
