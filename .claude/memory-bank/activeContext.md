@@ -6,7 +6,7 @@
 
 **MVP COMPLETE** — Platform MVP done. Now building Windows Task Mining Agent (PRD: `docs/prd/PRD_KMFlow_TaskMining_Windows.md`).
 
-- **Current version**: 2026.02.195
+- **Current version**: 2026.02.196
 - **Open issues**: ~37 Windows Agent stories (#519-#555) across 8 epics (#511-#518)
 - **Presentation**: deployed to kmflow.agentic-innovations.com via Cloudflare Pages
 

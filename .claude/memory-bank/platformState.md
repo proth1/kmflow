@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.195
+**Version**: 2026.02.196
 **Last Updated**: 2026-02-28
 
 ## Quick Stats
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.196 | 2026-02-28 | E2E infrastructure: deterministic seeding, auth fixtures, 24 specs, 148 tests, Alembic async fix (#557) |
 | 2026.02.195 | 2026-02-28 | Windows Task Mining Agent: C# capture, PII, IPC, consent, security, config — 35 files, 4,398 LOC (#556) |
 | 2026.02.194 | 2026-02-28 | Windows Task Mining Agent PRD (#510) |
 | 2026.02.193 | 2026-02-28 | Alembic hardening, CalVer doc fix, CLAUDE.md refresh, 4 ADRs, activeContext trim (#509) |

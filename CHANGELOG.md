@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.02.196] - 2026-02-28
+### Added
+- E2E test infrastructure: deterministic UUID seeding, cookie-based auth fixtures (4 roles), 24 Playwright spec files (148 tests), 11 POMs, custom fixtures, Makefile targets, Alembic async commit fix (#557)
+
 ## [2026.02.195] - 2026-02-28
 ### Added
 - Windows Task Mining Agent implementation: C# .NET 8 NativeAOT capture layer, C hook DLL with lock-free ring buffer, PII L1 filter, IPC with named pipe + TCP fallback, Python platform abstraction, DPAPI consent store with HMAC, IntegrityChecker, Registry-based AgentConfig, GitHub Actions CI (#556)
