@@ -60,11 +60,17 @@ export default function GovernancePage() {
   const health = data?.health ?? null;
 
   useEffect(() => {
+    let mounted = true;
     fetchPolicies()
-      .then(setPolicies)
+      .then((data) => {
+        if (mounted) setPolicies(data);
+      })
       .catch((err) => {
-        console.error("Failed to load policies:", err);
+        if (mounted) console.error("Failed to load policies:", err);
       });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const idError =

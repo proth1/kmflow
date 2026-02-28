@@ -14,25 +14,12 @@ export default function PortalUploadPage() {
   const engagementId = params.engagementId as string;
 
   return (
-    <main
-      style={{
-        maxWidth: "800px",
-        margin: "0 auto",
-        padding: "32px 24px",
-      }}
-    >
-      <div style={{ marginBottom: "32px" }}>
-        <h1
-          style={{
-            fontSize: "24px",
-            fontWeight: 700,
-            margin: "0 0 4px 0",
-            color: "#111827",
-          }}
-        >
+    <main className="mx-auto max-w-3xl px-6 py-8">
+      <div className="mb-8">
+        <h1 className="mb-1 text-2xl font-bold text-gray-900">
           Upload Evidence
         </h1>
-        <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>
+        <p className="text-sm text-gray-500">
           Upload documents, spreadsheets, and images for this engagement.
           Accepted formats: PDF, DOCX, XLSX, CSV, PNG, JPG (max 50MB each).
         </p>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -31,9 +31,11 @@ interface Deviation {
 
 export default function ConformanceDashboard() {
   const [referenceModels, setReferenceModels] = useState<ReferenceModel[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Upload form state
   const [uploadForm, setUploadForm] = useState({
@@ -57,18 +59,34 @@ export default function ConformanceDashboard() {
   // Load reference models on mount
   useEffect(() => {
     loadReferenceModels();
-  }, []);
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadReferenceModels = async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setModelsLoading(true);
     try {
       const response = await fetch(
-        `${API_BASE}/api/v1/conformance/reference-models`
+        `${API_BASE}/api/v1/conformance/reference-models`,
+        { signal: controller.signal }
       );
       if (!response.ok) throw new Error("Failed to load reference models");
       const data = await response.json();
-      setReferenceModels(data);
+      if (!controller.signal.aborted) {
+        setReferenceModels(data);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      if (!controller.signal.aborted) {
+        setError(err instanceof Error ? err.message : "Unknown error");
+      }
+    } finally {
+      if (!controller.signal.aborted) {
+        setModelsLoading(false);
+      }
     }
   };
 
@@ -252,7 +270,11 @@ export default function ConformanceDashboard() {
         {/* Reference Models List Section */}
         <section className="mb-6 rounded-lg bg-white p-6 shadow">
           <h2 className="mb-4 text-lg font-semibold">Reference Models</h2>
-          {referenceModels.length === 0 ? (
+          {modelsLoading ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+            </div>
+          ) : referenceModels.length === 0 ? (
             <p className="text-sm text-gray-500">
               No reference models uploaded yet
             </p>
