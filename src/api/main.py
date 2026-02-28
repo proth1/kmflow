@@ -42,6 +42,7 @@ from src.api.routes import (
     conformance,
     consent,
     consistency,
+    cost_modeling,
     copilot,
     dashboard,
     data_classification,
@@ -351,6 +352,9 @@ def create_app() -> FastAPI:
 
     # -- Financial Assumption Routes (Story #354) ---
     app.include_router(assumptions.router)
+
+    # -- Cost Modeling Routes (Story #359) ---
+    app.include_router(cost_modeling.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)
