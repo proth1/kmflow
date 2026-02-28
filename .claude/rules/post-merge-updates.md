@@ -8,12 +8,12 @@ This is enforced by the post-merge hook (`.claude/hooks/post-merge-hook.sh`).
 ### 1. Update CHANGELOG.md
 Add an entry at the top of the changelog:
 ```markdown
-## [YYYY.MM.DDD] - YYYY-MM-DD
+## [YYYY.MM.MICRO] - YYYY-MM-DD
 ### {Type}
 - {Description} (#{issue_number})
 ```
 Where:
-- `YYYY.MM.DDD` is CalVer (year.month.day-of-year)
+- `YYYY.MM.MICRO` is CalVer (year.month.sequential-build)
 - Type is one of: Added, Changed, Fixed, Removed, Security, Infrastructure
 - Description is a concise summary of the change
 - Issue number links to the GitHub Issue
@@ -51,10 +51,10 @@ Otherwise, manually add `status:done` label and close.
 
 ## CalVer Format
 KMFlow uses Calendar Versioning:
-- Format: `YYYY.MM.DDD` (e.g., `2026.02.056`)
+- Format: `YYYY.MM.MICRO` (e.g., `2026.02.192`)
 - YYYY = 4-digit year
 - MM = 2-digit month (zero-padded)
-- DDD = day of year (1-366, zero-padded to 3 digits)
+- MICRO = monotonically incrementing build number (does NOT reset across months)
 
 ## Skipping
 These updates cannot be skipped. If you encounter issues:

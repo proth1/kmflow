@@ -14,13 +14,13 @@ Each entry follows:
 
 ## 2026-02-25: CalVer Versioning
 
-**Decision**: Adopt Calendar Versioning (CalVer) format `YYYY.MM.DDD`.
+**Decision**: Adopt Calendar Versioning (CalVer) format `YYYY.MM.MICRO`.
 
 **Context**: KMFlow is a continuously deployed platform with no fixed release cycles. Semantic versioning (semver) implies API contract stability which doesn't apply to an internal platform.
 
 **Alternatives**: SemVer, date-only (YYYY-MM-DD), build numbers.
 
-**Consequences**: Version numbers are immediately meaningful (when was this deployed?). No debates about major/minor/patch bumps. Aligns with rival project's versioning scheme.
+**Consequences**: Version numbers are immediately meaningful (when was this deployed?). No debates about major/minor/patch bumps. MICRO is a monotonically incrementing build number that does NOT reset across months — ensures strict ordering (e.g., `2026.02.192` < `2026.03.193`).
 
 ---
 

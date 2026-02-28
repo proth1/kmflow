@@ -56,7 +56,7 @@ Execute the complete Software Development Lifecycle for a work item.
 
 ### Phase 7: Post-Merge Updates
 After PR is merged (triggered by post-merge hook):
-1. **Update CHANGELOG.md**: CalVer entry (YYYY.MM.DDD format)
+1. **Update CHANGELOG.md**: CalVer entry (YYYY.MM.MICRO format)
 2. **Update .current-version**: Increment version
 3. **Update platformState.md**: Recent releases table, quick stats
 4. **Update activeContext.md**: Clear current work, note completion

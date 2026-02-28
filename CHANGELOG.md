@@ -1,7 +1,7 @@
 # Changelog
 
 All notable changes to KMFlow are documented here.
-Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
+Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
 ## [2026.02.192] - 2026-02-28
 ### Changed
