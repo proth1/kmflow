@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.155
+**Version**: 2026.02.156
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.156 | 2026-02-27 | Republish cycle and version diff: CONFIRM/CORRECT/REJECT/DEFER decisions, BPMN color-coding, dark-room shrink rate, rename collision guard, 31 tests (#361) |
 | 2026.02.155 | 2026-02-27 | Validation APIs: pack detail, decision listing, reviewer routing via RoleActivityMapping, IDOR fix, unique constraint, 14 tests (#365) |
 | 2026.02.154 | 2026-02-27 | Evidence grading progression: per-version grade distributions, improvement rate with 100% cap, multi-cycle trend data, GradingSnapshot model, 19 tests (#357) |
 | 2026.02.153 | 2026-02-27 | Structured reviewer actions: CONFIRM/CORRECT/REJECT/DEFER with graph write-back, ValidationDecision model, :Assertion labels, element pack validation, 30 tests (#353) |

@@ -8,6 +8,7 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #473 merged** — Republish cycle and version diff: CONFIRM/CORRECT/REJECT/DEFER decisions, BPMN color-coding, dark-room shrink rate, rename collision guard, 31 tests (#361) (v2026.02.156)
 - **PR #472 merged** — Validation APIs: pack detail, decision listing, reviewer routing via RoleActivityMapping, IDOR fix, unique constraint, 14 tests (#365) (v2026.02.155)
 - **PR #471 merged** — Evidence grading progression: per-version grade distributions, improvement rate with 100% cap, multi-cycle trend data, GradingSnapshot model, 19 tests (#357) (v2026.02.154)
 - **PR #470 merged** — Structured reviewer actions: CONFIRM/CORRECT/REJECT/DEFER with graph write-back, ValidationDecision model, :Assertion labels, element pack validation, 30 tests (#353) (v2026.02.153)

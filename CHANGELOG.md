@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.156] - 2026-02-27
+### Added
+- Republish cycle and version diff with BPMN color-coding: apply validation decisions (CONFIRM/CORRECT/REJECT/DEFER) to produce new POV versions, structured diff with green/red/yellow color hints, dark-room shrink rate, rename collision detection, corrected fields persistence fix, 31 tests (#361)
+
 ## [2026.02.155] - 2026-02-27
 ### Added
 - Validation APIs: pack detail retrieval with engagement-scoped IDOR protection, filtered decision listing with action/reviewer/pack filters and pagination, role-based reviewer routing via RoleActivityMapping with unique constraint, migration 073, 14 tests (#365)
