@@ -44,6 +44,8 @@ from src.core.models import (
     UserRole,
 )
 from src.core.permissions import require_engagement_access, require_permission
+from src.tom.benchmarking import match_gaps_to_practices
+from src.tom.benchmarking import rank_client as _rank_client
 from src.tom.maturity_scorer import MaturityScoringService
 
 logger = logging.getLogger(__name__)
@@ -200,11 +202,13 @@ class GapList(BaseModel):
 class BestPracticeCreate(BaseModel):
     """Schema for creating a best practice."""
 
+    title: str = Field("", max_length=512)
     domain: str = Field(..., min_length=1, max_length=255)
     industry: str = Field(..., min_length=1, max_length=255)
     description: str
     source: str | None = None
     tom_dimension: TOMDimension
+    maturity_level_applicable: int | None = Field(None, ge=1, le=5)
 
 
 class BestPracticeResponse(BaseModel):
@@ -213,11 +217,13 @@ class BestPracticeResponse(BaseModel):
     model_config = {"from_attributes": True}
 
     id: UUID
+    title: str
     domain: str
     industry: str
     description: str
     source: str | None
     tom_dimension: TOMDimension
+    maturity_level_applicable: int | None
     created_at: Any
 
 
@@ -896,11 +902,13 @@ async def create_best_practice(
 ) -> BestPractice:
     """Create a best practice entry."""
     bp = BestPractice(
+        title=payload.title,
         domain=payload.domain,
         industry=payload.industry,
         description=payload.description,
         source=payload.source,
         tom_dimension=payload.tom_dimension,
+        maturity_level_applicable=payload.maturity_level_applicable,
     )
     session.add(bp)
     await session.commit()
@@ -911,6 +919,7 @@ async def create_best_practice(
 @router.get("/best-practices", response_model=BestPracticeList)
 async def list_best_practices(
     industry: str | None = None,
+    domain: str | None = None,
     dimension: TOMDimension | None = None,
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
@@ -921,6 +930,7 @@ async def list_best_practices(
 
     Args:
         industry: Filter by industry name.
+        domain: Filter by domain name.
         dimension: Filter by TOM dimension.
         limit: Max results.
         offset: Pagination offset.
@@ -931,6 +941,9 @@ async def list_best_practices(
     if industry is not None:
         query = query.where(BestPractice.industry == industry)
         count_query = count_query.where(BestPractice.industry == industry)
+    if domain is not None:
+        query = query.where(BestPractice.domain == domain)
+        count_query = count_query.where(BestPractice.domain == domain)
     if dimension is not None:
         query = query.where(BestPractice.tom_dimension == dimension)
         count_query = count_query.where(BestPractice.tom_dimension == dimension)
@@ -1051,6 +1064,197 @@ async def seed_best_practices_and_benchmarks(
 
     await session.commit()
     return {"best_practices_seeded": bp_count, "benchmarks_seeded": bm_count}
+
+
+# -- Benchmarking & Recommendations (Story #363) --------------------------------
+
+
+class PercentileRankingResponse(BaseModel):
+    """Percentile ranking of a client metric against industry benchmarks."""
+
+    metric_name: str
+    client_value: float
+    percentile: float
+    percentile_label: str
+    distribution: dict[str, float]
+
+
+class BenchmarkRankingResponse(BaseModel):
+    """Response containing one or more percentile rankings."""
+
+    engagement_id: str
+    rankings: list[PercentileRankingResponse]
+
+
+class PracticeMatchResponse(BaseModel):
+    """A best practice matched to a gap finding."""
+
+    practice_id: str
+    practice_title: str
+    practice_domain: str
+    practice_industry: str
+    gap_id: str
+    relevance_score: float
+    match_reason: str
+
+
+class GapRecommendationsResponse(BaseModel):
+    """Recommendations for a gap finding."""
+
+    gap_id: str
+    gap_dimension: str
+    recommendations: list[PracticeMatchResponse]
+
+
+@router.get("/engagements/{engagement_id}/benchmarks", response_model=BenchmarkRankingResponse)
+async def get_engagement_benchmarks(
+    engagement_id: UUID,
+    metric: str | None = None,
+    industry: str | None = None,
+    domain: str | None = None,
+    session: AsyncSession = Depends(get_session),
+    _engagement_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Compute client percentile ranking against industry benchmarks.
+
+    Args:
+        engagement_id: The engagement to rank.
+        metric: Optional metric name filter (e.g. "processing_time").
+        industry: Optional industry filter.
+        domain: Optional domain filter (unused for now, reserved for future).
+    """
+    # Load engagement to verify access (already done by require_engagement_access)
+    eng_result = await session.execute(
+        select(Engagement).where(Engagement.id == engagement_id)
+    )
+    engagement = eng_result.scalar_one_or_none()
+    if not engagement:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Engagement not found")
+
+    # Load benchmarks
+    bm_query = select(Benchmark)
+    if metric is not None:
+        bm_query = bm_query.where(Benchmark.metric_name == metric)
+    if industry is not None:
+        bm_query = bm_query.where(Benchmark.industry == industry)
+    bm_result = await session.execute(bm_query)
+    benchmarks = list(bm_result.scalars().all())
+
+    if not benchmarks:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No benchmarks found for the specified filters",
+        )
+
+    # Load engagement metrics from metadata or latest POV confidence
+    # For now, use engagement metadata_json for client metric values
+    metadata = engagement.metadata_json or {}
+    client_metrics: dict[str, float] = metadata.get("client_metrics", {})
+
+    rankings = []
+    for bm in benchmarks:
+        client_value = client_metrics.get(bm.metric_name)
+        if client_value is None:
+            continue
+        ranking = _rank_client(
+            metric_name=bm.metric_name,
+            client_value=float(client_value),
+            p25=bm.p25,
+            p50=bm.p50,
+            p75=bm.p75,
+            p90=bm.p90,
+        )
+        rankings.append({
+            "metric_name": ranking.metric_name,
+            "client_value": ranking.client_value,
+            "percentile": ranking.percentile,
+            "percentile_label": ranking.percentile_label,
+            "distribution": ranking.distribution,
+        })
+
+    return {
+        "engagement_id": str(engagement_id),
+        "rankings": rankings,
+    }
+
+
+@router.get("/gap-findings/{gap_id}/recommendations", response_model=GapRecommendationsResponse)
+async def get_gap_recommendations(
+    gap_id: UUID,
+    engagement_id: UUID = Query(...),
+    limit: int = Query(default=10, ge=1, le=50),
+    session: AsyncSession = Depends(get_session),
+    _engagement_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Get best practice recommendations for a specific gap finding.
+
+    Matches the gap to relevant best practices by domain, dimension, and keyword overlap.
+
+    Args:
+        gap_id: The gap finding to recommend practices for.
+        engagement_id: The engagement owning the gap (for IDOR protection).
+        limit: Maximum recommendations to return.
+    """
+    # Load gap with engagement scope
+    gap_result = await session.execute(
+        select(GapAnalysisResult).where(
+            GapAnalysisResult.id == gap_id,
+            GapAnalysisResult.engagement_id == engagement_id,
+        )
+    )
+    gap = gap_result.scalar_one_or_none()
+    if not gap:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Gap finding {gap_id} not found in engagement {engagement_id}",
+        )
+
+    # Load best practices pre-filtered by dimension for performance
+    bp_query = select(BestPractice)
+    if gap.dimension:
+        bp_query = bp_query.where(BestPractice.tom_dimension == gap.dimension)
+    bp_result = await session.execute(bp_query)
+    practices = list(bp_result.scalars().all())
+
+    # Build gap dict for matching
+    gap_dict = {
+        "id": str(gap.id),
+        "description": gap.rationale or "",
+        "domain": "",  # GapAnalysisResult doesn't have domain; use dimension as proxy
+        "tom_dimension": gap.dimension.value if gap.dimension else "",
+    }
+
+    # Build practice dicts for matching
+    practice_dicts = [
+        {
+            "id": str(bp.id),
+            "title": bp.title,
+            "description": bp.description,
+            "domain": bp.domain,
+            "industry": bp.industry,
+            "tom_dimension": bp.tom_dimension.value if bp.tom_dimension else "",
+        }
+        for bp in practices
+    ]
+
+    matches = match_gaps_to_practices([gap_dict], practice_dicts)
+
+    return {
+        "gap_id": str(gap.id),
+        "gap_dimension": gap.dimension.value if gap.dimension else "",
+        "recommendations": [
+            {
+                "practice_id": m.practice_id,
+                "practice_title": m.practice_title,
+                "practice_domain": m.practice_domain,
+                "practice_industry": m.practice_industry,
+                "gap_id": m.gap_id,
+                "relevance_score": m.relevance_score,
+                "match_reason": m.match_reason,
+            }
+            for m in matches[:limit]
+        ],
+    }
 
 
 # -- Alignment Engine Routes (Story #30) --------------------------------------
