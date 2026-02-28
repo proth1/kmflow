@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.160
+**Version**: 2026.02.161
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.161 | 2026-02-27 | Cost-per-role and volume forecast modeling: RoleRateAssumption/VolumeForecast, staffing/volume/quarterly/FTE computation, typed payloads, seasonal validation, 25 tests (#359) |
 | 2026.02.160 | 2026-02-27 | Financial assumption management: engagement-scoped CRUD, version history, CHECK constraint, IDOR fix, 16 tests (#354) |
 | 2026.02.159 | 2026-02-27 | Suggestion review workflow: ACCEPT/MODIFY/REJECT, ScenarioModification linkage, row-level lock, 409 Conflict, 20 tests (#379) |
 | 2026.02.158 | 2026-02-27 | Seed list coverage and dark room backlog: coverage report, uplift-ranked dark segments, evidence actions, SQL-filtered threshold, related seed terms, 26 tests (#367) |

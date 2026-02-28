@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.161] - 2026-02-27
+### Added
+- Cost-per-role and volume forecast modeling: RoleRateAssumption and VolumeForecast models, engagement-scoped CRUD, staffing/volume/quarterly/FTE-savings computation with interval arithmetic, typed TaskAssignment payloads, seasonal factor validation, unique constraint on (engagement_id, role_name), migration 078, 25 tests (#359)
+
 ## [2026.02.160] - 2026-02-27
 ### Added
 - Financial assumption management: engagement-scoped CRUD, version history audit trail, confidence explanation/range fields, CHECK constraint for source-or-explanation invariant, engagement-scoped PATCH/history (IDOR fix), efficient count query, 16 tests (#354)
