@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.176] - 2026-02-27
+### Added
+- POV generation orchestrator: PovGenerationWorker with 8-step LCD pipeline tracking, PovGenerationState with step progression/completion %, FAILED_PARTIAL preservation, compute_version_diff, 38 tests (Part of #318)
+
 ## [2026.02.175] - 2026-02-27
 ### Added
 - Async task architecture: Redis Streams-backed TaskQueue with TaskWorker ABC, consumer groups (XREADGROUP/XACK), retry logic, concurrency control via asyncio.Semaphore, TaskProgress tracking, 33 tests (#320)
