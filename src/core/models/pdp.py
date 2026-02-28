@@ -27,6 +27,11 @@ class ObligationType(enum.StrEnum):
     LOG_ENHANCED_AUDIT = "log_enhanced_audit"
     REQUIRE_MFA = "require_mfa"
     REDACT_FIELDS = "redact_fields"
+    # ABAC-specific obligations
+    MASK_FIELDS = "mask_fields"
+    SUPPRESS_COHORT = "suppress_cohort"
+    ENFORCE_FIELD_ALLOWLIST = "enforce_field_allowlist"
+    APPLY_RETENTION_LIMIT = "apply_retention_limit"
 
 
 class OperationType(enum.StrEnum):
@@ -36,6 +41,34 @@ class OperationType(enum.StrEnum):
     WRITE = "write"
     EXPORT = "export"
     DELETE = "delete"
+
+
+class PDPPolicyBundle(Base):
+    """Versioned container for a set of PDP policy rules.
+
+    Agents reference a bundle version in heartbeats so the PDP can detect
+    version drift and force re-evaluation when policies change.
+
+    Note: This is distinct from src.security.consent.models.PolicyBundle,
+    which tracks consent-related policy versions per engagement.
+    """
+
+    __tablename__ = "pdp_policy_bundles"
+    __table_args__ = (
+        Index("ix_pdp_policy_bundles_active", "is_active"),
+        Index("ix_pdp_policy_bundles_version", "version"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    version: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_active: Mapped[bool] = mapped_column(default=False, nullable=False)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    published_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<PDPPolicyBundle(id={self.id}, version={self.version}, is_active={self.is_active})>"
 
 
 class PDPPolicy(Base):
@@ -66,6 +99,46 @@ class PDPPolicy(Base):
 
     def __repr__(self) -> str:
         return f"<PDPPolicy(id={self.id}, name={self.name}, decision={self.decision})>"
+
+
+class PolicyObligation(Base):
+    """Structured obligation record linked to a specific policy rule.
+
+    Separates obligation definitions from the inline obligations_json on PDPPolicy,
+    enabling richer obligation management including enforcement_point tracking.
+
+    conditions_json ABAC attributes supported:
+      - department: str — e.g. "finance", "hr"
+      - cost_center: str — e.g. "CC-1001"
+      - data_residency: str — e.g. "EU", "US"
+      - cohort_size: int — minimum cohort for aggregated data
+      - evidence_type: str — e.g. "interview", "document"
+      - identity_posture: str — e.g. "managed", "unmanaged"
+      - export_mode: str — e.g. "csv", "pdf"
+    """
+
+    __tablename__ = "policy_obligations"
+    __table_args__ = (
+        Index("ix_policy_obligations_policy_id", "policy_id"),
+        Index("ix_policy_obligations_type", "obligation_type"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    policy_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("pdp_policies.id", ondelete="CASCADE"), nullable=False
+    )
+    obligation_type: Mapped[ObligationType] = mapped_column(
+        Enum(ObligationType, values_callable=lambda e: [x.value for x in e]),
+        nullable=False,
+    )
+    # Parameters for the obligation handler: {"fields": ["ssn", "dob"], "min_cohort": 5}
+    parameters: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # Where enforcement occurs: "response", "request", "export"
+    enforcement_point: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<PolicyObligation(id={self.id}, type={self.obligation_type}, policy_id={self.policy_id})>"
 
 
 class PDPAuditEntry(Base):

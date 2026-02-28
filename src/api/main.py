@@ -101,6 +101,9 @@ from src.api.routes import (
 from src.api.routes import (
     auth as auth_routes,
 )
+from src.api.routes import (
+    correlation as correlation_routes,
+)
 from src.api.routes.auth import limiter
 from src.api.version import API_VERSION
 from src.core.config import get_settings
@@ -383,6 +386,9 @@ def create_app() -> FastAPI:
 
     # -- Replay API Routes (Story #345) ---
     app.include_router(replay.router)
+
+    # -- Correlation Engine Routes ---
+    app.include_router(correlation_routes.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)

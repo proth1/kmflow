@@ -243,6 +243,58 @@ node_types:
       - duration_seconds
       - event_count
 
+  SwitchingTrace:
+    description: A sequence of application switches observed during task mining, used for friction analysis.
+    extractable: false
+    required_properties:
+      - name
+      - engagement_id
+    optional_properties:
+      - friction_score
+      - is_ping_pong
+      - total_duration_ms
+      - app_count
+
+  VisualContextEvent:
+    description: A visual context event captured from the desktop agent for screen state classification.
+    extractable: false
+    required_properties:
+      - name
+      - engagement_id
+    optional_properties:
+      - screen_state_class
+      - confidence
+      - trigger_reason
+      - dwell_ms
+
+  ScreenState:
+    description: A screen state classification category (queue, search, data_entry, review, error, etc.).
+    extractable: false
+    required_properties:
+      - name
+      - engagement_id
+      - screen_state_class
+
+  Session:
+    description: >
+      A task mining capture session stub. One node per unique session_id,
+      created during VCE graph ingestion to anchor CAPTURED_IN edges.
+    extractable: false
+    required_properties:
+      - name
+      - engagement_id
+      - session_id
+
+  CaseLink:
+    description: A correlation link between an endpoint event and a business case.
+    extractable: false
+    required_properties:
+      - name
+      - engagement_id
+    optional_properties:
+      - method
+      - confidence
+
 # ---------------------------------------------------------------------------
 # Relationship Types
 # ---------------------------------------------------------------------------
@@ -344,6 +396,9 @@ relationship_types:
     valid_to:
       - Activity
       - Decision
+    optional_properties:
+      - duration_ms
+      - gap_ms
 
   OWNED_BY:
     description: An activity or process is owned/performed by a role.
@@ -542,6 +597,72 @@ relationship_types:
       - BusinessRule
     optional_properties:
       - merged_from
+
+  # -------------------------------------------------------------------------
+  # WGI Alignment: Switching, VCE, Correlation, and Graph Enhancement Edges
+  # -------------------------------------------------------------------------
+  OBSERVED_IN:
+    description: A switching trace or VCE was observed in a specific session.
+    valid_from:
+      - SwitchingTrace
+      - VisualContextEvent
+    valid_to:
+      - Application
+
+  INVOLVES:
+    description: A switching trace involves a specific application.
+    valid_from:
+      - SwitchingTrace
+    valid_to:
+      - Application
+
+  INDICATES_FRICTION:
+    description: A switching trace indicates friction between two applications (rapid switching, ping-pong).
+    valid_from:
+      - SwitchingTrace
+    valid_to:
+      - Application
+
+  CLASSIFIED_AS:
+    description: A VCE is classified as a specific screen state.
+    valid_from:
+      - VisualContextEvent
+    valid_to:
+      - ScreenState
+
+  OBSERVED_DURING:
+    description: A VCE was observed during use of a specific application.
+    valid_from:
+      - VisualContextEvent
+    valid_to:
+      - Application
+
+  CAPTURED_IN:
+    description: A VCE was captured within a specific task mining session.
+    valid_from:
+      - VisualContextEvent
+    valid_to:
+      - Session
+
+  CASE_HAS_EVENT:
+    description: A business case contains a canonical activity event, linked by the correlation engine.
+    valid_from:
+      - Process
+    valid_to:
+      - Activity
+    optional_properties:
+      - link_method
+      - link_confidence
+
+  EVENT_MAPS_TO_ACTIVITY:
+    description: A canonical event maps to a documented process activity.
+    valid_from:
+      - UserAction
+    valid_to:
+      - Activity
+    optional_properties:
+      - confidence
+      - mapping_source
 
 # ---------------------------------------------------------------------------
 # Evidence Categories (mirrors EvidenceCategory enum for reference)

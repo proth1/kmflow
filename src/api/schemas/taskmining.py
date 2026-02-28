@@ -234,3 +234,180 @@ class DashboardStats(BaseModel):
     quarantine_pending: int
     events_last_24h: int
     app_usage: list[dict[str, Any]]
+
+
+# ---------------------------------------------------------------------------
+# Visual Context Events (VCE)
+# ---------------------------------------------------------------------------
+
+
+class VCEEventPayload(BaseModel):
+    """A single VCE record sent from the agent."""
+
+    engagement_id: UUID
+    session_id: UUID | None = None
+    agent_id: UUID | None = None
+    timestamp: datetime
+    screen_state_class: str = Field(..., max_length=50)
+    system_guess: str | None = Field(None, max_length=255)
+    module_guess: str | None = Field(None, max_length=255)
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    trigger_reason: str = Field(..., max_length=50)
+    sensitivity_flags: list[str] | None = None
+    application_name: str = Field(..., min_length=1, max_length=512)
+    window_title_redacted: str | None = Field(None, max_length=512)
+    dwell_ms: int = Field(..., ge=0)
+    interaction_intensity: float | None = None
+    snapshot_ref: str | None = Field(None, max_length=1024)
+    ocr_text_redacted: str | None = None
+    classification_method: str | None = Field(None, max_length=50)
+
+
+class VCEBatchRequest(BaseModel):
+    """Batch of VCE events from an agent."""
+
+    agent_id: UUID
+    events: list[VCEEventPayload] = Field(..., min_length=1, max_length=500)
+
+
+class VCEBatchResponse(BaseModel):
+    accepted: int
+    rejected: int
+
+
+class VCEResponse(BaseModel):
+    id: str
+    engagement_id: str
+    session_id: str | None = None
+    agent_id: str | None = None
+    timestamp: str
+    screen_state_class: str
+    system_guess: str | None = None
+    module_guess: str | None = None
+    confidence: float
+    trigger_reason: str
+    sensitivity_flags: list[str] | None = None
+    application_name: str
+    window_title_redacted: str | None = None
+    dwell_ms: int
+    interaction_intensity: float | None = None
+    snapshot_ref: str | None = None
+    ocr_text_redacted: str | None = None
+    classification_method: str | None = None
+    created_at: str
+
+
+class VCEListResponse(BaseModel):
+    items: list[VCEResponse]
+    total: int
+
+
+class VCEDistributionEntry(BaseModel):
+    screen_state_class: str
+    count: int
+    percentage: float
+
+
+class VCEDistributionResponse(BaseModel):
+    distributions: list[VCEDistributionEntry]
+    total: int
+
+
+class VCETriggerSummaryEntry(BaseModel):
+    trigger_reason: str
+    count: int
+    avg_confidence: float | None
+
+
+class VCETriggerSummaryResponse(BaseModel):
+    triggers: list[VCETriggerSummaryEntry]
+
+
+class VCEDwellStatEntry(BaseModel):
+    avg: float | None
+    median: float | None
+    p95: float | None
+    count: int | None
+
+
+class VCEDwellPerAppEntry(VCEDwellStatEntry):
+    application_name: str
+
+
+class VCEDwellPerClassEntry(VCEDwellStatEntry):
+    screen_state_class: str
+
+
+class VCEDwellAnalysisResponse(BaseModel):
+    per_app: list[VCEDwellPerAppEntry]
+    per_class: list[VCEDwellPerClassEntry]
+
+
+# ---------------------------------------------------------------------------
+# Switching Sequences
+# ---------------------------------------------------------------------------
+
+
+class SwitchingTraceResponse(BaseModel):
+    id: str
+    engagement_id: str
+    session_id: str | None = None
+    role_id: str | None = None
+    trace_sequence: list[str]
+    dwell_durations: list[int]
+    total_duration_ms: int
+    friction_score: float
+    is_ping_pong: bool
+    ping_pong_count: int | None = None
+    app_count: int
+    started_at: str
+    ended_at: str
+    created_at: str
+
+
+class SwitchingTraceListResponse(BaseModel):
+    items: list[SwitchingTraceResponse]
+    total: int
+
+
+class TransitionMatrixResponse(BaseModel):
+    id: str
+    engagement_id: str
+    role_id: str | None = None
+    period_start: str
+    period_end: str
+    matrix_data: dict[str, Any]
+    total_transitions: int
+    unique_apps: int
+    top_transitions: list[Any] | None = None
+    created_at: str
+
+
+class HighFrictionTraceEntry(BaseModel):
+    id: str
+    friction_score: float
+    app_count: int
+    is_ping_pong: bool
+    total_duration_ms: int
+
+
+class PingPongPairEntry(BaseModel):
+    pair: str
+    trace_count: int
+
+
+class FrictionAnalysisResponse(BaseModel):
+    avg_friction_score: float
+    high_friction_traces: list[HighFrictionTraceEntry]
+    top_ping_pong_pairs: list[PingPongPairEntry]
+    total_traces_analyzed: int
+
+
+class AssembleSwitchingRequest(BaseModel):
+    engagement_id: UUID
+    session_id: UUID | None = None
+
+
+class AssembleSwitchingResponse(BaseModel):
+    traces_created: int
+    status: str

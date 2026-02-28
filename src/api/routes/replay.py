@@ -115,3 +115,59 @@ async def get_replay_frames(
             detail=f"Replay task not found: {task_id}",
         )
     return result
+
+
+@router.get("/{task_id}/heatmap")
+async def get_replay_heatmap(
+    task_id: str,
+    user: User = Depends(require_permission("engagement:read")),
+) -> dict[str, Any]:
+    """Get heatmap density data for a completed aggregate replay.
+
+    Returns per-activity density values for heatmap overlay rendering.
+    """
+    from src.core.services.aggregate_replay import compute_heatmap_density
+
+    task = get_task(task_id)
+    if task is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Replay task not found: {task_id}",
+        )
+
+    if not hasattr(task, "events"):
+        return {"task_id": task_id, "densities": []}
+
+    densities = compute_heatmap_density(getattr(task, "events", []))
+    return {
+        "task_id": task_id,
+        "densities": [d.to_dict() for d in densities],
+    }
+
+
+@router.get("/{task_id}/drilldown/{activity_name}")
+async def get_replay_drilldown(
+    task_id: str,
+    activity_name: str,
+    user: User = Depends(require_permission("engagement:read")),
+) -> dict[str, Any]:
+    """Drill down from aggregate replay to individual case details.
+
+    Returns case-level summaries for a specific activity.
+    """
+    from src.core.services.aggregate_replay import get_drilldown_cases
+
+    task = get_task(task_id)
+    if task is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Replay task not found: {task_id}",
+        )
+
+    cases = get_drilldown_cases(getattr(task, "events", []), activity_name)
+    return {
+        "task_id": task_id,
+        "activity_name": activity_name,
+        "cases": cases,
+        "total_cases": len(cases),
+    }

@@ -400,3 +400,109 @@ def generate_aggregate_replay(
     )
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# Heatmap density and drill-down support
+# ---------------------------------------------------------------------------
+
+@dataclass
+class HeatmapDensity:
+    """Density data per activity node for heatmap overlay.
+
+    Attributes:
+        activity_name: Activity name.
+        total_events: Total events across all intervals.
+        density: Normalized density (0.0-1.0) relative to max activity.
+        avg_dwell_ms: Average time cases spend at this activity.
+        case_ids: Unique cases that touched this activity.
+    """
+
+    activity_name: str
+    total_events: int = 0
+    density: float = 0.0
+    avg_dwell_ms: int = 0
+    case_ids: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "activity_name": self.activity_name,
+            "total_events": self.total_events,
+            "density": round(self.density, 4),
+            "avg_dwell_ms": self.avg_dwell_ms,
+            "unique_cases": len(self.case_ids),
+        }
+
+
+def compute_heatmap_density(
+    events: list[dict[str, Any]],
+) -> list[HeatmapDensity]:
+    """Compute density per activity node for heatmap overlay.
+
+    Density is normalized to [0.0, 1.0] where 1.0 is the most
+    frequently visited activity.
+
+    Args:
+        events: Canonical activity events.
+
+    Returns:
+        List of HeatmapDensity per activity, sorted by density descending.
+    """
+    activity_events: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for event in events:
+        activity = event.get("activity_name", "")
+        activity_events[activity].append(event)
+
+    if not activity_events:
+        return []
+
+    max_count = max(len(evts) for evts in activity_events.values())
+
+    densities: list[HeatmapDensity] = []
+    for activity, evts in sorted(activity_events.items()):
+        case_ids = sorted({e.get("case_id", "") for e in evts})
+        densities.append(
+            HeatmapDensity(
+                activity_name=activity,
+                total_events=len(evts),
+                density=len(evts) / max_count if max_count > 0 else 0.0,
+                case_ids=case_ids,
+            )
+        )
+
+    densities.sort(key=lambda d: d.density, reverse=True)
+    return densities
+
+
+def get_drilldown_cases(
+    events: list[dict[str, Any]],
+    activity_name: str,
+) -> list[dict[str, Any]]:
+    """Get individual case details for drill-down from aggregate to single-case.
+
+    Args:
+        events: Canonical activity events.
+        activity_name: Activity to drill into.
+
+    Returns:
+        List of case summaries for the specified activity.
+    """
+    matching = [e for e in events if e.get("activity_name") == activity_name]
+
+    cases: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for event in matching:
+        cases[event.get("case_id", "")].append(event)
+
+    return [
+        {
+            "case_id": case_id,
+            "event_count": len(case_events),
+            "first_occurrence": min(
+                str(e.get("timestamp_utc", "")) for e in case_events
+            ),
+            "last_occurrence": max(
+                str(e.get("timestamp_utc", "")) for e in case_events
+            ),
+        }
+        for case_id, case_events in sorted(cases.items())
+    ]

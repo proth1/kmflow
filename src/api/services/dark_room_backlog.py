@@ -153,6 +153,80 @@ class DarkRoomBacklogService:
             for r in records
         ]
 
+    async def get_uncertainty_queue(
+        self,
+        engagement_id: str,
+        *,
+        min_impact: float = 0.0,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """Get a prioritized uncertainty backlog queue.
+
+        Returns items ranked by estimated impact — the product of
+        confidence gap and process criticality. Higher impact items
+        should be investigated first by SMEs.
+
+        Args:
+            engagement_id: Engagement to analyze.
+            min_impact: Minimum impact score filter.
+            limit: Page size.
+            offset: Page offset.
+
+        Returns:
+            Dict with prioritized uncertainty items.
+        """
+        dark_result = await self.get_dark_segments(engagement_id, limit=1000)
+        dark_items = dark_result.get("items", [])
+
+        # Score each item by impact: uplift potential × missing form count
+        uncertainty_items: list[dict[str, Any]] = []
+        for item in dark_items:
+            missing_count = item.get("missing_form_count", 0)
+            uplift = item.get("estimated_confidence_uplift", 0.0)
+            current_conf = item.get("current_confidence", 0.0)
+
+            # Impact: weighted by how Dark the segment is and how many forms are missing
+            impact_score = round(uplift * (1.0 - current_conf) * missing_count / 9, 4)
+
+            if impact_score < min_impact:
+                continue
+
+            # Determine recommended action based on what's missing
+            missing_forms = item.get("missing_knowledge_forms", [])
+            if not missing_forms:
+                recommended_action = "review_existing_evidence"
+            elif any(f.get("form_number") == 1 for f in missing_forms):
+                recommended_action = "verify_activity_exists"
+            elif any(f.get("form_number") in (5, 7) for f in missing_forms):
+                recommended_action = "collect_governance_evidence"
+            else:
+                recommended_action = "schedule_sme_interview"
+
+            uncertainty_items.append({
+                **item,
+                "impact_score": impact_score,
+                "recommended_action": recommended_action,
+                "priority_rank": 0,  # Set after sorting
+            })
+
+        # Sort by impact descending
+        uncertainty_items.sort(key=lambda x: x["impact_score"], reverse=True)
+
+        # Assign priority ranks
+        for rank, item in enumerate(uncertainty_items, 1):
+            item["priority_rank"] = rank
+
+        total = len(uncertainty_items)
+        paginated = uncertainty_items[offset : offset + limit]
+
+        return {
+            "engagement_id": engagement_id,
+            "total_count": total,
+            "items": paginated,
+            "min_impact_filter": min_impact,
+        }
+
     async def _compute_form_coverage(
         self, engagement_id: str, activity_ids: list[str]
     ) -> dict[str, set[KnowledgeForm]]:

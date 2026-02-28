@@ -12,12 +12,20 @@
 
 ## Current Focus
 
-No active work items. MVP complete.
+**WGI Platform Alignment** — All implementation complete (uncommitted). 12 GitHub epic issues created (#563-#574).
+
+### WGI Work Completed (uncommitted on feature/560-fix-knowledge-graph-edge-ids)
+- **Part A**: PRDs renamed to WGI terminology, 5 DOCX sources archived, VCE/Switching sections added
+- **Part B**: Switching Sequences backend (models, service, routes, graph ingest, worker, migration 080, tests). VCE full pipeline — macOS/Windows capture managers, Python classifier/OCR/redactor/trigger engine, IPC integration, backend processor/analytics, routes, graph ingest, migration 081, tests
+- **Part C**: Correlation Engine (deterministic + assisted linkage, role association, diagnostics, routes, migration 082, tests). PDP ABAC (8 attributes, obligation enforcer, PEP middleware, policy bundles, migration 083, 73 tests)
+- **Part D**: Agent runtime connector, schema drift, watermark management, pgvector search_similar(), BPMN auto-gen, evidence quality scorecards, heatmap density, drilldown, survey consensus, uncertainty queue, validation decision fields
+- **Epics**: #563-#574 created in GitHub
 
 ## Recently Completed
 
-- **PR #561**: Disable Next.js dev indicator overlay (#561) — merged 2026-02-28
+- **WGI Platform Alignment**: Full gap closure — 26 new files, 35 modified files, ~5,200+ lines added, 4 migrations
 - **PR #562**: Fix Knowledge Graph empty edge IDs crashing Cytoscape rendering (#560) — merged 2026-02-28
+- **PR #561**: Disable Next.js dev indicator overlay (#561) — merged 2026-02-28
 
 ### Completed Epics (All 8)
 - **Epic #511** (Capture Layer): InputMonitor, AppSwitchMonitor, WindowTitleCapture, IdleDetector, CaptureStateManager, HookDll
@@ -76,5 +84,3 @@ The project was built over February 2026 in a rapid sprint:
 - **CDD workflow**: Evidence posted as GitHub Issue comments for traceability
 
 ---
-> SESSION END WARNING (2026-02-28T16:40:20Z): activeContext.md was NOT updated during this session.
-> Branch: feature/560-fix-knowledge-graph-edge-ids, Uncommitted: 14
