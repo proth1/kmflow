@@ -1,7 +1,14 @@
 """XES (eXtensible Event Stream) importer (Story #332).
 
-Parses IEEE XES (1849-2016) event log files into KMFlow's
-CanonicalActivityEvent format using streaming XML parsing.
+Parses IEEE XES (1849-2016) event log files into ``ParsedEvent``
+objects using streaming XML parsing. ``ParsedEvent`` is a
+pre-canonicalization intermediate that preserves XES-specific
+fields (e.g. ``lifecycle_phase``) before conversion to
+``CanonicalActivityEvent`` in the integration pipeline.
+
+Uses ``defusedxml`` for XXE and entity-expansion protection since
+XES files are untrusted external artifacts.
+
 Supports plain .xes and .xes.gz compressed formats.
 
 Standard XES extensions mapped:
@@ -9,6 +16,7 @@ Standard XES extensions mapped:
 - lifecycle:transition → lifecycle_phase
 - time:timestamp → timestamp
 - org:resource → actor
+- org:group → resource
 """
 
 from __future__ import annotations
@@ -19,14 +27,13 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import IO, Any
-from xml.etree.ElementTree import iterparse
+from xml.etree.ElementTree import ParseError
+
+from defusedxml.ElementTree import iterparse
 
 logger = logging.getLogger(__name__)
 
-# XES namespace
-XES_NS = "http://www.xes-standard.org/"
-
-# Standard attribute key mappings (XES key → CanonicalActivityEvent field)
+# Standard attribute key mappings (XES key → ParsedEvent field)
 _STANDARD_MAPPINGS: dict[str, str] = {
     "concept:name": "activity_name",
     "lifecycle:transition": "lifecycle_phase",
@@ -134,55 +141,61 @@ def parse_xes_stream(
     current_event: ParsedEvent | None = None
     in_event = False
 
-    context = iterparse(source, events=("start", "end"))
+    try:
+        context = iterparse(source, events=("start", "end"))
 
-    for xml_event, elem in context:
-        tag = elem.tag
-        # Strip namespace
-        if "}" in tag:
-            tag = tag.split("}")[1]
+        for xml_event, elem in context:
+            tag = elem.tag
+            # Strip namespace
+            if "}" in tag:
+                tag = tag.split("}")[1]
 
-        if xml_event == "start":
-            if tag == "trace":
-                current_trace_case_id = ""
-                result.total_traces += 1
-            elif tag == "event":
-                in_event = True
-                current_event = ParsedEvent(case_id=current_trace_case_id)
+            if xml_event == "start":
+                if tag == "trace":
+                    current_trace_case_id = ""
+                    result.total_traces += 1
+                elif tag == "event":
+                    in_event = True
+                    current_event = ParsedEvent(case_id=current_trace_case_id)
 
-        elif xml_event == "end":
-            if tag == "trace":
-                current_trace_case_id = ""
+            elif xml_event == "end":
+                if tag == "trace":
+                    current_trace_case_id = ""
 
-            elif tag == "event" and current_event is not None:
-                in_event = False
-                result.total_events += 1
-                current_batch.append(current_event)
+                elif tag == "event" and current_event is not None:
+                    in_event = False
+                    result.total_events += 1
+                    current_batch.append(current_event)
 
-                if len(current_batch) >= batch_size:
-                    all_batches.append(current_batch)
-                    result.batches_committed += 1
-                    current_batch = []
+                    if len(current_batch) >= batch_size:
+                        all_batches.append(current_batch)
+                        result.batches_committed += 1
+                        current_batch = []
 
-                current_event = None
-                # Free memory for processed elements
-                elem.clear()
+                    current_event = None
+                    # Free memory for processed elements
+                    elem.clear()
 
-            elif tag in ("string", "date", "int", "float", "boolean"):
-                key, value = _extract_attribute_value(elem)
+                elif tag in ("string", "date", "int", "float", "boolean"):
+                    key, value = _extract_attribute_value(elem)
 
-                if in_event and current_event is not None:
-                    # Map standard XES attributes
-                    mapped = _STANDARD_MAPPINGS.get(key)
-                    if mapped:
-                        setattr(current_event, mapped, str(value))
-                    else:
-                        current_event.extended_attributes[key] = value
-                elif not in_event and key == "concept:name":
-                    # Trace-level concept:name = case ID
-                    current_trace_case_id = str(value)
+                    if in_event and current_event is not None:
+                        # Map standard XES attributes
+                        mapped = _STANDARD_MAPPINGS.get(key)
+                        if mapped:
+                            setattr(current_event, mapped, str(value))
+                        else:
+                            current_event.extended_attributes[key] = value
+                    elif not in_event and key == "concept:name":
+                        # Trace-level concept:name = case ID
+                        current_trace_case_id = str(value)
 
-                elem.clear()
+                    elem.clear()
+
+    except ParseError as exc:
+        result.errors.append(f"XML parse error: {exc}")
+        logger.error("XES parse failed: %s", exc)
+        return all_batches, result
 
     # Flush remaining events
     if current_batch:

@@ -98,6 +98,26 @@ class TestStandardExtensionMapping:
         assert events[3].actor == "Charlie"
         assert events[4].actor == "Diana"
 
+    def test_org_group_maps_to_resource(self) -> None:
+        """org:group maps to resource."""
+        xml = b"""<?xml version="1.0"?>
+        <log xmlns="http://www.xes-standard.org/">
+          <trace>
+            <string key="concept:name" value="C1"/>
+            <event>
+              <string key="concept:name" value="Task A"/>
+              <string key="org:resource" value="Alice"/>
+              <string key="org:group" value="Engineering"/>
+            </event>
+          </trace>
+        </log>"""
+        source = io.BytesIO(xml)
+        batches, _ = parse_xes_stream(source)
+        events = flatten_batches(batches)
+
+        assert events[0].actor == "Alice"
+        assert events[0].resource == "Engineering"
+
     def test_non_standard_attributes_in_extended(self) -> None:
         """Non-standard attributes stored in extended_attributes."""
         batches, _ = parse_xes_file(SAMPLE_XES)
@@ -331,3 +351,12 @@ class TestEdgeCases:
         assert events[0].case_id == "T1"
         assert events[1].case_id == "T2"
         assert events[2].case_id == "T3"
+
+    def test_malformed_xml_returns_error(self) -> None:
+        """Malformed XML returns error in ImportResult, not an exception."""
+        source = io.BytesIO(b"<not valid xml!!!!!")
+        batches, result = parse_xes_stream(source)
+
+        assert not result.success
+        assert len(result.errors) == 1
+        assert "XML parse error" in result.errors[0]
