@@ -28,7 +28,7 @@ class AlertType:
 
 
 class Severity:
-    """String constants for severity levels (matches AlertSeverity StrEnum)."""
+    """Severity ranking utilities. Values match AlertSeverity StrEnum in src.core.models.monitoring."""
 
     CRITICAL = "critical"
     HIGH = "high"
