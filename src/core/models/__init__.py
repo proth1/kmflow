@@ -128,6 +128,7 @@ from src.core.models.raci import (
     RACICell,
     RACIStatus,
 )
+from src.core.models.role_activity_mapping import RoleActivityMapping
 from src.core.models.seed_term import (
     SeedTerm,
     TermCategory,
@@ -312,6 +313,8 @@ __all__ = [
     "RACIAssignment",
     "RACICell",
     "RACIStatus",
+    # role_activity_mapping
+    "RoleActivityMapping",
     # pattern
     "PatternAccessRule",
     "PatternCategory",
