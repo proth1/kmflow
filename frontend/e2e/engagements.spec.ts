@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures/base";
-import { ENGAGEMENT_ID, ENGAGEMENT } from "./fixtures/seed-data";
+import { ENGAGEMENT_ID, ENGAGEMENT, USERS } from "./fixtures/seed-data";
 
 const BACKEND = process.env.E2E_BACKEND_URL || "http://localhost:8000";
 
@@ -24,7 +24,7 @@ test.describe("Engagements", () => {
   }) => {
     // Login to get auth cookies for API calls
     const loginResponse = await request.post(`${BACKEND}/api/v1/auth/login`, {
-      data: { email: "admin@acme-demo.com", password: "demo" },
+      data: { email: USERS.admin.email, password: USERS.admin.password },
     });
     if (!loginResponse.ok()) {
       test.skip(true, "Backend login not available");
@@ -59,7 +59,7 @@ test.describe("Engagements", () => {
   }) => {
     // Login to get auth cookies for API calls
     const loginResponse = await request.post(`${BACKEND}/api/v1/auth/login`, {
-      data: { email: "admin@acme-demo.com", password: "demo" },
+      data: { email: USERS.admin.email, password: USERS.admin.password },
     });
     if (!loginResponse.ok()) {
       test.skip(true, "Backend login not available");
