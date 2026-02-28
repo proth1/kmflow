@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.196
+**Version**: 2026.02.197
 **Last Updated**: 2026-02-28
 
 ## Quick Stats
@@ -10,7 +10,7 @@
 | SQLAlchemy Models | 92 |
 | API Routers | 65 |
 | Test Count | 5,162 backend + 635 frontend (5,797 total) |
-| Total LOC | ~106,200 (389 Python / 112 TypeScript / 39 Swift / 35 C#/C) |
+| Total LOC | ~108,700 (389 Python / 112 TypeScript / 39 Swift / 63 C#/C) |
 | Database Migrations | 81 |
 | BPMN Process Models | 44 |
 | Coverage | >80% |
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.197 | 2026-02-28 | Windows Agent UI, installer, testing, MDM: WPF tray app, WiX MSI, MSIX, GPO ADMX, Authenticode, WDAC, integration tests, Win matrix, Intune, SCCM (#559) |
 | 2026.02.196 | 2026-02-28 | E2E infrastructure: deterministic seeding, auth fixtures, 24 specs, 148 tests, Alembic async fix (#557) |
 | 2026.02.195 | 2026-02-28 | Windows Task Mining Agent: C# capture, PII, IPC, consent, security, config — 35 files, 4,398 LOC (#556) |
 | 2026.02.194 | 2026-02-28 | Windows Task Mining Agent PRD (#510) |

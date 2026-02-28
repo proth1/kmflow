@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.02.197] - 2026-02-28
+### Added
+- Windows Agent UI, installer, testing, and MDM: WPF system tray app, onboarding wizard, transparency log, WiX MSI, MSIX, Task Scheduler, Windows Service, GPO ADMX templates, Authenticode signing pipeline, WDAC policy, AV pre-submission checklist, integration tests, Win 10/11 test matrix, Intune deployment profile, SCCM detection scripts (#559)
+
 ## [2026.02.196] - 2026-02-28
 ### Added
 - E2E test infrastructure: deterministic UUID seeding, cookie-based auth fixtures (4 roles), 24 Playwright spec files (148 tests), 11 POMs, custom fixtures, Makefile targets, Alembic async commit fix (#557)

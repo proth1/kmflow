@@ -4,33 +4,29 @@
 
 ## Project Status
 
-**MVP COMPLETE** — Platform MVP done. Now building Windows Task Mining Agent (PRD: `docs/prd/PRD_KMFlow_TaskMining_Windows.md`).
+**MVP COMPLETE** — Platform MVP done. Windows Task Mining Agent fully implemented across all 8 epics.
 
-- **Current version**: 2026.02.196
-- **Open issues**: ~37 Windows Agent stories (#519-#555) across 8 epics (#511-#518)
+- **Current version**: 2026.02.197
+- **Open issues**: 0 Windows Agent stories remaining (all 45 stories closed)
 - **Presentation**: deployed to kmflow.agentic-innovations.com via Cloudflare Pages
 
 ## Current Focus
 
-**Windows Task Mining Agent** — C# .NET 8 NativeAOT capture layer + shared Python platform abstraction.
+**Windows Task Mining Agent — COMPLETE**. All 8 epics (#511-#518) implemented in PRs #556 and #559.
 
-### Completed Epics
+### Completed Epics (All 8)
 - **Epic #511** (Capture Layer): InputMonitor, AppSwitchMonitor, WindowTitleCapture, IdleDetector, CaptureStateManager, HookDll
 - **Epic #512** (PII L1): CaptureContextFilter, PrivateBrowsingDetector
-- **Epic #513** (IPC & Platform): EventProtocol, NamedPipeClient (dual transport), Python platform abstraction (_windows.py, _macos.py)
-- **Epic #514** (Consent/Config — partial): DPAPIConsentStore, ConsentManager, IntegrityChecker, AgentConfig
-- **Epic #516** (Security — partial): IntegrityChecker (Authenticode verification)
-- **Epic #518** (MDM — partial): AgentConfig (Registry-based, GPO/Intune compatible)
-
-### Remaining Stories
-- **Epic #514**: #537 (SystemTrayApp WPF), #538 (OnboardingWindow), #539 (TransparencyLogWindow)
-- **Epic #515**: #540 (WiX MSI), #541 (MSIX), #542 (Task Scheduler), #543 (Windows Service), #544 (GPO ADMX)
-- **Epic #516**: #545 (Authenticode pipeline), #547 (WDAC policy), #548 (AV pre-submission)
-- **Epic #517**: #550 (Integration tests), #552 (Win 10/11 test matrix)
-- **Epic #518**: #554 (Intune profile), #555 (SCCM docs)
+- **Epic #513** (IPC & Platform): EventProtocol, NamedPipeClient (dual transport), Python platform abstraction
+- **Epic #514** (Consent/Config/UI): DPAPIConsentStore, ConsentManager, IntegrityChecker, AgentConfig, SystemTrayApp, OnboardingWindow, TransparencyLogWindow
+- **Epic #515** (Installer): WiX MSI, MSIX, Task Scheduler, Windows Service, GPO ADMX templates
+- **Epic #516** (Security): IntegrityChecker (Authenticode), signing pipeline, WDAC policy, AV pre-submission
+- **Epic #517** (Testing): Integration tests (IPC round-trip), Win 10/11 test matrix (windows-latest, 2022, 2019)
+- **Epic #518** (MDM): Intune deployment profile (detection/install/uninstall/OMA-URI), SCCM detection scripts + WQL
 
 ## Recently Completed
 
+- **PR #559**: Windows Agent Epics #514-#518 — UI, installer, testing, MDM (merged 2026-02-28)
 - **PR #556**: Windows Agent Epics #511-#513 + partial #514/#516/#518 (merged 2026-02-28)
 - **PR #510**: Windows Task Mining Agent PRD (merged 2026-02-28)
 - **PR #509**: Alembic hardening + docs refresh (merged 2026-02-28)
@@ -62,6 +58,7 @@ The project was built over February 2026 in a rapid sprint:
 - **v2026.02.101–v2026.02.130** (Feb 27): Process intelligence — Client portal, RLS, auth/RBAC, audit logging, BPMN assembly, deviation detection, RACI matrix, review packs, monitoring pipeline, event spine
 - **v2026.02.131–v2026.02.170** (Feb 27): Advanced features — Governance, compliance, TOM alignment, scenarios, financial modeling, conflict detection/resolution, privacy (GDPR, consent, watermarking, PDP), task mining integrations, connectors (Celonis, Soroco, SAP, XES, ARIS, Visio)
 - **v2026.02.171–v2026.02.192** (Feb 27-28): Platform completion — Async task queue, POV orchestrator, replay engines, dashboards (executive, gap, persona, financial, confidence), alerting, presentation deployment, security cleanup, inaugural release
+- **v2026.02.193–v2026.02.197** (Feb 28): Windows Agent — PRD, C# capture layer, PII, IPC, consent, UI, installer, security, testing, MDM
 
 ## Key Architectural Patterns
 
