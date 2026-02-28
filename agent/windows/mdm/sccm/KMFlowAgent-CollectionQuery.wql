@@ -1,0 +1,27 @@
+-- KMFlowAgent-CollectionQuery.wql
+-- WQL query for targeting SCCM device collections.
+--
+-- Use this query to create a collection of machines
+-- eligible for KMFlow Agent deployment.
+--
+-- Requirements:
+-- - Windows 10 version 1903 or later (Build 18362+)
+-- - x64 architecture
+-- - Workstation (not server)
+
+SELECT
+    SMS_R_System.ResourceId,
+    SMS_R_System.ResourceType,
+    SMS_R_System.Name,
+    SMS_R_System.Client,
+    SMS_R_System.OperatingSystemNameandVersion,
+    SMS_R_System.SystemOUName
+FROM
+    SMS_R_System
+INNER JOIN
+    SMS_G_System_OPERATING_SYSTEM ON SMS_G_System_OPERATING_SYSTEM.ResourceID = SMS_R_System.ResourceId
+WHERE
+    SMS_G_System_OPERATING_SYSTEM.BuildNumber >= "18362"
+    AND SMS_R_System.SystemType = "x64-based PC"
+    AND SMS_G_System_OPERATING_SYSTEM.ProductType = 1
+    AND SMS_R_System.Client = 1

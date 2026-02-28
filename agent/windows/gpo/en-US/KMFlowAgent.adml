@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  KMFlow Agent ADML language resources (English).
+  Companion to KMFlowAgent.admx.
+-->
+<policyDefinitionResources xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+                            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                            revision="1.0"
+                            schemaVersion="1.0"
+                            xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+
+  <displayName>KMFlow Agent</displayName>
+  <description>Group Policy settings for the KMFlow Task Mining Agent.</description>
+
+  <resources>
+    <stringTable>
+
+      <!-- Categories -->
+      <string id="Cat_KMFlowAgent">KMFlow Agent</string>
+      <string id="Cat_Connection">Connection</string>
+      <string id="Cat_Capture">Capture</string>
+      <string id="Cat_Security">Security</string>
+
+      <!-- Connection policies -->
+      <string id="BackendUrl">Backend URL</string>
+      <string id="BackendUrl_Help">Specifies the KMFlow backend API server URL.
+
+If this setting is enabled, the agent connects to the specified URL instead of the default.
+
+Example: https://api.kmflow.example.com
+
+Registry value: HKLM\SOFTWARE\Policies\KMFlowAgent\ServerUrl (REG_SZ)</string>
+
+      <string id="EngagementId">Engagement ID</string>
+      <string id="EngagementId_Help">Specifies the engagement identifier for this deployment.
+
+The engagement ID associates captured data with the correct consulting engagement in the KMFlow platform.
+
+Registry value: HKLM\SOFTWARE\Policies\KMFlowAgent\EngagementId (REG_SZ)</string>
+
+      <!-- Capture policies -->
+      <string id="KeystrokeMode">Keystroke Capture Mode</string>
+      <string id="KeystrokeMode_Help">Controls the level of keystroke capture.
+
+Action Level: Records that a keyboard action occurred (key count) but not the actual keystrokes. This is the default and recommended setting.
+
+Content Level: Records actual keystrokes for process documentation. Requires additional consent and PII filtering. Available only in Phase 2.
+
+Registry value: HKLM\SOFTWARE\Policies\KMFlowAgent\CaptureScope (REG_SZ)</string>
+
+      <string id="KeystrokeMode_Action">Action Level (counts only, recommended)</string>
+      <string id="KeystrokeMode_Content">Content Level (actual keystrokes, Phase 2)</string>
+
+      <string id="IdleThreshold">Idle Detection Threshold (seconds)</string>
+      <string id="IdleThreshold_Help">Specifies the number of seconds of inactivity before the agent considers the user idle.
+
+Valid range: 60 to 3600 seconds. Default: 300 seconds (5 minutes).
+
+Registry value: HKLM\SOFTWARE\Policies\KMFlowAgent\IdleTimeoutSeconds (REG_DWORD)</string>
+
+      <string id="AppAllowlist">Application Allowlist</string>
+      <string id="AppAllowlist_Help">Specifies a comma-separated list of process names that the agent is allowed to capture. If this list is non-empty, only these applications are monitored.
+
+Leave empty to monitor all applications (except those on the blocklist).
+
+Example: outlook.exe,excel.exe,chrome.exe,teams.exe
+
+Registry value: HKLM\SOFTWARE\Policies\KMFlowAgent\Allowlist (REG_SZ)</string>
+
+      <string id="AgentEnabled">Enable KMFlow Agent</string>
+      <string id="AgentEnabled_Help">Controls whether the KMFlow Agent is enabled.
+
+If disabled, the agent process runs but does not capture any events. This allows IT to deploy the agent and enable it later via GPO without reinstallation.
+
+Registry value: HKLM\SOFTWARE\Policies\KMFlowAgent\Enabled (REG_DWORD, 0 or 1)</string>
+
+      <!-- Security policies -->
+      <string id="RequireSignature">Require Authenticode Signature</string>
+      <string id="RequireSignature_Help">When enabled, the agent verifies its own Authenticode signature at startup and refuses to run if the signature is missing or invalid.
+
+This should be enabled in production environments to detect binary tampering. Disable for development/testing with unsigned builds.
+
+Registry value: HKLM\SOFTWARE\Policies\KMFlowAgent\RequireSignature (REG_DWORD, 0 or 1)</string>
+
+    </stringTable>
+
+    <presentationTable>
+
+      <presentation id="BackendUrl">
+        <textBox refId="BackendUrl_Value">
+          <label>Backend URL:</label>
+          <defaultValue>https://api.kmflow.io</defaultValue>
+        </textBox>
+      </presentation>
+
+      <presentation id="EngagementId">
+        <textBox refId="EngagementId_Value">
+          <label>Engagement ID:</label>
+        </textBox>
+      </presentation>
+
+      <presentation id="KeystrokeMode">
+        <dropdownList refId="KeystrokeMode_Value" defaultItem="0">Keystroke Mode:</dropdownList>
+      </presentation>
+
+      <presentation id="IdleThreshold">
+        <decimalTextBox refId="IdleThreshold_Value" defaultValue="300">Idle threshold (seconds):</decimalTextBox>
+      </presentation>
+
+      <presentation id="AppAllowlist">
+        <textBox refId="AppAllowlist_Value">
+          <label>Allowed applications (comma-separated):</label>
+        </textBox>
+      </presentation>
+
+    </presentationTable>
+
+  </resources>
+
+</policyDefinitionResources>

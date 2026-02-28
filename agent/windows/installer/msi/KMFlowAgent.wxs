@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  WiX v4 MSI installer for KMFlow Task Mining Agent.
+
+  Build with:
+    dotnet tool install -g wix
+    wix build -o KMFlowAgent.msi
+
+  Features:
+  - Installs KMFlowAgent.exe to %ProgramFiles%\KMFlowAgent\
+  - Registers Task Scheduler task for auto-start
+  - Writes registry keys for configuration
+  - Supports silent install: msiexec /i KMFlowAgent.msi /qn
+  - Supports properties: ENGAGEMENTID, BACKENDURL
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <Package
+    Name="KMFlow Task Mining Agent"
+    Manufacturer="KMFlow Ltd"
+    Version="1.0.0.0"
+    UpgradeCode="7A8B9C0D-1E2F-3A4B-5C6D-7E8F9A0B1C2D"
+    Scope="perMachine"
+    InstallerVersion="500">
+
+    <MajorUpgrade
+      DowngradeErrorMessage="A newer version of [ProductName] is already installed."
+      AllowSameVersionUpgrades="yes" />
+
+    <!-- Public properties settable from command line -->
+    <Property Id="ENGAGEMENTID" Secure="yes" />
+    <Property Id="BACKENDURL" Secure="yes" Value="https://api.kmflow.io" />
+
+    <!-- Installation directory -->
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLDIR" Name="KMFlowAgent">
+        <Component Id="MainExecutable" Guid="1A2B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D">
+          <File Id="KMFlowAgentExe"
+                Source="!(bindpath.publishDir)\KMFlowAgent.exe"
+                KeyPath="yes" />
+        </Component>
+
+        <Component Id="HookDll" Guid="2B3C4D5E-6F7A-8B9C-0D1E-2F3A4B5C6D7E">
+          <File Id="KMFlowAgentHookDll"
+                Source="!(bindpath.publishDir)\KMFlowAgent.HookDll.dll" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <!-- Registry configuration -->
+    <Component Id="RegistryConfig" Directory="INSTALLDIR"
+               Guid="3C4D5E6F-7A8B-9C0D-1E2F-3A4B5C6D7E8F">
+      <RegistryKey Root="HKLM" Key="SOFTWARE\KMFlowAgent">
+        <RegistryValue Type="string" Name="ServerUrl" Value="[BACKENDURL]" />
+        <RegistryValue Type="string" Name="EngagementId" Value="[ENGAGEMENTID]" />
+        <RegistryValue Type="string" Name="InstallDir" Value="[INSTALLDIR]" />
+        <RegistryValue Type="string" Name="Version" Value="1.0.0" />
+      </RegistryKey>
+    </Component>
+
+    <!-- Task Scheduler registration via custom action -->
+    <CustomAction Id="RegisterTask"
+                  Directory="INSTALLDIR"
+                  ExeCommand='schtasks /create /tn "KMFlow\KMFlowAgent" /xml "[INSTALLDIR]KMFlowAgent.ScheduledTask.xml" /f'
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <CustomAction Id="UnregisterTask"
+                  Directory="INSTALLDIR"
+                  ExeCommand='schtasks /delete /tn "KMFlow\KMFlowAgent" /f'
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <InstallExecuteSequence>
+      <Custom Action="RegisterTask" After="InstallFiles">NOT Installed</Custom>
+      <Custom Action="UnregisterTask" Before="RemoveFiles">REMOVE="ALL"</Custom>
+    </InstallExecuteSequence>
+
+    <!-- Feature tree -->
+    <Feature Id="Complete" Title="KMFlow Agent" Level="1">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="HookDll" />
+      <ComponentRef Id="RegistryConfig" />
+    </Feature>
+
+  </Package>
+
+</Wix>

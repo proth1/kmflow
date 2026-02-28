@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  WDAC (Windows Defender Application Control) Supplemental Policy
+  for KMFlow Task Mining Agent.
+
+  This supplemental policy allows KMFlowAgent.exe and KMFlowAgent.HookDll.dll
+  to run on systems with WDAC base policies enabled.
+
+  Deployment:
+  1. Replace the placeholder certificate values with actual EV certificate data.
+  2. Convert to binary: ConvertFrom-CIPolicy -XmlFilePath KMFlowAgent-WDAC.xml -BinaryFilePath KMFlowAgent-WDAC.p7b
+  3. Deploy via Intune, GPO, or SCCM.
+
+  For more information:
+  https://learn.microsoft.com/en-us/windows/security/application-security/application-control/wdac/design/wdac-supplemental-policy
+-->
+<SiPolicy xmlns="urn:schemas-microsoft-com:sipolicy"
+          PolicyType="Supplemental Policy">
+
+  <VersionEx>10.0.0.0</VersionEx>
+  <PlatformID>{2E07F7E4-194C-4D20-B7C9-6F44A6C5A234}</PlatformID>
+  <BasePolicyID>{A244370E-44C9-4C06-B551-F6016E563076}</BasePolicyID>
+  <PolicyID>{F1E2D3C4-B5A6-7890-1234-56789ABCDEF0}</PolicyID>
+
+  <Rules>
+    <Rule>
+      <Option>Enabled:Unsigned System Integrity Policy</Option>
+    </Rule>
+    <Rule>
+      <Option>Enabled:Supplemental Policies</Option>
+    </Rule>
+  </Rules>
+
+  <!--
+    Signer rules: allow binaries signed with KMFlow's EV certificate.
+    Replace TBS hash and CN with actual certificate values after obtaining
+    the EV code signing certificate.
+  -->
+  <Signers>
+    <Signer ID="ID_SIGNER_KMFLOW" Name="KMFlow Ltd EV Code Signing">
+      <!-- Replace with actual TBS hash from EV certificate -->
+      <CertRoot Type="TBS" Value="PLACEHOLDER_TBS_HASH_FROM_EV_CERTIFICATE" />
+      <CertPublisher Value="KMFlow Ltd" />
+    </Signer>
+  </Signers>
+
+  <SigningScenarios>
+    <SigningScenario Value="131" ID="ID_SIGNINGSCENARIO_DRIVERS" FriendlyName="Driver Signing">
+      <ProductSigners />
+    </SigningScenario>
+    <SigningScenario Value="12" ID="ID_SIGNINGSCENARIO_USERMODE" FriendlyName="User Mode Signing">
+      <ProductSigners>
+        <AllowedSigners>
+          <AllowedSigner SignerId="ID_SIGNER_KMFLOW" />
+        </AllowedSigners>
+      </ProductSigners>
+    </SigningScenario>
+  </SigningScenarios>
+
+  <!--
+    File rules: explicitly allow specific binaries by hash.
+    These are fallback rules for environments that don't trust the signer.
+    Update hashes after each release build.
+  -->
+  <FileRules>
+    <Allow ID="ID_ALLOW_KMFLOWAGENT"
+           FriendlyName="KMFlowAgent.exe"
+           FileName="KMFlowAgent.exe"
+           MinimumFileVersion="1.0.0.0" />
+    <Allow ID="ID_ALLOW_HOOKDLL"
+           FriendlyName="KMFlowAgent.HookDll.dll"
+           FileName="KMFlowAgent.HookDll.dll"
+           MinimumFileVersion="1.0.0.0" />
+  </FileRules>
+
+</SiPolicy>

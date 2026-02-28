@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  KMFlow Agent ADMX Policy Definition.
+
+  Install in Central Store:
+    \\domain\sysvol\domain\Policies\PolicyDefinitions\KMFlowAgent.admx
+    \\domain\sysvol\domain\Policies\PolicyDefinitions\en-US\KMFlowAgent.adml
+
+  Or local:
+    %SystemRoot%\PolicyDefinitions\KMFlowAgent.admx
+    %SystemRoot%\PolicyDefinitions\en-US\KMFlowAgent.adml
+
+  Registry path: HKLM\SOFTWARE\Policies\KMFlowAgent
+  Note: Consent setting is deliberately ABSENT — consent is user-only.
+-->
+<policyDefinitions xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   revision="1.0"
+                   schemaVersion="1.0"
+                   xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+
+  <policyNamespaces>
+    <target prefix="kmflowagent" namespace="KMFlow.Policies.KMFlowAgent" />
+    <using prefix="windows" namespace="Microsoft.Policies.Windows" />
+  </policyNamespaces>
+
+  <resources minRequiredRevision="1.0" />
+
+  <categories>
+    <category name="KMFlowAgent" displayName="$(string.Cat_KMFlowAgent)">
+      <parentCategory ref="windows:System" />
+    </category>
+    <category name="KMFlowAgent_Connection" displayName="$(string.Cat_Connection)">
+      <parentCategory ref="KMFlowAgent" />
+    </category>
+    <category name="KMFlowAgent_Capture" displayName="$(string.Cat_Capture)">
+      <parentCategory ref="KMFlowAgent" />
+    </category>
+    <category name="KMFlowAgent_Security" displayName="$(string.Cat_Security)">
+      <parentCategory ref="KMFlowAgent" />
+    </category>
+  </categories>
+
+  <policies>
+
+    <!-- Connection Settings -->
+
+    <policy name="BackendUrl"
+            class="Machine"
+            displayName="$(string.BackendUrl)"
+            explainText="$(string.BackendUrl_Help)"
+            key="SOFTWARE\Policies\KMFlowAgent"
+            valueName="ServerUrl"
+            presentation="$(presentation.BackendUrl)">
+      <parentCategory ref="KMFlowAgent_Connection" />
+      <supportedOn ref="windows:SUPPORTED_Windows_10_0_RS5" />
+      <elements>
+        <text id="BackendUrl_Value" valueName="ServerUrl" required="true" maxLength="512" />
+      </elements>
+    </policy>
+
+    <policy name="EngagementId"
+            class="Machine"
+            displayName="$(string.EngagementId)"
+            explainText="$(string.EngagementId_Help)"
+            key="SOFTWARE\Policies\KMFlowAgent"
+            valueName="EngagementId"
+            presentation="$(presentation.EngagementId)">
+      <parentCategory ref="KMFlowAgent_Connection" />
+      <supportedOn ref="windows:SUPPORTED_Windows_10_0_RS5" />
+      <elements>
+        <text id="EngagementId_Value" valueName="EngagementId" required="true" maxLength="128" />
+      </elements>
+    </policy>
+
+    <!-- Capture Settings -->
+
+    <policy name="KeystrokeMode"
+            class="Machine"
+            displayName="$(string.KeystrokeMode)"
+            explainText="$(string.KeystrokeMode_Help)"
+            key="SOFTWARE\Policies\KMFlowAgent"
+            valueName="CaptureScope"
+            presentation="$(presentation.KeystrokeMode)">
+      <parentCategory ref="KMFlowAgent_Capture" />
+      <supportedOn ref="windows:SUPPORTED_Windows_10_0_RS5" />
+      <elements>
+        <enum id="KeystrokeMode_Value" valueName="CaptureScope" required="true">
+          <item displayName="$(string.KeystrokeMode_Action)">
+            <value>
+              <string>action_level</string>
+            </value>
+          </item>
+          <item displayName="$(string.KeystrokeMode_Content)">
+            <value>
+              <string>content_level</string>
+            </value>
+          </item>
+        </enum>
+      </elements>
+    </policy>
+
+    <policy name="IdleThreshold"
+            class="Machine"
+            displayName="$(string.IdleThreshold)"
+            explainText="$(string.IdleThreshold_Help)"
+            key="SOFTWARE\Policies\KMFlowAgent"
+            valueName="IdleTimeoutSeconds"
+            presentation="$(presentation.IdleThreshold)">
+      <parentCategory ref="KMFlowAgent_Capture" />
+      <supportedOn ref="windows:SUPPORTED_Windows_10_0_RS5" />
+      <elements>
+        <decimal id="IdleThreshold_Value" valueName="IdleTimeoutSeconds"
+                 required="true" minValue="60" maxValue="3600" />
+      </elements>
+    </policy>
+
+    <policy name="AppAllowlist"
+            class="Machine"
+            displayName="$(string.AppAllowlist)"
+            explainText="$(string.AppAllowlist_Help)"
+            key="SOFTWARE\Policies\KMFlowAgent"
+            valueName="Allowlist"
+            presentation="$(presentation.AppAllowlist)">
+      <parentCategory ref="KMFlowAgent_Capture" />
+      <supportedOn ref="windows:SUPPORTED_Windows_10_0_RS5" />
+      <elements>
+        <text id="AppAllowlist_Value" valueName="Allowlist" maxLength="4096" />
+      </elements>
+    </policy>
+
+    <policy name="AgentEnabled"
+            class="Machine"
+            displayName="$(string.AgentEnabled)"
+            explainText="$(string.AgentEnabled_Help)"
+            key="SOFTWARE\Policies\KMFlowAgent"
+            valueName="Enabled">
+      <parentCategory ref="KMFlowAgent_Capture" />
+      <supportedOn ref="windows:SUPPORTED_Windows_10_0_RS5" />
+      <enabledValue>
+        <decimal value="1" />
+      </enabledValue>
+      <disabledValue>
+        <decimal value="0" />
+      </disabledValue>
+    </policy>
+
+    <!-- Security Settings -->
+
+    <policy name="RequireSignature"
+            class="Machine"
+            displayName="$(string.RequireSignature)"
+            explainText="$(string.RequireSignature_Help)"
+            key="SOFTWARE\Policies\KMFlowAgent"
+            valueName="RequireSignature">
+      <parentCategory ref="KMFlowAgent_Security" />
+      <supportedOn ref="windows:SUPPORTED_Windows_10_0_RS5" />
+      <enabledValue>
+        <decimal value="1" />
+      </enabledValue>
+      <disabledValue>
+        <decimal value="0" />
+      </disabledValue>
+    </policy>
+
+  </policies>
+
+</policyDefinitions>

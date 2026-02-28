@@ -1,0 +1,112 @@
+# Authenticode EV Code Signing Pipeline for Windows Agent
+#
+# Triggered manually or after a successful build on the main branch.
+# Signs the NativeAOT binary with an EV code signing certificate.
+#
+# Prerequisites:
+# - EV code signing certificate stored in GitHub Actions secrets
+# - SignTool.exe available on Windows runner
+#
+# Secrets required:
+# - WINDOWS_CERT_PFX: Base64-encoded PFX certificate
+# - WINDOWS_CERT_PASSWORD: Certificate password
+# - WINDOWS_CERT_THUMBPRINT: Certificate thumbprint
+# - WINDOWS_TIMESTAMP_URL: RFC 3161 timestamp server URL
+
+name: Windows Agent Code Signing
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: 'Build workflow run ID to sign artifacts from'
+        required: true
+        type: string
+  workflow_run:
+    workflows: ["Windows Agent CI"]
+    types: [completed]
+    branches: [main]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+
+jobs:
+  sign:
+    name: Sign Windows Agent Binary
+    runs-on: windows-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    permissions:
+      contents: read
+      actions: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-agent-binary
+          path: unsigned/
+          run-id: ${{ github.event.inputs.build_run_id || github.event.workflow_run.id }}
+
+      - name: Import code signing certificate
+        shell: powershell
+        env:
+          CERT_PFX: ${{ secrets.WINDOWS_CERT_PFX }}
+          CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: |
+          $pfxBytes = [Convert]::FromBase64String($env:CERT_PFX)
+          $pfxPath = Join-Path $env:RUNNER_TEMP 'signing-cert.pfx'
+          [IO.File]::WriteAllBytes($pfxPath, $pfxBytes)
+
+          Import-PfxCertificate `
+            -FilePath $pfxPath `
+            -CertStoreLocation Cert:\CurrentUser\My `
+            -Password (ConvertTo-SecureString -String $env:CERT_PASSWORD -AsPlainText -Force)
+
+          Remove-Item $pfxPath -Force
+
+      - name: Sign binary with Authenticode
+        shell: powershell
+        env:
+          CERT_THUMBPRINT: ${{ secrets.WINDOWS_CERT_THUMBPRINT }}
+          TIMESTAMP_URL: ${{ secrets.WINDOWS_TIMESTAMP_URL }}
+        run: |
+          $signTool = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe"
+
+          # If signtool not at expected path, search for it
+          if (-not (Test-Path $signTool)) {
+            $signTool = Get-ChildItem "C:\Program Files (x86)\Windows Kits" -Recurse -Filter "signtool.exe" |
+              Where-Object { $_.FullName -match "x64" } |
+              Sort-Object LastWriteTime -Descending |
+              Select-Object -First 1 -ExpandProperty FullName
+          }
+
+          $timestampUrl = if ($env:TIMESTAMP_URL) { $env:TIMESTAMP_URL } else { "http://timestamp.digicert.com" }
+
+          & $signTool sign `
+            /sha1 $env:CERT_THUMBPRINT `
+            /tr $timestampUrl `
+            /td sha256 `
+            /fd sha256 `
+            /v `
+            unsigned\KMFlowAgent.exe
+
+          # Verify signature
+          & $signTool verify /pa /v unsigned\KMFlowAgent.exe
+
+      - name: Upload signed binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-agent-signed
+          path: unsigned/KMFlowAgent.exe
+
+      - name: Cleanup certificate
+        if: always()
+        shell: powershell
+        env:
+          CERT_THUMBPRINT: ${{ secrets.WINDOWS_CERT_THUMBPRINT }}
+        run: |
+          if ($env:CERT_THUMBPRINT) {
+            Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Thumbprint -eq $env:CERT_THUMBPRINT } | Remove-Item -Force -ErrorAction SilentlyContinue
+          }

@@ -77,6 +77,13 @@ jobs:
             --collect:"XPlat Code Coverage" `
             --results-directory TestResults
 
+      - name: Run integration tests
+        run: |
+          dotnet test agent/windows/src/KMFlowAgent.IntegrationTests/KMFlowAgent.IntegrationTests.csproj `
+            --configuration Debug `
+            --verbosity normal `
+            --results-directory TestResults/Integration
+
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()

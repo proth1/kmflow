@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "Pre-submission checklist for AV/EDR vendor whitelisting. Submit signed binaries to each vendor before enterprise deployment to prevent false positive detections.",
+
+  "vendors": [
+    {
+      "name": "Microsoft Defender",
+      "portal": "https://www.microsoft.com/en-us/wdsi/filesubmission",
+      "submissionType": "File",
+      "requiredFiles": ["KMFlowAgent.exe", "KMFlowAgent.HookDll.dll"],
+      "notes": "Submit as 'Software developer' category. Include EV certificate details.",
+      "expectedTurnaround": "24-48 hours",
+      "status": "pending"
+    },
+    {
+      "name": "CrowdStrike Falcon",
+      "portal": "Submit via Falcon console > IOC Management > Exclusions",
+      "submissionType": "Hash exclusion + Signer exclusion",
+      "requiredFiles": ["KMFlowAgent.exe", "KMFlowAgent.HookDll.dll"],
+      "notes": "Provide SHA-256 hashes and EV signer CN to customer success manager.",
+      "expectedTurnaround": "1-3 business days",
+      "status": "pending"
+    },
+    {
+      "name": "SentinelOne",
+      "portal": "Submit via SentinelOne console > Exclusions > Path/Hash",
+      "submissionType": "Hash exclusion",
+      "requiredFiles": ["KMFlowAgent.exe", "KMFlowAgent.HookDll.dll"],
+      "notes": "Create hash-based exclusion. Alternatively, exclude by certificate signer.",
+      "expectedTurnaround": "1-2 business days",
+      "status": "pending"
+    },
+    {
+      "name": "Symantec (Broadcom)",
+      "portal": "https://symsubmit.symantec.com/",
+      "submissionType": "File",
+      "requiredFiles": ["KMFlowAgent.exe"],
+      "notes": "Submit as false positive if detected. Include company and product details.",
+      "expectedTurnaround": "2-5 business days",
+      "status": "pending"
+    },
+    {
+      "name": "Carbon Black (VMware)",
+      "portal": "Submit via CB Defense console > Approved Applications",
+      "submissionType": "Reputation override",
+      "requiredFiles": ["KMFlowAgent.exe", "KMFlowAgent.HookDll.dll"],
+      "notes": "Set reputation to 'Company Approved' for signed binary hash.",
+      "expectedTurnaround": "Immediate (customer-managed)",
+      "status": "pending"
+    }
+  ],
+
+  "preSubmissionChecks": [
+    "Binary is signed with EV code signing certificate",
+    "Binary passes SmartScreen (signtool verify /pa)",
+    "VirusTotal scan shows 0 detections",
+    "Binary metadata (version, company, description) is correct",
+    "No debug symbols or test code in release binary"
+  ],
+
+  "submissionTemplate": {
+    "companyName": "KMFlow Ltd",
+    "productName": "KMFlow Task Mining Agent",
+    "productDescription": "Desktop activity capture agent for process intelligence. Monitors application switches, window titles, and input patterns for workflow analysis.",
+    "websiteUrl": "https://kmflow.io",
+    "contactEmail": "security@kmflow.io",
+    "hooks": "WH_KEYBOARD_LL, WH_MOUSE_LL (via SetWindowsHookEx)",
+    "uiAutomation": "UIAutomation IsPasswordProperty (read-only, for password field detection)"
+  }
+}
