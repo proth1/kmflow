@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.175] - 2026-02-27
+### Added
+- Async task architecture: Redis Streams-backed TaskQueue with TaskWorker ABC, consumer groups (XREADGROUP/XACK), retry logic, concurrency control via asyncio.Semaphore, TaskProgress tracking, 33 tests (#320)
+
 ## [2026.02.174] - 2026-02-27
 ### Added
 - Celonis EMS integration: event log, process model, and conformance deviation mappers with idempotent dedup, severity scoring, MismatchType mapping, checkpoint tracking, 45 tests (#325)

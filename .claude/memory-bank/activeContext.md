@@ -8,6 +8,7 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #492 merged** — Async task architecture: Redis Streams TaskQueue, TaskWorker ABC, consumer groups, retry logic, concurrency control, 33 tests (#320) (v2026.02.175)
 - **PR #491 merged** — Celonis EMS integration: event log, process model, conformance mappers, idempotent dedup, severity scoring, 45 tests (#325) (v2026.02.174)
 - **PR #490 merged** — Soroco Scout Work Graph integration: ScoutActivity parser, Activity node mapping with telemetric epistemic frames, SUPPORTED_BY evidence edges, 30 tests (#326) (v2026.02.173)
 - **PR #489 merged** — ARIS AML and Visio VSDX process model importers: ModelImporter ABC, ImportedModel, defusedxml XXE protection, 28 tests (#328) (v2026.02.172)
