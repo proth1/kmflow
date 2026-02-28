@@ -108,6 +108,34 @@ export interface GapData {
   related_element_id: string | null;
 }
 
+// -- Confidence Heatmap types -------------------------------------------------
+
+export interface ElementConfidenceEntry {
+  score: number;
+  brightness: string;
+  grade: string;
+}
+
+export interface ConfidenceMapData {
+  engagement_id: string;
+  model_version: number;
+  elements: Record<string, ElementConfidenceEntry>;
+  total_elements: number;
+}
+
+export interface ConfidenceSummaryData {
+  engagement_id: string;
+  model_version: number;
+  total_elements: number;
+  bright_count: number;
+  bright_percentage: number;
+  dim_count: number;
+  dim_percentage: number;
+  dark_count: number;
+  dark_percentage: number;
+  overall_confidence: number;
+}
+
 // -- API functions ------------------------------------------------------------
 
 /**
@@ -175,4 +203,33 @@ export async function fetchEvidenceMap(
  */
 export async function fetchGaps(modelId: string): Promise<GapData[]> {
   return apiGet<GapData[]>(`/api/v1/pov/${modelId}/gaps`);
+}
+
+/**
+ * Fetch per-element confidence map for heatmap rendering.
+ */
+export async function fetchConfidenceMap(
+  engagementId: string,
+): Promise<ConfidenceMapData> {
+  return apiGet<ConfidenceMapData>(
+    `/api/v1/pov/engagement/${engagementId}/confidence`,
+  );
+}
+
+/**
+ * Fetch confidence summary for export (JSON).
+ */
+export async function fetchConfidenceSummary(
+  engagementId: string,
+): Promise<ConfidenceSummaryData> {
+  return apiGet<ConfidenceSummaryData>(
+    `/api/v1/pov/engagement/${engagementId}/confidence/summary`,
+  );
+}
+
+/**
+ * Build the URL for confidence summary CSV download.
+ */
+export function getConfidenceSummaryCSVUrl(engagementId: string): string {
+  return `/api/v1/pov/engagement/${engagementId}/confidence/summary?format=csv`;
 }
