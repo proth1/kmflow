@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.155] - 2026-02-27
+### Added
+- Validation APIs: pack detail retrieval with engagement-scoped IDOR protection, filtered decision listing with action/reviewer/pack filters and pagination, role-based reviewer routing via RoleActivityMapping with unique constraint, migration 073, 14 tests (#365)
+
 ## [2026.02.154] - 2026-02-27
 ### Added
 - Evidence grading progression tracking: per-version grade distributions (U/D/C/B/A), aggregate and per-element improvement rate computation with 100% cap, multi-cycle trend data for stacked bar charts, GradingSnapshot model, migration 072, 19 tests (#357)
