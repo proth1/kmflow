@@ -54,20 +54,6 @@ def _make_mock_gap(
     return gap
 
 
-def _make_mock_maturity(
-    engagement_id: uuid.UUID,
-    maturity_level: str = "optimized",
-    level_number: int = 5,
-) -> MagicMock:
-    """Create a mock MaturityScore."""
-    score = MagicMock()
-    score.id = uuid.uuid4()
-    score.engagement_id = engagement_id
-    score.maturity_level = maturity_level
-    score.level_number = level_number
-    return score
-
-
 # ============================================================
 # Scenario 1: Gap counts displayed by type and severity
 # ============================================================
@@ -92,9 +78,7 @@ class TestGapCountsByTypeAndSeverity:
         session = AsyncMock()
         gap_result = MagicMock()
         gap_result.scalars.return_value.all.return_value = gaps
-        maturity_result = MagicMock()
-        maturity_result.scalars.return_value.all.return_value = []
-        session.execute = AsyncMock(side_effect=[gap_result, maturity_result])
+        session.execute = AsyncMock(return_value=gap_result)
         user = _make_mock_user()
 
         result = await get_gap_analysis_dashboard(eng_id, session, user)
@@ -121,9 +105,7 @@ class TestGapCountsByTypeAndSeverity:
         session = AsyncMock()
         gap_result = MagicMock()
         gap_result.scalars.return_value.all.return_value = gaps
-        maturity_result = MagicMock()
-        maturity_result.scalars.return_value.all.return_value = []
-        session.execute = AsyncMock(side_effect=[gap_result, maturity_result])
+        session.execute = AsyncMock(return_value=gap_result)
         user = _make_mock_user()
 
         result = await get_gap_analysis_dashboard(eng_id, session, user)
@@ -142,9 +124,7 @@ class TestGapCountsByTypeAndSeverity:
         session = AsyncMock()
         gap_result = MagicMock()
         gap_result.scalars.return_value.all.return_value = []
-        maturity_result = MagicMock()
-        maturity_result.scalars.return_value.all.return_value = []
-        session.execute = AsyncMock(side_effect=[gap_result, maturity_result])
+        session.execute = AsyncMock(return_value=gap_result)
         user = _make_mock_user()
 
         result = await get_gap_analysis_dashboard(eng_id, session, user)
@@ -185,17 +165,15 @@ class TestDimensionAlignmentScores:
         eng_id = uuid.uuid4()
 
         gaps = [
-            _make_mock_gap(eng_id, dimension=TOMDimension.PROCESS_ARCHITECTURE, confidence=0.8),
-            _make_mock_gap(eng_id, dimension=TOMDimension.PROCESS_ARCHITECTURE, confidence=0.6),
-            _make_mock_gap(eng_id, dimension=TOMDimension.PEOPLE_AND_ORGANIZATION, confidence=0.4),
+            _make_mock_gap(eng_id, dimension=TOMDimension.PROCESS_ARCHITECTURE, severity=0.8),
+            _make_mock_gap(eng_id, dimension=TOMDimension.PROCESS_ARCHITECTURE, severity=0.6),
+            _make_mock_gap(eng_id, dimension=TOMDimension.PEOPLE_AND_ORGANIZATION, severity=0.4),
         ]
 
         session = AsyncMock()
         gap_result = MagicMock()
         gap_result.scalars.return_value.all.return_value = gaps
-        maturity_result = MagicMock()
-        maturity_result.scalars.return_value.all.return_value = []
-        session.execute = AsyncMock(side_effect=[gap_result, maturity_result])
+        session.execute = AsyncMock(return_value=gap_result)
         user = _make_mock_user()
 
         result = await get_gap_analysis_dashboard(eng_id, session, user)
@@ -203,11 +181,13 @@ class TestDimensionAlignmentScores:
         scores_by_dim = {s["dimension"]: s for s in result["dimension_scores"]}
         assert len(scores_by_dim) == len(TOMDimension)
 
+        # alignment = 1.0 - avg(severity): (0.8 + 0.6) / 2 = 0.7, so 1.0 - 0.7 = 0.3
         pa_score = scores_by_dim["process_architecture"]
-        assert pa_score["score"] == 0.7  # (0.8 + 0.6) / 2
+        assert pa_score["score"] == 0.3
 
+        # alignment = 1.0 - 0.4 = 0.6
         po_score = scores_by_dim["people_and_organization"]
-        assert po_score["score"] == 0.4
+        assert po_score["score"] == 0.6
 
     @pytest.mark.asyncio
     async def test_dimensions_below_threshold_flagged(self) -> None:
@@ -215,15 +195,13 @@ class TestDimensionAlignmentScores:
         eng_id = uuid.uuid4()
 
         gaps = [
-            _make_mock_gap(eng_id, dimension=TOMDimension.TECHNOLOGY_AND_DATA, confidence=0.3),
+            _make_mock_gap(eng_id, dimension=TOMDimension.TECHNOLOGY_AND_DATA, severity=0.8),
         ]
 
         session = AsyncMock()
         gap_result = MagicMock()
         gap_result.scalars.return_value.all.return_value = gaps
-        maturity_result = MagicMock()
-        maturity_result.scalars.return_value.all.return_value = []
-        session.execute = AsyncMock(side_effect=[gap_result, maturity_result])
+        session.execute = AsyncMock(return_value=gap_result)
         user = _make_mock_user()
 
         result = await get_gap_analysis_dashboard(eng_id, session, user)
@@ -239,9 +217,7 @@ class TestDimensionAlignmentScores:
         session = AsyncMock()
         gap_result = MagicMock()
         gap_result.scalars.return_value.all.return_value = []
-        maturity_result = MagicMock()
-        maturity_result.scalars.return_value.all.return_value = []
-        session.execute = AsyncMock(side_effect=[gap_result, maturity_result])
+        session.execute = AsyncMock(return_value=gap_result)
         user = _make_mock_user()
 
         result = await get_gap_analysis_dashboard(eng_id, session, user)
@@ -273,9 +249,7 @@ class TestPrioritizedRecommendations:
         session = AsyncMock()
         gap_result = MagicMock()
         gap_result.scalars.return_value.all.return_value = gaps
-        maturity_result = MagicMock()
-        maturity_result.scalars.return_value.all.return_value = []
-        session.execute = AsyncMock(side_effect=[gap_result, maturity_result])
+        session.execute = AsyncMock(return_value=gap_result)
         user = _make_mock_user()
 
         result = await get_gap_analysis_dashboard(eng_id, session, user)
@@ -301,9 +275,7 @@ class TestPrioritizedRecommendations:
         session = AsyncMock()
         gap_result = MagicMock()
         gap_result.scalars.return_value.all.return_value = [gap]
-        maturity_result = MagicMock()
-        maturity_result.scalars.return_value.all.return_value = []
-        session.execute = AsyncMock(side_effect=[gap_result, maturity_result])
+        session.execute = AsyncMock(return_value=gap_result)
         user = _make_mock_user()
 
         result = await get_gap_analysis_dashboard(eng_id, session, user)
@@ -327,9 +299,7 @@ class TestPrioritizedRecommendations:
         session = AsyncMock()
         gap_result = MagicMock()
         gap_result.scalars.return_value.all.return_value = [gap]
-        maturity_result = MagicMock()
-        maturity_result.scalars.return_value.all.return_value = []
-        session.execute = AsyncMock(side_effect=[gap_result, maturity_result])
+        session.execute = AsyncMock(return_value=gap_result)
         user = _make_mock_user()
 
         result = await get_gap_analysis_dashboard(eng_id, session, user)
@@ -346,9 +316,7 @@ class TestPrioritizedRecommendations:
         session = AsyncMock()
         gap_result = MagicMock()
         gap_result.scalars.return_value.all.return_value = [gap]
-        maturity_result = MagicMock()
-        maturity_result.scalars.return_value.all.return_value = []
-        session.execute = AsyncMock(side_effect=[gap_result, maturity_result])
+        session.execute = AsyncMock(return_value=gap_result)
         user = _make_mock_user()
 
         result = await get_gap_analysis_dashboard(eng_id, session, user)
@@ -374,9 +342,7 @@ class TestMaturityHeatmap:
         session = AsyncMock()
         gap_result = MagicMock()
         gap_result.scalars.return_value.all.return_value = []
-        maturity_result = MagicMock()
-        maturity_result.scalars.return_value.all.return_value = []
-        session.execute = AsyncMock(side_effect=[gap_result, maturity_result])
+        session.execute = AsyncMock(return_value=gap_result)
         user = _make_mock_user()
 
         result = await get_gap_analysis_dashboard(eng_id, session, user)

@@ -1352,6 +1352,13 @@ async def prioritize_gaps(
     return {"engagement_id": str(engagement_id), "gaps": prioritized, "total": len(prioritized)}
 
 
+# -- Gap Analysis Dashboard Constants -----------------------------------------
+
+SEVERITY_THRESHOLD_CRITICAL = 0.9
+SEVERITY_THRESHOLD_HIGH = 0.7
+SEVERITY_THRESHOLD_MEDIUM = 0.4
+ALIGNMENT_THRESHOLD = 0.6
+
 # -- Gap Analysis Dashboard (Story #347) --------------------------------------
 
 
@@ -1424,10 +1431,6 @@ async def get_gap_analysis_dashboard(
     gaps = list(gap_result.scalars().all())
 
     # --- Gap counts by type and severity ---
-    severity_threshold_critical = 0.9
-    severity_threshold_high = 0.7
-    severity_threshold_medium = 0.4
-
     gap_type_counts: dict[str, dict[str, int]] = {}
     for gap_type in TOMGapType:
         if gap_type == TOMGapType.NO_GAP:
@@ -1439,11 +1442,11 @@ async def get_gap_analysis_dashboard(
         if gt not in gap_type_counts:
             continue
         gap_type_counts[gt]["total"] += 1
-        if gap.severity >= severity_threshold_critical:
+        if gap.severity >= SEVERITY_THRESHOLD_CRITICAL:
             gap_type_counts[gt]["critical"] += 1
-        elif gap.severity >= severity_threshold_high:
+        elif gap.severity >= SEVERITY_THRESHOLD_HIGH:
             gap_type_counts[gt]["high"] += 1
-        elif gap.severity >= severity_threshold_medium:
+        elif gap.severity >= SEVERITY_THRESHOLD_MEDIUM:
             gap_type_counts[gt]["medium"] += 1
         else:
             gap_type_counts[gt]["low"] += 1
@@ -1454,19 +1457,21 @@ async def get_gap_analysis_dashboard(
     ]
 
     # --- TOM dimension alignment scores ---
-    alignment_threshold = 0.6
-    dim_gaps: dict[str, list[float]] = {dim.value: [] for dim in TOMDimension}
+    # Alignment = 1.0 - avg(severity): higher score = better aligned.
+    # No gaps in a dimension = fully aligned (1.0).
+    dim_severities: dict[str, list[float]] = {dim.value: [] for dim in TOMDimension}
     for gap in gaps:
-        dim_gaps[str(gap.dimension)].append(gap.confidence)
+        dim_severities[str(gap.dimension)].append(gap.severity)
 
     dimension_scores = []
     for dim in TOMDimension:
-        dim_values = dim_gaps[dim.value]
-        score = sum(dim_values) / len(dim_values) if dim_values else 1.0
+        sev_values = dim_severities[dim.value]
+        avg_severity = sum(sev_values) / len(sev_values) if sev_values else 0.0
+        score = round(1.0 - avg_severity, 3)
         dimension_scores.append(DimensionAlignmentScore(
             dimension=dim.value,
-            score=round(score, 3),
-            below_threshold=score < alignment_threshold,
+            score=score,
+            below_threshold=score < ALIGNMENT_THRESHOLD,
         ))
 
     # --- Prioritized recommendations ---
@@ -1485,23 +1490,16 @@ async def get_gap_analysis_dashboard(
         ))
     recommendations.sort(key=lambda r: r.priority_score, reverse=True)
 
-    # --- Maturity heatmap (dimension × maturity level) ---
-    maturity_result = await session.execute(
-        select(MaturityScore).where(MaturityScore.engagement_id == engagement_id)
-    )
-    maturity_scores = list(maturity_result.scalars().all())
-
-    # Build heatmap: {dimension: {maturity_level: count}}
+    # --- Maturity heatmap (dimension × gap type counts) ---
+    # Each cell: {dimension: {gap_type: count}} for grid visualization.
     heatmap: dict[str, dict[str, int]] = {}
     for dim in TOMDimension:
-        heatmap[dim.value] = {}
-    for score in maturity_scores:
-        dim_key = str(score.maturity_level)
-        # Group by engagement dimension — use level_number as value
-        for dim in TOMDimension:
-            if dim.value not in heatmap:
-                heatmap[dim.value] = {}
-            heatmap[dim.value][dim_key] = score.level_number
+        heatmap[dim.value] = {"full_gap": 0, "partial_gap": 0, "deviation": 0}
+    for gap in gaps:
+        dim_key = str(gap.dimension)
+        gt = str(gap.gap_type)
+        if dim_key in heatmap and gt in heatmap[dim_key]:
+            heatmap[dim_key][gt] += 1
 
     return {
         "engagement_id": str(engagement_id),
