@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.152] - 2026-02-27
+### Added
+- Claim write-back service with Neo4j graph integration: SurveyClaim ingestion with SUPPORTS/CONTRADICTS edges, certainty tier weights (KNOWN=1.0 to CONTRADICTED=-0.5), EpistemicFrame nodes with HAS_FRAME linkage, auto-created ConflictObjects, activity confidence recomputation, engagement-scoped IDOR-safe Cypher queries, 27 tests (#324)
+
 ## [2026.02.151] - 2026-02-27
 ### Added
 - Survey bot with 8 probe types: SurveySession lifecycle, fatigue-optimized probe generation from seed terms (EXISTENCE → UNCERTAINTY ordering), claim creation with conflict flagging, session summaries with certainty tier distribution, engagement-scoped IDOR-safe endpoints, migration 070, 23 tests (#319)
