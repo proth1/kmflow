@@ -6,7 +6,7 @@
 
 **MVP COMPLETE** — Platform MVP done. Windows Task Mining Agent fully implemented across all 8 epics.
 
-- **Current version**: 2026.02.198
+- **Current version**: 2026.02.199
 - **Open issues**: 0
 - **Presentation**: deployed to kmflow.agentic-innovations.com via Cloudflare Pages
 
@@ -16,6 +16,7 @@ No active work items. MVP complete.
 
 ## Recently Completed
 
+- **PR #561**: Disable Next.js dev indicator overlay (#561) — merged 2026-02-28
 - **PR #562**: Fix Knowledge Graph empty edge IDs crashing Cytoscape rendering (#560) — merged 2026-02-28
 
 ### Completed Epics (All 8)

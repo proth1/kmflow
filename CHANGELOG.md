@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.02.199] - 2026-02-28
+### Fixed
+- Disable Next.js dev indicator overlay that obscured sidebar navigation (#561)
+
 ## [2026.02.198] - 2026-02-28
 ### Fixed
 - Knowledge Graph: empty edge IDs crashing Cytoscape rendering — use `elementId(r)` fallback (#560)
