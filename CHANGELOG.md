@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.153] - 2026-02-27
+### Added
+- Structured reviewer actions with graph write-back: CONFIRM (grade promotion C→B→A, +0.1 confidence), CORRECT (SUPERSEDES edge + retraction), REJECT (ConflictObject creation, severity 0.8), DEFER (Dark Room backlog), ValidationDecision model, :Assertion-labeled Cypher, element_id pack validation, property allowlist injection defense, 30 tests (#353)
+
 ## [2026.02.152] - 2026-02-27
 ### Added
 - Claim write-back service with Neo4j graph integration: SurveyClaim ingestion with SUPPORTS/CONTRADICTS edges, certainty tier weights (KNOWN=1.0 to CONTRADICTED=-0.5), EpistemicFrame nodes with HAS_FRAME linkage, auto-created ConflictObjects, activity confidence recomputation, engagement-scoped IDOR-safe Cypher queries, 27 tests (#324)

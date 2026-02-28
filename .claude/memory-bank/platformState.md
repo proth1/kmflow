@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.152
+**Version**: 2026.02.153
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.153 | 2026-02-27 | Structured reviewer actions: CONFIRM/CORRECT/REJECT/DEFER with graph write-back, ValidationDecision model, :Assertion labels, element pack validation, 30 tests (#353) |
 | 2026.02.152 | 2026-02-27 | Claim write-back: Neo4j graph integration, SUPPORTS/CONTRADICTS edges, EpistemicFrame, ConflictObject auto-creation, confidence recomputation, 27 tests (#324) |
 | 2026.02.151 | 2026-02-27 | Survey bot with 8 probe types: session lifecycle, fatigue-optimized probes, claim creation, conflict flagging, certainty summaries, 23 tests (#319) |
 | 2026.02.150 | 2026-02-27 | Seed list pipeline: 4-stage workflow, consultant upload, NLP refinement, probe generation, extraction targeting, IDOR-safe DELETE, 25 tests (#321) |
