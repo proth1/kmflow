@@ -67,6 +67,7 @@ from src.core.models.governance import (
     PolicyType,
     Regulation,
 )
+from src.core.models.grading_snapshot import GradingSnapshot
 from src.core.models.illumination import (
     IlluminationAction,
     IlluminationActionStatus,
@@ -276,6 +277,8 @@ __all__ = [
     "IncidentEvent",
     "IncidentEventType",
     "IncidentStatus",
+    # grading_snapshot
+    "GradingSnapshot",
     # governance
     "ComplianceAssessment",
     "ComplianceLevel",
