@@ -283,3 +283,18 @@ class TestAssumptionBounds:
 
         # confidence=0.95 → fallback pct = 0.1 * 0.05 = 0.005 = ±0.5%
         assert entry["swing_magnitude"] < 20  # Very narrow swing
+
+    def test_negative_assumption_value(self) -> None:
+        """Negative values (cost credits/rebates) produce correct swing."""
+        assumptions = [
+            AssumptionInput(name="rebate", value=-5000, confidence=0.8, confidence_range=20.0),
+        ]
+        result = compute_sensitivity(assumptions)
+        entry = result["entries"][0]
+
+        # value=-5000, ±20%: bounds are -6000 and -4000
+        # low_cost should be the smaller value, high_cost the larger
+        assert entry["low_cost"] < entry["high_cost"]
+        assert entry["swing_magnitude"] > 0
+        # Swing should be 2000 (|-4000 - (-6000)|)
+        assert abs(entry["swing_magnitude"] - 2000.0) < 0.01

@@ -127,12 +127,12 @@ def compute_sensitivity(
         swing = high_cost - low_cost
         entries.append({
             "assumption_name": assumption.name,
-            "baseline_cost": baseline_cost,
-            "low_cost": low_cost,
-            "high_cost": high_cost,
-            "swing_magnitude": swing,
-            "impact_amount_low": low_cost - baseline_cost,
-            "impact_amount_high": high_cost - baseline_cost,
+            "baseline_cost": round(baseline_cost, 2),
+            "low_cost": round(low_cost, 2),
+            "high_cost": round(high_cost, 2),
+            "swing_magnitude": round(swing, 2),
+            "impact_amount_low": round(low_cost - baseline_cost, 2),
+            "impact_amount_high": round(high_cost - baseline_cost, 2),
         })
 
     # Rank by descending swing magnitude
