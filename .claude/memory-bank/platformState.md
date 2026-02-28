@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.197
+**Version**: 2026.02.198
 **Last Updated**: 2026-02-28
 
 ## Quick Stats
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.198 | 2026-02-28 | Fix Knowledge Graph empty edge IDs crashing Cytoscape; retake screenshots (#560) |
 | 2026.02.197 | 2026-02-28 | Windows Agent UI, installer, testing, MDM: WPF tray app, WiX MSI, MSIX, GPO ADMX, Authenticode, WDAC, integration tests, Win matrix, Intune, SCCM (#559) |
 | 2026.02.196 | 2026-02-28 | E2E infrastructure: deterministic seeding, auth fixtures, 24 specs, 148 tests, Alembic async fix (#557) |
 | 2026.02.195 | 2026-02-28 | Windows Task Mining Agent: C# capture, PII, IPC, consent, security, config — 35 files, 4,398 LOC (#556) |

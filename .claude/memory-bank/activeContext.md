@@ -6,13 +6,17 @@
 
 **MVP COMPLETE** — Platform MVP done. Windows Task Mining Agent fully implemented across all 8 epics.
 
-- **Current version**: 2026.02.197
-- **Open issues**: 0 Windows Agent stories remaining (all 45 stories closed)
+- **Current version**: 2026.02.198
+- **Open issues**: 0
 - **Presentation**: deployed to kmflow.agentic-innovations.com via Cloudflare Pages
 
 ## Current Focus
 
-**Windows Task Mining Agent — COMPLETE**. All 8 epics (#511-#518) implemented in PRs #556 and #559.
+No active work items. MVP complete.
+
+## Recently Completed
+
+- **PR #562**: Fix Knowledge Graph empty edge IDs crashing Cytoscape rendering (#560) — merged 2026-02-28
 
 ### Completed Epics (All 8)
 - **Epic #511** (Capture Layer): InputMonitor, AppSwitchMonitor, WindowTitleCapture, IdleDetector, CaptureStateManager, HookDll
@@ -69,3 +73,7 @@ The project was built over February 2026 in a rapid sprint:
 - **RLS**: Row-level security on 32 engagement-scoped tables
 - **IDOR protection**: Every endpoint checks engagement membership
 - **CDD workflow**: Evidence posted as GitHub Issue comments for traceability
+
+---
+> SESSION END WARNING (2026-02-28T16:40:20Z): activeContext.md was NOT updated during this session.
+> Branch: feature/560-fix-knowledge-graph-edge-ids, Uncommitted: 14

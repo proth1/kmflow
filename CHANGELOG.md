@@ -3,6 +3,11 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.02.198] - 2026-02-28
+### Fixed
+- Knowledge Graph: empty edge IDs crashing Cytoscape rendering — use `elementId(r)` fallback (#560)
+- Knowledge Graph presentation screenshots replaced with real app captures (#560)
+
 ## [2026.02.197] - 2026-02-28
 ### Added
 - Windows Agent UI, installer, testing, and MDM: WPF system tray app, onboarding wizard, transparency log, WiX MSI, MSIX, Task Scheduler, Windows Service, GPO ADMX templates, Authenticode signing pipeline, WDAC policy, AV pre-submission checklist, integration tests, Win 10/11 test matrix, Intune deployment profile, SCCM detection scripts (#559)
