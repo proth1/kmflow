@@ -44,6 +44,8 @@ from src.core.models import (
     UserRole,
 )
 from src.core.permissions import require_engagement_access, require_permission
+from src.tom.benchmarking import match_gaps_to_practices
+from src.tom.benchmarking import rank_client as _rank_client
 from src.tom.maturity_scorer import MaturityScoringService
 
 logger = logging.getLogger(__name__)
@@ -206,7 +208,7 @@ class BestPracticeCreate(BaseModel):
     description: str
     source: str | None = None
     tom_dimension: TOMDimension
-    maturity_level_applicable: int | None = None
+    maturity_level_applicable: int | None = Field(None, ge=1, le=5)
 
 
 class BestPracticeResponse(BaseModel):
@@ -1121,8 +1123,6 @@ async def get_engagement_benchmarks(
         industry: Optional industry filter.
         domain: Optional domain filter (unused for now, reserved for future).
     """
-    from src.tom.benchmarking import rank_client as _rank_client
-
     # Load engagement to verify access (already done by require_engagement_access)
     eng_result = await session.execute(
         select(Engagement).where(Engagement.id == engagement_id)
@@ -1195,8 +1195,6 @@ async def get_gap_recommendations(
         engagement_id: The engagement owning the gap (for IDOR protection).
         limit: Maximum recommendations to return.
     """
-    from src.tom.benchmarking import match_gaps_to_practices
-
     # Load gap with engagement scope
     gap_result = await session.execute(
         select(GapAnalysisResult).where(
@@ -1211,8 +1209,11 @@ async def get_gap_recommendations(
             detail=f"Gap finding {gap_id} not found in engagement {engagement_id}",
         )
 
-    # Load best practices (all — filter by matching logic)
-    bp_result = await session.execute(select(BestPractice))
+    # Load best practices pre-filtered by dimension for performance
+    bp_query = select(BestPractice)
+    if gap.dimension:
+        bp_query = bp_query.where(BestPractice.tom_dimension == gap.dimension)
+    bp_result = await session.execute(bp_query)
     practices = list(bp_result.scalars().all())
 
     # Build gap dict for matching

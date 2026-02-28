@@ -8,6 +8,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+_STOP_WORDS = frozenset({
+    "the", "a", "an", "is", "in", "to", "for", "of", "and", "or",
+    "with", "on", "at", "be", "it", "that", "this", "was", "are",
+    "but", "not", "from", "by", "as", "has", "have", "been",
+})
+
 
 @dataclass
 class PercentileRanking:
@@ -175,11 +181,9 @@ def match_gaps_to_practices(
             # Keyword overlap
             if gap_words and practice_words:
                 overlap = gap_words & practice_words
-                # Remove common stop words
-                stop_words = {"the", "a", "an", "is", "in", "to", "for", "of", "and", "or", "with", "on", "at"}
-                meaningful_overlap = overlap - stop_words
+                meaningful_overlap = overlap - _STOP_WORDS
                 if meaningful_overlap:
-                    overlap_ratio = len(meaningful_overlap) / max(len(gap_words - stop_words), 1)
+                    overlap_ratio = len(meaningful_overlap) / max(len(gap_words - _STOP_WORDS), 1)
                     keyword_score = min(overlap_ratio * 0.3, 0.3)
                     score += keyword_score
                     if keyword_score > 0.05:
