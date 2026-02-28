@@ -1,8 +1,9 @@
-"""Validation API endpoints (Stories #349, #370).
+"""Validation API endpoints (Stories #349, #353, #370).
 
 Provides:
 - POST /api/v1/validation/review-packs — Trigger async review pack generation
 - GET  /api/v1/validation/review-packs — Retrieve generated packs by pov_version_id
+- POST /api/v1/validation/review-packs/{id}/decisions — Submit reviewer decision
 - GET  /api/v1/validation/dark-room-shrink — Dark-Room Shrink Rate dashboard data
 """
 
@@ -16,7 +17,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,7 +30,10 @@ from src.core.models import (
     User,
 )
 from src.core.models.validation import ReviewPack, ReviewPackStatus
+from src.core.models.validation_decision import ReviewerAction
 from src.core.permissions import require_engagement_access
+from src.core.services.reviewer_actions_service import ReviewerActionsService
+from src.semantic.graph import KnowledgeGraphService
 from src.validation.dark_room import (
     DEFAULT_SHRINK_RATE_TARGET,
     compute_illumination_timeline,
@@ -80,6 +84,24 @@ class PaginatedReviewPackResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class DecisionRequest(BaseModel):
+    """Request body for submitting a reviewer decision."""
+
+    element_id: str = Field(..., description="ID of the graph element being reviewed")
+    action: ReviewerAction = Field(..., description="Reviewer action: confirm/correct/reject/defer")
+    payload: dict[str, Any] | None = Field(None, description="Action-specific payload")
+
+
+class DecisionResponse(BaseModel):
+    """Response from submitting a reviewer decision."""
+
+    decision_id: str
+    action: str
+    element_id: str
+    graph_write_back: dict[str, Any]
+    decision_at: str
 
 
 class GenerateRequest(BaseModel):
@@ -185,6 +207,55 @@ async def list_review_packs(
         "limit": limit,
         "offset": offset,
     }
+
+
+# ---------------------------------------------------------------------------
+# Submit Reviewer Decision (Story #353)
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/review-packs/{review_pack_id}/decisions",
+    response_model=DecisionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def submit_decision(
+    review_pack_id: uuid.UUID,
+    body: DecisionRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Submit a structured reviewer decision on a review pack item.
+
+    Persists a ValidationDecision and triggers the corresponding
+    knowledge graph write-back (CONFIRM/CORRECT/REJECT/DEFER).
+    """
+    # Verify review pack exists and get its engagement_id
+    pack_result = await session.execute(
+        select(ReviewPack).where(ReviewPack.id == review_pack_id)
+    )
+    pack = pack_result.scalar_one_or_none()
+    if pack is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Review pack not found",
+        )
+
+    graph = KnowledgeGraphService(request.app.state.neo4j_driver)
+    service = ReviewerActionsService(graph=graph, session=session)
+
+    result = await service.submit_decision(
+        engagement_id=pack.engagement_id,
+        review_pack_id=review_pack_id,
+        element_id=body.element_id,
+        action=body.action,
+        reviewer_id=current_user.id,
+        payload=body.payload,
+    )
+    await session.commit()
+
+    return result
 
 
 # ---------------------------------------------------------------------------
