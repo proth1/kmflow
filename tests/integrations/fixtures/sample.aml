@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AML Version="10.0">
+  <Group Group.ID="grp-1">
+    <ObjDef ObjDef.ID="obj-1" TypeNum="OT_FUNC" SymbNum="OT_FUNC">
+      <AttrDef AttrDef.Type="AT_NAME">
+        <AttrValue>Submit Application</AttrValue>
+      </AttrDef>
+    </ObjDef>
+    <ObjDef ObjDef.ID="obj-2" TypeNum="OT_FUNC" SymbNum="OT_FUNC">
+      <AttrDef AttrDef.Type="AT_NAME">
+        <AttrValue>Review Application</AttrValue>
+      </AttrDef>
+    </ObjDef>
+    <ObjDef ObjDef.ID="obj-3" TypeNum="OT_RULE" SymbNum="OT_RULE">
+      <AttrDef AttrDef.Type="AT_NAME">
+        <AttrValue>Approved?</AttrValue>
+      </AttrDef>
+    </ObjDef>
+    <ObjDef ObjDef.ID="obj-4" TypeNum="OT_FUNC" SymbNum="OT_FUNC">
+      <AttrDef AttrDef.Type="AT_NAME">
+        <AttrValue>Approve Application</AttrValue>
+      </AttrDef>
+    </ObjDef>
+    <ObjDef ObjDef.ID="obj-5" TypeNum="OT_EVT" SymbNum="OT_EVT">
+      <AttrDef AttrDef.Type="AT_NAME">
+        <AttrValue>Application Received</AttrValue>
+      </AttrDef>
+    </ObjDef>
+    <ObjDef ObjDef.ID="role-1" TypeNum="OT_ROLE" SymbNum="OT_ROLE">
+      <AttrDef AttrDef.Type="AT_NAME">
+        <AttrValue>Clerk</AttrValue>
+      </AttrDef>
+    </ObjDef>
+    <ObjDef ObjDef.ID="role-2" TypeNum="OT_ROLE" SymbNum="OT_ROLE">
+      <AttrDef AttrDef.Type="AT_NAME">
+        <AttrValue>Manager</AttrValue>
+      </AttrDef>
+    </ObjDef>
+    <CxnDef CxnDef.ID="cxn-1" CxnDef.Type="CT_IS_PRED_OF"
+            SourceObjDef.IdRef="obj-1" TargetObjDef.IdRef="obj-2"/>
+    <CxnDef CxnDef.ID="cxn-2" CxnDef.Type="CT_IS_PRED_OF"
+            SourceObjDef.IdRef="obj-2" TargetObjDef.IdRef="obj-3"/>
+    <CxnDef CxnDef.ID="cxn-3" CxnDef.Type="CT_IS_PRED_OF"
+            SourceObjDef.IdRef="obj-3" TargetObjDef.IdRef="obj-4"/>
+    <CxnDef CxnDef.ID="cxn-4" CxnDef.Type="CT_EXEC"
+            SourceObjDef.IdRef="role-1" TargetObjDef.IdRef="obj-1"/>
+    <CxnDef CxnDef.ID="cxn-5" CxnDef.Type="CT_EXEC"
+            SourceObjDef.IdRef="role-2" TargetObjDef.IdRef="obj-2"/>
+  </Group>
+  <Lane Lane.ID="lane-1">
+    <AttrDef AttrDef.Type="AT_NAME">
+      <AttrValue>Front Office</AttrValue>
+    </AttrDef>
+    <ObjOcc ObjDef.IdRef="obj-1"/>
+  </Lane>
+  <Lane Lane.ID="lane-2">
+    <AttrDef AttrDef.Type="AT_NAME">
+      <AttrValue>Back Office</AttrValue>
+    </AttrDef>
+    <ObjOcc ObjDef.IdRef="obj-2"/>
+    <ObjOcc ObjDef.IdRef="obj-3"/>
+  </Lane>
+</AML>
