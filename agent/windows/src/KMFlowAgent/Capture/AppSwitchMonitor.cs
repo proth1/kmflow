@@ -20,6 +20,7 @@ public sealed class AppSwitchMonitor : IDisposable
 
     private readonly Action<CaptureEvent> _onEvent;
     private readonly ProcessIdentifier _processIdentifier;
+    private WindowTitleCapture? _windowTitleCapture;
     private IntPtr _hookHandle;
     private WinEventDelegate? _hookDelegate; // prevent GC of delegate
     private string? _currentApp;
@@ -36,6 +37,15 @@ public sealed class AppSwitchMonitor : IDisposable
         _onEvent = onEvent;
         _processIdentifier = processIdentifier;
         _lastSwitchTime = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Set the WindowTitleCapture instance to receive WINDOW_FOCUS events
+    /// on each foreground change. Called by CaptureStateManager during setup.
+    /// </summary>
+    public void SetWindowTitleCapture(WindowTitleCapture windowTitleCapture)
+    {
+        _windowTitleCapture = windowTitleCapture;
     }
 
     /// <summary>Install the foreground change hook.</summary>
@@ -97,6 +107,9 @@ public sealed class AppSwitchMonitor : IDisposable
                 eventData: eventData);
 
             _onEvent(evt);
+
+            // Also emit a WINDOW_FOCUS event with the new window's title
+            _windowTitleCapture?.CaptureTitle(hwnd);
 
             _currentApp = appName;
             _currentAppId = appId;

@@ -25,6 +25,7 @@ public sealed class CaptureStateManager : IDisposable
     private WindowTitleCapture? _windowTitleCapture;
 
     private ulong _globalSequenceNumber;
+    private long _droppedEventCount;
     private volatile bool _isPaused;
     private bool _disposed;
 
@@ -44,6 +45,9 @@ public sealed class CaptureStateManager : IDisposable
     /// <summary>Total events captured in this session.</summary>
     public ulong EventCount => _globalSequenceNumber;
 
+    /// <summary>Total events dropped due to IPC send failure.</summary>
+    public long DroppedEventCount => Interlocked.Read(ref _droppedEventCount);
+
     /// <summary>Start all capture subsystems.</summary>
     public void Start()
     {
@@ -51,6 +55,10 @@ public sealed class CaptureStateManager : IDisposable
         _appSwitchMonitor = new AppSwitchMonitor(OnRawEvent, _processIdentifier);
         _idleDetector = new IdleDetector(OnRawEvent);
         _windowTitleCapture = new WindowTitleCapture(OnRawEvent);
+
+        // Wire WindowTitleCapture into AppSwitchMonitor so WINDOW_FOCUS events
+        // are emitted on each foreground change
+        _appSwitchMonitor.SetWindowTitleCapture(_windowTitleCapture);
 
         _inputMonitor.Start();
         _appSwitchMonitor.Start();
@@ -102,16 +110,17 @@ public sealed class CaptureStateManager : IDisposable
             eventData: rawEvent.EventData,
             idempotencyKey: rawEvent.IdempotencyKey);
 
-        // Fire-and-forget send to Python via named pipe
+        // Fire-and-forget send to Python via IPC
         _ = Task.Run(async () =>
         {
             try
             {
                 await _pipeClient.SendEventAsync(finalEvent).ConfigureAwait(false);
             }
-            catch
+            catch (Exception ex)
             {
-                // Best effort — event will be logged but not block capture
+                Interlocked.Increment(ref _droppedEventCount);
+                AgentLogger.Debug($"Event send failed (dropped={DroppedEventCount}): {ex.Message}");
             }
         });
     }

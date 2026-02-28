@@ -2,6 +2,10 @@
 
 Uses DPAPI for credential storage, named pipes for IPC, and NTFS ACLs
 for file permissions. Falls back to TCP loopback if named pipe creation fails.
+
+TCP loopback is authenticated via a shared secret token written to an
+owner-only ipc_port file. The C# client reads this file and sends the
+token as the first line after connecting.
 """
 
 from __future__ import annotations
@@ -11,6 +15,7 @@ import base64
 import ctypes
 import logging
 import os
+import secrets
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -23,6 +28,7 @@ _CREDENTIAL_TARGET_PREFIX = "KMFlowAgent:"
 _PIPE_NAME = r"\\.\pipe\KMFlowAgent"
 _TCP_FALLBACK_HOST = "127.0.0.1"
 _TCP_FALLBACK_PORT = 19847
+_AUTH_TOKEN_BYTES = 32
 
 
 class WindowsPlatform(PlatformBase):
@@ -48,25 +54,52 @@ class WindowsPlatform(PlatformBase):
         We use TCP loopback (127.0.0.1) restricted to localhost as a reliable
         fallback. The C# client connects to this address.
 
+        Authentication: a random token is generated per session and written to
+        the owner-only ipc_port file. The C# client reads this token and sends
+        it as the first line after connecting. Unauthenticated connections are
+        immediately closed.
+
         A future enhancement can use ProactorEventLoop with win32pipe for true
         named pipe support.
         """
         data_dir = self.get_data_dir()
         data_dir.mkdir(parents=True, exist_ok=True)
 
+        # Generate a per-session auth token
+        auth_token = secrets.token_hex(_AUTH_TOKEN_BYTES)
+
+        async def _authenticated_handler(
+            reader: asyncio.StreamReader,
+            writer: asyncio.StreamWriter,
+        ) -> None:
+            """Verify auth token before delegating to the real handler."""
+            try:
+                first_line = await asyncio.wait_for(reader.readline(), timeout=5.0)
+                received_token = first_line.decode("utf-8").strip()
+                if received_token != auth_token:
+                    logger.warning("IPC client failed authentication, closing connection")
+                    writer.close()
+                    await writer.wait_closed()
+                    return
+                await client_handler(reader, writer)
+            except asyncio.TimeoutError:
+                logger.warning("IPC client did not send auth token within timeout")
+                writer.close()
+                await writer.wait_closed()
+
         server = await asyncio.start_server(
-            client_handler,
+            _authenticated_handler,
             host=_TCP_FALLBACK_HOST,
             port=_TCP_FALLBACK_PORT,
         )
 
-        # Write the port to a file so the C# client can discover it
+        # Write port:token to a file so the C# client can discover both
         port_file = data_dir / "ipc_port"
-        port_file.write_text(str(_TCP_FALLBACK_PORT))
+        port_file.write_text(f"{_TCP_FALLBACK_PORT}:{auth_token}")
         self.set_owner_only_permissions(port_file)
 
         logger.info(
-            "IPC server listening on %s:%d (TCP loopback)",
+            "IPC server listening on %s:%d (TCP loopback, authenticated)",
             _TCP_FALLBACK_HOST,
             _TCP_FALLBACK_PORT,
         )
@@ -198,8 +231,10 @@ class WindowsPlatform(PlatformBase):
                 result = ctypes.string_at(output_blob.pbData, output_blob.cbData)
                 ctypes.windll.kernel32.LocalFree(output_blob.pbData)  # type: ignore[attr-defined]
                 return result
-        except Exception:
+        except (OSError, ValueError, ctypes.ArgumentError):
             pass
+        except Exception:
+            logger.warning("Unexpected error in DPAPI protect", exc_info=True)
         return None
 
     @staticmethod
@@ -223,6 +258,8 @@ class WindowsPlatform(PlatformBase):
                 result = ctypes.string_at(output_blob.pbData, output_blob.cbData).decode("utf-8")
                 ctypes.windll.kernel32.LocalFree(output_blob.pbData)  # type: ignore[attr-defined]
                 return result
-        except Exception:
+        except (OSError, ValueError, ctypes.ArgumentError):
             pass
+        except Exception:
+            logger.warning("Unexpected error in DPAPI unprotect", exc_info=True)
         return None

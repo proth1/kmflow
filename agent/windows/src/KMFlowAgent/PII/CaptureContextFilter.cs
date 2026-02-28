@@ -84,6 +84,13 @@ public sealed class CaptureContextFilter
                 return true;
         }
 
+        // Block keyboard events when focused element is a password field (ES_PASSWORD)
+        if (evt.EventType is DesktopEventType.KeyboardAction or DesktopEventType.KeyboardShortcut)
+        {
+            if (IsPasswordField())
+                return true;
+        }
+
         return false;
     }
 
