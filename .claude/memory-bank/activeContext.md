@@ -8,6 +8,7 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #468 merged** — Survey bot with 8 probe types: session lifecycle, fatigue-optimized probes, claim creation, conflict flagging, certainty summaries, 23 tests (#319) (v2026.02.151)
 - **PR #467 merged** — Seed list pipeline: 4-stage workflow, consultant upload, NLP refinement, probe generation, extraction targeting, 25 tests (#321) (v2026.02.150)
 - **PR #466 merged** — Certainty tier tracking: SurveyClaimHistory audit trail, tier promotion, shelf data auto-generation, IDOR-safe endpoints, 24 tests (#322) (v2026.02.149)
 - **PR #465 merged** — Data classification + GDPR compliance: 4-tier classification, retention enforcement, ROPA tracking, compliance reporting, 31 tests (#317) (v2026.02.148)

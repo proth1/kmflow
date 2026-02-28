@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.150
+**Version**: 2026.02.151
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.151 | 2026-02-27 | Survey bot with 8 probe types: session lifecycle, fatigue-optimized probes, claim creation, conflict flagging, certainty summaries, 23 tests (#319) |
 | 2026.02.150 | 2026-02-27 | Seed list pipeline: 4-stage workflow, consultant upload, NLP refinement, probe generation, extraction targeting, IDOR-safe DELETE, 25 tests (#321) |
 | 2026.02.149 | 2026-02-27 | Certainty tier tracking: SurveyClaimHistory audit trail, tier promotion, shelf data auto-generation, IDOR-safe engagement-scoped endpoints, 24 tests (#322) |
 | 2026.02.148 | 2026-02-27 | Data classification + GDPR compliance: 4-tier classification, retention enforcement, ROPA tracking, compliance reporting, 31 tests (#317) |

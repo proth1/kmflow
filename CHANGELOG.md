@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.151] - 2026-02-27
+### Added
+- Survey bot with 8 probe types: SurveySession lifecycle, fatigue-optimized probe generation from seed terms (EXISTENCE → UNCERTAINTY ordering), claim creation with conflict flagging, session summaries with certainty tier distribution, engagement-scoped IDOR-safe endpoints, migration 070, 23 tests (#319)
+
 ## [2026.02.150] - 2026-02-27
 ### Added
 - Seed list pipeline with 4-stage workflow: consultant vocabulary upload with deduplication, NLP refinement with source tracking, probe generation (4 templates per term), extraction targeting for active terms, engagement-scoped endpoints with IDOR-safe DELETE, 25 tests (#321)
