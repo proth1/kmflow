@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.187
+**Version**: 2026.02.188
 **Last Updated**: 2026-02-28
 
 ## Quick Stats
@@ -9,7 +9,7 @@
 |--------|-------|
 | SQLAlchemy Models | 82+ classes across 12 modules |
 | API Routes | 26+ routers |
-| Test Count | 3279 backend + 206 frontend passing |
+| Test Count | 3302 backend + 206 frontend passing |
 | Coverage | >80% |
 | Python Version | 3.12+ |
 | FastAPI Version | 0.109+ |
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.188 | 2026-02-28 | Persona-specific dashboard APIs: Engagement Lead, Process Analyst, SME, Client Stakeholder with RBAC, 23 tests (#362) |
 | 2026.02.187 | 2026-02-28 | Gap analysis dashboard API: gap counts by type/severity, TOM dimension alignment scores, prioritized recommendations, maturity heatmap, 16 tests (#347) |
 | 2026.02.186 | 2026-02-28 | Evidence mapping overlay API: reverse evidence-to-element lookup, dark elements with acquisition suggestions, 19 tests (#343) |
 | 2026.02.185 | 2026-02-28 | Confidence heatmap API: per-element confidence map, brightness distribution summary with CSV export, 14 tests (Part of #341) |

@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.188] - 2026-02-28
+### Added
+- Persona-specific dashboard APIs: Engagement Lead (7 KPIs), Process Analyst (processing status, conflict queue), SME (review stats, decision history), Client Stakeholder (read-only findings), role-based access control, 23 tests (#362)
+
 ## [2026.02.187] - 2026-02-28
 ### Added
 - Gap analysis dashboard API: gap counts by type/severity, TOM dimension alignment scores (1.0 - avg_severity), prioritized recommendations, maturity heatmap, 16 tests (#347)

@@ -4,10 +4,11 @@
 
 ## Current Focus
 
-Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. Next: Story #362 (Persona Dashboards).
+Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. Next: Story #369 (Financial Impact Dashboard).
 
 ## Recently Completed
 
+- **PR #505 merged** — Persona-specific dashboard APIs: Engagement Lead, Process Analyst, SME, Client Stakeholder with RBAC, 23 tests (#362) (v2026.02.188)
 - **PR #504 merged** — Gap analysis dashboard API: gap counts by type/severity, TOM dimension alignment scores, prioritized recommendations, maturity heatmap, 16 tests (#347) (v2026.02.187)
 - **PR #503 merged** — Evidence mapping overlay API: reverse evidence lookup, dark elements with suggestions, 19 tests (#343) (v2026.02.186)
 - **PR #502 merged** — Confidence heatmap API: per-element confidence map, brightness distribution summary, CSV export, 14 tests (Part of #341) (v2026.02.185)
