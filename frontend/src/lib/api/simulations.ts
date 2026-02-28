@@ -409,6 +409,87 @@ export async function fetchFinancialImpact(
   );
 }
 
+// -- Engagement-Scoped Financial Analysis API ---------------------------------
+
+export interface TornadoEntryData {
+  assumption_name: string;
+  baseline_cost: number;
+  low_cost: number;
+  high_cost: number;
+  swing_magnitude: number;
+  rank: number;
+}
+
+export interface TornadoChartData {
+  items: TornadoEntryData[];
+  total: number;
+}
+
+export interface PercentileEstimateData {
+  p10: number;
+  p50: number;
+  p90: number;
+}
+
+export interface EngagementAssumptionData {
+  id: string;
+  engagement_id: string;
+  assumption_type: string;
+  name: string;
+  value: number;
+  unit: string;
+  confidence: number;
+  confidence_range: number | null;
+  source_evidence_id: string | null;
+  confidence_explanation: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EngagementAssumptionList {
+  items: EngagementAssumptionData[];
+  total: number;
+}
+
+export async function fetchEngagementAssumptions(
+  engagementId: string,
+  assumptionType?: string,
+): Promise<EngagementAssumptionList> {
+  const params = assumptionType ? `?assumption_type=${assumptionType}` : "";
+  return apiGet<EngagementAssumptionList>(
+    `/api/v1/engagements/${engagementId}/assumptions${params}`,
+  );
+}
+
+export async function updateEngagementAssumption(
+  engagementId: string,
+  assumptionId: string,
+  body: { value?: number; unit?: string; confidence?: number; notes?: string },
+): Promise<EngagementAssumptionData> {
+  return apiPatch<EngagementAssumptionData>(
+    `/api/v1/engagements/${engagementId}/assumptions/${assumptionId}`,
+    body,
+  );
+}
+
+export async function fetchTornadoChart(
+  engagementId: string,
+): Promise<TornadoChartData> {
+  return apiGet<TornadoChartData>(
+    `/api/v1/engagements/${engagementId}/financial-analysis/tornado`,
+  );
+}
+
+export async function fetchPercentiles(
+  engagementId: string,
+): Promise<PercentileEstimateData> {
+  return apiPost<PercentileEstimateData>(
+    `/api/v1/engagements/${engagementId}/financial-analysis/percentiles`,
+    {},
+  );
+}
+
 // -- Scenario Ranking API -----------------------------------------------------
 
 export async function fetchScenarioRanking(
