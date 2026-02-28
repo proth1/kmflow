@@ -1352,6 +1352,167 @@ async def prioritize_gaps(
     return {"engagement_id": str(engagement_id), "gaps": prioritized, "total": len(prioritized)}
 
 
+# -- Gap Analysis Dashboard (Story #347) --------------------------------------
+
+
+class GapCountByType(BaseModel):
+    """Gap count for a specific gap type, broken down by severity buckets."""
+
+    gap_type: str
+    total: int
+    critical: int
+    high: int
+    medium: int
+    low: int
+
+
+class DimensionAlignmentScore(BaseModel):
+    """Alignment score for a single TOM dimension."""
+
+    dimension: str
+    score: float
+    below_threshold: bool
+
+
+class RecommendationEntry(BaseModel):
+    """A prioritized recommendation from gap analysis."""
+
+    gap_id: str
+    title: str
+    gap_type: str
+    dimension: str
+    severity: float
+    priority_score: float
+    recommendation: str | None
+    rationale: str | None
+
+
+class GapDashboardResponse(BaseModel):
+    """Aggregated gap analysis dashboard data."""
+
+    engagement_id: str
+    total_gaps: int
+    gap_counts: list[GapCountByType]
+    dimension_scores: list[DimensionAlignmentScore]
+    recommendations: list[RecommendationEntry]
+    maturity_heatmap: dict[str, dict[str, int]]
+
+
+@router.get(
+    "/dashboard/{engagement_id}/gap-analysis",
+    response_model=GapDashboardResponse,
+)
+async def get_gap_analysis_dashboard(
+    engagement_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("engagement:read")),
+) -> dict[str, Any]:
+    """Get aggregated gap analysis dashboard data.
+
+    Returns gap counts by type/severity, TOM dimension alignment scores,
+    prioritized recommendations, and a maturity heatmap.
+
+    Args:
+        engagement_id: The engagement UUID.
+    """
+    await _check_engagement_member(session, user, engagement_id)
+
+    # Get all gaps for the engagement
+    gap_result = await session.execute(
+        select(GapAnalysisResult).where(GapAnalysisResult.engagement_id == engagement_id)
+    )
+    gaps = list(gap_result.scalars().all())
+
+    # --- Gap counts by type and severity ---
+    severity_threshold_critical = 0.9
+    severity_threshold_high = 0.7
+    severity_threshold_medium = 0.4
+
+    gap_type_counts: dict[str, dict[str, int]] = {}
+    for gap_type in TOMGapType:
+        if gap_type == TOMGapType.NO_GAP:
+            continue
+        gap_type_counts[gap_type.value] = {"total": 0, "critical": 0, "high": 0, "medium": 0, "low": 0}
+
+    for gap in gaps:
+        gt = str(gap.gap_type)
+        if gt not in gap_type_counts:
+            continue
+        gap_type_counts[gt]["total"] += 1
+        if gap.severity >= severity_threshold_critical:
+            gap_type_counts[gt]["critical"] += 1
+        elif gap.severity >= severity_threshold_high:
+            gap_type_counts[gt]["high"] += 1
+        elif gap.severity >= severity_threshold_medium:
+            gap_type_counts[gt]["medium"] += 1
+        else:
+            gap_type_counts[gt]["low"] += 1
+
+    gap_counts_list = [
+        GapCountByType(gap_type=gt, **counts)
+        for gt, counts in gap_type_counts.items()
+    ]
+
+    # --- TOM dimension alignment scores ---
+    alignment_threshold = 0.6
+    dim_gaps: dict[str, list[float]] = {dim.value: [] for dim in TOMDimension}
+    for gap in gaps:
+        dim_gaps[str(gap.dimension)].append(gap.confidence)
+
+    dimension_scores = []
+    for dim in TOMDimension:
+        dim_values = dim_gaps[dim.value]
+        score = sum(dim_values) / len(dim_values) if dim_values else 1.0
+        dimension_scores.append(DimensionAlignmentScore(
+            dimension=dim.value,
+            score=round(score, 3),
+            below_threshold=score < alignment_threshold,
+        ))
+
+    # --- Prioritized recommendations ---
+    recommendations = []
+    for gap in gaps:
+        title = gap.recommendation[:80] if gap.recommendation else f"{gap.gap_type} in {gap.dimension}"
+        recommendations.append(RecommendationEntry(
+            gap_id=str(gap.id),
+            title=title,
+            gap_type=str(gap.gap_type),
+            dimension=str(gap.dimension),
+            severity=gap.severity,
+            priority_score=gap.priority_score,
+            recommendation=gap.recommendation,
+            rationale=gap.rationale,
+        ))
+    recommendations.sort(key=lambda r: r.priority_score, reverse=True)
+
+    # --- Maturity heatmap (dimension × maturity level) ---
+    maturity_result = await session.execute(
+        select(MaturityScore).where(MaturityScore.engagement_id == engagement_id)
+    )
+    maturity_scores = list(maturity_result.scalars().all())
+
+    # Build heatmap: {dimension: {maturity_level: count}}
+    heatmap: dict[str, dict[str, int]] = {}
+    for dim in TOMDimension:
+        heatmap[dim.value] = {}
+    for score in maturity_scores:
+        dim_key = str(score.maturity_level)
+        # Group by engagement dimension — use level_number as value
+        for dim in TOMDimension:
+            if dim.value not in heatmap:
+                heatmap[dim.value] = {}
+            heatmap[dim.value][dim_key] = score.level_number
+
+    return {
+        "engagement_id": str(engagement_id),
+        "total_gaps": len(gaps),
+        "gap_counts": [gc.model_dump() for gc in gap_counts_list],
+        "dimension_scores": [ds.model_dump() for ds in dimension_scores],
+        "recommendations": [r.model_dump() for r in recommendations],
+        "maturity_heatmap": heatmap,
+    }
+
+
 # -- Conformance Routes (Story #32) -------------------------------------------
 
 
