@@ -28,6 +28,7 @@ from src.core.models import (
     DarkRoomSnapshot,
     ProcessElement,
     ProcessModel,
+    ProcessModelStatus,
     User,
 )
 from src.core.models.grading_snapshot import GradingSnapshot
@@ -48,6 +49,11 @@ from src.validation.grading_progression import (
     compute_grade_distributions,
 )
 from src.validation.pack_generator import ActivityInfo, generate_packs
+from src.validation.republish import (
+    ElementSnapshot,
+    apply_decisions_to_elements,
+    compute_diff,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -457,6 +463,268 @@ async def route_review_packs(
     await session.commit()
 
     return routed
+
+
+# ---------------------------------------------------------------------------
+# Republish Cycle (Story #361 — Scenario 1)
+# ---------------------------------------------------------------------------
+
+
+class RepublishRequest(BaseModel):
+    """Request body to trigger POV republish."""
+
+    pov_version_id: uuid.UUID
+    engagement_id: uuid.UUID
+
+
+class RepublishResponse(BaseModel):
+    """Response from POV republish."""
+
+    new_version_id: str
+    new_version_number: int
+    total_elements: int
+    dark_shrink_rate: float | None
+    changes_summary: dict[str, int]
+
+
+@router.post("/republish", response_model=RepublishResponse, status_code=status.HTTP_201_CREATED)
+async def republish_pov(
+    body: RepublishRequest,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Republish a POV version incorporating validation decisions.
+
+    Creates a new version (v2, v3, etc.) by applying CONFIRM/CORRECT/REJECT/DEFER
+    decisions from the prior version's review packs.
+    """
+    # Load source POV
+    pov_result = await session.execute(
+        select(ProcessModel).where(
+            ProcessModel.id == body.pov_version_id,
+            ProcessModel.engagement_id == body.engagement_id,
+        )
+    )
+    source_pov = pov_result.scalar_one_or_none()
+    if source_pov is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="POV version not found for this engagement",
+        )
+
+    # Load source elements
+    elements_result = await session.execute(
+        select(ProcessElement)
+        .where(ProcessElement.model_id == body.pov_version_id)
+        .order_by(ProcessElement.created_at)
+    )
+    source_elements = elements_result.scalars().all()
+
+    # Build element snapshots
+    snapshots = [
+        ElementSnapshot(
+            element_id=str(el.id),
+            name=el.name,
+            element_type=el.element_type.value if hasattr(el.element_type, "value") else str(el.element_type),
+            confidence_score=el.confidence_score,
+            evidence_grade=el.evidence_grade.value if hasattr(el.evidence_grade, "value") else str(el.evidence_grade),
+            brightness_classification=(
+                el.brightness_classification.value
+                if hasattr(el.brightness_classification, "value")
+                else str(el.brightness_classification)
+            ),
+            evidence_count=el.evidence_count,
+            evidence_ids=el.evidence_ids or [],
+        )
+        for el in source_elements
+    ]
+
+    # Load validation decisions for this POV version's review packs
+    decisions_result = await session.execute(
+        select(ValidationDecision).where(
+            ValidationDecision.engagement_id == body.engagement_id,
+            ValidationDecision.review_pack_id.in_(
+                select(ReviewPack.id).where(ReviewPack.pov_version_id == body.pov_version_id)
+            ),
+        )
+    )
+    decisions = decisions_result.scalars().all()
+
+    decision_dicts = [
+        {
+            "element_id": d.element_id,
+            "action": d.action,
+            "payload": d.payload or {},
+        }
+        for d in decisions
+    ]
+
+    # Apply decisions to produce new element set
+    new_snapshots = apply_decisions_to_elements(snapshots, decision_dicts)
+
+    # Compute diff for shrink rate
+    diff = compute_diff(snapshots, new_snapshots, str(body.pov_version_id), "new")
+
+    # Create new ProcessModel version
+    new_version = source_pov.version + 1
+    new_pov = ProcessModel(
+        engagement_id=body.engagement_id,
+        version=new_version,
+        scope=source_pov.scope,
+        status=ProcessModelStatus.COMPLETED,
+        confidence_score=source_pov.confidence_score,
+        element_count=len(new_snapshots),
+        evidence_count=source_pov.evidence_count,
+        metadata_json={"source_version_id": str(body.pov_version_id), "source_decisions": "validation"},
+        generated_by="republish_engine",
+    )
+    session.add(new_pov)
+    await session.flush()
+
+    # Create new ProcessElement rows for the new version
+    for snap in new_snapshots:
+        new_el = ProcessElement(
+            model_id=new_pov.id,
+            element_type=snap.element_type,
+            name=snap.name,
+            confidence_score=snap.confidence_score,
+            evidence_grade=snap.evidence_grade,
+            brightness_classification=snap.brightness_classification,
+            evidence_count=snap.evidence_count,
+            evidence_ids=snap.evidence_ids,
+        )
+        session.add(new_el)
+
+    await session.commit()
+
+    return {
+        "new_version_id": str(new_pov.id),
+        "new_version_number": new_version,
+        "total_elements": len(new_snapshots),
+        "dark_shrink_rate": diff.dark_shrink_rate,
+        "changes_summary": {
+            "added": len(diff.added),
+            "removed": len(diff.removed),
+            "modified": len(diff.modified),
+            "unchanged": diff.unchanged_count,
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# Version Diff (Story #361 — Scenario 2 & 3)
+# ---------------------------------------------------------------------------
+
+
+class ElementChangeResponse(BaseModel):
+    """A single element change in the diff."""
+
+    element_id: str
+    element_name: str
+    change_type: str
+    changed_fields: list[str] = []
+    color: str = "none"
+    css_class: str = "unchanged"
+
+
+class VersionDiffResponse(BaseModel):
+    """Structured diff between two POV versions."""
+
+    v1_id: str
+    v2_id: str
+    added: list[ElementChangeResponse]
+    removed: list[ElementChangeResponse]
+    modified: list[ElementChangeResponse]
+    unchanged_count: int
+    dark_shrink_rate: float | None
+    total_changes: int
+
+
+@router.get("/diff", response_model=VersionDiffResponse)
+async def get_version_diff(
+    v1: uuid.UUID = Query(..., description="POV version 1 ID"),
+    v2: uuid.UUID = Query(..., description="POV version 2 ID"),
+    engagement_id: uuid.UUID = Query(..., description="Engagement ID"),
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Compute the diff between two POV versions.
+
+    Returns added, removed, and modified elements with BPMN color-coding hints.
+    """
+    # Load both versions (engagement-scoped)
+    v1_result = await session.execute(
+        select(ProcessModel).where(
+            ProcessModel.id == v1,
+            ProcessModel.engagement_id == engagement_id,
+        )
+    )
+    v1_pov = v1_result.scalar_one_or_none()
+    if v1_pov is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Version 1 not found")
+
+    v2_result = await session.execute(
+        select(ProcessModel).where(
+            ProcessModel.id == v2,
+            ProcessModel.engagement_id == engagement_id,
+        )
+    )
+    v2_pov = v2_result.scalar_one_or_none()
+    if v2_pov is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Version 2 not found")
+
+    # Load elements for both
+    v1_els_result = await session.execute(
+        select(ProcessElement).where(ProcessElement.model_id == v1)
+    )
+    v1_elements = v1_els_result.scalars().all()
+
+    v2_els_result = await session.execute(
+        select(ProcessElement).where(ProcessElement.model_id == v2)
+    )
+    v2_elements = v2_els_result.scalars().all()
+
+    def to_snapshot(el: Any) -> ElementSnapshot:
+        return ElementSnapshot(
+            element_id=str(el.id),
+            name=el.name,
+            element_type=el.element_type.value if hasattr(el.element_type, "value") else str(el.element_type),
+            confidence_score=el.confidence_score,
+            evidence_grade=el.evidence_grade.value if hasattr(el.evidence_grade, "value") else str(el.evidence_grade),
+            brightness_classification=(
+                el.brightness_classification.value
+                if hasattr(el.brightness_classification, "value")
+                else str(el.brightness_classification)
+            ),
+            evidence_count=el.evidence_count,
+            evidence_ids=el.evidence_ids or [],
+        )
+
+    v1_snapshots = [to_snapshot(e) for e in v1_elements]
+    v2_snapshots = [to_snapshot(e) for e in v2_elements]
+
+    diff = compute_diff(v1_snapshots, v2_snapshots, str(v1), str(v2))
+
+    def change_to_dict(c: Any) -> dict[str, Any]:
+        return {
+            "element_id": c.element_id,
+            "element_name": c.element_name,
+            "change_type": c.change_type.value,
+            "changed_fields": c.changed_fields,
+            "color": c.color,
+            "css_class": c.css_class,
+        }
+
+    return {
+        "v1_id": str(v1),
+        "v2_id": str(v2),
+        "added": [change_to_dict(c) for c in diff.added],
+        "removed": [change_to_dict(c) for c in diff.removed],
+        "modified": [change_to_dict(c) for c in diff.modified],
+        "unchanged_count": diff.unchanged_count,
+        "dark_shrink_rate": diff.dark_shrink_rate,
+        "total_changes": diff.total_changes,
+    }
 
 
 # ---------------------------------------------------------------------------
