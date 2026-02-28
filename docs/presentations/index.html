@@ -1518,7 +1518,7 @@
       <a href="#slide-45">Workflows</a>
       <a href="#slide-51">Roadmap</a>
     </div>
-    <div class="nav-version">v2026.02.191 &mdash; MVP Complete</div>
+    <div class="nav-version">v2026.02.197 &mdash; MVP + Windows Agent</div>
   </nav>
 
   <div class="slide-indicator" id="slideIndicator"></div>
@@ -1600,7 +1600,7 @@
         <div class="card toc-card" onclick="openTocModal(7)">
           <div class="card-icon">8</div>
           <h3>Roadmap</h3>
-          <p>MVP complete (101K LOC, 5,797 tests, 18 epics), what&rsquo;s new, Phase 2 intelligence, Phase 3 scale, success metrics, launch plan</p>
+          <p>MVP complete (108K LOC, 5,797+ tests, 26 epics), Windows Agent delivered, Phase 2 intelligence, Phase 3 scale, success metrics</p>
         </div>
         <div class="card toc-card" onclick="openTocModal(8)">
           <div class="card-icon">9</div>
@@ -3398,36 +3398,40 @@ confidence = (
       </div>
     </section>
 
-    <!-- Slide 38b: Our Solution — First-Party macOS Agent -->
+    <!-- Slide 38b: Our Solution — Cross-Platform Desktop Agents -->
     <section id="slide-38b" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Agent Technology</span>
-        <h2>Our Solution: First-Party macOS Agent</h2>
-        <p>A lightweight, privacy-first desktop agent that observes actual work patterns and feeds evidence directly into the knowledge graph</p>
+        <h2>Our Solution: Cross-Platform Desktop Agents</h2>
+        <p>Lightweight, privacy-first desktop agents for macOS and Windows that observe actual work patterns and feed evidence into the knowledge graph</p>
       </div>
       <div class="two-col">
         <div>
           <h3>Key Capabilities</h3>
           <ul class="feature-list">
-            <li><strong>Native Swift + Python</strong> &mdash; 1,335 LOC Swift for OS-level capture, Python intelligence layer for PII filtering and aggregation</li>
+            <li><strong>Native capture layers</strong> &mdash; Swift (macOS) + C#/.NET 8 NativeAOT (Windows), shared Python intelligence layer</li>
             <li><strong>Mandatory 4-layer PII architecture</strong> &mdash; not configurable off; defense-in-depth from capture to storage</li>
             <li><strong>0.9 source reliability</strong> &mdash; highest confidence tier in the platform (observed ground truth)</li>
-            <li><strong>Consulting-native deployment</strong> &mdash; engagement mode with auto-disable at end date; enterprise MDM mode for persistent monitoring</li>
+            <li><strong>Consulting-native deployment</strong> &mdash; engagement mode with auto-disable; enterprise MDM (Jamf/Intune/SCCM/GPO)</li>
             <li><strong>&lt;3% CPU, &lt;150MB RAM</strong> &mdash; invisible to users during normal work</li>
-            <li><strong>Menu bar presence</strong> &mdash; visible icon, pause/resume, transparent consent</li>
+            <li><strong>System tray presence</strong> &mdash; menu bar (macOS) / notification area (Windows), pause/resume, transparent consent</li>
           </ul>
         </div>
         <div>
-          <div style="background: var(--kmflow-blue); color: white; padding: 1.5rem; border-radius: 12px;">
-            <h3 style="color: white; margin-bottom: 1rem;">Architecture at a Glance</h3>
-            <div style="font-family: monospace; font-size: 0.8rem; line-height: 1.8;">
-              <div style="background: rgba(255,255,255,0.15); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.25rem;">Swift &mdash; CGEventTap, AXUIElement, NSWorkspace</div>
-              <div style="text-align: center;">&darr; Unix Domain Socket (ndjson)</div>
-              <div style="background: rgba(255,255,255,0.15); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.25rem;">Python &mdash; PII Filter, Aggregator, SQLite Buffer</div>
-              <div style="text-align: center;">&darr; HTTPS / mTLS</div>
-              <div style="background: rgba(255,255,255,0.15); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.25rem;">FastAPI &mdash; Event Ingestion, Config Push</div>
-              <div style="text-align: center;">&darr; Redis Stream</div>
-              <div style="background: rgba(255,255,255,0.15); padding: 0.5rem; border-radius: 4px;">Worker &mdash; L3 PII, Action Assembly, Neo4j Write</div>
+          <div style="background: var(--kmflow-blue); color: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 0.75rem;">
+            <h3 style="color: white; margin-bottom: 0.75rem;">macOS Agent</h3>
+            <div style="font-family: monospace; font-size: 0.75rem; line-height: 1.6;">
+              <div style="background: rgba(255,255,255,0.15); padding: 0.4rem; border-radius: 4px; margin-bottom: 0.2rem;">Swift &mdash; CGEventTap, AXUIElement, NSWorkspace</div>
+              <div style="text-align: center;">&darr; Unix Domain Socket</div>
+              <div style="background: rgba(255,255,255,0.15); padding: 0.4rem; border-radius: 4px;">Python &mdash; PII Filter, Aggregator, SQLite Buffer</div>
+            </div>
+          </div>
+          <div style="background: var(--kmflow-dark-navy); color: white; padding: 1.5rem; border-radius: 12px;">
+            <h3 style="color: white; margin-bottom: 0.75rem;">Windows Agent</h3>
+            <div style="font-family: monospace; font-size: 0.75rem; line-height: 1.6;">
+              <div style="background: rgba(255,255,255,0.15); padding: 0.4rem; border-radius: 4px; margin-bottom: 0.2rem;">C# .NET 8 &mdash; WH_KEYBOARD_LL, UIAutomation, WPF Tray</div>
+              <div style="text-align: center;">&darr; Named Pipe + TCP fallback</div>
+              <div style="background: rgba(255,255,255,0.15); padding: 0.4rem; border-radius: 4px;">Python &mdash; PII Filter, Aggregator, SQLite Buffer</div>
             </div>
           </div>
         </div>
@@ -3444,7 +3448,7 @@ confidence = (
       <div class="section-header">
         <span class="badge badge-blue">Agent Technology</span>
         <h2>Agent Architecture</h2>
-        <p>Hybrid Swift + Python application with 8 internal modules and zero external dependencies</p>
+        <p>Cross-platform capture (Swift / C# NativeAOT) with shared Python intelligence layer and zero external dependencies</p>
       </div>
       <div style="background: var(--kmflow-white); padding: 2rem; border-radius: 12px; font-family: monospace; font-size: 0.85rem;">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -4006,7 +4010,7 @@ confidence = (
             <li>Process assembly (UserAction &rarr; Activity)</li>
             <li>Process variant detection</li>
             <li>Graph-based task mining queries</li>
-            <li>Windows agent (Win32 + WH_KEYBOARD_LL)</li>
+            <li style="color: #4CAF50;"><strong>&check; Windows agent</strong> (delivered &mdash; C# NativeAOT, MSI/MSIX, Intune/SCCM/GPO)</li>
             <li>Deviation detection vs. POV models</li>
             <li>Cross-agent session analysis</li>
             <li>Scenario Engine integration</li>
@@ -4555,42 +4559,43 @@ confidence = (
       </div>
     </section>
 
-    <!-- Slide 52: What's New — MVP Complete -->
+    <!-- Slide 52: What's New — MVP + Windows Agent -->
     <section id="slide-52" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Changelog</span>
-        <h2>What&rsquo;s New &mdash; MVP Complete</h2>
+        <h2>What&rsquo;s New &mdash; MVP + Windows Agent</h2>
       </div>
       <div class="two-col">
         <div>
           <h3>PRD v2.1 Fully Delivered</h3>
           <ul class="feature-list">
-            <li><strong>All 106 stories</strong> across 18 epics complete &mdash; 399 issues closed</li>
+            <li><strong>All 106 platform stories</strong> across 18 epics + <strong>45 Windows Agent stories</strong> across 8 epics</li>
             <li><strong>65 API routers</strong> with full RBAC, engagement-scoped access control</li>
             <li>Process replay engine: single-case timeline, aggregate volume, variant comparison</li>
             <li>Confidence heatmap overlay with brightness classification on BPMN viewer</li>
             <li>Executive report generation with evidence appendix and in-text citations</li>
           </ul>
-          <h3 style="margin-top: 1rem;">Platform Highlights</h3>
+          <h3 style="margin-top: 1rem;">Windows Agent (New)</h3>
           <ul class="feature-list">
-            <li>Desktop task mining pipeline with PII documentation and source classification</li>
-            <li>Celonis EMS, ServiceNow, Jira, and SAP integrations with checkpoint tracking</li>
-            <li>Persona-specific dashboards for 4 roles with role-based KPIs</li>
-            <li>Financial impact analysis with scenario comparison and composite ranking</li>
+            <li><strong>C# .NET 8 NativeAOT</strong> capture layer with C hook DLL for keyboard/mouse</li>
+            <li>WPF system tray app, onboarding wizard, transparency log viewer</li>
+            <li>WiX MSI + MSIX installers, Task Scheduler, Windows Service modes</li>
+            <li>Intune, SCCM, and GPO enterprise deployment with ADMX templates</li>
+            <li>Authenticode signing pipeline, WDAC allowlisting, AV pre-submission</li>
           </ul>
         </div>
         <div>
           <div style="background: var(--kmflow-blue); color: white; padding: 1.5rem; border-radius: 12px; text-align: center; margin-bottom: 1rem;">
-            <div style="font-size: 2rem; font-weight: 700;">101,811</div>
+            <div style="font-size: 2rem; font-weight: 700;">108,700+</div>
             <div style="font-size: 0.85rem; opacity: 0.9;">Lines of Code</div>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
             <div style="background: var(--kmflow-light-gray); padding: 1rem; border-radius: 8px; text-align: center;">
-              <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-blue);">5,797</div>
+              <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-blue);">5,797+</div>
               <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">Total Tests</div>
             </div>
             <div style="background: var(--kmflow-light-gray); padding: 1rem; border-radius: 8px; text-align: center;">
-              <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-blue);">182</div>
+              <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-blue);">188</div>
               <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">Merged PRs</div>
             </div>
             <div style="background: var(--kmflow-light-gray); padding: 1rem; border-radius: 8px; text-align: center;">
@@ -6188,15 +6193,15 @@ confidence = (
       <div class="section-header">
         <span class="badge badge-blue">Appendix</span>
         <h2>Project Stats Dashboard</h2>
-        <p>v2026.02.191 &mdash; MVP Complete</p>
+        <p>v2026.02.197 &mdash; MVP + Windows Agent</p>
       </div>
       <div class="two-col">
         <div>
           <div style="background: var(--kmflow-blue); color: white; padding: 1.5rem; border-radius: 12px; text-align: center; margin-bottom: 1.25rem;">
-            <div style="font-size: 2.5rem; font-weight: 700;">101,811</div>
+            <div style="font-size: 2.5rem; font-weight: 700;">108,700+</div>
             <div style="font-size: 0.9rem; opacity: 0.9;">Total Lines of Code</div>
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem;">
             <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid var(--kmflow-border);">
               <div style="font-size: 1.3rem; font-weight: 700; color: var(--kmflow-blue);">389</div>
               <div style="font-size: 0.7rem; color: var(--kmflow-medium-gray);">Python Files</div>
@@ -6210,6 +6215,11 @@ confidence = (
             <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid var(--kmflow-border);">
               <div style="font-size: 1.3rem; font-weight: 700; color: var(--kmflow-blue);">39</div>
               <div style="font-size: 0.7rem; color: var(--kmflow-medium-gray);">Swift Files</div>
+              <div style="font-size: 0.85rem; font-weight: 600; color: var(--kmflow-dark-gray);">5K LOC</div>
+            </div>
+            <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid var(--kmflow-border);">
+              <div style="font-size: 1.3rem; font-weight: 700; color: var(--kmflow-blue);">50</div>
+              <div style="font-size: 0.7rem; color: var(--kmflow-medium-gray);">C# / C Files</div>
               <div style="font-size: 0.85rem; font-weight: 600; color: var(--kmflow-dark-gray);">5K LOC</div>
             </div>
           </div>
@@ -6247,7 +6257,7 @@ confidence = (
               </tr>
               <tr>
                 <td style="padding: 0.6rem 0; font-weight: 600;">Total Tests</td>
-                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">5,797</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">5,797+</td>
               </tr>
             </tbody>
           </table>
@@ -6256,27 +6266,27 @@ confidence = (
             <tbody>
               <tr style="border-bottom: 1px solid var(--kmflow-border);">
                 <td style="padding: 0.6rem 0; font-weight: 600;">Commits</td>
-                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">370</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">383</td>
               </tr>
               <tr style="border-bottom: 1px solid var(--kmflow-border);">
                 <td style="padding: 0.6rem 0; font-weight: 600;">Merged PRs</td>
-                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">182</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">188</td>
               </tr>
               <tr style="border-bottom: 1px solid var(--kmflow-border);">
                 <td style="padding: 0.6rem 0; font-weight: 600;">Closed Issues</td>
-                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">399</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">366</td>
               </tr>
               <tr style="border-bottom: 1px solid var(--kmflow-border);">
                 <td style="padding: 0.6rem 0; padding-left: 1rem; color: var(--kmflow-medium-gray);">Stories</td>
-                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-medium-gray);">214</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-medium-gray);">251</td>
               </tr>
               <tr style="border-bottom: 1px solid var(--kmflow-border);">
                 <td style="padding: 0.6rem 0; padding-left: 1rem; color: var(--kmflow-medium-gray);">Epics</td>
-                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-medium-gray);">46</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-medium-gray);">54</td>
               </tr>
               <tr>
                 <td style="padding: 0.6rem 0; padding-left: 1rem; color: var(--kmflow-medium-gray);">Tasks</td>
-                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-medium-gray);">59</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-medium-gray);">60</td>
               </tr>
             </tbody>
           </table>
@@ -6307,7 +6317,12 @@ confidence = (
         <tbody>
           <tr style="border-bottom: 1px solid var(--kmflow-border); background: rgba(0,82,204,0.04);">
             <td style="padding: 0.75rem; font-weight: 600;">2026-02-28</td>
-            <td style="padding: 0.75rem;"><strong>v3.0</strong></td>
+            <td style="padding: 0.75rem;"><strong>v4.0</strong></td>
+            <td style="padding: 0.75rem;">Windows Agent release &mdash; cross-platform desktop agents (macOS + Windows), updated stats (108K+ LOC, 188 PRs, 366 issues, 50 C#/C files), updated roadmap with Windows delivery checkmark, refreshed What&rsquo;s New for 45 Windows stories across 8 epics</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--kmflow-border);">
+            <td style="padding: 0.75rem;">2026-02-28</td>
+            <td style="padding: 0.75rem;">v3.0</td>
             <td style="padding: 0.75rem;">MVP Complete release &mdash; updated all stats to final (101K LOC, 5,797 tests, 65 routers, 92 models), added Project Stats Dashboard and Presentation Changelog appendix, refreshed What&rsquo;s New slide for full PRD v2.1 delivery, added Appendix section to TOC</td>
           </tr>
           <tr style="border-bottom: 1px solid var(--kmflow-border);">
@@ -7219,7 +7234,7 @@ confidence = (
         slides: [
           { name: "System Architecture", id: "slide-37" },
           { name: "Tech Stack", id: "slide-38" },
-          { name: "Task Mining Agent", id: "slide-38a" },
+          { name: "Desktop Agents (macOS + Windows)", id: "slide-38a" },
           { name: "Knowledge Graph", id: "slide-39" },
           { name: "Loan Origination Graph Demo", id: "slide-40" },
           { name: "Core Entities (PostgreSQL)", id: "slide-41" },
@@ -7268,11 +7283,11 @@ confidence = (
         num: "8",
         title: "Roadmap",
         link: "#slide-51",
-        description: "Where KMFlow has been and where it's going — the full MVP is delivered with 101,811 LOC, 5,797 tests, and all 18 epics complete. Next: intelligence enhancements, autonomous agents, and multi-tenant SaaS.",
+        description: "Where KMFlow has been and where it's going — the full MVP is delivered with 108K+ LOC, 5,797+ tests, and all 26 epics complete including the Windows Agent. Next: intelligence enhancements, autonomous agents, and multi-tenant SaaS.",
         highlights: [
-          "MVP Complete: all 106 stories across 18 epics delivered — 399 issues closed, 182 PRs merged",
+          "MVP Complete: 106 platform stories (18 epics) + 45 Windows Agent stories (8 epics) — 366 issues closed, 188 PRs merged",
           "Full-stack platform: 65 API routers, 92 models, 81 migrations, 44 BPMN process models",
-          "5,797 tests (5,162 backend + 635 frontend) across the entire platform",
+          "Cross-platform desktop agents: macOS (Swift) + Windows (C# .NET 8 NativeAOT) with shared Python layer",
           "Phase 2 roadmap: autonomous evidence collection agents, cross-engagement pattern intelligence",
           "Phase 3 roadmap: multi-tenant SaaS, marketplace for evidence parsers, white-label packaging"
         ],
@@ -7292,11 +7307,11 @@ confidence = (
         link: "#slide-122",
         description: "Project-level metrics, codebase statistics, and a changelog of this presentation itself — documenting what was built and how the story evolved.",
         highlights: [
-          "101,811 lines of code across Python, TypeScript, and Swift",
-          "5,797 tests (5,162 backend + 635 frontend) for comprehensive coverage",
+          "108,700+ lines of code across Python, TypeScript, Swift, and C#",
+          "5,797+ tests (5,162 backend + 635 frontend) for comprehensive coverage",
           "92 SQLAlchemy models, 65 API routers, 81 migrations, 44 BPMN process models",
-          "370 commits, 182 merged PRs, 399 closed issues across 18 epics",
-          "Presentation changelog tracking 5 major versions from v1.0 to v3.0"
+          "383 commits, 188 merged PRs, 366 closed issues across 26 epics",
+          "Presentation changelog tracking 6 major versions from v1.0 to v4.0"
         ],
         slides: [
           { name: "Project Stats Dashboard", id: "slide-122" },
