@@ -8,6 +8,7 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #489 merged** — ARIS AML and Visio VSDX process model importers: ModelImporter ABC, ImportedModel, defusedxml XXE protection, 28 tests (#328) (v2026.02.172)
 - **PR #488 merged** — SaaS connector incremental sync: SyncCheckpointStore, SyncLog, async coordinator, SAP timestamp conversion, 34 tests (#330) (v2026.02.171)
 - **PR #487 merged** — XES event log importer: streaming parser, defusedxml XXE protection, batch processing, .xes.gz, 25 tests (#332) (v2026.02.170)
 - **PR #486 merged** — Connector framework: CredentialProvider, @with_retry, TransformPipeline, rate limit parsing, Credential masking, 34 tests (#323) (v2026.02.169)

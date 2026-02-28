@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.171
+**Version**: 2026.02.172
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.172 | 2026-02-27 | ARIS AML and Visio VSDX process model importers: ModelImporter ABC, ImportedModel, defusedxml XXE protection, 28 tests (#328) |
 | 2026.02.171 | 2026-02-27 | SaaS connector incremental sync: SyncCheckpointStore, SyncLog, async coordinator, SAP timestamp conversion, 34 tests (#330) |
 | 2026.02.170 | 2026-02-27 | XES event log importer: streaming parser, defusedxml XXE protection, batch processing, .xes.gz, 25 tests (#332) |
 | 2026.02.169 | 2026-02-27 | Connector framework: CredentialProvider, @with_retry, TransformPipeline, rate limit parsing, Credential masking, 34 tests (#323) |

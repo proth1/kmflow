@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.172] - 2026-02-27
+### Added
+- ARIS AML and Visio VSDX process model importers: ModelImporter ABC with ImportedModel pre-graph-commit data structure, ARIS ObjDef/CxnDef/Lane parsing, Visio master shape mapping and connector resolution, defusedxml XXE protection, 28 tests (#328)
+
 ## [2026.02.171] - 2026-02-27
 ### Added
 - SaaS connector incremental sync: SyncCheckpointStore with Redis key pattern, SyncLog with new/updated/skipped counts, async coordinator with checkpoint lifecycle, SAP DATS/TIMS/OData timestamp conversion, 34 tests (#330)
