@@ -74,5 +74,8 @@ agent/macos/*.xcworkspace/
 agent/python/.venv/
 agent/python/*.egg-info/
 
-# SDLC session state (ephemeral)
+# SDLC session state and CDD markers (ephemeral)
 .session-state.json
+.pipeline-passed
+.pipeline-report.md
+.cdd-compliance-report.md

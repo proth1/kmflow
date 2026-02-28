@@ -97,9 +97,7 @@ class TestBestPracticesSearch:
         practices = [self._mock_practice()]
         session = self._setup_session(practices)
         client = _make_app(session)
-        resp = client.get(
-            "/api/v1/tom/best-practices?industry=Financial+Services&domain=Loan+Origination"
-        )
+        resp = client.get("/api/v1/tom/best-practices?industry=Financial+Services&domain=Loan+Origination")
         assert resp.status_code == 200
         data = resp.json()
         assert data["total"] == 1
@@ -179,9 +177,7 @@ class TestPercentileRanking:
         session = self._setup_session(engagement, benchmarks)
         client = _make_app(session)
 
-        resp = client.get(
-            f"/api/v1/tom/engagements/{ENGAGEMENT_ID}/benchmarks?metric=processing_time"
-        )
+        resp = client.get(f"/api/v1/tom/engagements/{ENGAGEMENT_ID}/benchmarks?metric=processing_time")
         assert resp.status_code == 200
         data = resp.json()
         assert data["engagement_id"] == str(ENGAGEMENT_ID)
@@ -273,10 +269,7 @@ class TestGapRecommendations:
         session = self._setup_session(gap, practices)
         client = _make_app(session)
 
-        resp = client.get(
-            f"/api/v1/tom/gap-findings/{GAP_ID}/recommendations"
-            f"?engagement_id={ENGAGEMENT_ID}"
-        )
+        resp = client.get(f"/api/v1/tom/gap-findings/{GAP_ID}/recommendations?engagement_id={ENGAGEMENT_ID}")
         assert resp.status_code == 200
         data = resp.json()
         assert data["gap_id"] == str(GAP_ID)
@@ -289,10 +282,7 @@ class TestGapRecommendations:
     def test_returns_404_for_missing_gap(self) -> None:
         session = self._setup_session(gap=None)
         client = _make_app(session)
-        resp = client.get(
-            f"/api/v1/tom/gap-findings/{uuid.uuid4()}/recommendations"
-            f"?engagement_id={ENGAGEMENT_ID}"
-        )
+        resp = client.get(f"/api/v1/tom/gap-findings/{uuid.uuid4()}/recommendations?engagement_id={ENGAGEMENT_ID}")
         assert resp.status_code == 404
 
     def test_requires_engagement_id(self) -> None:
@@ -306,9 +296,6 @@ class TestGapRecommendations:
         gap = self._mock_gap()
         session = self._setup_session(gap, [])
         client = _make_app(session)
-        resp = client.get(
-            f"/api/v1/tom/gap-findings/{GAP_ID}/recommendations"
-            f"?engagement_id={ENGAGEMENT_ID}"
-        )
+        resp = client.get(f"/api/v1/tom/gap-findings/{GAP_ID}/recommendations?engagement_id={ENGAGEMENT_ID}")
         assert resp.status_code == 200
         assert len(resp.json()["recommendations"]) == 0

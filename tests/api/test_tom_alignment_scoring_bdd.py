@@ -405,9 +405,7 @@ class TestGetAlignmentRunResults:
         items_result = MagicMock()
         items_result.scalars.return_value.all.return_value = result_items
 
-        mock_session.execute = AsyncMock(
-            side_effect=[run_result, count_result, items_result]
-        )
+        mock_session.execute = AsyncMock(side_effect=[run_result, count_result, items_result])
 
         app = _make_app_with_session(mock_session)
 

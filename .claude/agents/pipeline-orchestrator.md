@@ -71,7 +71,7 @@ pip freeze | grep -v '^\-e' | grep -iv '^kmflow' > /tmp/audit-reqs.txt && pip-au
 cd frontend && npm audit --audit-level=high 2>&1 || echo "npm audit found issues"
 ```
 
-### Step 7: Report Summary
+### Step 7: Report Summary and CDD Evidence
 Output a consolidated status table:
 
 ```
@@ -91,6 +91,29 @@ Security Scan           PASS/WARN
 Overall: PASS / FAIL
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
+
+### Step 8: CDD Pipeline Marker
+After generating the report, write the results for CDD evidence tracking:
+
+1. **Write pipeline report** to `.pipeline-report.md` with the summary table above
+2. **If ALL steps passed**: Create `.pipeline-passed` marker file with the timestamp
+3. **If ANY step failed**: Remove `.pipeline-passed` if it exists (stale from prior run)
+
+```bash
+# On success:
+echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > /Users/proth/repos/kmflow/.pipeline-passed
+
+# On failure:
+rm -f /Users/proth/repos/kmflow/.pipeline-passed
+```
+
+The `.pipeline-passed` marker is checked by the pre-merge hook to enforce that the pipeline has been run before allowing merge.
+
+3. **Post CDD evidence to GitHub Issue**: Run the evidence posting script to auto-post pipeline results as a CDD evidence comment on the linked issue:
+```bash
+bash /Users/proth/repos/kmflow/.claude/hooks/post-pipeline-evidence.sh
+```
+This script reads `.pipeline-report.md`, determines pass/fail from `.pipeline-passed`, and posts a structured CDD Evidence comment on the GitHub Issue linked via the branch name.
 
 ## Error Recovery
 

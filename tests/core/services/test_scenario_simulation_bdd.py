@@ -43,7 +43,11 @@ class TestCycleTimeTaskRemoval:
         """When no task_durations mapping exists, use default (4.0 hrs)."""
         adapter = ScenarioSimulationAdapter(baseline_cycle_time_hrs=50.0)
         modifications = [
-            {"modification_type": ModificationType.TASK_REMOVE, "element_id": "unknown", "element_name": "Unknown Task"},
+            {
+                "modification_type": ModificationType.TASK_REMOVE,
+                "element_id": "unknown",
+                "element_name": "Unknown Task",
+            },
         ]
         output = adapter.simulate(modifications)
 

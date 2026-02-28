@@ -9,11 +9,12 @@ Story #232 — Part of Epic #231 (ML Task Segmentation).
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
 
 from src.taskmining.aggregation.session import AggregatedSession
 from src.taskmining.app_categories import (
     APP_CATEGORIES as _APP_CATEGORIES,
+)
+from src.taskmining.app_categories import (
     detect_app_category,
 )
 
@@ -109,16 +110,31 @@ def extract_features(session: AggregatedSession) -> list[float]:
 
     vector = [
         # Raw counts
-        keyboard, mouse, copy_paste, scroll, file_op, url_nav, total_f,
+        keyboard,
+        mouse,
+        copy_paste,
+        scroll,
+        file_op,
+        url_nav,
+        total_f,
         # Ratios
-        keyboard_ratio, mouse_ratio, copy_paste_ratio,
-        scroll_ratio, file_op_ratio, url_nav_ratio,
+        keyboard_ratio,
+        mouse_ratio,
+        copy_paste_ratio,
+        scroll_ratio,
+        file_op_ratio,
+        url_nav_ratio,
         # Duration
-        duration_s, active_ratio, events_per_second,
+        duration_s,
+        active_ratio,
+        events_per_second,
         # Temporal
-        hour, dow, is_business,
+        hour,
+        dow,
+        is_business,
         # Derived
-        keyboard_mouse_ratio, input_diversity,
+        keyboard_mouse_ratio,
+        input_diversity,
         # App category one-hot
         *app_one_hot,
     ]

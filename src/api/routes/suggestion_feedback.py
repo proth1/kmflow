@@ -99,9 +99,7 @@ async def get_exclusion_prompt(
 
 async def _get_scenario(session: AsyncSession, scenario_id: UUID) -> SimulationScenario:
     """Load a scenario or 404."""
-    result = await session.execute(
-        select(SimulationScenario).where(SimulationScenario.id == scenario_id)
-    )
+    result = await session.execute(select(SimulationScenario).where(SimulationScenario.id == scenario_id))
     scenario = result.scalar_one_or_none()
     if not scenario:
         raise HTTPException(
@@ -111,9 +109,7 @@ async def _get_scenario(session: AsyncSession, scenario_id: UUID) -> SimulationS
     return scenario
 
 
-async def _check_engagement_member(
-    session: AsyncSession, user: User, engagement_id: UUID
-) -> None:
+async def _check_engagement_member(session: AsyncSession, user: User, engagement_id: UUID) -> None:
     """Verify user is a member of the engagement. Platform admins bypass."""
     if user.role == UserRole.PLATFORM_ADMIN:
         return

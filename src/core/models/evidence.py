@@ -5,6 +5,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import BigInteger, Date, DateTime, Enum, Float, ForeignKey, Index, String, Text, func
@@ -12,6 +13,9 @@ from sqlalchemy.dialects.postgresql import JSON, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.database import Base
+
+if TYPE_CHECKING:
+    from src.core.models.engagement import Engagement
 
 
 class EvidenceCategory(enum.StrEnum):
@@ -80,7 +84,9 @@ class EvidenceItem(Base):
         UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(512), nullable=False)
-    category: Mapped[EvidenceCategory] = mapped_column(Enum(EvidenceCategory, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    category: Mapped[EvidenceCategory] = mapped_column(
+        Enum(EvidenceCategory, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
     format: Mapped[str] = mapped_column(String(50), nullable=False)
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
@@ -115,12 +121,17 @@ class EvidenceItem(Base):
     )
 
     validation_status: Mapped[ValidationStatus] = mapped_column(
-        Enum(ValidationStatus, values_callable=lambda e: [x.value for x in e]), default=ValidationStatus.PENDING, nullable=False
+        Enum(ValidationStatus, values_callable=lambda e: [x.value for x in e]),
+        default=ValidationStatus.PENDING,
+        nullable=False,
     )
 
     # Data sensitivity classification — defaults to INTERNAL
     classification: Mapped[DataClassification] = mapped_column(
-        Enum(DataClassification, values_callable=lambda e: [x.value for x in e]), default=DataClassification.INTERNAL, server_default="internal", nullable=False
+        Enum(DataClassification, values_callable=lambda e: [x.value for x in e]),
+        default=DataClassification.INTERNAL,
+        server_default="internal",
+        nullable=False,
     )
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -132,7 +143,7 @@ class EvidenceItem(Base):
     )
 
     # Relationships
-    engagement: Mapped["Engagement"] = relationship("Engagement", back_populates="evidence_items")
+    engagement: Mapped[Engagement] = relationship("Engagement", back_populates="evidence_items")
     fragments: Mapped[list[EvidenceFragment]] = relationship(
         "EvidenceFragment", back_populates="evidence_item", cascade="all, delete-orphan"
     )
@@ -161,7 +172,9 @@ class EvidenceFragment(Base):
         ForeignKey("evidence_items.id", ondelete="CASCADE"),
         nullable=False,
     )
-    fragment_type: Mapped[FragmentType] = mapped_column(Enum(FragmentType, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    fragment_type: Mapped[FragmentType] = mapped_column(
+        Enum(FragmentType, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
     content: Mapped[str] = mapped_column(Text, nullable=False)
     metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     embedding: Mapped[list[float] | None] = mapped_column(Vector(768), nullable=True)
@@ -244,11 +257,15 @@ class DataCatalogEntry(Base):
     )
     dataset_name: Mapped[str] = mapped_column(String(512), nullable=False)
     dataset_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    layer: Mapped[DataLayer] = mapped_column(Enum(DataLayer, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    layer: Mapped[DataLayer] = mapped_column(
+        Enum(DataLayer, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
     schema_definition: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     owner: Mapped[str | None] = mapped_column(String(255), nullable=True)
     classification: Mapped[DataClassification] = mapped_column(
-        Enum(DataClassification, values_callable=lambda e: [x.value for x in e]), default=DataClassification.INTERNAL, nullable=False
+        Enum(DataClassification, values_callable=lambda e: [x.value for x in e]),
+        default=DataClassification.INTERNAL,
+        nullable=False,
     )
     quality_sla: Mapped[dict | None] = mapped_column(
         JSON,

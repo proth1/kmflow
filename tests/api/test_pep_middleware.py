@@ -6,10 +6,9 @@ layer, mocking the PDP service to avoid database dependencies.
 
 from __future__ import annotations
 
-import json
 import uuid
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -20,12 +19,11 @@ from starlette.routing import Route
 
 from src.api.middleware.pep import (
     PEPMiddleware,
+    _extract_engagement_id,
     _is_protected,
     _method_to_operation,
-    _extract_engagement_id,
 )
-from src.core.models.pdp import PDPDecisionType, ObligationType
-
+from src.core.models.pdp import PDPDecisionType
 
 # ---------------------------------------------------------------------------
 # Unit tests: helpers

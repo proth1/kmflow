@@ -66,7 +66,7 @@ def mine_sequences(
         session_patterns: set[tuple[str, ...]] = set()
         for n in range(min_n, min(max_n + 1, len(sequence) + 1)):
             for i in range(len(sequence) - n + 1):
-                ngram = tuple(sequence[i:i + n])
+                ngram = tuple(sequence[i : i + n])
                 session_patterns.add(ngram)
 
         for pattern in session_patterns:
@@ -76,11 +76,13 @@ def mine_sequences(
     patterns = []
     for pattern, support in pattern_counts.items():
         if support >= min_support:
-            patterns.append(ActionPattern(
-                pattern=pattern,
-                support=support,
-                frequency=round(support / total_sessions, 4),
-            ))
+            patterns.append(
+                ActionPattern(
+                    pattern=pattern,
+                    support=support,
+                    frequency=round(support / total_sessions, 4),
+                )
+            )
 
     # Sort by support descending, then by pattern length descending
     patterns.sort(key=lambda p: (-p.support, -len(p.pattern)))
@@ -92,6 +94,8 @@ def mine_sequences(
     )
     logger.info(
         "Sequence mining: %d sessions, %d patterns found (min_support=%d)",
-        total_sessions, len(patterns), min_support,
+        total_sessions,
+        len(patterns),
+        min_support,
     )
     return result

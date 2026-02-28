@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 # ── Alert types ──────────────────────────────────────────────────
 
+
 class AlertType:
     """String constants for alert types."""
 
@@ -331,9 +332,7 @@ class AlertDeduplicator:
             now = datetime.now(tz=UTC)
 
         expired_keys = [
-            key
-            for key, alert in self._open_alerts.items()
-            if (now - alert.created_at) > self._default_window
+            key for key, alert in self._open_alerts.items() if (now - alert.created_at) > self._default_window
         ]
 
         for key in expired_keys:
@@ -508,14 +507,16 @@ class AlertEngine:
             if not Severity.meets_threshold(alert.severity, channel.min_severity):
                 continue
 
-            self._notification_log.append({
-                "channel_id": channel.id,
-                "channel_type": channel.channel_type,
-                "alert_id": alert.id,
-                "severity": alert.severity,
-                "timestamp": alert.created_at.isoformat(),
-                "payload": alert.to_dict(),
-            })
+            self._notification_log.append(
+                {
+                    "channel_id": channel.id,
+                    "channel_type": channel.channel_type,
+                    "alert_id": alert.id,
+                    "severity": alert.severity,
+                    "timestamp": alert.created_at.isoformat(),
+                    "payload": alert.to_dict(),
+                }
+            )
 
             logger.info(
                 "Alert %s dispatched to %s channel %s",

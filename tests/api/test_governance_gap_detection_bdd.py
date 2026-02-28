@@ -107,10 +107,26 @@ class TestGapDetectionService:
 
         # First call: get_regulated_activities → 4 activities
         regulated_records = [
-            {"activity_id": str(ACTIVITY_1), "activity_name": "Wire Transfer", "activity_category": "financial_transaction"},
-            {"activity_id": str(ACTIVITY_2), "activity_name": "Payment Processing", "activity_category": "financial_transaction"},
-            {"activity_id": str(ACTIVITY_3), "activity_name": "Ledger Entry", "activity_category": "financial_transaction"},
-            {"activity_id": str(uuid.uuid4()), "activity_name": "Reconciliation", "activity_category": "financial_transaction"},
+            {
+                "activity_id": str(ACTIVITY_1),
+                "activity_name": "Wire Transfer",
+                "activity_category": "financial_transaction",
+            },
+            {
+                "activity_id": str(ACTIVITY_2),
+                "activity_name": "Payment Processing",
+                "activity_category": "financial_transaction",
+            },
+            {
+                "activity_id": str(ACTIVITY_3),
+                "activity_name": "Ledger Entry",
+                "activity_category": "financial_transaction",
+            },
+            {
+                "activity_id": str(uuid.uuid4()),
+                "activity_name": "Reconciliation",
+                "activity_category": "financial_transaction",
+            },
         ]
 
         # Second call: get_ungoverned_activity_ids → 2 ungoverned
@@ -119,9 +135,7 @@ class TestGapDetectionService:
             {"activity_id": str(ACTIVITY_2)},
         ]
 
-        mock_graph.run_query = AsyncMock(
-            side_effect=[regulated_records, ungoverned_records]
-        )
+        mock_graph.run_query = AsyncMock(side_effect=[regulated_records, ungoverned_records])
 
         service = GovernanceGapDetectionService(mock_graph)
         regulations = [
@@ -155,14 +169,15 @@ class TestGapDetectionService:
         ]
         ungoverned_records: list[dict[str, Any]] = []  # All governed
 
-        mock_graph.run_query = AsyncMock(
-            side_effect=[regulated_records, ungoverned_records]
-        )
+        mock_graph.run_query = AsyncMock(side_effect=[regulated_records, ungoverned_records])
 
         service = GovernanceGapDetectionService(mock_graph)
-        gaps = await service.detect_gaps("eng1", [
-            {"id": "reg1", "name": "SOX", "obligations": {"required_categories": ["financial_transaction"]}},
-        ])
+        gaps = await service.detect_gaps(
+            "eng1",
+            [
+                {"id": "reg1", "name": "SOX", "obligations": {"required_categories": ["financial_transaction"]}},
+            ],
+        )
 
         assert gaps == []
 
@@ -173,9 +188,12 @@ class TestGapDetectionService:
         mock_graph.run_query = AsyncMock()
 
         service = GovernanceGapDetectionService(mock_graph)
-        gaps = await service.detect_gaps("eng1", [
-            {"id": "reg1", "name": "Policy A", "obligations": {}},
-        ])
+        gaps = await service.detect_gaps(
+            "eng1",
+            [
+                {"id": "reg1", "name": "Policy A", "obligations": {}},
+            ],
+        )
 
         assert gaps == []
         mock_graph.run_query.assert_not_called()
@@ -187,9 +205,12 @@ class TestGapDetectionService:
         mock_graph.run_query = AsyncMock(side_effect=Exception("Connection refused"))
 
         service = GovernanceGapDetectionService(mock_graph)
-        gaps = await service.detect_gaps("eng1", [
-            {"id": "reg1", "name": "SOX", "obligations": {"required_categories": ["financial_transaction"]}},
-        ])
+        gaps = await service.detect_gaps(
+            "eng1",
+            [
+                {"id": "reg1", "name": "SOX", "obligations": {"required_categories": ["financial_transaction"]}},
+            ],
+        )
 
         assert gaps == []
 
@@ -201,9 +222,7 @@ class TestGapDetectionService:
         reg_id = str(uuid.uuid4())
 
         # get_ungoverned_activity_ids returns only ACTIVITY_1 (ACTIVITY_2 is now covered)
-        mock_graph.run_query = AsyncMock(
-            return_value=[{"activity_id": str(ACTIVITY_1)}]
-        )
+        mock_graph.run_query = AsyncMock(return_value=[{"activity_id": str(ACTIVITY_1)}])
 
         gap1_id = str(uuid.uuid4())
         gap2_id = str(uuid.uuid4())
@@ -291,7 +310,11 @@ class TestDetectGapsEndpoint:
         reg = _make_plain_mock(
             id=REGULATION_ID,
             engagement_id=ENGAGEMENT_ID,
-            obligations={"required_categories": ["financial_transaction"], "regulatory": True, "financial_penalty": True},
+            obligations={
+                "required_categories": ["financial_transaction"],
+                "regulatory": True,
+                "financial_penalty": True,
+            },
         )
         reg.name = "SOX"
         reg_result = MagicMock()
@@ -305,9 +328,7 @@ class TestDetectGapsEndpoint:
         open_count_result = MagicMock()
         open_count_result.scalars.return_value.all.return_value = []
 
-        mock_session.execute = AsyncMock(
-            side_effect=[eng_result, reg_result, existing_result, open_count_result]
-        )
+        mock_session.execute = AsyncMock(side_effect=[eng_result, reg_result, existing_result, open_count_result])
         mock_session.commit = AsyncMock()
 
         _added_objects: list[Any] = []
@@ -341,9 +362,7 @@ class TestDetectGapsEndpoint:
         ]
 
         with (
-            mock.patch(
-                "src.api.routes.governance.GovernanceGapDetectionService"
-            ) as mock_svc_cls,
+            mock.patch("src.api.routes.governance.GovernanceGapDetectionService") as mock_svc_cls,
             mock.patch("src.api.routes.governance.log_audit", new_callable=AsyncMock),
         ):
             mock_svc = AsyncMock()
@@ -441,9 +460,7 @@ class TestListGapsEndpoint:
         findings_result = MagicMock()
         findings_result.scalars.return_value.all.return_value = findings
 
-        mock_session.execute = AsyncMock(
-            side_effect=[eng_result, count_result, findings_result]
-        )
+        mock_session.execute = AsyncMock(side_effect=[eng_result, count_result, findings_result])
 
         app = _make_app_with_session(mock_session)
 
@@ -498,9 +515,7 @@ class TestListGapsEndpoint:
         findings_result = MagicMock()
         findings_result.scalars.return_value.all.return_value = []
 
-        mock_session.execute = AsyncMock(
-            side_effect=[eng_result, count_result, findings_result]
-        )
+        mock_session.execute = AsyncMock(side_effect=[eng_result, count_result, findings_result])
 
         app = _make_app_with_session(mock_session)
 

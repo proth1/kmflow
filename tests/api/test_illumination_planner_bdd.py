@@ -78,14 +78,12 @@ def _make_backlog_service_mock(
 ) -> MagicMock:
     """Mock DarkRoomBacklogService returning items."""
 
-    async def mock_get_dark_segments(
-        engagement_id: str, limit: int = 50, offset: int = 0
-    ) -> dict[str, Any]:
+    async def mock_get_dark_segments(engagement_id: str, limit: int = 50, offset: int = 0) -> dict[str, Any]:
         return {
             "engagement_id": engagement_id,
             "dark_threshold": 0.4,
             "total_count": len(items),
-            "items": items[offset:offset + limit],
+            "items": items[offset : offset + limit],
         }
 
     service = MagicMock()
@@ -298,35 +296,33 @@ async def test_api_create_illumination_plan() -> None:
         patch("src.api.routes.pov.IlluminationPlannerService") as mock_planner_cls,
     ):
         mock_planner = mock_planner_cls.return_value
-        mock_planner.create_illumination_plan = AsyncMock(return_value=[
-            {
-                "id": str(uuid.uuid4()),
-                "element_id": ELEMENT_ID,
-                "element_name": "Wire Transfer",
-                "action_type": "persona_probe",
-                "target_knowledge_form": 6,
-                "target_form_name": "personas",
-                "status": "pending",
-                "linked_item_id": None,
-            },
-            {
-                "id": str(uuid.uuid4()),
-                "element_id": ELEMENT_ID,
-                "element_name": "Wire Transfer",
-                "action_type": "shelf_request",
-                "target_knowledge_form": 8,
-                "target_form_name": "evidence",
-                "status": "pending",
-                "linked_item_id": None,
-            },
-        ])
+        mock_planner.create_illumination_plan = AsyncMock(
+            return_value=[
+                {
+                    "id": str(uuid.uuid4()),
+                    "element_id": ELEMENT_ID,
+                    "element_name": "Wire Transfer",
+                    "action_type": "persona_probe",
+                    "target_knowledge_form": 6,
+                    "target_form_name": "personas",
+                    "status": "pending",
+                    "linked_item_id": None,
+                },
+                {
+                    "id": str(uuid.uuid4()),
+                    "element_id": ELEMENT_ID,
+                    "element_name": "Wire Transfer",
+                    "action_type": "shelf_request",
+                    "target_knowledge_form": 8,
+                    "target_form_name": "evidence",
+                    "status": "pending",
+                    "linked_item_id": None,
+                },
+            ]
+        )
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            resp = await client.post(
-                f"/api/v1/pov/{MODEL_ID}/dark-room/{ELEMENT_ID}/illuminate"
-            )
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.post(f"/api/v1/pov/{MODEL_ID}/dark-room/{ELEMENT_ID}/illuminate")
 
     assert resp.status_code == 201
     data = resp.json()
@@ -343,23 +339,21 @@ async def test_api_get_progress() -> None:
 
     with patch("src.api.routes.pov.IlluminationPlannerService") as mock_planner_cls:
         mock_planner = mock_planner_cls.return_value
-        mock_planner.get_progress = AsyncMock(return_value={
-            "engagement_id": str(ENGAGEMENT_ID),
-            "element_id": ELEMENT_ID,
-            "total_actions": 3,
-            "completed_actions": 1,
-            "pending_actions": 2,
-            "in_progress_actions": 0,
-            "all_complete": False,
-            "actions": [],
-        })
+        mock_planner.get_progress = AsyncMock(
+            return_value={
+                "engagement_id": str(ENGAGEMENT_ID),
+                "element_id": ELEMENT_ID,
+                "total_actions": 3,
+                "completed_actions": 1,
+                "pending_actions": 2,
+                "in_progress_actions": 0,
+                "all_complete": False,
+                "actions": [],
+            }
+        )
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            resp = await client.get(
-                f"/api/v1/pov/{MODEL_ID}/dark-room/{ELEMENT_ID}/progress"
-            )
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.get(f"/api/v1/pov/{MODEL_ID}/dark-room/{ELEMENT_ID}/progress")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -379,12 +373,8 @@ async def test_model_not_found_returns_404() -> None:
     session = _mock_session_with_model(None)
     app = _make_app(session)
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as client:
-        resp = await client.post(
-            f"/api/v1/pov/{uuid.uuid4()}/dark-room/{ELEMENT_ID}/illuminate"
-        )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.post(f"/api/v1/pov/{uuid.uuid4()}/dark-room/{ELEMENT_ID}/illuminate")
     assert resp.status_code == 404
 
 

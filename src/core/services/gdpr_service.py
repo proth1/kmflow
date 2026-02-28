@@ -60,13 +60,9 @@ class GdprComplianceService:
 
     # ── Retention Policy ──────────────────────────────────────────────
 
-    async def get_retention_policy(
-        self, engagement_id: uuid.UUID
-    ) -> RetentionPolicy | None:
+    async def get_retention_policy(self, engagement_id: uuid.UUID) -> RetentionPolicy | None:
         """Get the retention policy for an engagement."""
-        stmt = select(RetentionPolicy).where(
-            RetentionPolicy.engagement_id == engagement_id
-        )
+        stmt = select(RetentionPolicy).where(RetentionPolicy.engagement_id == engagement_id)
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -95,9 +91,7 @@ class GdprComplianceService:
         await self._session.flush()
         return policy
 
-    async def enforce_retention(
-        self, engagement_id: uuid.UUID
-    ) -> dict[str, Any]:
+    async def enforce_retention(self, engagement_id: uuid.UUID) -> dict[str, Any]:
         """Enforce retention policy for an engagement.
 
         Archives or deletes evidence items older than the retention period.
@@ -110,13 +104,10 @@ class GdprComplianceService:
         cutoff = datetime.now(UTC) - timedelta(days=policy.retention_days)
 
         # Find expired evidence items
-        stmt = (
-            select(EvidenceItem)
-            .where(
-                EvidenceItem.engagement_id == engagement_id,
-                EvidenceItem.created_at < cutoff,
-                EvidenceItem.validation_status != ValidationStatus.ARCHIVED,
-            )
+        stmt = select(EvidenceItem).where(
+            EvidenceItem.engagement_id == engagement_id,
+            EvidenceItem.created_at < cutoff,
+            EvidenceItem.validation_status != ValidationStatus.ARCHIVED,
         )
         result = await self._session.execute(stmt)
         expired_items = result.scalars().all()
@@ -134,7 +125,9 @@ class GdprComplianceService:
 
         logger.info(
             "Retention enforcement: engagement=%s, action=%s, affected=%d",
-            engagement_id, policy.action, len(affected_ids),
+            engagement_id,
+            policy.action,
+            len(affected_ids),
         )
         return {
             "engagement_id": str(engagement_id),
@@ -170,7 +163,9 @@ class GdprComplianceService:
 
         logger.info(
             "Processing activity created: name=%s, basis=%s, engagement=%s",
-            name, lawful_basis, engagement_id,
+            name,
+            lawful_basis,
+            engagement_id,
         )
         return activity
 
@@ -218,9 +213,7 @@ class GdprComplianceService:
             "offset": offset,
         }
 
-    async def get_compliance_report(
-        self, engagement_id: uuid.UUID
-    ) -> dict[str, Any]:
+    async def get_compliance_report(self, engagement_id: uuid.UUID) -> dict[str, Any]:
         """Generate a GDPR compliance report for an engagement.
 
         Identifies processing activities without lawful basis and
@@ -248,9 +241,7 @@ class GdprComplianceService:
             .group_by(EvidenceItem.classification)
         )
         class_result = await self._session.execute(class_stmt)
-        classification_counts = {
-            row.classification.value: row.count for row in class_result
-        }
+        classification_counts = {row.classification.value: row.count for row in class_result}
 
         # Total activities
         total_stmt = (

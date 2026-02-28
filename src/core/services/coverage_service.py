@@ -133,16 +133,18 @@ def build_dark_room_backlog(
         # Generate recommended actions
         actions = _infer_recommended_actions(evidence_count, evidence_grade, conf)
 
-        segments.append(DarkSegment(
-            element_id=str(el.get("id", "")),
-            name=str(el.get("name", "")),
-            element_type=str(el.get("element_type", "")),
-            confidence_score=conf,
-            estimated_uplift=uplift,
-            missing_knowledge_forms=missing_forms,
-            recommended_actions=actions,
-            related_seed_terms=el.get("related_seed_terms", []),
-        ))
+        segments.append(
+            DarkSegment(
+                element_id=str(el.get("id", "")),
+                name=str(el.get("name", "")),
+                element_type=str(el.get("element_type", "")),
+                confidence_score=conf,
+                estimated_uplift=uplift,
+                missing_knowledge_forms=missing_forms,
+                recommended_actions=actions,
+                related_seed_terms=el.get("related_seed_terms", []),
+            )
+        )
 
     # Sort by estimated uplift descending (highest value evidence first)
     segments.sort(key=lambda s: s.estimated_uplift, reverse=True)
@@ -190,9 +192,7 @@ async def fetch_coverage_report(
 
     evidence_links: set[str] = set()
     if latest_pov:
-        elements_result = await session.execute(
-            select(ProcessElement).where(ProcessElement.model_id == latest_pov.id)
-        )
+        elements_result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == latest_pov.id))
         elements = list(elements_result.scalars().all())
         element_names_lower = {e.name.lower() for e in elements}
 
@@ -255,18 +255,18 @@ async def fetch_dark_room_backlog(
     element_dicts = []
     for el in dark_elements:
         # Find related seed terms by name matching
-        related = [
-            t.term for t in seed_terms if t.term.lower() in el.name.lower()
-        ]
-        element_dicts.append({
-            "id": str(el.id),
-            "name": el.name,
-            "element_type": el.element_type.value if el.element_type else "",
-            "confidence_score": el.confidence_score,
-            "evidence_count": el.evidence_count,
-            "evidence_grade": el.evidence_grade.value if el.evidence_grade else "U",
-            "related_seed_terms": related,
-        })
+        related = [t.term for t in seed_terms if t.term.lower() in el.name.lower()]
+        element_dicts.append(
+            {
+                "id": str(el.id),
+                "name": el.name,
+                "element_type": el.element_type.value if el.element_type else "",
+                "confidence_score": el.confidence_score,
+                "evidence_count": el.evidence_count,
+                "evidence_grade": el.evidence_grade.value if el.evidence_grade else "U",
+                "related_seed_terms": related,
+            }
+        )
 
     backlog = build_dark_room_backlog(element_dicts, dark_threshold=threshold)
 

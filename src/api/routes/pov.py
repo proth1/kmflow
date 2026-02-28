@@ -383,17 +383,21 @@ async def trigger_pov_generation(
     job_id = uuid.uuid4().hex
 
     # Track job as in-progress with initial progress
-    await _set_job(request, job_id, {
-        "status": "running",
-        "result": None,
-        "error": None,
-        "progress": {
-            "current_step": 0,
-            "step_name": "Evidence Aggregation",
-            "completion_percentage": 0,
-            "total_steps": 8,
+    await _set_job(
+        request,
+        job_id,
+        {
+            "status": "running",
+            "result": None,
+            "error": None,
+            "progress": {
+                "current_step": 0,
+                "step_name": "Evidence Aggregation",
+                "completion_percentage": 0,
+                "total_steps": 8,
+            },
         },
-    })
+    )
 
     job_status = "failed"
     try:
@@ -407,8 +411,11 @@ async def trigger_pov_generation(
         try:
             eng_uuid = uuid.UUID(payload.engagement_id)
             await log_audit(
-                session, eng_uuid, AuditAction.POV_GENERATED,
-                f"POV generation scope={payload.scope}", actor=str(user.id),
+                session,
+                eng_uuid,
+                AuditAction.POV_GENERATED,
+                f"POV generation scope={payload.scope}",
+                actor=str(user.id),
             )
         except ValueError:
             pass  # engagement_id is not a valid UUID, skip audit
@@ -451,17 +458,21 @@ async def trigger_pov_generation(
 
     except (ValueError, RuntimeError) as e:
         logger.exception("POV generation failed")
-        await _set_job(request, job_id, {
-            "status": "failed",
-            "result": None,
-            "error": str(e),
-            "progress": {
-                "current_step": 0,
-                "step_name": "Failed",
-                "completion_percentage": 0,
-                "total_steps": 8,
+        await _set_job(
+            request,
+            job_id,
+            {
+                "status": "failed",
+                "result": None,
+                "error": str(e),
+                "progress": {
+                    "current_step": 0,
+                    "step_name": "Failed",
+                    "completion_percentage": 0,
+                    "total_steps": 8,
+                },
             },
-        })
+        )
 
     return {
         "job_id": job_id,
@@ -548,11 +559,7 @@ async def get_version_history(
     await _check_engagement_member(session, user, eng_uuid)
 
     # Get all versions for this engagement ordered by version desc
-    query = (
-        select(ProcessModel)
-        .where(ProcessModel.engagement_id == eng_uuid)
-        .order_by(ProcessModel.version.desc())
-    )
+    query = select(ProcessModel).where(ProcessModel.engagement_id == eng_uuid).order_by(ProcessModel.version.desc())
     result = await session.execute(query)
     models = list(result.scalars().all())
 
@@ -591,12 +598,11 @@ async def get_version_history(
 
 
 async def _get_elements_for_model(
-    session: AsyncSession, model_id: uuid.UUID,
+    session: AsyncSession,
+    model_id: uuid.UUID,
 ) -> list[dict[str, Any]]:
     """Get elements for a model as simple dicts for version comparison."""
-    result = await session.execute(
-        select(ProcessElement).where(ProcessElement.model_id == model_id)
-    )
+    result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == model_id))
     return [
         {
             "name": e.name,
@@ -888,9 +894,7 @@ async def get_latest_model_for_engagement(
         )
 
     # Get all elements for the model
-    elements_result = await session.execute(
-        select(ProcessElement).where(ProcessElement.model_id == model.id)
-    )
+    elements_result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == model.id))
     elements = list(elements_result.scalars().all())
 
     return {
@@ -929,9 +933,7 @@ async def get_element_evidence(
         ) from None
 
     # Fetch element
-    elem_result = await session.execute(
-        select(ProcessElement).where(ProcessElement.id == elem_uuid)
-    )
+    elem_result = await session.execute(select(ProcessElement).where(ProcessElement.id == elem_uuid))
     element = elem_result.scalar_one_or_none()
 
     if not element:
@@ -941,9 +943,7 @@ async def get_element_evidence(
         )
 
     # Verify engagement access via the element's parent model
-    model_result = await session.execute(
-        select(ProcessModel).where(ProcessModel.id == element.model_id)
-    )
+    model_result = await session.execute(select(ProcessModel).where(ProcessModel.id == element.model_id))
     model = model_result.scalar_one_or_none()
     if not model:
         raise HTTPException(
@@ -963,18 +963,18 @@ async def get_element_evidence(
                 continue
 
         if evidence_uuids:
-            ev_result = await session.execute(
-                select(EvidenceItem).where(EvidenceItem.id.in_(evidence_uuids))
-            )
+            ev_result = await session.execute(select(EvidenceItem).where(EvidenceItem.id.in_(evidence_uuids)))
             for ev in ev_result.scalars().all():
-                evidence_items.append({
-                    "id": str(ev.id),
-                    "title": ev.name,
-                    "category": str(ev.category),
-                    "grade": "N/A",
-                    "source": ev.source_system,
-                    "created_at": str(ev.created_at) if ev.created_at else None,
-                })
+                evidence_items.append(
+                    {
+                        "id": str(ev.id),
+                        "title": ev.name,
+                        "category": str(ev.category),
+                        "grade": "N/A",
+                        "source": ev.source_system,
+                        "created_at": str(ev.created_at) if ev.created_at else None,
+                    }
+                )
 
     return {
         "element_id": str(element.id),
@@ -1027,9 +1027,7 @@ async def get_engagement_dashboard(
         )
 
     # Get elements for brightness distribution
-    elements_result = await session.execute(
-        select(ProcessElement).where(ProcessElement.model_id == model.id)
-    )
+    elements_result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == model.id))
     elements = list(elements_result.scalars().all())
 
     # Brightness distribution
@@ -1040,10 +1038,7 @@ async def get_engagement_dashboard(
             brightness_dist[b] += 1
 
     total_elements = len(elements) or 1
-    brightness_pcts = {
-        k: round(v / total_elements * 100, 1)
-        for k, v in brightness_dist.items()
-    }
+    brightness_pcts = {k: round(v / total_elements * 100, 1) for k, v in brightness_dist.items()}
 
     # Evidence coverage: elements with at least 1 evidence item
     with_evidence = sum(1 for e in elements if e.evidence_count > 0)
@@ -1051,14 +1046,14 @@ async def get_engagement_dashboard(
 
     # Gap counts
     gap_result = await session.execute(
-        select(func.count()).select_from(EvidenceGap).where(
-            EvidenceGap.model_id == model.id
-        )
+        select(func.count()).select_from(EvidenceGap).where(EvidenceGap.model_id == model.id)
     )
     gap_count = gap_result.scalar() or 0
 
     critical_gap_result = await session.execute(
-        select(func.count()).select_from(EvidenceGap).where(
+        select(func.count())
+        .select_from(EvidenceGap)
+        .where(
             EvidenceGap.model_id == model.id,
             EvidenceGap.severity == "high",
         )
@@ -1159,9 +1154,7 @@ async def get_confidence_map(
         )
 
     # Get all elements
-    elements_result = await session.execute(
-        select(ProcessElement).where(ProcessElement.model_id == model.id)
-    )
+    elements_result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == model.id))
     elements = list(elements_result.scalars().all())
 
     elements_map: dict[str, dict[str, Any]] = {}
@@ -1225,9 +1218,7 @@ async def get_confidence_summary(
         )
 
     # Get elements
-    elements_result = await session.execute(
-        select(ProcessElement).where(ProcessElement.model_id == model.id)
-    )
+    elements_result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == model.id))
     elements = list(elements_result.scalars().all())
 
     total = len(elements) or 1
@@ -1266,9 +1257,7 @@ async def get_confidence_summary(
         return Response(
             content=output.getvalue(),
             media_type="text/csv",
-            headers={
-                "Content-Disposition": f'attachment; filename="confidence-summary-{engagement_id}.csv"'
-            },
+            headers={"Content-Disposition": f'attachment; filename="confidence-summary-{engagement_id}.csv"'},
         )
 
     return summary_data
@@ -1343,9 +1332,7 @@ async def get_elements_for_evidence(
         ) from None
 
     # Verify the evidence item exists and get its engagement for access control
-    ev_result = await session.execute(
-        select(EvidenceItem).where(EvidenceItem.id == ev_uuid)
-    )
+    ev_result = await session.execute(select(EvidenceItem).where(EvidenceItem.id == ev_uuid))
     evidence = ev_result.scalar_one_or_none()
     if not evidence:
         raise HTTPException(
@@ -1375,13 +1362,15 @@ async def get_elements_for_evidence(
         )
         for elem in elements_result.scalars().all():
             if elem.evidence_ids and str(ev_uuid) in [str(eid) for eid in elem.evidence_ids]:
-                matching_elements.append({
-                    "element_id": str(elem.id),
-                    "element_name": elem.name,
-                    "element_type": str(elem.element_type),
-                    "confidence_score": elem.confidence_score,
-                    "brightness_classification": str(elem.brightness_classification),
-                })
+                matching_elements.append(
+                    {
+                        "element_id": str(elem.id),
+                        "element_name": elem.name,
+                        "element_type": str(elem.element_type),
+                        "confidence_score": elem.confidence_score,
+                        "brightness_classification": str(elem.brightness_classification),
+                    }
+                )
 
     return {
         "evidence_id": evidence_id,
@@ -1444,14 +1433,16 @@ async def get_dark_elements(
     dark_entries: list[dict[str, Any]] = []
     for elem in dark_elements:
         suggestions = _suggest_evidence_actions(str(elem.element_type), elem.name)
-        dark_entries.append({
-            "element_id": str(elem.id),
-            "element_name": elem.name,
-            "element_type": str(elem.element_type),
-            "confidence_score": elem.confidence_score,
-            "evidence_count": elem.evidence_count,
-            "suggested_actions": suggestions,
-        })
+        dark_entries.append(
+            {
+                "element_id": str(elem.id),
+                "element_name": elem.name,
+                "element_type": str(elem.element_type),
+                "confidence_score": elem.confidence_score,
+                "evidence_count": elem.evidence_count,
+                "suggested_actions": suggestions,
+            }
+        )
 
     return {
         "engagement_id": engagement_id,
@@ -1488,9 +1479,7 @@ def _suggest_evidence_actions(element_type: str, element_name: str) -> list[str]
 # -- Engagement Access Check -------------------------------------------------
 
 
-async def _check_engagement_member(
-    session: AsyncSession, user: User, engagement_id: uuid.UUID
-) -> None:
+async def _check_engagement_member(session: AsyncSession, user: User, engagement_id: uuid.UUID) -> None:
     """Verify user is a member of the engagement. Platform admins bypass."""
     if user.role == UserRole.PLATFORM_ADMIN:
         return
@@ -1723,9 +1712,7 @@ async def create_illumination_plan(
     backlog_service = DarkRoomBacklogService(graph_service)
 
     # Get dark segments to find the element's missing forms
-    backlog = await backlog_service.get_dark_segments(
-        engagement_id=str(model.engagement_id), limit=500
-    )
+    backlog = await backlog_service.get_dark_segments(engagement_id=str(model.engagement_id), limit=500)
     target_item = next(
         (item for item in backlog["items"] if item["element_id"] == element_id),
         None,
@@ -1745,7 +1732,9 @@ async def create_illumination_plan(
     )
 
     await log_audit(
-        session, model.engagement_id, AuditAction.EPISTEMIC_PLAN_GENERATED,
+        session,
+        model.engagement_id,
+        AuditAction.EPISTEMIC_PLAN_GENERATED,
         f"Created illumination plan with {len(actions)} actions for {element_id}",
         actor=str(user.id),
     )

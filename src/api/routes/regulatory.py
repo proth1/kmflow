@@ -180,7 +180,9 @@ async def create_policy(
     """Create a new policy."""
     eng_result = await session.execute(select(Engagement).where(Engagement.id == payload.engagement_id))
     if not eng_result.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found"
+        )
     policy = Policy(
         engagement_id=payload.engagement_id,
         name=payload.name,
@@ -208,7 +210,11 @@ async def list_policies(
 ) -> dict[str, Any]:
     """List policies for an engagement."""
     query = select(Policy).where(Policy.engagement_id == engagement_id, Policy.deleted_at.is_(None))
-    count_query = select(func.count()).select_from(Policy).where(Policy.engagement_id == engagement_id, Policy.deleted_at.is_(None))
+    count_query = (
+        select(func.count())
+        .select_from(Policy)
+        .where(Policy.engagement_id == engagement_id, Policy.deleted_at.is_(None))
+    )
 
     if policy_type is not None:
         query = query.where(Policy.policy_type == policy_type)
@@ -271,7 +277,12 @@ async def delete_policy(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Policy {policy_id} not found")
 
     policy.deleted_at = datetime.now(UTC)
-    await log_audit(session, policy.engagement_id, AuditAction.POLICY_DELETED, json.dumps({"id": str(policy_id), "name": policy.name}))
+    await log_audit(
+        session,
+        policy.engagement_id,
+        AuditAction.POLICY_DELETED,
+        json.dumps({"id": str(policy_id), "name": policy.name}),
+    )
     await session.commit()
 
 
@@ -287,7 +298,9 @@ async def create_control(
     """Create a new control."""
     eng_result = await session.execute(select(Engagement).where(Engagement.id == payload.engagement_id))
     if not eng_result.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found"
+        )
     control = Control(
         engagement_id=payload.engagement_id,
         name=payload.name,
@@ -314,7 +327,11 @@ async def list_controls(
 ) -> dict[str, Any]:
     """List controls for an engagement."""
     query = select(Control).where(Control.engagement_id == engagement_id, Control.deleted_at.is_(None))
-    count_query = select(func.count()).select_from(Control).where(Control.engagement_id == engagement_id, Control.deleted_at.is_(None))
+    count_query = (
+        select(func.count())
+        .select_from(Control)
+        .where(Control.engagement_id == engagement_id, Control.deleted_at.is_(None))
+    )
     query = query.offset(offset).limit(limit)
     result = await session.execute(query)
     controls = list(result.scalars().all())
@@ -407,7 +424,9 @@ async def create_regulation(
     """Create a new regulation."""
     eng_result = await session.execute(select(Engagement).where(Engagement.id == payload.engagement_id))
     if not eng_result.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {payload.engagement_id} not found"
+        )
     regulation = Regulation(
         engagement_id=payload.engagement_id,
         name=payload.name,
@@ -434,7 +453,11 @@ async def list_regulations(
 ) -> dict[str, Any]:
     """List regulations for an engagement, optionally filtered by framework."""
     query = select(Regulation).where(Regulation.engagement_id == engagement_id, Regulation.deleted_at.is_(None))
-    count_query = select(func.count()).select_from(Regulation).where(Regulation.engagement_id == engagement_id, Regulation.deleted_at.is_(None))
+    count_query = (
+        select(func.count())
+        .select_from(Regulation)
+        .where(Regulation.engagement_id == engagement_id, Regulation.deleted_at.is_(None))
+    )
 
     if framework is not None:
         query = query.where(Regulation.framework == framework)
@@ -471,7 +494,9 @@ async def update_regulation(
     user: User = Depends(require_permission("engagement:update")),
 ) -> Regulation:
     """Update a regulation's fields (partial update)."""
-    result = await session.execute(select(Regulation).where(Regulation.id == regulation_id, Regulation.deleted_at.is_(None)))
+    result = await session.execute(
+        select(Regulation).where(Regulation.id == regulation_id, Regulation.deleted_at.is_(None))
+    )
     regulation = result.scalar_one_or_none()
     if not regulation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Regulation {regulation_id} not found")
@@ -492,13 +517,20 @@ async def delete_regulation(
     user: User = Depends(require_permission("engagement:update")),
 ) -> None:
     """Soft-delete a regulation (sets deleted_at, does not hard delete)."""
-    result = await session.execute(select(Regulation).where(Regulation.id == regulation_id, Regulation.deleted_at.is_(None)))
+    result = await session.execute(
+        select(Regulation).where(Regulation.id == regulation_id, Regulation.deleted_at.is_(None))
+    )
     regulation = result.scalar_one_or_none()
     if not regulation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Regulation {regulation_id} not found")
 
     regulation.deleted_at = datetime.now(UTC)
-    await log_audit(session, regulation.engagement_id, AuditAction.REGULATION_DELETED, json.dumps({"id": str(regulation_id), "name": regulation.name}))
+    await log_audit(
+        session,
+        regulation.engagement_id,
+        AuditAction.REGULATION_DELETED,
+        json.dumps({"id": str(regulation_id), "name": regulation.name}),
+    )
     await session.commit()
 
 
@@ -551,10 +583,30 @@ async def get_governance_chain(
     if records:
         rec = records[0]
         chain = [
-            {"entity_id": rec.get("activity_id", ""), "entity_type": "Activity", "name": rec.get("activity_name", ""), "relationship_type": None},
-            {"entity_id": rec.get("control_id", ""), "entity_type": "Control", "name": rec.get("control_name", ""), "relationship_type": "ENFORCED_BY"},
-            {"entity_id": rec.get("policy_id", ""), "entity_type": "Policy", "name": rec.get("policy_name", ""), "relationship_type": "ENFORCES"},
-            {"entity_id": rec.get("regulation_id", ""), "entity_type": "Regulation", "name": rec.get("regulation_name", ""), "relationship_type": "GOVERNED_BY"},
+            {
+                "entity_id": rec.get("activity_id", ""),
+                "entity_type": "Activity",
+                "name": rec.get("activity_name", ""),
+                "relationship_type": None,
+            },
+            {
+                "entity_id": rec.get("control_id", ""),
+                "entity_type": "Control",
+                "name": rec.get("control_name", ""),
+                "relationship_type": "ENFORCED_BY",
+            },
+            {
+                "entity_id": rec.get("policy_id", ""),
+                "entity_type": "Policy",
+                "name": rec.get("policy_name", ""),
+                "relationship_type": "ENFORCES",
+            },
+            {
+                "entity_id": rec.get("regulation_id", ""),
+                "entity_type": "Regulation",
+                "name": rec.get("regulation_name", ""),
+                "relationship_type": "GOVERNED_BY",
+            },
         ]
 
     return {"activity_id": str(activity_id), "chain": chain}

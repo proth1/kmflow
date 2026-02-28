@@ -11,7 +11,6 @@ import logging
 import uuid
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -82,35 +81,51 @@ def generate_bpmn_xml(
         },
     )
 
-    process = ET.SubElement(definitions, f"{{{BPMN_NS}}}process", {
-        "id": process_id,
-        "name": process_name,
-        "isExecutable": "true",
-    })
+    process = ET.SubElement(
+        definitions,
+        f"{{{BPMN_NS}}}process",
+        {
+            "id": process_id,
+            "name": process_name,
+            "isExecutable": "true",
+        },
+    )
 
     # Create start event
     start_id = f"StartEvent_{uuid.uuid4().hex[:8]}"
-    ET.SubElement(process, f"{{{BPMN_NS}}}startEvent", {
-        "id": start_id,
-        "name": "Start",
-    })
+    ET.SubElement(
+        process,
+        f"{{{BPMN_NS}}}startEvent",
+        {
+            "id": start_id,
+            "name": "Start",
+        },
+    )
 
     # Create end event
     end_id = f"EndEvent_{uuid.uuid4().hex[:8]}"
-    ET.SubElement(process, f"{{{BPMN_NS}}}endEvent", {
-        "id": end_id,
-        "name": "End",
-    })
+    ET.SubElement(
+        process,
+        f"{{{BPMN_NS}}}endEvent",
+        {
+            "id": end_id,
+            "name": "End",
+        },
+    )
 
     # Create task elements
     task_ids: list[str] = []
     for activity in activities:
         task_id = activity.id
         task_ids.append(task_id)
-        ET.SubElement(process, f"{{{BPMN_NS}}}task", {
-            "id": task_id,
-            "name": activity.name,
-        })
+        ET.SubElement(
+            process,
+            f"{{{BPMN_NS}}}task",
+            {
+                "id": task_id,
+                "name": activity.name,
+            },
+        )
 
     # Create sequence flows: Start -> Task1 -> Task2 -> ... -> End
     flow_elements: list[tuple[str, str, str]] = []
@@ -118,39 +133,59 @@ def generate_bpmn_xml(
     # Start -> first task
     flow_id = f"Flow_{uuid.uuid4().hex[:8]}"
     flow_elements.append((flow_id, start_id, task_ids[0]))
-    ET.SubElement(process, f"{{{BPMN_NS}}}sequenceFlow", {
-        "id": flow_id,
-        "sourceRef": start_id,
-        "targetRef": task_ids[0],
-    })
+    ET.SubElement(
+        process,
+        f"{{{BPMN_NS}}}sequenceFlow",
+        {
+            "id": flow_id,
+            "sourceRef": start_id,
+            "targetRef": task_ids[0],
+        },
+    )
 
     # Task-to-task flows
     for i in range(len(task_ids) - 1):
         flow_id = f"Flow_{uuid.uuid4().hex[:8]}"
         flow_elements.append((flow_id, task_ids[i], task_ids[i + 1]))
-        ET.SubElement(process, f"{{{BPMN_NS}}}sequenceFlow", {
-            "id": flow_id,
-            "sourceRef": task_ids[i],
-            "targetRef": task_ids[i + 1],
-        })
+        ET.SubElement(
+            process,
+            f"{{{BPMN_NS}}}sequenceFlow",
+            {
+                "id": flow_id,
+                "sourceRef": task_ids[i],
+                "targetRef": task_ids[i + 1],
+            },
+        )
 
     # Last task -> End
     flow_id = f"Flow_{uuid.uuid4().hex[:8]}"
     flow_elements.append((flow_id, task_ids[-1], end_id))
-    ET.SubElement(process, f"{{{BPMN_NS}}}sequenceFlow", {
-        "id": flow_id,
-        "sourceRef": task_ids[-1],
-        "targetRef": end_id,
-    })
+    ET.SubElement(
+        process,
+        f"{{{BPMN_NS}}}sequenceFlow",
+        {
+            "id": flow_id,
+            "sourceRef": task_ids[-1],
+            "targetRef": end_id,
+        },
+    )
 
     # Create BPMN diagram
-    diagram = ET.SubElement(definitions, f"{{{BPMNDI_NS}}}BPMNDiagram", {
-        "id": f"BPMNDiagram_{uuid.uuid4().hex[:8]}",
-    })
-    plane = ET.SubElement(diagram, f"{{{BPMNDI_NS}}}BPMNPlane", {
-        "id": f"BPMNPlane_{uuid.uuid4().hex[:8]}",
-        "bpmnElement": process_id,
-    })
+    diagram = ET.SubElement(
+        definitions,
+        f"{{{BPMNDI_NS}}}BPMNDiagram",
+        {
+            "id": f"BPMNDiagram_{uuid.uuid4().hex[:8]}",
+        },
+    )
+    plane = ET.SubElement(
+        diagram,
+        f"{{{BPMNDI_NS}}}BPMNPlane",
+        {
+            "id": f"BPMNPlane_{uuid.uuid4().hex[:8]}",
+            "bpmnElement": process_id,
+        },
+    )
 
     # Layout: left-to-right
     x = LANE_X_START
@@ -183,15 +218,22 @@ def generate_bpmn_xml(
 def _empty_bpmn(process_name: str) -> str:
     """Generate minimal BPMN with just start and end events."""
     ET.register_namespace("bpmn", BPMN_NS)
-    definitions = ET.Element(f"{{{BPMN_NS}}}definitions", {
-        "id": f"Definitions_{uuid.uuid4().hex[:8]}",
-        "targetNamespace": "http://bpmn.io/schema/bpmn",
-    })
-    process = ET.SubElement(definitions, f"{{{BPMN_NS}}}process", {
-        "id": f"Process_{uuid.uuid4().hex[:8]}",
-        "name": process_name,
-        "isExecutable": "true",
-    })
+    definitions = ET.Element(
+        f"{{{BPMN_NS}}}definitions",
+        {
+            "id": f"Definitions_{uuid.uuid4().hex[:8]}",
+            "targetNamespace": "http://bpmn.io/schema/bpmn",
+        },
+    )
+    process = ET.SubElement(
+        definitions,
+        f"{{{BPMN_NS}}}process",
+        {
+            "id": f"Process_{uuid.uuid4().hex[:8]}",
+            "name": process_name,
+            "isExecutable": "true",
+        },
+    )
     ET.SubElement(process, f"{{{BPMN_NS}}}startEvent", {"id": "Start", "name": "Start"})
     ET.SubElement(process, f"{{{BPMN_NS}}}endEvent", {"id": "End", "name": "End"})
     ET.indent(definitions, space="  ")
@@ -207,16 +249,24 @@ def _add_shape(
     height: int,
 ) -> None:
     """Add a BPMNShape element to the diagram plane."""
-    shape = ET.SubElement(plane, f"{{{BPMNDI_NS}}}BPMNShape", {
-        "id": f"{element_id}_di",
-        "bpmnElement": element_id,
-    })
-    ET.SubElement(shape, f"{{{DC_NS}}}Bounds", {
-        "x": str(x),
-        "y": str(y),
-        "width": str(width),
-        "height": str(height),
-    })
+    shape = ET.SubElement(
+        plane,
+        f"{{{BPMNDI_NS}}}BPMNShape",
+        {
+            "id": f"{element_id}_di",
+            "bpmnElement": element_id,
+        },
+    )
+    ET.SubElement(
+        shape,
+        f"{{{DC_NS}}}Bounds",
+        {
+            "x": str(x),
+            "y": str(y),
+            "width": str(width),
+            "height": str(height),
+        },
+    )
 
 
 def _add_edge(
@@ -227,19 +277,31 @@ def _add_edge(
     tgt: str,
 ) -> None:
     """Add a BPMNEdge element to the diagram plane."""
-    edge = ET.SubElement(plane, f"{{{BPMNDI_NS}}}BPMNEdge", {
-        "id": f"{flow_id}_di",
-        "bpmnElement": flow_id,
-    })
+    edge = ET.SubElement(
+        plane,
+        f"{{{BPMNDI_NS}}}BPMNEdge",
+        {
+            "id": f"{flow_id}_di",
+            "bpmnElement": flow_id,
+        },
+    )
     src_pos = positions.get(src, (0, 0))
     tgt_pos = positions.get(tgt, (0, 0))
 
     # Simple straight line from right edge of source to left edge of target
-    ET.SubElement(edge, f"{{{DI_NS}}}waypoint", {
-        "x": str(src_pos[0] + TASK_WIDTH),
-        "y": str(src_pos[1] + TASK_HEIGHT // 2),
-    })
-    ET.SubElement(edge, f"{{{DI_NS}}}waypoint", {
-        "x": str(tgt_pos[0]),
-        "y": str(tgt_pos[1] + TASK_HEIGHT // 2),
-    })
+    ET.SubElement(
+        edge,
+        f"{{{DI_NS}}}waypoint",
+        {
+            "x": str(src_pos[0] + TASK_WIDTH),
+            "y": str(src_pos[1] + TASK_HEIGHT // 2),
+        },
+    )
+    ET.SubElement(
+        edge,
+        f"{{{DI_NS}}}waypoint",
+        {
+            "x": str(tgt_pos[0]),
+            "y": str(tgt_pos[1] + TASK_HEIGHT // 2),
+        },
+    )

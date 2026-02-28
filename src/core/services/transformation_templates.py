@@ -138,16 +138,18 @@ def analyze_consolidate_tasks(elements: list[ProcessElement]) -> list[TemplateSu
         next_task = tasks[i + 1]
 
         if current.lane == next_task.lane and current.performer == next_task.performer:
-            suggestions.append(TemplateSuggestion(
-                id=str(uuid.uuid4()),
-                template_type=TemplateType.CONSOLIDATE_TASKS,
-                element_ids=[current.id, next_task.id],
-                rationale=(
-                    f"Tasks '{current.name}' and '{next_task.name}' are adjacent in lane "
-                    f"'{current.lane}' and performed by '{current.performer}'. "
-                    f"Consider consolidating to reduce handoff overhead."
-                ),
-            ))
+            suggestions.append(
+                TemplateSuggestion(
+                    id=str(uuid.uuid4()),
+                    template_type=TemplateType.CONSOLIDATE_TASKS,
+                    element_ids=[current.id, next_task.id],
+                    rationale=(
+                        f"Tasks '{current.name}' and '{next_task.name}' are adjacent in lane "
+                        f"'{current.lane}' and performed by '{current.performer}'. "
+                        f"Consider consolidating to reduce handoff overhead."
+                    ),
+                )
+            )
         i += 1
 
     return suggestions
@@ -167,21 +169,20 @@ def analyze_automate_gateway(elements: list[ProcessElement]) -> list[TemplateSug
             continue
 
         system_indicators = {"system", "api", "database", "automated", "integration"}
-        all_system = all(
-            any(ind in src.lower() for ind in system_indicators)
-            for src in gw.input_sources
-        )
+        all_system = all(any(ind in src.lower() for ind in system_indicators) for src in gw.input_sources)
 
         if all_system:
-            suggestions.append(TemplateSuggestion(
-                id=str(uuid.uuid4()),
-                template_type=TemplateType.AUTOMATE_GATEWAY,
-                element_ids=[gw.id],
-                rationale=(
-                    f"Gateway '{gw.name}' has all inputs sourced from system integrations: "
-                    f"{', '.join(gw.input_sources)}. This gateway can be fully automated."
-                ),
-            ))
+            suggestions.append(
+                TemplateSuggestion(
+                    id=str(uuid.uuid4()),
+                    template_type=TemplateType.AUTOMATE_GATEWAY,
+                    element_ids=[gw.id],
+                    rationale=(
+                        f"Gateway '{gw.name}' has all inputs sourced from system integrations: "
+                        f"{', '.join(gw.input_sources)}. This gateway can be fully automated."
+                    ),
+                )
+            )
 
     return suggestions
 
@@ -192,26 +193,24 @@ def analyze_shift_decision(elements: list[ProcessElement]) -> list[TemplateSugge
     Identifies gateways/tasks at 'human' autonomy level that have potential
     to shift to system_assisted or autonomous.
     """
-    candidates = [
-        e for e in elements
-        if e.element_type in ("gateway", "task")
-        and e.autonomy_level == "human"
-    ]
+    candidates = [e for e in elements if e.element_type in ("gateway", "task") and e.autonomy_level == "human"]
 
     suggestions: list[TemplateSuggestion] = []
     for elem in candidates:
         target_level = "system_assisted"  # conservative: always recommend system_assisted first
 
         if elem.autonomy_level != target_level:
-            suggestions.append(TemplateSuggestion(
-                id=str(uuid.uuid4()),
-                template_type=TemplateType.SHIFT_DECISION,
-                element_ids=[elem.id],
-                rationale=(
-                    f"'{elem.name}' is currently at '{elem.autonomy_level}' autonomy level. "
-                    f"Consider shifting to '{target_level}' to reduce manual decision-making."
-                ),
-            ))
+            suggestions.append(
+                TemplateSuggestion(
+                    id=str(uuid.uuid4()),
+                    template_type=TemplateType.SHIFT_DECISION,
+                    element_ids=[elem.id],
+                    rationale=(
+                        f"'{elem.name}' is currently at '{elem.autonomy_level}' autonomy level. "
+                        f"Consider shifting to '{target_level}' to reduce manual decision-making."
+                    ),
+                )
+            )
 
     return suggestions
 
@@ -226,15 +225,17 @@ def analyze_remove_control(elements: list[ProcessElement]) -> list[TemplateSugge
 
     suggestions: list[TemplateSuggestion] = []
     for ctrl in controls:
-        suggestions.append(TemplateSuggestion(
-            id=str(uuid.uuid4()),
-            template_type=TemplateType.REMOVE_CONTROL,
-            element_ids=[ctrl.id],
-            rationale=(
-                f"Control '{ctrl.name}' has low compliance risk. "
-                f"Removing it would improve cycle time with minimal regulatory exposure."
-            ),
-        ))
+        suggestions.append(
+            TemplateSuggestion(
+                id=str(uuid.uuid4()),
+                template_type=TemplateType.REMOVE_CONTROL,
+                element_ids=[ctrl.id],
+                rationale=(
+                    f"Control '{ctrl.name}' has low compliance risk. "
+                    f"Removing it would improve cycle time with minimal regulatory exposure."
+                ),
+            )
+        )
 
     return suggestions
 

@@ -161,7 +161,8 @@ class TestRateLimitPruning:
         # Add 100 stale entries (window_start is beyond the window)
         for i in range(100):
             middleware._clients[f"10.0.0.{i}"] = _RateLimitEntry(
-                count=5, window_start=now - 120,
+                count=5,
+                window_start=now - 120,
             )
 
         # Add 2 active entries

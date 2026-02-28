@@ -99,10 +99,7 @@ class TestGetReviewPack:
         mock_session.execute = AsyncMock(return_value=mock_result)
 
         client = _make_app(mock_session)
-        resp = client.get(
-            f"/api/v1/validation/review-packs/{REVIEW_PACK_ID}"
-            f"?engagement_id={ENGAGEMENT_ID}"
-        )
+        resp = client.get(f"/api/v1/validation/review-packs/{REVIEW_PACK_ID}?engagement_id={ENGAGEMENT_ID}")
         assert resp.status_code == 200
         data = resp.json()
         assert data["segment_activities"] == [{"id": "act_1", "name": "Activity 1"}]
@@ -116,10 +113,7 @@ class TestGetReviewPack:
         mock_session.execute = AsyncMock(return_value=mock_result)
 
         client = _make_app(mock_session)
-        resp = client.get(
-            f"/api/v1/validation/review-packs/{uuid.uuid4()}"
-            f"?engagement_id={ENGAGEMENT_ID}"
-        )
+        resp = client.get(f"/api/v1/validation/review-packs/{uuid.uuid4()}?engagement_id={ENGAGEMENT_ID}")
         assert resp.status_code == 404
 
     def test_returns_404_for_wrong_engagement(self) -> None:
@@ -131,10 +125,7 @@ class TestGetReviewPack:
 
         wrong_engagement = uuid.uuid4()
         client = _make_app(mock_session)
-        resp = client.get(
-            f"/api/v1/validation/review-packs/{REVIEW_PACK_ID}"
-            f"?engagement_id={wrong_engagement}"
-        )
+        resp = client.get(f"/api/v1/validation/review-packs/{REVIEW_PACK_ID}?engagement_id={wrong_engagement}")
         assert resp.status_code == 404
 
 
@@ -145,7 +136,9 @@ class TestListDecisions:
     """GET /api/v1/validation/decisions"""
 
     def _setup_session(
-        self, decisions: list[MagicMock], total: int = 0,
+        self,
+        decisions: list[MagicMock],
+        total: int = 0,
     ) -> AsyncMock:
         """Create mock session that handles both count and list queries."""
         call_count = 0
@@ -173,9 +166,7 @@ class TestListDecisions:
         session = self._setup_session(decisions, total=2)
 
         client = _make_app(session)
-        resp = client.get(
-            f"/api/v1/validation/decisions?engagement_id={ENGAGEMENT_ID}"
-        )
+        resp = client.get(f"/api/v1/validation/decisions?engagement_id={ENGAGEMENT_ID}")
         assert resp.status_code == 200
         data = resp.json()
         assert data["total"] == 2
@@ -187,9 +178,7 @@ class TestListDecisions:
         session = self._setup_session([], total=0)
 
         client = _make_app(session)
-        resp = client.get(
-            f"/api/v1/validation/decisions?engagement_id={ENGAGEMENT_ID}"
-        )
+        resp = client.get(f"/api/v1/validation/decisions?engagement_id={ENGAGEMENT_ID}")
         assert resp.status_code == 200
         assert resp.json()["items"] == []
         assert resp.json()["total"] == 0
@@ -199,9 +188,7 @@ class TestListDecisions:
         session = self._setup_session(decisions, total=1)
 
         client = _make_app(session)
-        resp = client.get(
-            f"/api/v1/validation/decisions?engagement_id={ENGAGEMENT_ID}&action=confirm"
-        )
+        resp = client.get(f"/api/v1/validation/decisions?engagement_id={ENGAGEMENT_ID}&action=confirm")
         assert resp.status_code == 200
         assert resp.json()["total"] == 1
 
@@ -210,9 +197,7 @@ class TestListDecisions:
         session = self._setup_session(decisions, total=1)
 
         client = _make_app(session)
-        resp = client.get(
-            f"/api/v1/validation/decisions?engagement_id={ENGAGEMENT_ID}&reviewer_id={REVIEWER_ID}"
-        )
+        resp = client.get(f"/api/v1/validation/decisions?engagement_id={ENGAGEMENT_ID}&reviewer_id={REVIEWER_ID}")
         assert resp.status_code == 200
         assert resp.json()["total"] == 1
 
@@ -221,10 +206,7 @@ class TestListDecisions:
         session = self._setup_session(decisions, total=1)
 
         client = _make_app(session)
-        resp = client.get(
-            f"/api/v1/validation/decisions?engagement_id={ENGAGEMENT_ID}"
-            f"&review_pack_id={REVIEW_PACK_ID}"
-        )
+        resp = client.get(f"/api/v1/validation/decisions?engagement_id={ENGAGEMENT_ID}&review_pack_id={REVIEW_PACK_ID}")
         assert resp.status_code == 200
 
     def test_pagination_params(self) -> None:
@@ -232,10 +214,7 @@ class TestListDecisions:
         session = self._setup_session(decisions, total=50)
 
         client = _make_app(session)
-        resp = client.get(
-            f"/api/v1/validation/decisions?engagement_id={ENGAGEMENT_ID}"
-            "&limit=10&offset=20"
-        )
+        resp = client.get(f"/api/v1/validation/decisions?engagement_id={ENGAGEMENT_ID}&limit=10&offset=20")
         assert resp.status_code == 200
         data = resp.json()
         assert data["limit"] == 10

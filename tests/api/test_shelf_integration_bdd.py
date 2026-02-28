@@ -271,18 +271,12 @@ async def test_scenario_3_api_follow_through_rate() -> None:
         "meets_target": True,
     }
 
-    with patch(
-        "src.api.services.shelf_integration.ShelfIntegrationService"
-    ) as mock_cls:
+    with patch("src.api.services.shelf_integration.ShelfIntegrationService") as mock_cls:
         mock_service = mock_cls.return_value
         mock_service.get_follow_through_rate = AsyncMock(return_value=mock_rate)
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            resp = await client.get(
-                f"/api/v1/shelf-requests/follow-through-rate?engagement_id={ENGAGEMENT_ID}"
-            )
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.get(f"/api/v1/shelf-requests/follow-through-rate?engagement_id={ENGAGEMENT_ID}")
 
     assert resp.status_code == 200
     data = resp.json()

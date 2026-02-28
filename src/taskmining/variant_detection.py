@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any
 
 from src.semantic.graph import GraphNode, KnowledgeGraphService
 
@@ -72,17 +71,13 @@ async def detect_variants(
     result = VariantDetectionResult()
 
     # Load processes with their expected activity sequences
-    processes = await graph_service.find_nodes(
-        "Process", {"engagement_id": engagement_id}, limit=_MAX_NODES
-    )
+    processes = await graph_service.find_nodes("Process", {"engagement_id": engagement_id}, limit=_MAX_NODES)
     if not processes:
         logger.info("No processes found for engagement %s", engagement_id)
         return result
 
     # Load UserAction nodes with their PRECEDED_BY chains and SUPPORTS links
-    user_actions = await graph_service.find_nodes(
-        "UserAction", {"engagement_id": engagement_id}, limit=_MAX_NODES
-    )
+    user_actions = await graph_service.find_nodes("UserAction", {"engagement_id": engagement_id}, limit=_MAX_NODES)
     if not user_actions:
         logger.info("No UserActions found for engagement %s", engagement_id)
         return result
@@ -91,9 +86,7 @@ async def detect_variants(
     process_sequences = await _build_process_sequences(graph_service, processes)
 
     # Build observed session sequences via PRECEDED_BY + SUPPORTS
-    session_sequences = await _build_session_sequences(
-        graph_service, user_actions
-    )
+    session_sequences = await _build_session_sequences(graph_service, user_actions)
 
     result.sessions_analyzed = len(session_sequences)
 
@@ -132,8 +125,7 @@ async def detect_variants(
                     result.errors.append(f"DEVIATES_FROM failed: {e}")
 
     logger.info(
-        "Variant detection complete for engagement %s: "
-        "%d sessions, %d variants, %d relationships created",
+        "Variant detection complete for engagement %s: %d sessions, %d variants, %d relationships created",
         engagement_id,
         result.sessions_analyzed,
         len(result.variants),
@@ -157,14 +149,9 @@ async def _build_process_sequences(
 
     for process in processes:
         # Get activities linked to this process via outgoing relationships
-        rels = await graph_service.get_relationships(
-            process.id, direction="outgoing"
-        )
+        rels = await graph_service.get_relationships(process.id, direction="outgoing")
         # Find activities connected by FOLLOWED_BY to build the sequence
-        activity_ids = [
-            r.to_id for r in rels
-            if r.relationship_type in ("REQUIRES", "OWNED_BY", "USES", "FOLLOWED_BY")
-        ]
+        activity_ids = [r.to_id for r in rels if r.relationship_type in ("REQUIRES", "OWNED_BY", "USES", "FOLLOWED_BY")]
 
         # Get FOLLOWED_BY chains among these activities
         if not activity_ids:
@@ -192,9 +179,7 @@ async def _topological_sort_activities(
     has_predecessor: set[str] = set()
 
     for aid in activity_ids:
-        rels = await graph_service.get_relationships(
-            aid, direction="outgoing", relationship_type="FOLLOWED_BY"
-        )
+        rels = await graph_service.get_relationships(aid, direction="outgoing", relationship_type="FOLLOWED_BY")
         for r in rels:
             if r.to_id in id_set:
                 successors[aid] = r.to_id
@@ -232,9 +217,7 @@ async def _build_session_sequences(
     # Resolve each UserAction's mapped Activity via SUPPORTS
     ua_to_activity: dict[str, str] = {}
     for ua in user_actions:
-        rels = await graph_service.get_relationships(
-            ua.id, direction="outgoing", relationship_type="SUPPORTS"
-        )
+        rels = await graph_service.get_relationships(ua.id, direction="outgoing", relationship_type="SUPPORTS")
         if rels:
             # Take the highest-confidence link
             best = max(rels, key=lambda r: r.properties.get("similarity_score", 0))
@@ -246,9 +229,7 @@ async def _build_session_sequences(
     preceded_by: dict[str, str] = {}  # ua_id -> predecessor_ua_id
 
     for ua in user_actions:
-        rels = await graph_service.get_relationships(
-            ua.id, direction="outgoing", relationship_type="PRECEDED_BY"
-        )
+        rels = await graph_service.get_relationships(ua.id, direction="outgoing", relationship_type="PRECEDED_BY")
         for r in rels:
             preceded_by[ua.id] = r.to_id
             has_successor.add(r.to_id)
@@ -297,51 +278,48 @@ def _compare_sequences(
     # Extra steps: observed but not in expected
     extra = observed_set - expected_set
     if extra:
-        variants.append(ProcessVariant(
-            process_id=process_id,
-            process_name=process_name,
-            session_id=session_id,
-            deviation_type="extra_step",
-            severity=_SEVERITY_MAP["extra_step"],
-            confidence=0.8,
-            description=(
-                f"Observed {len(extra)} step(s) not in documented process "
-                f"'{process_name}'"
-            ),
-        ))
+        variants.append(
+            ProcessVariant(
+                process_id=process_id,
+                process_name=process_name,
+                session_id=session_id,
+                deviation_type="extra_step",
+                severity=_SEVERITY_MAP["extra_step"],
+                confidence=0.8,
+                description=(f"Observed {len(extra)} step(s) not in documented process '{process_name}'"),
+            )
+        )
 
     # Missing steps: expected but not observed
     missing = expected_set - observed_set
     if missing:
-        variants.append(ProcessVariant(
-            process_id=process_id,
-            process_name=process_name,
-            session_id=session_id,
-            deviation_type="missing_step",
-            severity=_SEVERITY_MAP["missing_step"],
-            confidence=0.7,
-            description=(
-                f"{len(missing)} expected step(s) in '{process_name}' "
-                f"were not observed"
-            ),
-        ))
+        variants.append(
+            ProcessVariant(
+                process_id=process_id,
+                process_name=process_name,
+                session_id=session_id,
+                deviation_type="missing_step",
+                severity=_SEVERITY_MAP["missing_step"],
+                confidence=0.7,
+                description=(f"{len(missing)} expected step(s) in '{process_name}' were not observed"),
+            )
+        )
 
     # Order deviation: check if common elements are in same relative order
     common = [aid for aid in observed_ids if aid in expected_set]
     expected_common = [aid for aid in expected_ids if aid in observed_set]
 
     if common and expected_common and common != expected_common:
-        variants.append(ProcessVariant(
-            process_id=process_id,
-            process_name=process_name,
-            session_id=session_id,
-            deviation_type="different_order",
-            severity=_SEVERITY_MAP["different_order"],
-            confidence=0.75,
-            description=(
-                f"Steps in '{process_name}' were performed in a different "
-                f"order than documented"
-            ),
-        ))
+        variants.append(
+            ProcessVariant(
+                process_id=process_id,
+                process_name=process_name,
+                session_id=session_id,
+                deviation_type="different_order",
+                severity=_SEVERITY_MAP["different_order"],
+                confidence=0.75,
+                description=(f"Steps in '{process_name}' were performed in a different order than documented"),
+            )
+        )
 
     return variants

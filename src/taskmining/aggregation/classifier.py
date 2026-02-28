@@ -174,12 +174,14 @@ class ActionClassifier:
 
         rules = []
         for rule_data in data.get("rules", []):
-            rules.append(ClassificationRule(
-                name=rule_data["name"],
-                category=ActionCategory(rule_data["category"]),
-                confidence=rule_data.get("confidence", 0.80),
-                conditions=rule_data.get("conditions", {}),
-            ))
+            rules.append(
+                ClassificationRule(
+                    name=rule_data["name"],
+                    category=ActionCategory(rule_data["category"]),
+                    confidence=rule_data.get("confidence", 0.80),
+                    conditions=rule_data.get("conditions", {}),
+                )
+            )
         return cls(rules=rules)
 
     def classify(self, session: AggregatedSession) -> ClassificationResult:
@@ -213,9 +215,7 @@ class ActionClassifier:
             description=f"Unclassified activity in {session.app_bundle_id} ({session.total_event_count} events)",
         )
 
-    def classify_batch(
-        self, sessions: list[AggregatedSession]
-    ) -> list[ClassificationResult]:
+    def classify_batch(self, sessions: list[AggregatedSession]) -> list[ClassificationResult]:
         """Classify multiple sessions."""
         return [self.classify(s) for s in sessions]
 

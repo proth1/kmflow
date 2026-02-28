@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 def _sanitize_input(text: str) -> str:
     """Sanitize user input for LLM prompt injection prevention."""
     # Strip control characters
-    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
     # Truncate to reasonable length
     return text[:5000]
 

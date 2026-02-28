@@ -17,8 +17,8 @@ from src.integrations.utils import DEFAULT_TIMEOUT, paginate_cursor, retry_reque
 
 logger = logging.getLogger(__name__)
 
-VALID_SOBJECT_PATTERN = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
-VALID_FIELD_PATTERN = re.compile(r'^[A-Za-z_][A-Za-z0-9_.]*$')
+VALID_SOBJECT_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+VALID_FIELD_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_.]*$")
 
 
 def _validate_sobject_name(name: str) -> str:
@@ -120,7 +120,10 @@ class SalesforceConnector(BaseConnector):
             return {"records_synced": 0, "errors": ["Salesforce authentication failed"]}
 
         object_type = _validate_sobject_name(kwargs.get("object_type", "Case"))
-        fields = [_validate_field_name(f) for f in kwargs.get("fields", ["Id", "Name", "Description", "CreatedDate", "Status"])]
+        fields = [
+            _validate_field_name(f)
+            for f in kwargs.get("fields", ["Id", "Name", "Description", "CreatedDate", "Status"])
+        ]
         # _soql_override is set internally by sync_incremental for WHERE-clause queries only
         soql = kwargs.get("_soql_override") or f"SELECT {', '.join(fields)} FROM {object_type}"
 
@@ -166,7 +169,10 @@ class SalesforceConnector(BaseConnector):
         """Incremental sync using LastModifiedDate filter."""
         if since:
             object_type = _validate_sobject_name(kwargs.get("object_type", "Case"))
-            fields = [_validate_field_name(f) for f in kwargs.get("fields", ["Id", "Name", "Description", "CreatedDate", "Status"])]
+            fields = [
+                _validate_field_name(f)
+                for f in kwargs.get("fields", ["Id", "Name", "Description", "CreatedDate", "Status"])
+            ]
             # Build SOQL directly here so sync_data does not need to accept a raw soql_query
             kwargs["_soql_override"] = f"SELECT {', '.join(fields)} FROM {object_type} WHERE LastModifiedDate > {since}"
             kwargs["object_type"] = object_type

@@ -28,3 +28,10 @@ Task(subagent_type="pr-orchestrator", model="opus", prompt="Review PR #NNN in pr
 - Medium findings SHOULD be addressed (document rationale if skipping)
 - Low findings are informational
 - Never merge without at least running the review
+
+## Pre-Merge Gates (Blocking)
+Before `gh pr merge` is allowed, two PreToolUse hooks enforce:
+1. **Pipeline check** (`detect-merge-to-main.sh`): `.pipeline-passed` marker must exist and be <4h old
+2. **Evidence check** (`validate-cdd-evidence.sh`): CDD evidence comments must exist on the linked issue
+
+Both hooks will **block** the merge command if their conditions are not met.

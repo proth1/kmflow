@@ -15,13 +15,11 @@ from __future__ import annotations
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
-from src.api.middleware.audit import AuditLoggingMiddleware, MUTATING_METHODS
-
+from src.api.middleware.audit import MUTATING_METHODS, AuditLoggingMiddleware
 
 # ---------------------------------------------------------------------------
 # App factory

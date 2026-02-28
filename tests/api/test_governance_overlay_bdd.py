@@ -99,38 +99,50 @@ async def test_scenario_1_governance_status_classification() -> None:
     4 governed, 3 partially governed, 3 ungoverned,
     When GET /governance-overlay is called,
     Then correct status counts are returned."""
-    activities = [
-        {"activity_id": f"act-{i}", "activity_name": f"Activity {i}"}
-        for i in range(10)
-    ]
+    activities = [{"activity_id": f"act-{i}", "activity_name": f"Activity {i}"} for i in range(10)]
 
     # 4 fully governed (policy + control + regulation)
     chains: list[dict[str, Any]] = []
     for i in range(4):
-        chains.append({
-            "activity_id": f"act-{i}",
-            "policy_id": f"pol-{i}", "policy_name": f"Policy {i}",
-            "control_id": f"ctl-{i}", "control_name": f"Control {i}",
-            "regulation_id": f"reg-{i}", "regulation_name": f"Regulation {i}",
-        })
+        chains.append(
+            {
+                "activity_id": f"act-{i}",
+                "policy_id": f"pol-{i}",
+                "policy_name": f"Policy {i}",
+                "control_id": f"ctl-{i}",
+                "control_name": f"Control {i}",
+                "regulation_id": f"reg-{i}",
+                "regulation_name": f"Regulation {i}",
+            }
+        )
 
     # 3 partially governed (policy only, no control/regulation)
     for i in range(4, 7):
-        chains.append({
-            "activity_id": f"act-{i}",
-            "policy_id": f"pol-{i}", "policy_name": f"Policy {i}",
-            "control_id": None, "control_name": None,
-            "regulation_id": None, "regulation_name": None,
-        })
+        chains.append(
+            {
+                "activity_id": f"act-{i}",
+                "policy_id": f"pol-{i}",
+                "policy_name": f"Policy {i}",
+                "control_id": None,
+                "control_name": None,
+                "regulation_id": None,
+                "regulation_name": None,
+            }
+        )
 
     # 3 ungoverned (no governance entities)
     for i in range(7, 10):
-        chains.append({
-            "activity_id": f"act-{i}",
-            "policy_id": None, "policy_name": None,
-            "control_id": None, "control_name": None,
-            "regulation_id": None, "regulation_name": None,
-        })
+        chains.append(
+            {
+                "activity_id": f"act-{i}",
+                "policy_id": None,
+                "policy_name": None,
+                "control_id": None,
+                "control_name": None,
+                "regulation_id": None,
+                "regulation_name": None,
+            }
+        )
 
     mock_session = _mock_session(_mock_process_model())
     app = _make_app(mock_session)
@@ -140,12 +152,8 @@ async def test_scenario_1_governance_status_classification() -> None:
         instance = mock_kgs.return_value
         instance.run_query = mock_rq
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            resp = await client.get(
-                f"/api/v1/process-models/{PROCESS_MODEL_ID}/governance-overlay"
-            )
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.get(f"/api/v1/process-models/{PROCESS_MODEL_ID}/governance-overlay")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -172,9 +180,12 @@ async def test_scenario_2_full_governance_chain() -> None:
     chains = [
         {
             "activity_id": "act-wtr",
-            "policy_id": "pol-aml", "policy_name": "AML Policy",
-            "control_id": "ctl-txn", "control_name": "Transaction Monitoring",
-            "regulation_id": "reg-bsa", "regulation_name": "BSA",
+            "policy_id": "pol-aml",
+            "policy_name": "AML Policy",
+            "control_id": "ctl-txn",
+            "control_name": "Transaction Monitoring",
+            "regulation_id": "reg-bsa",
+            "regulation_name": "BSA",
         },
     ]
 
@@ -186,12 +197,8 @@ async def test_scenario_2_full_governance_chain() -> None:
         instance = mock_kgs.return_value
         instance.run_query = mock_rq
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            resp = await client.get(
-                f"/api/v1/process-models/{PROCESS_MODEL_ID}/governance-overlay"
-            )
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.get(f"/api/v1/process-models/{PROCESS_MODEL_ID}/governance-overlay")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -212,35 +219,47 @@ async def test_scenario_3_ungoverned_activities_as_gaps() -> None:
     """Given 3 ungoverned out of 10 activities,
     When GET /governance-overlay is called,
     Then the 3 ungoverned appear in governance_gaps and coverage = 70%."""
-    activities = [
-        {"activity_id": f"act-{i}", "activity_name": f"Activity {i}"}
-        for i in range(10)
-    ]
+    activities = [{"activity_id": f"act-{i}", "activity_name": f"Activity {i}"} for i in range(10)]
 
     chains: list[dict[str, Any]] = []
     # 7 governed (4 full + 3 partial)
     for i in range(4):
-        chains.append({
-            "activity_id": f"act-{i}",
-            "policy_id": f"pol-{i}", "policy_name": f"Policy {i}",
-            "control_id": f"ctl-{i}", "control_name": f"Control {i}",
-            "regulation_id": f"reg-{i}", "regulation_name": f"Regulation {i}",
-        })
+        chains.append(
+            {
+                "activity_id": f"act-{i}",
+                "policy_id": f"pol-{i}",
+                "policy_name": f"Policy {i}",
+                "control_id": f"ctl-{i}",
+                "control_name": f"Control {i}",
+                "regulation_id": f"reg-{i}",
+                "regulation_name": f"Regulation {i}",
+            }
+        )
     for i in range(4, 7):
-        chains.append({
-            "activity_id": f"act-{i}",
-            "policy_id": f"pol-{i}", "policy_name": f"Policy {i}",
-            "control_id": None, "control_name": None,
-            "regulation_id": None, "regulation_name": None,
-        })
+        chains.append(
+            {
+                "activity_id": f"act-{i}",
+                "policy_id": f"pol-{i}",
+                "policy_name": f"Policy {i}",
+                "control_id": None,
+                "control_name": None,
+                "regulation_id": None,
+                "regulation_name": None,
+            }
+        )
     # 3 ungoverned
     for i in range(7, 10):
-        chains.append({
-            "activity_id": f"act-{i}",
-            "policy_id": None, "policy_name": None,
-            "control_id": None, "control_name": None,
-            "regulation_id": None, "regulation_name": None,
-        })
+        chains.append(
+            {
+                "activity_id": f"act-{i}",
+                "policy_id": None,
+                "policy_name": None,
+                "control_id": None,
+                "control_name": None,
+                "regulation_id": None,
+                "regulation_name": None,
+            }
+        )
 
     mock_session = _mock_session(_mock_process_model())
     app = _make_app(mock_session)
@@ -250,12 +269,8 @@ async def test_scenario_3_ungoverned_activities_as_gaps() -> None:
         instance = mock_kgs.return_value
         instance.run_query = mock_rq
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            resp = await client.get(
-                f"/api/v1/process-models/{PROCESS_MODEL_ID}/governance-overlay"
-            )
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.get(f"/api/v1/process-models/{PROCESS_MODEL_ID}/governance-overlay")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -279,12 +294,8 @@ async def test_process_model_not_found_returns_404() -> None:
     mock_session = _mock_session(None)  # No process model found
     app = _make_app(mock_session)
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as client:
-        resp = await client.get(
-            f"/api/v1/process-models/{uuid.uuid4()}/governance-overlay"
-        )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get(f"/api/v1/process-models/{uuid.uuid4()}/governance-overlay")
 
     assert resp.status_code == 404
     assert "not found" in resp.json()["detail"].lower()
@@ -301,12 +312,8 @@ async def test_no_activities_returns_empty() -> None:
         instance = mock_kgs.return_value
         instance.run_query = mock_rq
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            resp = await client.get(
-                f"/api/v1/process-models/{PROCESS_MODEL_ID}/governance-overlay"
-            )
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.get(f"/api/v1/process-models/{PROCESS_MODEL_ID}/governance-overlay")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -329,15 +336,21 @@ async def test_all_governed_100_percent_coverage() -> None:
     chains = [
         {
             "activity_id": "act-1",
-            "policy_id": "pol-1", "policy_name": "P1",
-            "control_id": "ctl-1", "control_name": "C1",
-            "regulation_id": "reg-1", "regulation_name": "R1",
+            "policy_id": "pol-1",
+            "policy_name": "P1",
+            "control_id": "ctl-1",
+            "control_name": "C1",
+            "regulation_id": "reg-1",
+            "regulation_name": "R1",
         },
         {
             "activity_id": "act-2",
-            "policy_id": "pol-2", "policy_name": "P2",
-            "control_id": "ctl-2", "control_name": "C2",
-            "regulation_id": "reg-2", "regulation_name": "R2",
+            "policy_id": "pol-2",
+            "policy_name": "P2",
+            "control_id": "ctl-2",
+            "control_name": "C2",
+            "regulation_id": "reg-2",
+            "regulation_name": "R2",
         },
     ]
 
@@ -349,12 +362,8 @@ async def test_all_governed_100_percent_coverage() -> None:
         instance = mock_kgs.return_value
         instance.run_query = mock_rq
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            resp = await client.get(
-                f"/api/v1/process-models/{PROCESS_MODEL_ID}/governance-overlay"
-            )
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.get(f"/api/v1/process-models/{PROCESS_MODEL_ID}/governance-overlay")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -373,15 +382,21 @@ async def test_all_ungoverned_zero_percent_coverage() -> None:
     chains = [
         {
             "activity_id": "act-1",
-            "policy_id": None, "policy_name": None,
-            "control_id": None, "control_name": None,
-            "regulation_id": None, "regulation_name": None,
+            "policy_id": None,
+            "policy_name": None,
+            "control_id": None,
+            "control_name": None,
+            "regulation_id": None,
+            "regulation_name": None,
         },
         {
             "activity_id": "act-2",
-            "policy_id": None, "policy_name": None,
-            "control_id": None, "control_name": None,
-            "regulation_id": None, "regulation_name": None,
+            "policy_id": None,
+            "policy_name": None,
+            "control_id": None,
+            "control_name": None,
+            "regulation_id": None,
+            "regulation_name": None,
         },
     ]
 
@@ -393,12 +408,8 @@ async def test_all_ungoverned_zero_percent_coverage() -> None:
         instance = mock_kgs.return_value
         instance.run_query = mock_rq
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            resp = await client.get(
-                f"/api/v1/process-models/{PROCESS_MODEL_ID}/governance-overlay"
-            )
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.get(f"/api/v1/process-models/{PROCESS_MODEL_ID}/governance-overlay")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -429,9 +440,12 @@ async def test_service_classifies_partial_with_control_only() -> None:
     chains = [
         {
             "activity_id": "act-1",
-            "policy_id": None, "policy_name": None,
-            "control_id": "ctl-1", "control_name": "Control 1",
-            "regulation_id": None, "regulation_name": None,
+            "policy_id": None,
+            "policy_name": None,
+            "control_id": "ctl-1",
+            "control_name": "Control 1",
+            "regulation_id": None,
+            "regulation_name": None,
         },
     ]
 
@@ -456,9 +470,12 @@ async def test_service_classifies_partial_with_regulation_only() -> None:
     chains = [
         {
             "activity_id": "act-1",
-            "policy_id": None, "policy_name": None,
-            "control_id": None, "control_name": None,
-            "regulation_id": "reg-1", "regulation_name": "Regulation 1",
+            "policy_id": None,
+            "policy_name": None,
+            "control_id": None,
+            "control_name": None,
+            "regulation_id": "reg-1",
+            "regulation_name": "Regulation 1",
         },
     ]
 

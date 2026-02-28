@@ -113,12 +113,8 @@ class GapAnalysisResult:
     """
 
     user_id: str = ""
-    analysis_window_start: datetime = field(
-        default_factory=lambda: datetime.now(tz=UTC)
-    )
-    analysis_window_end: datetime = field(
-        default_factory=lambda: datetime.now(tz=UTC)
-    )
+    analysis_window_start: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
+    analysis_window_end: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
     gaps: list[GapItem] = field(default_factory=list)
     total_gaps: int = 0
     total_gap_seconds: int = 0
@@ -148,10 +144,7 @@ def _find_desktop_events_in_window(
     Returns:
         Desktop events within the window.
     """
-    return [
-        e for e in desktop_events
-        if start < e.timestamp < end
-    ]
+    return [e for e in desktop_events if start < e.timestamp < end]
 
 
 def _recommend_action(gap: GapItem) -> str:
@@ -172,10 +165,7 @@ def _recommend_action(gap: GapItem) -> str:
             f"over {gap.gap_duration_seconds // 60} minutes with no system trace"
         )
 
-    return (
-        f"Review {gap.desktop_event_count} desktop actions for undocumented "
-        f"process steps between system events"
-    )
+    return f"Review {gap.desktop_event_count} desktop actions for undocumented process steps between system events"
 
 
 def detect_gaps(
@@ -231,9 +221,7 @@ def detect_gaps(
             continue
 
         # Find desktop events in this gap
-        desktop_in_gap = _find_desktop_events_in_window(
-            sorted_desktop, gap_start, gap_end
-        )
+        desktop_in_gap = _find_desktop_events_in_window(sorted_desktop, gap_start, gap_end)
 
         # Only flag as a gap if there IS desktop activity (user was working)
         if not desktop_in_gap:

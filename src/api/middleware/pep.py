@@ -15,7 +15,6 @@ auth endpoints are never blocked.
 
 from __future__ import annotations
 
-import contextlib
 import json
 import logging
 import uuid
@@ -132,6 +131,7 @@ class PEPMiddleware(BaseHTTPMiddleware):
             self._fail_open = fail_open
         else:
             from src.core.config import get_settings
+
             settings = get_settings()
             self._fail_open = getattr(settings, "pdp_fail_open", False)
 

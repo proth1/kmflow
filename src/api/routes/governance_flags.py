@@ -58,10 +58,12 @@ async def check_governance_flags(
     detector = GovernanceFlagDetector(
         regulated_elements=payload.regulated_elements or {},
     )
-    flags = detector.check({
-        "role_changes": payload.role_changes,
-        "affected_element_ids": payload.affected_element_ids,
-    })
+    flags = detector.check(
+        {
+            "role_changes": payload.role_changes,
+            "affected_element_ids": payload.affected_element_ids,
+        }
+    )
 
     flag_dicts = [f.to_dict() for f in flags]
     suggestion.governance_flags = flag_dicts if flag_dicts else None

@@ -145,10 +145,7 @@ class VisioImporter(ModelImporter):
         masters: dict[str, str],
     ) -> None:
         """Parse all pages in the VSDX archive."""
-        page_files = sorted(
-            n for n in zf.namelist()
-            if n.startswith("visio/pages/page") and n.endswith(".xml")
-        )
+        page_files = sorted(n for n in zf.namelist() if n.startswith("visio/pages/page") and n.endswith(".xml"))
 
         for page_file in page_files:
             page_xml = zf.read(page_file)

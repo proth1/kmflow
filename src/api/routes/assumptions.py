@@ -83,9 +83,7 @@ async def create_engagement_assumption(
     try:
         assumption = await create_assumption(session, engagement_id, payload.model_dump())
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)) from e
 
     await session.commit()
     await session.refresh(assumption)

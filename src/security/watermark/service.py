@@ -57,22 +57,20 @@ class WatermarkService:
         The HMAC covers user_id|export_id|timestamp to detect tampering.
         """
         ts = timestamp or datetime.now(UTC)
-        payload = _PAYLOAD_DELIMITER.join([
-            str(user_id),
-            str(export_id),
-            ts.isoformat(),
-        ])
+        payload = _PAYLOAD_DELIMITER.join(
+            [
+                str(user_id),
+                str(export_id),
+                ts.isoformat(),
+            ]
+        )
 
-        signature = hmac.new(
-            self._secret_key, payload.encode("utf-8"), hashlib.sha256
-        ).hexdigest()
+        signature = hmac.new(self._secret_key, payload.encode("utf-8"), hashlib.sha256).hexdigest()
 
         signed_payload = f"{payload}{_PAYLOAD_DELIMITER}{signature}"
         return base64.b64encode(signed_payload.encode("utf-8")).decode("ascii")
 
-    def decode_invisible_watermark(
-        self, encoded: str
-    ) -> dict[str, Any] | None:
+    def decode_invisible_watermark(self, encoded: str) -> dict[str, Any] | None:
         """Decode and verify an invisible watermark.
 
         Returns dict with user_id, export_id, timestamp if valid, None if tampered.
@@ -92,9 +90,7 @@ class WatermarkService:
 
         # Verify HMAC
         payload = _PAYLOAD_DELIMITER.join([user_id_str, export_id_str, timestamp_str])
-        expected_sig = hmac.new(
-            self._secret_key, payload.encode("utf-8"), hashlib.sha256
-        ).hexdigest()
+        expected_sig = hmac.new(self._secret_key, payload.encode("utf-8"), hashlib.sha256).hexdigest()
 
         if not hmac.compare_digest(signature, expected_sig):
             logger.warning("Watermark HMAC verification failed — possible tampering")
@@ -187,13 +183,9 @@ class WatermarkService:
             "offset": offset,
         }
 
-    async def lookup_by_export_id(
-        self, export_id: uuid.UUID
-    ) -> dict[str, Any] | None:
+    async def lookup_by_export_id(self, export_id: uuid.UUID) -> dict[str, Any] | None:
         """Look up export log entry by export_id for forensic recovery."""
-        result = await self._session.execute(
-            select(ExportLog).where(ExportLog.id == export_id)
-        )
+        result = await self._session.execute(select(ExportLog).where(ExportLog.id == export_id))
         log = result.scalar_one_or_none()
         if log is None:
             return None

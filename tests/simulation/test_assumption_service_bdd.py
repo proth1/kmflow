@@ -133,7 +133,8 @@ class TestAssumptionFiltering:
 
         session.execute = mock_execute
         result = await list_assumptions(
-            session, ENGAGEMENT_ID,
+            session,
+            ENGAGEMENT_ID,
             assumption_type=FinancialAssumptionType.COST_PER_ROLE,
         )
         assert result["total"] == 1

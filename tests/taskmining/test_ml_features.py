@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -28,7 +28,7 @@ def _make_session(
     active_ms: int = 55000,
     started_at: datetime | None = None,
 ) -> AggregatedSession:
-    start = started_at or datetime(2026, 1, 6, 14, 30, 0, tzinfo=timezone.utc)  # Monday 14:30
+    start = started_at or datetime(2026, 1, 6, 14, 30, 0, tzinfo=UTC)  # Monday 14:30
     return AggregatedSession(
         app_bundle_id=app,
         window_title_sample="Test Window",
@@ -64,10 +64,10 @@ class TestExtractFeatures:
         features = extract_features(session)
         assert features[0] == 50.0  # keyboard_count
         assert features[1] == 30.0  # mouse_count
-        assert features[2] == 3.0   # copy_paste_count
+        assert features[2] == 3.0  # copy_paste_count
         assert features[3] == 10.0  # scroll_count
-        assert features[4] == 2.0   # file_op_count
-        assert features[5] == 0.0   # url_nav_count
+        assert features[4] == 2.0  # file_op_count
+        assert features[5] == 0.0  # url_nav_count
         assert features[6] == 95.0  # total_event_count
 
     def test_ratios_sum_to_at_most_one(self):
@@ -85,23 +85,23 @@ class TestExtractFeatures:
 
     def test_temporal_features(self):
         # Monday 14:30 UTC
-        start = datetime(2026, 1, 5, 14, 30, 0, tzinfo=timezone.utc)
+        start = datetime(2026, 1, 5, 14, 30, 0, tzinfo=UTC)
         session = _make_session(started_at=start)
         features = extract_features(session)
         assert features[16] == 14.0  # hour_of_day
-        assert features[17] == 0.0   # day_of_week (Monday=0)
-        assert features[18] == 1.0   # is_business_hours
+        assert features[17] == 0.0  # day_of_week (Monday=0)
+        assert features[18] == 1.0  # is_business_hours
 
     def test_weekend_not_business_hours(self):
         # Saturday 14:30
-        start = datetime(2026, 1, 10, 14, 30, 0, tzinfo=timezone.utc)
+        start = datetime(2026, 1, 10, 14, 30, 0, tzinfo=UTC)
         session = _make_session(started_at=start)
         features = extract_features(session)
         assert features[18] == 0.0  # is_business_hours
 
     def test_evening_not_business_hours(self):
         # Monday 21:00
-        start = datetime(2026, 1, 5, 21, 0, 0, tzinfo=timezone.utc)
+        start = datetime(2026, 1, 5, 21, 0, 0, tzinfo=UTC)
         session = _make_session(started_at=start)
         features = extract_features(session)
         assert features[18] == 0.0
@@ -113,7 +113,7 @@ class TestExtractFeatures:
         app_cat_start = FEATURE_NAMES.index("app_cat_spreadsheet")
         # spreadsheet should be 1.0, rest 0.0
         assert features[app_cat_start] == 1.0
-        assert sum(features[app_cat_start:app_cat_start + 9]) == 1.0
+        assert sum(features[app_cat_start : app_cat_start + 9]) == 1.0
 
     def test_zero_event_session_no_division_error(self):
         session = _make_session(keyboard=0, mouse=0, copy_paste=0, scroll=0, file_ops=0, url_nav=0)
@@ -151,17 +151,20 @@ class TestExtractFeaturesBatch:
 
 
 class TestDetectAppCategory:
-    @pytest.mark.parametrize("app,expected", [
-        ("Microsoft Excel", "spreadsheet"),
-        ("Google Chrome", "browser"),
-        ("Outlook", "email"),
-        ("Slack", "communication"),
-        ("Microsoft Word", "document"),
-        ("Salesforce", "crm"),
-        ("Jira", "project_management"),
-        ("VS Code", "development"),
-        ("Calculator", "other"),
-    ])
+    @pytest.mark.parametrize(
+        "app,expected",
+        [
+            ("Microsoft Excel", "spreadsheet"),
+            ("Google Chrome", "browser"),
+            ("Outlook", "email"),
+            ("Slack", "communication"),
+            ("Microsoft Word", "document"),
+            ("Salesforce", "crm"),
+            ("Jira", "project_management"),
+            ("VS Code", "development"),
+            ("Calculator", "other"),
+        ],
+    )
     def test_categories(self, app: str, expected: str):
         assert detect_app_category(app) == expected
 

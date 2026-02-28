@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from pathlib import Path
-
-import pytest
+from datetime import UTC, datetime
 
 from src.core.models.taskmining import ActionCategory
-from src.taskmining.aggregation.classifier import ActionClassifier, ClassificationResult
+from src.taskmining.aggregation.classifier import ActionClassifier
 from src.taskmining.aggregation.session import AggregatedSession
 
 
@@ -17,8 +14,8 @@ def _session(**kwargs) -> AggregatedSession:
     defaults = {
         "app_bundle_id": "com.test.app",
         "window_title_sample": "Test Window",
-        "started_at": datetime(2026, 2, 25, 10, 0, tzinfo=timezone.utc),
-        "ended_at": datetime(2026, 2, 25, 10, 8, tzinfo=timezone.utc),
+        "started_at": datetime(2026, 2, 25, 10, 0, tzinfo=UTC),
+        "ended_at": datetime(2026, 2, 25, 10, 8, tzinfo=UTC),
         "duration_ms": 480_000,
         "active_duration_ms": 480_000,
         "keyboard_event_count": 0,

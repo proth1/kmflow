@@ -128,5 +128,7 @@ async def update_org_scope(
     """
     service = ConsentService(session)
     return await service.update_org_scope(
-        engagement_id, payload.new_scope, updated_by=user.id,
+        engagement_id,
+        payload.new_scope,
+        updated_by=user.id,
     )

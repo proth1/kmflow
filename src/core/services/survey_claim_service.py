@@ -72,7 +72,10 @@ class SurveyClaimService:
 
         logger.info(
             "Certainty tier updated: claim=%s, %s -> %s, by=%s",
-            claim_id, previous_tier, new_tier, changed_by,
+            claim_id,
+            previous_tier,
+            new_tier,
+            changed_by,
         )
         return {
             "claim_id": str(claim_id),
@@ -98,21 +101,13 @@ class SurveyClaimService:
             base_filter.append(SurveyClaim.probe_type == probe_type)
 
         # Total count
-        count_stmt = (
-            select(sa_func.count())
-            .select_from(SurveyClaim)
-            .where(*base_filter)
-        )
+        count_stmt = select(sa_func.count()).select_from(SurveyClaim).where(*base_filter)
         count_result = await self._session.execute(count_stmt)
         total = count_result.scalar() or 0
 
         # Paginated items
         query = (
-            select(SurveyClaim)
-            .where(*base_filter)
-            .order_by(SurveyClaim.created_at.desc())
-            .limit(limit)
-            .offset(offset)
+            select(SurveyClaim).where(*base_filter).order_by(SurveyClaim.created_at.desc()).limit(limit).offset(offset)
         )
         result = await self._session.execute(query)
         claims = result.scalars().all()
@@ -137,9 +132,7 @@ class SurveyClaimService:
             "offset": offset,
         }
 
-    async def create_shelf_data_request(
-        self, claim_id: uuid.UUID
-    ) -> dict[str, Any]:
+    async def create_shelf_data_request(self, claim_id: uuid.UUID) -> dict[str, Any]:
         """Auto-generate a shelf data request from a SUSPECTED claim's proof_expectation.
 
         Only valid for claims with certainty_tier=SUSPECTED and a non-empty
@@ -177,7 +170,8 @@ class SurveyClaimService:
 
         logger.info(
             "Shelf data request created from claim: claim=%s, request=%s",
-            claim_id, request.id,
+            claim_id,
+            request.id,
         )
         return {
             "shelf_data_request_id": str(request.id),
@@ -186,9 +180,7 @@ class SurveyClaimService:
             "description": claim.proof_expectation,
         }
 
-    async def get_claim_history(
-        self, claim_id: uuid.UUID
-    ) -> list[dict[str, Any]]:
+    async def get_claim_history(self, claim_id: uuid.UUID) -> list[dict[str, Any]]:
         """Get the tier transition history for a claim."""
         stmt = (
             select(SurveyClaimHistory)

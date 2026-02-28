@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -23,7 +23,7 @@ def _make_session(
     url_nav: int = 0,
     copy_paste: int = 0,
 ) -> AggregatedSession:
-    start = datetime(2026, 1, 6, 14, 0, 0, tzinfo=timezone.utc)
+    start = datetime(2026, 1, 6, 14, 0, 0, tzinfo=UTC)
     total = keyboard + mouse + scroll + file_ops + url_nav + copy_paste
     return AggregatedSession(
         app_bundle_id=app,
@@ -50,34 +50,42 @@ def _build_training_dataset(n_per_class: int = 15) -> TrainingDataset:
     # Data entry: high keyboard
     for i in range(n_per_class):
         session = _make_session(keyboard=50 + i, mouse=5, app="Excel")
-        ds.add_sample(LabeledSample(
-            features=extract_features(session),
-            label="data_entry",
-        ))
+        ds.add_sample(
+            LabeledSample(
+                features=extract_features(session),
+                label="data_entry",
+            )
+        )
 
     # Navigation: high scroll + URL
     for i in range(n_per_class):
         session = _make_session(keyboard=3, mouse=10, scroll=20 + i, url_nav=5, app="Chrome")
-        ds.add_sample(LabeledSample(
-            features=extract_features(session),
-            label="navigation",
-        ))
+        ds.add_sample(
+            LabeledSample(
+                features=extract_features(session),
+                label="navigation",
+            )
+        )
 
     # Review: scroll + copy_paste, low keyboard
     for i in range(n_per_class):
         session = _make_session(keyboard=2, mouse=5, scroll=15 + i, copy_paste=3, app="Chrome")
-        ds.add_sample(LabeledSample(
-            features=extract_features(session),
-            label="review",
-        ))
+        ds.add_sample(
+            LabeledSample(
+                features=extract_features(session),
+                label="review",
+            )
+        )
 
     # File operation: high file ops
     for i in range(n_per_class):
         session = _make_session(keyboard=10, mouse=5, file_ops=5 + i, app="Excel")
-        ds.add_sample(LabeledSample(
-            features=extract_features(session),
-            label="file_operation",
-        ))
+        ds.add_sample(
+            LabeledSample(
+                features=extract_features(session),
+                label="file_operation",
+            )
+        )
 
     return ds
 

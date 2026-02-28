@@ -72,12 +72,12 @@ export default function ConformanceDashboard() {
     try {
       const response = await fetch(
         `${API_BASE}/api/v1/conformance/reference-models`,
-        { signal: controller.signal }
+        { signal: controller.signal, credentials: "include" }
       );
       if (!response.ok) throw new Error("Failed to load reference models");
       const data = await response.json();
       if (!controller.signal.aborted) {
-        setReferenceModels(data);
+        setReferenceModels(data.items ?? data);
       }
     } catch (err) {
       if (!controller.signal.aborted) {
@@ -102,6 +102,7 @@ export default function ConformanceDashboard() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify(uploadForm),
         }
       );
@@ -132,6 +133,7 @@ export default function ConformanceDashboard() {
       const response = await fetch(`${API_BASE}/api/v1/conformance/check`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(checkForm),
       });
 

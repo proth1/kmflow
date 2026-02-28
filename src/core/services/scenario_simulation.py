@@ -146,25 +146,23 @@ class ScenarioSimulationAdapter:
             total_cycle_delta += cycle_delta
             total_fte_delta += fte_delta
 
-            element_impacts.append(ElementImpact(
-                element_id=element_id,
-                element_name=element_name,
-                modification_type=mod_type,
-                cycle_time_delta_hrs=cycle_delta,
-                fte_delta=fte_delta,
-                confidence_classification=confidence,
-            ))
+            element_impacts.append(
+                ElementImpact(
+                    element_id=element_id,
+                    element_name=element_name,
+                    modification_type=mod_type,
+                    cycle_time_delta_hrs=cycle_delta,
+                    fte_delta=fte_delta,
+                    confidence_classification=confidence,
+                )
+            )
 
         modified_cycle = self.baseline_cycle_time_hrs + total_cycle_delta
         # Prevent negative cycle time
         modified_cycle = max(modified_cycle, 0.0)
 
         if self.baseline_cycle_time_hrs > 0:
-            delta_pct = (
-                (self.baseline_cycle_time_hrs - modified_cycle)
-                / self.baseline_cycle_time_hrs
-                * 100
-            )
+            delta_pct = (self.baseline_cycle_time_hrs - modified_cycle) / self.baseline_cycle_time_hrs * 100
         else:
             delta_pct = 0.0
 
@@ -206,13 +204,15 @@ def apply_confidence_overlay(
         if impact.modification_type == ModificationType.TASK_REMOVE and original == "BRIGHT":
             modified = "DARK"
 
-        overlays.append({
-            "element_id": impact.element_id,
-            "element_name": impact.element_name,
-            "original_classification": original,
-            "modified_classification": modified,
-            "confidence_changed": original != modified,
-        })
+        overlays.append(
+            {
+                "element_id": impact.element_id,
+                "element_name": impact.element_name,
+                "original_classification": original,
+                "modified_classification": modified,
+                "confidence_changed": original != modified,
+            }
+        )
 
     return overlays
 
@@ -239,10 +239,7 @@ def _is_human_to_system(from_role: str, to_role: str) -> bool:
     system_indicators = {"system", "automated", "bot", "rpa", "api"}
     to_lower = to_role.lower()
     from_lower = from_role.lower()
-    return (
-        any(ind in to_lower for ind in system_indicators)
-        and not any(ind in from_lower for ind in system_indicators)
-    )
+    return any(ind in to_lower for ind in system_indicators) and not any(ind in from_lower for ind in system_indicators)
 
 
 def _is_system_to_human(from_role: str, to_role: str) -> bool:

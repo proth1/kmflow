@@ -202,9 +202,7 @@ class SorocoWorkGraphMapper:
             },
         }
 
-    def build_graph_operations(
-        self, mappings: list[ProcessElementMapping]
-    ) -> list[dict[str, Any]]:
+    def build_graph_operations(self, mappings: list[ProcessElementMapping]) -> list[dict[str, Any]]:
         """Build Neo4j graph operations for the mapped elements.
 
         Generates operations to:
@@ -222,49 +220,55 @@ class SorocoWorkGraphMapper:
 
         for mapping in mappings:
             # Node operation: create/merge Activity
-            operations.append({
-                "op": "merge_node",
-                "label": "Activity",
-                "id": mapping.element_id,
-                "properties": {
-                    "name": mapping.name,
-                    "engagement_id": self._engagement_id,
-                    "epistemic_frame": mapping.epistemic_frame,
-                    "source_system": mapping.source,
-                    "evidence_category": mapping.evidence_category,
-                    **mapping.attributes,
-                },
-            })
+            operations.append(
+                {
+                    "op": "merge_node",
+                    "label": "Activity",
+                    "id": mapping.element_id,
+                    "properties": {
+                        "name": mapping.name,
+                        "engagement_id": self._engagement_id,
+                        "epistemic_frame": mapping.epistemic_frame,
+                        "source_system": mapping.source,
+                        "evidence_category": mapping.evidence_category,
+                        **mapping.attributes,
+                    },
+                }
+            )
 
             # PERFORMED_BY edge to user role
             if mapping.performed_by:
-                operations.append({
-                    "op": "merge_edge",
-                    "type": "PERFORMED_BY",
-                    "from_id": mapping.element_id,
-                    "to_label": "Role",
-                    "to_id": f"role:{mapping.performed_by}",
-                    "to_properties": {
-                        "name": mapping.performed_by,
-                        "engagement_id": self._engagement_id,
-                    },
-                })
+                operations.append(
+                    {
+                        "op": "merge_edge",
+                        "type": "PERFORMED_BY",
+                        "from_id": mapping.element_id,
+                        "to_label": "Role",
+                        "to_id": f"role:{mapping.performed_by}",
+                        "to_properties": {
+                            "name": mapping.performed_by,
+                            "engagement_id": self._engagement_id,
+                        },
+                    }
+                )
 
             # SUPPORTED_BY edge to evidence record
             evidence_id = f"evidence:soroco:{mapping.activity.activity_id}"
-            operations.append({
-                "op": "merge_edge",
-                "type": "SUPPORTED_BY",
-                "from_id": mapping.element_id,
-                "to_label": "Evidence",
-                "to_id": evidence_id,
-                "to_properties": {
-                    "source": "soroco_scout",
-                    "category": EVIDENCE_CATEGORY_KM4WORK,
-                    "epistemic_frame": "telemetric",
-                    "engagement_id": self._engagement_id,
-                },
-            })
+            operations.append(
+                {
+                    "op": "merge_edge",
+                    "type": "SUPPORTED_BY",
+                    "from_id": mapping.element_id,
+                    "to_label": "Evidence",
+                    "to_id": evidence_id,
+                    "to_properties": {
+                        "source": "soroco_scout",
+                        "category": EVIDENCE_CATEGORY_KM4WORK,
+                        "epistemic_frame": "telemetric",
+                        "engagement_id": self._engagement_id,
+                    },
+                }
+            )
 
         return operations
 

@@ -68,13 +68,13 @@ class ConsentService:
 
         logger.info(
             "Consent recorded: participant=%s, engagement=%s, type=%s",
-            participant_id, engagement_id, consent_type,
+            participant_id,
+            engagement_id,
+            consent_type,
         )
         return record
 
-    async def withdraw_consent(
-        self, consent_id: uuid.UUID
-    ) -> dict[str, Any] | None:
+    async def withdraw_consent(self, consent_id: uuid.UUID) -> dict[str, Any] | None:
         """Withdraw consent by marking record as WITHDRAWN.
 
         Returns the withdrawal details including a deletion task ID.
@@ -101,7 +101,9 @@ class ConsentService:
 
         logger.info(
             "Consent withdrawn: id=%s, participant=%s, deletion_task=%s",
-            consent_id, record.participant_id, deletion_task_id,
+            consent_id,
+            record.participant_id,
+            deletion_task_id,
         )
         return {
             "consent_id": str(consent_id),
@@ -112,9 +114,7 @@ class ConsentService:
             "deletion_targets": ["postgresql", "neo4j", "pgvector", "redis"],
         }
 
-    async def get_consent(
-        self, consent_id: uuid.UUID
-    ) -> EndpointConsentRecord | None:
+    async def get_consent(self, consent_id: uuid.UUID) -> EndpointConsentRecord | None:
         """Get a single consent record by ID."""
         return await self._session.get(EndpointConsentRecord, consent_id)
 
@@ -130,13 +130,9 @@ class ConsentService:
         """Query consent records with optional filters and pagination."""
         conditions = []
         if participant_id is not None:
-            conditions.append(
-                EndpointConsentRecord.participant_id == participant_id
-            )
+            conditions.append(EndpointConsentRecord.participant_id == participant_id)
         if engagement_id is not None:
-            conditions.append(
-                EndpointConsentRecord.engagement_id == engagement_id
-            )
+            conditions.append(EndpointConsentRecord.engagement_id == engagement_id)
         if status_filter is not None:
             conditions.append(EndpointConsentRecord.status == status_filter)
 
@@ -147,10 +143,7 @@ class ConsentService:
         total = count_result.scalar() or 0
 
         query = (
-            select(EndpointConsentRecord)
-            .order_by(EndpointConsentRecord.recorded_at.desc())
-            .limit(limit)
-            .offset(offset)
+            select(EndpointConsentRecord).order_by(EndpointConsentRecord.recorded_at.desc()).limit(limit).offset(offset)
         )
         if conditions:
             query = query.where(*conditions)
@@ -218,13 +211,10 @@ class ConsentService:
         retention_expires = now + timedelta(days=RETENTION_YEARS * 365)
 
         # Find all active ORG_AUTHORIZED consent records for this engagement
-        stmt = (
-            select(EndpointConsentRecord)
-            .where(
-                EndpointConsentRecord.engagement_id == engagement_id,
-                EndpointConsentRecord.consent_type == EndpointConsentType.ORG_AUTHORIZED,
-                EndpointConsentRecord.status == ConsentStatus.ACTIVE,
-            )
+        stmt = select(EndpointConsentRecord).where(
+            EndpointConsentRecord.engagement_id == engagement_id,
+            EndpointConsentRecord.consent_type == EndpointConsentType.ORG_AUTHORIZED,
+            EndpointConsentRecord.status == ConsentStatus.ACTIVE,
         )
         result = await self._session.execute(stmt)
         records = result.scalars().all()
@@ -253,7 +243,9 @@ class ConsentService:
 
         logger.info(
             "Org scope updated: engagement=%s, new_scope=%s, affected=%d",
-            engagement_id, new_scope, len(affected_participants),
+            engagement_id,
+            new_scope,
+            len(affected_participants),
         )
 
         return {

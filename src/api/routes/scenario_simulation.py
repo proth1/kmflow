@@ -70,9 +70,7 @@ async def trigger_simulation(
 
     # Launch simulation in background with session factory from app state
     session_factory = request.app.state.db_session_factory
-    task = asyncio.create_task(
-        _run_simulation_task(scenario_id, sim_result.id, session_factory)
-    )
+    task = asyncio.create_task(_run_simulation_task(scenario_id, sim_result.id, session_factory))
     _background_tasks.add(task)
     task.add_done_callback(_background_tasks.discard)
 
@@ -150,9 +148,7 @@ async def _run_simulation_task(
     async with session_factory() as session:
         try:
             # Mark as running
-            result = await session.execute(
-                select(SimulationResult).where(SimulationResult.id == result_id)
-            )
+            result = await session.execute(select(SimulationResult).where(SimulationResult.id == result_id))
             sim_result = result.scalar_one()
             sim_result.status = SimulationStatus.RUNNING
             sim_result.started_at = datetime.now(UTC)
@@ -216,9 +212,7 @@ async def _run_simulation_task(
 
 async def _get_scenario(session: AsyncSession, scenario_id: UUID) -> SimulationScenario:
     """Load a scenario or 404."""
-    result = await session.execute(
-        select(SimulationScenario).where(SimulationScenario.id == scenario_id)
-    )
+    result = await session.execute(select(SimulationScenario).where(SimulationScenario.id == scenario_id))
     scenario = result.scalar_one_or_none()
     if not scenario:
         raise HTTPException(
@@ -228,9 +222,7 @@ async def _get_scenario(session: AsyncSession, scenario_id: UUID) -> SimulationS
     return scenario
 
 
-async def _check_engagement_member(
-    session: AsyncSession, user: User, engagement_id: UUID
-) -> None:
+async def _check_engagement_member(session: AsyncSession, user: User, engagement_id: UUID) -> None:
     """Verify user is a member of the engagement. Platform admins bypass."""
     if user.role == UserRole.PLATFORM_ADMIN:
         return

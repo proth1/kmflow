@@ -4,12 +4,16 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Float, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.database import Base
+
+if TYPE_CHECKING:
+    from src.core.models.engagement import Engagement
 
 
 class ReferenceProcessModel(Base):
@@ -55,7 +59,7 @@ class ConformanceResult(Base):
     deviations: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
     reference_model: Mapped[ReferenceProcessModel] = relationship("ReferenceProcessModel")
 
     def __repr__(self) -> str:

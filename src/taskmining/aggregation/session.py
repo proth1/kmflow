@@ -8,8 +8,8 @@ time windows.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
 
 from src.core.models.taskmining import DesktopEventType
@@ -95,7 +95,7 @@ class SessionAggregator:
     def flush(self) -> list[AggregatedSession]:
         """Force-complete any active session and return all completed sessions."""
         if self._active_session:
-            self._close_session(datetime.now(timezone.utc))
+            self._close_session(datetime.now(UTC))
         result = list(self._completed_sessions)
         self._completed_sessions.clear()
         return result
@@ -107,7 +107,7 @@ class SessionAggregator:
             return
         timestamp = _parse_timestamp(timestamp_str)
         app_name = event.get("application_name", "")
-        bundle_id = app_name  # Use app name as bundle proxy when bundle_id not in event
+        _bundle_id = app_name  # Use app name as bundle proxy when bundle_id not in event
         window_title = event.get("window_title")
         session_id = event.get("session_id")
         engagement_id = event.get("engagement_id")

@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import jwt
 import pytest
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
@@ -85,9 +85,11 @@ class TestWebSocketMissingToken:
         with patch("src.api.routes.websocket.get_settings", return_value=_make_settings()):
             client = TestClient(app)
             # When server closes with code 1008, Starlette raises WebSocketDisconnect
-            with pytest.raises(WebSocketDisconnect) as exc_info:
-                with client.websocket_connect("/ws/monitoring/eng-123") as ws:
-                    ws.receive_text()
+            with (
+                pytest.raises(WebSocketDisconnect) as exc_info,
+                client.websocket_connect("/ws/monitoring/eng-123") as ws,
+            ):
+                ws.receive_text()
             assert exc_info.value.code == 1008
 
 
@@ -150,9 +152,11 @@ class TestWebSocketEngagementMembership:
 
         with patch("src.api.routes.websocket.get_settings", return_value=_make_settings()):
             client = TestClient(app)
-            with pytest.raises(WebSocketDisconnect) as exc_info:
-                with client.websocket_connect(f"/ws/monitoring/eng-123?token={token}") as ws:
-                    ws.receive_text()
+            with (
+                pytest.raises(WebSocketDisconnect) as exc_info,
+                client.websocket_connect(f"/ws/monitoring/eng-123?token={token}") as ws,
+            ):
+                ws.receive_text()
             assert exc_info.value.code == 1008
 
     def test_admin_bypasses_membership_check(self) -> None:
@@ -201,9 +205,11 @@ class TestWebSocketExpiredToken:
 
         with patch("src.api.routes.websocket.get_settings", return_value=_make_settings()):
             client = TestClient(app)
-            with pytest.raises(WebSocketDisconnect) as exc_info:
-                with client.websocket_connect(f"/ws/monitoring/eng-123?token={expired_token}") as ws:
-                    ws.receive_text()
+            with (
+                pytest.raises(WebSocketDisconnect) as exc_info,
+                client.websocket_connect(f"/ws/monitoring/eng-123?token={expired_token}") as ws,
+            ):
+                ws.receive_text()
             assert exc_info.value.code == 1008
 
 
@@ -231,9 +237,11 @@ class TestWebSocketInvalidToken:
 
         with patch("src.api.routes.websocket.get_settings", return_value=_make_settings()):
             client = TestClient(app)
-            with pytest.raises(WebSocketDisconnect) as exc_info:
-                with client.websocket_connect(f"/ws/monitoring/eng-123?token={bad_token}") as ws:
-                    ws.receive_text()
+            with (
+                pytest.raises(WebSocketDisconnect) as exc_info,
+                client.websocket_connect(f"/ws/monitoring/eng-123?token={bad_token}") as ws,
+            ):
+                ws.receive_text()
             assert exc_info.value.code == 1008
 
     def test_garbage_token_closes_with_1008(self) -> None:
@@ -243,9 +251,11 @@ class TestWebSocketInvalidToken:
 
         with patch("src.api.routes.websocket.get_settings", return_value=_make_settings()):
             client = TestClient(app)
-            with pytest.raises(WebSocketDisconnect) as exc_info:
-                with client.websocket_connect("/ws/monitoring/eng-123?token=not.a.valid.jwt") as ws:
-                    ws.receive_text()
+            with (
+                pytest.raises(WebSocketDisconnect) as exc_info,
+                client.websocket_connect("/ws/monitoring/eng-123?token=not.a.valid.jwt") as ws,
+            ):
+                ws.receive_text()
             assert exc_info.value.code == 1008
 
     def test_refresh_token_type_rejected(self) -> None:
@@ -263,7 +273,9 @@ class TestWebSocketInvalidToken:
 
         with patch("src.api.routes.websocket.get_settings", return_value=_make_settings()):
             client = TestClient(app)
-            with pytest.raises(WebSocketDisconnect) as exc_info:
-                with client.websocket_connect(f"/ws/monitoring/eng-123?token={refresh_token}") as ws:
-                    ws.receive_text()
+            with (
+                pytest.raises(WebSocketDisconnect) as exc_info,
+                client.websocket_connect(f"/ws/monitoring/eng-123?token={refresh_token}") as ws,
+            ):
+                ws.receive_text()
             assert exc_info.value.code == 1008

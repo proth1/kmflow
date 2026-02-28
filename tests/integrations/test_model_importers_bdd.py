@@ -397,16 +397,12 @@ class TestImportedModelDataStructure:
         model = ImportedModel()
         assert not model.success  # No elements
 
-        model.elements.append(
-            ProcessElement(id="1", name="Test", element_type=ElementType.TASK)
-        )
+        model.elements.append(ProcessElement(id="1", name="Test", element_type=ElementType.TASK))
         assert model.success
 
     def test_success_false_with_errors(self) -> None:
         model = ImportedModel(errors=["something wrong"])
-        model.elements.append(
-            ProcessElement(id="1", name="Test", element_type=ElementType.TASK)
-        )
+        model.elements.append(ProcessElement(id="1", name="Test", element_type=ElementType.TASK))
         assert not model.success
 
     def test_get_elements_by_type(self) -> None:

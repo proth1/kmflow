@@ -17,9 +17,7 @@ from src.core.models.taskmining import (
     PIIQuarantine,
     PIIType,
     QuarantineStatus,
-    SessionStatus,
     TaskMiningAgent,
-    TaskMiningSession,
 )
 
 
@@ -61,9 +59,7 @@ class TestAgentRegistration:
         assert data["capture_granularity"] == "action_level"
 
     @pytest.mark.asyncio
-    async def test_register_duplicate_machine_id(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_register_duplicate_machine_id(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         # Simulate existing agent found
         existing_agent = MagicMock(spec=TaskMiningAgent)
         mock_result = MagicMock()
@@ -119,9 +115,7 @@ class TestAgentApproval:
         assert response.status_code == 200
 
     @pytest.mark.asyncio
-    async def test_approve_nonexistent_agent(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_approve_nonexistent_agent(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = None
         mock_db_session.execute = AsyncMock(return_value=mock_result)
@@ -133,9 +127,7 @@ class TestAgentApproval:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_approve_invalid_status(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_approve_invalid_status(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         response = await client.post(
             f"/api/v1/taskmining/agents/{uuid.uuid4()}/approve",
             json={"status": "active"},
@@ -179,9 +171,7 @@ class TestHeartbeat:
         assert data["status"] == "ok"
 
     @pytest.mark.asyncio
-    async def test_heartbeat_revoked_agent(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_heartbeat_revoked_agent(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         agent_id = uuid.uuid4()
         agent = MagicMock(spec=TaskMiningAgent)
         agent.id = agent_id
@@ -201,9 +191,7 @@ class TestHeartbeat:
         assert data["status"] == "revoked"
 
     @pytest.mark.asyncio
-    async def test_heartbeat_unknown_agent(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_heartbeat_unknown_agent(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = None
         mock_db_session.execute = AsyncMock(return_value=mock_result)
@@ -266,9 +254,7 @@ class TestQuarantine:
     """Tests for quarantine management endpoints."""
 
     @pytest.mark.asyncio
-    async def test_list_quarantine_empty(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_list_quarantine_empty(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         response = await client.get("/api/v1/taskmining/quarantine")
         assert response.status_code == 200
         data = response.json()
@@ -276,9 +262,7 @@ class TestQuarantine:
         assert data["total"] == 0
 
     @pytest.mark.asyncio
-    async def test_quarantine_delete_action(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_quarantine_delete_action(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         quarantine_id = uuid.uuid4()
         item = MagicMock(spec=PIIQuarantine)
         item.id = quarantine_id
@@ -303,9 +287,7 @@ class TestQuarantine:
         assert response.status_code == 200
 
     @pytest.mark.asyncio
-    async def test_quarantine_invalid_action(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_quarantine_invalid_action(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         response = await client.post(
             f"/api/v1/taskmining/quarantine/{uuid.uuid4()}/action",
             json={"action": "invalid"},
@@ -317,9 +299,7 @@ class TestDashboardStats:
     """Tests for GET /api/v1/taskmining/dashboard/stats."""
 
     @pytest.mark.asyncio
-    async def test_get_dashboard_stats(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_get_dashboard_stats(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         # Mock multiple execute calls returning 0 counts
         mock_result = MagicMock()
         mock_result.scalar.return_value = 0

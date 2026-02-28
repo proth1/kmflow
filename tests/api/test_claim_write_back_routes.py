@@ -69,12 +69,14 @@ class TestIngestClaim:
         mock_session.execute = AsyncMock(return_value=mock_result)
 
         mock_service = AsyncMock()
-        mock_service.ingest_claim = AsyncMock(return_value={
-            "claim_node_id": "abc123",
-            "edge_type": "SUPPORTS",
-            "conflict_id": None,
-            "weight": 1.0,
-        })
+        mock_service.ingest_claim = AsyncMock(
+            return_value={
+                "claim_node_id": "abc123",
+                "edge_type": "SUPPORTS",
+                "conflict_id": None,
+                "weight": 1.0,
+            }
+        )
         mock_service_cls.return_value = mock_service
 
         client = _make_app(mock_session)
@@ -123,13 +125,15 @@ class TestBatchIngest:
         mock_session.execute = AsyncMock(return_value=mock_result)
 
         mock_service = AsyncMock()
-        mock_service.batch_ingest_claims = AsyncMock(return_value={
-            "claims_ingested": 2,
-            "edges_created": 2,
-            "conflicts_created": 0,
-            "activities_recomputed": 1,
-            "recomputation_results": [],
-        })
+        mock_service.batch_ingest_claims = AsyncMock(
+            return_value={
+                "claims_ingested": 2,
+                "edges_created": 2,
+                "conflicts_created": 0,
+                "activities_recomputed": 1,
+                "recomputation_results": [],
+            }
+        )
         mock_service_cls.return_value = mock_service
 
         client = _make_app(mock_session)
@@ -171,12 +175,14 @@ class TestRecomputeConfidence:
         mock_graph_cls: MagicMock,
     ) -> None:
         mock_service = AsyncMock()
-        mock_service.recompute_activity_confidence = AsyncMock(return_value={
-            "activity_id": "act_001",
-            "claim_count": 5,
-            "aggregate_weight": 4.0,
-            "claim_confidence": 0.8,
-        })
+        mock_service.recompute_activity_confidence = AsyncMock(
+            return_value={
+                "activity_id": "act_001",
+                "claim_count": 5,
+                "aggregate_weight": 4.0,
+                "claim_confidence": 0.8,
+            }
+        )
         mock_service_cls.return_value = mock_service
 
         mock_session = AsyncMock()

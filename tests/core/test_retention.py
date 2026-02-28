@@ -14,13 +14,12 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.core.models import Engagement, EngagementStatus
 from src.core.retention import cleanup_expired_engagements, find_expired_engagements
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -64,9 +63,7 @@ class TestFindExpiredEngagements:
     """Tests for find_expired_engagements()."""
 
     @pytest.mark.asyncio
-    async def test_finds_expired_completed_engagement(
-        self, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_finds_expired_completed_engagement(self, mock_db_session: AsyncMock) -> None:
         """A COMPLETED engagement older than retention_days is returned."""
         expired = _make_engagement(
             status=EngagementStatus.COMPLETED,
@@ -81,9 +78,7 @@ class TestFindExpiredEngagements:
         assert result[0] is expired
 
     @pytest.mark.asyncio
-    async def test_finds_expired_archived_engagement(
-        self, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_finds_expired_archived_engagement(self, mock_db_session: AsyncMock) -> None:
         """An ARCHIVED engagement older than retention_days is also returned."""
         expired = _make_engagement(
             status=EngagementStatus.ARCHIVED,
@@ -97,9 +92,7 @@ class TestFindExpiredEngagements:
         assert len(result) == 1
 
     @pytest.mark.asyncio
-    async def test_active_engagements_excluded(
-        self, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_active_engagements_excluded(self, mock_db_session: AsyncMock) -> None:
         """The DB query filters out ACTIVE/DRAFT engagements at the query level.
 
         If the DB layer were bypassed and an ACTIVE record slipped through,
@@ -127,9 +120,7 @@ class TestFindExpiredEngagements:
         assert result == []
 
     @pytest.mark.asyncio
-    async def test_null_retention_days_excluded(
-        self, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_null_retention_days_excluded(self, mock_db_session: AsyncMock) -> None:
         """Engagements with null retention_days are not expired (no deadline set).
 
         The DB query includes a .isnot(None) filter, so these should never
@@ -149,9 +140,7 @@ class TestFindExpiredEngagements:
         assert result == []
 
     @pytest.mark.asyncio
-    async def test_engagement_within_retention_window_excluded(
-        self, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_engagement_within_retention_window_excluded(self, mock_db_session: AsyncMock) -> None:
         """An engagement created 100 days ago with 365-day retention is not expired."""
         fresh = _make_engagement(
             status=EngagementStatus.COMPLETED,
@@ -165,9 +154,7 @@ class TestFindExpiredEngagements:
         assert result == []
 
     @pytest.mark.asyncio
-    async def test_returns_multiple_expired_engagements(
-        self, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_returns_multiple_expired_engagements(self, mock_db_session: AsyncMock) -> None:
         """Multiple expired engagements are all returned."""
         eng1 = _make_engagement(retention_days=30, days_old=60)
         eng2 = _make_engagement(retention_days=90, days_old=200)
@@ -179,9 +166,7 @@ class TestFindExpiredEngagements:
         assert len(result) == 3
 
     @pytest.mark.asyncio
-    async def test_mixed_expired_and_fresh_only_returns_expired(
-        self, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_mixed_expired_and_fresh_only_returns_expired(self, mock_db_session: AsyncMock) -> None:
         """Only the expired engagement is returned when mixed with a fresh one."""
         expired = _make_engagement(retention_days=30, days_old=60)
         fresh = _make_engagement(retention_days=365, days_old=100)
@@ -202,9 +187,7 @@ class TestCleanupExpiredEngagements:
     """Tests for cleanup_expired_engagements()."""
 
     @pytest.mark.asyncio
-    async def test_cleanup_archives_expired_engagement(
-        self, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_cleanup_archives_expired_engagement(self, mock_db_session: AsyncMock) -> None:
         """An expired engagement's status is set to ARCHIVED."""
         expired = _make_engagement(retention_days=30, days_old=60)
 
@@ -218,9 +201,7 @@ class TestCleanupExpiredEngagements:
         assert expired.status == EngagementStatus.ARCHIVED
 
     @pytest.mark.asyncio
-    async def test_cleanup_commits_when_work_done(
-        self, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_cleanup_commits_when_work_done(self, mock_db_session: AsyncMock) -> None:
         """session.commit() is called after archiving at least one engagement."""
         expired = _make_engagement(retention_days=30, days_old=60)
 
@@ -233,9 +214,7 @@ class TestCleanupExpiredEngagements:
         mock_db_session.commit.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_cleanup_skips_commit_when_nothing_expired(
-        self, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_cleanup_skips_commit_when_nothing_expired(self, mock_db_session: AsyncMock) -> None:
         """session.commit() is NOT called when there are no expired engagements."""
         with patch(
             "src.core.retention.find_expired_engagements",
@@ -247,9 +226,7 @@ class TestCleanupExpiredEngagements:
         mock_db_session.commit.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_cleanup_returns_correct_count(
-        self, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_cleanup_returns_correct_count(self, mock_db_session: AsyncMock) -> None:
         """The function returns the exact number of engagements it processed."""
         expired_list = [_make_engagement(retention_days=30, days_old=60) for _ in range(5)]
 
@@ -262,9 +239,7 @@ class TestCleanupExpiredEngagements:
         assert count == 5
 
     @pytest.mark.asyncio
-    async def test_cleanup_archives_all_expired_engagements(
-        self, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_cleanup_archives_all_expired_engagements(self, mock_db_session: AsyncMock) -> None:
         """Every expired engagement in the list is set to ARCHIVED."""
         expired_list = [_make_engagement(retention_days=30, days_old=60) for _ in range(3)]
 

@@ -24,7 +24,6 @@ from src.core.auth import create_access_token, get_current_user, hash_password
 from src.core.config import Settings
 from src.core.models import Engagement, EngagementStatus, User, UserRole
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -118,9 +117,7 @@ class TestRetentionCleanup:
     """Tests for POST /api/v1/admin/retention-cleanup."""
 
     @pytest.mark.asyncio
-    async def test_retention_cleanup_requires_admin(
-        self, test_app, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_retention_cleanup_requires_admin(self, test_app, mock_db_session: AsyncMock) -> None:
         """A PROCESS_ANALYST user receives 403 Forbidden."""
         analyst = _make_user(UserRole.PROCESS_ANALYST)
         # Return the analyst for the DB lookup triggered by get_current_user
@@ -137,9 +134,7 @@ class TestRetentionCleanup:
         assert response.status_code == 403
 
     @pytest.mark.asyncio
-    async def test_retention_cleanup_dry_run(
-        self, test_app, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_retention_cleanup_dry_run(self, test_app, mock_db_session: AsyncMock) -> None:
         """Dry run (default) returns a preview without performing any deletion."""
         admin = _make_user(UserRole.PLATFORM_ADMIN)
         expired_eng = _make_engagement()
@@ -167,9 +162,7 @@ class TestRetentionCleanup:
         assert len(data["engagements"]) == 1
 
     @pytest.mark.asyncio
-    async def test_retention_cleanup_requires_confirmation_header(
-        self, test_app, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_retention_cleanup_requires_confirmation_header(self, test_app, mock_db_session: AsyncMock) -> None:
         """A live run without the X-Confirm-Action header returns 400."""
         admin = _make_user(UserRole.PLATFORM_ADMIN)
         mock_db_session.execute.return_value = _mock_scalar_result(admin)
@@ -207,9 +200,7 @@ class TestRetentionCleanup:
         assert response.status_code == 400
 
     @pytest.mark.asyncio
-    async def test_retention_cleanup_live_run_executes(
-        self, test_app, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_retention_cleanup_live_run_executes(self, test_app, mock_db_session: AsyncMock) -> None:
         """A live run with the correct confirmation header returns cleaned_up count."""
         admin = _make_user(UserRole.PLATFORM_ADMIN)
         mock_db_session.execute.return_value = _mock_scalar_result(admin)
@@ -246,9 +237,7 @@ class TestRotateEncryptionKey:
     """Tests for POST /api/v1/admin/rotate-encryption-key."""
 
     @pytest.mark.asyncio
-    async def test_key_rotation_requires_admin(
-        self, test_app, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_key_rotation_requires_admin(self, test_app, mock_db_session: AsyncMock) -> None:
         """A PROCESS_ANALYST user receives 403 Forbidden."""
         analyst = _make_user(UserRole.PROCESS_ANALYST)
         mock_db_session.execute.return_value = _mock_scalar_result(analyst)
@@ -264,9 +253,7 @@ class TestRotateEncryptionKey:
         assert response.status_code == 403
 
     @pytest.mark.asyncio
-    async def test_key_rotation_no_connections(
-        self, test_app, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_key_rotation_no_connections(self, test_app, mock_db_session: AsyncMock) -> None:
         """Admin with zero integration connections returns rotated=0, total=0."""
         admin = _make_user(UserRole.PLATFORM_ADMIN)
 
@@ -291,9 +278,7 @@ class TestRotateEncryptionKey:
         assert data["status"] == "completed"
 
     @pytest.mark.asyncio
-    async def test_key_rotation_with_connections(
-        self, test_app, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_key_rotation_with_connections(self, test_app, mock_db_session: AsyncMock) -> None:
         """Admin with integration connections triggers re-encryption for each."""
         from src.core.models import IntegrationConnection
 
@@ -334,9 +319,7 @@ class TestRotateEncryptionKey:
         assert conn2.encrypted_config == "new-cipher"
 
     @pytest.mark.asyncio
-    async def test_key_rotation_rollback_on_failure(
-        self, test_app, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_key_rotation_rollback_on_failure(self, test_app, mock_db_session: AsyncMock) -> None:
         """If re-encryption fails midway, session is rolled back and 500 is returned."""
         from src.core.models import IntegrationConnection
 

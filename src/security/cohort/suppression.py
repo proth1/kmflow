@@ -107,9 +107,7 @@ class CohortSuppressionService:
                 engagement_id=engagement_id,
                 action=AuditAction.EXPORT_BLOCKED,
                 actor=requester,
-                details=(
-                    f"Export blocked: cohort size {cohort_size} below minimum {minimum}"
-                ),
+                details=(f"Export blocked: cohort size {cohort_size} below minimum {minimum}"),
             )
             self._session.add(audit_entry)
             await self._session.flush()
@@ -145,9 +143,7 @@ class CohortSuppressionService:
         if minimum_cohort_size < 2:
             raise ValueError("Minimum cohort size must be at least 2")
 
-        result = await self._session.execute(
-            select(Engagement).where(Engagement.id == engagement_id)
-        )
+        result = await self._session.execute(select(Engagement).where(Engagement.id == engagement_id))
         engagement = result.scalar_one_or_none()
         if engagement is None:
             raise ValueError(f"Engagement {engagement_id} not found")
@@ -192,9 +188,7 @@ class CohortSuppressionService:
             ValueError: If the engagement does not exist.
         """
         result = await self._session.execute(
-            select(Engagement.id, Engagement.cohort_minimum_size).where(
-                Engagement.id == engagement_id
-            )
+            select(Engagement.id, Engagement.cohort_minimum_size).where(Engagement.id == engagement_id)
         )
         row = result.one_or_none()
         if row is None:
@@ -211,6 +205,4 @@ class CohortExportBlockedError(Exception):
     def __init__(self, cohort_size: int, minimum: int) -> None:
         self.cohort_size = cohort_size
         self.minimum = minimum
-        super().__init__(
-            f"Export blocked: cohort size {cohort_size} is below minimum threshold {minimum}"
-        )
+        super().__init__(f"Export blocked: cohort size {cohort_size} is below minimum threshold {minimum}")

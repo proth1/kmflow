@@ -374,9 +374,7 @@ def build_comparison_stages(
         # Collect divergence evidence
         evidence_refs: list[str] = []
         if is_divergence:
-            evidence_refs = _collect_divergence_evidence(
-                fa, fb, divergence_annotations, stage_idx
-            )
+            evidence_refs = _collect_divergence_evidence(fa, fb, divergence_annotations, stage_idx)
 
         stages.append(
             ComparisonStage(
@@ -437,9 +435,7 @@ def generate_variant_comparison(
     alignment = compute_lcs_alignment(seq_a, seq_b)
 
     # Build comparison stages
-    stages = build_comparison_stages(
-        frames_a, frames_b, alignment, divergence_annotations
-    )
+    stages = build_comparison_stages(frames_a, frames_b, alignment, divergence_annotations)
 
     # Compute totals
     total_a = sum(f.cycle_time_ms for f in frames_a)

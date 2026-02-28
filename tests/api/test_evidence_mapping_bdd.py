@@ -97,15 +97,18 @@ class TestReverseEvidenceLookup:
 
         # Two elements reference this evidence, one does not
         elem1 = _make_mock_element(
-            model_id=model.id, name="Task A",
+            model_id=model.id,
+            name="Task A",
             evidence_ids=[str(evidence.id), str(uuid.uuid4())],
         )
         elem2 = _make_mock_element(
-            model_id=model.id, name="Task B",
+            model_id=model.id,
+            name="Task B",
             evidence_ids=[str(evidence.id)],
         )
         elem3 = _make_mock_element(
-            model_id=model.id, name="Task C",
+            model_id=model.id,
+            name="Task C",
             evidence_ids=[str(uuid.uuid4())],
         )
 
@@ -214,7 +217,9 @@ class TestReverseEvidenceLookup:
         model = _make_mock_model(engagement_id=eng_id)
 
         elem = _make_mock_element(
-            model_id=model.id, brightness="dim", confidence=0.55,
+            model_id=model.id,
+            brightness="dim",
+            confidence=0.55,
             evidence_ids=[str(evidence.id)],
         )
 
@@ -250,14 +255,20 @@ class TestDarkElementsEndpoint:
         model = _make_mock_model(engagement_id=eng_id, version=2)
 
         dark1 = _make_mock_element(
-            model_id=model.id, name="Approve Loan",
-            element_type="activity", evidence_count=0,
-            brightness="dark", confidence=0.0,
+            model_id=model.id,
+            name="Approve Loan",
+            element_type="activity",
+            evidence_count=0,
+            brightness="dark",
+            confidence=0.0,
         )
         dark2 = _make_mock_element(
-            model_id=model.id, name="Risk Check",
-            element_type="gateway", evidence_count=0,
-            brightness="dark", confidence=0.0,
+            model_id=model.id,
+            name="Risk Check",
+            element_type="gateway",
+            evidence_count=0,
+            brightness="dark",
+            confidence=0.0,
         )
 
         session = AsyncMock()

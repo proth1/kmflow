@@ -30,17 +30,13 @@ router = APIRouter(prefix="/api/v1", tags=["survey-claims"])
 # ── Helpers ────────────────────────────────────────────────────────────
 
 
-async def _get_claim_engagement_id(
-    claim_id: UUID, session: AsyncSession
-) -> UUID:
+async def _get_claim_engagement_id(claim_id: UUID, session: AsyncSession) -> UUID:
     """Look up a claim's engagement_id, raising 404 if not found."""
     stmt = select(SurveyClaim.engagement_id).where(SurveyClaim.id == claim_id)
     result = await session.execute(stmt)
     engagement_id = result.scalar_one_or_none()
     if engagement_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Claim not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Claim not found")
     return engagement_id
 
 

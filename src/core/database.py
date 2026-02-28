@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,

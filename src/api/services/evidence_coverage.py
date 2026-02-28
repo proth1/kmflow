@@ -64,13 +64,15 @@ class EvidenceCoverageService:
             is_dark = brightness == BrightnessClassification.DARK
             warning_message = _WARNING_MESSAGE if is_dark else None
 
-            modified_elements.append({
-                "element_id": mod.element_id,
-                "element_name": mod.element_name,
-                "brightness": brightness.value,
-                "warning": is_dark,
-                "warning_message": warning_message,
-            })
+            modified_elements.append(
+                {
+                    "element_id": mod.element_id,
+                    "element_name": mod.element_name,
+                    "brightness": brightness.value,
+                    "warning": is_dark,
+                    "warning_message": warning_message,
+                }
+            )
 
             if brightness == BrightnessClassification.BRIGHT:
                 bright_count += 1
@@ -79,9 +81,7 @@ class EvidenceCoverageService:
             else:
                 dark_count += 1
 
-        return self._build_response(
-            scenario_id, modified_elements, bright_count, dim_count, dark_count
-        )
+        return self._build_response(scenario_id, modified_elements, bright_count, dim_count, dark_count)
 
     async def compare_scenarios(
         self,
@@ -114,9 +114,7 @@ class EvidenceCoverageService:
         )
         scenario = result.scalar_one_or_none()
         if scenario is None:
-            raise ValueError(
-                f"Scenario {scenario_id} not found in engagement {engagement_id}"
-            )
+            raise ValueError(f"Scenario {scenario_id} not found in engagement {engagement_id}")
         return scenario
 
     async def _get_brightness_map(

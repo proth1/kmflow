@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -23,8 +23,11 @@ def mock_graph_service():
     service.find_nodes = AsyncMock(return_value=[])
     service.create_relationship = AsyncMock(
         return_value=GraphRelationship(
-            id="r1", from_id="a", to_id="b",
-            relationship_type="SUPPORTS", properties={},
+            id="r1",
+            from_id="a",
+            to_id="b",
+            relationship_type="SUPPORTS",
+            properties={},
         )
     )
     return service
@@ -56,17 +59,21 @@ class TestSupportsRelationships:
         ua = _make_node("ua-1", "UserAction", "Edited customer record in Salesforce")
         act = _make_node("act-1", "Activity", "Update Customer Data")
 
-        mock_graph_service.find_nodes = AsyncMock(side_effect=[
-            [ua],   # UserActions
-            [act],  # Activities
-            [],     # Applications
-            [],     # Systems
-        ])
+        mock_graph_service.find_nodes = AsyncMock(
+            side_effect=[
+                [ua],  # UserActions
+                [act],  # Activities
+                [],  # Applications
+                [],  # Systems
+            ]
+        )
         # Embeddings with high similarity (0.95)
-        mock_embedding_service.embed_texts_async = AsyncMock(side_effect=[
-            [[1.0, 0.0, 0.0]],  # UA embeddings
-            [[0.95, 0.31, 0.0]],  # Activity embeddings (cos sim ≈ 0.95)
-        ])
+        mock_embedding_service.embed_texts_async = AsyncMock(
+            side_effect=[
+                [[1.0, 0.0, 0.0]],  # UA embeddings
+                [[0.95, 0.31, 0.0]],  # Activity embeddings (cos sim ≈ 0.95)
+            ]
+        )
 
         result = await run_semantic_bridge(mock_graph_service, mock_embedding_service, "eng-1")
 
@@ -82,14 +89,21 @@ class TestSupportsRelationships:
         ua = _make_node("ua-1", "UserAction", "Browsed Salesforce")
         act = _make_node("act-1", "Activity", "Update Customer Data")
 
-        mock_graph_service.find_nodes = AsyncMock(side_effect=[
-            [ua], [act], [], [],
-        ])
+        mock_graph_service.find_nodes = AsyncMock(
+            side_effect=[
+                [ua],
+                [act],
+                [],
+                [],
+            ]
+        )
         # Embeddings with moderate similarity (0.62)
-        mock_embedding_service.embed_texts_async = AsyncMock(side_effect=[
-            [[1.0, 0.0, 0.0]],
-            [[0.62, 0.78, 0.0]],  # cos sim ≈ 0.62
-        ])
+        mock_embedding_service.embed_texts_async = AsyncMock(
+            side_effect=[
+                [[1.0, 0.0, 0.0]],
+                [[0.62, 0.78, 0.0]],  # cos sim ≈ 0.62
+            ]
+        )
 
         result = await run_semantic_bridge(mock_graph_service, mock_embedding_service, "eng-1")
 
@@ -103,14 +117,21 @@ class TestSupportsRelationships:
         ua = _make_node("ua-1", "UserAction", "Opened calculator")
         act = _make_node("act-1", "Activity", "Process loan application")
 
-        mock_graph_service.find_nodes = AsyncMock(side_effect=[
-            [ua], [act], [], [],
-        ])
+        mock_graph_service.find_nodes = AsyncMock(
+            side_effect=[
+                [ua],
+                [act],
+                [],
+                [],
+            ]
+        )
         # Very low similarity (0.1)
-        mock_embedding_service.embed_texts_async = AsyncMock(side_effect=[
-            [[1.0, 0.0, 0.0]],
-            [[0.1, 0.99, 0.0]],
-        ])
+        mock_embedding_service.embed_texts_async = AsyncMock(
+            side_effect=[
+                [[1.0, 0.0, 0.0]],
+                [[0.1, 0.99, 0.0]],
+            ]
+        )
 
         result = await run_semantic_bridge(mock_graph_service, mock_embedding_service, "eng-1")
 
@@ -124,14 +145,21 @@ class TestSupportsRelationships:
         ua = _make_node("ua-1", "UserAction", "Action X")
         act = _make_node("act-1", "Activity", "Activity Y")
 
-        mock_graph_service.find_nodes = AsyncMock(side_effect=[
-            [ua], [act], [], [],
-        ])
+        mock_graph_service.find_nodes = AsyncMock(
+            side_effect=[
+                [ua],
+                [act],
+                [],
+                [],
+            ]
+        )
         # Vector with exact 0.5 cosine similarity
-        mock_embedding_service.embed_texts_async = AsyncMock(side_effect=[
-            [[1.0, 0.0]],
-            [[0.5, 0.866]],  # cos sim = 0.5
-        ])
+        mock_embedding_service.embed_texts_async = AsyncMock(
+            side_effect=[
+                [[1.0, 0.0]],
+                [[0.5, 0.866]],  # cos sim = 0.5
+            ]
+        )
 
         result = await run_semantic_bridge(mock_graph_service, mock_embedding_service, "eng-1")
 
@@ -144,13 +172,20 @@ class TestSupportsRelationships:
         ua = _make_node("ua-1", "UserAction", "Action X")
         act = _make_node("act-1", "Activity", "Activity Y")
 
-        mock_graph_service.find_nodes = AsyncMock(side_effect=[
-            [ua], [act], [], [],
-        ])
-        mock_embedding_service.embed_texts_async = AsyncMock(side_effect=[
-            [[1.0, 0.0]],
-            [[0.49, 0.8717]],  # cos sim ≈ 0.49
-        ])
+        mock_graph_service.find_nodes = AsyncMock(
+            side_effect=[
+                [ua],
+                [act],
+                [],
+                [],
+            ]
+        )
+        mock_embedding_service.embed_texts_async = AsyncMock(
+            side_effect=[
+                [[1.0, 0.0]],
+                [[0.49, 0.8717]],  # cos sim ≈ 0.49
+            ]
+        )
 
         result = await run_semantic_bridge(mock_graph_service, mock_embedding_service, "eng-1")
 
@@ -163,13 +198,20 @@ class TestSupportsRelationships:
         ua = _make_node("ua-1", "UserAction", "Action X")
         act = _make_node("act-1", "Activity", "Activity Y")
 
-        mock_graph_service.find_nodes = AsyncMock(side_effect=[
-            [ua], [act], [], [],
-        ])
-        mock_embedding_service.embed_texts_async = AsyncMock(side_effect=[
-            [[1.0, 0.0]],
-            [[0.7, 0.7141]],  # cos sim ≈ 0.70
-        ])
+        mock_graph_service.find_nodes = AsyncMock(
+            side_effect=[
+                [ua],
+                [act],
+                [],
+                [],
+            ]
+        )
+        mock_embedding_service.embed_texts_async = AsyncMock(
+            side_effect=[
+                [[1.0, 0.0]],
+                [[0.7, 0.7141]],  # cos sim ≈ 0.70
+            ]
+        )
 
         result = await run_semantic_bridge(mock_graph_service, mock_embedding_service, "eng-1")
 
@@ -182,16 +224,20 @@ class TestMapsToRelationships:
         app = _make_node("app-1", "Application", "Salesforce")
         sys = _make_node("sys-1", "System", "Salesforce CRM")
 
-        mock_graph_service.find_nodes = AsyncMock(side_effect=[
-            [],     # UserActions
-            [],     # Activities
-            [app],  # Applications
-            [sys],  # Systems
-        ])
-        mock_embedding_service.embed_texts_async = AsyncMock(side_effect=[
-            [[1.0, 0.0, 0.0]],  # App embeddings
-            [[0.95, 0.31, 0.0]],  # System embeddings (high similarity)
-        ])
+        mock_graph_service.find_nodes = AsyncMock(
+            side_effect=[
+                [],  # UserActions
+                [],  # Activities
+                [app],  # Applications
+                [sys],  # Systems
+            ]
+        )
+        mock_embedding_service.embed_texts_async = AsyncMock(
+            side_effect=[
+                [[1.0, 0.0, 0.0]],  # App embeddings
+                [[0.95, 0.31, 0.0]],  # System embeddings (high similarity)
+            ]
+        )
 
         result = await run_semantic_bridge(mock_graph_service, mock_embedding_service, "eng-1")
 
@@ -205,13 +251,20 @@ class TestMapsToRelationships:
         app = _make_node("app-1", "Application", "Calculator")
         sys = _make_node("sys-1", "System", "Salesforce CRM")
 
-        mock_graph_service.find_nodes = AsyncMock(side_effect=[
-            [], [], [app], [sys],
-        ])
-        mock_embedding_service.embed_texts_async = AsyncMock(side_effect=[
-            [[1.0, 0.0]],
-            [[0.1, 0.99]],
-        ])
+        mock_graph_service.find_nodes = AsyncMock(
+            side_effect=[
+                [],
+                [],
+                [app],
+                [sys],
+            ]
+        )
+        mock_embedding_service.embed_texts_async = AsyncMock(
+            side_effect=[
+                [[1.0, 0.0]],
+                [[0.1, 0.99]],
+            ]
+        )
 
         result = await run_semantic_bridge(mock_graph_service, mock_embedding_service, "eng-1")
 
@@ -235,15 +288,21 @@ class TestEdgeCases:
         ua = _make_node("ua-1", "UserAction", "Action")
         act = _make_node("act-1", "Activity", "Activity")
 
-        mock_graph_service.find_nodes = AsyncMock(side_effect=[
-            [ua], [act], [], [],
-        ])
-        mock_embedding_service.embed_texts_async = AsyncMock(side_effect=[
-            [[1.0, 0.0]], [[0.95, 0.31]],
-        ])
-        mock_graph_service.create_relationship = AsyncMock(
-            side_effect=RuntimeError("Neo4j unavailable")
+        mock_graph_service.find_nodes = AsyncMock(
+            side_effect=[
+                [ua],
+                [act],
+                [],
+                [],
+            ]
         )
+        mock_embedding_service.embed_texts_async = AsyncMock(
+            side_effect=[
+                [[1.0, 0.0]],
+                [[0.95, 0.31]],
+            ]
+        )
+        mock_graph_service.create_relationship = AsyncMock(side_effect=RuntimeError("Neo4j unavailable"))
 
         result = await run_semantic_bridge(mock_graph_service, mock_embedding_service, "eng-1")
 

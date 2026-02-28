@@ -88,7 +88,9 @@ class SeedListService:
 
         logger.info(
             "Seed terms created: engagement=%s, created=%d, skipped=%d",
-            engagement_id, len(created), len(skipped),
+            engagement_id,
+            len(created),
+            len(skipped),
         )
         return {
             "engagement_id": str(engagement_id),
@@ -114,21 +116,11 @@ class SeedListService:
         if source is not None:
             base_filter.append(SeedTerm.source == source)
 
-        count_stmt = (
-            select(sa_func.count())
-            .select_from(SeedTerm)
-            .where(*base_filter)
-        )
+        count_stmt = select(sa_func.count()).select_from(SeedTerm).where(*base_filter)
         count_result = await self._session.execute(count_stmt)
         total = count_result.scalar() or 0
 
-        query = (
-            select(SeedTerm)
-            .where(*base_filter)
-            .order_by(SeedTerm.created_at.desc())
-            .limit(limit)
-            .offset(offset)
-        )
+        query = select(SeedTerm).where(*base_filter).order_by(SeedTerm.created_at.desc()).limit(limit).offset(offset)
         result = await self._session.execute(query)
         terms = result.scalars().all()
 
@@ -195,16 +187,20 @@ class SeedListService:
         probes = []
         for term in terms:
             for template in PROBE_TEMPLATES:
-                probes.append({
-                    "seed_term_id": str(term.id),
-                    "seed_term": term.term,
-                    "probe_type": template["probe_type"],
-                    "question": template["template"].replace("{term}", term.term),
-                })
+                probes.append(
+                    {
+                        "seed_term_id": str(term.id),
+                        "seed_term": term.term,
+                        "probe_type": template["probe_type"],
+                        "question": template["template"].replace("{term}", term.term),
+                    }
+                )
 
         logger.info(
             "Probes generated: engagement=%s, terms=%d, probes=%d",
-            engagement_id, len(terms), len(probes),
+            engagement_id,
+            len(terms),
+            len(probes),
         )
         return {
             "engagement_id": str(engagement_id),
@@ -215,9 +211,7 @@ class SeedListService:
 
     # ── Stage 4: Extraction Targeting ──────────────────────────────────
 
-    async def get_extraction_targets(
-        self, engagement_id: uuid.UUID
-    ) -> dict[str, Any]:
+    async def get_extraction_targets(self, engagement_id: uuid.UUID) -> dict[str, Any]:
         """Get active seed terms for extraction targeting.
 
         Returns the active terms that the extraction pipeline should use
@@ -248,9 +242,7 @@ class SeedListService:
             ],
         }
 
-    async def deprecate_term(
-        self, term_id: uuid.UUID
-    ) -> dict[str, Any]:
+    async def deprecate_term(self, term_id: uuid.UUID) -> dict[str, Any]:
         """Deprecate a seed term (soft delete)."""
         stmt = select(SeedTerm).where(SeedTerm.id == term_id)
         result = await self._session.execute(stmt)

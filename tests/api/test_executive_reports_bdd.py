@@ -106,7 +106,12 @@ class TestReportGenerationTrigger:
             ),
         ):
             result = await trigger_report_generation(
-                eng_id, body, request, session, user, user,
+                eng_id,
+                body,
+                request,
+                session,
+                user,
+                user,
             )
 
         assert "report_id" in result
@@ -135,7 +140,12 @@ class TestReportGenerationTrigger:
             ),
         ):
             await trigger_report_generation(
-                eng_id, body, request, session, user, user,
+                eng_id,
+                body,
+                request,
+                session,
+                user,
+                user,
             )
 
         # Verify Redis setex was called (at least 3 times: pending, generating, complete)
@@ -165,7 +175,12 @@ class TestReportGenerationTrigger:
             ),
         ):
             result = await trigger_report_generation(
-                eng_id, body, request, session, user, user,
+                eng_id,
+                body,
+                request,
+                session,
+                user,
+                user,
             )
 
         assert result["report_id"] is not None
@@ -192,7 +207,12 @@ class TestReportGenerationTrigger:
             ),
         ):
             await trigger_report_generation(
-                eng_id, body, request, session, user, user,
+                eng_id,
+                body,
+                request,
+                session,
+                user,
+                user,
             )
 
         # Last Redis call should contain FAILED status
@@ -218,7 +238,12 @@ class TestReportGenerationTrigger:
             side_effect=RuntimeError("DB connection lost"),
         ):
             result = await trigger_report_generation(
-                eng_id, body, request, session, user, user,
+                eng_id,
+                body,
+                request,
+                session,
+                user,
+                user,
             )
 
         # Should still return a response (not crash)
@@ -478,8 +503,8 @@ class TestEvidenceAppendixCitations:
 
         html = service._build_evidence_appendix(citations)
 
-        assert 'id=\'evidence-E1\'' in html
-        assert 'id=\'evidence-E2\'' in html
+        assert "id='evidence-E1'" in html
+        assert "id='evidence-E2'" in html
         assert "Process Map v1" in html
         assert "Staff Survey Results" in html
         assert "BPM Process Models" in html
@@ -620,12 +645,14 @@ class TestReportGenerationService:
     def test_render_executive_summary_section(self) -> None:
         """Executive summary section renders metrics."""
         service = ReportGenerationService()
-        html = service._render_executive_summary({
-            "evidence_count": 42,
-            "coverage_percentage": 75.5,
-            "covered_categories": 9,
-            "total_categories": 12,
-        })
+        html = service._render_executive_summary(
+            {
+                "evidence_count": 42,
+                "coverage_percentage": 75.5,
+                "covered_categories": 9,
+                "total_categories": 12,
+            }
+        )
 
         assert "42" in html
         assert "75.5%" in html
@@ -634,20 +661,22 @@ class TestReportGenerationService:
     def test_build_recommendations_with_gaps(self) -> None:
         """Recommendations section lists prioritized actions."""
         service = ReportGenerationService()
-        html = service._build_recommendations({
-            "gaps": [
-                {
-                    "recommendation": "Automate manual handoffs",
-                    "priority_score": 0.85,
-                    "dimension": "process_architecture",
-                },
-                {
-                    "recommendation": "Add access controls",
-                    "priority_score": 0.45,
-                    "dimension": "governance_structures",
-                },
-            ],
-        })
+        html = service._build_recommendations(
+            {
+                "gaps": [
+                    {
+                        "recommendation": "Automate manual handoffs",
+                        "priority_score": 0.85,
+                        "dimension": "process_architecture",
+                    },
+                    {
+                        "recommendation": "Add access controls",
+                        "priority_score": 0.45,
+                        "dimension": "governance_structures",
+                    },
+                ],
+            }
+        )
 
         assert "Automate manual handoffs" in html
         assert "[High]" in html
@@ -688,6 +717,7 @@ class TestReportGenerationService:
     def test_render_pdf_without_weasyprint(self) -> None:
         """PDF render returns empty bytes when WeasyPrint is not installed."""
         import builtins
+
         real_import = builtins.__import__
 
         def mock_import(name: str, *args: Any, **kwargs: Any) -> Any:

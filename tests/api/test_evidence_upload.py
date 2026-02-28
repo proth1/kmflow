@@ -21,7 +21,6 @@ from httpx import AsyncClient
 
 from src.core.models import DataClassification, EvidenceCategory, EvidenceItem, ValidationStatus
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -125,9 +124,7 @@ class TestEvidenceUpload:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_upload_unauthorized_returns_401(
-        self, test_app, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_upload_unauthorized_returns_401(self, test_app, mock_db_session: AsyncMock) -> None:
         """Uploading without any Authorization header returns 401.
 
         We temporarily remove the get_current_user override to exercise the
@@ -137,20 +134,20 @@ class TestEvidenceUpload:
 
         test_app.dependency_overrides.pop(get_current_user, None)
         try:
-            from httpx import ASGITransport, AsyncClient as RawClient
+            from httpx import ASGITransport
+            from httpx import AsyncClient as RawClient
 
             transport = ASGITransport(app=test_app)
             async with RawClient(transport=transport, base_url="http://test") as bare_client:
                 response = await bare_client.post(
                     "/api/v1/evidence/upload",
-                    files={
-                        "file": ("report.pdf", io.BytesIO(b"PDF content"), "application/pdf")
-                    },
+                    files={"file": ("report.pdf", io.BytesIO(b"PDF content"), "application/pdf")},
                     data={"engagement_id": str(uuid.uuid4())},
                 )
         finally:
             # Restore the override so other tests in the session are unaffected
             from unittest.mock import MagicMock
+
             from src.core.models import User, UserRole
 
             mock_user = MagicMock(spec=User)
@@ -163,9 +160,7 @@ class TestEvidenceUpload:
         assert response.status_code == 401
 
     @pytest.mark.asyncio
-    async def test_upload_invalid_file_type_returns_415(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_upload_invalid_file_type_returns_415(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Uploading a disallowed file type returns 415 Unsupported Media Type.
 
         The validation happens inside ingest_evidence (via validate_file_type).
@@ -198,9 +193,7 @@ class TestEvidenceUpload:
         assert response.status_code == 415
 
     @pytest.mark.asyncio
-    async def test_upload_empty_file_returns_400(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_upload_empty_file_returns_400(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Uploading a zero-byte file returns 400 Bad Request."""
         response = await client.post(
             "/api/v1/evidence/upload",
@@ -227,9 +220,7 @@ class TestEvidenceUpload:
         assert "json" in response.json()["detail"].lower()
 
     @pytest.mark.asyncio
-    async def test_upload_reports_duplicate(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_upload_reports_duplicate(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """When a duplicate is detected, the response includes duplicate_of_id."""
         engagement_id = uuid.uuid4()
         original_id = uuid.uuid4()

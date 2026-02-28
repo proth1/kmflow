@@ -30,36 +30,26 @@ class TestClassificationAccessControl:
 
     def test_public_accessible_without_restricted_grant(self) -> None:
         service = GdprComplianceService(AsyncMock())
-        assert service.check_classification_access(
-            DataClassification.PUBLIC, has_restricted_access=False
-        ) is True
+        assert service.check_classification_access(DataClassification.PUBLIC, has_restricted_access=False) is True
 
     def test_internal_accessible_without_restricted_grant(self) -> None:
         service = GdprComplianceService(AsyncMock())
-        assert service.check_classification_access(
-            DataClassification.INTERNAL, has_restricted_access=False
-        ) is True
+        assert service.check_classification_access(DataClassification.INTERNAL, has_restricted_access=False) is True
 
     def test_confidential_accessible_without_restricted_grant(self) -> None:
         service = GdprComplianceService(AsyncMock())
-        assert service.check_classification_access(
-            DataClassification.CONFIDENTIAL, has_restricted_access=False
-        ) is True
+        assert service.check_classification_access(DataClassification.CONFIDENTIAL, has_restricted_access=False) is True
 
     def test_restricted_denied_without_explicit_grant(self) -> None:
         """Given a user without Restricted access,
         When accessing Restricted evidence,
         Then access is denied."""
         service = GdprComplianceService(AsyncMock())
-        assert service.check_classification_access(
-            DataClassification.RESTRICTED, has_restricted_access=False
-        ) is False
+        assert service.check_classification_access(DataClassification.RESTRICTED, has_restricted_access=False) is False
 
     def test_restricted_allowed_with_explicit_grant(self) -> None:
         service = GdprComplianceService(AsyncMock())
-        assert service.check_classification_access(
-            DataClassification.RESTRICTED, has_restricted_access=True
-        ) is True
+        assert service.check_classification_access(DataClassification.RESTRICTED, has_restricted_access=True) is True
 
 
 class TestRetentionPolicyEnforcement:
@@ -294,9 +284,7 @@ class TestComplianceReport:
         total_result = MagicMock()
         total_result.scalar.return_value = 3
 
-        mock_session.execute = AsyncMock(
-            side_effect=[basis_result, class_result, total_result]
-        )
+        mock_session.execute = AsyncMock(side_effect=[basis_result, class_result, total_result])
 
         service = GdprComplianceService(mock_session)
         report = await service.get_compliance_report(ENGAGEMENT_ID)
@@ -319,9 +307,7 @@ class TestComplianceReport:
         total_result = MagicMock()
         total_result.scalar.return_value = 0
 
-        mock_session.execute = AsyncMock(
-            side_effect=[basis_result, class_result, total_result]
-        )
+        mock_session.execute = AsyncMock(side_effect=[basis_result, class_result, total_result])
 
         service = GdprComplianceService(mock_session)
         report = await service.get_compliance_report(ENGAGEMENT_ID)

@@ -50,9 +50,7 @@ router = APIRouter(tags=["gdpr"])
 # Valid consent types
 # ---------------------------------------------------------------------------
 
-VALID_CONSENT_TYPES: frozenset[str] = frozenset(
-    {"analytics", "data_processing", "marketing_communications"}
-)
+VALID_CONSENT_TYPES: frozenset[str] = frozenset({"analytics", "data_processing", "marketing_communications"})
 
 # ---------------------------------------------------------------------------
 # Schemas
@@ -195,27 +193,19 @@ async def export_user_data(
     user_id_str = str(current_user.id)
 
     # Membership records
-    member_result = await session.execute(
-        select(EngagementMember).where(EngagementMember.user_id == current_user.id)
-    )
+    member_result = await session.execute(select(EngagementMember).where(EngagementMember.user_id == current_user.id))
     memberships = [_member_to_dict(m) for m in member_result.scalars().all()]
 
     # Audit log entries attributed to this user
-    audit_result = await session.execute(
-        select(AuditLog).where(AuditLog.actor == user_id_str)
-    )
+    audit_result = await session.execute(select(AuditLog).where(AuditLog.actor == user_id_str))
     audit_entries = [_audit_to_dict(e) for e in audit_result.scalars().all()]
 
     # Annotations authored by this user
-    annotation_result = await session.execute(
-        select(Annotation).where(Annotation.author_id == user_id_str)
-    )
+    annotation_result = await session.execute(select(Annotation).where(Annotation.author_id == user_id_str))
     annotations = [_annotation_to_dict(a) for a in annotation_result.scalars().all()]
 
     # User consent records
-    consent_result = await session.execute(
-        select(UserConsent).where(UserConsent.user_id == current_user.id)
-    )
+    consent_result = await session.execute(select(UserConsent).where(UserConsent.user_id == current_user.id))
     user_consents = [
         {
             "id": str(c.id),
@@ -229,9 +219,7 @@ async def export_user_data(
     ]
 
     # Copilot chat messages for the user
-    copilot_result = await session.execute(
-        select(CopilotMessage).where(CopilotMessage.user_id == current_user.id)
-    )
+    copilot_result = await session.execute(select(CopilotMessage).where(CopilotMessage.user_id == current_user.id))
     copilot_messages = [
         {
             "id": str(m.id),
@@ -327,9 +315,7 @@ async def get_consent_status(
     # Fetch all consent rows for this user ordered by granted_at DESC so we
     # can pick the latest event per consent_type.
     result = await session.execute(
-        select(UserConsent)
-        .where(UserConsent.user_id == current_user.id)
-        .order_by(UserConsent.granted_at.desc())
+        select(UserConsent).where(UserConsent.user_id == current_user.id).order_by(UserConsent.granted_at.desc())
     )
     all_consents = result.scalars().all()
 
@@ -371,10 +357,7 @@ async def update_consent(
     if payload.consent_type not in VALID_CONSENT_TYPES:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=(
-                f"Invalid consent_type '{payload.consent_type}'. "
-                f"Must be one of: {sorted(VALID_CONSENT_TYPES)}"
-            ),
+            detail=(f"Invalid consent_type '{payload.consent_type}'. Must be one of: {sorted(VALID_CONSENT_TYPES)}"),
         )
 
     now = datetime.now(UTC)
@@ -469,10 +452,7 @@ async def admin_anonymize_user(
     # agents registered by this user's engagements. Agent records are
     # kept but hostname is anonymised.
     await session.execute(
-        text(
-            "UPDATE task_mining_agents SET hostname = 'anonymized', "
-            "approved_by = NULL WHERE approved_by = :uid"
-        ),
+        text("UPDATE task_mining_agents SET hostname = 'anonymized', approved_by = NULL WHERE approved_by = :uid"),
         {"uid": user_id_str},
     )
 

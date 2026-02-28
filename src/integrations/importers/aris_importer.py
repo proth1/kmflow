@@ -117,9 +117,7 @@ class ARISImporter(ModelImporter):
                     supported_versions=SUPPORTED_VERSIONS,
                 )
 
-    def _extract_objects(
-        self, root: Any, model: ImportedModel
-    ) -> dict[str, ProcessElement]:
+    def _extract_objects(self, root: Any, model: ImportedModel) -> dict[str, ProcessElement]:
         """Extract object definitions from AML."""
         obj_map: dict[str, ProcessElement] = {}
 
@@ -132,9 +130,7 @@ class ARISImporter(ModelImporter):
             # Get name from AttrDef with AttrTypeNum="AT_NAME"
             name = ""
             for attr_def in obj_def.iter("AttrDef"):
-                if attr_def.get("AttrDef.Type", "") == "AT_NAME" or attr_def.get(
-                    "AttrTypeNum", ""
-                ) == "AT_NAME":
+                if attr_def.get("AttrDef.Type", "") == "AT_NAME" or attr_def.get("AttrTypeNum", "") == "AT_NAME":
                     # Name is in AttrValue child
                     attr_val = attr_def.find("AttrValue")
                     if attr_val is not None and attr_val.text:

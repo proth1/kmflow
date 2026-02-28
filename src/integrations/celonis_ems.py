@@ -324,31 +324,35 @@ class CelonisProcessModelMapper:
         operations: list[dict[str, Any]] = []
 
         for node in nodes:
-            operations.append({
-                "op": "merge_node",
-                "label": "ProcessElement",
-                "id": f"celonis:{node.node_id}",
-                "properties": {
-                    "name": node.activity_name,
-                    "engagement_id": self._engagement_id,
-                    "source_connector": "celonis",
-                    "external_id": node.node_id,
-                    "frequency": node.frequency,
-                    "avg_duration": node.avg_duration,
-                },
-            })
+            operations.append(
+                {
+                    "op": "merge_node",
+                    "label": "ProcessElement",
+                    "id": f"celonis:{node.node_id}",
+                    "properties": {
+                        "name": node.activity_name,
+                        "engagement_id": self._engagement_id,
+                        "source_connector": "celonis",
+                        "external_id": node.node_id,
+                        "frequency": node.frequency,
+                        "avg_duration": node.avg_duration,
+                    },
+                }
+            )
 
         for flow in flows:
-            operations.append({
-                "op": "merge_edge",
-                "type": "PRECEDES",
-                "from_id": f"celonis:{flow.source_node_id}",
-                "to_id": f"celonis:{flow.target_node_id}",
-                "properties": {
-                    "source_connector": "celonis",
-                    "frequency": flow.frequency,
-                },
-            })
+            operations.append(
+                {
+                    "op": "merge_edge",
+                    "type": "PRECEDES",
+                    "from_id": f"celonis:{flow.source_node_id}",
+                    "to_id": f"celonis:{flow.target_node_id}",
+                    "properties": {
+                        "source_connector": "celonis",
+                        "frequency": flow.frequency,
+                    },
+                }
+            )
 
         return operations
 

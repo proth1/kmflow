@@ -116,9 +116,7 @@ class TestCompareScenarios:
         results_scalars.all.return_value = []
         results_result.scalars.return_value = results_scalars
 
-        mock_session.execute = AsyncMock(
-            side_effect=[scenarios_result, results_result]
-        )
+        mock_session.execute = AsyncMock(side_effect=[scenarios_result, results_result])
 
         client = _make_app(mock_session)
         resp = client.get(

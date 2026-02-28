@@ -245,18 +245,14 @@ class TestRationaleGenerator:
     def test_parse_response_valid_json(self) -> None:
         """Parses valid JSON response."""
         service = RationaleGeneratorService()
-        result = service._parse_response(
-            '{"rationale": "Gap found", "recommendation": "Fix it"}'
-        )
+        result = service._parse_response('{"rationale": "Gap found", "recommendation": "Fix it"}')
         assert result["rationale"] == "Gap found"
         assert result["recommendation"] == "Fix it"
 
     def test_parse_response_markdown_json(self) -> None:
         """Parses JSON wrapped in markdown code blocks."""
         service = RationaleGeneratorService()
-        result = service._parse_response(
-            '```json\n{"rationale": "Gap found", "recommendation": "Fix it"}\n```'
-        )
+        result = service._parse_response('```json\n{"rationale": "Gap found", "recommendation": "Fix it"}\n```')
         assert result["rationale"] == "Gap found"
         assert result["recommendation"] == "Fix it"
 
@@ -469,9 +465,7 @@ class TestRationaleGeneration:
 
         app = _make_app_with_session(mock_session)
 
-        with mock.patch(
-            "src.tom.rationale_generator.RationaleGeneratorService"
-        ) as mock_service_cls:
+        with mock.patch("src.tom.rationale_generator.RationaleGeneratorService") as mock_service_cls:
             instance = mock_service_cls.return_value
             instance.generate_rationale = AsyncMock(
                 return_value={
@@ -527,9 +521,7 @@ class TestBulkRationaleGeneration:
 
         app = _make_app_with_session(mock_session)
 
-        with mock.patch(
-            "src.tom.rationale_generator.RationaleGeneratorService"
-        ) as mock_service_cls:
+        with mock.patch("src.tom.rationale_generator.RationaleGeneratorService") as mock_service_cls:
             instance = mock_service_cls.return_value
             instance.generate_bulk_rationales = AsyncMock(
                 return_value=[

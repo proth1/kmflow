@@ -8,11 +8,37 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-_STOP_WORDS = frozenset({
-    "the", "a", "an", "is", "in", "to", "for", "of", "and", "or",
-    "with", "on", "at", "be", "it", "that", "this", "was", "are",
-    "but", "not", "from", "by", "as", "has", "have", "been",
-})
+_STOP_WORDS = frozenset(
+    {
+        "the",
+        "a",
+        "an",
+        "is",
+        "in",
+        "to",
+        "for",
+        "of",
+        "and",
+        "or",
+        "with",
+        "on",
+        "at",
+        "be",
+        "it",
+        "that",
+        "this",
+        "was",
+        "are",
+        "but",
+        "not",
+        "from",
+        "by",
+        "as",
+        "has",
+        "have",
+        "been",
+    }
+)
 
 
 @dataclass
@@ -190,15 +216,17 @@ def match_gaps_to_practices(
                         reasons.append("keyword overlap")
 
             if score > 0.1:
-                matches.append(PracticeMatch(
-                    practice_id=str(practice.get("id", "")),
-                    practice_title=str(practice.get("title", "")),
-                    practice_domain=str(practice.get("domain", "")),
-                    practice_industry=str(practice.get("industry", "")),
-                    gap_id=str(gap.get("id", "")),
-                    relevance_score=round(score, 3),
-                    match_reason=", ".join(reasons),
-                ))
+                matches.append(
+                    PracticeMatch(
+                        practice_id=str(practice.get("id", "")),
+                        practice_title=str(practice.get("title", "")),
+                        practice_domain=str(practice.get("domain", "")),
+                        practice_industry=str(practice.get("industry", "")),
+                        gap_id=str(gap.get("id", "")),
+                        relevance_score=round(score, 3),
+                        match_reason=", ".join(reasons),
+                    )
+                )
 
     # Sort by relevance descending
     matches.sort(key=lambda m: m.relevance_score, reverse=True)

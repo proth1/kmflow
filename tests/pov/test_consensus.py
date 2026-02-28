@@ -91,7 +91,7 @@ class TestBuildConsensus:
         assert len(elements) == 1
         # structured_data weight = 1.0, with recency adjustment
         assert elements[0].weighted_vote_score >= 0.70  # min: 1.0 * 0.7
-        assert elements[0].weighted_vote_score <= 1.0   # max: 1.0 * 1.0
+        assert elements[0].weighted_vote_score <= 1.0  # max: 1.0 * 1.0
 
     def test_consensus_multiple_sources_averaged(self):
         entity = _make_entity("Review Invoice")

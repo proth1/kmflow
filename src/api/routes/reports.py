@@ -70,22 +70,16 @@ class ReportTriggerResponse(BaseModel):
 # -- Redis job helpers --------------------------------------------------------
 
 
-async def _set_report_job(
-    request: Request, report_id: str, data: dict[str, Any]
-) -> None:
+async def _set_report_job(request: Request, report_id: str, data: dict[str, Any]) -> None:
     """Store a report job record in Redis."""
     try:
         redis_client = request.app.state.redis_client
-        await redis_client.setex(
-            f"report:job:{report_id}", _REPORT_JOB_TTL, json.dumps(data)
-        )
+        await redis_client.setex(f"report:job:{report_id}", _REPORT_JOB_TTL, json.dumps(data))
     except aioredis.RedisError:
         logger.warning("Redis unavailable for report job store, job %s status may be lost", report_id)
 
 
-async def _get_report_job(
-    request: Request, report_id: str
-) -> dict[str, Any] | None:
+async def _get_report_job(request: Request, report_id: str) -> dict[str, Any] | None:
     """Retrieve a report job record from Redis."""
     try:
         redis_client = request.app.state.redis_client
@@ -167,24 +161,32 @@ async def trigger_report_generation(
     report_id = uuid.uuid4().hex
 
     # Store initial job state
-    await _set_report_job(request, report_id, {
-        "status": ReportStatus.PENDING,
-        "engagement_id": str(engagement_id),
-        "format": body.format,
-        "progress_percentage": 0,
-        "requested_by": str(user.id),
-    })
+    await _set_report_job(
+        request,
+        report_id,
+        {
+            "status": ReportStatus.PENDING,
+            "engagement_id": str(engagement_id),
+            "format": body.format,
+            "progress_percentage": 0,
+            "requested_by": str(user.id),
+        },
+    )
 
     # Generate the report (runs inline for now; production would use Celery)
     service = ReportGenerationService()
 
-    await _set_report_job(request, report_id, {
-        "status": ReportStatus.GENERATING,
-        "engagement_id": str(engagement_id),
-        "format": body.format,
-        "progress_percentage": 10,
-        "requested_by": str(user.id),
-    })
+    await _set_report_job(
+        request,
+        report_id,
+        {
+            "status": ReportStatus.GENERATING,
+            "engagement_id": str(engagement_id),
+            "format": body.format,
+            "progress_percentage": 10,
+            "requested_by": str(user.id),
+        },
+    )
 
     try:
         result = await service.generate(
@@ -195,14 +197,18 @@ async def trigger_report_generation(
         )
 
         if result.error:
-            await _set_report_job(request, report_id, {
-                "status": ReportStatus.FAILED,
-                "engagement_id": str(engagement_id),
-                "format": body.format,
-                "progress_percentage": 0,
-                "error": result.error,
-                "requested_by": str(user.id),
-            })
+            await _set_report_job(
+                request,
+                report_id,
+                {
+                    "status": ReportStatus.FAILED,
+                    "engagement_id": str(engagement_id),
+                    "format": body.format,
+                    "progress_percentage": 0,
+                    "error": result.error,
+                    "requested_by": str(user.id),
+                },
+            )
         else:
             # Store the generated content
             job_data: dict[str, Any] = {
@@ -222,14 +228,18 @@ async def trigger_report_generation(
 
     except Exception as e:
         logger.error("Report generation failed for %s: %s", engagement_id, e)
-        await _set_report_job(request, report_id, {
-            "status": ReportStatus.FAILED,
-            "engagement_id": str(engagement_id),
-            "format": body.format,
-            "progress_percentage": 0,
-            "error": "Report generation failed. Please try again or contact support.",
-            "requested_by": str(user.id),
-        })
+        await _set_report_job(
+            request,
+            report_id,
+            {
+                "status": ReportStatus.FAILED,
+                "engagement_id": str(engagement_id),
+                "format": body.format,
+                "progress_percentage": 0,
+                "error": "Report generation failed. Please try again or contact support.",
+                "requested_by": str(user.id),
+            },
+        )
 
     status_url = f"/api/v1/reports/engagements/{engagement_id}/status/{report_id}"
     return {
@@ -275,8 +285,7 @@ async def get_report_status(
     download_url = None
     if job.get("status") == ReportStatus.COMPLETE:
         download_url = (
-            f"/api/v1/reports/engagements/{engagement_id}"
-            f"/download/{report_id}?format={job.get('format', 'html')}"
+            f"/api/v1/reports/engagements/{engagement_id}/download/{report_id}?format={job.get('format', 'html')}"
         )
 
     return {
@@ -336,9 +345,7 @@ async def download_report(
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
-            headers={
-                "Content-Disposition": f'attachment; filename="report-{engagement_id}.pdf"'
-            },
+            headers={"Content-Disposition": f'attachment; filename="report-{engagement_id}.pdf"'},
         )
 
     # Default: return HTML

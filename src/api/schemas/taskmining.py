@@ -9,16 +9,11 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from src.core.models.taskmining import (
-    ActionCategory,
     AgentStatus,
     CaptureGranularity,
     DeploymentMode,
     DesktopEventType,
-    PIIType,
-    QuarantineStatus,
-    SessionStatus,
 )
-
 
 # ---------------------------------------------------------------------------
 # Agent Registration

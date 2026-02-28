@@ -54,9 +54,7 @@ class TestGovernanceCheckRoute:
         resp = client.post(
             f"/api/v1/engagements/{ENGAGEMENT_ID}/scenarios/{SCENARIO_ID}/suggestions/{SUGGESTION_ID}/governance-check",
             json={
-                "role_changes": [
-                    {"type": "merge", "roles": ["Approver", "Processor"]}
-                ],
+                "role_changes": [{"type": "merge", "roles": ["Approver", "Processor"]}],
                 "affected_element_ids": [],
             },
         )
@@ -117,9 +115,7 @@ class TestGovernanceCheckRoute:
         resp = client.post(
             f"/api/v1/engagements/{ENGAGEMENT_ID}/scenarios/{SCENARIO_ID}/suggestions/{SUGGESTION_ID}/governance-check",
             json={
-                "role_changes": [
-                    {"type": "automate", "element_id": "task_approve", "element_name": "Final Approval"}
-                ],
+                "role_changes": [{"type": "automate", "element_id": "task_approve", "element_name": "Final Approval"}],
                 "affected_element_ids": [],
                 "regulated_elements": {"task_approve": ["SOX Section 302"]},
             },

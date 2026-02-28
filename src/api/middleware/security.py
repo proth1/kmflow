@@ -127,11 +127,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     def _prune_stale(self, now: float) -> None:
         """Remove expired client entries to prevent unbounded memory growth."""
-        stale = [
-            ip
-            for ip, entry in self._clients.items()
-            if now - entry.window_start >= self.window_seconds
-        ]
+        stale = [ip for ip, entry in self._clients.items() if now - entry.window_start >= self.window_seconds]
         for ip in stale:
             del self._clients[ip]
 

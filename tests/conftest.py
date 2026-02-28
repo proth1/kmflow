@@ -139,7 +139,7 @@ async def test_app(
     The lifespan is skipped; instead, we manually set app.state
     with mock objects.
     """
-    from fastapi import FastAPI, HTTPException, Request
+    from fastapi import FastAPI
     from fastapi.middleware.cors import CORSMiddleware
 
     from src.api.middleware.security import (

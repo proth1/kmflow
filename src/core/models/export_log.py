@@ -25,9 +25,7 @@ class ExportLog(Base):
         Index("ix_export_logs_recipient_id", "recipient_id"),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     recipient_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="RESTRICT"),
@@ -39,12 +37,7 @@ class ExportLog(Base):
         ForeignKey("engagements.id", ondelete="RESTRICT"),
         nullable=False,
     )
-    exported_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    exported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     def __repr__(self) -> str:
-        return (
-            f"<ExportLog(id={self.id}, recipient={self.recipient_id}, "
-            f"type={self.document_type})>"
-        )
+        return f"<ExportLog(id={self.id}, recipient={self.recipient_id}, type={self.document_type})>"

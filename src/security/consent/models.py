@@ -44,26 +44,18 @@ class PolicyBundle(Base):
     """
 
     __tablename__ = "policy_bundles"
-    __table_args__ = (
-        Index("ix_policy_bundles_engagement_id", "engagement_id"),
-    )
+    __table_args__ = (Index("ix_policy_bundles_engagement_id", "engagement_id"),)
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     engagement_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("engagements.id", ondelete="RESTRICT"),
         nullable=False,
     )
     version: Mapped[str] = mapped_column(String(50), nullable=False)
-    scope: Mapped[str] = mapped_column(
-        String(512), nullable=False, default="application-usage-monitoring"
-    )
+    scope: Mapped[str] = mapped_column(String(512), nullable=False, default="application-usage-monitoring")
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     def __repr__(self) -> str:
         return f"<PolicyBundle(id={self.id}, version={self.version}, scope={self.scope})>"
@@ -84,9 +76,7 @@ class EndpointConsentRecord(Base):
         Index("ix_endpoint_consent_records_status", "status"),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     participant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="RESTRICT"),
@@ -97,36 +87,24 @@ class EndpointConsentRecord(Base):
         ForeignKey("engagements.id", ondelete="RESTRICT"),
         nullable=False,
     )
-    consent_type: Mapped[EndpointConsentType] = mapped_column(
-        Enum(EndpointConsentType), nullable=False
-    )
-    scope: Mapped[str] = mapped_column(
-        String(512), nullable=False, default="application-usage-monitoring"
-    )
+    consent_type: Mapped[EndpointConsentType] = mapped_column(Enum(EndpointConsentType), nullable=False)
+    scope: Mapped[str] = mapped_column(String(512), nullable=False, default="application-usage-monitoring")
     policy_bundle_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("policy_bundles.id", ondelete="RESTRICT"),
         nullable=False,
     )
-    status: Mapped[ConsentStatus] = mapped_column(
-        Enum(ConsentStatus), nullable=False, default=ConsentStatus.ACTIVE
-    )
+    status: Mapped[ConsentStatus] = mapped_column(Enum(ConsentStatus), nullable=False, default=ConsentStatus.ACTIVE)
     recorded_by: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="RESTRICT"),
         nullable=False,
     )
-    recorded_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-    withdrawn_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # 7-year retention floor (earliest allowed deletion date)
-    retention_expires_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    retention_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     def __repr__(self) -> str:
         return (

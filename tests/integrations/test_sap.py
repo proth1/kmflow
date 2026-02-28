@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import httpx
 import pytest
@@ -388,7 +388,7 @@ class TestSAPSyncIncremental:
         connector = SAPConnector(config)
 
         # Spy on sync_data to capture the kwargs it receives
-        original_sync = connector.sync_data
+        _original_sync = connector.sync_data
         captured: list[dict] = []
 
         async def spy_sync(engagement_id: str, **kwargs: object) -> dict:

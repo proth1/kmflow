@@ -368,7 +368,10 @@ class TestDivergenceEvidenceLinking:
         # Alignment: (0,0)=Submit, (1,None)=Review(a_only), (None,1)=Audit(b_only)
         # The a_only stage is at index 1, b_only at index 2
         result = generate_variant_comparison(
-            "v-a", "v-b", events_a, events_b,
+            "v-a",
+            "v-b",
+            events_a,
+            events_b,
             divergence_annotations={1: ["ev-annotation"]},
         )
 
@@ -376,9 +379,7 @@ class TestDivergenceEvidenceLinking:
         assert len(divergences) >= 1
 
         # Find the stage with annotation evidence
-        annotated = [
-            s for s in divergences if "ev-annotation" in s.divergence_evidence_refs
-        ]
+        annotated = [s for s in divergences if "ev-annotation" in s.divergence_evidence_refs]
         assert len(annotated) == 1
 
     def test_evidence_deduplicated(self) -> None:
@@ -396,9 +397,7 @@ class TestDivergenceEvidenceLinking:
 
         for stage in result.stages:
             # No duplicates in evidence refs
-            assert len(stage.divergence_evidence_refs) == len(
-                set(stage.divergence_evidence_refs)
-            )
+            assert len(stage.divergence_evidence_refs) == len(set(stage.divergence_evidence_refs))
 
     def test_no_evidence_for_non_divergence_stages(self) -> None:
         """Non-divergence stages have empty evidence refs."""

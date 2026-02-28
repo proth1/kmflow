@@ -57,10 +57,7 @@ class ObligationEnforcer:
     def _mask_recursive(cls, obj: Any, fields: set[str]) -> Any:
         """Recursively mask fields inside dicts and lists."""
         if isinstance(obj, dict):
-            return {
-                k: "***" if k in fields else cls._mask_recursive(v, fields)
-                for k, v in obj.items()
-            }
+            return {k: "***" if k in fields else cls._mask_recursive(v, fields) for k, v in obj.items()}
         if isinstance(obj, list):
             return [cls._mask_recursive(item, fields) for item in obj]
         return obj

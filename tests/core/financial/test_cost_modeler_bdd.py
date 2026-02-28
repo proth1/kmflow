@@ -163,9 +163,7 @@ class TestSeasonalQuarterlyProjections:
             per_transaction_cost=10.0,
         )
 
-        expected_mid = sum(
-            result["quarters"][q]["cost_range"]["mid"] for q in ("Q1", "Q2", "Q3", "Q4")
-        )
+        expected_mid = sum(result["quarters"][q]["cost_range"]["mid"] for q in ("Q1", "Q2", "Q3", "Q4"))
         assert abs(result["annual_total"]["mid"] - expected_mid) < 0.01
 
 

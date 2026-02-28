@@ -306,7 +306,10 @@ class TaskQueue:
                 last_error = str(exc)
                 logger.warning(
                     "Task %s attempt %d/%d failed: %s",
-                    task_id, attempt, max_retries, last_error,
+                    task_id,
+                    attempt,
+                    max_retries,
+                    last_error,
                 )
 
                 if attempt < max_retries:
@@ -340,7 +343,10 @@ class TaskQueue:
             stream = f"{STREAM_PREFIX}:{task_type}"
             try:
                 await self._redis.xgroup_create(
-                    stream, CONSUMER_GROUP, id="0", mkstream=True,
+                    stream,
+                    CONSUMER_GROUP,
+                    id="0",
+                    mkstream=True,
                 )
             except Exception as e:
                 if "BUSYGROUP" not in str(e):

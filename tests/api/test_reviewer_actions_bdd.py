@@ -52,9 +52,7 @@ class TestConfirmAction:
 
     @pytest.mark.asyncio
     async def test_promotes_grade_c_to_b(self) -> None:
-        service, graph, session = _make_service(
-            query_results=[{"grade": "C", "confidence": 0.5}]
-        )
+        service, graph, session = _make_service(query_results=[{"grade": "C", "confidence": 0.5}])
 
         result = await service.submit_decision(
             engagement_id=ENGAGEMENT_ID,
@@ -71,9 +69,7 @@ class TestConfirmAction:
 
     @pytest.mark.asyncio
     async def test_promotes_grade_b_to_a(self) -> None:
-        service, graph, session = _make_service(
-            query_results=[{"grade": "B", "confidence": 0.7}]
-        )
+        service, graph, session = _make_service(query_results=[{"grade": "B", "confidence": 0.7}])
 
         result = await service.submit_decision(
             engagement_id=ENGAGEMENT_ID,
@@ -88,9 +84,7 @@ class TestConfirmAction:
 
     @pytest.mark.asyncio
     async def test_caps_at_grade_a(self) -> None:
-        service, graph, session = _make_service(
-            query_results=[{"grade": "A", "confidence": 0.9}]
-        )
+        service, graph, session = _make_service(query_results=[{"grade": "A", "confidence": 0.9}])
 
         result = await service.submit_decision(
             engagement_id=ENGAGEMENT_ID,
@@ -105,9 +99,7 @@ class TestConfirmAction:
 
     @pytest.mark.asyncio
     async def test_increases_confidence_by_0_1(self) -> None:
-        service, graph, session = _make_service(
-            query_results=[{"grade": "C", "confidence": 0.5}]
-        )
+        service, graph, session = _make_service(query_results=[{"grade": "C", "confidence": 0.5}])
 
         result = await service.submit_decision(
             engagement_id=ENGAGEMENT_ID,
@@ -123,9 +115,7 @@ class TestConfirmAction:
 
     @pytest.mark.asyncio
     async def test_confidence_capped_at_1(self) -> None:
-        service, graph, session = _make_service(
-            query_results=[{"grade": "B", "confidence": 0.95}]
-        )
+        service, graph, session = _make_service(query_results=[{"grade": "B", "confidence": 0.95}])
 
         result = await service.submit_decision(
             engagement_id=ENGAGEMENT_ID,
@@ -140,9 +130,7 @@ class TestConfirmAction:
 
     @pytest.mark.asyncio
     async def test_persists_validation_decision(self) -> None:
-        service, graph, session = _make_service(
-            query_results=[{"grade": "C", "confidence": 0.5}]
-        )
+        service, graph, session = _make_service(query_results=[{"grade": "C", "confidence": 0.5}])
 
         await service.submit_decision(
             engagement_id=ENGAGEMENT_ID,
@@ -160,9 +148,7 @@ class TestConfirmAction:
 
     @pytest.mark.asyncio
     async def test_writes_to_graph_with_engagement_scope(self) -> None:
-        service, graph, session = _make_service(
-            query_results=[{"grade": "C", "confidence": 0.5}]
-        )
+        service, graph, session = _make_service(query_results=[{"grade": "C", "confidence": 0.5}])
 
         await service.submit_decision(
             engagement_id=ENGAGEMENT_ID,
@@ -456,9 +442,7 @@ class TestDecisionResponse:
 
     @pytest.mark.asyncio
     async def test_response_has_required_fields(self) -> None:
-        service, graph, session = _make_service(
-            query_results=[{"grade": "C", "confidence": 0.5}]
-        )
+        service, graph, session = _make_service(query_results=[{"grade": "C", "confidence": 0.5}])
 
         result = await service.submit_decision(
             engagement_id=ENGAGEMENT_ID,

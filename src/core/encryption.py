@@ -27,9 +27,9 @@ def _derive_fernet_key(secret: str) -> bytes:
     except (ValueError, Exception):
         # Use PBKDF2 with a fixed application salt for proper key derivation
         derived = hashlib.pbkdf2_hmac(
-            'sha256',
+            "sha256",
             secret.encode(),
-            b'kmflow-fernet-key-derivation-v1',  # Fixed application-level salt
+            b"kmflow-fernet-key-derivation-v1",  # Fixed application-level salt
             iterations=600_000,
         )
         return base64.urlsafe_b64encode(derived)

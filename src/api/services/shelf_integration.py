@@ -86,13 +86,15 @@ class ShelfIntegrationService:
                 source=ShelfRequestItemSource.PLANNER,
             )
             self._session.add(item)
-            created_items.append({
-                "epistemic_action_id": str(action.id),
-                "item_name": item.item_name,
-                "category": category.value,
-                "priority": priority.value,
-                "source": ShelfRequestItemSource.PLANNER.value,
-            })
+            created_items.append(
+                {
+                    "epistemic_action_id": str(action.id),
+                    "item_name": item.item_name,
+                    "category": category.value,
+                    "priority": priority.value,
+                    "source": ShelfRequestItemSource.PLANNER.value,
+                }
+            )
 
         if created_items:
             await self._session.flush()

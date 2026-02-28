@@ -5,12 +5,16 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import BigInteger, Boolean, DateTime, Enum, ForeignKey, Index, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.database import Base
+
+if TYPE_CHECKING:
+    from src.core.models.engagement import Engagement
 
 
 class UserRole(enum.StrEnum):
@@ -32,7 +36,10 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole, values_callable=lambda e: [x.value for x in e]), default=UserRole.PROCESS_ANALYST, insert_default=UserRole.PROCESS_ANALYST, nullable=False
+        Enum(UserRole, values_callable=lambda e: [x.value for x in e]),
+        default=UserRole.PROCESS_ANALYST,
+        insert_default=UserRole.PROCESS_ANALYST,
+        nullable=False,
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, insert_default=True, nullable=False)
     external_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True, index=True)
@@ -82,7 +89,7 @@ class EngagementMember(Base):
     added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
     user: Mapped[User] = relationship("User", back_populates="engagement_memberships")
 
     def __repr__(self) -> str:

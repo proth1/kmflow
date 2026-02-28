@@ -18,9 +18,7 @@ from src.security.watermark.service import WatermarkService
 logger = logging.getLogger(__name__)
 
 # Pattern to extract base64 watermark from HTML meta tag
-_HTML_WATERMARK_PATTERN = re.compile(
-    r'<meta\s+name="kmflow-watermark"\s+content="([^"]+)"'
-)
+_HTML_WATERMARK_PATTERN = re.compile(r'<meta\s+name="kmflow-watermark"\s+content="([^"]+)"')
 
 
 class WatermarkExtractor:

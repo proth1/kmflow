@@ -244,16 +244,12 @@ async def list_shelf_requests(
     if source is not None:
         query = query.where(
             ShelfDataRequest.id.in_(
-                select(ShelfDataRequestItem.request_id).where(
-                    ShelfDataRequestItem.source == source
-                )
+                select(ShelfDataRequestItem.request_id).where(ShelfDataRequestItem.source == source)
             )
         )
         count_query = count_query.where(
             ShelfDataRequest.id.in_(
-                select(ShelfDataRequestItem.request_id).where(
-                    ShelfDataRequestItem.source == source
-                )
+                select(ShelfDataRequestItem.request_id).where(ShelfDataRequestItem.source == source)
             )
         )
 

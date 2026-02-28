@@ -33,7 +33,9 @@ class PatternLibraryEntry(Base):
     source_engagement_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="SET NULL"), nullable=True
     )
-    category: Mapped[PatternCategory] = mapped_column(Enum(PatternCategory, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    category: Mapped[PatternCategory] = mapped_column(
+        Enum(PatternCategory, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
     title: Mapped[str] = mapped_column(String(512), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     anonymized_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)

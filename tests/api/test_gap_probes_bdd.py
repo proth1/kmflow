@@ -83,10 +83,7 @@ def _build_mock_run_query(
 
         # Brightness query
         if "brightness" in query and "type(r)" not in query:
-            return [
-                {"activity_id": aid, "brightness": brightness_map.get(aid, "dim")}
-                for aid in activity_ids
-            ]
+            return [{"activity_id": aid, "brightness": brightness_map.get(aid, "dim")} for aid in activity_ids]
 
         # Activity listing (no edge types, no brightness, no degree)
         if "RETURN a.id AS activity_id" in query and "type(r)" not in query:
@@ -372,9 +369,7 @@ async def test_pagination_offset_and_limit() -> None:
             # Get all probes first
             resp_all = await client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/gap-probes?limit=200")
             # Get paginated slice
-            resp_page = await client.get(
-                f"/api/v1/engagements/{ENGAGEMENT_ID}/gap-probes?limit=2&offset=1"
-            )
+            resp_page = await client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/gap-probes?limit=2&offset=1")
 
     assert resp_all.status_code == 200
     assert resp_page.status_code == 200

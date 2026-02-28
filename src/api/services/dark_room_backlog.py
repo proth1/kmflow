@@ -90,27 +90,31 @@ class DarkRoomBacklogService:
             for form in KnowledgeForm:
                 if form not in covered_forms:
                     form_num = FORM_NUMBERS[form]
-                    missing_forms.append({
-                        "form_number": form_num,
-                        "form_name": form.value,
-                        "recommended_probes": FORM_RECOMMENDED_PROBES.get(form_num, []),
-                        "probe_type": FORM_PROBE_TYPE_MAP[form],
-                    })
+                    missing_forms.append(
+                        {
+                            "form_number": form_num,
+                            "form_name": form.value,
+                            "recommended_probes": FORM_RECOMMENDED_PROBES.get(form_num, []),
+                            "probe_type": FORM_PROBE_TYPE_MAP[form],
+                        }
+                    )
 
             # Estimated uplift: proportional to missing forms ratio × brightness gap
             missing_ratio = len(missing_forms) / 9
             estimated_uplift = round(missing_ratio * brightness_gap * 0.6, 4)
 
-            items.append({
-                "element_id": aid,
-                "element_name": elem["element_name"],
-                "current_confidence": current_conf,
-                "brightness": elem.get("brightness", "dark"),
-                "estimated_confidence_uplift": estimated_uplift,
-                "missing_knowledge_forms": missing_forms,
-                "missing_form_count": len(missing_forms),
-                "covered_form_count": len(covered_forms),
-            })
+            items.append(
+                {
+                    "element_id": aid,
+                    "element_name": elem["element_name"],
+                    "current_confidence": current_conf,
+                    "brightness": elem.get("brightness", "dark"),
+                    "estimated_confidence_uplift": estimated_uplift,
+                    "missing_knowledge_forms": missing_forms,
+                    "missing_form_count": len(missing_forms),
+                    "covered_form_count": len(covered_forms),
+                }
+            )
 
         # Sort by estimated uplift descending
         items.sort(key=lambda x: x["estimated_confidence_uplift"], reverse=True)
@@ -125,9 +129,7 @@ class DarkRoomBacklogService:
             "items": paginated,
         }
 
-    async def _get_dark_elements(
-        self, engagement_id: str
-    ) -> list[dict[str, Any]]:
+    async def _get_dark_elements(self, engagement_id: str) -> list[dict[str, Any]]:
         """Get all Dark activities from the knowledge graph."""
         query = (
             "MATCH (a:Activity) "
@@ -203,12 +205,14 @@ class DarkRoomBacklogService:
             else:
                 recommended_action = "schedule_sme_interview"
 
-            uncertainty_items.append({
-                **item,
-                "impact_score": impact_score,
-                "recommended_action": recommended_action,
-                "priority_rank": 0,  # Set after sorting
-            })
+            uncertainty_items.append(
+                {
+                    **item,
+                    "impact_score": impact_score,
+                    "recommended_action": recommended_action,
+                    "priority_rank": 0,  # Set after sorting
+                }
+            )
 
         # Sort by impact descending
         uncertainty_items.sort(key=lambda x: x["impact_score"], reverse=True)

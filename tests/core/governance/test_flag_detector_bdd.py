@@ -18,12 +18,12 @@ class TestSoDDetection:
     def test_merge_triggers_sod_flag(self) -> None:
         """Merging Approver and Processor produces segregation_of_duties flag."""
         detector = GovernanceFlagDetector()
-        flags = detector.check({
-            "role_changes": [
-                {"type": "merge", "roles": ["Approver", "Processor"], "element_id": "task_1"}
-            ],
-            "affected_element_ids": [],
-        })
+        flags = detector.check(
+            {
+                "role_changes": [{"type": "merge", "roles": ["Approver", "Processor"], "element_id": "task_1"}],
+                "affected_element_ids": [],
+            }
+        )
 
         assert len(flags) == 1
         assert flags[0].flag_type == "segregation_of_duties"
@@ -31,12 +31,12 @@ class TestSoDDetection:
     def test_sod_flag_names_both_roles(self) -> None:
         """Flag description names the two roles being merged."""
         detector = GovernanceFlagDetector()
-        flags = detector.check({
-            "role_changes": [
-                {"type": "merge", "roles": ["Approver", "Processor"], "element_id": "task_1"}
-            ],
-            "affected_element_ids": [],
-        })
+        flags = detector.check(
+            {
+                "role_changes": [{"type": "merge", "roles": ["Approver", "Processor"], "element_id": "task_1"}],
+                "affected_element_ids": [],
+            }
+        )
 
         assert "Approver" in flags[0].description
         assert "Processor" in flags[0].description
@@ -44,12 +44,12 @@ class TestSoDDetection:
     def test_sod_flag_states_known_constraint(self) -> None:
         """Flag explicitly states this is a known constraint identified by the system."""
         detector = GovernanceFlagDetector()
-        flags = detector.check({
-            "role_changes": [
-                {"type": "merge", "roles": ["Approver", "Processor"], "element_id": "task_1"}
-            ],
-            "affected_element_ids": [],
-        })
+        flags = detector.check(
+            {
+                "role_changes": [{"type": "merge", "roles": ["Approver", "Processor"], "element_id": "task_1"}],
+                "affected_element_ids": [],
+            }
+        )
 
         assert "known constraint" in flags[0].description.lower()
 
@@ -62,16 +62,18 @@ class TestRegulatoryDetection:
         detector = GovernanceFlagDetector(
             regulated_elements={"task_approve": ["SOX Section 302"]},
         )
-        flags = detector.check({
-            "role_changes": [
-                {
-                    "type": "automate",
-                    "element_id": "task_approve",
-                    "element_name": "Final Approval",
-                }
-            ],
-            "affected_element_ids": [],
-        })
+        flags = detector.check(
+            {
+                "role_changes": [
+                    {
+                        "type": "automate",
+                        "element_id": "task_approve",
+                        "element_name": "Final Approval",
+                    }
+                ],
+                "affected_element_ids": [],
+            }
+        )
 
         assert len(flags) == 1
         assert flags[0].flag_type == "regulatory_compliance"
@@ -81,16 +83,18 @@ class TestRegulatoryDetection:
         detector = GovernanceFlagDetector(
             regulated_elements={"task_approve": ["SOX Section 302"]},
         )
-        flags = detector.check({
-            "role_changes": [
-                {
-                    "type": "automate",
-                    "element_id": "task_approve",
-                    "element_name": "Final Approval",
-                }
-            ],
-            "affected_element_ids": [],
-        })
+        flags = detector.check(
+            {
+                "role_changes": [
+                    {
+                        "type": "automate",
+                        "element_id": "task_approve",
+                        "element_name": "Final Approval",
+                    }
+                ],
+                "affected_element_ids": [],
+            }
+        )
 
         assert flags[0].regulation_reference == "SOX Section 302"
 
@@ -99,16 +103,18 @@ class TestRegulatoryDetection:
         detector = GovernanceFlagDetector(
             regulated_elements={"task_approve": ["SOX Section 302"]},
         )
-        flags = detector.check({
-            "role_changes": [
-                {
-                    "type": "automate",
-                    "element_id": "task_approve",
-                    "element_name": "Final Approval",
-                }
-            ],
-            "affected_element_ids": [],
-        })
+        flags = detector.check(
+            {
+                "role_changes": [
+                    {
+                        "type": "automate",
+                        "element_id": "task_approve",
+                        "element_name": "Final Approval",
+                    }
+                ],
+                "affected_element_ids": [],
+            }
+        )
 
         assert "possible impact" in flags[0].description.lower() or "requiring" in flags[0].description.lower()
 
@@ -119,12 +125,12 @@ class TestKnowledgeBoundaries:
     def test_sod_flag_has_knowledge_boundary(self) -> None:
         """SoD flag includes a knowledge_boundary field."""
         detector = GovernanceFlagDetector()
-        flags = detector.check({
-            "role_changes": [
-                {"type": "merge", "roles": ["Approver", "Processor"], "element_id": "task_1"}
-            ],
-            "affected_element_ids": [],
-        })
+        flags = detector.check(
+            {
+                "role_changes": [{"type": "merge", "roles": ["Approver", "Processor"], "element_id": "task_1"}],
+                "affected_element_ids": [],
+            }
+        )
 
         assert flags[0].knowledge_boundary
         assert len(flags[0].knowledge_boundary) > 0
@@ -132,12 +138,12 @@ class TestKnowledgeBoundaries:
     def test_knowledge_boundary_states_limitations(self) -> None:
         """Knowledge boundary states what the system cannot assess."""
         detector = GovernanceFlagDetector()
-        flags = detector.check({
-            "role_changes": [
-                {"type": "merge", "roles": ["Approver", "Processor"], "element_id": "task_1"}
-            ],
-            "affected_element_ids": [],
-        })
+        flags = detector.check(
+            {
+                "role_changes": [{"type": "merge", "roles": ["Approver", "Processor"], "element_id": "task_1"}],
+                "affected_element_ids": [],
+            }
+        )
 
         boundary = flags[0].knowledge_boundary.lower()
         assert "cannot" in boundary or "not" in boundary
@@ -147,13 +153,15 @@ class TestKnowledgeBoundaries:
         detector = GovernanceFlagDetector(
             regulated_elements={"task_approve": ["SOX Section 302"]},
         )
-        flags = detector.check({
-            "role_changes": [
-                {"type": "merge", "roles": ["Approver", "Processor"]},
-                {"type": "automate", "element_id": "task_approve", "element_name": "Approval"},
-            ],
-            "affected_element_ids": [],
-        })
+        flags = detector.check(
+            {
+                "role_changes": [
+                    {"type": "merge", "roles": ["Approver", "Processor"]},
+                    {"type": "automate", "element_id": "task_approve", "element_name": "Approval"},
+                ],
+                "affected_element_ids": [],
+            }
+        )
 
         for flag in flags:
             desc_lower = flag.description.lower()
@@ -169,12 +177,12 @@ class TestKnowledgeBoundaries:
         detector = GovernanceFlagDetector(
             regulated_elements={"task_approve": ["SOX Section 302"]},
         )
-        flags = detector.check({
-            "role_changes": [
-                {"type": "automate", "element_id": "task_approve", "element_name": "Approval"}
-            ],
-            "affected_element_ids": [],
-        })
+        flags = detector.check(
+            {
+                "role_changes": [{"type": "automate", "element_id": "task_approve", "element_name": "Approval"}],
+                "affected_element_ids": [],
+            }
+        )
 
         assert flags[0].knowledge_boundary
         assert "cannot" in flags[0].knowledge_boundary.lower()
@@ -186,44 +194,50 @@ class TestNoFalsePositives:
     def test_clean_suggestion_produces_no_flags(self) -> None:
         """Non-regulated, non-approval task produces empty flag list."""
         detector = GovernanceFlagDetector()
-        flags = detector.check({
-            "role_changes": [
-                {
-                    "type": "add",
-                    "element_id": "task_data_entry",
-                    "element_name": "Enter Data",
-                }
-            ],
-            "affected_element_ids": ["task_data_entry"],
-        })
+        flags = detector.check(
+            {
+                "role_changes": [
+                    {
+                        "type": "add",
+                        "element_id": "task_data_entry",
+                        "element_name": "Enter Data",
+                    }
+                ],
+                "affected_element_ids": ["task_data_entry"],
+            }
+        )
 
         assert flags == []
 
     def test_empty_suggestion_produces_no_flags(self) -> None:
         """Suggestion with no role changes and no affected elements → empty."""
         detector = GovernanceFlagDetector()
-        flags = detector.check({
-            "role_changes": [],
-            "affected_element_ids": [],
-        })
+        flags = detector.check(
+            {
+                "role_changes": [],
+                "affected_element_ids": [],
+            }
+        )
 
         assert flags == []
 
     def test_reassign_non_approval_role_no_flag(self) -> None:
         """Reassigning a non-approval role does not trigger authorization flag."""
         detector = GovernanceFlagDetector()
-        flags = detector.check({
-            "role_changes": [
-                {
-                    "type": "reassign",
-                    "element_id": "task_1",
-                    "element_name": "Process Data",
-                    "original_role": "Junior Analyst",
-                    "new_role": "Senior Analyst",
-                }
-            ],
-            "affected_element_ids": [],
-        })
+        flags = detector.check(
+            {
+                "role_changes": [
+                    {
+                        "type": "reassign",
+                        "element_id": "task_1",
+                        "element_name": "Process Data",
+                        "original_role": "Junior Analyst",
+                        "new_role": "Senior Analyst",
+                    }
+                ],
+                "affected_element_ids": [],
+            }
+        )
 
         assert flags == []
 
@@ -234,18 +248,20 @@ class TestAuthorizationChanges:
     def test_demoting_approver_triggers_flag(self) -> None:
         """Changing from Approver to Processor triggers authorization_change flag."""
         detector = GovernanceFlagDetector()
-        flags = detector.check({
-            "role_changes": [
-                {
-                    "type": "reassign",
-                    "element_id": "task_approve",
-                    "element_name": "Final Sign-Off",
-                    "original_role": "Approver",
-                    "new_role": "Processor",
-                }
-            ],
-            "affected_element_ids": [],
-        })
+        flags = detector.check(
+            {
+                "role_changes": [
+                    {
+                        "type": "reassign",
+                        "element_id": "task_approve",
+                        "element_name": "Final Sign-Off",
+                        "original_role": "Approver",
+                        "new_role": "Processor",
+                    }
+                ],
+                "affected_element_ids": [],
+            }
+        )
 
         assert len(flags) == 1
         assert flags[0].flag_type == "authorization_change"
@@ -255,12 +271,12 @@ class TestAuthorizationChanges:
     def test_flag_to_dict(self) -> None:
         """GovernanceFlag serializes to dict correctly."""
         detector = GovernanceFlagDetector()
-        flags = detector.check({
-            "role_changes": [
-                {"type": "merge", "roles": ["Approver", "Processor"]}
-            ],
-            "affected_element_ids": [],
-        })
+        flags = detector.check(
+            {
+                "role_changes": [{"type": "merge", "roles": ["Approver", "Processor"]}],
+                "affected_element_ids": [],
+            }
+        )
 
         d = flags[0].to_dict()
         assert d["flag_type"] == "segregation_of_duties"

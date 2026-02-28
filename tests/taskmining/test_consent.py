@@ -6,8 +6,8 @@ Story #213 — Part of Epic #210 (Privacy and Compliance).
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -154,7 +154,7 @@ class TestReGrantConsent:
         """A REVOKED agent can be re-granted consent and transitions back to APPROVED."""
         session = AsyncMock()
         agent = _mock_agent(AgentStatus.REVOKED)
-        agent.revoked_at = datetime.now(timezone.utc)
+        agent.revoked_at = datetime.now(UTC)
         session.get.return_value = agent
 
         mgr = ConsentManager()
@@ -256,7 +256,7 @@ class TestGetConsentStatus:
             consent_type=ConsentType.ENGAGEMENT,
             capture_mode="action_level",
         )
-        existing.revoked_at = datetime.now(timezone.utc)
+        existing.revoked_at = datetime.now(UTC)
         result_mock = MagicMock()
         result_mock.scalar_one_or_none.return_value = existing
         session.execute.return_value = result_mock
@@ -305,7 +305,7 @@ class TestHasActiveConsent:
             consent_type=ConsentType.ENGAGEMENT,
             capture_mode="action_level",
         )
-        existing.revoked_at = datetime.now(timezone.utc)
+        existing.revoked_at = datetime.now(UTC)
         result_mock = MagicMock()
         result_mock.scalar_one_or_none.return_value = existing
         session.execute.return_value = result_mock

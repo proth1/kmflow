@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -11,7 +11,6 @@ import pytest
 from src.core.models.canonical_event import CanonicalActivityEvent
 from src.core.models.correlation import CaseLinkEdge
 from src.taskmining.correlation.role_association import ROLE_AGGREGATE_PREFIX, RoleAssociator
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -26,7 +25,7 @@ def _make_event(
     event.id = uuid.uuid4()
     event.engagement_id = engagement_id or uuid.uuid4()
     event.performer_role_ref = performer_role_ref
-    event.timestamp_utc = datetime(2026, 1, 15, 10, 0, tzinfo=timezone.utc)
+    event.timestamp_utc = datetime(2026, 1, 15, 10, 0, tzinfo=UTC)
     return event
 
 

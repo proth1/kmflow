@@ -174,7 +174,7 @@ class AlignmentScoringService:
 
         # Get TOM dimension descriptions for embedding comparison
         dim_descriptions = {}
-        for dr in (tom.dimension_records or []):
+        for dr in tom.dimension_records or []:
             if dr.description:
                 dim_descriptions[dr.dimension_type] = dr.description
 
@@ -284,11 +284,7 @@ class AlignmentScoringService:
                 "RETURN a.id AS activity_id, t.dimension AS dimension"
             )
             records = await self._graph.run_query(query, {"engagement_id": engagement_id})
-            return {
-                (r["activity_id"], r["dimension"])
-                for r in records
-                if r.get("activity_id") and r.get("dimension")
-            }
+            return {(r["activity_id"], r["dimension"]) for r in records if r.get("activity_id") and r.get("dimension")}
         except Exception:
             logger.warning("Failed to query ALIGNS_TO edges for engagement %s", engagement_id)
             return set()

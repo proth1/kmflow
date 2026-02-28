@@ -88,9 +88,7 @@ class UpliftAccuracyResponse(BaseModel):
 
 async def _get_engagement_or_404(session: AsyncSession, engagement_id: UUID) -> Engagement:
     """Fetch engagement or raise 404."""
-    eng_result = await session.execute(
-        select(Engagement).where(Engagement.id == engagement_id)
-    )
+    eng_result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
     eng = eng_result.scalar_one_or_none()
     if not eng:
         raise HTTPException(
@@ -126,8 +124,11 @@ async def compute_uplift_projections(
     count = await service.persist_projections(str(engagement_id), projections)
 
     await log_audit(
-        session, engagement_id, AuditAction.EVIDENCE_VALIDATED,
-        f"Computed {count} uplift projections", actor=str(user.id),
+        session,
+        engagement_id,
+        AuditAction.EVIDENCE_VALIDATED,
+        f"Computed {count} uplift projections",
+        actor=str(user.id),
     )
     await session.commit()
 

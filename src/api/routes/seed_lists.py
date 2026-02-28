@@ -173,9 +173,7 @@ async def deprecate_seed_term(
     service = SeedListService(session)
     result = await service.deprecate_term(term_id)
     if result.get("error") == "not_found":
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Seed term not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Seed term not found")
     return result
 
 

@@ -58,9 +58,7 @@ class ComplianceAssessmentService:
     def __init__(self, graph_service: Any) -> None:
         self._graph = graph_service
 
-    async def get_required_controls(
-        self, activity_id: str, engagement_id: str
-    ) -> list[dict[str, Any]]:
+    async def get_required_controls(self, activity_id: str, engagement_id: str) -> list[dict[str, Any]]:
         """Query ENFORCED_BY edges to find required controls for an activity.
 
         Returns list of dicts with 'control_id' and 'control_name' keys.
@@ -71,23 +69,17 @@ class ComplianceAssessmentService:
                 "WHERE a.id = $activity_id AND a.engagement_id = $engagement_id "
                 "RETURN c.id AS control_id, c.name AS control_name"
             )
-            records = await self._graph.run_query(
-                query, {"activity_id": activity_id, "engagement_id": engagement_id}
-            )
+            records = await self._graph.run_query(query, {"activity_id": activity_id, "engagement_id": engagement_id})
             return [
                 {"control_id": r["control_id"], "control_name": r.get("control_name", "")}
                 for r in records
                 if r.get("control_id")
             ]
         except Exception:
-            logger.warning(
-                "Failed to query ENFORCED_BY edges for activity %s", activity_id
-            )
+            logger.warning("Failed to query ENFORCED_BY edges for activity %s", activity_id)
             return []
 
-    async def get_controls_with_evidence(
-        self, control_ids: list[str], engagement_id: str
-    ) -> list[str]:
+    async def get_controls_with_evidence(self, control_ids: list[str], engagement_id: str) -> list[str]:
         """Check which controls have execution evidence.
 
         Returns list of control IDs that have supporting evidence.
@@ -101,9 +93,7 @@ class ComplianceAssessmentService:
                 "WHERE c.id IN $control_ids AND c.engagement_id = $engagement_id "
                 "RETURN DISTINCT c.id AS control_id"
             )
-            records = await self._graph.run_query(
-                query, {"control_ids": control_ids, "engagement_id": engagement_id}
-            )
+            records = await self._graph.run_query(query, {"control_ids": control_ids, "engagement_id": engagement_id})
             return [r["control_id"] for r in records if r.get("control_id")]
         except Exception:
             logger.warning("Failed to query control evidence for engagement %s", engagement_id)

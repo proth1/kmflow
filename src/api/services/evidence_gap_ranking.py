@@ -40,7 +40,6 @@ EVIDENCE_COVERAGE_FACTORS: dict[str, float] = {
 }
 
 
-
 class EvidenceGapRankingService:
     """Computes evidence gap rankings with confidence uplift projections."""
 
@@ -52,9 +51,7 @@ class EvidenceGapRankingService:
         self._session = session
         self._graph = graph_service
 
-    async def compute_uplift_projections(
-        self, engagement_id: str
-    ) -> list[dict[str, Any]]:
+    async def compute_uplift_projections(self, engagement_id: str) -> list[dict[str, Any]]:
         """Compute uplift projections for all Dark/Dim elements in an engagement.
 
         Formula: projected_confidence = current + (coverage_factor × brightness_gap)
@@ -97,9 +94,7 @@ class EvidenceGapRankingService:
         projections.sort(key=lambda p: p["projected_uplift"], reverse=True)
         return projections
 
-    async def persist_projections(
-        self, engagement_id: str, projections: list[dict[str, Any]]
-    ) -> int:
+    async def persist_projections(self, engagement_id: str, projections: list[dict[str, Any]]) -> int:
         """Persist uplift projections to the database."""
         records = [
             UpliftProjection(
@@ -119,9 +114,7 @@ class EvidenceGapRankingService:
         await self._session.flush()
         return len(records)
 
-    async def get_cross_scenario_gaps(
-        self, engagement_id: str
-    ) -> list[dict[str, Any]]:
+    async def get_cross_scenario_gaps(self, engagement_id: str) -> list[dict[str, Any]]:
         """Detect elements that appear as gaps across multiple scenarios.
 
         An element that is modified in multiple scenarios is a shared gap —
@@ -163,20 +156,20 @@ class EvidenceGapRankingService:
         gaps: list[dict[str, Any]] = []
         for row in rows:
             total_uplift = row.total_uplift or 0.0
-            gaps.append({
-                "element_id": row.element_id,
-                "element_name": row.element_name,
-                "scenario_count": row.scenario_count,
-                "label": "improves all scenarios" if row.scenario_count >= 2 else "shared gap",
-                "combined_estimated_uplift": round(total_uplift, 4),
-            })
+            gaps.append(
+                {
+                    "element_id": row.element_id,
+                    "element_name": row.element_name,
+                    "scenario_count": row.scenario_count,
+                    "label": "improves all scenarios" if row.scenario_count >= 2 else "shared gap",
+                    "combined_estimated_uplift": round(total_uplift, 4),
+                }
+            )
 
         gaps.sort(key=lambda g: g["combined_estimated_uplift"], reverse=True)
         return gaps
 
-    async def compute_uplift_accuracy(
-        self, engagement_id: str
-    ) -> dict[str, Any]:
+    async def compute_uplift_accuracy(self, engagement_id: str) -> dict[str, Any]:
         """Compute Pearson correlation between projected and actual uplift.
 
         Requires minimum 10 resolved projections. Returns correlation
@@ -185,8 +178,7 @@ class EvidenceGapRankingService:
         eng_uuid = uuid.UUID(engagement_id)
 
         result = await self._session.execute(
-            select(UpliftProjection.projected_uplift, UpliftProjection.actual_uplift)
-            .where(
+            select(UpliftProjection.projected_uplift, UpliftProjection.actual_uplift).where(
                 UpliftProjection.engagement_id == eng_uuid,
                 UpliftProjection.actual_uplift.is_not(None),
             )
@@ -235,9 +227,7 @@ class EvidenceGapRankingService:
 
         return numerator / (denom_x * denom_y)
 
-    async def _get_dark_dim_elements(
-        self, engagement_id: str
-    ) -> list[dict[str, Any]]:
+    async def _get_dark_dim_elements(self, engagement_id: str) -> list[dict[str, Any]]:
         """Get Dark and Dim process elements from the graph."""
         if self._graph is None:
             return []

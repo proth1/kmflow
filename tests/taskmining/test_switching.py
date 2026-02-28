@@ -11,14 +11,12 @@ import pytest
 from src.core.models.taskmining import DesktopEventType, SwitchingTrace
 from src.taskmining.switching import (
     IDLE_GAP_SECONDS,
-    RAPID_SWITCH_MS,
     assemble_switching_traces,
     compute_friction_score,
     compute_transition_matrix,
     detect_ping_pong,
     get_friction_analysis,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

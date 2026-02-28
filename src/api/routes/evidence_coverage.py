@@ -67,9 +67,7 @@ async def compare_evidence_coverage(
     try:
         results = await service.compare_scenarios(parsed_ids, engagement_id)
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
     return {"scenarios": results}
 
@@ -91,6 +89,4 @@ async def get_evidence_coverage(
     try:
         return await service.get_scenario_coverage(scenario_id, engagement_id)
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc

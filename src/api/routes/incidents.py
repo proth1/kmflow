@@ -189,9 +189,7 @@ async def get_incident_timeline(
 
     from src.core.models import Incident
 
-    result = await session.execute(
-        select(Incident).where(Incident.id == incident_id)
-    )
+    result = await session.execute(select(Incident).where(Incident.id == incident_id))
     incident = result.scalar_one_or_none()
     if incident is None:
         raise HTTPException(
@@ -206,9 +204,7 @@ async def get_incident_timeline(
     from src.core.models import IncidentEvent
 
     event_result = await session.execute(
-        select(IncidentEvent)
-        .where(IncidentEvent.incident_id == incident_id)
-        .order_by(IncidentEvent.created_at)
+        select(IncidentEvent).where(IncidentEvent.incident_id == incident_id).order_by(IncidentEvent.created_at)
     )
     events = event_result.scalars().all()
 

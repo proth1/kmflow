@@ -35,6 +35,7 @@ def mock_graph_service() -> AsyncMock:
         )
 
     service.create_node = AsyncMock(side_effect=_create_node)
+
     # batch_create_nodes returns a list of ids matching input props
     async def _batch_create_nodes(label: str, props_list: list) -> list:
         return [p.get("id", uuid.uuid4().hex[:16]) for p in props_list]

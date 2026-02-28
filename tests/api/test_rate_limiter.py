@@ -11,7 +11,6 @@ Tests cover:
 from __future__ import annotations
 
 import time
-from unittest.mock import patch
 
 import pytest
 from fastapi import HTTPException
@@ -19,12 +18,11 @@ from fastapi import HTTPException
 # Import the function and its module-level state so we can reset between tests
 import src.api.routes.simulations as simulations_module
 from src.api.routes.simulations import (
+    _LLM_MAX_TRACKED_USERS,
     _LLM_RATE_LIMIT,
     _LLM_RATE_WINDOW,
-    _LLM_MAX_TRACKED_USERS,
     _check_llm_rate_limit,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixture: reset the module-level rate limit log before each test

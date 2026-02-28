@@ -16,7 +16,6 @@ import uuid
 from datetime import timedelta
 from typing import Any
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.models.canonical_event import CanonicalActivityEvent
@@ -112,9 +111,7 @@ class AssistedLinker:
             List of newly created CaseLinkEdge records.
         """
         # Build feature index from deterministically-linked events
-        known_case_features = await self._build_case_feature_index(
-            session, engagement_id
-        )
+        known_case_features = await self._build_case_feature_index(session, engagement_id)
 
         if not known_case_features:
             logger.info(

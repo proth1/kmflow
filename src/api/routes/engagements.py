@@ -183,9 +183,7 @@ async def list_engagements(
     # Non-admin users can only see engagements they are members of
     if user.role != UserRole.PLATFORM_ADMIN:
         member_engagement_ids = (
-            select(EngagementMember.engagement_id)
-            .where(EngagementMember.user_id == user.id)
-            .scalar_subquery()
+            select(EngagementMember.engagement_id).where(EngagementMember.user_id == user.id).scalar_subquery()
         )
         query = query.where(Engagement.id.in_(member_engagement_ids))
         count_query = count_query.where(Engagement.id.in_(member_engagement_ids))

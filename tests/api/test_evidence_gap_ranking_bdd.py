@@ -103,12 +103,8 @@ async def test_scenario_1_per_gap_uplift_projection() -> None:
         instance = mock_kgs.return_value
         instance.run_query = AsyncMock(side_effect=_mock_graph_with_elements(elements))
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            resp = await client.post(
-                f"/api/v1/engagements/{ENGAGEMENT_ID}/uplift-projections"
-            )
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.post(f"/api/v1/engagements/{ENGAGEMENT_ID}/uplift-projections")
 
     assert resp.status_code == 201
     data = resp.json()
@@ -156,18 +152,12 @@ async def test_scenario_2_cross_scenario_shared_gaps() -> None:
     shared_result = MagicMock()
     shared_result.all.return_value = [shared_row]
 
-    session.execute = AsyncMock(
-        side_effect=[eng_result, shared_result]
-    )
+    session.execute = AsyncMock(side_effect=[eng_result, shared_result])
 
     app = _make_app(session)
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as client:
-        resp = await client.get(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/cross-scenario-gaps"
-        )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/cross-scenario-gaps")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -205,12 +195,8 @@ async def test_scenario_3_uplift_correlation_sufficient_data() -> None:
 
     app = _make_app(session)
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as client:
-        resp = await client.get(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/uplift-accuracy"
-        )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/uplift-accuracy")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -240,12 +226,8 @@ async def test_scenario_3_insufficient_data() -> None:
     session.execute = AsyncMock(side_effect=[eng_result, corr_result])
     app = _make_app(session)
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as client:
-        resp = await client.get(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/uplift-accuracy"
-        )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/uplift-accuracy")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -265,12 +247,8 @@ async def test_engagement_not_found_returns_404() -> None:
     session = _mock_session_with_engagement(None)
     app = _make_app(session)
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as client:
-        resp = await client.post(
-            f"/api/v1/engagements/{uuid.uuid4()}/uplift-projections"
-        )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.post(f"/api/v1/engagements/{uuid.uuid4()}/uplift-projections")
     assert resp.status_code == 404
 
 
@@ -285,12 +263,8 @@ async def test_no_dark_dim_elements_returns_empty() -> None:
         instance = mock_kgs.return_value
         instance.run_query = AsyncMock(return_value=[])
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            resp = await client.post(
-                f"/api/v1/engagements/{ENGAGEMENT_ID}/uplift-projections"
-            )
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.post(f"/api/v1/engagements/{ENGAGEMENT_ID}/uplift-projections")
 
     assert resp.status_code == 201
     data = resp.json()
@@ -313,12 +287,8 @@ async def test_cross_scenario_no_shared_gaps() -> None:
     session.execute = AsyncMock(side_effect=[eng_result, empty_result])
     app = _make_app(session)
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as client:
-        resp = await client.get(
-            f"/api/v1/engagements/{ENGAGEMENT_ID}/cross-scenario-gaps"
-        )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/cross-scenario-gaps")
 
     assert resp.status_code == 200
     assert resp.json()["shared_gaps"] == []
@@ -360,14 +330,16 @@ async def test_pearson_correlation_single_point() -> None:
 async def test_uplift_formula_dark_element() -> None:
     """Dark element uplift = coverage_factor × brightness_gap."""
     graph = MagicMock()
-    graph.run_query = AsyncMock(return_value=[
-        {
-            "element_id": "e1",
-            "element_name": "Activity A",
-            "confidence": 0.35,
-            "brightness": "dark",
-        },
-    ])
+    graph.run_query = AsyncMock(
+        return_value=[
+            {
+                "element_id": "e1",
+                "element_name": "Activity A",
+                "confidence": 0.35,
+                "brightness": "dark",
+            },
+        ]
+    )
 
     session = AsyncMock()
     service = EvidenceGapRankingService(session, graph)

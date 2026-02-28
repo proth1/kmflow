@@ -109,10 +109,7 @@ class TestDarkRoomBacklog:
 
     def test_acceptance_criteria_10_dark_segments(self) -> None:
         """10 dark segments are listed sorted by uplift descending."""
-        elements = [
-            self._make_element(f"e{i}", f"Task {i}", confidence=i * 0.03)
-            for i in range(10)
-        ]
+        elements = [self._make_element(f"e{i}", f"Task {i}", confidence=i * 0.03) for i in range(10)]
         backlog = build_dark_room_backlog(elements)
         assert len(backlog) == 10
         # Verify sorted descending by uplift

@@ -102,24 +102,18 @@ class TestGenerateRecommendation:
     """Tests for recommendation generation."""
 
     def test_highly_effective_no_recommendation(self) -> None:
-        result = generate_recommendation(
-            ControlEffectiveness.HIGHLY_EFFECTIVE, "Dual Auth", Decimal("95.00")
-        )
+        result = generate_recommendation(ControlEffectiveness.HIGHLY_EFFECTIVE, "Dual Auth", Decimal("95.00"))
         assert result is None
 
     def test_ineffective_generates_recommendation(self) -> None:
-        result = generate_recommendation(
-            ControlEffectiveness.INEFFECTIVE, "Manual Review Gate", Decimal("40.00")
-        )
+        result = generate_recommendation(ControlEffectiveness.INEFFECTIVE, "Manual Review Gate", Decimal("40.00"))
         assert result is not None
         assert "Manual Review Gate" in result
         assert "40.00%" in result
         assert "shelf data request" in result
 
     def test_moderately_effective_generates_recommendation(self) -> None:
-        result = generate_recommendation(
-            ControlEffectiveness.MODERATELY_EFFECTIVE, "KYC Check", Decimal("55.00")
-        )
+        result = generate_recommendation(ControlEffectiveness.MODERATELY_EFFECTIVE, "KYC Check", Decimal("55.00"))
         assert result is not None
         assert "KYC Check" in result
 
@@ -140,10 +134,12 @@ class TestScoringService:
         # SUPPORTED_BY returns 100 records, 95 have execution markers
         evidence_records = []
         for i in range(100):
-            evidence_records.append({
-                "evidence_id": f"ev{i}",
-                "has_marker": i < 95,  # First 95 have markers
-            })
+            evidence_records.append(
+                {
+                    "evidence_id": f"ev{i}",
+                    "has_marker": i < 95,  # First 95 have markers
+                }
+            )
 
         mock_graph.run_query = AsyncMock(return_value=evidence_records)
 
@@ -254,9 +250,7 @@ class TestScoreControlEndpoint:
         }
 
         with (
-            mock.patch(
-                "src.api.routes.governance.ControlEffectivenessScoringService"
-            ) as mock_svc_cls,
+            mock.patch("src.api.routes.governance.ControlEffectivenessScoringService") as mock_svc_cls,
             mock.patch("src.api.routes.governance.log_audit", new_callable=AsyncMock),
         ):
             mock_svc = AsyncMock()
@@ -350,9 +344,7 @@ class TestScoreHistory:
         scores_result = MagicMock()
         scores_result.scalars.return_value.all.return_value = scores
 
-        mock_session.execute = AsyncMock(
-            side_effect=[ctrl_result, count_result, scores_result]
-        )
+        mock_session.execute = AsyncMock(side_effect=[ctrl_result, count_result, scores_result])
 
         app = _make_app_with_session(mock_session)
 
@@ -408,9 +400,7 @@ class TestScoreHistory:
         scores_result = MagicMock()
         scores_result.scalars.return_value.all.return_value = []
 
-        mock_session.execute = AsyncMock(
-            side_effect=[ctrl_result, count_result, scores_result]
-        )
+        mock_session.execute = AsyncMock(side_effect=[ctrl_result, count_result, scores_result])
 
         app = _make_app_with_session(mock_session)
 

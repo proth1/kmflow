@@ -195,9 +195,7 @@ class ContinuousEvidencePipeline:
         """
         from sqlalchemy import select
 
-        result = await session.execute(
-            select(EvidenceItem).where(EvidenceItem.id == evidence_id)
-        )
+        result = await session.execute(select(EvidenceItem).where(EvidenceItem.id == evidence_id))
         item = result.scalar_one_or_none()
         if item is None:
             return 0.0
@@ -208,9 +206,7 @@ class ContinuousEvidencePipeline:
         scores = await score_evidence(session, item)
         return scores.get("composite", 0.0) if isinstance(scores, dict) else 0.0
 
-    async def _update_knowledge_graph(
-        self, evidence_id: str, engagement_id: str
-    ) -> None:
+    async def _update_knowledge_graph(self, evidence_id: str, engagement_id: str) -> None:
         """Incrementally update the knowledge graph with new evidence.
 
         Args:

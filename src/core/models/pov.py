@@ -5,12 +5,16 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.database import Base
+
+if TYPE_CHECKING:
+    from src.core.models.engagement import Engagement
 
 
 class ProcessModelStatus(enum.StrEnum):
@@ -97,7 +101,9 @@ class ProcessModel(Base):
     version: Mapped[int] = mapped_column(default=1, nullable=False)
     scope: Mapped[str] = mapped_column(String(512), nullable=False)
     status: Mapped[ProcessModelStatus] = mapped_column(
-        Enum(ProcessModelStatus, values_callable=lambda e: [x.value for x in e]), default=ProcessModelStatus.GENERATING, nullable=False
+        Enum(ProcessModelStatus, values_callable=lambda e: [x.value for x in e]),
+        default=ProcessModelStatus.GENERATING,
+        nullable=False,
     )
     confidence_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     bpmn_xml: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -116,7 +122,7 @@ class ProcessModel(Base):
     )
 
     # Relationships
-    engagement: Mapped["Engagement"] = relationship("Engagement")
+    engagement: Mapped[Engagement] = relationship("Engagement")
     elements: Mapped[list[ProcessElement]] = relationship(
         "ProcessElement", back_populates="process_model", cascade="all, delete-orphan"
     )
@@ -141,12 +147,16 @@ class ProcessElement(Base):
     model_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("process_models.id", ondelete="CASCADE"), nullable=False
     )
-    element_type: Mapped[ProcessElementType] = mapped_column(Enum(ProcessElementType, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    element_type: Mapped[ProcessElementType] = mapped_column(
+        Enum(ProcessElementType, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
     name: Mapped[str] = mapped_column(String(512), nullable=False)
     confidence_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     triangulation_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     corroboration_level: Mapped[CorroborationLevel] = mapped_column(
-        Enum(CorroborationLevel, values_callable=lambda e: [x.value for x in e]), default=CorroborationLevel.WEAKLY, nullable=False
+        Enum(CorroborationLevel, values_callable=lambda e: [x.value for x in e]),
+        default=CorroborationLevel.WEAKLY,
+        nullable=False,
     )
     evidence_count: Mapped[int] = mapped_column(default=0, nullable=False)
     evidence_ids: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
@@ -206,9 +216,13 @@ class EvidenceGap(Base):
     model_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("process_models.id", ondelete="CASCADE"), nullable=False
     )
-    gap_type: Mapped[GapType] = mapped_column(Enum(GapType, values_callable=lambda e: [x.value for x in e]), nullable=False)
+    gap_type: Mapped[GapType] = mapped_column(
+        Enum(GapType, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    severity: Mapped[GapSeverity] = mapped_column(Enum(GapSeverity, values_callable=lambda e: [x.value for x in e]), default=GapSeverity.MEDIUM, nullable=False)
+    severity: Mapped[GapSeverity] = mapped_column(
+        Enum(GapSeverity, values_callable=lambda e: [x.value for x in e]), default=GapSeverity.MEDIUM, nullable=False
+    )
     recommendation: Mapped[str | None] = mapped_column(Text, nullable=True)
     related_element_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("process_elements.id", ondelete="SET NULL"), nullable=True

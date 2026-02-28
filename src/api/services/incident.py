@@ -96,7 +96,8 @@ class IncidentService:
 
         logger.info(
             "Incident %s created: classification=%s, deadline=%s, alerts=%s",
-            incident.id, classification.value,
+            incident.id,
+            classification.value,
             notification_deadline.isoformat() if notification_deadline else "none",
             alert_recipients,
         )
@@ -119,9 +120,7 @@ class IncidentService:
         Returns:
             Summary of containment actions taken.
         """
-        result = await self._session.execute(
-            select(Incident).where(Incident.id == incident_id)
-        )
+        result = await self._session.execute(select(Incident).where(Incident.id == incident_id))
         incident = result.scalar_one_or_none()
         if incident is None:
             raise ValueError(f"Incident {incident_id} not found")
@@ -133,39 +132,45 @@ class IncidentService:
         actions_taken: list[str] = []
 
         # Record containment start
-        self._session.add(IncidentEvent(
-            incident_id=incident_id,
-            event_type=IncidentEventType.CONTAINMENT_STARTED,
-            actor=actor,
-            description=f"Containment initiated by {actor}",
-        ))
+        self._session.add(
+            IncidentEvent(
+                incident_id=incident_id,
+                event_type=IncidentEventType.CONTAINMENT_STARTED,
+                actor=actor,
+                description=f"Containment initiated by {actor}",
+            )
+        )
 
         # Access restriction for P1/P2
         if incident.classification in (IncidentClassification.P1, IncidentClassification.P2):
-            self._session.add(IncidentEvent(
-                incident_id=incident_id,
-                event_type=IncidentEventType.ACCESS_RESTRICTED,
-                actor=actor,
-                description=f"Non-DPO access restricted for engagement {incident.engagement_id}",
-                details_json={
-                    "engagement_id": str(incident.engagement_id),
-                    "scope": "all_non_dpo",
-                    "timestamp": now.isoformat(),
-                },
-            ))
+            self._session.add(
+                IncidentEvent(
+                    incident_id=incident_id,
+                    event_type=IncidentEventType.ACCESS_RESTRICTED,
+                    actor=actor,
+                    description=f"Non-DPO access restricted for engagement {incident.engagement_id}",
+                    details_json={
+                        "engagement_id": str(incident.engagement_id),
+                        "scope": "all_non_dpo",
+                        "timestamp": now.isoformat(),
+                    },
+                )
+            )
             actions_taken.append("access_restricted")
 
             # Freeze audit logs
-            self._session.add(IncidentEvent(
-                incident_id=incident_id,
-                event_type=IncidentEventType.AUDIT_FROZEN,
-                actor=actor,
-                description=f"Audit logs frozen for engagement {incident.engagement_id}",
-                details_json={
-                    "engagement_id": str(incident.engagement_id),
-                    "timestamp": now.isoformat(),
-                },
-            ))
+            self._session.add(
+                IncidentEvent(
+                    incident_id=incident_id,
+                    event_type=IncidentEventType.AUDIT_FROZEN,
+                    actor=actor,
+                    description=f"Audit logs frozen for engagement {incident.engagement_id}",
+                    details_json={
+                        "engagement_id": str(incident.engagement_id),
+                        "timestamp": now.isoformat(),
+                    },
+                )
+            )
             actions_taken.append("audit_logs_frozen")
 
         incident.status = IncidentStatus.CONTAINED
@@ -218,7 +223,9 @@ class IncidentService:
                 "incident_id": str(incident.id),
                 "classification": incident.classification.value,
                 "created_at": incident.created_at.isoformat(),
-                "notification_deadline": incident.notification_deadline.isoformat() if incident.notification_deadline else None,
+                "notification_deadline": incident.notification_deadline.isoformat()
+                if incident.notification_deadline
+                else None,
                 "hours_remaining": round(hours_remaining, 1),
                 "current_status": incident.status.value,
                 "message": f"GDPR notification deadline in {round(hours_remaining)} hours",
@@ -228,13 +235,15 @@ class IncidentService:
             alerts.append(alert)
 
             # Record escalation event
-            self._session.add(IncidentEvent(
-                incident_id=incident.id,
-                event_type=IncidentEventType.ESCALATION_SENT,
-                actor="system",
-                description=f"DPO escalation: deadline in {round(hours_remaining)} hours",
-                details_json=alert,
-            ))
+            self._session.add(
+                IncidentEvent(
+                    incident_id=incident.id,
+                    event_type=IncidentEventType.ESCALATION_SENT,
+                    actor="system",
+                    description=f"DPO escalation: deadline in {round(hours_remaining)} hours",
+                    details_json=alert,
+                )
+            )
 
         await self._session.flush()
         return alerts
@@ -255,9 +264,7 @@ class IncidentService:
         Returns:
             Incident summary with full timeline.
         """
-        result = await self._session.execute(
-            select(Incident).where(Incident.id == incident_id)
-        )
+        result = await self._session.execute(select(Incident).where(Incident.id == incident_id))
         incident = result.scalar_one_or_none()
         if incident is None:
             raise ValueError(f"Incident {incident_id} not found")
@@ -268,19 +275,19 @@ class IncidentService:
         now = datetime.now(UTC)
 
         # Record close event
-        self._session.add(IncidentEvent(
-            incident_id=incident_id,
-            event_type=IncidentEventType.CLOSED,
-            actor=actor,
-            description=f"Incident closed by {actor}: {resolution_summary}",
-            details_json={"resolution_summary": resolution_summary},
-        ))
+        self._session.add(
+            IncidentEvent(
+                incident_id=incident_id,
+                event_type=IncidentEventType.CLOSED,
+                actor=actor,
+                description=f"Incident closed by {actor}: {resolution_summary}",
+                details_json={"resolution_summary": resolution_summary},
+            )
+        )
 
         # Generate timeline from all events
         event_result = await self._session.execute(
-            select(IncidentEvent)
-            .where(IncidentEvent.incident_id == incident_id)
-            .order_by(IncidentEvent.created_at)
+            select(IncidentEvent).where(IncidentEvent.incident_id == incident_id).order_by(IncidentEvent.created_at)
         )
         events = event_result.scalars().all()
 

@@ -80,34 +80,21 @@ async def run_semantic_bridge(
     result = SemanticBridgeResult()
 
     # -- SUPPORTS: UserAction → Activity ------------------------------------
-    user_actions = await graph_service.find_nodes(
-        "UserAction", {"engagement_id": engagement_id}, limit=_MAX_NODES
-    )
-    activities = await graph_service.find_nodes(
-        "Activity", {"engagement_id": engagement_id}, limit=_MAX_NODES
-    )
+    user_actions = await graph_service.find_nodes("UserAction", {"engagement_id": engagement_id}, limit=_MAX_NODES)
+    activities = await graph_service.find_nodes("Activity", {"engagement_id": engagement_id}, limit=_MAX_NODES)
 
     if user_actions and activities:
-        await _link_actions_to_activities(
-            graph_service, embedding_service, user_actions, activities, result
-        )
+        await _link_actions_to_activities(graph_service, embedding_service, user_actions, activities, result)
 
     # -- MAPS_TO: Application → System --------------------------------------
-    applications = await graph_service.find_nodes(
-        "Application", {"engagement_id": engagement_id}, limit=_MAX_NODES
-    )
-    systems = await graph_service.find_nodes(
-        "System", {"engagement_id": engagement_id}, limit=_MAX_NODES
-    )
+    applications = await graph_service.find_nodes("Application", {"engagement_id": engagement_id}, limit=_MAX_NODES)
+    systems = await graph_service.find_nodes("System", {"engagement_id": engagement_id}, limit=_MAX_NODES)
 
     if applications and systems:
-        await _link_apps_to_systems(
-            graph_service, embedding_service, applications, systems, result
-        )
+        await _link_apps_to_systems(graph_service, embedding_service, applications, systems, result)
 
     logger.info(
-        "Semantic bridge complete for engagement %s: "
-        "confirmed=%d, suggested=%d, maps_to=%d, errors=%d",
+        "Semantic bridge complete for engagement %s: confirmed=%d, suggested=%d, maps_to=%d, errors=%d",
         engagement_id,
         result.supports_confirmed,
         result.supports_suggested,

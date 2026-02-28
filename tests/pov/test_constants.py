@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import pytest
+
 from src.pov.constants import (
     CONFIDENCE_FACTOR_WEIGHTS,
     CONFIDENCE_LEVELS,
-    DEFAULT_EVIDENCE_WEIGHT,
     EVIDENCE_TYPE_WEIGHTS,
 )
 
@@ -45,7 +46,3 @@ class TestConfidenceLevels:
     def test_descending_thresholds(self):
         thresholds = [t for _, t in CONFIDENCE_LEVELS]
         assert thresholds == sorted(thresholds, reverse=True)
-
-
-# Import pytest for approx
-import pytest

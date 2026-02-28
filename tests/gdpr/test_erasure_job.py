@@ -14,7 +14,6 @@ import pytest
 
 from src.gdpr.erasure_job import _anonymize_user, run_erasure_job
 
-
 # ---------------------------------------------------------------------------
 # _anonymize_user
 # ---------------------------------------------------------------------------

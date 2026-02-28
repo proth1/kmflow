@@ -99,7 +99,6 @@ from src.core.models.monitoring import (
     ProcessDeviation,
     SuccessMetric,
 )
-from src.core.models.report import Report, ReportFormat, ReportStatus
 from src.core.models.pattern import (
     PatternAccessRule,
     PatternCategory,
@@ -130,6 +129,7 @@ from src.core.models.raci import (
     RACICell,
     RACIStatus,
 )
+from src.core.models.report import Report, ReportFormat, ReportStatus
 from src.core.models.role_activity_mapping import RoleActivityMapping
 from src.core.models.seed_term import (
     SeedTerm,
@@ -320,6 +320,10 @@ __all__ = [
     "RACIAssignment",
     "RACICell",
     "RACIStatus",
+    # report
+    "Report",
+    "ReportFormat",
+    "ReportStatus",
     # role_activity_mapping
     "RoleActivityMapping",
     # pattern

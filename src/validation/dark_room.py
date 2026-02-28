@@ -168,9 +168,7 @@ def compute_illumination_timeline(
             prev = history[i - 1]
             curr = history[i]
 
-            if prev["brightness_classification"] == "dark" and curr[
-                "brightness_classification"
-            ] in ("dim", "bright"):
+            if prev["brightness_classification"] == "dark" and curr["brightness_classification"] in ("dim", "bright"):
                 events.append(
                     IlluminationEvent(
                         element_name=curr["element_name"],
@@ -179,10 +177,7 @@ def compute_illumination_timeline(
                         to_classification=curr["brightness_classification"],
                         illuminated_in_version=curr["version_number"],
                         pov_version_id=str(curr["pov_version_id"]),
-                        evidence_ids=[
-                            str(eid)
-                            for eid in (curr.get("evidence_ids") or [])
-                        ],
+                        evidence_ids=[str(eid) for eid in (curr.get("evidence_ids") or [])],
                     )
                 )
 

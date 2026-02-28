@@ -159,9 +159,7 @@ class TestIncrementalSyncAsync:
         }
         store = SyncCheckpointStore()
 
-        log = await run_incremental_sync_async(
-            connector, "servicenow", "eng-001", store
-        )
+        log = await run_incremental_sync_async(connector, "servicenow", "eng-001", store)
 
         connector.sync_incremental.assert_called_once()
         call_kwargs = connector.sync_incremental.call_args
@@ -199,9 +197,7 @@ class TestIncrementalSyncAsync:
         store = SyncCheckpointStore()
         store.set_checkpoint("servicenow", "eng-001", "2026-01-15T10:00:00Z")
 
-        log = await run_incremental_sync_async(
-            connector, "servicenow", "eng-001", store
-        )
+        log = await run_incremental_sync_async(connector, "servicenow", "eng-001", store)
 
         call_kwargs = connector.sync_incremental.call_args
         assert call_kwargs[1]["since"] == "2026-01-15T10:00:00Z"
@@ -219,9 +215,7 @@ class TestIncrementalSyncAsync:
         store = SyncCheckpointStore()
         store.set_checkpoint("salesforce", "eng-001", "2026-01-10T00:00:00Z")
 
-        log = await run_incremental_sync_async(
-            connector, "salesforce", "eng-001", store
-        )
+        log = await run_incremental_sync_async(connector, "salesforce", "eng-001", store)
 
         assert not log.success
         # Checkpoint should remain unchanged
@@ -234,9 +228,7 @@ class TestIncrementalSyncAsync:
         connector.sync_incremental.side_effect = RuntimeError("connection refused")
         store = SyncCheckpointStore()
 
-        log = await run_incremental_sync_async(
-            connector, "servicenow", "eng-001", store
-        )
+        log = await run_incremental_sync_async(connector, "servicenow", "eng-001", store)
 
         assert not log.success
         assert "connection refused" in log.errors[0]
@@ -275,9 +267,7 @@ class TestIncrementalSyncAsync:
         }
         store = SyncCheckpointStore()
 
-        log = await run_incremental_sync_async(
-            connector, "sap", "eng-001", store
-        )
+        log = await run_incremental_sync_async(connector, "sap", "eng-001", store)
 
         assert log.started_at != ""
         assert log.completed_at != ""

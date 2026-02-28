@@ -109,11 +109,14 @@ class TestCompareSequences:
 
 
 class TestSeverityAssignment:
-    @pytest.mark.parametrize("deviation_type,expected_severity", [
-        ("missing_step", "warning"),
-        ("extra_step", "info"),
-        ("different_order", "info"),
-    ])
+    @pytest.mark.parametrize(
+        "deviation_type,expected_severity",
+        [
+            ("missing_step", "warning"),
+            ("extra_step", "info"),
+            ("different_order", "info"),
+        ],
+    )
     def test_severity_mapping(self, deviation_type: str, expected_severity: str):
         variants = _compare_sequences(
             expected_ids=["A", "B", "C"] if deviation_type != "extra_step" else ["A", "B"],
@@ -154,18 +157,23 @@ class TestDetectVariantsIntegration:
         service = AsyncMock()
         service.create_relationship = AsyncMock(
             return_value=GraphRelationship(
-                id="r1", from_id="a", to_id="b",
-                relationship_type="DEVIATES_FROM", properties={},
+                id="r1",
+                from_id="a",
+                to_id="b",
+                relationship_type="DEVIATES_FROM",
+                properties={},
             )
         )
         return service
 
     @pytest.mark.asyncio
     async def test_no_processes_returns_empty(self, mock_graph_service):
-        mock_graph_service.find_nodes = AsyncMock(side_effect=[
-            [],  # processes
-            [],  # user_actions
-        ])
+        mock_graph_service.find_nodes = AsyncMock(
+            side_effect=[
+                [],  # processes
+                [],  # user_actions
+            ]
+        )
 
         result = await detect_variants(mock_graph_service, "eng-1")
 
@@ -174,10 +182,12 @@ class TestDetectVariantsIntegration:
 
     @pytest.mark.asyncio
     async def test_no_user_actions_returns_empty(self, mock_graph_service):
-        mock_graph_service.find_nodes = AsyncMock(side_effect=[
-            [_make_node("p1", "Process", "Loan Process")],
-            [],  # no user actions
-        ])
+        mock_graph_service.find_nodes = AsyncMock(
+            side_effect=[
+                [_make_node("p1", "Process", "Loan Process")],
+                [],  # no user actions
+            ]
+        )
 
         result = await detect_variants(mock_graph_service, "eng-1")
 
@@ -190,10 +200,12 @@ class TestDetectVariantsIntegration:
         ua1 = _make_node("ua-1", "UserAction", "Step A")
         ua2 = _make_node("ua-2", "UserAction", "Step B")
 
-        mock_graph_service.find_nodes = AsyncMock(side_effect=[
-            [process],
-            [ua1, ua2],
-        ])
+        mock_graph_service.find_nodes = AsyncMock(
+            side_effect=[
+                [process],
+                [ua1, ua2],
+            ]
+        )
 
         # Process has activities A, B connected via FOLLOWED_BY
         def get_rels(node_id, direction="both", relationship_type=None):
@@ -228,10 +240,12 @@ class TestDetectVariantsIntegration:
         process = _make_node("p1", "Process", "Test Process")
         ua1 = _make_node("ua-1", "UserAction", "Action 1")
 
-        mock_graph_service.find_nodes = AsyncMock(side_effect=[
-            [process],
-            [ua1],
-        ])
+        mock_graph_service.find_nodes = AsyncMock(
+            side_effect=[
+                [process],
+                [ua1],
+            ]
+        )
 
         # Process has one activity; UA maps to a different activity = extra step
         def get_rels(node_id, direction="both", relationship_type=None):
@@ -246,9 +260,7 @@ class TestDetectVariantsIntegration:
             return []
 
         mock_graph_service.get_relationships = AsyncMock(side_effect=get_rels)
-        mock_graph_service.create_relationship = AsyncMock(
-            side_effect=RuntimeError("Neo4j error")
-        )
+        mock_graph_service.create_relationship = AsyncMock(side_effect=RuntimeError("Neo4j error"))
 
         result = await detect_variants(mock_graph_service, "eng-1")
 

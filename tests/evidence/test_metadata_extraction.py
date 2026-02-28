@@ -295,9 +295,7 @@ class TestBDDScenario4CatalogAPI:
     """
 
     @pytest.mark.asyncio
-    async def test_catalog_returns_paginated_response(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_catalog_returns_paginated_response(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Catalog response includes pagination fields."""
         _setup_catalog_mocks(mock_db_session, items=[], total=0)
 
@@ -314,9 +312,7 @@ class TestBDDScenario4CatalogAPI:
         assert "has_more" in data
 
     @pytest.mark.asyncio
-    async def test_catalog_filters_by_category(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_catalog_filters_by_category(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Catalog filters by evidence category."""
         items = _make_mock_evidence_items(3, category=EvidenceCategory.DOCUMENTS)
         _setup_catalog_mocks(mock_db_session, items=items, total=3)
@@ -334,9 +330,7 @@ class TestBDDScenario4CatalogAPI:
         assert len(data["items"]) == 3
 
     @pytest.mark.asyncio
-    async def test_catalog_has_more_pagination(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_catalog_has_more_pagination(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """has_more is True when total exceeds offset + limit."""
         items = _make_mock_evidence_items(5)
         _setup_catalog_mocks(mock_db_session, items=items, total=15)
@@ -349,9 +343,7 @@ class TestBDDScenario4CatalogAPI:
         assert data["has_more"] is True
 
     @pytest.mark.asyncio
-    async def test_catalog_no_more_on_last_page(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_catalog_no_more_on_last_page(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """has_more is False on the last page."""
         items = _make_mock_evidence_items(3)
         _setup_catalog_mocks(mock_db_session, items=items, total=3)
@@ -364,9 +356,7 @@ class TestBDDScenario4CatalogAPI:
         assert data["has_more"] is False
 
     @pytest.mark.asyncio
-    async def test_catalog_item_has_required_fields(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_catalog_item_has_required_fields(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Each catalog item includes id, title, category, creation_date, quality_score."""
         items = _make_mock_evidence_items(1, category=EvidenceCategory.DOCUMENTS)
         _setup_catalog_mocks(mock_db_session, items=items, total=1)
@@ -385,9 +375,7 @@ class TestBDDScenario4CatalogAPI:
         assert "quality_score" in item
 
     @pytest.mark.asyncio
-    async def test_catalog_filters_by_language(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_catalog_filters_by_language(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Catalog filters by detected language."""
         items = _make_mock_evidence_items(2, language="fr")
         _setup_catalog_mocks(mock_db_session, items=items, total=2)
@@ -401,17 +389,13 @@ class TestBDDScenario4CatalogAPI:
         assert data["total"] == 2
 
     @pytest.mark.asyncio
-    async def test_catalog_requires_engagement_id(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_catalog_requires_engagement_id(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Catalog endpoint requires engagement_id query param."""
         response = await client.get("/api/v1/evidence/catalog")
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_catalog_full_text_search(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_catalog_full_text_search(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Catalog supports full-text search via q parameter."""
         items = _make_mock_evidence_items(1)
         _setup_catalog_mocks(mock_db_session, items=items, total=1)
@@ -423,9 +407,7 @@ class TestBDDScenario4CatalogAPI:
         assert response.status_code == 200
 
     @pytest.mark.asyncio
-    async def test_catalog_filters_by_date_from(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_catalog_filters_by_date_from(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Catalog filters by date_from lower bound."""
         items = _make_mock_evidence_items(2)
         _setup_catalog_mocks(mock_db_session, items=items, total=2)
@@ -438,9 +420,7 @@ class TestBDDScenario4CatalogAPI:
         assert response.json()["total"] == 2
 
     @pytest.mark.asyncio
-    async def test_catalog_filters_by_date_to(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_catalog_filters_by_date_to(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Catalog filters by date_to upper bound."""
         items = _make_mock_evidence_items(1)
         _setup_catalog_mocks(mock_db_session, items=items, total=1)
@@ -453,9 +433,7 @@ class TestBDDScenario4CatalogAPI:
         assert response.json()["total"] == 1
 
     @pytest.mark.asyncio
-    async def test_catalog_search_escapes_like_wildcards(
-        self, client: AsyncClient, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_catalog_search_escapes_like_wildcards(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Search query with LIKE wildcards (%, _) is escaped safely."""
         items = _make_mock_evidence_items(0)
         _setup_catalog_mocks(mock_db_session, items=items, total=0)
@@ -480,9 +458,15 @@ class TestExtractedMetadataModel:
         m = ExtractedMetadata()
         d = m.to_dict()
         expected_keys = {
-            "title", "author", "creation_date", "modification_date",
-            "page_count", "file_size_bytes", "detected_language",
-            "sheet_count", "tabular_metadata",
+            "title",
+            "author",
+            "creation_date",
+            "modification_date",
+            "page_count",
+            "file_size_bytes",
+            "detected_language",
+            "sheet_count",
+            "tabular_metadata",
         }
         assert expected_keys.issubset(set(d.keys()))
 

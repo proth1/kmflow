@@ -135,9 +135,7 @@ class TestSorocoScoutMapping:
         for category, expected in mappings.items():
             capture = _make_capture(app_category=category)
             activity = process_capture(capture)
-            assert activity.activity_name == expected, (
-                f"{category} should map to {expected}"
-            )
+            assert activity.activity_name == expected, f"{category} should map to {expected}"
 
     def test_unknown_category_falls_back_to_app_name(self) -> None:
         """Unknown app category falls back to application_name."""
@@ -193,7 +191,7 @@ class TestKM4WorkWorkaroundDetection:
     def test_workaround_included_in_batch_result(self) -> None:
         """Workarounds are collected in PipelineResult.workarounds."""
         captures = [
-            _make_capture(app_category="email"),       # Not workaround
+            _make_capture(app_category="email"),  # Not workaround
             _make_capture(app_category="spreadsheet"),  # Workaround
         ]
         documented = {"Communication"}
@@ -222,9 +220,7 @@ class TestInBetweenWorkDetection:
         base_ts = datetime(2026, 2, 15, 9, 0, 0, tzinfo=UTC)
 
         system_events = [
-            _make_timeline_event(
-                activity_name="Submit", timestamp=base_ts
-            ),
+            _make_timeline_event(activity_name="Submit", timestamp=base_ts),
             _make_timeline_event(
                 activity_name="Approve",
                 timestamp=base_ts + timedelta(minutes=30),
@@ -297,9 +293,7 @@ class TestInBetweenWorkDetection:
             ),
         ]
 
-        result = detect_gaps(
-            desktop_events, system_events, min_gap_seconds=60
-        )
+        result = detect_gaps(desktop_events, system_events, min_gap_seconds=60)
         assert result.total_gaps == 0
 
     def test_gap_above_max_threshold_ignored(self) -> None:
@@ -317,9 +311,7 @@ class TestInBetweenWorkDetection:
             ),
         ]
 
-        result = detect_gaps(
-            desktop_events, system_events, max_gap_seconds=7200
-        )
+        result = detect_gaps(desktop_events, system_events, max_gap_seconds=7200)
         assert result.total_gaps == 0
 
     def test_recommended_action_for_long_gap(self) -> None:
@@ -565,9 +557,7 @@ class TestProcessBatchErrorHandling:
 
         # Make map_to_activity raise on first call, succeed on second
         call_count = 0
-        original_map = __import__(
-            "src.monitoring.desktop.pipeline", fromlist=["map_to_activity"]
-        ).map_to_activity
+        original_map = __import__("src.monitoring.desktop.pipeline", fromlist=["map_to_activity"]).map_to_activity
 
         def flaky_map(capture: DesktopCapture) -> str:
             nonlocal call_count

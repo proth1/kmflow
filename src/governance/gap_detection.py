@@ -172,38 +172,36 @@ class GovernanceGapDetectionService:
                 continue
 
             # Find activities in regulated categories
-            regulated_activities = await self.get_regulated_activities(
-                engagement_id, required_categories
-            )
+            regulated_activities = await self.get_regulated_activities(engagement_id, required_categories)
             if not regulated_activities:
                 continue
 
             # Check which lack controls
             activity_ids = [a["activity_id"] for a in regulated_activities]
-            ungoverned_ids = await self.get_ungoverned_activity_ids(
-                engagement_id, activity_ids
-            )
+            ungoverned_ids = await self.get_ungoverned_activity_ids(engagement_id, activity_ids)
             ungoverned_set = set(ungoverned_ids)
 
             severity = derive_severity(obligations)
 
             for act in regulated_activities:
                 if act["activity_id"] in ungoverned_set:
-                    all_gaps.append({
-                        "engagement_id": engagement_id,
-                        "activity_id": act["activity_id"],
-                        "activity_name": act["activity_name"],
-                        "regulation_id": reg["id"],
-                        "regulation_name": reg.get("name", ""),
-                        "gap_type": GovernanceGapType.CONTROL_GAP,
-                        "severity": severity,
-                        "status": GovernanceGapStatus.OPEN,
-                        "description": (
-                            f"Activity '{act['activity_name']}' (category: {act['activity_category']}) "
-                            f"requires controls per regulation '{reg.get('name', '')}' "
-                            f"but has no ENFORCED_BY edges."
-                        ),
-                    })
+                    all_gaps.append(
+                        {
+                            "engagement_id": engagement_id,
+                            "activity_id": act["activity_id"],
+                            "activity_name": act["activity_name"],
+                            "regulation_id": reg["id"],
+                            "regulation_name": reg.get("name", ""),
+                            "gap_type": GovernanceGapType.CONTROL_GAP,
+                            "severity": severity,
+                            "status": GovernanceGapStatus.OPEN,
+                            "description": (
+                                f"Activity '{act['activity_name']}' (category: {act['activity_category']}) "
+                                f"requires controls per regulation '{reg.get('name', '')}' "
+                                f"but has no ENFORCED_BY edges."
+                            ),
+                        }
+                    )
 
         return all_gaps
 

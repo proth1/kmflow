@@ -243,9 +243,7 @@ async def catalog_evidence(
     Returns compact catalog items with pagination metadata.
     """
     query = select(EvidenceItem).where(EvidenceItem.engagement_id == engagement_id)
-    count_query = select(func.count()).select_from(EvidenceItem).where(
-        EvidenceItem.engagement_id == engagement_id
-    )
+    count_query = select(func.count()).select_from(EvidenceItem).where(EvidenceItem.engagement_id == engagement_id)
 
     if category is not None:
         query = query.where(EvidenceItem.category == category)
@@ -281,17 +279,19 @@ async def catalog_evidence(
     catalog_items = []
     for item in items:
         em = item.extracted_metadata or {}
-        catalog_items.append({
-            "id": item.id,
-            "title": em.get("title"),
-            "name": item.name,
-            "category": item.category,
-            "creation_date": em.get("creation_date"),
-            "quality_score": item.quality_score,
-            "detected_language": item.detected_language,
-            "validation_status": item.validation_status,
-            "file_size_bytes": item.size_bytes,
-        })
+        catalog_items.append(
+            {
+                "id": item.id,
+                "title": em.get("title"),
+                "name": item.name,
+                "category": item.category,
+                "creation_date": em.get("creation_date"),
+                "quality_score": item.quality_score,
+                "detected_language": item.detected_language,
+                "validation_status": item.validation_status,
+                "file_size_bytes": item.size_bytes,
+            }
+        )
 
     return {
         "items": catalog_items,
@@ -453,9 +453,7 @@ async def batch_validate(
     errors: list[str] = []
 
     # Bulk-fetch all evidence items in a single query (Fix N+1)
-    result = await session.execute(
-        select(EvidenceItem).where(EvidenceItem.id.in_(payload.evidence_ids))
-    )
+    result = await session.execute(select(EvidenceItem).where(EvidenceItem.id.in_(payload.evidence_ids)))
     evidence_map = {item.id: item for item in result.scalars().all()}
 
     # Identify missing items

@@ -156,10 +156,7 @@ def build_compliance_trend(
     if not data_points:
         return ComplianceTrend()
 
-    points = [
-        ComplianceDataPoint(date=str(dp["date"]), score=dp["score"])
-        for dp in data_points
-    ]
+    points = [ComplianceDataPoint(date=str(dp["date"]), score=dp["score"]) for dp in data_points]
     scores = [dp["score"] for dp in data_points]
 
     return ComplianceTrend(

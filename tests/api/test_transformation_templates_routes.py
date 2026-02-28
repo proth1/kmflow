@@ -80,12 +80,20 @@ class TestApplyTemplates:
         body = {
             "elements": [
                 {
-                    "id": "t1", "name": "Task A", "element_type": "task",
-                    "lane": "Ops", "performer": "Analyst", "sequence_position": 1,
+                    "id": "t1",
+                    "name": "Task A",
+                    "element_type": "task",
+                    "lane": "Ops",
+                    "performer": "Analyst",
+                    "sequence_position": 1,
                 },
                 {
-                    "id": "t2", "name": "Task B", "element_type": "task",
-                    "lane": "Ops", "performer": "Analyst", "sequence_position": 2,
+                    "id": "t2",
+                    "name": "Task B",
+                    "element_type": "task",
+                    "lane": "Ops",
+                    "performer": "Analyst",
+                    "sequence_position": 2,
                 },
             ]
         }

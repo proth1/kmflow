@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -164,7 +164,7 @@ class TaskMiningAuditLogger:
             engagement_id=engagement_id,
             rows_deleted=rows_deleted,
             duration_ms=duration_ms,
-            run_at=datetime.now(timezone.utc).isoformat(),
+            run_at=datetime.now(UTC).isoformat(),
         )
 
     async def log_capture_started(

@@ -240,9 +240,7 @@ def detect_bottlenecks(
     avg_count = sum(activity_totals.values()) / len(activity_totals)
     threshold = avg_count * multiplier
 
-    bottlenecks = sorted(
-        name for name, total in activity_totals.items() if total > threshold
-    )
+    bottlenecks = sorted(name for name, total in activity_totals.items() if total > threshold)
 
     # Mark metrics as bottleneck
     bottleneck_set = set(bottlenecks)
@@ -295,9 +293,7 @@ def compute_gateway_distributions(
         if len(successors) < 2:
             continue
         total = sum(successors.values())
-        paths = {
-            succ: round(count / total, 2) for succ, count in sorted(successors.items())
-        }
+        paths = {succ: round(count / total, 2) for succ, count in sorted(successors.items())}
         distributions.append(
             GatewayDistribution(
                 gateway_activity=gateway,
@@ -406,6 +402,7 @@ def generate_aggregate_replay(
 # Heatmap density and drill-down support
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class HeatmapDensity:
     """Density data per activity node for heatmap overlay.
@@ -497,12 +494,8 @@ def get_drilldown_cases(
         {
             "case_id": case_id,
             "event_count": len(case_events),
-            "first_occurrence": min(
-                str(e.get("timestamp_utc", "")) for e in case_events
-            ),
-            "last_occurrence": max(
-                str(e.get("timestamp_utc", "")) for e in case_events
-            ),
+            "first_occurrence": min(str(e.get("timestamp_utc", "")) for e in case_events),
+            "last_occurrence": max(str(e.get("timestamp_utc", "")) for e in case_events),
         }
         for case_id, case_events in sorted(cases.items())
     ]

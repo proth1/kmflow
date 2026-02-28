@@ -42,9 +42,7 @@ class TestProbeGeneration:
         service = SurveyBotService(AsyncMock())
         terms = [{"id": str(uuid.uuid4()), "term": "KYC Review", "domain": "compliance", "category": "activity"}]
 
-        probes = service.generate_probes_for_terms(
-            terms, session_id=SESSION_ID, probe_types=[ProbeType.EXISTENCE]
-        )
+        probes = service.generate_probes_for_terms(terms, session_id=SESSION_ID, probe_types=[ProbeType.EXISTENCE])
 
         assert len(probes) == 1
         assert probes[0]["question"] == "Does 'KYC Review' happen in your area?"

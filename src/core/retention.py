@@ -24,7 +24,6 @@ from src.core.models import (
     QuarantineStatus,
     TaskMiningAction,
     TaskMiningEvent,
-    TaskMiningSession,
 )
 
 logger = logging.getLogger(__name__)
@@ -73,15 +72,11 @@ async def cleanup_expired_engagements(session: AsyncSession) -> int:
 
         # 1. Delete evidence fragments (children of evidence_items via CASCADE,
         #    but we do it explicitly to control ordering).
-        evidence_ids_result = await session.execute(
-            select(EvidenceItem.id).where(EvidenceItem.engagement_id == eng.id)
-        )
+        evidence_ids_result = await session.execute(select(EvidenceItem.id).where(EvidenceItem.engagement_id == eng.id))
         evidence_ids = [row[0] for row in evidence_ids_result]
 
         if evidence_ids:
-            await session.execute(
-                delete(EvidenceFragment).where(EvidenceFragment.evidence_id.in_(evidence_ids))
-            )
+            await session.execute(delete(EvidenceFragment).where(EvidenceFragment.evidence_id.in_(evidence_ids)))
             logger.info(
                 "Retention cleanup: deleted fragments for %d evidence items in engagement %s",
                 len(evidence_ids),
@@ -89,14 +84,10 @@ async def cleanup_expired_engagements(session: AsyncSession) -> int:
             )
 
         # 2. Delete evidence items.
-        await session.execute(
-            delete(EvidenceItem).where(EvidenceItem.engagement_id == eng.id)
-        )
+        await session.execute(delete(EvidenceItem).where(EvidenceItem.engagement_id == eng.id))
 
         # 3. Delete engagement-scoped audit logs.
-        await session.execute(
-            delete(AuditLog).where(AuditLog.engagement_id == eng.id)
-        )
+        await session.execute(delete(AuditLog).where(AuditLog.engagement_id == eng.id))
 
         # 4. Archive the engagement record (data cleaned but record preserved).
         eng.status = EngagementStatus.ARCHIVED
@@ -119,9 +110,7 @@ async def cleanup_old_copilot_messages(session: AsyncSession, retention_days: in
     Returns the number of rows deleted.
     """
     cutoff = datetime.now(UTC) - timedelta(days=retention_days)
-    result = await session.execute(
-        delete(CopilotMessage).where(CopilotMessage.created_at < cutoff)
-    )
+    result = await session.execute(delete(CopilotMessage).where(CopilotMessage.created_at < cutoff))
     deleted = result.rowcount or 0
     if deleted:
         await session.commit()
@@ -137,9 +126,7 @@ async def cleanup_old_http_audit_events(session: AsyncSession, retention_days: i
     Returns the number of rows deleted.
     """
     cutoff = datetime.now(UTC) - timedelta(days=retention_days)
-    result = await session.execute(
-        delete(HttpAuditEvent).where(HttpAuditEvent.created_at < cutoff)
-    )
+    result = await session.execute(delete(HttpAuditEvent).where(HttpAuditEvent.created_at < cutoff))
     deleted = result.rowcount or 0
     if deleted:
         await session.commit()
@@ -156,9 +143,7 @@ async def cleanup_old_task_mining_events(session: AsyncSession, retention_days: 
     Returns the number of rows deleted.
     """
     cutoff = datetime.now(UTC) - timedelta(days=retention_days)
-    result = await session.execute(
-        delete(TaskMiningEvent).where(TaskMiningEvent.created_at < cutoff)
-    )
+    result = await session.execute(delete(TaskMiningEvent).where(TaskMiningEvent.created_at < cutoff))
     deleted = result.rowcount or 0
     if deleted:
         await session.commit()
@@ -174,9 +159,7 @@ async def cleanup_old_task_mining_actions(session: AsyncSession, retention_days:
     Returns the number of rows deleted.
     """
     cutoff = datetime.now(UTC) - timedelta(days=retention_days)
-    result = await session.execute(
-        delete(TaskMiningAction).where(TaskMiningAction.created_at < cutoff)
-    )
+    result = await session.execute(delete(TaskMiningAction).where(TaskMiningAction.created_at < cutoff))
     deleted = result.rowcount or 0
     if deleted:
         await session.commit()

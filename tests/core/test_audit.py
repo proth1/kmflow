@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -21,7 +21,6 @@ from src.core.audit import (
     log_security_event,
 )
 from src.core.models import AuditAction, AuditLog, HttpAuditEvent
-
 
 # ---------------------------------------------------------------------------
 # log_audit_event_async

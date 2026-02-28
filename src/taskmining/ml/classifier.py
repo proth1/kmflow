@@ -15,7 +15,7 @@ from typing import Any
 
 from src.core.models.taskmining import ActionCategory
 from src.taskmining.aggregation.session import AggregatedSession
-from src.taskmining.ml.dataset import DatasetSplit, TrainingDataset
+from src.taskmining.ml.dataset import TrainingDataset
 from src.taskmining.ml.features import (
     FEATURE_SCHEMA_VERSION,
     extract_features,
@@ -122,9 +122,7 @@ class GradientBoostingTaskClassifier:
         weighted_f1 = float(f1_score(y_test, y_pred, average="weighted", zero_division=0))
 
         # Per-class metrics
-        report = classification_report(
-            y_test, y_pred, target_names=le.classes_, output_dict=True, zero_division=0
-        )
+        report = classification_report(y_test, y_pred, target_names=le.classes_, output_dict=True, zero_division=0)
         per_class = {}
         for label_name in le.classes_:
             if label_name in report:
@@ -146,7 +144,9 @@ class GradientBoostingTaskClassifier:
         )
         logger.info(
             "Model trained: accuracy=%.4f, F1=%.4f, samples=%d",
-            metrics.accuracy, metrics.weighted_f1, metrics.sample_count,
+            metrics.accuracy,
+            metrics.weighted_f1,
+            metrics.sample_count,
         )
         return metrics
 
@@ -167,9 +167,7 @@ class GradientBoostingTaskClassifier:
         features = extract_features(session)
         return self._predict_from_features(features)
 
-    def predict_batch(
-        self, sessions: list[AggregatedSession]
-    ) -> list[MLPrediction | None]:
+    def predict_batch(self, sessions: list[AggregatedSession]) -> list[MLPrediction | None]:
         """Predict categories for multiple sessions."""
         if not self.is_trained:
             return [None] * len(sessions)
@@ -181,21 +179,20 @@ class GradientBoostingTaskClassifier:
         if not self._model or not self._label_encoder:
             return None
 
-        X = [features]
+        x_input = [features]
 
         # Get class probabilities
         if hasattr(self._model, "predict_proba"):
-            probas = self._model.predict_proba(X)[0]
+            probas = self._model.predict_proba(x_input)[0]
         else:
             # Fallback for non-calibrated model
-            pred_idx = self._model.predict(X)[0]
+            pred_idx = self._model.predict(x_input)[0]
             probas = [0.0] * len(self._label_encoder.classes_)
             probas[pred_idx] = 1.0
 
         # Build probability dict
         prob_dict = {
-            label: round(float(prob), 4)
-            for label, prob in zip(self._label_encoder.classes_, probas)
+            label: round(float(prob), 4) for label, prob in zip(self._label_encoder.classes_, probas, strict=False)
         }
 
         # Find best prediction
@@ -259,7 +256,8 @@ class GradientBoostingTaskClassifier:
         if saved_version != FEATURE_SCHEMA_VERSION:
             logger.warning(
                 "Model schema version %d != current %d, ignoring saved model",
-                saved_version, FEATURE_SCHEMA_VERSION,
+                saved_version,
+                FEATURE_SCHEMA_VERSION,
             )
             return False
 

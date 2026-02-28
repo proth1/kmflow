@@ -457,9 +457,7 @@ class TestConcurrencyControl:
             task_ids.append(tid)
 
         # Execute all concurrently
-        await asyncio.gather(
-            *[queue.execute_task(tid, "test_slow", {"steps": 2}) for tid in task_ids]
-        )
+        await asyncio.gather(*[queue.execute_task(tid, "test_slow", {"steps": 2}) for tid in task_ids])
 
         for tid in task_ids:
             progress = await queue.get_status(tid)
@@ -533,9 +531,7 @@ class TestConcurrencyControl:
             tid = await queue.enqueue("test_indexed", {"index": i})
             task_ids.append((tid, i))
 
-        await asyncio.gather(
-            *[queue.execute_task(tid, "test_indexed", {"index": idx}) for tid, idx in task_ids]
-        )
+        await asyncio.gather(*[queue.execute_task(tid, "test_indexed", {"index": idx}) for tid, idx in task_ids])
 
         for tid, expected_idx in task_ids:
             progress = await queue.get_status(tid)

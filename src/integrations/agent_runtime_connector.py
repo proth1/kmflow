@@ -104,10 +104,9 @@ class AgentRuntimeConnector(BaseConnector):
         if since and events:
             since_dt = datetime.fromisoformat(since.replace("Z", "+00:00"))
             events = [
-                e for e in events
-                if datetime.fromisoformat(
-                    str(e.get("timestamp", "")).replace("Z", "+00:00")
-                ) > since_dt
+                e
+                for e in events
+                if datetime.fromisoformat(str(e.get("timestamp", "")).replace("Z", "+00:00")) > since_dt
             ]
         return await self.sync_data(engagement_id, events=events, **kwargs)
 

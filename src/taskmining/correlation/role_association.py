@@ -47,9 +47,7 @@ class RoleAssociator:
             Count of CaseLinkEdge records created.
         """
         # IDs of events that already have a link
-        linked_subq = select(CaseLinkEdge.event_id).where(
-            CaseLinkEdge.engagement_id == engagement_id
-        )
+        linked_subq = select(CaseLinkEdge.event_id).where(CaseLinkEdge.engagement_id == engagement_id)
 
         # Events with no link at all
         stmt = select(CanonicalActivityEvent).where(
@@ -60,9 +58,7 @@ class RoleAssociator:
         unlinked_events = list(result.scalars().all())
 
         if not unlinked_events:
-            logger.info(
-                "RoleAssociator: no unlinked events for engagement %s", engagement_id
-            )
+            logger.info("RoleAssociator: no unlinked events for engagement %s", engagement_id)
             return 0
 
         edges: list[CaseLinkEdge] = []
