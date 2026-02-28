@@ -56,6 +56,7 @@ from src.api.routes import (
     gap_probes,
     gdpr,
     governance,
+    governance_flags,
     governance_overlay,
     graph,
     health,
@@ -355,6 +356,9 @@ def create_app() -> FastAPI:
 
     # -- Cost Modeling Routes (Story #359) ---
     app.include_router(cost_modeling.router)
+
+    # -- Governance Flag Detection Routes (Story #381) ---
+    app.include_router(governance_flags.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)
