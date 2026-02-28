@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.187] - 2026-02-28
+### Added
+- Gap analysis dashboard API: gap counts by type/severity, TOM dimension alignment scores (1.0 - avg_severity), prioritized recommendations, maturity heatmap, 16 tests (#347)
+
 ## [2026.02.186] - 2026-02-28
 ### Added
 - Evidence mapping overlay API: reverse evidence-to-element lookup, dark elements with type-specific acquisition suggestions, 19 tests (#343)
