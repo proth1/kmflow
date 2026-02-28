@@ -1,4 +1,4 @@
-"""Validation API endpoints (Stories #349, #353, #357, #370).
+"""Validation API endpoints (Stories #349, #353, #357, #365, #370).
 
 Provides:
 - POST /api/v1/validation/review-packs — Trigger async review pack generation
@@ -31,8 +31,9 @@ from src.core.models import (
     User,
 )
 from src.core.models.grading_snapshot import GradingSnapshot
+from src.core.models.role_activity_mapping import RoleActivityMapping
 from src.core.models.validation import ReviewPack, ReviewPackStatus
-from src.core.models.validation_decision import ReviewerAction
+from src.core.models.validation_decision import ReviewerAction, ValidationDecision
 from src.core.permissions import require_engagement_access
 from src.core.services.reviewer_actions_service import ReviewerActionsService
 from src.semantic.graph import KnowledgeGraphService
@@ -216,6 +217,38 @@ async def list_review_packs(
 
 
 # ---------------------------------------------------------------------------
+# Review Pack Detail (Story #365)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/review-packs/{review_pack_id}", response_model=ReviewPackResponse)
+async def get_review_pack(
+    review_pack_id: uuid.UUID,
+    engagement_id: uuid.UUID = Query(..., description="Engagement ID for access scoping"),
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """Retrieve a single review pack by ID.
+
+    Returns full pack details including segment activities, evidence list,
+    per-element confidence scores, and conflict flags.
+    """
+    result = await session.execute(
+        select(ReviewPack).where(
+            ReviewPack.id == review_pack_id,
+            ReviewPack.engagement_id == engagement_id,
+        )
+    )
+    pack = result.scalar_one_or_none()
+    if pack is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Review pack not found",
+        )
+    return pack
+
+
+# ---------------------------------------------------------------------------
 # Submit Reviewer Decision (Story #353)
 # ---------------------------------------------------------------------------
 
@@ -272,6 +305,158 @@ async def submit_decision(
     await session.commit()
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# Filtered Decision Listing (Story #365)
+# ---------------------------------------------------------------------------
+
+
+class DecisionListItem(BaseModel):
+    """Decision item for listing."""
+
+    id: uuid.UUID
+    engagement_id: uuid.UUID
+    review_pack_id: uuid.UUID
+    element_id: str
+    action: str
+    reviewer_id: uuid.UUID | None
+    payload: dict[str, Any] | None
+    graph_write_back_result: dict[str, Any] | None
+    decision_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class PaginatedDecisionResponse(BaseModel):
+    """Paginated response for decision queries."""
+
+    items: list[DecisionListItem]
+    total: int
+    limit: int
+    offset: int
+
+
+@router.get("/decisions", response_model=PaginatedDecisionResponse)
+async def list_decisions(
+    engagement_id: uuid.UUID = Query(..., description="Engagement ID"),
+    action: ReviewerAction | None = Query(None, description="Filter by action"),
+    reviewer_id: uuid.UUID | None = Query(None, description="Filter by reviewer"),
+    review_pack_id: uuid.UUID | None = Query(None, description="Filter by review pack"),
+    limit: int = Query(20, ge=1, le=100, description="Items per page"),
+    offset: int = Query(0, ge=0, description="Offset for pagination"),
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_engagement_access),
+) -> dict[str, Any]:
+    """List validation decisions with optional filters.
+
+    Results are ordered by decision_at descending (most recent first).
+    """
+    query = select(ValidationDecision).where(
+        ValidationDecision.engagement_id == engagement_id
+    )
+    count_query = (
+        select(func.count())
+        .select_from(ValidationDecision)
+        .where(ValidationDecision.engagement_id == engagement_id)
+    )
+
+    if action is not None:
+        query = query.where(ValidationDecision.action == action)
+        count_query = count_query.where(ValidationDecision.action == action)
+
+    if reviewer_id is not None:
+        query = query.where(ValidationDecision.reviewer_id == reviewer_id)
+        count_query = count_query.where(ValidationDecision.reviewer_id == reviewer_id)
+
+    if review_pack_id is not None:
+        query = query.where(ValidationDecision.review_pack_id == review_pack_id)
+        count_query = count_query.where(ValidationDecision.review_pack_id == review_pack_id)
+
+    total_result = await session.execute(count_query)
+    total = total_result.scalar() or 0
+
+    query = query.order_by(ValidationDecision.decision_at.desc())
+    query = query.limit(limit).offset(offset)
+
+    result = await session.execute(query)
+    items = result.scalars().all()
+
+    return {
+        "items": items,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Reviewer Routing (Story #365 — Scenario 3)
+# ---------------------------------------------------------------------------
+
+
+class RoutePacksRequest(BaseModel):
+    """Request body for routing review packs to reviewers."""
+
+    engagement_id: uuid.UUID
+
+
+class RoutedPackResponse(BaseModel):
+    """Response showing which packs were routed to which reviewer."""
+
+    pack_id: str
+    assigned_role: str | None
+    assigned_sme_id: str | None
+    status: str
+
+
+@router.post("/review-packs/route", response_model=list[RoutedPackResponse])
+async def route_review_packs(
+    body: RoutePacksRequest,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_engagement_access),
+) -> list[dict[str, Any]]:
+    """Route unassigned review packs to reviewers using role-activity mapping.
+
+    For each pending/unassigned pack, looks up the RoleActivityMapping for
+    the pack's assigned_role and sets assigned_sme_id accordingly.
+    Packs with no matching role mapping remain unassigned.
+    """
+    # Load role-activity mappings for this engagement
+    mapping_result = await session.execute(
+        select(RoleActivityMapping).where(
+            RoleActivityMapping.engagement_id == body.engagement_id
+        )
+    )
+    mappings = mapping_result.scalars().all()
+    role_to_reviewer: dict[str, uuid.UUID] = {
+        m.role_name: m.reviewer_id for m in mappings
+    }
+
+    # Load unassigned packs for this engagement
+    pack_result = await session.execute(
+        select(ReviewPack).where(
+            ReviewPack.engagement_id == body.engagement_id,
+            ReviewPack.assigned_sme_id.is_(None),
+        )
+    )
+    packs = pack_result.scalars().all()
+
+    routed: list[dict[str, Any]] = []
+    for pack in packs:
+        reviewer_id = role_to_reviewer.get(pack.assigned_role) if pack.assigned_role else None
+        if reviewer_id is not None:
+            pack.assigned_sme_id = reviewer_id
+        routed.append({
+            "pack_id": str(pack.id),
+            "assigned_role": pack.assigned_role,
+            "assigned_sme_id": str(pack.assigned_sme_id) if pack.assigned_sme_id else None,
+            "status": "routed" if reviewer_id else "unassigned",
+        })
+
+    await session.commit()
+
+    return routed
 
 
 # ---------------------------------------------------------------------------
