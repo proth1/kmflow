@@ -8,6 +8,7 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #483 merged** — Transformation templates library: 4 analysis templates, Literal validation, IDOR-safe, 35 tests (#376) (v2026.02.166)
 - **PR #482 merged** — LLM suggestion feedback loop: RejectionFeedback model, traceability chain, exclusion prompt, IDOR-safe, LIMIT 50 patterns, 25 tests (#390) (v2026.02.165)
 - **PR #481 merged** — Per-scenario simulation engine: 7 modification types, confidence overlay, async trigger, IDOR-safe, task lifecycle, 31 tests (#380) (v2026.02.164)
 - **PR #480 merged** — Sensitivity analysis engine: OAT ranking, tornado chart data, P10/P50/P90 percentiles, custom cost functions, negative value support, 24 tests (#364) (v2026.02.163)

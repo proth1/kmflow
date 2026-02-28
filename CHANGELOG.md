@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.166] - 2026-02-27
+### Added
+- Transformation templates library: 4 analysis templates (consolidate tasks, automate gateway, shift decision, remove control), Literal action validation, max 500 elements, IDOR-safe, 35 tests (#376)
+
 ## [2026.02.165] - 2026-02-27
 ### Added
 - LLM suggestion feedback loop: RejectionFeedback model/migration, traceability chain (modification→suggestion→audit log), exclusion prompt generation, IDOR-safe endpoints, LIMIT 50 on pattern queries, 25 tests (#390)
