@@ -144,6 +144,12 @@ class ModelImporter(abc.ABC):
 
     Subclasses must implement ``parse()`` to extract process elements
     and edges from their respective file formats.
+
+    Error handling convention:
+    - Raise ``ImportFormatError`` for structural format issues where
+      parsing cannot proceed (corrupt archive, unsupported version).
+    - Return errors in ``ImportedModel.errors`` for recoverable issues
+      (file not found, wrong extension, malformed XML content).
     """
 
     @abc.abstractmethod
@@ -155,8 +161,11 @@ class ModelImporter(abc.ABC):
 
         Returns:
             ImportedModel with extracted elements and edges.
+            Check ``model.success`` for parse result; errors are
+            in ``model.errors`` for recoverable failures.
 
         Raises:
-            ImportFormatError: If the file format is unsupported or corrupt.
+            ImportFormatError: If the file format is structurally
+                unsupported or corrupt (non-recoverable).
         """
         ...

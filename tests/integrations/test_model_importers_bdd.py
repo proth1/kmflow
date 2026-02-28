@@ -213,6 +213,28 @@ class TestARISErrorHandling:
         assert err.detected_version == "8.0"
         assert "9.x" in err.supported_versions
 
+    def test_version_1x_rejected(self, tmp_path: Path) -> None:
+        """Version 1.x is not in supported 9.x/10.x range."""
+        aml = tmp_path / "v1.aml"
+        aml.write_text('<?xml version="1.0"?><AML Version="1.0"></AML>')
+
+        importer = ARISImporter()
+        with pytest.raises(ImportFormatError) as exc_info:
+            importer.parse(aml)
+
+        assert exc_info.value.detected_version == "1.0"
+
+    def test_version_11x_rejected(self, tmp_path: Path) -> None:
+        """Version 11.x is not in supported 9.x/10.x range."""
+        aml = tmp_path / "v11.aml"
+        aml.write_text('<?xml version="1.0"?><AML Version="11.0"></AML>')
+
+        importer = ARISImporter()
+        with pytest.raises(ImportFormatError) as exc_info:
+            importer.parse(aml)
+
+        assert exc_info.value.detected_version == "11.0"
+
 
 # --- Visio VSDX Tests ---
 

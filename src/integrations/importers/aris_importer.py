@@ -106,13 +106,16 @@ class ARISImporter(ModelImporter):
         # AML files may have version in attributes or header
         version = root.get("Version", root.get("version", ""))
         # Accept 9.x, 10.x, or missing version (assume compatible)
-        if version and not any(version.startswith(v[0]) for v in SUPPORTED_VERSIONS):
-            raise ImportFormatError(
-                "Unsupported ARIS AML version",
-                format_name="aris_aml",
-                detected_version=version,
-                supported_versions=SUPPORTED_VERSIONS,
-            )
+        if version:
+            major = version.split(".")[0]
+            supported_majors = {v.split(".")[0] for v in SUPPORTED_VERSIONS}
+            if major not in supported_majors:
+                raise ImportFormatError(
+                    "Unsupported ARIS AML version",
+                    format_name="aris_aml",
+                    detected_version=version,
+                    supported_versions=SUPPORTED_VERSIONS,
+                )
 
     def _extract_objects(
         self, root: Any, model: ImportedModel
