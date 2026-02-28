@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.184] - 2026-02-28
+### Added
+- BPMN viewer API: latest model with BPMN XML, element evidence detail, engagement dashboard KPIs, engagement access control, 19 tests (#338)
+
 ## [2026.02.183] - 2026-02-28
 ### Added
 - Async executive report generation: 5-section assembly with evidence appendix and in-text citations, Redis job tracking, HTML/PDF download, engagement access control, 32 tests (#356)

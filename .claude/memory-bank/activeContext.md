@@ -8,6 +8,7 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #501 merged** — BPMN viewer API: latest model, element evidence, dashboard KPIs, 19 tests (#338) (v2026.02.184)
 - **PR #500 merged** — Executive report generation: 5-section assembly, evidence appendix citations, Redis job tracking, HTML/PDF download, 32 tests (#356) (v2026.02.183)
 - **PR #499 merged** — POV orchestrator API: progress tracking, version history with diff, engagement access control, 23 tests (#318) (v2026.02.182)
 - **PR #498 merged** — Desktop task mining: SourceType/Brightness StrEnums, canonical event dict, PII docs, 44 tests (#355) (v2026.02.181)

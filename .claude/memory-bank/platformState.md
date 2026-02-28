@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.183
+**Version**: 2026.02.184
 **Last Updated**: 2026-02-28
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.184 | 2026-02-28 | BPMN viewer API: latest model with BPMN XML, element evidence detail, engagement dashboard KPIs, engagement access control, 19 tests (#338) |
 | 2026.02.183 | 2026-02-28 | Executive report generation: 5-section assembly, evidence appendix citations, Redis job tracking, HTML/PDF download, 32 tests (#356) |
 | 2026.02.182 | 2026-02-28 | POV orchestrator API: progress tracking, version history with diff, engagement access control, 23 tests (#318) |
 | 2026.02.181 | 2026-02-28 | Desktop task mining: SourceType/Brightness StrEnums, canonical event dict, PII docs, 44 tests (#355) |
