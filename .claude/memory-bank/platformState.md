@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.164
+**Version**: 2026.02.165
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.165 | 2026-02-27 | LLM suggestion feedback loop: RejectionFeedback, traceability chain, exclusion prompt, IDOR-safe, 25 tests (#390) |
 | 2026.02.164 | 2026-02-27 | Per-scenario simulation: 7 mod types, confidence overlay, async trigger, IDOR-safe, task lifecycle, 31 tests (#380) |
 | 2026.02.163 | 2026-02-27 | Sensitivity analysis engine: OAT ranking, tornado chart, P10/P50/P90 percentiles, custom cost functions, 24 tests (#364) |
 | 2026.02.162 | 2026-02-27 | Governance flag detection: SoD checks, regulatory compliance flagging, authorization change detection, knowledge boundaries, IDOR-safe, 19 tests (#381) |

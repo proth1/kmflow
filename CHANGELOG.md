@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.165] - 2026-02-27
+### Added
+- LLM suggestion feedback loop: RejectionFeedback model/migration, traceability chain (modification→suggestion→audit log), exclusion prompt generation, IDOR-safe endpoints, LIMIT 50 on pattern queries, 25 tests (#390)
+
 ## [2026.02.164] - 2026-02-27
 ### Added
 - Per-scenario simulation engine: ScenarioSimulationAdapter for all 7 modification types, confidence overlay (Bright/Dim/Dark), async trigger with status polling, IDOR-safe engagement membership check, background task lifecycle management, 31 tests (#380)
