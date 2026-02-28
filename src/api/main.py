@@ -82,6 +82,7 @@ from src.api.routes import (
     sensitivity,
     shelf_requests,
     simulations,
+    suggestion_feedback,
     survey_claims,
     survey_sessions,
     taskmining,
@@ -367,6 +368,9 @@ def create_app() -> FastAPI:
 
     # -- Scenario Simulation Routes (Story #380) ---
     app.include_router(scenario_simulation.router)
+
+    # -- Suggestion Feedback Routes (Story #390) ---
+    app.include_router(suggestion_feedback.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)

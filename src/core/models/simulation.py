@@ -278,3 +278,27 @@ class AlternativeSuggestion(Base):
 
     def __repr__(self) -> str:
         return f"<AlternativeSuggestion(id={self.id}, disposition={self.disposition})>"
+
+
+class RejectionFeedback(Base):
+    """Stores rejected suggestion patterns to prevent repeat suggestions.
+
+    When a consultant rejects an LLM suggestion, the pattern is summarized
+    and stored so future suggestion prompts can exclude similar ideas.
+    """
+
+    __tablename__ = "rejection_feedback"
+    __table_args__ = (
+        Index("ix_rejection_feedback_engagement_id", "engagement_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    suggestion_pattern_summary: Mapped[str] = mapped_column(Text, nullable=False)
+    rejected_suggestion_ids: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<RejectionFeedback(id={self.id}, engagement_id={self.engagement_id})>"
