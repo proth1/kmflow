@@ -8,6 +8,7 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #496 merged** — Variant comparison replay: LCS alignment, divergence detection, cycle time deltas, evidence linking, 39 tests (#342) (v2026.02.179)
 - **PR #495 merged** — Aggregate volume replay: per-interval flow metrics, bottleneck detection, gateway distribution, heat map, 36 tests (#339) (v2026.02.178)
 - **PR #494 merged** — Single-case timeline replay: brightness classification, paginated frames, evidence linking, 48 tests (#337) (v2026.02.177)
 - **PR #493 merged** — POV generation orchestrator: 8-step LCD pipeline tracking, FAILED_PARTIAL preservation, version diff, 38 tests (Part of #318) (v2026.02.176)
