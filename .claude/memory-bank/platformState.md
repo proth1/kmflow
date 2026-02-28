@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.153
+**Version**: 2026.02.154
 **Last Updated**: 2026-02-27
 
 ## Quick Stats
@@ -27,6 +27,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.154 | 2026-02-27 | Evidence grading progression: per-version grade distributions, improvement rate with 100% cap, multi-cycle trend data, GradingSnapshot model, 19 tests (#357) |
 | 2026.02.153 | 2026-02-27 | Structured reviewer actions: CONFIRM/CORRECT/REJECT/DEFER with graph write-back, ValidationDecision model, :Assertion labels, element pack validation, 30 tests (#353) |
 | 2026.02.152 | 2026-02-27 | Claim write-back: Neo4j graph integration, SUPPORTS/CONTRADICTS edges, EpistemicFrame, ConflictObject auto-creation, confidence recomputation, 27 tests (#324) |
 | 2026.02.151 | 2026-02-27 | Survey bot with 8 probe types: session lifecycle, fatigue-optimized probes, claim creation, conflict flagging, certainty summaries, 23 tests (#319) |

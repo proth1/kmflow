@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.154] - 2026-02-27
+### Added
+- Evidence grading progression tracking: per-version grade distributions (U/D/C/B/A), aggregate and per-element improvement rate computation with 100% cap, multi-cycle trend data for stacked bar charts, GradingSnapshot model, migration 072, 19 tests (#357)
+
 ## [2026.02.153] - 2026-02-27
 ### Added
 - Structured reviewer actions with graph write-back: CONFIRM (grade promotion C→B→A, +0.1 confidence), CORRECT (SUPERSEDES edge + retraction), REJECT (ConflictObject creation, severity 0.8), DEFER (Dark Room backlog), ValidationDecision model, :Assertion-labeled Cypher, element_id pack validation, property allowlist injection defense, 30 tests (#353)

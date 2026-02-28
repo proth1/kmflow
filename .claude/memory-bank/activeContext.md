@@ -8,6 +8,8 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #471 merged** — Evidence grading progression: per-version grade distributions, improvement rate with 100% cap, multi-cycle trend data, GradingSnapshot model, 19 tests (#357) (v2026.02.154)
+- **PR #470 merged** — Structured reviewer actions: CONFIRM/CORRECT/REJECT/DEFER with graph write-back, ValidationDecision model, :Assertion labels, element pack validation, 30 tests (#353) (v2026.02.153)
 - **PR #469 merged** — Claim write-back: Neo4j graph integration, SUPPORTS/CONTRADICTS edges, EpistemicFrame, ConflictObject auto-creation, confidence recomputation, 27 tests (#324) (v2026.02.152)
 - **PR #468 merged** — Survey bot with 8 probe types: session lifecycle, fatigue-optimized probes, claim creation, conflict flagging, certainty summaries, 23 tests (#319) (v2026.02.151)
 - **PR #467 merged** — Seed list pipeline: 4-stage workflow, consultant upload, NLP refinement, probe generation, extraction targeting, 25 tests (#321) (v2026.02.150)
