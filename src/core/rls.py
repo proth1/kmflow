@@ -42,6 +42,7 @@ _TABLE_NAME_RE = re.compile(r"^[a-z_][a-z0-9_]*$")
 ENGAGEMENT_SCOPED_TABLES: list[str] = [
     "annotations",
     "audit_logs",
+    "case_link_edges",
     "conflict_objects",
     "conformance_results",
     "controls",
@@ -67,11 +68,14 @@ ENGAGEMENT_SCOPED_TABLES: list[str] = [
     "shelf_data_requests",
     "simulation_scenarios",
     "survey_claims",
+    "switching_traces",
     "target_operating_models",
     "task_mining_actions",
     "task_mining_agents",
     "task_mining_events",
     "task_mining_sessions",
+    "transition_matrices",
+    "visual_context_events",
 ]
 
 

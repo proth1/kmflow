@@ -58,7 +58,7 @@ class OCREngine:
     # ------------------------------------------------------------------
 
     async def _extract_macos(self, image_bytes: bytes) -> str:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._extract_macos_sync, image_bytes)
 
     @staticmethod
@@ -86,7 +86,7 @@ class OCREngine:
     # ------------------------------------------------------------------
 
     async def _extract_windows(self, image_bytes: bytes) -> str:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._extract_windows_sync, image_bytes)
 
     @staticmethod
@@ -118,7 +118,7 @@ class OCREngine:
     # ------------------------------------------------------------------
 
     async def _extract_tesseract(self, image_bytes: bytes) -> str:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._extract_tesseract_sync, image_bytes)
 
     @staticmethod

@@ -15,6 +15,7 @@ auth endpoints are never blocked.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import uuid
@@ -43,9 +44,7 @@ PROTECTED_PATH_PREFIXES: frozenset[str] = frozenset(
 )
 
 # Paths always excluded from PEP regardless of prefix matching
-_SKIP_PATHS: frozenset[str] = frozenset(
-    {"/api/v1/health", "/docs", "/openapi.json", "/redoc", "/api/v1/pdp"}
-)
+_SKIP_PATHS: frozenset[str] = frozenset({"/api/v1/health", "/docs", "/openapi.json", "/redoc", "/api/v1/pdp"})
 
 # Maximum response body size to apply obligations to (10 MB). Larger
 # responses are passed through to avoid excessive memory allocation.
@@ -96,13 +95,10 @@ def _extract_attributes(request: Request) -> dict[str, Any]:
     abac = getattr(request.state, "abac_attributes", None)
     if isinstance(abac, dict):
         attrs.update(abac)
-    # Allow callers to pass cohort_size via custom header for API clients
-    raw_cohort = request.headers.get("X-Cohort-Size")
-    if raw_cohort and "cohort_size" not in attrs:
-        try:
-            attrs["cohort_size"] = int(raw_cohort)
-        except ValueError:
-            pass
+    # Note: cohort_size must be derived server-side from response data by
+    # the upstream enrichment middleware that populates request.state.abac_attributes.
+    # It is NOT read from client headers to prevent self-reported bypass of
+    # cohort suppression obligations.
     return attrs
 
 
@@ -126,11 +122,18 @@ class PEPMiddleware(BaseHTTPMiddleware):
     ensures the PEP never breaks non-JSON endpoints (binary downloads, SSE).
     """
 
-    def __init__(self, app: ASGIApp, *, fail_open: bool = True) -> None:
+    def __init__(self, app: ASGIApp, *, fail_open: bool | None = None) -> None:
         super().__init__(app)
-        # fail_open=True: if PDP is unavailable, requests are permitted.
-        # flip to False for strict environments where unavailability = DENY.
-        self._fail_open = fail_open
+        # fail_open controls behavior when PDP is unavailable:
+        #   True  → requests are permitted (development/testing)
+        #   False → requests get 503 (production)
+        # Default: read from settings; if not configured, default False.
+        if fail_open is not None:
+            self._fail_open = fail_open
+        else:
+            from src.core.config import get_settings
+            settings = get_settings()
+            self._fail_open = getattr(settings, "pdp_fail_open", False)
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         if not _is_protected(request.url.path):
@@ -275,7 +278,6 @@ class PEPMiddleware(BaseHTTPMiddleware):
             return response
 
         from src.api.services.obligation_enforcer import ObligationEnforcer
-        from src.core.models.pdp import PolicyObligation
 
         # Convert raw obligation dicts into PolicyObligation-like objects for enforcer
         obligation_objects = [_dict_to_obligation(o) for o in obligations]
@@ -313,8 +315,6 @@ def _dict_to_obligation(raw: dict[str, Any]) -> Any:
     Uses a lightweight object so ObligationEnforcer doesn't need a DB model.
     """
     from types import SimpleNamespace
-
-    from src.core.models.pdp import ObligationType
 
     raw_type = raw.get("type", "")
     try:
