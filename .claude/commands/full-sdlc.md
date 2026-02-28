@@ -23,6 +23,7 @@ Execute the complete Software Development Lifecycle for a work item.
 
 ### Phase 3: Implementation
 1. **Create feature branch**: `git checkout -b feature/{issue}-{description}`
+   - Auto-applies `cdd:evidence-required` label to the issue (label-taxonomy automation)
 2. **Create worktree** (if needed): `git worktree add ../kmflow-{issue} feature/{issue}-{description}`
 3. **Implement the changes**: Write code following coding standards (`.claude/rules/coding-standards.md`)
 4. **Write tests**: pytest unit tests, >80% coverage target
@@ -31,14 +32,22 @@ Execute the complete Software Development Lifecycle for a work item.
    - Backend format (ruff format --check)
    - Backend type check (mypy)
    - Backend tests with coverage
+   - WGI subsystem test suites (when applicable):
+     - Correlation Engine — correlation quality and diagnostic checks
+     - VCE Pipeline — VCE privacy compliance and output validation
+     - Switching Sequences — sequence correctness and state transition tests
+     - ABAC PDP — policy decision point authorization tests
    - Frontend tests (if applicable)
    - Security scan (pip-audit + npm audit)
+   - **Creates `.pipeline-passed` marker** on success (required for merge)
+   - **Generates `.pipeline-report.md`** (posted as CDD evidence on issue)
 
 ### Phase 4: Commit, Push, and Pull Request
 1. **Stage changes**: `git add` specific files (never `git add -A`)
 2. **Commit**: Descriptive message referencing the issue
 3. **Push**: `git push -u origin feature/{issue}-{description}`
-4. **Create PR**: Use `gh pr create` with:
+4. **Post CDD evidence**: Pipeline results are auto-posted to the issue by `post-pipeline-evidence.sh`
+5. **Create PR**: Use `gh pr create` with:
    - Title: Short, descriptive (<70 chars)
    - Body: `Closes #{issue}` + summary + test plan
    - Labels matching issue labels

@@ -1,4 +1,4 @@
-# KMFlow Task Mining Agent (Windows) - Product Requirements Document
+# WorkGraphIQ Task Mining Agent (Windows) - Product Requirements Document
 
 **Version**: 1.0.0
 **Status**: Draft
@@ -10,7 +10,7 @@
 
 ## 1. Executive Summary
 
-The KMFlow Task Mining Agent for macOS (`docs/prd/PRD_KMFlow_TaskMining.md`) established a first-party desktop observation capability for consulting engagements. It captures observed desktop behavior as PII-filtered evidence, achieving 0.9 source weight in the confidence scoring model. The macOS agent shipped as a Swift + Python hybrid with four-layer PII architecture and engagement/enterprise deployment modes.
+The WorkGraphIQ Task Mining Agent for macOS (`docs/prd/PRD_WGI_TaskMining.md`) established a first-party desktop observation capability for consulting engagements. It captures observed desktop behavior as PII-filtered evidence, achieving 0.9 source weight in the confidence scoring model. The macOS agent shipped as a Swift + Python hybrid with four-layer PII architecture and engagement/enterprise deployment modes.
 
 **Why Windows Now**:
 
@@ -70,14 +70,14 @@ The four-layer PII architecture is not optional on Windows. The same regulatory 
 
 ## 3. Product Vision
 
-The Windows Task Mining Agent extends KMFlow's desktop observation capability to the dominant enterprise platform. It provides the same privacy-first, evidence-grade process discovery that the macOS agent delivers, using native Windows APIs for capture and the shared Python + backend pipeline for intelligence and evidence materialization.
+The Windows Task Mining Agent extends WorkGraphIQ's desktop observation capability to the dominant enterprise platform. It provides the same privacy-first, evidence-grade process discovery that the macOS agent delivers, using native Windows APIs for capture and the shared Python + backend pipeline for intelligence and evidence materialization.
 
-**Vision Statement**: A lightweight, privacy-first Windows desktop agent that observes actual work patterns using native Windows APIs, applies mandatory four-layer PII filtering before any data leaves the device, and feeds observed behavior into the shared KMFlow evidence pipeline with 0.9 source weight.
+**Vision Statement**: A lightweight, privacy-first Windows desktop agent that observes actual work patterns using native Windows APIs, applies mandatory four-layer PII filtering before any data leaves the device, and feeds observed behavior into the shared WorkGraphIQ evidence pipeline with 0.9 source weight.
 
 **Guiding Principles** (identical to macOS):
 - Privacy-first: four-layer PII filtering is architectural, not configurable off
 - Lightweight: agent CPU < 3%, memory < 150MB, invisible to users during normal work
-- Evidence-grade: captured data meets the same quality standards as all other KMFlow evidence
+- Evidence-grade: captured data meets the same quality standards as all other WorkGraphIQ evidence
 - Consulting-native: supports both bounded engagement deployment and enterprise MDM deployment
 - Transparent consent: users know the agent is running, what it captures, and how to opt out of content-level capture
 
@@ -99,16 +99,16 @@ The Windows Task Mining Agent extends KMFlow's desktop observation capability to
 
 ### 4.2 Competitive Landscape (Windows-Specific)
 
-| Vendor | Windows Agent | Strength | Gap vs. KMFlow |
+| Vendor | Windows Agent | Strength | Gap vs. WorkGraphIQ |
 |--------|--------------|----------|----------------|
 | **Celonis Task Mining** | Native Windows sensor | Mature Windows support, EMS integration | No knowledge graph; no consulting workflow; vendor PII |
 | **UiPath Task Mining** | Windows desktop recorder | Deep RPA integration, large install base | RPA-centric; no evidence triangulation |
 | **Soroco Scout** | Windows agent | Enterprise deployment tooling | Black-box PII; $25K/engagement; no LCD scoring |
 | **Microsoft Viva Insights** | M365 behavioral data | Zero-deploy for M365 shops | M365 only; no desktop-wide capture |
 
-### 4.3 KMFlow's Windows Positioning
+### 4.3 WorkGraphIQ's Windows Positioning
 
-KMFlow enters the Windows task mining market with advantages no competitor has:
+WorkGraphIQ enters the Windows task mining market with advantages no competitor has:
 
 1. **Cross-platform evidence fusion**: macOS + Windows task mining data feeds the same knowledge graph, enabling cross-platform process discovery in mixed-OS environments
 2. **Identical backend**: No "Windows version" of the backend — same API, same schema, same confidence model
@@ -133,7 +133,7 @@ graph TD
         NP -->|deserialized events| PY
     end
 
-    subgraph KMFlow Backend - Shared
+    subgraph WorkGraphIQ Backend - Shared
         FASTAPI[FastAPI\nEvent Ingestion\nConfig Push\nHeartbeat]
         REDIS[Redis Stream\nTASK_MINING_STREAM]
         WORKER[Worker\nAction Assembly\nPII L3 Filter\nEvidence Materialization]
@@ -277,7 +277,7 @@ The `app_bundle_id` field in the event protocol is populated with the best avail
 | Auto-disable | Agent ceases capture at engagement end date; requires re-authorization to resume |
 | Persistence | Task Scheduler task (runs at user logon, stops at engagement end) |
 | Data scope | Bounded to engagement session window |
-| Uninstall | Windows Settings > Apps > KMFlow Agent; or PowerShell `Remove-AppxPackage` |
+| Uninstall | Windows Settings > Apps > WorkGraphIQ Agent; or PowerShell `Remove-AppxPackage` |
 | Consent flow | System tray notification at first launch with capture summary; user acceptance required before capture begins |
 
 ### 6.2 Enterprise Mode (Persistent)
@@ -425,7 +425,7 @@ The `app_allowlist` in the configuration response uses the canonical identifier 
 ```mermaid
 sequenceDiagram
     participant EL as Engagement Lead
-    participant Admin as KMFlow Admin
+    participant Admin as WorkGraphIQ Admin
     participant IT as Client IT
     participant User as Client User
     participant Agent as Windows Agent
@@ -453,7 +453,7 @@ sequenceDiagram
     participant Intune as Microsoft Intune
     participant PC as User's Windows PC
     participant Agent as Windows Agent
-    participant Admin as KMFlow Backend
+    participant Admin as WorkGraphIQ Backend
 
     IT->>Intune: Upload MSI + configure app settings
     IT->>Intune: Set target group (e.g., Finance department)
@@ -516,7 +516,7 @@ The Windows executable and MSI/MSIX packages are signed with an Extended Validat
 
 ### 15.3 Windows Defender Application Control (WDAC)
 
-Enterprise environments using WDAC policies can whitelist the KMFlow agent by signing certificate. The MSI includes a WDAC supplemental policy file that enterprise IT can merge with their base policy:
+Enterprise environments using WDAC policies can whitelist the WorkGraphIQ agent by signing certificate. The MSI includes a WDAC supplemental policy file that enterprise IT can merge with their base policy:
 
 ```xml
 <SignerRule>
@@ -527,7 +527,7 @@ Enterprise environments using WDAC policies can whitelist the KMFlow agent by si
 
 ### 15.4 UAC and Privilege Model
 
-The KMFlow agent runs as a standard user process. It does not require administrator privileges for capture operations:
+The WorkGraphIQ agent runs as a standard user process. It does not require administrator privileges for capture operations:
 
 | Operation | Privilege Required | How Achieved |
 |-----------|-------------------|-------------|
@@ -633,11 +633,11 @@ Identical to macOS PRD Section 15.5. All registration, configuration, consent, p
 
 ### 17.1 Feature Comparison (Windows Market)
 
-| Capability | KMFlow Windows Agent | Celonis Task Mining | UiPath Task Mining | Soroco Scout |
+| Capability | WorkGraphIQ Windows Agent | Celonis Task Mining | UiPath Task Mining | Soroco Scout |
 |-----------|:-------------------:|:------------------:|:-----------------:|:------------:|
 | Knowledge graph integration | Yes | No | No | No |
 | Evidence triangulation | Yes | No | No | No |
-| LCD confidence scoring | Yes | No | No | No |
+| Least Common Denominator (LCD) confidence scoring | Yes | No | No | No |
 | Mandatory 4-layer PII | Yes | Config-based | Config-based | Config-based |
 | Cross-platform (macOS + Windows) | Yes | Windows only | Windows only | Windows only |
 | Engagement mode (auto-disable) | Yes | No | No | No |
@@ -649,7 +649,7 @@ Identical to macOS PRD Section 15.5. All registration, configuration, consent, p
 
 ### 17.2 Cross-Platform Advantage
 
-KMFlow is the only task mining solution that captures from both macOS and Windows desktops into a single evidence pipeline. In mixed-OS environments (common in consulting, design, and technology firms), this provides:
+WorkGraphIQ is the only task mining solution that captures from both macOS and Windows desktops into a single evidence pipeline. In mixed-OS environments (common in consulting, design, and technology firms), this provides:
 
 - Unified process view across all desktops
 - Single confidence scoring model regardless of agent platform
@@ -866,7 +866,7 @@ Identical to macOS PRD Section 20.3. Windows task mining sessions materialize as
 | Created | 2026-02-28 |
 | Last Updated | 2026-02-28 |
 | Next Review | 2026-03-28 |
-| Related Documents | `docs/prd/PRD_KMFlow_Platform.md` (Platform PRD), `docs/prd/PRD_KMFlow_TaskMining.md` (macOS Task Mining Agent PRD) |
+| Related Documents | `docs/prd/PRD_KMFlow_Platform.md` (Platform PRD), `docs/prd/PRD_WGI_TaskMining.md` (macOS Task Mining Agent PRD) |
 
 ---
 

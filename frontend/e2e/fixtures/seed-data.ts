@@ -80,6 +80,31 @@ export const SCENARIO_IDS = [
   "92c217a5-eca9-5fc1-a581-20024caf73c5",
 ] as const;
 
+// ── WGI Feature IDs ────────────────────────────────────────────────
+
+export const SWITCHING_TRACE_IDS = [
+  "460e7138-9e07-535b-b276-6fd2943d78b7",
+  "6ecd11eb-12a8-5deb-a747-3c65c2cddfbc",
+  "d4291e13-a816-5ca1-b895-04f6062892b9",
+] as const;
+
+export const TRANSITION_MATRIX_ID = "60aae798-0db6-5804-9a92-3dabe36a1b85";
+
+export const VCE_IDS = [
+  "cf4adadd-101e-55ac-9851-38e967279a09",
+  "58bbd73f-8bef-5aed-b4ca-6eb0e7c9b410",
+  "e329e9f2-7ef0-571f-bcda-2ee9192f73b0",
+  "086fb074-3877-51fd-99e1-39e88f8c4d9b",
+  "9178e3bb-28c9-5ee7-ab74-b2e6062ce8f7",
+] as const;
+
+export const CASE_LINK_IDS = [
+  "3527cf80-6ab8-5117-b243-d0aa3a72574f",
+  "892f4238-d5d1-5c19-9be5-8f94d1524f79",
+  "43eefcf1-a2a4-5792-b9fc-6353a60c5132",
+  "fc777d38-5b53-5ffb-aaf6-1f88dedd603c",
+] as const;
+
 // ── Engagement metadata ─────────────────────────────────────────────
 
 export const ENGAGEMENT = {

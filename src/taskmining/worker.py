@@ -53,6 +53,8 @@ async def process_task(task_data: dict[str, Any]) -> dict[str, Any]:
         }
     elif task_type == "materialize":
         return {"status": "materialized"}
+    elif task_type == "assemble_switching":
+        return await _handle_assemble_switching(task_data)
     else:
         return {"status": "unknown_task_type", "task_type": task_type}
 
@@ -100,3 +102,72 @@ async def run_worker(
             await asyncio.sleep(5)
 
     logger.info("Task mining worker %s stopped", worker_id)
+
+
+async def _handle_assemble_switching(task_data: dict[str, Any]) -> dict[str, Any]:
+    """Handle the assemble_switching task type.
+
+    Assembles APP_SWITCH events into SwitchingTrace records and ingests
+    them into the knowledge graph. Requires a database session and graph
+    service — these are lazily imported to avoid circular dependencies.
+
+    Args:
+        task_data: Must contain 'engagement_id'. 'session_id' is optional.
+
+    Returns:
+        Dict with traces_created and graph_nodes_created counts.
+    """
+    engagement_id_str = task_data.get("engagement_id")
+    session_id_str = task_data.get("session_id")
+
+    if not engagement_id_str:
+        logger.warning("assemble_switching task missing engagement_id")
+        return {"status": "error", "detail": "engagement_id required"}
+
+    import uuid as _uuid
+
+    try:
+        engagement_id = _uuid.UUID(engagement_id_str)
+        session_id = _uuid.UUID(session_id_str) if session_id_str else None
+    except ValueError:
+        logger.warning("assemble_switching: invalid UUID in task_data")
+        return {"status": "error", "detail": "invalid UUID"}
+
+    # Lazy imports to avoid circular dependency at module load time
+    from src.core.database import async_session_factory
+    from src.semantic.graph import KnowledgeGraphService
+    from src.taskmining.graph_ingest import ingest_switching_traces
+    from src.taskmining.switching import assemble_switching_traces
+
+    traces_created = 0
+    graph_nodes_created = 0
+
+    async with async_session_factory() as db_session:
+        traces = await assemble_switching_traces(
+            session=db_session,
+            engagement_id=engagement_id,
+            session_id=session_id,
+        )
+        await db_session.commit()
+        traces_created = len(traces)
+
+    graph_service = KnowledgeGraphService()
+    async with async_session_factory() as db_session:
+        graph_summary = await ingest_switching_traces(
+            db_session=db_session,
+            graph_service=graph_service,
+            engagement_id=str(engagement_id),
+        )
+        graph_nodes_created = graph_summary.get("switching_traces", 0)
+
+    logger.info(
+        "assemble_switching complete: engagement=%s traces=%d graph_nodes=%d",
+        engagement_id_str,
+        traces_created,
+        graph_nodes_created,
+    )
+    return {
+        "status": "ok",
+        "traces_created": traces_created,
+        "graph_nodes_created": graph_nodes_created,
+    }

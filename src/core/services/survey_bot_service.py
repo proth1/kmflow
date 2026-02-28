@@ -270,6 +270,133 @@ class SurveyBotService:
             "contradicted_count": by_tier.get("contradicted", 0),
         }
 
+    # ── Multi-Respondent Consensus ──────────────────────────────────
+
+    async def compute_consensus(
+        self,
+        engagement_id: uuid.UUID,
+        *,
+        activity_name: str | None = None,
+        min_sessions: int = 2,
+    ) -> dict[str, Any]:
+        """Aggregate claims across multiple survey sessions for consensus.
+
+        Identifies agreement, conflicts, and uncertainty across respondents
+        for the same activities or process areas.
+
+        Args:
+            engagement_id: Engagement to analyze.
+            activity_name: Optional filter to a specific activity.
+            min_sessions: Minimum sessions required for consensus.
+
+        Returns:
+            Dict with consensus results, conflicts, and agreement scores.
+        """
+        # Get all completed sessions for the engagement
+        sessions_result = await self.list_sessions(
+            engagement_id,
+            status=SurveySessionStatus.COMPLETED,
+            limit=1000,
+        )
+        sessions = sessions_result["items"]
+
+        if len(sessions) < min_sessions:
+            return {
+                "engagement_id": str(engagement_id),
+                "status": "insufficient_sessions",
+                "sessions_found": len(sessions),
+                "min_required": min_sessions,
+                "consensus": [],
+            }
+
+        # Get all claims for these sessions
+        session_ids = [uuid.UUID(s["id"]) for s in sessions]
+        claims_stmt = (
+            select(SurveyClaim)
+            .where(
+                SurveyClaim.session_id.in_(session_ids),
+                SurveyClaim.engagement_id == engagement_id,
+            )
+            .order_by(SurveyClaim.probe_type)
+        )
+        claims_result = await self._session.execute(claims_stmt)
+        all_claims = claims_result.scalars().all()
+
+        # Group claims by probe type + related seed terms for cross-session comparison
+        claim_groups: dict[str, list[SurveyClaim]] = {}
+        for claim in all_claims:
+            # Group key: probe_type + first seed term (approximation of topic)
+            terms = claim.related_seed_terms or []
+            topic = terms[0] if terms else "general"
+            if activity_name and activity_name.lower() not in claim.claim_text.lower():
+                continue
+            group_key = f"{claim.probe_type.value}:{topic}"
+            claim_groups.setdefault(group_key, []).append(claim)
+
+        # Compute consensus for each group
+        consensus_items: list[dict[str, Any]] = []
+        conflicts: list[dict[str, Any]] = []
+
+        for group_key, group_claims in sorted(claim_groups.items()):
+            if len(group_claims) < 2:
+                continue
+
+            # Check tier agreement
+            tiers = [c.certainty_tier for c in group_claims]
+            unique_tiers = set(tiers)
+            roles = list({c.respondent_role for c in group_claims})
+
+            if len(unique_tiers) == 1:
+                # Full agreement
+                consensus_items.append({
+                    "topic": group_key,
+                    "agreement": "full",
+                    "certainty_tier": tiers[0].value,
+                    "respondent_count": len(group_claims),
+                    "respondent_roles": roles,
+                })
+            elif CertaintyTier.CONTRADICTED in unique_tiers:
+                # Active contradiction
+                conflicts.append({
+                    "topic": group_key,
+                    "conflict_type": "contradiction",
+                    "tiers": [t.value for t in tiers],
+                    "respondent_roles": roles,
+                    "claims": [
+                        {
+                            "role": c.respondent_role,
+                            "tier": c.certainty_tier.value,
+                            "text_preview": c.claim_text[:100],
+                        }
+                        for c in group_claims
+                    ],
+                })
+            else:
+                # Partial agreement (different tiers but no contradiction)
+                consensus_items.append({
+                    "topic": group_key,
+                    "agreement": "partial",
+                    "tiers": sorted(t.value for t in unique_tiers),
+                    "respondent_count": len(group_claims),
+                    "respondent_roles": roles,
+                })
+
+        # Compute agreement score
+        total_groups = len(consensus_items) + len(conflicts)
+        full_agreement = sum(1 for c in consensus_items if c["agreement"] == "full")
+        agreement_score = full_agreement / total_groups if total_groups > 0 else 0.0
+
+        return {
+            "engagement_id": str(engagement_id),
+            "status": "computed",
+            "sessions_analyzed": len(sessions),
+            "total_claims": len(all_claims),
+            "consensus_items": consensus_items,
+            "conflicts": conflicts,
+            "agreement_score": round(agreement_score, 4),
+            "conflict_count": len(conflicts),
+        }
+
     # ── List Sessions ────────────────────────────────────────────────
 
     async def list_sessions(

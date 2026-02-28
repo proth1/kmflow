@@ -12,6 +12,10 @@ Endpoints:
 - GET  /quarantine             — List PII quarantine items
 - POST /quarantine/{id}/action — Release/delete quarantine item
 - GET  /dashboard/stats        — Admin dashboard statistics
+- GET  /switching/traces       — List switching traces
+- GET  /switching/matrix       — Get transition matrix
+- GET  /switching/friction     — Get friction analysis summary
+- POST /switching/assemble     — Trigger trace assembly
 """
 
 from __future__ import annotations
@@ -37,10 +41,13 @@ from src.api.schemas.taskmining import (
     AgentListResponse,
     AgentRegisterRequest,
     AgentResponse,
+    AssembleSwitchingRequest,
+    AssembleSwitchingResponse,
     CaptureConfig,
     DashboardStats,
     EventBatchRequest,
     EventBatchResponse,
+    FrictionAnalysisResponse,
     HeartbeatRequest,
     HeartbeatResponse,
     QuarantineActionRequest,
@@ -48,16 +55,31 @@ from src.api.schemas.taskmining import (
     QuarantineListResponse,
     SessionListResponse,
     SessionResponse,
+    SwitchingTraceListResponse,
+    SwitchingTraceResponse,
+    TransitionMatrixResponse,
+    VCEBatchRequest,
+    VCEBatchResponse,
+    VCEDistributionResponse,
+    VCEDwellAnalysisResponse,
+    VCEListResponse,
+    VCEResponse,
+    VCETriggerSummaryResponse,
 )
 from src.core.models.taskmining import (
     AgentStatus,
     PIIQuarantine,
     QuarantineStatus,
+    ScreenStateClass,
     SessionStatus,
+    SwitchingTrace,
     TaskMiningAction,
     TaskMiningAgent,
     TaskMiningEvent,
     TaskMiningSession,
+    TransitionMatrix,
+    VCETriggerReason,
+    VisualContextEvent,
 )
 
 logger = logging.getLogger(__name__)
@@ -699,3 +721,346 @@ async def get_dashboard_stats(
         "events_last_24h": events_24h,
         "app_usage": app_usage,
     }
+
+
+# ---------------------------------------------------------------------------
+# VCE helpers
+# ---------------------------------------------------------------------------
+
+
+def _vce_to_response(vce: VisualContextEvent) -> dict[str, Any]:
+    return {
+        "id": str(vce.id),
+        "engagement_id": str(vce.engagement_id),
+        "session_id": str(vce.session_id) if vce.session_id else None,
+        "agent_id": str(vce.agent_id) if vce.agent_id else None,
+        "timestamp": vce.timestamp.isoformat(),
+        "screen_state_class": vce.screen_state_class,
+        "system_guess": vce.system_guess,
+        "module_guess": vce.module_guess,
+        "confidence": vce.confidence,
+        "trigger_reason": vce.trigger_reason,
+        "sensitivity_flags": vce.sensitivity_flags,
+        "application_name": vce.application_name,
+        "window_title_redacted": vce.window_title_redacted,
+        "dwell_ms": vce.dwell_ms,
+        "interaction_intensity": vce.interaction_intensity,
+        "snapshot_ref": vce.snapshot_ref,
+        "ocr_text_redacted": vce.ocr_text_redacted,
+        "classification_method": vce.classification_method,
+        "created_at": vce.created_at.isoformat(),
+    }
+
+
+# ---------------------------------------------------------------------------
+# POST /vce/events
+# ---------------------------------------------------------------------------
+
+
+@router.post("/vce/events", response_model=VCEBatchResponse, status_code=status.HTTP_202_ACCEPTED)
+async def ingest_vce_events(
+    payload: VCEBatchRequest,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_permission("taskmining:write")),
+) -> dict[str, Any]:
+    """Batch ingest VCE events from the agent.
+
+    Events are validated and persisted individually. Invalid records are
+    counted as rejected without blocking the rest of the batch.
+    """
+    from src.taskmining.vce.processor import process_vce_batch
+
+    # Enrich each payload with agent_id from the batch envelope
+    events_data = []
+    for event in payload.events:
+        data = event.model_dump()
+        data["agent_id"] = str(payload.agent_id)
+        events_data.append(data)
+
+    counts = await process_vce_batch(session=session, events=events_data)
+    await session.commit()
+
+    logger.info(
+        "VCE batch ingest: agent=%s accepted=%d rejected=%d",
+        payload.agent_id,
+        counts["accepted"],
+        counts["rejected"],
+    )
+    return counts
+
+
+# ---------------------------------------------------------------------------
+# GET /vce
+# ---------------------------------------------------------------------------
+
+
+@router.get("/vce", response_model=VCEListResponse)
+async def list_vce_events(
+    engagement_id: UUID | None = None,
+    session_id: UUID | None = None,
+    screen_state_class: ScreenStateClass | None = None,
+    trigger_reason: VCETriggerReason | None = None,
+    limit: int = Query(default=50, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_permission("taskmining:read")),
+) -> dict[str, Any]:
+    """List VCE events with optional filters."""
+    query = select(VisualContextEvent)
+    count_query = select(func.count(VisualContextEvent.id))
+
+    if engagement_id:
+        query = query.where(VisualContextEvent.engagement_id == engagement_id)
+        count_query = count_query.where(VisualContextEvent.engagement_id == engagement_id)
+    if session_id:
+        query = query.where(VisualContextEvent.session_id == session_id)
+        count_query = count_query.where(VisualContextEvent.session_id == session_id)
+    if screen_state_class:
+        query = query.where(VisualContextEvent.screen_state_class == screen_state_class)
+        count_query = count_query.where(VisualContextEvent.screen_state_class == screen_state_class)
+    if trigger_reason:
+        query = query.where(VisualContextEvent.trigger_reason == trigger_reason)
+        count_query = count_query.where(VisualContextEvent.trigger_reason == trigger_reason)
+
+    query = query.order_by(VisualContextEvent.timestamp.desc()).offset(offset).limit(limit)
+
+    result = await session.execute(query)
+    items = [_vce_to_response(v) for v in result.scalars().all()]
+
+    total_result = await session.execute(count_query)
+    total = total_result.scalar() or 0
+
+    return {"items": items, "total": total}
+
+
+# ---------------------------------------------------------------------------
+# GET /vce/{vce_id}
+# ---------------------------------------------------------------------------
+
+
+@router.get("/vce/{vce_id}", response_model=VCEResponse)
+async def get_vce_event(
+    vce_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_permission("taskmining:read")),
+) -> dict[str, Any]:
+    """Get a single VCE event by ID."""
+    result = await session.execute(
+        select(VisualContextEvent).where(VisualContextEvent.id == vce_id)
+    )
+    vce = result.scalar_one_or_none()
+    if vce is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="VCE event not found")
+    return _vce_to_response(vce)
+
+
+# ---------------------------------------------------------------------------
+# GET /vce/distribution
+# ---------------------------------------------------------------------------
+
+
+@router.get("/vce/distribution", response_model=VCEDistributionResponse)
+async def get_vce_distribution(
+    engagement_id: UUID,
+    period_start: datetime | None = None,
+    period_end: datetime | None = None,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_permission("taskmining:read")),
+) -> dict[str, Any]:
+    """Return screen state class distribution for an engagement."""
+    from src.taskmining.vce.analytics import get_vce_distribution as _get_distribution
+
+    return await _get_distribution(
+        session=session,
+        engagement_id=engagement_id,
+        period_start=period_start,
+        period_end=period_end,
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /vce/triggers/summary
+# ---------------------------------------------------------------------------
+
+
+@router.get("/vce/triggers/summary", response_model=VCETriggerSummaryResponse)
+async def get_vce_trigger_summary(
+    engagement_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_permission("taskmining:read")),
+) -> dict[str, Any]:
+    """Return trigger reason distribution for an engagement."""
+    from src.taskmining.vce.analytics import get_trigger_summary
+
+    return await get_trigger_summary(session=session, engagement_id=engagement_id)
+
+
+# ---------------------------------------------------------------------------
+# GET /vce/dwell
+# ---------------------------------------------------------------------------
+
+
+@router.get("/vce/dwell", response_model=VCEDwellAnalysisResponse)
+async def get_vce_dwell_analysis(
+    engagement_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_permission("taskmining:read")),
+) -> dict[str, Any]:
+    """Return dwell time analysis per app and screen state class."""
+    from src.taskmining.vce.analytics import get_dwell_analysis
+
+    return await get_dwell_analysis(session=session, engagement_id=engagement_id)
+
+
+# ---------------------------------------------------------------------------
+# Switching Sequences
+# ---------------------------------------------------------------------------
+
+
+def _trace_to_response(t: SwitchingTrace) -> dict[str, Any]:
+    return {
+        "id": str(t.id),
+        "engagement_id": str(t.engagement_id),
+        "session_id": str(t.session_id) if t.session_id else None,
+        "role_id": str(t.role_id) if t.role_id else None,
+        "trace_sequence": t.trace_sequence,
+        "dwell_durations": t.dwell_durations,
+        "total_duration_ms": t.total_duration_ms,
+        "friction_score": t.friction_score,
+        "is_ping_pong": t.is_ping_pong,
+        "ping_pong_count": t.ping_pong_count,
+        "app_count": t.app_count,
+        "started_at": t.started_at.isoformat(),
+        "ended_at": t.ended_at.isoformat(),
+        "created_at": t.created_at.isoformat(),
+    }
+
+
+def _matrix_to_response(m: TransitionMatrix) -> dict[str, Any]:
+    return {
+        "id": str(m.id),
+        "engagement_id": str(m.engagement_id),
+        "role_id": str(m.role_id) if m.role_id else None,
+        "period_start": m.period_start.isoformat(),
+        "period_end": m.period_end.isoformat(),
+        "matrix_data": m.matrix_data,
+        "total_transitions": m.total_transitions,
+        "unique_apps": m.unique_apps,
+        "top_transitions": m.top_transitions,
+        "created_at": m.created_at.isoformat(),
+    }
+
+
+@router.get("/switching/traces", response_model=SwitchingTraceListResponse)
+async def list_switching_traces(
+    engagement_id: UUID,
+    session_id: UUID | None = None,
+    min_friction: float | None = Query(default=None, ge=0.0, le=1.0),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_permission("taskmining:read")),
+) -> dict[str, Any]:
+    """List switching traces for an engagement."""
+    query = select(SwitchingTrace).where(SwitchingTrace.engagement_id == engagement_id)
+    count_query = select(func.count(SwitchingTrace.id)).where(SwitchingTrace.engagement_id == engagement_id)
+
+    if session_id is not None:
+        query = query.where(SwitchingTrace.session_id == session_id)
+        count_query = count_query.where(SwitchingTrace.session_id == session_id)
+    if min_friction is not None:
+        query = query.where(SwitchingTrace.friction_score >= min_friction)
+        count_query = count_query.where(SwitchingTrace.friction_score >= min_friction)
+
+    query = query.order_by(SwitchingTrace.started_at.desc()).offset(offset).limit(limit)
+
+    result = await db.execute(query)
+    traces = [_trace_to_response(t) for t in result.scalars().all()]
+
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+
+    return {"items": traces, "total": total}
+
+
+@router.get("/switching/matrix", response_model=TransitionMatrixResponse)
+async def get_transition_matrix(
+    engagement_id: UUID,
+    period_start: datetime,
+    period_end: datetime,
+    role_id: UUID | None = None,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_permission("taskmining:read")),
+) -> dict[str, Any]:
+    """Get or compute a transition matrix for an engagement period.
+
+    Returns the most recent stored matrix matching the filters, or computes
+    a new one if none exists.
+    """
+    # Try to find existing matrix for this period
+    query = (
+        select(TransitionMatrix)
+        .where(
+            TransitionMatrix.engagement_id == engagement_id,
+            TransitionMatrix.period_start == period_start,
+            TransitionMatrix.period_end == period_end,
+        )
+        .order_by(TransitionMatrix.created_at.desc())
+        .limit(1)
+    )
+    if role_id is not None:
+        query = query.where(TransitionMatrix.role_id == role_id)
+
+    result = await db.execute(query)
+    matrix = result.scalar_one_or_none()
+
+    if matrix is None:
+        from src.taskmining.switching import compute_transition_matrix
+
+        matrix = await compute_transition_matrix(
+            session=db,
+            engagement_id=engagement_id,
+            role_id=role_id,
+            period_start=period_start,
+            period_end=period_end,
+        )
+        await db.commit()
+        await db.refresh(matrix)
+
+    return _matrix_to_response(matrix)
+
+
+@router.get("/switching/friction", response_model=FrictionAnalysisResponse)
+async def get_friction_analysis(
+    engagement_id: UUID,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_permission("taskmining:read")),
+) -> dict[str, Any]:
+    """Return aggregate friction analysis for an engagement."""
+    from src.taskmining.switching import get_friction_analysis as _get_friction_analysis
+
+    return await _get_friction_analysis(session=db, engagement_id=engagement_id)
+
+
+@router.post("/switching/assemble", response_model=AssembleSwitchingResponse)
+async def assemble_switching(
+    payload: AssembleSwitchingRequest,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_permission("taskmining:write")),
+) -> dict[str, Any]:
+    """Trigger switching trace assembly for an engagement.
+
+    Assembles APP_SWITCH events into SwitchingTrace records. Idempotent:
+    duplicate events are skipped by the service layer.
+    """
+    from src.taskmining.switching import assemble_switching_traces
+
+    traces = await assemble_switching_traces(
+        session=db,
+        engagement_id=payload.engagement_id,
+        session_id=payload.session_id,
+    )
+    await db.commit()
+
+    logger.info("Assembled %d switching traces for engagement %s", len(traces), payload.engagement_id)
+    return {"traces_created": len(traces), "status": "ok"}

@@ -109,6 +109,16 @@ METRIC_IDS = [_uid(f"metric-{i}") for i in range(3)]
 # Simulations
 SCENARIO_IDS = [_uid(f"scenario-{i}") for i in range(3)]
 
+# Switching sequences
+SWITCHING_TRACE_IDS = [_uid(f"switching-trace-{i}") for i in range(3)]
+TRANSITION_MATRIX_ID = _uid("transition-matrix-loan-orig")
+
+# VCE
+VCE_IDS = [_uid(f"vce-event-{i}") for i in range(5)]
+
+# Correlation
+CASE_LINK_IDS = [_uid(f"case-link-{i}") for i in range(4)]
+
 NOW = datetime.now(timezone.utc)
 TODAY = date.today()
 
@@ -1457,6 +1467,151 @@ def seed_neo4j() -> None:
 
 
 # ---------------------------------------------------------------------------
+# WGI Features (switching sequences, VCEs, correlation)
+# ---------------------------------------------------------------------------
+
+
+def seed_wgi_features() -> dict:
+    """Seed WGI-specific features: switching sequences, VCEs, correlation."""
+    from src.core.models.taskmining import (
+        ScreenStateClass,
+        SwitchingTrace,
+        TransitionMatrix,
+        VCETriggerReason,
+        VisualContextEvent,
+    )
+    from src.core.models.correlation import CaseLinkEdge
+
+    traces = [
+        SwitchingTrace(
+            id=SWITCHING_TRACE_IDS[0], engagement_id=ENG_ID,
+            agent_id=AGENT_IDS[0], session_id=SESSION_IDS[0],
+            trace_sequence=["Temenos T24", "Microsoft Excel", "Temenos T24"],
+            dwell_durations=[45000, 12000, 38000],
+            friction_score=0.72, is_ping_pong=True, ping_pong_count=1, app_count=2,
+        ),
+        SwitchingTrace(
+            id=SWITCHING_TRACE_IDS[1], engagement_id=ENG_ID,
+            agent_id=AGENT_IDS[0], session_id=SESSION_IDS[1],
+            trace_sequence=["Google Chrome", "Microsoft Outlook", "Google Chrome", "Temenos T24"],
+            dwell_durations=[30000, 8000, 15000, 52000],
+            friction_score=0.45, is_ping_pong=True, ping_pong_count=1, app_count=3,
+        ),
+        SwitchingTrace(
+            id=SWITCHING_TRACE_IDS[2], engagement_id=ENG_ID,
+            agent_id=AGENT_IDS[1], session_id=SESSION_IDS[2],
+            trace_sequence=["Temenos T24", "Microsoft Excel"],
+            dwell_durations=[120000, 25000],
+            friction_score=0.15, is_ping_pong=False, ping_pong_count=0, app_count=2,
+        ),
+    ]
+
+    matrix = TransitionMatrix(
+        id=TRANSITION_MATRIX_ID, engagement_id=ENG_ID,
+        role_id="role-loan-officer", period_start=TODAY - timedelta(days=7),
+        period_end=TODAY,
+        matrix_data={
+            "Temenos T24": {"Microsoft Excel": 45, "Google Chrome": 30, "Microsoft Outlook": 12},
+            "Microsoft Excel": {"Temenos T24": 42, "Google Chrome": 8},
+            "Google Chrome": {"Temenos T24": 28, "Microsoft Outlook": 5},
+            "Microsoft Outlook": {"Google Chrome": 6, "Temenos T24": 10},
+        },
+        total_transitions=186, unique_apps=4,
+        top_transitions=[
+            {"from": "Temenos T24", "to": "Microsoft Excel", "count": 45},
+            {"from": "Microsoft Excel", "to": "Temenos T24", "count": 42},
+            {"from": "Temenos T24", "to": "Google Chrome", "count": 30},
+        ],
+    )
+
+    vce_events = [
+        VisualContextEvent(
+            id=VCE_IDS[0], engagement_id=ENG_ID,
+            agent_id=AGENT_IDS[0], session_id=SESSION_IDS[0],
+            screen_state_class=ScreenStateClass.DATA_ENTRY,
+            system_guess="Temenos T24", module_guess="Loan Application Entry",
+            confidence=0.85, trigger_reason=VCETriggerReason.HIGH_DWELL,
+            application_name="Temenos T24", window_title_redacted="T24 - New Application [PII_REDACTED]",
+            dwell_ms=45000, interaction_intensity=0.08,
+        ),
+        VisualContextEvent(
+            id=VCE_IDS[1], engagement_id=ENG_ID,
+            agent_id=AGENT_IDS[0], session_id=SESSION_IDS[0],
+            screen_state_class=ScreenStateClass.SEARCH,
+            system_guess="Equifax", module_guess="Credit Bureau Lookup",
+            confidence=0.72, trigger_reason=VCETriggerReason.LOW_CONFIDENCE,
+            application_name="Google Chrome", window_title_redacted="Credit Report - [PII_REDACTED]",
+            dwell_ms=18000, interaction_intensity=0.25,
+        ),
+        VisualContextEvent(
+            id=VCE_IDS[2], engagement_id=ENG_ID,
+            agent_id=AGENT_IDS[0], session_id=SESSION_IDS[1],
+            screen_state_class=ScreenStateClass.ERROR,
+            system_guess="Temenos T24", module_guess="Validation Error",
+            confidence=0.92, trigger_reason=VCETriggerReason.RECURRING_EXCEPTION,
+            application_name="Temenos T24", window_title_redacted="T24 - Error: Missing Field",
+            dwell_ms=5000, interaction_intensity=0.02,
+        ),
+        VisualContextEvent(
+            id=VCE_IDS[3], engagement_id=ENG_ID,
+            agent_id=AGENT_IDS[1], session_id=SESSION_IDS[2],
+            screen_state_class=ScreenStateClass.REVIEW,
+            system_guess="Microsoft Excel", module_guess="Credit Score Calculation",
+            confidence=0.68, trigger_reason=VCETriggerReason.HIGH_DWELL,
+            application_name="Microsoft Excel", window_title_redacted="Loan_Score_Calculator.xlsx",
+            dwell_ms=62000, interaction_intensity=0.12,
+        ),
+        VisualContextEvent(
+            id=VCE_IDS[4], engagement_id=ENG_ID,
+            agent_id=AGENT_IDS[1], session_id=SESSION_IDS[3],
+            screen_state_class=ScreenStateClass.WAITING_LATENCY,
+            system_guess="Temenos T24", module_guess="System Loading",
+            confidence=0.95, trigger_reason=VCETriggerReason.HIGH_DWELL,
+            application_name="Temenos T24", window_title_redacted="T24 - Processing...",
+            dwell_ms=32000, interaction_intensity=0.0,
+        ),
+    ]
+
+    case_links = [
+        CaseLinkEdge(
+            id=CASE_LINK_IDS[0], engagement_id=ENG_ID,
+            endpoint_event_id=str(SESSION_IDS[0]), case_id="LOAN-2025-001",
+            method="deterministic", confidence=0.98,
+            explainability={"method": "window_title_regex", "pattern": r"LOAN-\d{4}-\d{3}", "match": "LOAN-2025-001"},
+        ),
+        CaseLinkEdge(
+            id=CASE_LINK_IDS[1], engagement_id=ENG_ID,
+            endpoint_event_id=str(SESSION_IDS[1]), case_id="LOAN-2025-002",
+            method="deterministic", confidence=0.95,
+            explainability={"method": "window_title_regex", "pattern": r"LOAN-\d{4}-\d{3}", "match": "LOAN-2025-002"},
+        ),
+        CaseLinkEdge(
+            id=CASE_LINK_IDS[2], engagement_id=ENG_ID,
+            endpoint_event_id=str(SESSION_IDS[2]), case_id="LOAN-2025-001",
+            method="assisted", confidence=0.72,
+            explainability={
+                "method": "probabilistic", "features": {
+                    "time_proximity": 0.85, "role_match": 0.90, "system_overlap": 0.60,
+                },
+            },
+        ),
+        CaseLinkEdge(
+            id=CASE_LINK_IDS[3], engagement_id=ENG_ID,
+            endpoint_event_id=str(SESSION_IDS[3]), case_id="LOAN-2025-003",
+            method="role_association", confidence=0.45,
+            explainability={"method": "role_fallback", "role": "Loan Officer", "period": "2025-02-20"},
+        ),
+    ]
+
+    return {
+        "traces": traces,
+        "matrix": [matrix],
+        "vce_events": vce_events,
+        "case_links": case_links,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -1491,6 +1646,7 @@ async def main(reset: bool = False) -> None:
         mon = seed_monitoring()
         sim = seed_simulations()
         tm = seed_task_mining()
+        wgi = seed_wgi_features()
 
         all_objects = [
             *seed_users(),
@@ -1505,6 +1661,7 @@ async def main(reset: bool = False) -> None:
             *seed_shelf_requests(),
             *seed_patterns(),
             *tm["agents"], *tm["sessions"], *tm["events"], *tm["actions"], *tm["quarantine"],
+            *wgi["traces"], *wgi["matrix"], *wgi["vce_events"], *wgi["case_links"],
         ]
 
         session.add_all(all_objects)
@@ -1545,6 +1702,9 @@ async def main(reset: bool = False) -> None:
     logger.info("    3 cross-engagement patterns")
     logger.info("    3 data catalog entries (bronze/silver/gold)")
     logger.info("    30+ Neo4j nodes, 50+ relationships")
+    logger.info("    3 switching traces, 1 transition matrix")
+    logger.info("    5 visual context events across 4 screen states")
+    logger.info("    4 case link edges (2 deterministic, 1 assisted, 1 role)")
 
 
 if __name__ == "__main__":

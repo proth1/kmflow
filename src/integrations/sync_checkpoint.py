@@ -54,6 +54,38 @@ class SyncLog:
         }
 
 
+@dataclass
+class WatermarkState:
+    """Watermark/offset tracking for incremental sync position.
+
+    Tracks both timestamp-based and offset-based sync positions,
+    supporting connectors that use either or both strategies.
+    """
+
+    connector_type: str
+    engagement_id: str
+    last_timestamp: str | None = None
+    last_offset: int | None = None
+    last_cursor: str | None = None
+    records_since_reset: int = 0
+    updated_at: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.updated_at:
+            self.updated_at = _now_iso()
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "connector_type": self.connector_type,
+            "engagement_id": self.engagement_id,
+            "last_timestamp": self.last_timestamp,
+            "last_offset": self.last_offset,
+            "last_cursor": self.last_cursor,
+            "records_since_reset": self.records_since_reset,
+            "updated_at": self.updated_at,
+        }
+
+
 class SyncCheckpointStore:
     """Store for sync checkpoints (last_sync_at per connector+engagement).
 
@@ -99,6 +131,72 @@ class SyncCheckpointStore:
     def list_checkpoints(self) -> dict[str, str]:
         """Return all stored checkpoints."""
         return dict(self._store)
+
+    # ── Watermark/Offset Tracking ────────────────────────────────────
+
+    @staticmethod
+    def _watermark_key(connector_type: str, engagement_id: str) -> str:
+        return f"sync:watermark:{connector_type}:{engagement_id}"
+
+    def get_watermark(self, connector_type: str, engagement_id: str) -> WatermarkState | None:
+        """Get the watermark state for a connector+engagement.
+
+        Returns:
+            WatermarkState if exists, None otherwise.
+        """
+        key = self._watermark_key(connector_type, engagement_id)
+        raw = self._store.get(key)
+        if raw is None:
+            return None
+        # Deserialize from JSON string
+        import json
+        data = json.loads(raw)
+        return WatermarkState(**data)
+
+    def set_watermark(
+        self,
+        connector_type: str,
+        engagement_id: str,
+        *,
+        timestamp: str | None = None,
+        offset: int | None = None,
+        cursor: str | None = None,
+        records_processed: int = 0,
+    ) -> WatermarkState:
+        """Update the watermark state for a connector+engagement.
+
+        Args:
+            connector_type: Connector identifier.
+            engagement_id: Engagement being synced.
+            timestamp: Last processed timestamp (ISO 8601).
+            offset: Last processed numeric offset.
+            cursor: Last pagination cursor.
+            records_processed: Records processed in this batch.
+
+        Returns:
+            Updated WatermarkState.
+        """
+        import json
+
+        existing = self.get_watermark(connector_type, engagement_id)
+        state = WatermarkState(
+            connector_type=connector_type,
+            engagement_id=engagement_id,
+            last_timestamp=timestamp or (existing.last_timestamp if existing else None),
+            last_offset=offset if offset is not None else (existing.last_offset if existing else None),
+            last_cursor=cursor or (existing.last_cursor if existing else None),
+            records_since_reset=(existing.records_since_reset if existing else 0) + records_processed,
+        )
+
+        key = self._watermark_key(connector_type, engagement_id)
+        self._store[key] = json.dumps(state.to_dict())
+        logger.info("Updated watermark %s: offset=%s, cursor=%s", key, offset, cursor)
+        return state
+
+    def reset_watermark(self, connector_type: str, engagement_id: str) -> None:
+        """Reset watermark state (forces full re-sync)."""
+        key = self._watermark_key(connector_type, engagement_id)
+        self._store.pop(key, None)
 
 
 def _now_iso() -> str:

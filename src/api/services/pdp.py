@@ -24,6 +24,8 @@ from src.core.models.pdp import (
     PDPAuditEntry,
     PDPDecisionType,
     PDPPolicy,
+    PDPPolicyBundle,
+    PolicyObligation,
 )
 
 logger = logging.getLogger(__name__)
@@ -46,6 +48,11 @@ _cache_lock = asyncio.Lock()
 # Latency tracking for health endpoint
 _recent_latencies: collections.deque[float] = collections.deque(maxlen=100)
 
+# ABAC string condition keys evaluated against the attributes dict
+_ABAC_STRING_CONDITION_KEYS: frozenset[str] = frozenset(
+    {"department", "cost_center", "data_residency", "evidence_type", "identity_posture", "export_mode"}
+)
+
 
 class PDPService:
     """Evaluates access policies and records audit decisions."""
@@ -62,6 +69,7 @@ class PDPService:
         resource_id: str,
         classification: str,
         operation: str,
+        attributes: dict[str, Any] | None = None,
         request_id: str | None = None,
     ) -> dict[str, Any]:
         """Evaluate an access request against loaded policies.
@@ -73,6 +81,9 @@ class PDPService:
             resource_id: The resource being accessed.
             classification: Data classification level.
             operation: Operation type (read, write, export, delete).
+            attributes: ABAC attribute dict. Supported keys: department,
+                cost_center, data_residency, cohort_size, evidence_type,
+                identity_posture, export_mode.
             request_id: Optional request trace ID.
 
         Returns:
@@ -87,10 +98,17 @@ class PDPService:
         reason: str | None = None
         obligations: list[dict[str, Any]] = []
         matched_policy_id: uuid.UUID | None = None
+        effective_attrs = attributes or {}
 
         # Evaluate policies in priority order (lowest number first)
         for policy in _policy_cache:
-            if self._matches(policy, actor_role=actor_role, classification=classification, operation=operation):
+            if self._matches(
+                policy,
+                actor_role=actor_role,
+                classification=classification,
+                operation=operation,
+                attributes=effective_attrs,
+            ):
                 decision = PDPDecisionType(policy["decision"])
                 reason = policy.get("reason")
                 obligations = policy.get("obligations_json") or []
@@ -140,13 +158,19 @@ class PDPService:
         actor_role: str,
         classification: str,
         operation: str,
+        attributes: dict[str, Any] | None = None,
     ) -> bool:
         """Check if a policy's conditions match the request context.
+
+        Supports both RBAC conditions (classification, operation, min_role, max_role)
+        and ABAC conditions (department, cost_center, data_residency, cohort_size,
+        evidence_type, identity_posture, export_mode).
 
         Note: Policies are currently global (not engagement-scoped). Engagement-scoped
         policy conditions are deferred to a follow-up issue.
         """
         conditions = policy.get("conditions_json", {})
+        attrs = attributes or {}
 
         # Classification match
         if "classification" in conditions and conditions["classification"] != classification:
@@ -170,6 +194,23 @@ class PDPService:
             min_rank = _ROLE_RANK.get(min_role, 999)
             if actor_rank > min_rank:
                 return False  # Actor is less privileged than min
+
+        # ABAC attribute conditions — exact match for string attributes
+        for abac_key in _ABAC_STRING_CONDITION_KEYS:
+            if abac_key in conditions:
+                if attrs.get(abac_key) != conditions[abac_key]:
+                    return False
+
+        # ABAC numeric threshold conditions
+        if "cohort_size_lt" in conditions:
+            cohort = attrs.get("cohort_size")
+            if cohort is None or cohort >= conditions["cohort_size_lt"]:
+                return False
+
+        if "cohort_size_gte" in conditions:
+            cohort = attrs.get("cohort_size")
+            if cohort is None or cohort < conditions["cohort_size_gte"]:
+                return False
 
         return True
 
@@ -212,7 +253,23 @@ class PDPService:
             logger.debug("PDP policy cache refreshed: %d policies loaded", len(_policy_cache))
 
     # Allowed keys for conditions_json validation (SEC-2)
-    ALLOWED_CONDITION_KEYS = {"classification", "operation", "min_role", "max_role"}
+    ALLOWED_CONDITION_KEYS = {
+        # RBAC
+        "classification",
+        "operation",
+        "min_role",
+        "max_role",
+        # ABAC string attributes
+        "department",
+        "cost_center",
+        "data_residency",
+        "evidence_type",
+        "identity_posture",
+        "export_mode",
+        # ABAC numeric thresholds
+        "cohort_size_lt",
+        "cohort_size_gte",
+    }
 
     async def create_rule(
         self,
@@ -271,6 +328,58 @@ class PDPService:
             .order_by(PDPPolicy.priority)
         )
         return list(result.scalars().all())
+
+    async def publish_bundle(
+        self,
+        *,
+        version: str,
+        name: str,
+        published_by: str,
+    ) -> PDPPolicyBundle:
+        """Create and activate a new policy bundle version.
+
+        Deactivates all previous bundles and activates the new one.
+        Agents should compare their cached bundle version against the
+        active bundle on each heartbeat to detect drift.
+
+        Args:
+            version: Semantic or CalVer version string (e.g. "2026.03.001").
+            name: Human-readable bundle name.
+            published_by: Identity of the publisher.
+
+        Returns:
+            The newly created and activated PDPPolicyBundle.
+        """
+        # Deactivate all current bundles
+        existing = await self._session.execute(
+            select(PDPPolicyBundle).where(PDPPolicyBundle.is_active.is_(True))
+        )
+        for bundle in existing.scalars().all():
+            bundle.is_active = False
+
+        now = datetime.now(UTC)
+        new_bundle = PDPPolicyBundle(
+            id=uuid.uuid4(),
+            version=version,
+            name=name,
+            is_active=True,
+            published_at=now,
+            published_by=published_by,
+            created_at=now,
+        )
+        self._session.add(new_bundle)
+        await self._session.flush()
+        return new_bundle
+
+    async def get_active_bundle(self) -> PDPPolicyBundle | None:
+        """Return the currently active policy bundle, or None if none published."""
+        result = await self._session.execute(
+            select(PDPPolicyBundle)
+            .where(PDPPolicyBundle.is_active.is_(True))
+            .order_by(PDPPolicyBundle.published_at.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
 
     @classmethod
     def _validate_conditions(cls, conditions: dict) -> None:

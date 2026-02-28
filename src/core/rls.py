@@ -42,6 +42,7 @@ _TABLE_NAME_RE = re.compile(r"^[a-z_][a-z0-9_]*$")
 ENGAGEMENT_SCOPED_TABLES: list[str] = [
     "annotations",
     "audit_logs",
+    "case_link_edges",
     "conflict_objects",
     "conformance_results",
     "controls",
@@ -67,11 +68,14 @@ ENGAGEMENT_SCOPED_TABLES: list[str] = [
     "shelf_data_requests",
     "simulation_scenarios",
     "survey_claims",
+    "switching_traces",
     "target_operating_models",
     "task_mining_actions",
     "task_mining_agents",
     "task_mining_events",
     "task_mining_sessions",
+    "transition_matrices",
+    "visual_context_events",
 ]
 
 
@@ -81,16 +85,18 @@ async def set_engagement_context(
 ) -> None:
     """Set the current engagement context for RLS filtering.
 
-    Uses SET LOCAL so the variable is scoped to the current transaction
-    and automatically reset on commit or rollback.
+    Uses ``set_config(..., true)`` so the variable is scoped to the current
+    transaction and automatically reset on commit or rollback.  Unlike
+    ``SET LOCAL``, ``set_config`` is a regular SQL function and supports
+    parameterized queries (required by asyncpg).
 
     Args:
         session: The async database session.
         engagement_id: The engagement UUID to scope queries to.
     """
     await session.execute(
-        text(f"SET LOCAL {RLS_SESSION_VAR} = :eid"),
-        {"eid": str(engagement_id)},
+        text("SELECT set_config(:var, :eid, true)"),
+        {"var": RLS_SESSION_VAR, "eid": str(engagement_id)},
     )
     logger.debug("RLS context set to engagement %s", engagement_id)
 
@@ -161,7 +167,7 @@ def apply_engagement_rls(table_name: str) -> list[str]:
     _validate_table_name(table_name)
 
     policy_name = f"engagement_isolation_{table_name}"
-    rls_condition = f"engagement_id = current_setting('{RLS_SESSION_VAR}')::uuid"
+    rls_condition = f"engagement_id = NULLIF(current_setting('{RLS_SESSION_VAR}', true), '')::uuid"
 
     return [
         f"ALTER TABLE {table_name} ENABLE ROW LEVEL SECURITY",

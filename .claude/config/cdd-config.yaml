@@ -11,20 +11,49 @@ cdd:
     - code_coverage
     - bdd_scenarios
     - architectural_decisions
+    - correlation_diagnostics   # daily correlation quality reports (WGI Platform Alignment)
+    - vce_privacy_audit         # VCE privacy compliance evidence (WGI Platform Alignment)
+    - abac_policy_bundle        # ABAC policy version evidence (WGI Platform Alignment)
   quality_gates:
-    phase1: [prd_exists, work_items_created]
-    phase2: [tests_pass, coverage_above_80, no_critical_vulnerabilities]
-    phase3: [pr_approved, ci_green, evidence_attached]
-    phase4: [memory_bank_updated, patterns_documented]
+    phase1:
+      gates: [prd_exists, work_items_created]
+      enforcement: advisory  # Manual adherence
+    phase2:
+      gates: [tests_pass, coverage_above_80, no_critical_vulnerabilities]
+      enforcement: blocking  # pipeline-orchestrator + .pipeline-passed marker
+    phase3:
+      gates: [pr_approved, ci_green, evidence_attached]
+      enforcement: blocking  # PreToolUse hooks block merge without pipeline + evidence
+    phase4:
+      gates: [memory_bank_updated, patterns_documented]
+      enforcement: semi-automated  # post-merge-hook mandates, decision-log reminds
 
 # Evidence posting target
 evidence_target:
   type: github_issue_comments
   repository: proth1/kmflow
   format: markdown
+  auto_post: true  # post-pipeline-evidence.sh posts after pipeline runs
 
 # Evidence retention
 retention:
   active_evidence_max_files: 50
   archive_after_days: 30
   archive_directory: evidence/archive/
+
+# Label automation
+labels:
+  on_branch_create: ["cdd:evidence-required"]
+  on_pr_merge: ["cdd:verified"]
+
+# Pipeline enforcement
+pipeline:
+  marker_file: .pipeline-passed
+  marker_max_age_hours: 4
+  report_file: .pipeline-report.md
+  block_merge_without_marker: true
+
+# Compliance reporting
+reporting:
+  script: .claude/scripts/cdd-compliance-report.sh
+  output_file: .cdd-compliance-report.md

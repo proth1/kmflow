@@ -446,3 +446,400 @@ async def test_create_rule_accepts_valid_condition_keys() -> None:
     )
 
     assert policy.name == "valid_rule"
+
+
+# ---------------------------------------------------------------------------
+# ABAC: department condition
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_abac_department_condition_deny() -> None:
+    """Given a DENY policy for 'finance' department, a finance user is denied.
+
+    ABAC conditions match when the request attribute equals the condition value.
+    A policy with {"department": "finance"} fires exactly when the requester
+    belongs to the 'finance' department.
+    """
+    _invalidate_cache()
+    session = _mock_session()
+    _setup_policies(
+        session,
+        [
+            {
+                "name": "deny_finance_department",
+                "conditions_json": {"department": "finance"},
+                "decision": PDPDecisionType.DENY,
+                "reason": "finance_access_blocked",
+                "priority": 5,
+            }
+        ],
+    )
+
+    service = PDPService(session)
+    result = await service.evaluate(
+        engagement_id=ENGAGEMENT_ID,
+        actor="user@example.com",
+        actor_role=UserRole.ENGAGEMENT_LEAD.value,
+        resource_id="resource-001",
+        classification="internal",
+        operation="read",
+        attributes={"department": "finance"},
+    )
+
+    assert result["decision"] == PDPDecisionType.DENY
+    assert result["reason"] == "finance_access_blocked"
+
+
+@pytest.mark.asyncio
+async def test_abac_department_condition_permit_when_not_matching() -> None:
+    """User from 'hr' is permitted when the deny policy targets 'finance' department only."""
+    _invalidate_cache()
+    session = _mock_session()
+    _setup_policies(
+        session,
+        [
+            {
+                "name": "deny_finance_only",
+                "conditions_json": {"department": "finance"},
+                "decision": PDPDecisionType.DENY,
+                "reason": "finance_blocked",
+                "priority": 5,
+            }
+        ],
+    )
+
+    service = PDPService(session)
+    result = await service.evaluate(
+        engagement_id=ENGAGEMENT_ID,
+        actor="hr@example.com",
+        actor_role=UserRole.ENGAGEMENT_LEAD.value,
+        resource_id="resource-002",
+        classification="internal",
+        operation="read",
+        attributes={"department": "hr"},  # does NOT match "finance" → no deny rule matches
+    )
+
+    assert result["decision"] == PDPDecisionType.PERMIT
+
+
+# ---------------------------------------------------------------------------
+# ABAC: cohort_size threshold
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_abac_cohort_size_below_threshold_fires_obligation() -> None:
+    """A policy with cohort_size_lt condition matches when cohort is below threshold."""
+    _invalidate_cache()
+    session = _mock_session()
+    _setup_policies(
+        session,
+        [
+            {
+                "name": "suppress_small_cohort",
+                "conditions_json": {"cohort_size_lt": 5},
+                "decision": PDPDecisionType.PERMIT,
+                "obligations_json": [{"type": "suppress_cohort", "params": {"min_cohort": 5}}],
+                "reason": "cohort_suppressed",
+                "priority": 10,
+            }
+        ],
+    )
+
+    service = PDPService(session)
+    result = await service.evaluate(
+        engagement_id=ENGAGEMENT_ID,
+        actor="analyst@example.com",
+        actor_role=UserRole.PROCESS_ANALYST.value,
+        resource_id="agg-001",
+        classification="internal",
+        operation="read",
+        attributes={"cohort_size": 3},
+    )
+
+    assert result["decision"] == PDPDecisionType.PERMIT
+    assert any(o.get("type") == "suppress_cohort" for o in result["obligations"])
+
+
+@pytest.mark.asyncio
+async def test_abac_cohort_size_above_threshold_no_match() -> None:
+    """cohort_size_lt condition does not match when cohort is at or above threshold."""
+    _invalidate_cache()
+    session = _mock_session()
+    _setup_policies(
+        session,
+        [
+            {
+                "name": "suppress_small_cohort",
+                "conditions_json": {"cohort_size_lt": 5},
+                "decision": PDPDecisionType.PERMIT,
+                "obligations_json": [{"type": "suppress_cohort", "params": {"min_cohort": 5}}],
+                "reason": "cohort_suppressed",
+                "priority": 10,
+            }
+        ],
+    )
+
+    service = PDPService(session)
+    result = await service.evaluate(
+        engagement_id=ENGAGEMENT_ID,
+        actor="analyst@example.com",
+        actor_role=UserRole.PROCESS_ANALYST.value,
+        resource_id="agg-002",
+        classification="internal",
+        operation="read",
+        attributes={"cohort_size": 10},
+    )
+
+    # Cohort of 10 is NOT < 5, so the policy doesn't match → default PERMIT, no obligations
+    assert result["decision"] == PDPDecisionType.PERMIT
+    assert result["obligations"] == []
+
+
+# ---------------------------------------------------------------------------
+# ABAC: data_residency check
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_abac_data_residency_check_deny() -> None:
+    """Requests with EU data_residency are denied by a residency policy."""
+    _invalidate_cache()
+    session = _mock_session()
+    _setup_policies(
+        session,
+        [
+            {
+                "name": "block_eu_export",
+                "conditions_json": {"data_residency": "EU", "operation": "export"},
+                "decision": PDPDecisionType.DENY,
+                "reason": "eu_data_export_blocked",
+                "priority": 5,
+            }
+        ],
+    )
+
+    service = PDPService(session)
+    result = await service.evaluate(
+        engagement_id=ENGAGEMENT_ID,
+        actor="lead@example.com",
+        actor_role=UserRole.ENGAGEMENT_LEAD.value,
+        resource_id="evidence-eu-001",
+        classification="confidential",
+        operation="export",
+        attributes={"data_residency": "EU"},
+    )
+
+    assert result["decision"] == PDPDecisionType.DENY
+    assert result["reason"] == "eu_data_export_blocked"
+
+
+@pytest.mark.asyncio
+async def test_abac_data_residency_check_permit_different_region() -> None:
+    """US data_residency is not blocked by the EU export policy."""
+    _invalidate_cache()
+    session = _mock_session()
+    _setup_policies(
+        session,
+        [
+            {
+                "name": "block_eu_export",
+                "conditions_json": {"data_residency": "EU", "operation": "export"},
+                "decision": PDPDecisionType.DENY,
+                "reason": "eu_data_export_blocked",
+                "priority": 5,
+            }
+        ],
+    )
+
+    service = PDPService(session)
+    result = await service.evaluate(
+        engagement_id=ENGAGEMENT_ID,
+        actor="lead@example.com",
+        actor_role=UserRole.ENGAGEMENT_LEAD.value,
+        resource_id="evidence-us-001",
+        classification="confidential",
+        operation="export",
+        attributes={"data_residency": "US"},
+    )
+
+    assert result["decision"] == PDPDecisionType.PERMIT
+
+
+# ---------------------------------------------------------------------------
+# Policy bundle versioning
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_policy_bundle_versioning_publish() -> None:
+    """Publishing a bundle creates an active bundle record."""
+    from src.core.models.pdp import PDPPolicyBundle
+
+    session = _mock_session()
+
+    # Mock select returning no existing active bundles
+    scalars_mock = MagicMock()
+    scalars_mock.all.return_value = []
+    result_mock = MagicMock()
+    result_mock.scalars.return_value = scalars_mock
+    session.execute = AsyncMock(return_value=result_mock)
+
+    service = PDPService(session)
+    bundle = await service.publish_bundle(
+        version="2026.03.001",
+        name="Initial ABAC bundle",
+        published_by="admin@example.com",
+    )
+
+    assert bundle.version == "2026.03.001"
+    assert bundle.is_active is True
+    assert bundle.published_by == "admin@example.com"
+    session.add.assert_called()
+
+
+@pytest.mark.asyncio
+async def test_policy_bundle_get_active_bundle() -> None:
+    """get_active_bundle returns the active bundle."""
+    from src.core.models.pdp import PDPPolicyBundle
+
+    session = _mock_session()
+
+    mock_bundle = MagicMock(spec=PDPPolicyBundle)
+    mock_bundle.version = "2026.03.001"
+    mock_bundle.is_active = True
+
+    scalar_mock = MagicMock()
+    scalar_mock.scalar_one_or_none.return_value = mock_bundle
+    session.execute = AsyncMock(return_value=scalar_mock)
+
+    service = PDPService(session)
+    result = await service.get_active_bundle()
+    assert result is mock_bundle
+    assert result.version == "2026.03.001"
+
+
+# ---------------------------------------------------------------------------
+# Obligations returned in PERMIT decisions
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_obligation_masking_returned_in_permit() -> None:
+    """A PERMIT decision returns mask_fields obligation from matched policy."""
+    _invalidate_cache()
+    session = _mock_session()
+    _setup_policies(
+        session,
+        [
+            {
+                "name": "mask_pii_on_export",
+                "conditions_json": {"operation": "export"},
+                "decision": PDPDecisionType.PERMIT,
+                "obligations_json": [{"type": "mask_fields", "params": {"fields": ["ssn", "dob"]}}],
+                "reason": "export_with_masking",
+                "priority": 10,
+            }
+        ],
+    )
+
+    service = PDPService(session)
+    result = await service.evaluate(
+        engagement_id=ENGAGEMENT_ID,
+        actor="lead@example.com",
+        actor_role=UserRole.ENGAGEMENT_LEAD.value,
+        resource_id="report-001",
+        classification="internal",
+        operation="export",
+    )
+
+    assert result["decision"] == PDPDecisionType.PERMIT
+    assert any(o.get("type") == "mask_fields" for o in result["obligations"])
+    mask_ob = next(o for o in result["obligations"] if o.get("type") == "mask_fields")
+    assert "ssn" in mask_ob["params"]["fields"]
+
+
+@pytest.mark.asyncio
+async def test_obligation_suppression_returned_in_permit() -> None:
+    """A PERMIT decision returns suppress_cohort obligation from matched policy."""
+    _invalidate_cache()
+    session = _mock_session()
+    _setup_policies(
+        session,
+        [
+            {
+                "name": "suppress_small_cohorts",
+                "conditions_json": {},
+                "decision": PDPDecisionType.PERMIT,
+                "obligations_json": [{"type": "suppress_cohort", "params": {"min_cohort": 10}}],
+                "reason": "cohort_check_required",
+                "priority": 50,
+            }
+        ],
+    )
+
+    service = PDPService(session)
+    result = await service.evaluate(
+        engagement_id=ENGAGEMENT_ID,
+        actor="analyst@example.com",
+        actor_role=UserRole.PROCESS_ANALYST.value,
+        resource_id="agg-003",
+        classification="internal",
+        operation="read",
+    )
+
+    assert result["decision"] == PDPDecisionType.PERMIT
+    assert any(o.get("type") == "suppress_cohort" for o in result["obligations"])
+
+
+# ---------------------------------------------------------------------------
+# ABAC condition keys validation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_create_rule_accepts_abac_department_key() -> None:
+    """Creating a rule with ABAC 'department' condition key succeeds."""
+    session = _mock_session()
+    service = PDPService(session)
+
+    policy = await service.create_rule(
+        name="dept_rule",
+        conditions_json={"department": "finance"},
+        decision=PDPDecisionType.DENY,
+        reason="finance_restricted",
+    )
+
+    assert policy.name == "dept_rule"
+
+
+@pytest.mark.asyncio
+async def test_create_rule_accepts_abac_data_residency_key() -> None:
+    """Creating a rule with ABAC 'data_residency' condition key succeeds."""
+    session = _mock_session()
+    service = PDPService(session)
+
+    policy = await service.create_rule(
+        name="residency_rule",
+        conditions_json={"data_residency": "EU", "operation": "export"},
+        decision=PDPDecisionType.DENY,
+        reason="eu_export_blocked",
+    )
+
+    assert policy.name == "residency_rule"
+
+
+# ---------------------------------------------------------------------------
+# New ObligationType enum values
+# ---------------------------------------------------------------------------
+
+
+def test_new_obligation_type_enum_values() -> None:
+    """New ABAC ObligationType values are correct."""
+    from src.core.models.pdp import ObligationType
+
+    assert ObligationType.MASK_FIELDS == "mask_fields"
+    assert ObligationType.SUPPRESS_COHORT == "suppress_cohort"
+    assert ObligationType.ENFORCE_FIELD_ALLOWLIST == "enforce_field_allowlist"
+    assert ObligationType.APPLY_RETENTION_LIMIT == "apply_retention_limit"

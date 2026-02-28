@@ -1,4 +1,4 @@
-# KMFlow Task Mining Agent - Product Requirements Document
+# WorkGraphIQ Task Mining Agent - Product Requirements Document
 
 **Version**: 1.0.0
 **Status**: Draft
@@ -10,7 +10,7 @@
 
 ## 1. Executive Summary
 
-KMFlow currently discovers business processes through imported evidence: documents, interviews, SaaS exports, and third-party connectors. This is the right approach for consulting engagements where evidence arrives in bulk at the start of an engagement. However, it creates a structural blind spot: KMFlow cannot observe what users actually do at the desktop level.
+WorkGraphIQ currently discovers business processes through imported evidence: documents, interviews, SaaS exports, and third-party connectors. This is the right approach for consulting engagements where evidence arrives in bulk at the start of an engagement. However, it creates a structural blind spot: WorkGraphIQ cannot observe what users actually do at the desktop level.
 
 **The Problem with Third-Party Task Mining**:
 
@@ -24,11 +24,11 @@ Existing task mining integrations (Soroco Scout, Celonis) solve the observation 
 
 **What This PRD Defines**:
 
-A first-party native desktop agent for macOS (Windows in Phase 3) that captures observed desktop behavior as high-quality, PII-filtered evidence directly into KMFlow. The agent is purpose-built for consulting engagements: it captures what users do, filters PII at four layers before any data leaves the device, and materializes observed behavior as KM4Work evidence items with a 0.9 source weight — the highest confidence tier in the platform.
+A first-party native desktop agent for macOS (Windows in Phase 3) that captures observed desktop behavior as high-quality, PII-filtered evidence directly into WorkGraphIQ. The agent is purpose-built for consulting engagements: it captures what users do, filters PII at four layers before any data leaves the device, and materializes observed behavior as KM4Work evidence items with a 0.9 source weight — the highest confidence tier in the platform.
 
 **Strategic Position**: Observed desktop behavior is the ground truth of what processes actually exist. Documents describe what should happen. Desktop capture records what does happen. The Task Mining Agent closes the gap between declared and actual process execution.
 
-**Market Context**: The task mining market was valued at approximately $2B in 2025 and is projected to reach $10B by 2033 at a 25% CAGR. KMFlow enters this market not as a standalone task mining product, but as the only task mining solution purpose-built for the consulting delivery workflow, with native knowledge graph integration and mandatory four-layer PII architecture.
+**Market Context**: The task mining market was valued at approximately $2B in 2025 and is projected to reach $10B by 2033 at a 25% CAGR. WorkGraphIQ enters this market not as a standalone task mining product, but as the only task mining solution purpose-built for the consulting delivery workflow, with native knowledge graph integration and mandatory four-layer PII architecture.
 
 ---
 
@@ -36,7 +36,7 @@ A first-party native desktop agent for macOS (Windows in Phase 3) that captures 
 
 ### 2.1 The Evidence Gap
 
-KMFlow's evidence-first philosophy is sound. But evidence submitted by clients — documents, process models, system exports — describes intended or documented behavior. It does not reliably capture:
+WorkGraphIQ's evidence-first philosophy is sound. But evidence submitted by clients — documents, process models, system exports — describes intended or documented behavior. It does not reliably capture:
 
 - Workarounds that have become standard practice
 - Undocumented decision logic performed by experienced staff
@@ -48,7 +48,7 @@ These are the exact process insights consultants are paid to find. They are invi
 
 ### 2.2 Why Third-Party Tools Do Not Solve This
 
-The Soroco connector (`src/integrations/soroco.py`) demonstrates the integration pattern but exposes the structural problem: KMFlow receives whatever Soroco decides to send, filtered however Soroco decides to filter it, from a system the client already owns or must purchase separately. This limits:
+The Soroco connector (`src/integrations/soroco.py`) demonstrates the integration pattern but exposes the structural problem: WorkGraphIQ receives whatever Soroco decides to send, filtered however Soroco decides to filter it, from a system the client already owns or must purchase separately. This limits:
 
 - **Evidence control**: PII filtering cannot be tuned per engagement
 - **Confidence traceability**: The source weight assigned to Soroco data assumes vendor quality that cannot be independently verified
@@ -65,14 +65,14 @@ This PRD mandates four layers of PII protection. It is not a configuration optio
 
 ## 3. Product Vision
 
-The KMFlow Task Mining Agent transforms observed desktop behavior into evidence-grade process knowledge. It captures what users actually do, filters everything that should not leave the device, and feeds the result into the same evidence pipeline that processes documents, interviews, and system exports — with the highest confidence weight in the system.
+The WorkGraphIQ Task Mining Agent transforms observed desktop behavior into evidence-grade process knowledge. It captures what users actually do, filters everything that should not leave the device, and feeds the result into the same evidence pipeline that processes documents, interviews, and system exports — with the highest confidence weight in the system.
 
-**Vision Statement**: A lightweight, privacy-first desktop agent that observes actual work patterns, applies mandatory four-layer PII filtering before any data leaves the device, and materializes observed behavior as high-confidence KM4Work evidence integrated directly into the KMFlow knowledge graph.
+**Vision Statement**: A lightweight, privacy-first desktop agent that observes actual work patterns, applies mandatory four-layer PII filtering before any data leaves the device, and materializes observed behavior as high-confidence KM4Work evidence integrated directly into the WorkGraphIQ knowledge graph.
 
 **Guiding Principles**:
 - Privacy-first: four-layer PII filtering is architectural, not configurable off
 - Lightweight: agent CPU < 3%, memory < 150MB, invisible to users during normal work
-- Evidence-grade: captured data meets the same quality standards as all other KMFlow evidence
+- Evidence-grade: captured data meets the same quality standards as all other WorkGraphIQ evidence
 - Consulting-native: supports both bounded engagement deployment and enterprise MDM deployment
 - Transparent consent: users know the agent is running, what it captures, and how to opt out of content-level capture
 
@@ -91,17 +91,17 @@ The KMFlow Task Mining Agent transforms observed desktop behavior into evidence-
 
 ### 4.2 Competitive Landscape
 
-| Vendor | Approach | Price Signal | Gap vs. KMFlow Agent |
+| Vendor | Approach | Price Signal | Gap vs. WorkGraphIQ Agent |
 |--------|----------|-------------|----------------------|
 | **Soroco Scout** | Proprietary agent, Work Graph output | $25,000+/engagement | No knowledge graph integration; no consulting workflow; black-box PII |
-| **Celonis Task Mining** | Sensor-based desktop capture, EMS integration | Enterprise license | Requires Celonis EMS; no consulting evidence pipeline; no LCD confidence scoring |
+| **Celonis Task Mining** | Sensor-based desktop capture, EMS integration | Enterprise license | Requires Celonis EMS; no consulting evidence pipeline; no Least Common Denominator (LCD) confidence scoring |
 | **UiPath Task Mining** | Desktop recorder, process discovery | Enterprise license | RPA-centric; not designed for process discovery consulting; no triangulation |
 | **Microsoft Viva Insights** | Microsoft 365 behavioral data only | M365 E5 add-on | Limited to Microsoft applications; no desktop-wide capture; no process model output |
 | **SAP Signavio Process Intelligence** | Log-based; task mining add-on | Enterprise license | Event log dependency; task mining is secondary capability |
 
-### 4.3 KMFlow's Differentiated Position
+### 4.3 WorkGraphIQ's Differentiated Position
 
-No existing task mining tool integrates with a knowledge graph, applies evidence triangulation against other evidence types, or is purpose-built for the consulting engagement delivery model. KMFlow's Task Mining Agent is differentiated on:
+No existing task mining tool integrates with a knowledge graph, applies evidence triangulation against other evidence types, or is purpose-built for the consulting engagement delivery model. WorkGraphIQ's Task Mining Agent is differentiated on:
 
 1. **Knowledge graph integration**: Observed actions become `UserAction` nodes in Neo4j, linked to `Process`, `Application`, and `Role` nodes with typed relationships
 2. **Evidence triangulation**: Task mining evidence (0.9 weight) triangulates with documents, interviews, and system data through the existing confidence scoring model
@@ -127,7 +127,7 @@ graph TD
         UDS -->|deserialized events| PY
     end
 
-    subgraph KMFlow Backend
+    subgraph WorkGraphIQ Backend
         FASTAPI[FastAPI\nEvent Ingestion\nConfig Push\nHeartbeat]
         REDIS[Redis Stream\nTASK_MINING_STREAM]
         WORKER[Worker\nAction Assembly\nPII L3 Filter\nEvidence Materialization]
@@ -252,7 +252,7 @@ Used for clients who want ongoing process intelligence as a persistent capabilit
 | Data scope | Ongoing; retention policy enforced server-side |
 | Consent flow | Enterprise IT deploys with corporate policy disclosure; individual opt-out for content-level capture |
 
-Enterprise mode is appropriate for clients embedding KMFlow process intelligence into their ongoing operational model. The agent becomes part of the client's managed software estate.
+Enterprise mode is appropriate for clients embedding WorkGraphIQ process intelligence into their ongoing operational model. The agent becomes part of the client's managed software estate.
 
 ### 6.3 Mode Switching
 
@@ -273,7 +273,7 @@ graph LR
     L2[L2: At-Source Filtering\nPython / On-Device\nScrubbed before buffer]
     L3[L3: Server-Side\nFastAPI + NLP\nQuarantined if flagged]
     L4[L4: Data Management\nRetention + Erasure\nAudit trail]
-    EVIDENCE[KMFlow\nEvidence Store]
+    EVIDENCE[WorkGraphIQ\nEvidence Store]
 
     RAW --> L1
     L1 --> L2
@@ -343,11 +343,15 @@ Quarantined events do not flow to `task_mining_events` or the knowledge graph. I
 
 ---
 
-## 8. Keystroke Capture Policy
+## 8. Desktop Evidence Capture Policy
+
+This section defines the capture policy for all desktop evidence types: keystroke behavior, context switching sequences, and Visual Context Events (VCEs). All capture is governed by the PII filtering architecture defined in Section 7 and the engagement policy bundle.
+
+### 8.1 Keystroke Capture Policy
 
 Keystroke capture has two modes. The default is action-level. Content-level is opt-in and requires explicit configuration at the engagement level.
 
-### 8.1 Action-Level (Default)
+#### 8.1.1 Action-Level (Default)
 
 The agent records metadata about keyboard activity but not the actual characters typed.
 
@@ -368,7 +372,7 @@ The agent records metadata about keyboard activity but not the actual characters
 
 This captures the behavioral pattern (typing speed, correction rate, field usage) without any content that could contain PII.
 
-### 8.2 Content-Level (Opt-In)
+#### 8.1.2 Content-Level (Opt-In)
 
 When enabled, the agent records the actual characters typed. This mode requires:
 1. Explicit `keystroke_mode: content` in the engagement configuration
@@ -378,9 +382,226 @@ When enabled, the agent records the actual characters typed. This mode requires:
 
 Content-level capture produces significantly richer evidence for detecting process patterns (specific values entered, form field sequences, copy-paste content) but increases PII risk. It is appropriate only when the engagement scope justifies it and the client has signed appropriate data processing agreements.
 
-### 8.3 Keyboard Shortcut Capture
+#### 8.1.3 Keyboard Shortcut Capture
 
 Keyboard shortcuts (`Ctrl+C`, `Cmd+Z`, `Alt+F4`, etc.) are always captured in both modes without restriction. Shortcuts are process signals (copy-paste frequency, undo patterns) and contain no PII.
+
+---
+
+### 8.2 Switching Sequences
+
+#### 8.2.1 Intent
+
+Context switching sequences capture the ordered transitions between applications during a work session. Switching data is critical for detecting friction patterns (work bouncing across systems), identifying cross-system dependency chains, informing swimlane attribution in the Work Reality Graph, and surfacing automation candidates where repetitive system-switching implies manual handoff work.
+
+Switching sequences are derived from application focus sessions and do not require additional sensitive capture.
+
+#### 8.2.2 SwitchingTrace Data Model
+
+Each individual application-to-application transition is recorded as a `SwitchingTrace`:
+
+```python
+class SwitchingTrace:
+    id: UUID                        # Unique trace ID
+    session_id: UUID                # Parent task mining session
+    agent_id: UUID                  # Originating agent
+    engagement_id: UUID             # Engagement scope
+    role_ref: str                   # Role identifier (never personal identity by default)
+    from_app: str                   # Normalized app identifier
+    from_module: str | None         # Module/window within app (if observable)
+    to_app: str                     # Normalized app identifier
+    to_module: str | None           # Module/window within app (if observable)
+    switched_at: datetime           # UTC timestamp of focus change
+    dwell_ms: int                   # Time spent in from_app before switching
+    interaction_intensity: float    # Interaction count in from_app during dwell window (0.0–1.0 normalized)
+    vce_ref: UUID | None            # Optional: VCE captured at this transition
+    created_at: datetime
+```
+
+#### 8.2.3 TransitionMatrix
+
+The `TransitionMatrix` is a pre-aggregated representation of switching patterns for a role over a time window. It is computed by the backend worker and used by analytics and heat map services.
+
+```python
+class TransitionMatrix:
+    id: UUID
+    engagement_id: UUID
+    role_ref: str
+    window_start: datetime
+    window_end: datetime
+    matrix: dict[str, dict[str, int]]  # {from_app: {to_app: count}}
+    total_transitions: int
+    dominant_path: list[str]           # Most frequent sequence of apps
+    friction_score: float              # Composite friction index (0.0–1.0)
+    ping_pong_pairs: list[dict]        # Detected A↔B oscillations with counts
+    computed_at: datetime
+```
+
+#### 8.2.4 Role-Level Aggregation
+
+Switching analytics are computed at role level by default. Individual user identity is never surfaced in switching views unless the engagement policy explicitly enables identity-level drilldown (gated by ABAC policy). Analytics roll up via `role_ref`, which is derived from directory group membership or enrollment configuration.
+
+Minimum cohort size is enforced before any role-level view is surfaced. If a role has fewer than the configured minimum (default: 3 users), the view is suppressed to prevent re-identification.
+
+#### 8.2.5 Friction Detection
+
+The friction score for a transition matrix is computed as a weighted sum of:
+- **Raw transition volume**: high switch frequency indicates system dependency
+- **Dwell time variance**: high variance indicates unpredictable wait states
+- **Return rate**: how often the user returns to the previous app within N seconds (ping-pong indicator)
+- **Interaction intensity drop**: switches preceded by low interaction may indicate blocking/waiting states
+
+```
+friction_score = (
+    normalized_transition_rate   * 0.30 +
+    dwell_variance_coefficient   * 0.25 +
+    return_rate                  * 0.25 +
+    pre_switch_idle_ratio        * 0.20
+)
+```
+
+#### 8.2.6 Ping-Pong Detection
+
+Ping-pong (A→B→A→B oscillation) is detected when the same pair of applications appears in alternating sequence at least 3 times within a 10-minute window. Ping-pong is a strong signal of:
+- Copy-paste workflows that should be automated
+- Dual-screen lookup patterns (ERP + spreadsheet cross-referencing)
+- Error-correction loops (enter in system A, verify in system B)
+
+Detected ping-pong pairs are surfaced in the `TransitionMatrix.ping_pong_pairs` field and flagged in the Work Reality Graph as `FRICTION_SIGNAL` relationship attributes.
+
+---
+
+### 8.3 Visual Context Events (VCEs)
+
+#### 8.3.1 Intent
+
+A Visual Context Event (VCE) is a structured metadata record derived from a targeted, on-device screenshot. VCEs resolve ambiguity that application focus data alone cannot resolve: specifically, they classify what type of work the user is performing when time accumulates on a given screen.
+
+VCEs are not screen recordings. The screenshot is processed locally, produces structured metadata, and is then discarded by default. The VCE record contains the classification output, not the image.
+
+#### 8.3.2 VCE Record Schema
+
+All 13 fields are required in the VCE record:
+
+```python
+class VisualContextEvent:
+    timestamp: datetime              # UTC timestamp when screenshot was captured
+    screen_state_class: str          # Classification: one of 8 screen state classes (see 8.3.3)
+    system_guess: str | None         # Best-guess system/application if inferable from UI signals
+    module_guess: str | None         # Best-guess module/section within system if inferable
+    confidence: float                # Classification confidence (0.0–1.0)
+    trigger_reason: str              # Which trigger class fired (see 8.4.2)
+    sensitivity_flags: list[str]     # PII risk category tags detected (e.g., ["PII_NAME", "FINANCIAL"])
+    application_name: str            # Normalized application name from agent context
+    window_title_redacted: str       # Window title with PII tokens replaced by L2 scrubber
+    dwell_ms: int                    # Time user spent on this screen before VCE triggered
+    interaction_intensity: float     # Interaction activity level during dwell window (0.0–1.0)
+    snapshot_ref: UUID | None        # Reference to redacted snapshot in R2 (only if retention enabled)
+    ocr_text_redacted: str | None    # OCR-extracted text with PII redacted (only if OCR enabled)
+```
+
+#### 8.3.3 Screen State Classes
+
+Eight mutually exclusive screen state classes are supported. The classifier assigns one class per VCE:
+
+| Class | Description | Process Signal |
+|-------|-------------|----------------|
+| `queue` | User is viewing a work queue, inbox, or task list | Queue depth, arrival rate, workload distribution |
+| `search` | User is executing a search query or browsing results | Search frequency, result navigation time |
+| `data_entry` | User is typing structured data into form fields | Data entry duration, field traversal, error rate |
+| `review` | User is reading, scanning, or reviewing content without entering data | Review time, document type |
+| `error` | An error message, validation failure, or exception screen is visible | Error frequency, error type clustering |
+| `waiting_latency` | Screen shows a loading state, spinner, or progress indicator | System latency, wait time accumulation |
+| `navigation` | User is navigating menus, switching tabs, or changing views within an app | Navigation complexity, menu depth |
+| `other` | Screen state does not fit the above classes or confidence is below threshold | Unclassified time accumulation |
+
+#### 8.3.4 Classification Pipeline
+
+VCE classification runs on-device via a local lightweight model. The pipeline is:
+
+1. **Screenshot capture** — taken into memory only; never written to disk in default mode
+2. **Sensitivity pre-scan** — heuristic detection of PII-likely regions (form fields, personal data patterns); regions are blurred before classification input
+3. **Local classification** — screen state model produces `screen_state_class` + `confidence`
+4. **System/module inference** — app context + UI element signals used to populate `system_guess` / `module_guess`
+5. **OCR** (optional, policy-gated) — local OCR extracts text; L2 PII scrubber applied to output
+6. **Record assembly** — VCE record assembled from all outputs
+7. **Screenshot discard** — image memory freed immediately after step 6 (default mode)
+8. **Redacted snapshot retention** (optional) — if `vce_snapshot_retention: enabled` in policy, a redacted JPEG is encrypted with AES-256-GCM and uploaded to R2 with a content-expiry header
+
+---
+
+### 8.4 VCE Trigger Policy
+
+#### 8.4.1 Intent
+
+VCE triggers are the mechanism that controls *when* screenshots occur. Triggers exist to limit screenshot frequency and to ensure captures are purposeful. This is a trust requirement: workers and enterprise IT must be able to predict when screenshots can be taken and confirm that the system does not capture continuously.
+
+All trigger parameters are policy-controlled via the engagement configuration bundle and subject to hard frequency caps.
+
+#### 8.4.2 Trigger Classes
+
+Five trigger classes are defined. All are enabled by default but can be individually disabled in policy:
+
+**Trigger 1: High Dwell Time**
+Fires when focus duration on an allowlisted app exceeds the dwell threshold AND interaction intensity during that dwell period is below the activity threshold. This classifies accumulated time as waiting, review, or queue processing rather than active work.
+
+**Trigger 2: Low Classification Confidence**
+Fires when the agent cannot classify the current work state from non-image signals (application context, focus session metadata, interaction counts). A VCE is taken to reduce ambiguity and improve the Work Reality Graph segment quality.
+
+**Trigger 3: Recurring Error Signature**
+Fires when a VCE previously classified as `error` is detected in a repeating pattern: same application, similar session context, within the error recurrence window. This quantifies rework loops and error frequency.
+
+**Trigger 4: Novel/Unclassified Cluster**
+Fires when a new pattern of focus session and interaction features appears frequently but cannot be classified using existing session signals. This identifies missing subprocess coverage in the Work Reality Graph.
+
+**Trigger 5: Taxonomy Boundary**
+Fires at engagement-defined transition boundaries — points in the process model where the engagement team needs confirmation of which subprocess is executing. Only fires when the agent context matches the configured boundary condition.
+
+#### 8.4.3 Frequency Caps
+
+The following caps are enforced as hard limits. The agent will not trigger a VCE that would violate any active cap, regardless of trigger condition:
+
+| Cap | Default | Configurable Range |
+|-----|---------|-------------------|
+| Max VCEs per hour per device | 12 | 1–30 |
+| Max VCEs per workday per device | 60 | 10–200 |
+| Min cooldown between VCEs (same app) | 120 seconds | 30–600 seconds |
+| Min cooldown between VCEs (any app) | 30 seconds | 10–120 seconds |
+
+If the engagement policy sets `vce_enabled: false` or the user pauses capture via the widget, all VCE triggers are immediately disabled until the policy is updated or capture is resumed.
+
+---
+
+### 8.5 On-Device Processing and Retention
+
+#### 8.5.1 Intent
+
+The endpoint must not become a sensitive data replication tool. Image processing runs locally by default, and retention is minimized. This section defines the default memory-only pipeline and the gated optional retention mode.
+
+#### 8.5.2 Default: Memory-Only Pipeline
+
+In default mode, the VCE pipeline is fully in-memory:
+
+1. Screenshot captured into a temporary memory buffer (never written to disk)
+2. Sensitivity pre-scan applied to blur PII-likely regions in memory
+3. Local classifier runs against the in-memory buffer
+4. VCE metadata record assembled
+5. Screenshot memory buffer freed immediately
+6. VCE metadata record buffered in SQLite for upload
+7. Classified image is never transmitted — only the VCE metadata record leaves the device
+
+#### 8.5.3 Optional Redacted Retention Mode
+
+When `vce_snapshot_retention: enabled` is set in the engagement policy:
+
+- A redacted JPEG (PII-likely regions replaced with solid fill, not blur) is produced from the in-memory buffer after classification
+- The redacted image is encrypted with AES-256-GCM using a per-engagement key
+- The encrypted blob is uploaded to Cloudflare R2 with a content-expiry header matching the engagement retention policy
+- The `snapshot_ref` field in the VCE record is populated with the R2 object key
+- Access to R2 snapshots is controlled via ABAC policy: only engagement leads with `vce_snapshot:read` permission can retrieve them
+- Snapshot retention is bounded to the engagement window plus 30 days; automatic deletion is enforced via R2 lifecycle rules
+
+This mode is off by default and must be explicitly enabled with client approval. Enabling it requires a signed data processing addendum acknowledging the snapshot retention scope.
 
 ---
 
@@ -422,8 +643,11 @@ All events share a common envelope:
 | `UI_ELEMENT_INTERACTION` | AXUIElement interaction not covered above | `element_role`, `element_description`, `interaction_type` |
 | `IDLE_START` | No events for idle threshold (default: 5 minutes) | `idle_threshold_s` |
 | `IDLE_END` | Activity resumes after idle | `idle_duration_s`, `resuming_app` |
+| `VISUAL_CONTEXT_EVENT` | VCE trigger condition met (see Section 8.3–8.4) | `screen_state_class`, `system_guess`, `module_guess`, `confidence`, `trigger_reason`, `sensitivity_flags`, `dwell_ms`, `interaction_intensity`, `window_title_redacted`, `snapshot_ref` |
 
 **Privacy notes on URL capture**: Full URLs are never stored. Only the domain and a hash of the path are captured. Query parameters are always dropped. URL capture requires the browser to be on the engagement allowlist.
+
+**Privacy notes on VISUAL_CONTEXT_EVENT**: The VCE record contains structured metadata only. The originating screenshot is processed locally and discarded in default mode. The `window_title_redacted` field has PII tokens replaced by the L2 scrubber before the record is buffered. The `snapshot_ref` field is `null` unless optional redacted retention is enabled (see Section 8.5.3).
 
 ---
 
@@ -431,7 +655,7 @@ All events share a common envelope:
 
 ### 10.1 Evidence Materialization
 
-Captured task mining data materializes as `EvidenceItem` records in KMFlow's evidence store with category `KM4Work` (category 7 in the platform taxonomy). This follows the same pattern as the Soroco connector but with first-party data and guaranteed quality provenance.
+Captured task mining data materializes as `EvidenceItem` records in WorkGraphIQ's evidence store with category `KM4Work` (category 7 in the platform taxonomy). This follows the same pattern as the Soroco connector but with first-party data and guaranteed quality provenance.
 
 ```python
 EvidenceItem(
@@ -522,7 +746,7 @@ Task mining data extends the Neo4j schema with two new node types and two new re
 // Links sequential UserActions within a session (task sequence chain)
 (:UserAction)-[:PRECEDED_BY {gap_ms: int, same_app: bool}]->(:UserAction)
 
-// Links UserAction to a KMFlow Process element (populated by Phase 3 assembly)
+// Links UserAction to a WorkGraphIQ Process element (populated by Phase 3 assembly) (populated by Phase 3 assembly)
 (:UserAction)-[:MAPS_TO {confidence: float, assembly_version: string}]->(:Activity)
 ```
 
@@ -665,9 +889,101 @@ CREATE INDEX idx_pii_quarantine_expires ON pii_quarantine(expires_at) WHERE dele
 CREATE INDEX idx_pii_quarantine_agent ON pii_quarantine(agent_id);
 ```
 
+**`switching_traces`** — Individual application-to-application transitions
+
+```sql
+CREATE TABLE switching_traces (
+    id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id              UUID NOT NULL REFERENCES task_mining_sessions(id),
+    agent_id                UUID NOT NULL REFERENCES task_mining_agents(id),
+    engagement_id           UUID NOT NULL REFERENCES engagements(id),
+    role_ref                VARCHAR(255) NOT NULL,          -- Role identifier (never personal identity by default)
+    from_app                VARCHAR(255) NOT NULL,          -- Normalized app identifier
+    from_module             VARCHAR(255),                   -- Module/window within app (if observable)
+    to_app                  VARCHAR(255) NOT NULL,          -- Normalized app identifier
+    to_module               VARCHAR(255),                   -- Module/window within app (if observable)
+    switched_at             TIMESTAMPTZ NOT NULL,           -- UTC timestamp of focus change
+    dwell_ms                INTEGER NOT NULL,               -- Time spent in from_app before switching
+    interaction_intensity   FLOAT NOT NULL DEFAULT 0.0,    -- 0.0–1.0 normalized activity level
+    vce_ref                 UUID,                           -- Optional: VCE captured at this transition
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_switching_traces_session ON switching_traces(session_id);
+CREATE INDEX idx_switching_traces_engagement ON switching_traces(engagement_id, switched_at);
+CREATE INDEX idx_switching_traces_role ON switching_traces(engagement_id, role_ref, switched_at);
+CREATE INDEX idx_switching_traces_apps ON switching_traces(from_app, to_app, engagement_id);
+```
+
+**`transition_matrices`** — Pre-aggregated switching pattern summaries per role per time window
+
+```sql
+CREATE TABLE transition_matrices (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    engagement_id       UUID NOT NULL REFERENCES engagements(id),
+    role_ref            VARCHAR(255) NOT NULL,
+    window_start        TIMESTAMPTZ NOT NULL,
+    window_end          TIMESTAMPTZ NOT NULL,
+    matrix              JSONB NOT NULL,             -- {from_app: {to_app: count}}
+    total_transitions   INTEGER NOT NULL DEFAULT 0,
+    dominant_path       TEXT[],                    -- Most frequent app sequence
+    friction_score      FLOAT,                     -- Composite friction index (0.0–1.0)
+    ping_pong_pairs     JSONB,                     -- Detected A↔B oscillations with counts
+    computed_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_transition_matrices_engagement ON transition_matrices(engagement_id, window_start);
+CREATE INDEX idx_transition_matrices_role ON transition_matrices(engagement_id, role_ref, window_start);
+CREATE UNIQUE INDEX idx_transition_matrices_role_window ON transition_matrices(engagement_id, role_ref, window_start, window_end);
+```
+
+**`visual_context_events`** — VCE metadata records (all 13 fields)
+
+```sql
+CREATE TABLE visual_context_events (
+    id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id              UUID NOT NULL REFERENCES task_mining_sessions(id),
+    agent_id                UUID NOT NULL REFERENCES task_mining_agents(id),
+    engagement_id           UUID NOT NULL REFERENCES engagements(id),
+    timestamp               TIMESTAMPTZ NOT NULL,                   -- When screenshot was captured
+    screen_state_class      VARCHAR(50) NOT NULL
+                                CHECK (screen_state_class IN (
+                                    'queue', 'search', 'data_entry', 'review',
+                                    'error', 'waiting_latency', 'navigation', 'other'
+                                )),
+    system_guess            VARCHAR(255),                           -- Best-guess system if inferable
+    module_guess            VARCHAR(255),                           -- Best-guess module if inferable
+    confidence              FLOAT NOT NULL
+                                CHECK (confidence >= 0.0 AND confidence <= 1.0),
+    trigger_reason          VARCHAR(50) NOT NULL
+                                CHECK (trigger_reason IN (
+                                    'high_dwell', 'low_confidence', 'recurring_error',
+                                    'novel_state', 'taxonomy_boundary'
+                                )),
+    sensitivity_flags       TEXT[] NOT NULL DEFAULT '{}',           -- PII risk category tags
+    application_name        VARCHAR(255) NOT NULL,                  -- Normalized app name from agent
+    window_title_redacted   TEXT NOT NULL,                          -- L2-scrubbed window title
+    dwell_ms                INTEGER NOT NULL,                       -- Dwell time before VCE triggered
+    interaction_intensity   FLOAT NOT NULL DEFAULT 0.0
+                                CHECK (interaction_intensity >= 0.0 AND interaction_intensity <= 1.0),
+    snapshot_ref            VARCHAR(512),                           -- R2 object key (null by default)
+    ocr_text_redacted       TEXT,                                   -- L2-scrubbed OCR output (null by default)
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_vce_session ON visual_context_events(session_id, timestamp);
+CREATE INDEX idx_vce_engagement ON visual_context_events(engagement_id, timestamp);
+CREATE INDEX idx_vce_class ON visual_context_events(engagement_id, screen_state_class, timestamp);
+CREATE INDEX idx_vce_trigger ON visual_context_events(trigger_reason, engagement_id);
+CREATE INDEX idx_vce_app ON visual_context_events(application_name, engagement_id, timestamp);
+```
+
 ### 11.2 GDPR Erasure Extension
 
-The existing GDPR erasure procedure is extended to include task mining tables. When a user erasure request is processed, the procedure deletes all rows from `task_mining_events`, `task_mining_actions`, and `task_mining_sessions` associated with the agent(s) registered for that user. The `pii_quarantine` table is included. `task_mining_agents` records are anonymized (hostname and machine_id nulled) but not deleted, to preserve audit log integrity.
+The existing GDPR erasure procedure is extended to include task mining tables and the new WGI evidence tables. When a user erasure request is processed, the procedure deletes all rows from `task_mining_events`, `task_mining_actions`, `task_mining_sessions`, `switching_traces`, `transition_matrices`, and `visual_context_events` associated with the agent(s) registered for that user. The `pii_quarantine` table is included. `task_mining_agents` records are anonymized (hostname and machine_id nulled) but not deleted, to preserve audit log integrity.
+
+For `visual_context_events` rows with a non-null `snapshot_ref`, the corresponding R2 object is deleted via the R2 API before the database row is removed. Snapshot deletion is logged in the audit trail.
 
 ---
 
@@ -844,7 +1160,7 @@ Response 200:
 ```mermaid
 sequenceDiagram
     participant EL as Engagement Lead
-    participant Admin as KMFlow Admin
+    participant Admin as WorkGraphIQ Admin
     participant IT as Client IT
     participant User as Client User
     participant Agent as macOS Agent
@@ -996,7 +1312,7 @@ Every agent registration, configuration change, consent event, capture pause/res
 
 | Capability | Description |
 |-----------|-------------|
-| Process assembly | Link `UserAction` nodes to `Activity` nodes in KMFlow process models |
+| Process assembly | Link `UserAction` nodes to `Activity` nodes in WorkGraphIQ process models |
 | Process variant detection | Graph-based identification of users following different task sequences |
 | Knowledge graph queries | Task mining data available via `GET /api/v1/graph/query` |
 | Windows agent | Port Swift layer to Windows (Win32 accessibility APIs, WH_KEYBOARD_LL hook) |
@@ -1020,11 +1336,11 @@ Every agent registration, configuration change, consent event, capture pause/res
 
 ### 17.1 Feature Comparison
 
-| Capability | KMFlow Agent | Soroco Scout | Celonis Task Mining | UiPath Task Mining |
+| Capability | WorkGraphIQ Agent | Soroco Scout | Celonis Task Mining | UiPath Task Mining |
 |-----------|:-----------:|:------------:|:------------------:|:-----------------:|
 | Knowledge graph integration | Yes | No | No | No |
 | Evidence triangulation with docs/interviews | Yes | No | No | No |
-| LCD confidence scoring | Yes | No | No | No |
+| Least Common Denominator (LCD) confidence scoring | Yes | No | No | No |
 | Mandatory 4-layer PII architecture | Yes | Config-based | Config-based | Config-based |
 | Engagement mode (auto-disable) | Yes | No | No | No |
 | MDM deployment (Jamf/Intune) | Yes (Phase 2) | Yes | Yes | Yes |
@@ -1035,7 +1351,7 @@ Every agent registration, configuration change, consent event, capture pause/res
 
 ### 17.2 Economic Comparison
 
-| Factor | KMFlow Agent | Soroco Scout | Celonis Task Mining |
+| Factor | WorkGraphIQ Agent | Soroco Scout | Celonis Task Mining |
 |--------|:-----------:|:------------:|:------------------:|
 | Per-engagement cost | Platform subscription | $25,000+/engagement | Enterprise license |
 | Data portability | Full (your data) | Limited (vendor platform) | Limited |

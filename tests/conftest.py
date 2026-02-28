@@ -153,6 +153,7 @@ async def test_app(
         camunda,
         conformance,
         copilot,
+        correlation,
         dashboard,
         engagements,
         evidence,
@@ -239,6 +240,7 @@ async def test_app(
     app.include_router(admin.router)
     app.include_router(gdpr.router)
     app.include_router(taskmining.router)
+    app.include_router(correlation.router)
 
     # Override get_settings so auth uses the same JWT secret as tests
     test_settings_instance = Settings(

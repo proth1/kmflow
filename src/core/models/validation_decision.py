@@ -70,6 +70,18 @@ class ValidationDecision(Base):
     graph_write_back_result: Mapped[dict | None] = mapped_column(
         JSON, nullable=True
     )
+    reasoning: Mapped[str | None] = mapped_column(
+        String(2000), nullable=True
+    )
+    evidence_refs: Mapped[list | None] = mapped_column(
+        JSON, nullable=True
+    )
+    confidence_before: Mapped[float | None] = mapped_column(
+        nullable=True
+    )
+    confidence_after: Mapped[float | None] = mapped_column(
+        nullable=True
+    )
     decision_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

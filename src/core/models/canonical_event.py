@@ -56,6 +56,9 @@ class CanonicalActivityEvent(Base):
     )
     process_element_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     raw_payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # Correlation engine outputs — denormalised for query convenience
+    link_method: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    link_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     def __repr__(self) -> str:

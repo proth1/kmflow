@@ -194,3 +194,153 @@ def generate_packs(activities: list[ActivityInfo]) -> list[ReviewPackData]:
         len(activities),
     )
     return packs
+
+
+# ---------------------------------------------------------------------------
+# Process Evidence Pack bundling
+# ---------------------------------------------------------------------------
+
+@dataclass
+class EvidenceQualityScorecard:
+    """Quality scorecard for evidence completeness and freshness.
+
+    Attributes:
+        completeness_score: 0.0-1.0 — ratio of activities with evidence.
+        freshness_score: 0.0-1.0 — ratio of evidence updated within threshold.
+        confidence_score: Average confidence across all activities.
+        coverage_by_form: Per-knowledge-form coverage percentages.
+        total_activities: Total activities assessed.
+        activities_with_evidence: Activities with at least one evidence link.
+        overall_grade: A-F letter grade derived from composite score.
+    """
+
+    completeness_score: float = 0.0
+    freshness_score: float = 0.0
+    confidence_score: float = 0.0
+    coverage_by_form: dict[str, float] = field(default_factory=dict)
+    total_activities: int = 0
+    activities_with_evidence: int = 0
+    overall_grade: str = "F"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "completeness_score": round(self.completeness_score, 4),
+            "freshness_score": round(self.freshness_score, 4),
+            "confidence_score": round(self.confidence_score, 4),
+            "coverage_by_form": self.coverage_by_form,
+            "total_activities": self.total_activities,
+            "activities_with_evidence": self.activities_with_evidence,
+            "overall_grade": self.overall_grade,
+        }
+
+
+def compute_quality_scorecard(
+    activities: list[ActivityInfo],
+) -> EvidenceQualityScorecard:
+    """Compute an evidence quality scorecard for a set of activities.
+
+    Args:
+        activities: Activities with evidence metadata.
+
+    Returns:
+        EvidenceQualityScorecard with completeness, freshness, confidence.
+    """
+    if not activities:
+        return EvidenceQualityScorecard()
+
+    total = len(activities)
+    with_evidence = sum(1 for a in activities if a.evidence_ids)
+    completeness = with_evidence / total if total > 0 else 0.0
+
+    scores = [a.confidence_score for a in activities if a.confidence_score > 0]
+    avg_confidence = sum(scores) / len(scores) if scores else 0.0
+
+    # Freshness is proxied by confidence for now (high confidence ≈ recent evidence)
+    freshness = avg_confidence
+
+    # Composite score for grading
+    composite = (completeness * 0.4) + (freshness * 0.3) + (avg_confidence * 0.3)
+    grade = _score_to_grade(composite)
+
+    return EvidenceQualityScorecard(
+        completeness_score=completeness,
+        freshness_score=freshness,
+        confidence_score=avg_confidence,
+        total_activities=total,
+        activities_with_evidence=with_evidence,
+        overall_grade=grade,
+    )
+
+
+def _score_to_grade(score: float) -> str:
+    """Convert a 0-1 composite score to a letter grade."""
+    if score >= 0.9:
+        return "A"
+    if score >= 0.8:
+        return "B"
+    if score >= 0.7:
+        return "C"
+    if score >= 0.6:
+        return "D"
+    return "F"
+
+
+@dataclass
+class ProcessEvidencePack:
+    """A bundled Process Evidence Pack for export.
+
+    Contains review packs, quality scorecard, and manifest for
+    artifact bundling into a downloadable package.
+    """
+
+    engagement_id: str = ""
+    process_name: str = ""
+    packs: list[ReviewPackData] = field(default_factory=list)
+    scorecard: EvidenceQualityScorecard = field(default_factory=EvidenceQualityScorecard)
+    manifest: dict[str, Any] = field(default_factory=dict)
+
+    def to_manifest(self) -> dict[str, Any]:
+        """Generate bundle manifest for the evidence pack."""
+        return {
+            "engagement_id": self.engagement_id,
+            "process_name": self.process_name,
+            "pack_count": len(self.packs),
+            "total_activities": sum(len(p.activities) for p in self.packs),
+            "total_evidence_refs": sum(len(p.evidence_ids) for p in self.packs),
+            "scorecard": self.scorecard.to_dict(),
+        }
+
+
+def bundle_evidence_pack(
+    engagement_id: str,
+    process_name: str,
+    activities: list[ActivityInfo],
+) -> ProcessEvidencePack:
+    """Bundle activities into a Process Evidence Pack with scorecard.
+
+    Args:
+        engagement_id: Engagement identifier.
+        process_name: Name of the process.
+        activities: Ordered list of activities.
+
+    Returns:
+        ProcessEvidencePack with packs, scorecard, and manifest.
+    """
+    packs = generate_packs(activities)
+    scorecard = compute_quality_scorecard(activities)
+
+    pack = ProcessEvidencePack(
+        engagement_id=engagement_id,
+        process_name=process_name,
+        packs=packs,
+        scorecard=scorecard,
+    )
+    pack.manifest = pack.to_manifest()
+
+    logger.info(
+        "Bundled evidence pack for %s: %d packs, grade %s",
+        process_name,
+        len(packs),
+        scorecard.overall_grade,
+    )
+    return pack

@@ -10,7 +10,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import ARRAY, Boolean, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -308,3 +308,180 @@ class PIIQuarantine(Base):
 
     def __repr__(self) -> str:
         return f"<PIIQuarantine(id={self.id}, pii_type={self.pii_type}, status={self.status})>"
+
+
+# ---------------------------------------------------------------------------
+# VCE (Visual Context Event) Enums
+# ---------------------------------------------------------------------------
+
+
+class ScreenStateClass(enum.StrEnum):
+    """Classified screen state from VLM or rule-based heuristics."""
+
+    QUEUE = "queue"
+    SEARCH = "search"
+    DATA_ENTRY = "data_entry"
+    REVIEW = "review"
+    ERROR = "error"
+    WAITING_LATENCY = "waiting_latency"
+    NAVIGATION = "navigation"
+    OTHER = "other"
+
+
+class VCETriggerReason(enum.StrEnum):
+    """Reason the VCE pipeline was triggered for this screen state."""
+
+    HIGH_DWELL = "high_dwell"
+    LOW_CONFIDENCE = "low_confidence"
+    RECURRING_EXCEPTION = "recurring_exception"
+    NOVEL_CLUSTER = "novel_cluster"
+    TAXONOMY_BOUNDARY = "taxonomy_boundary"
+
+
+# ---------------------------------------------------------------------------
+# VCE Model
+# ---------------------------------------------------------------------------
+
+
+class VisualContextEvent(Base):
+    """A visual context event capturing screen state during task mining.
+
+    VCEs are triggered when the classification pipeline detects unusual
+    dwell times, low-confidence classifications, recurring exceptions, or
+    novel screen clusters. They capture a PII-redacted snapshot of the
+    worker's screen state for later WGI alignment analysis.
+    """
+
+    __tablename__ = "visual_context_events"
+    __table_args__ = (
+        Index("ix_vce_engagement_id", "engagement_id"),
+        Index("ix_vce_session_id", "session_id"),
+        Index("ix_vce_screen_state_class", "screen_state_class"),
+        Index("ix_vce_trigger_reason", "trigger_reason"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    session_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("task_mining_sessions.id", ondelete="SET NULL"), nullable=True
+    )
+    agent_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("task_mining_agents.id", ondelete="SET NULL"), nullable=True
+    )
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    screen_state_class: Mapped[ScreenStateClass] = mapped_column(
+        Enum(ScreenStateClass, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
+    system_guess: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    module_guess: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    trigger_reason: Mapped[VCETriggerReason] = mapped_column(
+        Enum(VCETriggerReason, values_callable=lambda e: [x.value for x in e]), nullable=False
+    )
+    sensitivity_flags: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
+    application_name: Mapped[str] = mapped_column(String(512), nullable=False)
+    window_title_redacted: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    dwell_ms: Mapped[int] = mapped_column(Integer, nullable=False)
+    interaction_intensity: Mapped[float | None] = mapped_column(Float, nullable=True)
+    snapshot_ref: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    ocr_text_redacted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    classification_method: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    engagement: Mapped["Engagement"] = relationship("Engagement")
+    session: Mapped["TaskMiningSession | None"] = relationship("TaskMiningSession")
+    agent: Mapped["TaskMiningAgent | None"] = relationship("TaskMiningAgent")
+
+    def __repr__(self) -> str:
+        return (
+            f"<VisualContextEvent(id={self.id}, screen_state={self.screen_state_class}, "
+            f"trigger={self.trigger_reason}, confidence={self.confidence:.2f})>"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Switching Sequence Models
+# ---------------------------------------------------------------------------
+
+
+class SwitchingTrace(Base):
+    """An observed sequence of application switches within a capture session.
+
+    Represents a continuous chain of APP_SWITCH events where the user moved
+    between applications within a bounded time window. Broken on idle gaps
+    >5 minutes. Used to measure cognitive load, context-switching friction,
+    and ping-pong patterns.
+    """
+
+    __tablename__ = "switching_traces"
+    __table_args__ = (
+        Index("ix_switching_traces_engagement_id", "engagement_id"),
+        Index("ix_switching_traces_session_id", "session_id"),
+        Index("ix_switching_traces_role_id", "role_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    session_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("task_mining_sessions.id", ondelete="SET NULL"), nullable=True
+    )
+    role_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    trace_sequence: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False)
+    dwell_durations: Mapped[list[int]] = mapped_column(ARRAY(Integer), nullable=False)
+    total_duration_ms: Mapped[int] = mapped_column(Integer, nullable=False)
+    friction_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    is_ping_pong: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    ping_pong_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    app_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    ended_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    engagement: Mapped["Engagement"] = relationship("Engagement")
+    session: Mapped["TaskMiningSession | None"] = relationship("TaskMiningSession")
+
+    def __repr__(self) -> str:
+        return (
+            f"<SwitchingTrace(id={self.id}, apps={self.app_count}, "
+            f"friction={self.friction_score:.2f}, ping_pong={self.is_ping_pong})>"
+        )
+
+
+class TransitionMatrix(Base):
+    """Aggregated application transition counts for an engagement period.
+
+    Records how often users switch from one application to another within a
+    given time window, optionally segmented by role. Used for heat-map
+    visualizations and friction hotspot detection.
+    """
+
+    __tablename__ = "transition_matrices"
+    __table_args__ = (
+        Index("ix_transition_matrices_engagement_id", "engagement_id"),
+        Index("ix_transition_matrices_role_id", "role_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engagements.id", ondelete="CASCADE"), nullable=False
+    )
+    role_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    matrix_data: Mapped[dict] = mapped_column(JSON, nullable=False)
+    total_transitions: Mapped[int] = mapped_column(Integer, nullable=False)
+    unique_apps: Mapped[int] = mapped_column(Integer, nullable=False)
+    top_transitions: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    engagement: Mapped["Engagement"] = relationship("Engagement")
+
+    def __repr__(self) -> str:
+        return (
+            f"<TransitionMatrix(id={self.id}, engagement_id={self.engagement_id}, "
+            f"transitions={self.total_transitions}, apps={self.unique_apps})>"
+        )

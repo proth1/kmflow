@@ -556,28 +556,84 @@ class KnowledgeGraphService:
         self,
         embedding: list[float],
         top_k: int = 10,
+        engagement_id: str | None = None,
+        node_label: str | None = None,
+        db_session: Any = None,
     ) -> list[dict[str, Any]]:
         """Search for similar nodes using pgvector semantic search.
 
-        This is a placeholder that delegates to pgvector. The actual
-        embedding search happens in the embeddings service; this method
-        provides graph context for the results.
+        Queries pgvector for the top-k similar fragment embeddings, then
+        maps matched fragment IDs to their corresponding Evidence nodes
+        in Neo4j to return enriched results with graph context.
 
         Args:
             embedding: Query embedding vector.
             top_k: Number of results to return.
+            engagement_id: Optional engagement scope filter.
+            node_label: Optional node label filter (e.g. "Activity", "Evidence").
+            db_session: Optional SQLAlchemy async session for pgvector queries.
 
         Returns:
-            List of search results with node and similarity data.
+            List of search results with node data and similarity scores.
         """
-        # In the full implementation, this would:
-        # 1. Query pgvector for top-k similar fragment embeddings
-        # 2. Map fragment IDs to Evidence nodes in Neo4j
-        # 3. Return enriched results with graph context
-        #
-        # For MVP, this returns an empty list since pgvector search
-        # is handled by the embeddings service.
-        return []
+        if db_session is None:
+            return []
+
+        try:
+            from sqlalchemy import text
+
+            # Query pgvector for similar embeddings
+            embedding_str = "[" + ",".join(str(v) for v in embedding) + "]"
+            pgvector_query = text(
+                "SELECT id, entity_id, entity_type, "
+                "1 - (embedding <=> :embedding::vector) AS similarity "
+                "FROM fragment_embeddings "
+                "WHERE (:engagement_id IS NULL OR engagement_id = :engagement_id::uuid) "
+                "ORDER BY embedding <=> :embedding::vector "
+                "LIMIT :top_k"
+            )
+            result = await db_session.execute(
+                pgvector_query,
+                {
+                    "embedding": embedding_str,
+                    "engagement_id": engagement_id,
+                    "top_k": top_k,
+                },
+            )
+            rows = result.fetchall()
+
+            if not rows:
+                return []
+
+            # Map fragment IDs to Neo4j nodes for graph context
+            results: list[dict[str, Any]] = []
+            for row in rows:
+                entity_id = str(row.entity_id)
+                node = await self.get_node(entity_id)
+
+                result_entry: dict[str, Any] = {
+                    "entity_id": entity_id,
+                    "entity_type": row.entity_type,
+                    "similarity": round(float(row.similarity), 4),
+                }
+
+                if node is not None:
+                    if node_label and node.label != node_label:
+                        continue
+                    result_entry["node"] = {
+                        "id": node.id,
+                        "label": node.label,
+                        "name": node.properties.get("name", ""),
+                        "engagement_id": node.properties.get("engagement_id", ""),
+                    }
+
+                results.append(result_entry)
+
+            return results
+
+        except Exception:
+            logger.exception("Semantic search failed")
+            return []
 
     # -----------------------------------------------------------------
     # Delete operations
