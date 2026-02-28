@@ -3,6 +3,14 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.02.201] - 2026-02-28
+### Added
+- WGI Platform Alignment: codebase-wide formatting, TYPE_CHECKING guards, import cleanup, pre-merge CI/CD gates, RLS context in TOM routes, frontend cookie auth (#576)
+
+## [2026.02.200] - 2026-02-28
+### Added
+- WGI Platform Alignment: switching sequences, VCE pipeline (macOS/Windows capture, classifier, OCR, redactor, trigger engine), correlation engine (deterministic + assisted linkage, role association, diagnostics), ABAC PDP (8 attributes, obligation enforcer, PEP middleware, policy bundles), PRD refactoring to WGI terminology, 4 Alembic migrations, 73+ ABAC tests, fixtures, seed data, E2E specs, presentation updates (#575)
+
 ## [2026.02.199] - 2026-02-28
 ### Fixed
 - Disable Next.js dev indicator overlay that obscured sidebar navigation (#561)

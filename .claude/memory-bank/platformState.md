@@ -1,17 +1,17 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.199
+**Version**: 2026.02.201
 **Last Updated**: 2026-02-28
 
 ## Quick Stats
 
 | Metric | Value |
 |--------|-------|
-| SQLAlchemy Models | 92 |
-| API Routers | 65 |
-| Test Count | 5,162 backend + 635 frontend (5,797 total) |
-| Total LOC | ~108,700 (389 Python / 112 TypeScript / 39 Swift / 63 C#/C) |
-| Database Migrations | 81 |
+| SQLAlchemy Models | 96 |
+| API Routers | 68 |
+| Test Count | 5,400+ backend + 635 frontend (6,035+ total) |
+| Total LOC | ~113,000 (430+ Python / 115 TypeScript / 39 Swift / 63 C#/C) |
+| Database Migrations | 84 |
 | BPMN Process Models | 44 |
 | Coverage | >80% |
 | Python Version | 3.12+ |
@@ -30,6 +30,8 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.201 | 2026-02-28 | WGI alignment: codebase-wide formatting, TYPE_CHECKING, pre-merge gates, RLS TOM context (#576) |
+| 2026.02.200 | 2026-02-28 | WGI Platform Alignment: switching, VCE, correlation, ABAC PDP, PRD refactoring, 4 migrations (#575) |
 | 2026.02.199 | 2026-02-28 | Disable Next.js dev indicator overlay obscuring sidebar nav (#561) |
 | 2026.02.198 | 2026-02-28 | Fix Knowledge Graph empty edge IDs crashing Cytoscape; retake screenshots (#560) |
 | 2026.02.197 | 2026-02-28 | Windows Agent UI, installer, testing, MDM: WPF tray app, WiX MSI, MSIX, GPO ADMX, Authenticode, WDAC, integration tests, Win matrix, Intune, SCCM (#559) |

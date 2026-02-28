@@ -4,49 +4,33 @@
 
 ## Project Status
 
-**MVP COMPLETE** — Platform MVP done. Windows Task Mining Agent fully implemented across all 8 epics.
+**MVP COMPLETE + WGI ALIGNED** — Platform MVP done. Windows Task Mining Agent fully implemented. WGI Platform Alignment complete.
 
-- **Current version**: 2026.02.199
+- **Current version**: 2026.02.201
 - **Open issues**: 0
 - **Presentation**: deployed to kmflow.agentic-innovations.com via Cloudflare Pages
 
 ## Current Focus
 
-**WGI Platform Alignment** — All implementation complete (uncommitted). 12 GitHub epic issues created (#563-#574).
-
-### WGI Work Completed (uncommitted on feature/560-fix-knowledge-graph-edge-ids)
-- **Part A**: PRDs renamed to WGI terminology, 5 DOCX sources archived, VCE/Switching sections added
-- **Part B**: Switching Sequences backend (models, service, routes, graph ingest, worker, migration 080, tests). VCE full pipeline — macOS/Windows capture managers, Python classifier/OCR/redactor/trigger engine, IPC integration, backend processor/analytics, routes, graph ingest, migration 081, tests
-- **Part C**: Correlation Engine (deterministic + assisted linkage, role association, diagnostics, routes, migration 082, tests). PDP ABAC (8 attributes, obligation enforcer, PEP middleware, policy bundles, migration 083, 73 tests)
-- **Part D**: Agent runtime connector, schema drift, watermark management, pgvector search_similar(), BPMN auto-gen, evidence quality scorecards, heatmap density, drilldown, survey consensus, uncertainty queue, validation decision fields
-- **Epics**: #563-#574 created in GitHub
+No active work. Clean backlog.
 
 ## Recently Completed
 
-- **WGI Platform Alignment**: Full gap closure — 26 new files, 35 modified files, ~5,200+ lines added, 4 migrations
+- **PR #576**: WGI remaining codebase changes — formatting, TYPE_CHECKING, pre-merge gates, RLS TOM context (merged 2026-02-28)
+- **PR #575**: WGI Platform Alignment — switching sequences, VCE pipeline, correlation engine, ABAC PDP, PRD refactoring, 4 migrations (merged 2026-02-28)
 - **PR #562**: Fix Knowledge Graph empty edge IDs crashing Cytoscape rendering (#560) — merged 2026-02-28
 - **PR #561**: Disable Next.js dev indicator overlay (#561) — merged 2026-02-28
 
-### Completed Epics (All 8)
-- **Epic #511** (Capture Layer): InputMonitor, AppSwitchMonitor, WindowTitleCapture, IdleDetector, CaptureStateManager, HookDll
-- **Epic #512** (PII L1): CaptureContextFilter, PrivateBrowsingDetector
-- **Epic #513** (IPC & Platform): EventProtocol, NamedPipeClient (dual transport), Python platform abstraction
-- **Epic #514** (Consent/Config/UI): DPAPIConsentStore, ConsentManager, IntegrityChecker, AgentConfig, SystemTrayApp, OnboardingWindow, TransparencyLogWindow
-- **Epic #515** (Installer): WiX MSI, MSIX, Task Scheduler, Windows Service, GPO ADMX templates
-- **Epic #516** (Security): IntegrityChecker (Authenticode), signing pipeline, WDAC policy, AV pre-submission
-- **Epic #517** (Testing): Integration tests (IPC round-trip), Win 10/11 test matrix (windows-latest, 2022, 2019)
-- **Epic #518** (MDM): Intune deployment profile (detection/install/uninstall/OMA-URI), SCCM detection scripts + WQL
+### WGI Platform Alignment (Epics #563-#574)
+- **Part A**: PRDs renamed to WGI terminology, 5 DOCX sources archived, VCE/Switching sections added
+- **Part B**: Switching Sequences backend, VCE full pipeline (macOS/Windows capture, classifier, OCR, redactor, trigger engine)
+- **Part C**: Correlation Engine (deterministic + assisted linkage), PDP ABAC (8 attributes, obligation enforcer, PEP middleware)
+- **Part D**: Agent runtime connector, schema drift, BPMN auto-gen, evidence quality scorecards, survey consensus, uncertainty queue
 
-## Recently Completed
-
-- **PR #559**: Windows Agent Epics #514-#518 — UI, installer, testing, MDM (merged 2026-02-28)
-- **PR #556**: Windows Agent Epics #511-#513 + partial #514/#516/#518 (merged 2026-02-28)
-- **PR #510**: Windows Task Mining Agent PRD (merged 2026-02-28)
-- **PR #509**: Alembic hardening + docs refresh (merged 2026-02-28)
+### Windows Agent (Epics #511-#518)
+- All 8 epics complete: Capture, PII, IPC, Consent/UI, Installer, Security, Testing, MDM
 
 ## Post-MVP Pending Work
-
-These are known follow-up items identified during development:
 
 - **Worker.py wiring**: Connect aggregation engine to Redis stream consumer (TODO in worker.py)
 - **API endpoints**: Expose graph ingestion, semantic bridge, variant detection, ML classification via REST
@@ -72,6 +56,7 @@ The project was built over February 2026 in a rapid sprint:
 - **v2026.02.131–v2026.02.170** (Feb 27): Advanced features — Governance, compliance, TOM alignment, scenarios, financial modeling, conflict detection/resolution, privacy (GDPR, consent, watermarking, PDP), task mining integrations, connectors (Celonis, Soroco, SAP, XES, ARIS, Visio)
 - **v2026.02.171–v2026.02.192** (Feb 27-28): Platform completion — Async task queue, POV orchestrator, replay engines, dashboards (executive, gap, persona, financial, confidence), alerting, presentation deployment, security cleanup, inaugural release
 - **v2026.02.193–v2026.02.197** (Feb 28): Windows Agent — PRD, C# capture layer, PII, IPC, consent, UI, installer, security, testing, MDM
+- **v2026.02.198–v2026.02.201** (Feb 28): WGI Platform Alignment — Switching sequences, VCE pipeline, correlation engine, ABAC PDP, codebase-wide cleanup
 
 ## Key Architectural Patterns
 
@@ -79,8 +64,10 @@ The project was built over February 2026 in a rapid sprint:
 - **3D confidence**: Numeric score + brightness (BRIGHT/DIM/DARK) + evidence grade (A-U)
 - **9 universal knowledge forms**: Coverage computation drives gap detection
 - **Multi-store**: PostgreSQL (OLTP) + Neo4j (graph) + Redis (cache/queue/streams)
-- **RLS**: Row-level security on 32 engagement-scoped tables
+- **RLS**: Row-level security on 36 engagement-scoped tables
 - **IDOR protection**: Every endpoint checks engagement membership
 - **CDD workflow**: Evidence posted as GitHub Issue comments for traceability
+- **ABAC PDP**: 8 attributes, obligation enforcement (masking/suppression/watermarking)
+- **VCE pipeline**: Memory-only image lifecycle, on-device classification, PII redaction
 
 ---
