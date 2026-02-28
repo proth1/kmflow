@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.02.195] - 2026-02-28
+### Added
+- Windows Task Mining Agent implementation: C# .NET 8 NativeAOT capture layer, C hook DLL with lock-free ring buffer, PII L1 filter, IPC with named pipe + TCP fallback, Python platform abstraction, DPAPI consent store with HMAC, IntegrityChecker, Registry-based AgentConfig, GitHub Actions CI (#556)
+
 ## [2026.02.194] - 2026-02-28
 ### Added
 - Windows Task Mining Agent PRD: desktop activity capture, 4-layer PII architecture, Redis Streams event processing (#510)
