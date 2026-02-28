@@ -663,7 +663,8 @@ class KnowledgeGraphService:
         # Get all relationships between engagement nodes
         rel_query = """
         MATCH (a {engagement_id: $engagement_id})-[r]->(b {engagement_id: $engagement_id})
-        RETURN r, a.id AS from_id, b.id AS to_id, type(r) AS rel_type
+        RETURN r, a.id AS from_id, b.id AS to_id, type(r) AS rel_type,
+               elementId(r) AS rel_element_id
         LIMIT $limit
         """
         rel_records = await self._run_query(rel_query, {"engagement_id": engagement_id, "limit": limit})
@@ -671,12 +672,8 @@ class KnowledgeGraphService:
         relationships = []
         for record in rel_records:
             r = record["r"]
-            if isinstance(r, dict):
-                rel_id = r.get("id", "")
-                rel_props = dict(r)
-            else:
-                rel_id = ""
-                rel_props = {}
+            rel_props = dict(r) if isinstance(r, dict) else {}
+            rel_id = rel_props.pop("id", "") or record.get("rel_element_id", "")
             relationships.append(
                 GraphRelationship(
                     id=rel_id,
