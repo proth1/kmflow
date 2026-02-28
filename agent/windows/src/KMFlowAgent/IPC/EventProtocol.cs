@@ -170,6 +170,11 @@ public sealed class CaptureEvent
 [JsonSerializable(typeof(CaptureEvent))]
 [JsonSerializable(typeof(DesktopEventType))]
 [JsonSerializable(typeof(Dictionary<string, object>))]
+[JsonSerializable(typeof(int))]
+[JsonSerializable(typeof(long))]
+[JsonSerializable(typeof(double))]
+[JsonSerializable(typeof(bool))]
+[JsonSerializable(typeof(string))]
 public partial class EventProtocolJsonContext : JsonSerializerContext
 {
 }

@@ -29,6 +29,8 @@
   <ItemGroup>
     <!-- JSON serialization with source generators for NativeAOT -->
     <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    <!-- DPAPI for consent record encryption -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
   </ItemGroup>
 
 </Project>
