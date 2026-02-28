@@ -79,17 +79,15 @@ def _make_mock_model(
 
 
 def _make_mock_evidence(
-    title: str = "Client Interview Notes",
+    name: str = "Client Interview Notes",
     category: str = "Documents",
-    grade: str = "A",
 ) -> MagicMock:
     """Create a mock EvidenceItem."""
     ev = MagicMock()
     ev.id = uuid.uuid4()
-    ev.title = title
+    ev.name = name
     ev.category = category
-    ev.grade = grade
-    ev.source = "Client Upload"
+    ev.source_system = "Client Upload"
     ev.created_at = "2026-02-28T12:00:00Z"
     return ev
 
@@ -215,10 +213,12 @@ class TestElementEvidenceEndpoint:
     @pytest.mark.asyncio
     async def test_returns_linked_evidence(self) -> None:
         """Returns evidence items referenced by element's evidence_ids."""
-        ev1 = _make_mock_evidence("Interview Notes", "Documents", "A")
-        ev2 = _make_mock_evidence("Process Map", "BPM Process Models", "B")
+        ev1 = _make_mock_evidence("Interview Notes", "Documents")
+        ev2 = _make_mock_evidence("Process Map", "BPM Process Models")
 
+        model = _make_mock_model()
         elem = _make_mock_element(
+            model_id=model.id,
             name="Review Application",
             evidence_ids=[str(ev1.id), str(ev2.id)],
         )
@@ -226,9 +226,11 @@ class TestElementEvidenceEndpoint:
         session = AsyncMock()
         elem_result = MagicMock()
         elem_result.scalar_one_or_none.return_value = elem
+        model_result = MagicMock()
+        model_result.scalar_one_or_none.return_value = model
         ev_result = MagicMock()
         ev_result.scalars.return_value.all.return_value = [ev1, ev2]
-        session.execute = AsyncMock(side_effect=[elem_result, ev_result])
+        session.execute = AsyncMock(side_effect=[elem_result, model_result, ev_result])
         user = _make_mock_user()
 
         result = await get_element_evidence(str(elem.id), session, user)
@@ -241,12 +243,15 @@ class TestElementEvidenceEndpoint:
     @pytest.mark.asyncio
     async def test_element_with_no_evidence(self) -> None:
         """Element with no evidence_ids returns empty list."""
-        elem = _make_mock_element(name="Unknown Step", evidence_ids=[], evidence_count=0)
+        model = _make_mock_model()
+        elem = _make_mock_element(model_id=model.id, name="Unknown Step", evidence_ids=[], evidence_count=0)
 
         session = AsyncMock()
         elem_result = MagicMock()
         elem_result.scalar_one_or_none.return_value = elem
-        session.execute = AsyncMock(return_value=elem_result)
+        model_result = MagicMock()
+        model_result.scalar_one_or_none.return_value = model
+        session.execute = AsyncMock(side_effect=[elem_result, model_result])
         user = _make_mock_user()
 
         result = await get_element_evidence(str(elem.id), session, user)
@@ -284,17 +289,44 @@ class TestElementEvidenceEndpoint:
         assert exc_info.value.status_code == 400
 
     @pytest.mark.asyncio
-    async def test_evidence_items_include_all_fields(self) -> None:
-        """Each evidence item has title, category, grade, source, date."""
-        ev = _make_mock_evidence("Org Chart", "Structured Data", "B")
-        elem = _make_mock_element(evidence_ids=[str(ev.id)], evidence_count=1)
+    async def test_non_member_gets_403(self) -> None:
+        """Non-member user without engagement access gets 403."""
+        from fastapi import HTTPException
+
+        model = _make_mock_model()
+        elem = _make_mock_element(model_id=model.id, evidence_ids=[], evidence_count=0)
 
         session = AsyncMock()
         elem_result = MagicMock()
         elem_result.scalar_one_or_none.return_value = elem
+        model_result = MagicMock()
+        model_result.scalar_one_or_none.return_value = model
+        # Membership check returns None (not a member)
+        member_result = MagicMock()
+        member_result.scalar_one_or_none.return_value = None
+        session.execute = AsyncMock(side_effect=[elem_result, model_result, member_result])
+        user = _make_mock_user(role=UserRole.ENGAGEMENT_LEAD)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await get_element_evidence(str(elem.id), session, user)
+
+        assert exc_info.value.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_evidence_items_include_all_fields(self) -> None:
+        """Each evidence item has title, category, grade, source, date."""
+        ev = _make_mock_evidence("Org Chart", "Structured Data")
+        model = _make_mock_model()
+        elem = _make_mock_element(model_id=model.id, evidence_ids=[str(ev.id)], evidence_count=1)
+
+        session = AsyncMock()
+        elem_result = MagicMock()
+        elem_result.scalar_one_or_none.return_value = elem
+        model_result = MagicMock()
+        model_result.scalar_one_or_none.return_value = model
         ev_result = MagicMock()
         ev_result.scalars.return_value.all.return_value = [ev]
-        session.execute = AsyncMock(side_effect=[elem_result, ev_result])
+        session.execute = AsyncMock(side_effect=[elem_result, model_result, ev_result])
         user = _make_mock_user()
 
         result = await get_element_evidence(str(elem.id), session, user)
@@ -302,8 +334,8 @@ class TestElementEvidenceEndpoint:
         item = result["evidence_items"][0]
         assert item["title"] == "Org Chart"
         assert item["category"] == "Structured Data"
-        assert item["grade"] == "B"
-        assert item["source"] is not None
+        assert item["grade"] == "N/A"
+        assert item["source"] == "Client Upload"
         assert item["created_at"] is not None
 
 

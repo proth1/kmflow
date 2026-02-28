@@ -936,6 +936,18 @@ async def get_element_evidence(
             detail=f"Process element {element_id} not found",
         )
 
+    # Verify engagement access via the element's parent model
+    model_result = await session.execute(
+        select(ProcessModel).where(ProcessModel.id == element.model_id)
+    )
+    model = model_result.scalar_one_or_none()
+    if not model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Associated process model not found",
+        )
+    await _check_engagement_member(session, user, model.engagement_id)
+
     # Fetch evidence items referenced by this element
     evidence_items: list[dict[str, Any]] = []
     if element.evidence_ids:
@@ -953,11 +965,11 @@ async def get_element_evidence(
             for ev in ev_result.scalars().all():
                 evidence_items.append({
                     "id": str(ev.id),
-                    "title": ev.title if hasattr(ev, "title") else str(ev.id),
-                    "category": str(ev.category) if hasattr(ev, "category") else "",
-                    "grade": str(ev.grade) if hasattr(ev, "grade") else "N/A",
-                    "source": str(ev.source) if hasattr(ev, "source") else None,
-                    "created_at": str(ev.created_at) if hasattr(ev, "created_at") else None,
+                    "title": ev.name,
+                    "category": str(ev.category),
+                    "grade": "N/A",
+                    "source": ev.source_system,
+                    "created_at": str(ev.created_at) if ev.created_at else None,
                 })
 
     return {
@@ -1044,7 +1056,7 @@ async def get_engagement_dashboard(
     critical_gap_result = await session.execute(
         select(func.count()).select_from(EvidenceGap).where(
             EvidenceGap.model_id == model.id,
-            EvidenceGap.severity == "critical",
+            EvidenceGap.severity == "high",
         )
     )
     critical_gap_count = critical_gap_result.scalar() or 0
