@@ -27,6 +27,7 @@ from src.core.models import (
     Contradiction,
     EngagementMember,
     EvidenceGap,
+    EvidenceItem,
     IlluminationActionStatus,
     ProcessElement,
     ProcessModel,
@@ -157,6 +158,70 @@ class EvidenceGapResponse(BaseModel):
     severity: str
     recommendation: str | None = None
     related_element_id: str | None = None
+
+
+class ProcessElementDetailResponse(BaseModel):
+    """Detailed response for a process element including brightness and grade."""
+
+    id: str
+    model_id: str
+    element_type: str
+    name: str
+    confidence_score: float
+    triangulation_score: float
+    corroboration_level: str
+    evidence_count: int
+    evidence_ids: list[str] | None = None
+    evidence_grade: str = "U"
+    brightness_classification: str = "dark"
+    mvc_threshold_passed: bool = False
+    metadata_json: dict | None = None
+
+
+class ElementEvidenceItem(BaseModel):
+    """An evidence item linked to a process element."""
+
+    id: str
+    title: str
+    category: str
+    grade: str
+    source: str | None = None
+    created_at: str | None = None
+
+
+class ElementEvidenceResponse(BaseModel):
+    """Response for element-level evidence query."""
+
+    element_id: str
+    element_name: str
+    evidence_items: list[ElementEvidenceItem]
+    total: int
+
+
+class EngagementBPMNResponse(BaseModel):
+    """Response for engagement-scoped latest BPMN model."""
+
+    engagement_id: str
+    model_id: str
+    version: int
+    bpmn_xml: str
+    confidence_score: float
+    element_count: int
+    elements: list[ProcessElementDetailResponse]
+
+
+class DashboardKPIs(BaseModel):
+    """Dashboard KPIs for an engagement's process model."""
+
+    engagement_id: str
+    model_version: int
+    overall_confidence: float
+    element_count: int
+    brightness_distribution: dict[str, int]
+    brightness_percentages: dict[str, float]
+    evidence_coverage: float
+    gap_count: int
+    critical_gap_count: int
 
 
 class EvidenceMapEntry(BaseModel):
@@ -746,6 +811,254 @@ async def get_bpmn_xml(
         "model_id": str(model.id),
         "bpmn_xml": model.bpmn_xml,
         "element_confidences": element_confidences,
+    }
+
+
+# -- BPMN Viewer API endpoints (Story #338) ---------------------------------
+
+
+def _element_to_detail_response(elem: ProcessElement) -> dict[str, Any]:
+    """Convert a ProcessElement to a detailed response dict."""
+    return {
+        "id": str(elem.id),
+        "model_id": str(elem.model_id),
+        "element_type": str(elem.element_type),
+        "name": elem.name,
+        "confidence_score": elem.confidence_score,
+        "triangulation_score": elem.triangulation_score,
+        "corroboration_level": str(elem.corroboration_level),
+        "evidence_count": elem.evidence_count,
+        "evidence_ids": elem.evidence_ids,
+        "evidence_grade": str(elem.evidence_grade),
+        "brightness_classification": str(elem.brightness_classification),
+        "mvc_threshold_passed": elem.mvc_threshold_passed,
+        "metadata_json": elem.metadata_json,
+    }
+
+
+@router.get(
+    "/engagement/{engagement_id}/latest-model",
+    response_model=EngagementBPMNResponse,
+)
+async def get_latest_model_for_engagement(
+    engagement_id: str,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("pov:read")),
+) -> dict[str, Any]:
+    """Get the latest process model with BPMN and elements for an engagement.
+
+    Used by the BPMN.js viewer to load the process model for visualization.
+
+    Args:
+        engagement_id: The engagement UUID.
+    """
+    try:
+        eng_uuid = uuid.UUID(engagement_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid engagement ID format",
+        ) from None
+
+    await _check_engagement_member(session, user, eng_uuid)
+
+    # Get latest model version
+    model_result = await session.execute(
+        select(ProcessModel)
+        .where(ProcessModel.engagement_id == eng_uuid)
+        .order_by(ProcessModel.version.desc())
+        .limit(1)
+    )
+    model = model_result.scalar_one_or_none()
+
+    if not model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No process model found for engagement {engagement_id}",
+        )
+
+    if not model.bpmn_xml:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Latest process model has no BPMN XML",
+        )
+
+    # Get all elements for the model
+    elements_result = await session.execute(
+        select(ProcessElement).where(ProcessElement.model_id == model.id)
+    )
+    elements = list(elements_result.scalars().all())
+
+    return {
+        "engagement_id": engagement_id,
+        "model_id": str(model.id),
+        "version": model.version,
+        "bpmn_xml": model.bpmn_xml,
+        "confidence_score": model.confidence_score,
+        "element_count": model.element_count,
+        "elements": [_element_to_detail_response(e) for e in elements],
+    }
+
+
+@router.get(
+    "/elements/{element_id}/evidence",
+    response_model=ElementEvidenceResponse,
+)
+async def get_element_evidence(
+    element_id: str,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("pov:read")),
+) -> dict[str, Any]:
+    """Get evidence items linked to a specific process element.
+
+    Returns all evidence items referenced by the element's evidence_ids.
+
+    Args:
+        element_id: The process element UUID.
+    """
+    try:
+        elem_uuid = uuid.UUID(element_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid element ID format",
+        ) from None
+
+    # Fetch element
+    elem_result = await session.execute(
+        select(ProcessElement).where(ProcessElement.id == elem_uuid)
+    )
+    element = elem_result.scalar_one_or_none()
+
+    if not element:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Process element {element_id} not found",
+        )
+
+    # Fetch evidence items referenced by this element
+    evidence_items: list[dict[str, Any]] = []
+    if element.evidence_ids:
+        evidence_uuids = []
+        for eid in element.evidence_ids:
+            try:
+                evidence_uuids.append(uuid.UUID(str(eid)))
+            except ValueError:
+                continue
+
+        if evidence_uuids:
+            ev_result = await session.execute(
+                select(EvidenceItem).where(EvidenceItem.id.in_(evidence_uuids))
+            )
+            for ev in ev_result.scalars().all():
+                evidence_items.append({
+                    "id": str(ev.id),
+                    "title": ev.title if hasattr(ev, "title") else str(ev.id),
+                    "category": str(ev.category) if hasattr(ev, "category") else "",
+                    "grade": str(ev.grade) if hasattr(ev, "grade") else "N/A",
+                    "source": str(ev.source) if hasattr(ev, "source") else None,
+                    "created_at": str(ev.created_at) if hasattr(ev, "created_at") else None,
+                })
+
+    return {
+        "element_id": str(element.id),
+        "element_name": element.name,
+        "evidence_items": evidence_items,
+        "total": len(evidence_items),
+    }
+
+
+@router.get(
+    "/engagement/{engagement_id}/dashboard",
+    response_model=DashboardKPIs,
+)
+async def get_engagement_dashboard(
+    engagement_id: str,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("pov:read")),
+) -> dict[str, Any]:
+    """Get dashboard KPIs for an engagement's process model.
+
+    Returns confidence, brightness distribution, evidence coverage,
+    and gap counts for the latest model version.
+
+    Args:
+        engagement_id: The engagement UUID.
+    """
+    try:
+        eng_uuid = uuid.UUID(engagement_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid engagement ID format",
+        ) from None
+
+    await _check_engagement_member(session, user, eng_uuid)
+
+    # Get latest model
+    model_result = await session.execute(
+        select(ProcessModel)
+        .where(ProcessModel.engagement_id == eng_uuid)
+        .order_by(ProcessModel.version.desc())
+        .limit(1)
+    )
+    model = model_result.scalar_one_or_none()
+
+    if not model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No process model found for engagement {engagement_id}",
+        )
+
+    # Get elements for brightness distribution
+    elements_result = await session.execute(
+        select(ProcessElement).where(ProcessElement.model_id == model.id)
+    )
+    elements = list(elements_result.scalars().all())
+
+    # Brightness distribution
+    brightness_dist: dict[str, int] = {"bright": 0, "dim": 0, "dark": 0}
+    for elem in elements:
+        b = str(elem.brightness_classification)
+        if b in brightness_dist:
+            brightness_dist[b] += 1
+
+    total_elements = len(elements) or 1
+    brightness_pcts = {
+        k: round(v / total_elements * 100, 1)
+        for k, v in brightness_dist.items()
+    }
+
+    # Evidence coverage: elements with at least 1 evidence item
+    with_evidence = sum(1 for e in elements if e.evidence_count > 0)
+    evidence_coverage = round(with_evidence / total_elements * 100, 1)
+
+    # Gap counts
+    gap_result = await session.execute(
+        select(func.count()).select_from(EvidenceGap).where(
+            EvidenceGap.model_id == model.id
+        )
+    )
+    gap_count = gap_result.scalar() or 0
+
+    critical_gap_result = await session.execute(
+        select(func.count()).select_from(EvidenceGap).where(
+            EvidenceGap.model_id == model.id,
+            EvidenceGap.severity == "critical",
+        )
+    )
+    critical_gap_count = critical_gap_result.scalar() or 0
+
+    return {
+        "engagement_id": engagement_id,
+        "model_version": model.version,
+        "overall_confidence": model.confidence_score,
+        "element_count": model.element_count,
+        "brightness_distribution": brightness_dist,
+        "brightness_percentages": brightness_pcts,
+        "evidence_coverage": evidence_coverage,
+        "gap_count": gap_count,
+        "critical_gap_count": critical_gap_count,
     }
 
 
