@@ -25,52 +25,24 @@ branch_labels: Union[str, None] = None
 depends_on: Union[str, None] = None
 
 
+def _create_index_if_not_exists(name: str, table: str, columns: list[str]) -> None:
+    """Create an index only if it doesn't already exist."""
+    cols = ", ".join(columns)
+    op.execute(sa.text(f"CREATE INDEX IF NOT EXISTS {name} ON {table} ({cols})"))
+
+
 def upgrade() -> None:
-    # -- Missing FK indexes ------------------------------------------------------
+    # -- Missing FK indexes (idempotent) -------------------------------------------
 
-    op.create_index(
-        "ix_evidence_fragments_evidence_id",
-        "evidence_fragments",
-        ["evidence_id"],
-    )
+    _create_index_if_not_exists("ix_evidence_fragments_evidence_id", "evidence_fragments", ["evidence_id"])
+    _create_index_if_not_exists("ix_metric_readings_metric_id", "metric_readings", ["metric_id"])
+    _create_index_if_not_exists("ix_metric_readings_engagement_id", "metric_readings", ["engagement_id"])
+    _create_index_if_not_exists("ix_annotations_engagement_id", "annotations", ["engagement_id"])
+    _create_index_if_not_exists("ix_monitoring_alerts_monitoring_job_id", "monitoring_alerts", ["monitoring_job_id"])
+    _create_index_if_not_exists("ix_pattern_access_rules_pattern_id", "pattern_access_rules", ["pattern_id"])
+    _create_index_if_not_exists("ix_pattern_access_rules_engagement_id", "pattern_access_rules", ["engagement_id"])
 
-    op.create_index(
-        "ix_metric_readings_metric_id",
-        "metric_readings",
-        ["metric_id"],
-    )
-
-    op.create_index(
-        "ix_metric_readings_engagement_id",
-        "metric_readings",
-        ["engagement_id"],
-    )
-
-    op.create_index(
-        "ix_annotations_engagement_id",
-        "annotations",
-        ["engagement_id"],
-    )
-
-    op.create_index(
-        "ix_monitoring_alerts_monitoring_job_id",
-        "monitoring_alerts",
-        ["monitoring_job_id"],
-    )
-
-    op.create_index(
-        "ix_pattern_access_rules_pattern_id",
-        "pattern_access_rules",
-        ["pattern_id"],
-    )
-
-    op.create_index(
-        "ix_pattern_access_rules_engagement_id",
-        "pattern_access_rules",
-        ["engagement_id"],
-    )
-
-    # -- Unique constraints ------------------------------------------------------
+    # -- Unique constraints --------------------------------------------------------
 
     op.create_unique_constraint(
         "uq_best_practice_domain_industry_dimension",

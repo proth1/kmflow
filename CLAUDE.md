@@ -21,22 +21,44 @@ Frontend (Next.js 14+, Port 3000)
 
 ```
 src/
-  api/           # FastAPI routes and endpoints
-  core/          # Business logic and domain models
-  evidence/      # Evidence ingestion and processing
-  semantic/      # Knowledge graph and relationship engine
-  pov/           # LCD algorithm and POV generator
-  tom/           # TOM alignment and gap analysis
-  integrations/  # External system connectors
+  api/              # FastAPI routes (77 route files), schemas, middleware
+  core/             # Domain models (46), config, database, auth, RLS, encryption
+  evidence/         # Evidence ingestion: 15+ parsers, pipeline, quality scoring, lifecycle
+  semantic/         # Knowledge graph engine, entity extraction, confidence scoring
+  pov/              # LCD algorithm, POV generator, consensus, triangulation, orchestrator
+  tom/              # TOM alignment, gap analysis, maturity scoring, roadmap generation
+  integrations/     # External connectors (Celonis, Soroco, SAP, ARIS, Visio, XES)
+  conformance/      # BPMN/event stream conformance checking
+  datalake/         # Analytics data warehouse (Databricks, lineage)
+  governance/       # Policy, compliance, effectiveness tracking
+  gdpr/             # GDPR compliance, retention enforcement
+  monitoring/       # Agent framework, deviation detection, dashboards, alerting
+  patterns/         # Pattern library, ML classification
+  rag/              # Retrieval-augmented generation, copilot
+  security/         # PDP, incident response, consent, watermarking
+  simulation/       # Scenario modeling, financial impact, sensitivity analysis
+  taskmining/       # Desktop task mining (PII, processor, worker, ML)
+  validation/       # Review workflow, evidence grading, dark room
+  mcp/              # Model Context Protocol integration
+  agents/           # SubAgent integrations
+  data/             # Data layer utilities
 frontend/
   src/
-    components/  # React components
-    pages/       # Next.js pages
-    lib/         # Client utilities
+    app/            # Next.js app router pages
+    components/     # React components
+    hooks/          # Custom React hooks
+    lib/            # Client utilities, API client
+    __tests__/      # Jest tests
+  e2e/              # Playwright E2E tests
 docs/
-  prd/           # Product requirements
-  presentations/ # Stakeholder presentations
-evidence/        # CDD evidence artifacts
+  prd/              # Product requirements (PRD v2.1)
+  presentations/    # Stakeholder presentation (Cloudflare Pages)
+  original-requirements/  # David Johnson founding requirements
+evidence/           # CDD evidence artifacts (loan-origination case study)
+platform/           # BPMN orchestration workflows (L3/L4 models)
+alembic/            # Database migrations (80+ versions)
+infrastructure/     # Cloudflare Workers (presentation auth)
+agent/              # macOS desktop agent (Swift + Python)
 ```
 
 ## Project Management
@@ -114,6 +136,19 @@ Evidence is posted as GitHub Issue comments for traceability. Each phase require
 7. Cleanup: delete branch, remove worktree, update issue labels, close issue
 
 Template: `.github/pull_request_template.md`
+
+## Current Stats (v2026.02.192)
+
+| Metric | Value |
+|--------|-------|
+| SQLAlchemy Models | 92 |
+| API Routers | 65 |
+| Backend Tests | 5,162 |
+| Frontend Tests | 635 |
+| Total LOC | 101,811 |
+| Database Migrations | 80+ |
+| BPMN Process Models | 44 |
+| Coverage | >80% |
 
 ## Testing Requirements
 
