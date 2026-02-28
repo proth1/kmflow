@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.164] - 2026-02-27
+### Added
+- Per-scenario simulation engine: ScenarioSimulationAdapter for all 7 modification types, confidence overlay (Bright/Dim/Dark), async trigger with status polling, IDOR-safe engagement membership check, background task lifecycle management, 31 tests (#380)
+
 ## [2026.02.163] - 2026-02-27
 ### Added
 - Sensitivity analysis engine: OAT sensitivity ranking, tornado chart data, confidence-weighted P10/P50/P90 percentiles, custom cost functions, negative value support, 24 tests (#364)
