@@ -20,6 +20,7 @@ from src.integrations.connector_framework import (
     CredentialProvider,
     CredentialSource,
     FieldMappingStep,
+    RateLimitError,
     RetryExhaustedError,
     TransformPipeline,
     TransformStep,
@@ -399,3 +400,22 @@ class TestCustomExceptions:
         cred = Credential(key="api_key", value="secret", source="env_var")
         assert cred.key == "api_key"
         assert cred.value == "secret"
+
+    def test_credential_repr_masks_value(self) -> None:
+        """Credential repr masks value to prevent secret leakage in logs."""
+        cred = Credential(key="api_key", value="super-secret-token", source="env_var")
+        r = repr(cred)
+        assert "super-secret-token" not in r
+        assert "***" in r
+        assert "api_key" in r
+        assert "env_var" in r
+
+    def test_rate_limit_error_attributes(self) -> None:
+        """RateLimitError stores retry_after and formats message."""
+        err = RateLimitError(retry_after=30.0)
+        assert err.retry_after == 30.0
+        assert "30.0" in str(err)
+
+        err_custom = RateLimitError(retry_after=5.0, message="Too many requests")
+        assert err_custom.retry_after == 5.0
+        assert str(err_custom) == "Too many requests"

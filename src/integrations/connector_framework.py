@@ -5,7 +5,16 @@ Provides reusable infrastructure for all integration connectors:
 - @with_retry: decorator with exponential backoff and jitter
 - TransformPipeline: ordered transform steps for data normalization
 - Rate limit header parsing for Retry-After and X-RateLimit-Reset
-- Custom exceptions (AuthenticationError, RetryExhaustedError)
+- Custom exceptions (AuthenticationError, RetryExhaustedError, RateLimitError)
+
+Relationship to existing modules:
+- ``base.py``: Defines the abstract ``BaseConnector`` interface and connection
+  lifecycle (connect/disconnect/health_check). Connectors subclass it.
+- ``utils.py``: Provides ``retry_request`` (httpx-specific) and ``paginate_api``
+  helpers tied to httpx.AsyncClient.
+- This module adds *transport-agnostic* building blocks (credentials, generic
+  retry decorator, transform pipeline) that ``BaseConnector`` implementations
+  can compose without depending on httpx directly.
 """
 
 from __future__ import annotations
@@ -97,6 +106,9 @@ class Credential:
     key: str
     value: str
     source: str
+
+    def __repr__(self) -> str:
+        return f"Credential(key={self.key!r}, value='***', source={self.source!r})"
 
 
 class CredentialProvider:
