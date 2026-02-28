@@ -51,12 +51,15 @@ async def review_suggestion(
         ValueError: If validation fails (suggestion not found, not PENDING,
             missing required fields).
     """
-    # Load suggestion scoped to scenario
+    # Load suggestion scoped to scenario with row-level lock to prevent
+    # concurrent disposition race conditions
     result = await session.execute(
-        select(AlternativeSuggestion).where(
+        select(AlternativeSuggestion)
+        .where(
             AlternativeSuggestion.id == suggestion_id,
             AlternativeSuggestion.scenario_id == scenario_id,
         )
+        .with_for_update()
     )
     suggestion = result.scalar_one_or_none()
     if not suggestion:

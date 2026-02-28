@@ -978,7 +978,10 @@ async def update_suggestion_disposition(
             disposition_notes=payload.disposition_notes,
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+        error_msg = str(e)
+        if "already" in error_msg:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=error_msg) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error_msg) from e
 
     if payload.disposition == SuggestionDisposition.REJECTED:
         action = AuditAction.SUGGESTION_REJECTED
