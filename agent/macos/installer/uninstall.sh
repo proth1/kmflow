@@ -26,6 +26,8 @@ echo "  - LaunchAgent: ~/Library/LaunchAgents/com.kmflow.agent.plist"
 echo "  - Application Support: ~/Library/Application Support/KMFlowAgent/"
 echo "  - Logs: ~/Library/Logs/KMFlowAgent/"
 echo "  - Shared data: /Users/Shared/KMFlowAgent/"
+echo "  - UserDefaults: ~/Library/Preferences/com.kmflow.agent.plist"
+echo "  - HTTP storage: ~/Library/HTTPStorages/com.kmflow.agent/"
 echo "  - Keychain items for com.kmflow.agent and com.kmflow.agent.consent"
 echo ""
 
@@ -130,7 +132,33 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Step 7: Remove Keychain items
+# Step 7: Remove UserDefaults and HTTP cookie/storage data
+# ---------------------------------------------------------------------------
+echo ""
+echo "--- Step 7: Removing UserDefaults and HTTP storage ---"
+
+PREFS_PLIST="${HOME}/Library/Preferences/com.kmflow.agent.plist"
+if [[ -f "$PREFS_PLIST" ]]; then
+    rm "$PREFS_PLIST"
+    echo "  Removed: $PREFS_PLIST"
+else
+    echo "  Not found (already removed): $PREFS_PLIST"
+fi
+
+# HTTPStorages (cookies, local storage used by NSURLSession)
+HTTP_STORAGE="${HOME}/Library/HTTPStorages/com.kmflow.agent"
+if [[ -d "$HTTP_STORAGE" ]]; then
+    rm -rf "$HTTP_STORAGE"
+    echo "  Removed: $HTTP_STORAGE"
+else
+    echo "  Not found (already removed): $HTTP_STORAGE"
+fi
+
+# Invalidate cached defaults
+defaults delete com.kmflow.agent 2>/dev/null && echo "  Flushed UserDefaults cache." || echo "  No cached defaults to flush."
+
+# ---------------------------------------------------------------------------
+# Step 8: Remove Keychain items
 # ---------------------------------------------------------------------------
 echo ""
 echo "--- Step 7: Removing Keychain items ---"

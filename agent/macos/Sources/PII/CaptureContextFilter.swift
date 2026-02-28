@@ -34,8 +34,11 @@ public struct CaptureContextFilter: Sendable {
     }
 
     /// Returns true if the app should be blocked from capture.
+    ///
+    /// Apps with a nil bundle identifier are blocked by default (least
+    /// privilege) — unidentified processes should never be captured.
     public static func isBlockedApp(bundleId: String?, blocklist: Set<String>) -> Bool {
-        guard let bid = bundleId else { return false }
+        guard let bid = bundleId else { return true }
         return blocklist.contains(bid)
     }
 
@@ -85,6 +88,21 @@ public struct PrivateBrowsingDetector: Sendable {
         // Edge InPrivate
         if bundleId == "com.microsoft.edgemac" {
             if title.contains("InPrivate") { return true }
+        }
+
+        // Brave private
+        if bundleId == "com.brave.Browser" {
+            if title.contains("Private") { return true }
+        }
+
+        // Vivaldi private
+        if bundleId == "com.vivaldi.Vivaldi" {
+            if title.contains("Private Browsing") { return true }
+        }
+
+        // Opera private
+        if bundleId == "com.operasoftware.Opera" {
+            if title.contains("Private") { return true }
         }
 
         return false

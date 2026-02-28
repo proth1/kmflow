@@ -70,6 +70,11 @@ public struct KeychainConsentStore: ConsentStore, Sendable {
     /// Keychain account for the HMAC signing key.
     private let hmacKeyAccount: String = "consent.hmac_key"
 
+    /// Current version of the consent agreement. When this changes, existing
+    /// consent records with an older version are treated as stale and users
+    /// must re-consent to the updated terms.
+    public static let currentConsentVersion: String = "1.0"
+
     /// Structured logger (os_log) — avoids depending on the Utilities module.
     private static let log = Logger(
         subsystem: "com.kmflow.agent",
@@ -101,6 +106,11 @@ public struct KeychainConsentStore: ConsentStore, Sendable {
                 Self.log.error("HMAC verification failed for engagement \(engagementId, privacy: .public)")
                 return .neverConsented
             }
+            // Stale consent version — user must re-consent to updated terms
+            if signed.record.consentVersion != Self.currentConsentVersion {
+                Self.log.warning("Consent version mismatch (\(signed.record.consentVersion, privacy: .public) vs \(Self.currentConsentVersion, privacy: .public)) — re-consent required")
+                return .neverConsented
+            }
             return signed.record.state
         } catch {
             // Legacy unsigned records are rejected — users must re-consent.
@@ -122,7 +132,7 @@ public struct KeychainConsentStore: ConsentStore, Sendable {
             consentedAt: date,
             authorizedBy: nil,
             captureScope: nil,
-            consentVersion: "1.0"
+            consentVersion: Self.currentConsentVersion
         )
         guard let recordData = try? jsonEncoder().encode(record) else { return }
         let hmac = computeHMAC(data: recordData)
@@ -134,6 +144,23 @@ public struct KeychainConsentStore: ConsentStore, Sendable {
     /// Remove the consent record for `engagementId` from the Keychain.
     public func clear(engagementId: String) {
         keychainDelete(account: accountKey(for: engagementId))
+    }
+
+    /// One-time migration: remove legacy unsigned consent records.
+    ///
+    /// Call once during app launch to clean up pre-HMAC records that would
+    /// otherwise be silently rejected on every `load()` call. After migration,
+    /// the user will be prompted to re-consent with a properly signed record.
+    public func migrateLegacyRecords(engagementId: String) {
+        guard let data = keychainLoad(account: accountKey(for: engagementId)) else { return }
+        let decoder = jsonDecoder()
+        // If the record decodes as a plain ConsentRecord (no HMAC wrapper),
+        // it's a legacy record from before HMAC signing was introduced.
+        if (try? decoder.decode(SignedConsentRecord.self, from: data)) == nil,
+           (try? decoder.decode(ConsentRecord.self, from: data)) != nil {
+            Self.log.warning("Migrating legacy unsigned consent record for engagement \(engagementId, privacy: .public)")
+            keychainDelete(account: accountKey(for: engagementId))
+        }
     }
 
     // MARK: - Private helpers
@@ -241,10 +268,11 @@ public struct KeychainConsentStore: ConsentStore, Sendable {
             SecRandomCopyBytes(kSecRandomDefault, 32, ptr.baseAddress!)
         }
         if result != errSecSuccess {
-            // Fallback: UUID-based key is weaker than SecRandomCopyBytes but
-            // still provides basic tamper detection. Log the degradation.
-            Self.log.warning("SecRandomCopyBytes failed (\(result, privacy: .public)); falling back to UUID-based HMAC key")
-            key = Data(UUID().uuidString.utf8)
+            // SecRandomCopyBytes failure means the system's CSPRNG is unavailable,
+            // which is a critical security issue. Do not fall back to UUID — it
+            // provides insufficient entropy for HMAC signing.
+            Self.log.error("SecRandomCopyBytes failed (\(result, privacy: .public)) — cannot generate HMAC key")
+            return Data()
         }
         keychainSave(account: hmacKeyAccount, data: key)
         return key

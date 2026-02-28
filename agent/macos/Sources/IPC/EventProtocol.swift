@@ -75,9 +75,14 @@ public struct CaptureEvent: Codable, Sendable {
 // MARK: - AnyCodable (type-erased JSON value)
 
 public struct AnyCodable: Codable, Sendable {
-    public let value: Any
+    /// The stored value. Only primitive Sendable types (Int, Double, Bool,
+    /// String, [AnyCodable], [String: AnyCodable], NSNull) are stored.
+    public let value: any Sendable
 
-    public init(_ value: Any) {
+    /// Create an AnyCodable from a Sendable value.
+    ///
+    /// Only Sendable types should be stored to maintain thread safety.
+    public init(_ value: any Sendable) {
         self.value = value
     }
 

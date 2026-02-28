@@ -62,7 +62,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        // Check consent state using Keychain-backed store
+        // Check consent state using Keychain-backed store.
+        // Run one-time migration to clean up pre-HMAC legacy records.
         let consentStore = KeychainConsentStore()
 
         // Detect MDM-configured engagement ID, fall back to UserDefaults or "default"
@@ -80,6 +81,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             engagementId = UserDefaults.standard.string(forKey: "engagementId") ?? "default"
         }
+
+        // Migrate legacy unsigned consent records before loading
+        consentStore.migrateLegacyRecords(engagementId: engagementId)
 
         let consent = ConsentManager(engagementId: engagementId, store: consentStore)
         consentManager = consent
@@ -101,8 +105,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         if consent.state == .neverConsented {
-            // Show first-run onboarding wizard
-            onboardingWindow = OnboardingWindow()
+            // Show first-run onboarding wizard, pre-populating MDM values if available
+            let wizardState = OnboardingState()
+            if let mdmDefaults = UserDefaults(suiteName: "com.kmflow.agent") {
+                if let mdmEng = mdmDefaults.string(forKey: "EngagementID"), !mdmEng.isEmpty {
+                    wizardState.engagementId = mdmEng
+                    wizardState.isMDMConfigured = true
+                }
+                if let mdmURL = mdmDefaults.string(forKey: "BackendURL"), !mdmURL.isEmpty {
+                    wizardState.backendURL = mdmURL
+                }
+            }
+            onboardingWindow = OnboardingWindow(state: wizardState)
             onboardingWindow?.show()
             state.requireConsent()
         } else if !consent.captureAllowed {
