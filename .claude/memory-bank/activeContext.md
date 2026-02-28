@@ -8,6 +8,7 @@ Executing full SDLC across 106 stories (18 epics) from PRD v2.1 decomposition. C
 
 ## Recently Completed
 
+- **PR #487 merged** — XES event log importer: streaming parser, defusedxml XXE protection, batch processing, .xes.gz, 25 tests (#332) (v2026.02.170)
 - **PR #486 merged** — Connector framework: CredentialProvider, @with_retry, TransformPipeline, rate limit parsing, Credential masking, 34 tests (#323) (v2026.02.169)
 - **PR #485 merged** — Replay API endpoints: 5 async task endpoints, date-typed ranges, Literal granularity, eviction cap, 30 tests (#345) (v2026.02.168)
 - **PR #484 merged** — Schema intelligence library: YAML templates for ServiceNow/SAP/Salesforce, case-insensitive lookup, manual fallback, 34 tests (#335) (v2026.02.167)

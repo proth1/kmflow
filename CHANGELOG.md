@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.170] - 2026-02-27
+### Added
+- XES event log importer: streaming IEEE XES parser with defusedxml XXE protection, standard extension mapping, batch processing, .xes.gz support, malformed XML handling, 25 tests (#332)
+
 ## [2026.02.169] - 2026-02-27
 ### Added
 - Connector framework: CredentialProvider (env var + secrets manager), @with_retry decorator with exponential backoff and jitter, TransformPipeline with FieldMappingStep, rate limit header parsing, Credential repr masking, 34 tests (#323)
