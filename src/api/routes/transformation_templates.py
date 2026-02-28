@@ -8,11 +8,11 @@ Provides:
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -55,13 +55,13 @@ class ProcessElementInput(BaseModel):
 class ApplyTemplatesRequest(BaseModel):
     """Request body for applying templates to process elements."""
 
-    elements: list[ProcessElementInput]
+    elements: list[ProcessElementInput] = Field(max_length=500)
 
 
 class SuggestionDecisionRequest(BaseModel):
     """Request body for accepting/rejecting a suggestion."""
 
-    action: str  # "accept" or "reject"
+    action: Literal["accept", "reject"]
 
 
 # -- Endpoints ---
@@ -134,12 +134,7 @@ async def update_suggestion_status(
     scenario = await _get_scenario(session, scenario_id)
     await _check_engagement_member(session, user, scenario.engagement_id)
 
-    if body.action not in ("accept", "reject"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Action must be 'accept' or 'reject'",
-        )
-
+    # Pydantic validates action is Literal["accept", "reject"] at parse time (422 on invalid)
     new_status = SuggestionStatus.ACCEPTED if body.action == "accept" else SuggestionStatus.REJECTED
 
     return {

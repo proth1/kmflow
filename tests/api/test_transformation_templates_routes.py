@@ -170,7 +170,8 @@ class TestUpdateSuggestionStatus:
         assert data["status"] == "rejected"
         assert data["action"] == "reject"
 
-    def test_invalid_action_returns_400(self) -> None:
+    def test_invalid_action_returns_422(self) -> None:
+        """Pydantic Literal validation rejects invalid action values."""
         session = AsyncMock()
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = _mock_scenario()
@@ -183,7 +184,7 @@ class TestUpdateSuggestionStatus:
             json={"action": "invalid"},
         )
 
-        assert resp.status_code == 400
+        assert resp.status_code == 422
 
 
 class TestEngagementAccessControl:
@@ -210,6 +211,31 @@ class TestEngagementAccessControl:
         resp = client.post(
             f"/api/v1/scenarios/{SCENARIO_ID}/templates/apply",
             json={"elements": []},
+        )
+
+        assert resp.status_code == 403
+
+    def test_non_member_gets_403_on_suggestion_update(self) -> None:
+        session = AsyncMock()
+        call_count = 0
+
+        async def side_effect(*_args: Any, **_kwargs: Any) -> MagicMock:
+            nonlocal call_count
+            call_count += 1
+            result = MagicMock()
+            if call_count == 1:
+                result.scalar_one_or_none.return_value = _mock_scenario()
+            else:
+                result.scalar_one_or_none.return_value = None
+            return result
+
+        session.execute = AsyncMock(side_effect=side_effect)
+
+        client = _make_client(session, user_role=UserRole.PROCESS_ANALYST)
+
+        resp = client.patch(
+            f"/api/v1/scenarios/{SCENARIO_ID}/suggestions/sugg-123",
+            json={"action": "accept"},
         )
 
         assert resp.status_code == 403

@@ -30,7 +30,12 @@ class TemplateType(enum.StrEnum):
 
 
 class SuggestionStatus(enum.StrEnum):
-    """Lifecycle status of a template suggestion."""
+    """Lifecycle status of a template suggestion.
+
+    Distinct from SuggestionDisposition (models/simulation.py) which includes
+    MODIFIED and is tied to the AlternativeSuggestion ORM model. This enum is
+    for in-memory template suggestions that are not persisted to the database.
+    """
 
     PENDING = "pending"
     ACCEPTED = "accepted"
