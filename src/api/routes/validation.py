@@ -588,6 +588,8 @@ async def republish_pov(
             element_type=snap.element_type,
             name=snap.name,
             confidence_score=snap.confidence_score,
+            evidence_grade=snap.evidence_grade,
+            brightness_classification=snap.brightness_classification,
             evidence_count=snap.evidence_count,
             evidence_ids=snap.evidence_ids,
         )

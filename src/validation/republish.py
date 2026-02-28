@@ -220,6 +220,9 @@ def apply_decisions_to_elements(
                     # Apply corrections from payload
                     if "name" in payload:
                         new_name = str(payload["name"])
+                        if new_name in elements_by_name and new_name != name:
+                            msg = f"Cannot rename '{name}' to '{new_name}': element with that name already exists"
+                            raise ValueError(msg)
                         elements_by_name[new_name] = ElementSnapshot(
                             element_id=el.element_id,
                             name=new_name,

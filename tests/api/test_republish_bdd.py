@@ -115,6 +115,17 @@ class TestRepublishFromDecisions:
         assert "Validate User Input" in names
         assert "Validate Input" not in names
 
+    def test_correct_rename_collision_raises(self) -> None:
+        """CORRECT rename to an existing element name raises ValueError."""
+        elements = self._make_elements()
+        decisions = [{
+            "element_id": "e2",
+            "action": "correct",
+            "payload": {"name": "Login"},  # e1 already named "Login"
+        }]
+        with pytest.raises(ValueError, match="element with that name already exists"):
+            apply_decisions_to_elements(elements, decisions)
+
 
 # ── Scenario 2: Version Diff Computation ─────────────────────────────
 
