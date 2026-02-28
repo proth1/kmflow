@@ -1,0 +1,68 @@
+{
+  "engagement_id": "1db9aa11-c73b-5867-82a3-864dd695cf23",
+  "users": {
+    "admin": {
+      "id": "b8191819-5e28-5323-aa6a-fc636e42aeaa",
+      "email": "admin@acme-demo.com"
+    },
+    "lead": {
+      "id": "55cafb59-81b4-5c28-9b17-f5789fa3bc4e",
+      "email": "lead@acme-demo.com"
+    },
+    "analyst": {
+      "id": "0ea90c06-cc86-503c-ab77-8a081aa134e1",
+      "email": "analyst@acme-demo.com"
+    },
+    "viewer": {
+      "id": "0ddb75a0-a43d-5f6e-95cb-ddc254551c52",
+      "email": "viewer@acme-demo.com"
+    }
+  },
+  "evidence_ids": {
+    "loan-policy": "e95612e6-8949-5bea-8534-b62fd6ca388c",
+    "process-doc": "c358fee8-f024-5c2a-9a9d-cff7036247ce",
+    "interview-ops-mgr": "26a054fc-7471-5652-bcc2-56e524b736e0",
+    "interview-cro": "de8db4bc-2c82-524e-8cc2-d3394c0871f7",
+    "bpmn-as-is": "5fd3d287-6dda-5e9b-aad0-1fb84a209cf4",
+    "signavio-export": "fbea2c77-2985-55b3-9a19-ba60c8942758",
+    "screen-recording": "e36a63ba-4974-5209-9d38-9a2b0d4bb9be",
+    "compliance-report": "0bd2a861-c325-59b1-a7ff-9b452c83f350",
+    "audit-controls": "3f6c6a26-ae9c-56ab-a4e1-16cf42711b29",
+    "email-thread": "52968ef5-f338-507a-bee0-fb5aadfe6c03",
+    "training-guide": "36ead8e1-a5a8-5cbe-82b2-ad259cf76756",
+    "data-extract": "0a673ff2-0422-5e77-9d3c-2d3950e4cbe3",
+    "task-mining-obs-1": "b6ad441a-ff65-5fea-8ddf-fffc3bd54338",
+    "task-mining-obs-2": "96cab1d7-a9f0-50d5-8ad5-96e06e11ae4b",
+    "task-mining-obs-3": "75e8c6b7-8d8f-5269-a3c4-939b198ebbfc"
+  },
+  "tom_id": "1454a7ab-2f76-57cc-bc27-ac1d7adbdf7e",
+  "process_model_id": "b0e82fc6-49db-58a4-9a1a-01203163c60f",
+  "baseline_id": "32b20eb5-966a-522f-b6fb-b6e98419294f",
+  "monitoring_job_ids": [
+    "1cff1fbb-bc80-59fd-90b5-fdfcca3e647c",
+    "d84239ef-b079-5458-aa5d-13f940d57cdd"
+  ],
+  "metric_ids": [
+    "5d5bdff8-bcea-5012-b093-f09b9af67621",
+    "1533e179-518c-5aeb-8fea-5e08b8ab06b1",
+    "f41a85ae-b907-50c5-a401-3428a7f20dbd"
+  ],
+  "scenario_ids": [
+    "15fbe069-f7bd-5161-8b68-7b0b72dbacca",
+    "17430837-573b-5a3f-a8c3-13e6f4c2a0be",
+    "92c217a5-eca9-5fc1-a581-20024caf73c5"
+  ],
+  "agent_ids": [
+    "f7888259-54ce-5089-823b-b00df61ec1fc",
+    "b4e46b34-3560-5eb6-865e-8bb3acc2c234",
+    "ef454207-31db-5632-972d-84aa53955f17"
+  ],
+  "session_ids": [
+    "5d1a32d0-cca8-5c02-ad92-d2dbdc709860",
+    "d8f4089c-748e-5bd7-9f7f-13e9848ce009",
+    "5f8e969e-cfcd-5e4c-9a22-d334440d7191",
+    "37881395-72d8-5569-8767-96697ccfe90f",
+    "ce51adf9-1a87-546c-bac1-a92b023ed0ed",
+    "094f22cf-cf2d-5c01-aeb8-4df02345f9e5"
+  ]
+}

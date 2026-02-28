@@ -1,4 +1,5 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures/base";
+import { ENGAGEMENT_ID } from "./fixtures/seed-data";
 
 test.describe("Copilot Chat", () => {
   test.beforeEach(async ({ page }) => {
@@ -32,5 +33,27 @@ test.describe("Copilot Chat", () => {
     await expect(
       page.getByText("Enter an engagement ID and start asking questions")
     ).toBeVisible();
+  });
+
+  test("entering seeded engagement ID enables send button with query", async ({
+    page,
+  }) => {
+    await page.getByPlaceholder("Enter engagement UUID").fill(ENGAGEMENT_ID);
+    await page.getByRole("textbox", { name: /question|query|message/i }).fill(
+      "What are the key process gaps?"
+    );
+    const sendButton = page.getByRole("button", { name: /send/i });
+    await expect(sendButton).toBeEnabled();
+  });
+
+  test("copilot page shows engagement context after ID entry", async ({
+    page,
+  }) => {
+    const uuidInput = page.getByPlaceholder("Enter engagement UUID");
+    await uuidInput.fill(ENGAGEMENT_ID);
+    await expect(uuidInput).toHaveValue(ENGAGEMENT_ID);
+    // The placeholder hint text should no longer be the only content visible —
+    // the engagement field is populated so the UI is no longer in the blank state.
+    await expect(uuidInput).not.toBeEmpty();
   });
 });

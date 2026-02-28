@@ -1,0 +1,6 @@
+case_id,activity,timestamp,resource
+CASE-001,Receive Application,2025-01-15T09:00:00Z,Loan Officer A
+CASE-001,Verify Identity,2025-01-15T09:15:00Z,Loan Officer A
+CASE-001,Credit Check,2025-01-15T10:00:00Z,Credit Bureau API
+CASE-001,Income Verification,2025-01-15T11:30:00Z,Analyst B
+CASE-001,Underwriting Decision,2025-01-15T14:00:00Z,Underwriter C
