@@ -78,6 +78,7 @@ from src.api.routes import (
     scenario_comparison,
     scenarios,
     seed_lists,
+    sensitivity,
     shelf_requests,
     simulations,
     survey_claims,
@@ -359,6 +360,9 @@ def create_app() -> FastAPI:
 
     # -- Governance Flag Detection Routes (Story #381) ---
     app.include_router(governance_flags.router)
+
+    # -- Sensitivity Analysis Routes (Story #364) ---
+    app.include_router(sensitivity.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)
