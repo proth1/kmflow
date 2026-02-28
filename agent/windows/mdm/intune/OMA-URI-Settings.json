@@ -48,6 +48,16 @@
       "registryValueType": "REG_DWORD"
     },
     {
+      "name": "Application Allowlist",
+      "description": "Comma-separated list of allowed process names (empty = all allowed)",
+      "omaUri": "./Device/Vendor/MSFT/Policy/Config/KMFlowAgent~Policy~KMFlowAgent~KMFlowAgent_Capture/AppAllowlist",
+      "dataType": "String",
+      "value": "",
+      "registryPath": "HKLM\\SOFTWARE\\Policies\\KMFlowAgent",
+      "registryValueName": "Allowlist",
+      "registryValueType": "REG_SZ"
+    },
+    {
       "name": "Agent Enabled",
       "description": "Enable (1) or disable (0) the agent",
       "omaUri": "./Device/Vendor/MSFT/Policy/Config/KMFlowAgent~Policy~KMFlowAgent~KMFlowAgent_Capture/AgentEnabled",

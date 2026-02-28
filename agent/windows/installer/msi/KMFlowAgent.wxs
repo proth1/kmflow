@@ -44,6 +44,11 @@
           <File Id="KMFlowAgentHookDll"
                 Source="!(bindpath.publishDir)\KMFlowAgent.HookDll.dll" />
         </Component>
+
+        <Component Id="ScheduledTaskXml" Guid="4D5E6F7A-8B9C-0D1E-2F3A-4B5C6D7E8F90">
+          <File Id="ScheduledTaskXml"
+                Source="!(bindpath.installerDir)\scheduled-task\KMFlowAgent.ScheduledTask.xml" />
+        </Component>
       </Directory>
     </StandardDirectory>
 
@@ -82,6 +87,7 @@
     <Feature Id="Complete" Title="KMFlow Agent" Level="1">
       <ComponentRef Id="MainExecutable" />
       <ComponentRef Id="HookDll" />
+      <ComponentRef Id="ScheduledTaskXml" />
       <ComponentRef Id="RegistryConfig" />
     </Feature>
 

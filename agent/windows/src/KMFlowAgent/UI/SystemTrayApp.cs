@@ -33,6 +33,7 @@ public sealed class SystemTrayApp : IDisposable
 
     // UI objects — accessed only on STA thread
     private Thread? _staThread;
+    private ManualResetEventSlim? _shutdownEvent;
     private volatile bool _disposed;
 
     // Callbacks for opening windows (injected to avoid circular deps)
@@ -107,11 +108,10 @@ public sealed class SystemTrayApp : IDisposable
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(10));
 
-        // Keep thread alive for message pump
-        while (!_disposed)
-        {
-            Thread.Sleep(100);
-        }
+        // Block STA thread until disposed (no CPU burn)
+        var shutdownEvent = new ManualResetEventSlim(false);
+        _shutdownEvent = shutdownEvent;
+        shutdownEvent.Wait();
 
         _tooltipTimer?.Dispose();
         AgentLogger.Debug("Tray STA thread exiting");
@@ -174,7 +174,9 @@ public sealed class SystemTrayApp : IDisposable
         if (!_disposed)
         {
             _disposed = true;
+            _shutdownEvent?.Set();
             _tooltipTimer?.Dispose();
+            _shutdownEvent?.Dispose();
             _staThread = null;
         }
     }

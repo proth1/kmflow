@@ -63,10 +63,10 @@
   </Applications>
 
   <Capabilities>
-    <!-- Required for input monitoring hooks -->
-    <rescap:Capability Name="inputInjectionBrokered" />
-    <!-- Required for accessibility/UIAutomation -->
-    <uap:Capability Name="userAccountInformation" />
+    <!-- Full-trust desktop bridge apps can use WH_KEYBOARD_LL/WH_MOUSE_LL
+         hooks without special restricted capabilities. The EntryPoint
+         "Windows.FullTrustApplication" grants native API access. -->
+    <rescap:Capability Name="runFullTrust" />
   </Capabilities>
 
 </Package>
