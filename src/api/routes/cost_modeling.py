@@ -11,7 +11,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -50,11 +50,31 @@ class VolumeForecastCreate(BaseModel):
     variance_pct: float = Field(0.0, ge=0.0, le=100.0)
     seasonal_factors: dict[str, float] | None = None
 
+    @model_validator(mode="after")
+    def validate_seasonal_factors(self) -> VolumeForecastCreate:
+        if self.seasonal_factors is not None:
+            allowed = {"Q1", "Q2", "Q3", "Q4"}
+            if not set(self.seasonal_factors.keys()).issubset(allowed):
+                msg = f"seasonal_factors keys must be subset of {allowed}"
+                raise ValueError(msg)
+            if any(v < 0 for v in self.seasonal_factors.values()):
+                msg = "seasonal_factors values must be non-negative"
+                raise ValueError(msg)
+        return self
+
+
+class TaskAssignment(BaseModel):
+    """A single task assignment for cost computation."""
+
+    role_name: str = Field(..., min_length=1, max_length=256)
+    task_count: int = Field(..., gt=0)
+    avg_hours_per_task: float = Field(..., gt=0)
+
 
 class StaffingCostRequest(BaseModel):
     """Request payload for staffing cost computation."""
 
-    task_assignments: list[dict[str, Any]]
+    task_assignments: list[TaskAssignment] = Field(..., min_length=1, max_length=1000)
 
 
 class VolumeCostRequest(BaseModel):
@@ -74,8 +94,8 @@ class QuarterlyProjectionRequest(BaseModel):
 class FteSavingsRequest(BaseModel):
     """Request payload for FTE savings computation."""
 
-    as_is_tasks: list[dict[str, Any]]
-    to_be_tasks: list[dict[str, Any]]
+    as_is_tasks: list[TaskAssignment] = Field(..., min_length=1, max_length=1000)
+    to_be_tasks: list[TaskAssignment] = Field(..., max_length=1000)
 
 
 # ── Role Rate Routes ──────────────────────────────────────────────────
@@ -191,7 +211,7 @@ async def compute_staffing(
         {"role_name": r.role_name, "hourly_rate": r.hourly_rate, "rate_variance_pct": r.rate_variance_pct}
         for r in rates
     ]
-    return compute_staffing_cost(role_rates, payload.task_assignments)
+    return compute_staffing_cost(role_rates, [t.model_dump() for t in payload.task_assignments])
 
 
 @router.post("/engagements/{engagement_id}/cost-modeling/volume")
@@ -249,7 +269,11 @@ async def compute_fte(
         {"role_name": r.role_name, "hourly_rate": r.hourly_rate, "rate_variance_pct": r.rate_variance_pct}
         for r in rates
     ]
-    return compute_fte_savings(role_rates, payload.as_is_tasks, payload.to_be_tasks)
+    return compute_fte_savings(
+        role_rates,
+        [t.model_dump() for t in payload.as_is_tasks],
+        [t.model_dump() for t in payload.to_be_tasks],
+    )
 
 
 # ── Helpers ──────────────────────────────────────────────────────────

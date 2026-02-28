@@ -44,6 +44,9 @@ def upgrade() -> None:
         ),
     )
     op.create_index("ix_role_rate_assumptions_engagement_id", "role_rate_assumptions", ["engagement_id"])
+    op.create_unique_constraint(
+        "uq_role_rate_engagement_role", "role_rate_assumptions", ["engagement_id", "role_name"]
+    )
 
     op.create_table(
         "volume_forecasts",
@@ -71,5 +74,6 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_index("ix_volume_forecasts_engagement_id", "volume_forecasts")
     op.drop_table("volume_forecasts")
+    op.drop_constraint("uq_role_rate_engagement_role", "role_rate_assumptions", type_="unique")
     op.drop_index("ix_role_rate_assumptions_engagement_id", "role_rate_assumptions")
     op.drop_table("role_rate_assumptions")

@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, String, func
+from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -22,6 +22,7 @@ class RoleRateAssumption(Base):
     __tablename__ = "role_rate_assumptions"
     __table_args__ = (
         Index("ix_role_rate_assumptions_engagement_id", "engagement_id"),
+        UniqueConstraint("engagement_id", "role_name", name="uq_role_rate_engagement_role"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
