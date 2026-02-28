@@ -1074,6 +1074,207 @@ async def get_engagement_dashboard(
     }
 
 
+# -- Confidence Heatmap Schemas ----------------------------------------------
+
+
+class ElementConfidenceEntry(BaseModel):
+    """Confidence data for a single process element."""
+
+    score: float
+    brightness: str
+    grade: str
+
+
+class ConfidenceMapResponse(BaseModel):
+    """Map of element_id to confidence data for heatmap rendering."""
+
+    engagement_id: str
+    model_version: int
+    elements: dict[str, ElementConfidenceEntry]
+    total_elements: int
+
+
+class ConfidenceSummaryResponse(BaseModel):
+    """Summary statistics of confidence distribution."""
+
+    engagement_id: str
+    model_version: int
+    total_elements: int
+    bright_count: int
+    bright_percentage: float
+    dim_count: int
+    dim_percentage: float
+    dark_count: int
+    dark_percentage: float
+    overall_confidence: float
+
+
+# -- Confidence Heatmap Endpoints --------------------------------------------
+
+
+@router.get(
+    "/engagement/{engagement_id}/confidence",
+    response_model=ConfidenceMapResponse,
+)
+async def get_confidence_map(
+    engagement_id: str,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("pov:read")),
+) -> dict[str, Any]:
+    """Get per-element confidence data for heatmap rendering.
+
+    Returns a map of element_id to {score, brightness, grade} for
+    the latest model version.
+
+    Args:
+        engagement_id: The engagement UUID.
+    """
+    try:
+        eng_uuid = uuid.UUID(engagement_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid engagement ID format",
+        ) from None
+
+    await _check_engagement_member(session, user, eng_uuid)
+
+    # Get latest model
+    model_result = await session.execute(
+        select(ProcessModel)
+        .where(ProcessModel.engagement_id == eng_uuid)
+        .order_by(ProcessModel.version.desc())
+        .limit(1)
+    )
+    model = model_result.scalar_one_or_none()
+
+    if not model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No process model found for engagement {engagement_id}",
+        )
+
+    # Get all elements
+    elements_result = await session.execute(
+        select(ProcessElement).where(ProcessElement.model_id == model.id)
+    )
+    elements = list(elements_result.scalars().all())
+
+    elements_map: dict[str, dict[str, Any]] = {}
+    for elem in elements:
+        elements_map[str(elem.id)] = {
+            "score": elem.confidence_score,
+            "brightness": str(elem.brightness_classification),
+            "grade": str(elem.evidence_grade),
+        }
+
+    return {
+        "engagement_id": engagement_id,
+        "model_version": model.version,
+        "elements": elements_map,
+        "total_elements": len(elements),
+    }
+
+
+@router.get(
+    "/engagement/{engagement_id}/confidence/summary",
+    response_model=ConfidenceSummaryResponse,
+)
+async def get_confidence_summary(
+    engagement_id: str,
+    output_format: str = Query(default="json", alias="format", pattern="^(json|csv)$"),
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("pov:read")),
+) -> Any:
+    """Get summary statistics of confidence distribution for export.
+
+    Returns counts and percentages for each brightness tier plus
+    overall model confidence. Supports JSON and CSV formats.
+
+    Args:
+        engagement_id: The engagement UUID.
+        output_format: Response format ('json' or 'csv').
+    """
+    try:
+        eng_uuid = uuid.UUID(engagement_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid engagement ID format",
+        ) from None
+
+    await _check_engagement_member(session, user, eng_uuid)
+
+    # Get latest model
+    model_result = await session.execute(
+        select(ProcessModel)
+        .where(ProcessModel.engagement_id == eng_uuid)
+        .order_by(ProcessModel.version.desc())
+        .limit(1)
+    )
+    model = model_result.scalar_one_or_none()
+
+    if not model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No process model found for engagement {engagement_id}",
+        )
+
+    # Get elements
+    elements_result = await session.execute(
+        select(ProcessElement).where(ProcessElement.model_id == model.id)
+    )
+    elements = list(elements_result.scalars().all())
+
+    total = len(elements) or 1
+    bright = sum(1 for e in elements if str(e.brightness_classification) == "bright")
+    dim = sum(1 for e in elements if str(e.brightness_classification) == "dim")
+    dark = sum(1 for e in elements if str(e.brightness_classification) == "dark")
+
+    summary_data = {
+        "engagement_id": engagement_id,
+        "model_version": model.version,
+        "total_elements": len(elements),
+        "bright_count": bright,
+        "bright_percentage": round(bright / total * 100, 1),
+        "dim_count": dim,
+        "dim_percentage": round(dim / total * 100, 1),
+        "dark_count": dark,
+        "dark_percentage": round(dark / total * 100, 1),
+        "overall_confidence": model.confidence_score,
+    }
+
+    if output_format == "csv":
+        import csv
+        import io
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["Metric", "Value"])
+        writer.writerow(["Engagement ID", engagement_id])
+        writer.writerow(["Model Version", model.version])
+        writer.writerow(["Total Elements", len(elements)])
+        writer.writerow(["Bright Count", bright])
+        writer.writerow(["Bright %", summary_data["bright_percentage"]])
+        writer.writerow(["Dim Count", dim])
+        writer.writerow(["Dim %", summary_data["dim_percentage"]])
+        writer.writerow(["Dark Count", dark])
+        writer.writerow(["Dark %", summary_data["dark_percentage"]])
+        writer.writerow(["Overall Confidence", model.confidence_score])
+
+        from fastapi.responses import Response
+
+        return Response(
+            content=output.getvalue(),
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": f'attachment; filename="confidence-summary-{engagement_id}.csv"'
+            },
+        )
+
+    return summary_data
+
+
 # -- Engagement Access Check -------------------------------------------------
 
 
