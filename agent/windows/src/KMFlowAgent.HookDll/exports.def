@@ -1,0 +1,6 @@
+LIBRARY KMFlowAgent.HookDll
+EXPORTS
+    HookDll_Initialize
+    HookDll_ReadEvents
+    HookDll_Shutdown
+    HookDll_IsHealthy
