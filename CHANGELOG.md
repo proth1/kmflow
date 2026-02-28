@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.DDD` (year.month.day-of-year)
 
+## [2026.02.171] - 2026-02-27
+### Added
+- SaaS connector incremental sync: SyncCheckpointStore with Redis key pattern, SyncLog with new/updated/skipped counts, async coordinator with checkpoint lifecycle, SAP DATS/TIMS/OData timestamp conversion, 34 tests (#330)
+
 ## [2026.02.170] - 2026-02-27
 ### Added
 - XES event log importer: streaming IEEE XES parser with defusedxml XXE protection, standard extension mapping, batch processing, .xes.gz support, malformed XML handling, 25 tests (#332)
