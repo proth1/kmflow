@@ -50,8 +50,10 @@ export interface QuarantineListResponse {
 
 export interface DashboardStats {
   active_agents: number;
-  events_today: number;
-  actions_today: number;
+  events_today?: number;
+  actions_today?: number;
+  events_last_24h?: number;
+  total_actions?: number;
   quarantine_pending: number;
   total_sessions: number;
 }
@@ -75,9 +77,12 @@ export interface CaptureConfig {
 
 // -- Agent Management --------------------------------------------------------
 
-export function fetchAgents(engagementId?: string): Promise<AgentListResponse> {
+export async function fetchAgents(engagementId?: string): Promise<AgentListResponse> {
   const params = engagementId ? `?engagement_id=${engagementId}` : "";
-  return apiGet<AgentListResponse>(`/api/v1/taskmining/agents${params}`);
+  const data = await apiGet<{ items?: TaskMiningAgent[]; agents?: TaskMiningAgent[]; total: number }>(
+    `/api/v1/taskmining/agents${params}`,
+  );
+  return { agents: data.agents ?? data.items ?? [], total: data.total };
 }
 
 export function approveAgent(agentId: string): Promise<TaskMiningAgent> {
