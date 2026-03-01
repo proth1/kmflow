@@ -8,7 +8,14 @@ import { ComponentErrorBoundary } from "@/components/ComponentErrorBoundary";
 
 const GraphExplorer = dynamic(() => import("@/components/GraphExplorer"), {
   ssr: false,
-  loading: () => <p className="text-sm text-gray-500">Loading graph component...</p>,
+  loading: () => (
+    <div className="flex h-96 items-center justify-center rounded-lg border border-gray-200 bg-white">
+      <div className="text-center">
+        <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+        <p className="text-sm text-gray-500">Loading graph visualization...</p>
+      </div>
+    </div>
+  ),
 });
 
 interface CytoscapeData {

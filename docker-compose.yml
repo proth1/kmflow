@@ -241,11 +241,43 @@ services:
     networks:
       - kmflow-network
 
-  # ── Next.js Frontend ──────────────────────────────────────────
+  # ── Next.js Frontend (production build) ─────────────────────
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: runner
+      args:
+        API_URL: http://backend:8000
+    container_name: kmflow-frontend
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      API_URL: http://backend:8000
+    ports:
+      - "3002:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3000').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - kmflow-network
+
+  # ── Next.js Frontend (dev mode with hot reload) ────────────
+  frontend-dev:
+    profiles: ["dev"]
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: dev
       args:
         API_URL: http://backend:8000
     container_name: kmflow-frontend

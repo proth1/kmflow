@@ -405,5 +405,3 @@ export default function TaskMiningDashboard() {
     </div>
   );
 }
-
-export { getAgentHealth, formatDuration };

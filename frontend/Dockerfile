@@ -6,17 +6,34 @@ WORKDIR /app
 ARG API_URL=http://localhost:8000
 ENV API_URL=$API_URL
 
-# Install dependencies
+# ── Dependencies ─────────────────────────────────────────────
+FROM base AS deps
 COPY package.json package-lock.json* ./
 RUN npm ci 2>/dev/null || npm install
 
-# Copy source
+# ── Production build ─────────────────────────────────────────
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN npm run build
 
-# Build (disabled for dev mode)
-# RUN npm run build
+# ── Production runner ────────────────────────────────────────
+FROM base AS runner
+ENV NODE_ENV=production
+
+# Next.js standalone output copies only what's needed
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
 
 EXPOSE 3000
 
-# Development mode
+CMD ["node", "server.js"]
+
+# ── Development mode ─────────────────────────────────────────
+FROM base AS dev
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+EXPOSE 3000
 CMD ["npm", "run", "dev"]
