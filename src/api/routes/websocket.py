@@ -15,7 +15,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
 
-from src.core.auth import decode_token, get_current_user, is_token_blacklisted
+from src.core.auth import decode_token, get_current_user, get_websocket_user, is_token_blacklisted
 from src.core.config import get_settings
 from src.core.models import EngagementMember, User, UserRole
 from src.core.redis import CHANNEL_ALERTS, CHANNEL_DEVIATIONS, CHANNEL_MONITORING
@@ -152,48 +152,19 @@ async def monitoring_websocket(
     Sends heartbeats every 30 seconds.
 
     Authentication:
-        Requires JWT token as query parameter: ?token=<jwt>
+        Accepts JWT via query param ``?token=<jwt>`` or ``kmflow_access``
+        cookie.  In dev mode, auto-authenticates as platform admin.
 
     Connection Limits:
         Max connections per engagement is configurable (default: 10).
         Exceeding the limit results in close code 1008 (Policy Violation).
     """
-    # Authenticate the connection
-    if not token:
-        await websocket.close(code=1008, reason="Missing authentication token")
+    user = await get_websocket_user(websocket, token)
+    if user is None:
+        await websocket.close(code=1008, reason="Not authenticated")
         return
 
-    try:
-        settings = get_settings()
-        payload = decode_token(token, settings)
-    except (HTTPException, ValueError) as e:
-        logger.warning("WebSocket authentication failed: %s", e)
-        await websocket.close(code=1008, reason="Invalid or expired token")
-        return
-
-    # Reject non-access tokens (e.g. refresh tokens)
-    if payload.get("type") != "access":
-        await websocket.close(code=1008, reason="Invalid token type")
-        return
-
-    # Check token blacklist
-    try:
-        if await is_token_blacklisted(websocket, token):
-            await websocket.close(code=1008, reason="Token has been revoked")
-            return
-    except Exception:  # Intentionally broad: fail-closed security check
-        logger.warning("Token blacklist check failed for WebSocket — failing closed")
-        await websocket.close(code=1008, reason="Authentication check failed")
-        return
-
-    # Verify engagement membership
-    user_id = payload.get("sub", "")
-    user_role_str = payload.get("role", "")
-    try:
-        user_role = UserRole(user_role_str)
-    except ValueError:
-        user_role = UserRole.CLIENT_VIEWER  # Fail to least privilege
-    if not await _check_engagement_membership(websocket, engagement_id, user_id, user_role):
+    if not await _check_engagement_membership(websocket, engagement_id, str(user.id), user.role):
         return
 
     # Check connection limit
@@ -249,48 +220,19 @@ async def alerts_websocket(
     """WebSocket endpoint for real-time alert notifications only.
 
     Authentication:
-        Requires JWT token as query parameter: ?token=<jwt>
+        Accepts JWT via query param ``?token=<jwt>`` or ``kmflow_access``
+        cookie.  In dev mode, auto-authenticates as platform admin.
 
     Connection Limits:
         Max connections per engagement is configurable (default: 10).
         Exceeding the limit results in close code 1008 (Policy Violation).
     """
-    # Authenticate the connection
-    if not token:
-        await websocket.close(code=1008, reason="Missing authentication token")
+    user = await get_websocket_user(websocket, token)
+    if user is None:
+        await websocket.close(code=1008, reason="Not authenticated")
         return
 
-    try:
-        settings = get_settings()
-        payload = decode_token(token, settings)
-    except (HTTPException, ValueError) as e:
-        logger.warning("WebSocket authentication failed: %s", e)
-        await websocket.close(code=1008, reason="Invalid or expired token")
-        return
-
-    # Reject non-access tokens (e.g. refresh tokens)
-    if payload.get("type") != "access":
-        await websocket.close(code=1008, reason="Invalid token type")
-        return
-
-    # Check token blacklist
-    try:
-        if await is_token_blacklisted(websocket, token):
-            await websocket.close(code=1008, reason="Token has been revoked")
-            return
-    except Exception:  # Intentionally broad: fail-closed security check
-        logger.warning("Token blacklist check failed for WebSocket — failing closed")
-        await websocket.close(code=1008, reason="Authentication check failed")
-        return
-
-    # Verify engagement membership
-    user_id = payload.get("sub", "")
-    user_role_str = payload.get("role", "")
-    try:
-        user_role = UserRole(user_role_str)
-    except ValueError:
-        user_role = UserRole.CLIENT_VIEWER
-    if not await _check_engagement_membership(websocket, engagement_id, user_id, user_role):
+    if not await _check_engagement_membership(websocket, engagement_id, str(user.id), user.role):
         return
 
     # Check connection limit
@@ -343,6 +285,61 @@ async def alerts_websocket(
         await pubsub.unsubscribe(CHANNEL_ALERTS)
         await pubsub.close()
         manager.disconnect(websocket, engagement_id)
+
+
+@router.websocket("/ws/taskmining/events")
+async def taskmining_events_websocket(
+    websocket: WebSocket,
+    token: str | None = Query(default=None),
+) -> None:
+    """WebSocket endpoint for real-time task mining dashboard events.
+
+    Pushes ``stats_update`` messages when task mining metrics change.
+    Used by the Activity Dashboard to show live agent/event counts.
+
+    Authentication:
+        Accepts JWT via query param ``?token=<jwt>`` or ``kmflow_access``
+        cookie.  In dev mode (AUTH_DEV_MODE=true), auto-authenticates as
+        the first platform admin user.
+    """
+    user = await get_websocket_user(websocket, token)
+    if user is None:
+        await websocket.close(code=1008, reason="Not authenticated")
+        return
+
+    await websocket.accept()
+    logger.info("Task mining WS connected for user %s", user.email)
+
+    try:
+        redis_client = websocket.app.state.redis_client
+        pubsub = redis_client.pubsub()
+        await pubsub.subscribe("taskmining:events")
+
+        while True:
+            # Check Redis for published events
+            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+            if message and message["type"] == "message":
+                try:
+                    data = json.loads(message["data"])
+                    await websocket.send_json(data)
+                except (json.JSONDecodeError, TypeError) as e:
+                    logger.debug("Skipping malformed task mining message: %s", e)
+
+            # Handle client messages (ping/pong) or detect disconnect
+            try:
+                data = await asyncio.wait_for(websocket.receive_text(), timeout=0.1)
+                if data == "ping":
+                    await websocket.send_text("pong")
+            except TimeoutError:
+                pass
+    except WebSocketDisconnect:
+        logger.debug("Task mining WS client disconnected (user %s)", user.email)
+    except Exception:
+        logger.exception("Task mining WS error")
+    finally:
+        await pubsub.unsubscribe("taskmining:events")
+        await pubsub.close()
+        logger.info("Task mining WS cleaned up for user %s", user.email)
 
 
 @router.get("/api/v1/ws/status")
