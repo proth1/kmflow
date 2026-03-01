@@ -1,0 +1,15 @@
+{
+  "name": "kmflow-tunnel-auth",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "jose": "^6.1.3"
+  },
+  "devDependencies": {
+    "wrangler": "^4.65.0"
+  }
+}

@@ -1,0 +1,31 @@
+name = "kmflow-tunnel-auth"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+account_id = "9cf2c4bac542fc51cda0343dc1485db1"
+
+# This worker protects the KMFlow dev frontend and CIB7 cockpit
+# served via Cloudflare Tunnel with Descope OTP authentication.
+#
+# Architecture:
+#   Worker (auth) on public hostnames -> Tunnel on internal hostnames -> localhost
+#
+#   kmflow-dev.agentic-innovations.com (worker) -> kmflow-dev-tunnel.agentic-innovations.com (tunnel) -> localhost:3002
+#   cockpit.agentic-innovations.com (worker)    -> cockpit-tunnel.agentic-innovations.com (tunnel)    -> localhost:8081
+
+# Route-based deployment: worker intercepts traffic on these hostnames
+# The tunnel CNAME records for the public hostnames will be replaced by worker routes.
+# The -tunnel suffixed hostnames remain as CNAME records pointing to the tunnel.
+[[routes]]
+pattern = "kmflow-dev.agentic-innovations.com/*"
+zone_name = "agentic-innovations.com"
+
+[[routes]]
+pattern = "cockpit.agentic-innovations.com/*"
+zone_name = "agentic-innovations.com"
+
+[vars]
+DESCOPE_PROJECT_ID = "P39ERvEl6A8ec0DKtrKBvzM4Ue5V"
+
+# Email restrictions are hardcoded in src/index.ts:
+# - ALLOWED_EMAILS = ['proth1@gmail.com', 'drj.infinity@gmail.com']
+# - ALLOWED_DOMAINS = ['kpmg.com']

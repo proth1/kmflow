@@ -303,8 +303,10 @@ async function validateDescopeJWT(
   token: string
 ): Promise<{ valid: boolean; reason?: string; payload?: Record<string, unknown> }> {
   try {
+    // jose v6 requires string | string[] for issuer (no callback)
+    // Descope issuer format: https://api.descope.com/v1/apps/<projectId>
     const { payload } = await jwtVerify(token, JWKS, {
-      issuer: (iss) => typeof iss === 'string' && iss.includes('descope'),
+      issuer: 'https://api.descope.com/v1/apps/P39ERvEl6A8ec0DKtrKBvzM4Ue5V',
     });
 
     return { valid: true, payload: payload as unknown as Record<string, unknown> };
