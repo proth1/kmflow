@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.201
+**Version**: 2026.02.202
 **Last Updated**: 2026-02-28
 
 ## Quick Stats
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.202 | 2026-02-28 | Tunnel-auth Worker, Neo4j optimization, Descope JWT issuer fix (91510ce) |
 | 2026.02.201 | 2026-02-28 | WGI alignment: codebase-wide formatting, TYPE_CHECKING, pre-merge gates, RLS TOM context (#576) |
 | 2026.02.200 | 2026-02-28 | WGI Platform Alignment: switching, VCE, correlation, ABAC PDP, PRD refactoring, 4 migrations (#575) |
 | 2026.02.199 | 2026-02-28 | Disable Next.js dev indicator overlay obscuring sidebar nav (#561) |

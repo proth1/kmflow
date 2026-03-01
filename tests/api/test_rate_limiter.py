@@ -1,40 +1,49 @@
-"""Tests for the in-memory LLM rate limiter in simulations.py.
+"""Tests for the Redis-backed LLM rate limiter in simulations.py.
 
 Tests cover:
-- First request within limit succeeds
-- Requests up to _LLM_RATE_LIMIT succeed
-- Request exceeding limit raises HTTPException 429
-- After time window expires, requests succeed again
-- Stale user eviction works when _LLM_MAX_TRACKED_USERS exceeded
+- First request within limit succeeds (Redis returns count 0)
+- Requests at the limit boundary succeed (Redis returns count < _LLM_RATE_LIMIT)
+- Request exceeding limit raises HTTPException 429 (Redis returns count >= _LLM_RATE_LIMIT)
+- Redis unavailability falls back to allowing the request
+- Redis errors fall back to allowing the request
 """
 
 from __future__ import annotations
 
-import time
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 
-# Import the function and its module-level state so we can reset between tests
-import src.api.routes.simulations as simulations_module
 from src.api.routes.simulations import (
-    _LLM_MAX_TRACKED_USERS,
     _LLM_RATE_LIMIT,
     _LLM_RATE_WINDOW,
     _check_llm_rate_limit,
 )
 
 # ---------------------------------------------------------------------------
-# Fixture: reset the module-level rate limit log before each test
+# Helpers
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture(autouse=True)
-def clear_rate_limit_log():
-    """Reset the in-memory request log before and after each test."""
-    simulations_module._llm_request_log.clear()
-    yield
-    simulations_module._llm_request_log.clear()
+def _make_request(redis_client: object | None) -> Request:
+    """Build a mock FastAPI Request whose app.state.redis_client is set."""
+    app = MagicMock()
+    app.state.redis_client = redis_client
+    request = MagicMock(spec=Request)
+    request.app = app
+    return request
+
+
+def _make_redis(zcard_result: int) -> MagicMock:
+    """Return a mock Redis client whose pipeline returns zcard_result."""
+    pipe = AsyncMock()
+    # pipe.execute() returns [zremrangebyscore_result, zcard_result, zadd_result, expire_result]
+    pipe.execute = AsyncMock(return_value=[0, zcard_result, 1, True])
+    # pipeline() is a sync call that returns the pipe mock
+    redis_client = MagicMock()
+    redis_client.pipeline = MagicMock(return_value=pipe)
+    return redis_client
 
 
 # ---------------------------------------------------------------------------
@@ -43,140 +52,89 @@ def clear_rate_limit_log():
 
 
 class TestRateLimitBasic:
-    """Core rate limiting behaviour."""
+    """Core rate limiting behaviour via Redis pipeline."""
 
-    def test_first_request_succeeds(self) -> None:
-        """First request for a user should not raise."""
-        _check_llm_rate_limit("user-1")  # Must not raise
+    @pytest.mark.asyncio
+    async def test_first_request_succeeds(self) -> None:
+        """First request (count = 0) should not raise."""
+        redis = _make_redis(zcard_result=0)
+        request = _make_request(redis)
+        await _check_llm_rate_limit(request, "user-1")  # Must not raise
 
-    def test_requests_up_to_limit_succeed(self) -> None:
-        """Exactly _LLM_RATE_LIMIT requests should all succeed."""
-        user_id = "user-limit-test"
-        for _ in range(_LLM_RATE_LIMIT):
-            _check_llm_rate_limit(user_id)  # Must not raise
+    @pytest.mark.asyncio
+    async def test_request_under_limit_succeeds(self) -> None:
+        """A request where the current count is below _LLM_RATE_LIMIT should not raise."""
+        redis = _make_redis(zcard_result=_LLM_RATE_LIMIT - 1)
+        request = _make_request(redis)
+        await _check_llm_rate_limit(request, "user-under-limit")  # Must not raise
 
-    def test_request_exceeding_limit_raises_429(self) -> None:
-        """The (_LLM_RATE_LIMIT + 1)-th request should raise 429."""
-        user_id = "user-over-limit"
-        for _ in range(_LLM_RATE_LIMIT):
-            _check_llm_rate_limit(user_id)
-
+    @pytest.mark.asyncio
+    async def test_request_at_limit_raises_429(self) -> None:
+        """When the current window count equals _LLM_RATE_LIMIT, the request is rejected."""
+        redis = _make_redis(zcard_result=_LLM_RATE_LIMIT)
+        request = _make_request(redis)
         with pytest.raises(HTTPException) as exc_info:
-            _check_llm_rate_limit(user_id)
+            await _check_llm_rate_limit(request, "user-at-limit")
         assert exc_info.value.status_code == 429
 
-    def test_429_detail_mentions_rate_limit(self) -> None:
+    @pytest.mark.asyncio
+    async def test_429_detail_mentions_rate_limit(self) -> None:
         """429 exception detail should mention the rate limit."""
-        user_id = "user-detail-check"
-        for _ in range(_LLM_RATE_LIMIT):
-            _check_llm_rate_limit(user_id)
-
+        redis = _make_redis(zcard_result=_LLM_RATE_LIMIT)
+        request = _make_request(redis)
         with pytest.raises(HTTPException) as exc_info:
-            _check_llm_rate_limit(user_id)
-        assert "Rate limit" in exc_info.value.detail or "rate limit" in exc_info.value.detail.lower()
+            await _check_llm_rate_limit(request, "user-detail-check")
+        detail = exc_info.value.detail.lower()
+        assert "rate limit" in detail
 
-    def test_different_users_have_independent_limits(self) -> None:
-        """Rate limit is per-user; one user exhausting it should not block another."""
-        user_a = "user-a-independent"
-        user_b = "user-b-independent"
-
-        # Exhaust user_a's limit
-        for _ in range(_LLM_RATE_LIMIT):
-            _check_llm_rate_limit(user_a)
-        with pytest.raises(HTTPException):
-            _check_llm_rate_limit(user_a)
-
-        # user_b should still be able to make requests
-        _check_llm_rate_limit(user_b)  # Must not raise
+    @pytest.mark.asyncio
+    async def test_retry_after_header_set(self) -> None:
+        """429 response should include Retry-After header."""
+        redis = _make_redis(zcard_result=_LLM_RATE_LIMIT)
+        request = _make_request(redis)
+        with pytest.raises(HTTPException) as exc_info:
+            await _check_llm_rate_limit(request, "user-retry-after")
+        assert "Retry-After" in exc_info.value.headers
 
 
 # ---------------------------------------------------------------------------
-# Time window expiry
+# Redis unavailability / error handling
 # ---------------------------------------------------------------------------
 
 
-class TestRateLimitTimeWindow:
-    """Rate limit resets after the time window expires."""
+class TestRateLimitFallback:
+    """Rate limiter degrades gracefully when Redis is unavailable."""
 
-    def test_requests_succeed_after_window_expires(self) -> None:
-        """After the time window passes, new requests should succeed again."""
-        user_id = "user-window-test"
-        now = time.monotonic()
+    @pytest.mark.asyncio
+    async def test_no_redis_allows_request(self) -> None:
+        """When redis_client is None, the request should be allowed (fail-open)."""
+        request = _make_request(redis_client=None)
+        await _check_llm_rate_limit(request, "user-no-redis")  # Must not raise
 
-        # Fill up the rate limit with timestamps at the start of the window
-        old_timestamps = [now - _LLM_RATE_WINDOW - 1.0] * _LLM_RATE_LIMIT
-        simulations_module._llm_request_log[user_id] = old_timestamps
+    @pytest.mark.asyncio
+    async def test_redis_error_allows_request(self) -> None:
+        """When the Redis pipeline raises RedisError, the request is allowed."""
+        import redis.asyncio as aioredis
 
-        # All old entries should be pruned; request should succeed
-        _check_llm_rate_limit(user_id)  # Must not raise
+        pipe = AsyncMock()
+        pipe.execute = AsyncMock(side_effect=aioredis.RedisError("connection refused"))
+        redis_client = MagicMock()
+        redis_client.pipeline = MagicMock(return_value=pipe)
+        request = _make_request(redis_client)
 
-    def test_partially_expired_window_counts_correctly(self) -> None:
-        """Only requests within the current window count against the limit."""
-        user_id = "user-partial-window"
-        now = time.monotonic()
-
-        # Half the limit has old (expired) timestamps, half are recent
-        half = _LLM_RATE_LIMIT // 2
-        old_timestamps = [now - _LLM_RATE_WINDOW - 1.0] * half
-        recent_timestamps = [now - 1.0] * half
-        simulations_module._llm_request_log[user_id] = old_timestamps + recent_timestamps
-
-        # Only the recent half counts; should have room for more requests
-        for _ in range(_LLM_RATE_LIMIT - half):
-            _check_llm_rate_limit(user_id)  # Must not raise
+        await _check_llm_rate_limit(request, "user-redis-error")  # Must not raise
 
 
 # ---------------------------------------------------------------------------
-# Stale user eviction
+# Rate limit constants sanity check
 # ---------------------------------------------------------------------------
 
 
-class TestStaleUserEviction:
-    """Stale entries are evicted when max tracked users is exceeded."""
+class TestRateLimitConstants:
+    """Validate the exported constants are sane."""
 
-    def test_stale_users_evicted_when_max_exceeded(self) -> None:
-        """When _LLM_MAX_TRACKED_USERS is exceeded, stale entries are removed."""
-        now = time.monotonic()
+    def test_rate_limit_is_positive(self) -> None:
+        assert _LLM_RATE_LIMIT > 0
 
-        # Fill log with _LLM_MAX_TRACKED_USERS + 1 stale users
-        stale_ts = [now - _LLM_RATE_WINDOW - 5.0]
-        for i in range(_LLM_MAX_TRACKED_USERS + 1):
-            simulations_module._llm_request_log[f"stale-user-{i}"] = stale_ts.copy()
-
-        # Calling the rate limiter for a new user triggers eviction
-        _check_llm_rate_limit("new-user-after-eviction")
-
-        # After eviction the log should be much smaller
-        assert len(simulations_module._llm_request_log) <= _LLM_MAX_TRACKED_USERS + 2  # +2: eviction+new user
-
-    def test_active_users_not_evicted(self) -> None:
-        """Active (recent) users should not be evicted during stale cleanup."""
-        now = time.monotonic()
-        active_user = "active-during-eviction"
-
-        # Add one active user with recent timestamp
-        simulations_module._llm_request_log[active_user] = [now - 1.0]
-
-        # Fill rest with stale users to trigger eviction
-        stale_ts = [now - _LLM_RATE_WINDOW - 5.0]
-        for i in range(_LLM_MAX_TRACKED_USERS + 1):
-            simulations_module._llm_request_log[f"stale-evict-{i}"] = stale_ts.copy()
-
-        # Trigger eviction by calling rate limiter
-        _check_llm_rate_limit("trigger-eviction-user")
-
-        # The active user should still be tracked
-        assert active_user in simulations_module._llm_request_log
-
-    def test_no_eviction_below_max_users(self) -> None:
-        """Eviction should not run when user count is at or below the limit."""
-        now = time.monotonic()
-        # Put exactly _LLM_MAX_TRACKED_USERS entries (not exceeding)
-        for i in range(_LLM_MAX_TRACKED_USERS):
-            simulations_module._llm_request_log[f"user-{i}"] = [now - 1.0]
-
-        initial_count = len(simulations_module._llm_request_log)
-        # Should not evict since we're exactly at the limit (eviction triggers on >)
-        _check_llm_rate_limit("one-more-user")
-        # Count should only grow by 1 (the new user)
-        assert len(simulations_module._llm_request_log) <= initial_count + 2
+    def test_rate_window_is_positive(self) -> None:
+        assert _LLM_RATE_WINDOW > 0

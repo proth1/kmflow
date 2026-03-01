@@ -55,7 +55,7 @@ describe("apiPut", () => {
     const result = await apiPut("/api/v1/test/1", { name: "Updated" });
     expect(result).toEqual({ id: "1", name: "Updated" });
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8002/api/v1/test/1",
+      "/api/v1/test/1",
       expect.objectContaining({
         method: "PUT",
         body: JSON.stringify({ name: "Updated" }),
@@ -74,7 +74,7 @@ describe("apiDelete", () => {
     mockFetch.mockResolvedValueOnce({ ok: true });
     await apiDelete("/api/v1/test/1");
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8002/api/v1/test/1",
+      "/api/v1/test/1",
       expect.objectContaining({ method: "DELETE" })
     );
   });
@@ -92,7 +92,7 @@ describe("fetchCatalogEntries", () => {
     mockOk([{ id: "1", dataset_name: "test" }]);
     const result = await fetchCatalogEntries();
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8002/api/v1/governance/catalog",
+      "/api/v1/governance/catalog",
       expect.any(Object)
     );
     expect(result).toHaveLength(1);
@@ -102,7 +102,7 @@ describe("fetchCatalogEntries", () => {
     mockOk([]);
     await fetchCatalogEntries("eng-1");
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8002/api/v1/governance/catalog?engagement_id=eng-1",
+      "/api/v1/governance/catalog?engagement_id=eng-1",
       expect.any(Object)
     );
   });
@@ -122,7 +122,7 @@ describe("fetchGovernanceHealth", () => {
     const result = await fetchGovernanceHealth("e1");
     expect(result.compliance_percentage).toBe(80);
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8002/api/v1/governance/health/e1",
+      "/api/v1/governance/health/e1",
       expect.any(Object)
     );
   });
@@ -143,7 +143,7 @@ describe("fetchConnections", () => {
     mockOk({ items: [], total: 0 });
     await fetchConnections("eng-1");
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8002/api/v1/integrations/connections?engagement_id=eng-1",
+      "/api/v1/integrations/connections?engagement_id=eng-1",
       expect.any(Object)
     );
   });
@@ -182,7 +182,7 @@ describe("fetchMetricDefinitions", () => {
     mockOk({ items: [{ id: "m1", name: "Test" }], total: 1 });
     await fetchMetricDefinitions("quality");
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8002/api/v1/metrics/definitions?category=quality",
+      "/api/v1/metrics/definitions?category=quality",
       expect.any(Object)
     );
   });
@@ -203,7 +203,7 @@ describe("fetchAnnotations", () => {
     mockOk({ items: [], total: 0 });
     await fetchAnnotations("e1", "gap", "g1");
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8002/api/v1/annotations?engagement_id=e1&target_type=gap&target_id=g1",
+      "/api/v1/annotations?engagement_id=e1&target_type=gap&target_id=g1",
       expect.any(Object)
     );
   });
@@ -230,7 +230,7 @@ describe("fetchLineageChain", () => {
     const result = await fetchLineageChain("eng-1", "ev1");
     expect(result.total_versions).toBe(2);
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8002/api/v1/engagements/eng-1/evidence/ev1/lineage",
+      "/api/v1/engagements/eng-1/evidence/ev1/lineage",
       expect.any(Object)
     );
   });
@@ -251,7 +251,7 @@ describe("fetchPatterns", () => {
     mockOk({ items: [{ id: "p1", title: "Pattern" }], total: 1 });
     await fetchPatterns("workflow");
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8002/api/v1/patterns?category=workflow",
+      "/api/v1/patterns?category=workflow",
       expect.any(Object)
     );
   });
@@ -264,7 +264,7 @@ describe("fetchScenarios", () => {
     mockOk({ items: [], total: 0 });
     await fetchScenarios("eng-1");
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8002/api/v1/simulations/scenarios?engagement_id=eng-1",
+      "/api/v1/simulations/scenarios?engagement_id=eng-1",
       expect.any(Object)
     );
   });
@@ -275,7 +275,7 @@ describe("fetchSimulationResults", () => {
     mockOk({ items: [], total: 0 });
     await fetchSimulationResults("s1");
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8002/api/v1/simulations/results?scenario_id=s1",
+      "/api/v1/simulations/results?scenario_id=s1",
       expect.any(Object)
     );
   });

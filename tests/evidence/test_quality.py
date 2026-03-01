@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 
 from src.evidence.quality import (
-    FRESHNESS_HALF_LIFE_DAYS,
+    FRESHNESS_THRESHOLD_DAYS,
     calculate_freshness,
     calculate_reliability,
 )
@@ -19,17 +19,17 @@ class TestFreshness:
         score = calculate_freshness(date.today(), date.today())
         assert abs(score - 1.0) < 0.01
 
-    def test_freshness_one_year_old(self) -> None:
-        """A 365-day-old document should have freshness ~0.5 (half-life)."""
+    def test_freshness_at_threshold(self) -> None:
+        """A document at FRESHNESS_THRESHOLD_DAYS old should have freshness ~0.5."""
         ref = date.today()
-        source = ref - timedelta(days=FRESHNESS_HALF_LIFE_DAYS)
+        source = ref - timedelta(days=FRESHNESS_THRESHOLD_DAYS)
         score = calculate_freshness(source, ref)
         assert abs(score - 0.5) < 0.05
 
     def test_freshness_very_old(self) -> None:
-        """A very old document should have freshness close to 0."""
+        """A very old document (>5000 days) should have freshness close to 0."""
         ref = date.today()
-        source = ref - timedelta(days=FRESHNESS_HALF_LIFE_DAYS * 10)
+        source = ref - timedelta(days=5100)
         score = calculate_freshness(source, ref)
         assert score < 0.01
 

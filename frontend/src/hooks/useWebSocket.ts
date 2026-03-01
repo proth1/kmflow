@@ -6,9 +6,17 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { API_BASE_URL } from "@/lib/api/client";
 
-const WS_BASE_URL =
-  process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000";
+function getWsBaseUrl(): string {
+  if (typeof window === "undefined") {
+    // Server-side: derive from API_BASE_URL
+    return API_BASE_URL.replace(/^http/, "ws");
+  }
+  // Client-side: derive from current page origin (proxied via Next.js rewrites)
+  const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${proto}//${window.location.host}`;
+}
 
 export interface WebSocketMessage {
   event_type?: string;
@@ -52,7 +60,7 @@ export function useWebSocket(
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    const url = `${WS_BASE_URL}${path}`;
+    const url = `${getWsBaseUrl()}${path}`;
     const ws = new WebSocket(url);
 
     ws.onopen = () => {

@@ -3,6 +3,12 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.02.202] - 2026-02-28
+### Infrastructure
+- Add tunnel-auth Cloudflare Worker with Descope OTP auth for kmflow-dev and cockpit endpoints
+- Fix Descope JWT issuer validation in both workers (jose v6 breaking change: callback → string)
+- Optimize Neo4j Docker performance settings (heap, page cache, transaction limits, slow query logging)
+
 ## [2026.02.201] - 2026-02-28
 ### Added
 - WGI Platform Alignment: codebase-wide formatting, TYPE_CHECKING guards, import cleanup, pre-merge CI/CD gates, RLS context in TOM routes, frontend cookie auth (#576)

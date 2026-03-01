@@ -9,7 +9,6 @@ import {
   type TaskMiningAgent,
   type AppUsageEntry,
 } from "@/lib/api/taskmining";
-import { API_BASE_URL } from "@/lib/api/client";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   Card,
@@ -116,7 +115,8 @@ export default function TaskMiningDashboard() {
 
   // WebSocket for real-time stats updates
   useEffect(() => {
-    const wsUrl = API_BASE_URL.replace(/^http/, "ws") + "/ws/taskmining/events";
+    const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${proto}//${window.location.host}/ws/taskmining/events`;
     let retryDelay = 1000;
 
     function connect() {

@@ -6,13 +6,10 @@
 "use client";
 
 import { useCallback, useState, useRef } from "react";
+import { API_BASE_URL } from "@/lib/api";
 
 const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".xlsx", ".csv", ".png", ".jpg", ".jpeg"];
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-const API_BASE =
-  typeof window === "undefined"
-    ? process.env.API_URL || "http://localhost:8000"
-    : process.env.NEXT_PUBLIC_API_URL || "http://localhost:8002";
 
 interface UploadResult {
   id: string;
@@ -115,7 +112,7 @@ export default function EvidenceUploader({ engagementId, onUploadComplete }: Evi
       }, 300);
 
       const response = await fetch(
-        `${API_BASE}/api/v1/portal/${eid}/upload`,
+        `${API_BASE_URL}/api/v1/portal/${eid}/upload`,
         { method: "POST", credentials: "include", body: formData },
       );
 

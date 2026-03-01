@@ -29,7 +29,7 @@ describe("API Client", () => {
       const result = await fetchHealth();
       expect(result).toEqual(mockHealth);
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8002/health",
+        "/health",
         expect.objectContaining({ cache: "no-store" })
       );
     });
@@ -57,7 +57,7 @@ describe("API Client", () => {
       expect(result).toEqual(mockData);
       // GET requests should NOT include Content-Type header (CQ-3 fix)
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8002/api/v1/engagements",
+        "/api/v1/engagements",
         expect.objectContaining({ signal: undefined })
       );
     });
@@ -88,7 +88,7 @@ describe("API Client", () => {
 
       expect(result).toEqual(mockResponse);
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8002/api/v1/engagements",
+        "/api/v1/engagements",
         expect.objectContaining({
           method: "POST",
           body: JSON.stringify({ name: "Test" }),

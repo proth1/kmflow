@@ -216,9 +216,7 @@ describe("EvidenceUploader", () => {
       );
     });
 
-    it("sends Authorization header when token in localStorage", async () => {
-      localStorage.setItem("kmflow_token", "my-jwt");
-
+    it("uses cookie-based auth (credentials: include) for uploads", async () => {
       global.fetch = jest.fn().mockResolvedValue({
         ok: true,
         json: () =>
@@ -251,9 +249,7 @@ describe("EvidenceUploader", () => {
         expect(global.fetch).toHaveBeenCalledWith(
           expect.any(String),
           expect.objectContaining({
-            headers: expect.objectContaining({
-              Authorization: "Bearer my-jwt",
-            }),
+            credentials: "include",
           }),
         );
       });
@@ -274,12 +270,20 @@ describe("EvidenceUploader", () => {
         selector: "input",
       });
 
-      fireEvent.change(input, {
-        target: { files: [makeFile("big.pdf", 1024)] },
+      await act(async () => {
+        fireEvent.change(input, {
+          target: { files: [makeFile("big.pdf", 1024)] },
+        });
       });
 
+      // Flush the progress interval and allow the fetch promise to settle
       await act(async () => {
         jest.advanceTimersByTime(2000);
+      });
+
+      // Allow any remaining microtasks (fetch .json() chain) to resolve
+      await act(async () => {
+        jest.advanceTimersByTime(0);
       });
 
       await waitFor(() => {
