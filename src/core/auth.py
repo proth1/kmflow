@@ -19,7 +19,7 @@ from uuid import UUID
 import bcrypt
 import jwt
 import redis.asyncio as _aioredis
-from fastapi import Depends, HTTPException, Request, Response, status
+from fastapi import Depends, HTTPException, Request, Response, WebSocket, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import PyJWTError
 from sqlalchemy import select
@@ -380,5 +380,72 @@ async def get_current_user(
             detail="User account is disabled",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    return user
+
+
+async def get_websocket_user(
+    websocket: WebSocket,
+    token: str | None = None,
+) -> User | None:
+    """Authenticate a WebSocket connection.
+
+    Checks (in order):
+    1. Explicit ``token`` query parameter.
+    2. ``kmflow_access`` cookie from the upgrade request.
+    3. Dev mode fallback — auto-authenticate as platform admin.
+
+    Returns the authenticated :class:`User`, or ``None`` if authentication
+    fails (caller should close the socket).
+    """
+    settings = get_settings()
+
+    # Try token param, then cookie
+    jwt_token = token or websocket.cookies.get(ACCESS_COOKIE_NAME)
+
+    if jwt_token is None:
+        # Dev mode: return first active admin
+        if settings.auth_dev_mode:
+            session_factory = websocket.app.state.db_session_factory
+            async with session_factory() as session:
+                result = await session.execute(
+                    select(User).where(User.role == "platform_admin", User.is_active == True).limit(1)  # noqa: E712
+                )
+                dev_user = result.scalar_one_or_none()
+            if dev_user is not None:
+                logger.debug("WS auth dev mode: auto-authenticated as %s", dev_user.email)
+                return dev_user
+        return None
+
+    try:
+        payload = decode_token(jwt_token, settings)
+    except (HTTPException, ValueError):
+        return None
+
+    if payload.get("type") != "access":
+        return None
+
+    try:
+        if await is_token_blacklisted(websocket, jwt_token):
+            return None
+    except Exception:
+        return None
+
+    user_id_str = payload.get("sub")
+    if not user_id_str:
+        return None
+
+    try:
+        user_id = UUID(user_id_str)
+    except ValueError:
+        return None
+
+    session_factory = websocket.app.state.db_session_factory
+    async with session_factory() as session:
+        result = await session.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+
+    if user is None or not user.is_active:
+        return None
 
     return user
