@@ -58,7 +58,7 @@
 | 2026.02.179 | 2026-02-28 | Variant comparison replay: LCS alignment, divergence detection, cycle time deltas, evidence linking, 39 tests (#342) |
 | 2026.02.178 | 2026-02-28 | Aggregate volume replay: per-interval flow metrics, bottleneck detection, gateway distribution, heat map, 36 tests (#339) |
 | 2026.02.177 | 2026-02-28 | Single-case timeline replay: brightness classification, paginated frames, evidence linking, 48 tests (#337) |
-| 2026.02.176 | 2026-02-27 | POV generation orchestrator: 8-step LCD pipeline tracking, FAILED_PARTIAL preservation, version diff, 38 tests (Part of #318) |
+| 2026.02.176 | 2026-02-27 | POV generation orchestrator: 8-step consensus pipeline tracking, FAILED_PARTIAL preservation, version diff, 38 tests (Part of #318) |
 | 2026.02.175 | 2026-02-27 | Async task architecture: Redis Streams TaskQueue, TaskWorker ABC, consumer groups, retry logic, concurrency control, 33 tests (#320) |
 | 2026.02.174 | 2026-02-27 | Celonis EMS integration: event log, process model, conformance mappers, idempotent dedup, severity scoring, 45 tests (#325) |
 | 2026.02.173 | 2026-02-27 | Soroco Scout Work Graph integration: ScoutActivity parser, Activity node mapping with telemetric epistemic frames, SUPPORTED_BY evidence edges, 30 tests (#326) |
@@ -137,7 +137,7 @@
 | 2026.02.100 | 2026-02-27 | Cross-source triangulation: evidence planes, coverage/agreement factors, cross-plane bonus, conflict detection (#306) |
 | 2026.02.099 | 2026-02-27 | Evidence aggregation and entity extraction: seed term guided, duplicate candidate detection, provenance maps (#303) |
 | 2026.02.098 | 2026-02-27 | Contradiction resolution: three-way distinction classifier, severity scoring, epistemic frames, persistence bridge (#312) |
-| 2026.02.097 | 2026-02-27 | Weighted consensus building with LCD algorithm, recency bias, variant detection (#310) |
+| 2026.02.097 | 2026-02-27 | Weighted consensus building with consensus algorithm, recency bias, variant detection (#310) |
 | 2026.02.096 | 2026-02-27 | Evidence cataloging, metadata extraction, catalog API (#304) |
 | 2026.02.095 | 2026-02-27 | Database infrastructure BDD tests (#309) |
 | 2026.02.094 | 2026-02-27 | API gateway BDD tests, health endpoint enhancements (#307) |
@@ -169,7 +169,7 @@
 | 2026.02.064 | 2026-02-25 | Audit Phase 0: fix false security claims in whitepaper, DPA, PIA, TCC profile, WelcomeView (#241) |
 | 2026.02.063 | 2026-02-25 | CISO-ready agent installer: app bundle, code signing, Keychain hardening, onboarding wizard, DMG/PKG/MDM |
 | 2026.02.062 | 2026-02-25 | ML task segmentation: feature extraction, gradient boosting, hybrid classification, sequence mining |
-| 2026.02.061 | 2026-02-25 | Knowledge graph integration: ingestion, semantic bridge, LCD weight, variant detection |
+| 2026.02.061 | 2026-02-25 | Knowledge graph integration: ingestion, semantic bridge, consensus weight, variant detection |
 | 2026.02.060 | 2026-02-25 | Admin dashboard: agents, policy, activity monitoring, quarantine review |
 | 2026.02.059 | 2026-02-25 | Privacy and compliance: PII tests, consent, audit, quarantine cleanup |
 | 2026.02.058 | 2026-02-25 | Action aggregation engine: session grouping, classification, materialization |
@@ -208,7 +208,7 @@ src/                  # Backend (FastAPI)
   core/               # Models, config, database, auth
   evidence/           # Evidence ingestion
   semantic/           # Knowledge graph engine
-  pov/                # LCD algorithm, POV generator
+  pov/                # Consensus algorithm, POV generator
   tom/                # TOM alignment, gap analysis
   taskmining/         # Task mining (PII, processor, worker, graph, ML classification)
   integrations/       # External connectors

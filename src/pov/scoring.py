@@ -1,4 +1,4 @@
-"""Confidence scoring for the LCD algorithm.
+"""Confidence scoring for the consensus algorithm.
 
 Step 6: Computes confidence scores using a 5-factor weighted formula:
   coverage(0.30) + agreement(0.25) + quality(0.20) + reliability(0.15) + recency(0.10)

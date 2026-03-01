@@ -1,4 +1,4 @@
-"""Evidence aggregation for the LCD algorithm.
+"""Evidence aggregation for the consensus algorithm.
 
 Step 1: Filters evidence by engagement and scope, collects validated items
 and their fragments for downstream processing.

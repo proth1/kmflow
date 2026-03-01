@@ -201,7 +201,7 @@ Both systems occupy the same domain: evidence-driven process intelligence for co
 
 **Takeaway**: KMFlow's bridge architecture is well-suited for the consulting use case. Keep and extend with WGI's case-event-activity edge types.
 
-#### KMF-5: LCD Consensus Algorithm
+#### KMF-5: Consensus Algorithm
 
 **KMFlow**: Specific consensus algorithm with weighted voting across evidence types (system data > documentation > communications > interviews > job aids), contradiction resolution with severity scoring, recency bias.
 

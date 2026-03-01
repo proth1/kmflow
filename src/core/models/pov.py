@@ -89,7 +89,7 @@ class GapSeverity(enum.StrEnum):
 
 
 class ProcessModel(Base):
-    """A generated Process Point of View model from the LCD algorithm."""
+    """A generated Process Point of View model from the consensus algorithm."""
 
     __tablename__ = "process_models"
     __table_args__ = (Index("ix_process_models_engagement_id", "engagement_id"),)
@@ -112,7 +112,7 @@ class ProcessModel(Base):
     contradiction_count: Mapped[int] = mapped_column(default=0, nullable=False)
     metadata_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     generated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    generated_by: Mapped[str] = mapped_column(String(255), default="lcd_algorithm", nullable=False)
+    generated_by: Mapped[str] = mapped_column(String(255), default="consensus_algorithm", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

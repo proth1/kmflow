@@ -16,7 +16,7 @@
         <bpmn:flowNodeRef>Gateway_1w8idp7</bpmn:flowNodeRef>
       </bpmn:lane>
       <bpmn:lane id="Lane_SemanticEngine" name="Semantic Engine">
-        <bpmn:flowNodeRef>Subprocess_LCDAlgorithm</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Subprocess_ConsensusAlgorithm</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_ExtractEntities</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_BuildGraph</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Subprocess_GraphTraversal</bpmn:flowNodeRef>
@@ -42,31 +42,31 @@
       <bpmn:incoming>Flow_1</bpmn:incoming>
       <bpmn:outgoing>Flow_2</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:subProcess id="Subprocess_LCDAlgorithm" name="LCD Algorithm Core">
+    <bpmn:subProcess id="Subprocess_ConsensusAlgorithm" name="Consensus Algorithm Core">
       <bpmn:incoming>Flow_2</bpmn:incoming>
       <bpmn:outgoing>Flow_3</bpmn:outgoing>
-      <bpmn:startEvent id="Start_LCD">
-        <bpmn:outgoing>Flow_LCD1</bpmn:outgoing>
+      <bpmn:startEvent id="Start_Consensus">
+        <bpmn:outgoing>Flow_Consensus1</bpmn:outgoing>
       </bpmn:startEvent>
-      <bpmn:serviceTask id="Task_LCD_ExtractEntities" name="Extract Entities" camunda:type="external" camunda:topic="kmflow.semantic.extract">
-        <bpmn:incoming>Flow_LCD1</bpmn:incoming>
-        <bpmn:outgoing>Flow_LCD2</bpmn:outgoing>
+      <bpmn:serviceTask id="Task_Consensus_ExtractEntities" name="Extract Entities" camunda:type="external" camunda:topic="kmflow.semantic.extract">
+        <bpmn:incoming>Flow_Consensus1</bpmn:incoming>
+        <bpmn:outgoing>Flow_Consensus2</bpmn:outgoing>
       </bpmn:serviceTask>
-      <bpmn:serviceTask id="Task_LCD_BuildRelationships" name="Build Relationships" camunda:type="external" camunda:topic="kmflow.semantic.relate">
-        <bpmn:incoming>Flow_LCD2</bpmn:incoming>
-        <bpmn:outgoing>Flow_LCD3</bpmn:outgoing>
+      <bpmn:serviceTask id="Task_Consensus_BuildRelationships" name="Build Relationships" camunda:type="external" camunda:topic="kmflow.semantic.relate">
+        <bpmn:incoming>Flow_Consensus2</bpmn:incoming>
+        <bpmn:outgoing>Flow_Consensus3</bpmn:outgoing>
       </bpmn:serviceTask>
-      <bpmn:serviceTask id="Task_LCD_IdentifyPatterns" name="Identify Patterns" camunda:type="external" camunda:topic="kmflow.semantic.patterns">
-        <bpmn:incoming>Flow_LCD3</bpmn:incoming>
-        <bpmn:outgoing>Flow_LCD4</bpmn:outgoing>
+      <bpmn:serviceTask id="Task_Consensus_IdentifyPatterns" name="Identify Patterns" camunda:type="external" camunda:topic="kmflow.semantic.patterns">
+        <bpmn:incoming>Flow_Consensus3</bpmn:incoming>
+        <bpmn:outgoing>Flow_Consensus4</bpmn:outgoing>
       </bpmn:serviceTask>
-      <bpmn:endEvent id="End_LCD">
-        <bpmn:incoming>Flow_LCD4</bpmn:incoming>
+      <bpmn:endEvent id="End_Consensus">
+        <bpmn:incoming>Flow_Consensus4</bpmn:incoming>
       </bpmn:endEvent>
-      <bpmn:sequenceFlow id="Flow_LCD1" sourceRef="Start_LCD" targetRef="Task_LCD_ExtractEntities" />
-      <bpmn:sequenceFlow id="Flow_LCD2" sourceRef="Task_LCD_ExtractEntities" targetRef="Task_LCD_BuildRelationships" />
-      <bpmn:sequenceFlow id="Flow_LCD3" sourceRef="Task_LCD_BuildRelationships" targetRef="Task_LCD_IdentifyPatterns" />
-      <bpmn:sequenceFlow id="Flow_LCD4" sourceRef="Task_LCD_IdentifyPatterns" targetRef="End_LCD" />
+      <bpmn:sequenceFlow id="Flow_Consensus1" sourceRef="Start_Consensus" targetRef="Task_Consensus_ExtractEntities" />
+      <bpmn:sequenceFlow id="Flow_Consensus2" sourceRef="Task_Consensus_ExtractEntities" targetRef="Task_Consensus_BuildRelationships" />
+      <bpmn:sequenceFlow id="Flow_Consensus3" sourceRef="Task_Consensus_BuildRelationships" targetRef="Task_Consensus_IdentifyPatterns" />
+      <bpmn:sequenceFlow id="Flow_Consensus4" sourceRef="Task_Consensus_IdentifyPatterns" targetRef="End_Consensus" />
     </bpmn:subProcess>
     <bpmn:serviceTask id="Task_ExtractEntities" name="Extract Process Entities" camunda:type="external" camunda:topic="kmflow.semantic.extract">
       <bpmn:incoming>Flow_3</bpmn:incoming>
@@ -116,8 +116,8 @@
       <bpmn:outgoing>Flow_FromAnalyst</bpmn:outgoing>
     </bpmn:userTask>
     <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_InitializeContext" />
-    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_InitializeContext" targetRef="Subprocess_LCDAlgorithm" />
-    <bpmn:sequenceFlow id="Flow_3" sourceRef="Subprocess_LCDAlgorithm" targetRef="Task_ExtractEntities" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_InitializeContext" targetRef="Subprocess_ConsensusAlgorithm" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Subprocess_ConsensusAlgorithm" targetRef="Task_ExtractEntities" />
     <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_ExtractEntities" targetRef="Task_BuildGraph" />
     <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_BuildGraph" targetRef="Subprocess_GraphTraversal" />
     <bpmn:sequenceFlow id="Flow_6" sourceRef="Subprocess_GraphTraversal" targetRef="Task_TriangulateSources" />
@@ -257,7 +257,7 @@
       <bpmndi:BPMNShape id="Gateway_1w8idp7_di" bpmnElement="Gateway_1w8idp7" isMarkerVisible="true">
         <dc:Bounds x="1595" y="121" width="50" height="50" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Subprocess_LCDAlgorithm_di" bpmnElement="Subprocess_LCDAlgorithm" isExpanded="false">
+      <bpmndi:BPMNShape id="Subprocess_ConsensusAlgorithm_di" bpmnElement="Subprocess_ConsensusAlgorithm" isExpanded="false">
         <dc:Bounds x="335" y="304" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_ExtractEntities_di" bpmnElement="Task_ExtractEntities">
@@ -398,36 +398,36 @@
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
-  <bpmndi:BPMNDiagram id="BPMNDiagram_LCDAlgorithm">
-    <bpmndi:BPMNPlane id="BPMNPlane_LCDAlgorithm" bpmnElement="Subprocess_LCDAlgorithm">
-      <bpmndi:BPMNShape id="Start_LCD_di" bpmnElement="Start_LCD">
+  <bpmndi:BPMNDiagram id="BPMNDiagram_ConsensusAlgorithm">
+    <bpmndi:BPMNPlane id="BPMNPlane_ConsensusAlgorithm" bpmnElement="Subprocess_ConsensusAlgorithm">
+      <bpmndi:BPMNShape id="Start_Consensus_di" bpmnElement="Start_Consensus">
         <dc:Bounds x="50" y="75" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_LCD_ExtractEntities_di" bpmnElement="Task_LCD_ExtractEntities">
+      <bpmndi:BPMNShape id="Task_Consensus_ExtractEntities_di" bpmnElement="Task_Consensus_ExtractEntities">
         <dc:Bounds x="136" y="53" width="100" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_LCD_BuildRelationships_di" bpmnElement="Task_LCD_BuildRelationships">
+      <bpmndi:BPMNShape id="Task_Consensus_BuildRelationships_di" bpmnElement="Task_Consensus_BuildRelationships">
         <dc:Bounds x="288" y="53" width="100" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_LCD_IdentifyPatterns_di" bpmnElement="Task_LCD_IdentifyPatterns">
+      <bpmndi:BPMNShape id="Task_Consensus_IdentifyPatterns_di" bpmnElement="Task_Consensus_IdentifyPatterns">
         <dc:Bounds x="440" y="53" width="100" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="End_LCD_di" bpmnElement="End_LCD">
+      <bpmndi:BPMNShape id="End_Consensus_di" bpmnElement="End_Consensus">
         <dc:Bounds x="592" y="75" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Flow_LCD1_di" bpmnElement="Flow_LCD1">
+      <bpmndi:BPMNEdge id="Flow_Consensus1_di" bpmnElement="Flow_Consensus1">
         <di:waypoint x="86" y="93" />
         <di:waypoint x="136" y="93" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_LCD2_di" bpmnElement="Flow_LCD2">
+      <bpmndi:BPMNEdge id="Flow_Consensus2_di" bpmnElement="Flow_Consensus2">
         <di:waypoint x="236" y="93" />
         <di:waypoint x="288" y="93" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_LCD3_di" bpmnElement="Flow_LCD3">
+      <bpmndi:BPMNEdge id="Flow_Consensus3_di" bpmnElement="Flow_Consensus3">
         <di:waypoint x="388" y="93" />
         <di:waypoint x="440" y="93" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_LCD4_di" bpmnElement="Flow_LCD4">
+      <bpmndi:BPMNEdge id="Flow_Consensus4_di" bpmnElement="Flow_Consensus4">
         <di:waypoint x="540" y="93" />
         <di:waypoint x="592" y="93" />
       </bpmndi:BPMNEdge>

@@ -94,7 +94,7 @@ The WorkGraphIQ Task Mining Agent transforms observed desktop behavior into evid
 | Vendor | Approach | Price Signal | Gap vs. WorkGraphIQ Agent |
 |--------|----------|-------------|----------------------|
 | **Soroco Scout** | Proprietary agent, Work Graph output | $25,000+/engagement | No knowledge graph integration; no consulting workflow; black-box PII |
-| **Celonis Task Mining** | Sensor-based desktop capture, EMS integration | Enterprise license | Requires Celonis EMS; no consulting evidence pipeline; no Least Common Denominator (LCD) confidence scoring |
+| **Celonis Task Mining** | Sensor-based desktop capture, EMS integration | Enterprise license | Requires Celonis EMS; no consulting evidence pipeline; no Consensus confidence scoring |
 | **UiPath Task Mining** | Desktop recorder, process discovery | Enterprise license | RPA-centric; not designed for process discovery consulting; no triangulation |
 | **Microsoft Viva Insights** | Microsoft 365 behavioral data only | M365 E5 add-on | Limited to Microsoft applications; no desktop-wide capture; no process model output |
 | **SAP Signavio Process Intelligence** | Log-based; task mining add-on | Enterprise license | Event log dependency; task mining is secondary capability |
@@ -1340,7 +1340,7 @@ Every agent registration, configuration change, consent event, capture pause/res
 |-----------|:-----------:|:------------:|:------------------:|:-----------------:|
 | Knowledge graph integration | Yes | No | No | No |
 | Evidence triangulation with docs/interviews | Yes | No | No | No |
-| Least Common Denominator (LCD) confidence scoring | Yes | No | No | No |
+| Consensus confidence scoring | Yes | No | No | No |
 | Mandatory 4-layer PII architecture | Yes | Config-based | Config-based | Config-based |
 | Engagement mode (auto-disable) | Yes | No | No | No |
 | MDM deployment (Jamf/Intune) | Yes (Phase 2) | Yes | Yes | Yes |

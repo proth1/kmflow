@@ -131,7 +131,7 @@ Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential
 
 ## [2026.02.176] - 2026-02-27
 ### Added
-- POV generation orchestrator: PovGenerationWorker with 8-step LCD pipeline tracking, PovGenerationState with step progression/completion %, FAILED_PARTIAL preservation, compute_version_diff, 38 tests (Part of #318)
+- POV generation orchestrator: PovGenerationWorker with 8-step consensus pipeline tracking, PovGenerationState with step progression/completion %, FAILED_PARTIAL preservation, compute_version_diff, 38 tests (Part of #318) [LCD renamed to Consensus]
 
 ## [2026.02.175] - 2026-02-27
 ### Added
@@ -439,7 +439,7 @@ Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential
 
 ## [2026.02.099] - 2026-02-27
 ### Added
-- Evidence aggregation and entity extraction for LCD Steps 1-2: seed term guided extraction with confidence boost, duplicate candidate detection (containment, acronym, word overlap), DuplicateCandidate dataclass, ExtractionSummary with provenance maps, 62 BDD tests (#303)
+- Evidence aggregation and entity extraction for Consensus Steps 1-2: seed term guided extraction with confidence boost, duplicate candidate detection (containment, acronym, word overlap), DuplicateCandidate dataclass, ExtractionSummary with provenance maps, 62 BDD tests (#303) [LCD renamed to Consensus]
 
 ## [2026.02.098] - 2026-02-27
 ### Added
@@ -447,7 +447,7 @@ Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential
 
 ## [2026.02.097] - 2026-02-27
 ### Added
-- Weighted consensus building with LCD algorithm: per-engagement weight overrides, exponential decay recency bias, variant detection, ConflictStub forwarding, brightness hints, 45 BDD tests (#310)
+- Weighted consensus building with consensus algorithm: per-engagement weight overrides, exponential decay recency bias, variant detection, ConflictStub forwarding, brightness hints, 45 BDD tests (#310) [LCD renamed to Consensus]
 
 ## [2026.02.096] - 2026-02-27
 ### Added
@@ -708,10 +708,10 @@ Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential
 
 ## [2026.02.061] - 2026-02-25
 ### Added
-- Knowledge graph integration for task mining: graph ingestion, semantic bridge, LCD weight, variant detection (#225)
+- Knowledge graph integration for task mining: graph ingestion, semantic bridge, consensus weight, variant detection (#225) [LCD renamed to Consensus]
 - Graph ingestion service: creates Application/UserAction nodes with PERFORMED_IN and PRECEDED_BY relationships (#226)
 - Semantic bridge: links UserAction→Activity (SUPPORTS) and Application→System (MAPS_TO) via embedding cosine similarity (#227)
-- LCD evidence weight: `task_mining: 0.90` in EVIDENCE_TYPE_WEIGHTS, above BPM models and documents (#228)
+- Consensus evidence weight: `task_mining: 0.90` in EVIDENCE_TYPE_WEIGHTS, above BPM models and documents (#228) [LCD renamed to Consensus]
 - Process variant detection: detects extra/missing/reordered steps, creates DEVIATES_FROM relationships (#229)
 - Ontology extensions: SUPPORTS, MAPS_TO relationship types; DEVIATES_FROM extended for UserAction
 - 71 new tests across 4 test files (2243 total backend)

@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 
 from src.pov.orchestrator import (
-    LCD_STEPS,
+    POV_STEPS,
     TOTAL_STEPS,
     PovGenerationState,
     PovGenerationWorker,
@@ -81,7 +81,7 @@ class TestProgressTracking:
 
     @pytest.mark.asyncio
     async def test_all_8_steps_completed(self) -> None:
-        """Successful run completes all 8 LCD steps."""
+        """Successful run completes all 8 consensus steps."""
         worker = PovGenerationWorker()
         result = await worker.execute({"engagement_id": "eng-001"})
 
@@ -98,12 +98,12 @@ class TestProgressTracking:
         assert result["completion_percentage"] == 100
 
     @pytest.mark.asyncio
-    async def test_step_names_match_lcd_algorithm(self) -> None:
-        """Step names match the defined LCD algorithm steps."""
+    async def test_step_names_match_consensus_algorithm(self) -> None:
+        """Step names match the defined consensus algorithm steps."""
         worker = PovGenerationWorker()
         result = await worker.execute({"engagement_id": "eng-001"})
 
-        expected_names = [s["name"] for s in LCD_STEPS]
+        expected_names = [s["name"] for s in POV_STEPS]
         actual_names = [s["step_name"] for s in result["completed_steps"]]
         assert actual_names == expected_names
 
@@ -423,7 +423,7 @@ class TestPovGenerationState:
     def test_completed_state(self) -> None:
         """Fully completed state has 100% and 'Complete' step name."""
         state = PovGenerationState(engagement_id="eng-001")
-        for i, step_def in enumerate(LCD_STEPS):
+        for i, step_def in enumerate(POV_STEPS):
             state.completed_steps.append(
                 PovStepResult(step_number=i + 1, step_name=step_def["name"]),
             )
@@ -450,10 +450,10 @@ class TestPovGenerationState:
         assert "partial_data" in data
 
 
-# --- LCD step info tests ----------------------------------------------------
+# --- Consensus step info tests -----------------------------------------------
 
 
-class TestLcdStepInfo:
+class TestConsensusStepInfo:
     """get_step_info utility."""
 
     def test_valid_step_numbers(self) -> None:
@@ -486,4 +486,4 @@ class TestLcdStepInfo:
     def test_total_steps_constant(self) -> None:
         """TOTAL_STEPS is 8."""
         assert TOTAL_STEPS == 8
-        assert len(LCD_STEPS) == 8
+        assert len(POV_STEPS) == 8

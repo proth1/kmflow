@@ -1,4 +1,4 @@
-"""Tests for BPMN XML assembly (LCD Step 7)."""
+"""Tests for BPMN XML assembly (Consensus Step 7)."""
 
 from __future__ import annotations
 

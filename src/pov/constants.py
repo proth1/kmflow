@@ -1,4 +1,4 @@
-"""Constants for the POV generator and LCD algorithm.
+"""Constants for the POV generator and consensus algorithm.
 
 Evidence type weights, confidence levels, and scoring parameters
 used across the POV generation pipeline.

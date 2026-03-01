@@ -63,7 +63,7 @@ The project was built over February 2026 in a rapid sprint:
 
 ## Key Architectural Patterns
 
-- **Evidence-first**: 15+ parsers → quality scoring → knowledge graph → LCD consensus
+- **Evidence-first**: 15+ parsers → quality scoring → knowledge graph → consensus algorithm
 - **3D confidence**: Numeric score + brightness (BRIGHT/DIM/DARK) + evidence grade (A-U)
 - **9 universal knowledge forms**: Coverage computation drives gap detection
 - **Multi-store**: PostgreSQL (OLTP) + Neo4j (graph) + Redis (cache/queue/streams)

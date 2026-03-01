@@ -116,7 +116,7 @@ export default function HomePage() {
           <ul className="text-sm text-[hsl(var(--muted-foreground))] space-y-1 list-disc list-inside">
             <li>Evidence-first approach across 12 evidence categories</li>
             <li>Semantic knowledge graph with Neo4j</li>
-            <li>Confidence-scored process model generation (LCD algorithm)</li>
+            <li>Confidence-scored process model generation (Consensus algorithm)</li>
             <li>Automated Target Operating Model gap analysis</li>
             <li>Regulatory, policy, and control overlay as connective tissue</li>
           </ul>

@@ -103,7 +103,7 @@ The Windows Task Mining Agent extends WorkGraphIQ's desktop observation capabili
 |--------|--------------|----------|----------------|
 | **Celonis Task Mining** | Native Windows sensor | Mature Windows support, EMS integration | No knowledge graph; no consulting workflow; vendor PII |
 | **UiPath Task Mining** | Windows desktop recorder | Deep RPA integration, large install base | RPA-centric; no evidence triangulation |
-| **Soroco Scout** | Windows agent | Enterprise deployment tooling | Black-box PII; $25K/engagement; no LCD scoring |
+| **Soroco Scout** | Windows agent | Enterprise deployment tooling | Black-box PII; $25K/engagement; no Consensus scoring |
 | **Microsoft Viva Insights** | M365 behavioral data | Zero-deploy for M365 shops | M365 only; no desktop-wide capture |
 
 ### 4.3 WorkGraphIQ's Windows Positioning
@@ -637,7 +637,7 @@ Identical to macOS PRD Section 15.5. All registration, configuration, consent, p
 |-----------|:-------------------:|:------------------:|:-----------------:|:------------:|
 | Knowledge graph integration | Yes | No | No | No |
 | Evidence triangulation | Yes | No | No | No |
-| Least Common Denominator (LCD) confidence scoring | Yes | No | No | No |
+| Consensus confidence scoring | Yes | No | No | No |
 | Mandatory 4-layer PII | Yes | Config-based | Config-based | Config-based |
 | Cross-platform (macOS + Windows) | Yes | Windows only | Windows only | Windows only |
 | Engagement mode (auto-disable) | Yes | No | No | No |

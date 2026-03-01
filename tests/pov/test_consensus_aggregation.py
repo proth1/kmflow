@@ -1,4 +1,4 @@
-"""BDD tests for LCD Steps 1-2: Evidence Aggregation and Entity Extraction.
+"""BDD tests for Consensus Steps 1-2: Evidence Aggregation and Entity Extraction.
 
 Story #303: Collect all evidence for a scoped business area and extract
 process elements (activities, decisions, roles, systems) from each evidence

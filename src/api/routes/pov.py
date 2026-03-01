@@ -1,7 +1,7 @@
 """POV (Process Point of View) API routes.
 
 Provides endpoints for generating, retrieving, and inspecting
-process models created by the LCD algorithm.
+process models created by the consensus algorithm.
 """
 
 from __future__ import annotations
@@ -80,7 +80,7 @@ class POVGenerateRequest(BaseModel):
 
     engagement_id: str = Field(..., description="Engagement UUID")
     scope: str = Field(default="all", description="Scope filter for evidence")
-    generated_by: str = Field(default="lcd_algorithm", description="Generator identifier")
+    generated_by: str = Field(default="consensus_algorithm", description="Generator identifier")
 
 
 class POVGenerateResponse(BaseModel):
@@ -376,7 +376,7 @@ async def trigger_pov_generation(
 ) -> dict[str, Any]:
     """Trigger POV generation for an engagement.
 
-    Runs the LCD algorithm synchronously (MVP) and returns a job ID
+    Runs the consensus algorithm synchronously (MVP) and returns a job ID
     for tracking. In a future version, this would dispatch to a
     background task queue.
     """
@@ -512,7 +512,7 @@ async def get_job_progress(
     """Get detailed progress for a POV generation task.
 
     Returns current step, step name, completion percentage, and per-step
-    results for monitoring the 8-step LCD algorithm pipeline.
+    results for monitoring the 8-step consensus algorithm pipeline.
     """
     job = await _get_job(request, job_id)
     if job is None:

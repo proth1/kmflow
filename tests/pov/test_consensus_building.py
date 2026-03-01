@@ -1,9 +1,9 @@
-"""Tests for Weighted Consensus Building with LCD Algorithm — Story #310.
+"""Tests for Weighted Consensus Building with Consensus Algorithm — Story #310.
 
 Covers all 5 BDD scenarios:
 1. Activity included via weighted agreement across source types
 2. System data overrides conflicting job aid
-3. Low-weight source activity included with lower confidence (LCD inclusivity)
+3. Low-weight source activity included with lower confidence (consensus inclusivity)
 4. Recency bias breaks ties between conflicting sources of equal weight
 5. Multiple process variants annotated in output
 """
@@ -208,8 +208,8 @@ class TestBDDScenario2SystemOverride:
 
         assert system_elem.weighted_vote_score > jobaid_elem.weighted_vote_score
 
-    def test_both_paths_included_lcd_inclusivity(self) -> None:
-        """Both paths are included in the consensus (LCD inclusivity)."""
+    def test_both_paths_included_consensus_inclusivity(self) -> None:
+        """Both paths are included in the consensus (consensus inclusivity)."""
         ev_system = _make_evidence(EvidenceCategory.STRUCTURED_DATA)
         ev_jobaid = _make_evidence(EvidenceCategory.JOB_AIDS_EDGE_CASES)
 
@@ -236,7 +236,7 @@ class TestBDDScenario3LowWeightInclusion:
     """Given Activity 'Manual Override Step' is only in job aids (weight: 0.3)
     And no other evidence source mentions this activity
     When consensus building runs
-    Then 'Manual Override Step' is included (LCD inclusivity)
+    Then 'Manual Override Step' is included (consensus inclusivity)
     And its source_reliability is ~0.3
     And its brightness_hint is 'dim' or 'dark'.
     """
@@ -354,7 +354,7 @@ class TestBDDScenario4RecencyBias:
         assert compute_recency_factor(now, reference_date=now) == 1.0
 
     def test_both_conflicting_sources_included(self) -> None:
-        """Both conflicting sources remain in LCD-inclusive consensus."""
+        """Both conflicting sources remain in inclusive consensus."""
         now = datetime.now(tz=UTC)
         ev_old = _make_evidence(EvidenceCategory.DOCUMENTS, source_date=now - timedelta(days=1000))
         ev_new = _make_evidence(EvidenceCategory.DOCUMENTS, source_date=now - timedelta(days=30))

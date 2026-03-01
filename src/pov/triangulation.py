@@ -1,4 +1,4 @@
-"""Cross-source triangulation for the LCD algorithm.
+"""Cross-source triangulation for the consensus algorithm.
 
 Step 3: Validates elements across multiple evidence sources, computes
 triangulation scores, and categorizes elements by corroboration level.

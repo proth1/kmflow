@@ -77,7 +77,7 @@ POV generation takes "<4 hours" but the API is synchronous (`POST /api/v1/pov/ge
 ### Theme 8: BPMN Assembly Lacks Process Discovery
 **Raised by**: Process Mining Specialist (critical), AI/ML Engineer (supporting)
 
-The LCD algorithm extracts entities and counts how many sources mention each one, but never reconstructs the behavioral relationships between them. BPMN assembly sorts activities by confidence score (not temporal sequence) and connects them in a linear chain. No parallelism, branching, loops, or gateway logic. No process discovery algorithm (Alpha Miner, Heuristic Miner, etc.) exists.
+The Consensus algorithm extracts entities and counts how many sources mention each one, but never reconstructs the behavioral relationships between them. BPMN assembly sorts activities by confidence score (not temporal sequence) and connects them in a linear chain. No parallelism, branching, loops, or gateway logic. No process discovery algorithm (Alpha Miner, Heuristic Miner, etc.) exists.
 
 **Consensus recommendation**: Add a "Process Structure Discovery" step that builds a directed graph from `PRECEDES` edges, identifies split/join patterns, and validates BPMN structural soundness. Activity ordering must derive from evidence, not confidence scores.
 
@@ -145,7 +145,7 @@ Many entities exist in both stores with no defined consistency model. No specifi
 
 ## Dissenting Views (Resolved)
 
-- **LCD terminology**: Process Mining Specialist recommended renaming "LCD" to "Evidence-Weighted Consensus" since the algorithm is permissive (includes anything mentioned), not conservative (only what everyone agrees on). **Resolution**: Keep "LCD" as David's brand term but add inline clarification throughout the PRD that the algorithm is evidence-weighted and inclusive, not limited to universal agreement. The term traces to David's original call (speech-to-text captured "least competent nominator"); the meaning is now explicit.
+- **Consensus terminology**: Process Mining Specialist recommended renaming to "Consensus algorithm" since the algorithm is permissive (includes anything mentioned), not conservative (only what everyone agrees on). **Resolution**: Use "Consensus algorithm" as the canonical term, with inline clarification throughout the PRD that the algorithm is evidence-weighted and inclusive, not limited to universal agreement. The concept traces to David's original requirements; the meaning is now explicit.
 - **Monolith vs microservices**: Enterprise Architect recommends documenting the current state as a "modular monolith" with decomposition roadmap. **Resolution**: Applied in Section 14 — architecture diagram described as logical service boundaries, not deployment units.
 - **Open/Closed World Assumption**: KM/Ontology Expert recommended OWA by default with CWA for specific queries. **Resolution**: Applied in Section 6.2 — OWA default (consistent with evidence-first philosophy and brightness model), CWA only for Control Gap detection against specific regulatory frameworks.
 
@@ -154,5 +154,5 @@ Many entities exist in both stores with no defined consistency model. No specifi
 ## Next Steps
 
 1. ~~Apply the Top 10 PRD changes to `docs/prd/PRD_KMFlow_Platform.md` → version 2.1.0~~ ✓ Done
-2. ~~Resolve LCD terminology and OWA/CWA decisions~~ ✓ Resolved in PRD v2.1.0
+2. ~~Resolve Consensus terminology and OWA/CWA decisions~~ ✓ Resolved in PRD v2.1.0
 3. Decompose revised PRD into GitHub Issues backlog

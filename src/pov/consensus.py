@@ -1,12 +1,12 @@
-"""Consensus building for the LCD algorithm.
+"""Consensus building for the consensus algorithm.
 
-Step 4 (Steps 6-7 of the 8-step LCD algorithm): Applies weighted voting by
+Step 4 (Steps 6-7 of the 8-step consensus algorithm): Applies weighted voting by
 evidence type to build an inclusive first-pass consensus model. Weight hierarchy:
 System data (highest) > Process docs > Communications > Interviews > Surveys >
 Job aids (lowest). Includes recency bias for breaking ties, variant detection,
 and ConflictStub forwarding.
 
-LCD Inclusivity: ALL elements with any evidence support are included in the
+Consensus Inclusivity: ALL elements with any evidence support are included in the
 consensus model (not just those with majority agreement). Confidence reflects
 the level of support.
 """
@@ -110,7 +110,7 @@ class ConsensusResult:
     """Complete result from consensus building.
 
     Attributes:
-        elements: All consensus elements (LCD inclusive — every element with evidence).
+        elements: All consensus elements (inclusive — every element with evidence).
         variants: Detected process variants with annotations.
         conflict_stubs: Conflicts forwarded to contradiction resolution step.
     """
@@ -341,7 +341,7 @@ def build_consensus(
 ) -> ConsensusResult:
     """Build consensus model using weighted voting by evidence type.
 
-    LCD Inclusivity: ALL elements with any evidence support are included
+    Consensus Inclusivity: ALL elements with any evidence support are included
     (not just those with consensus). Confidence score reflects the level
     of weighted agreement across sources.
 

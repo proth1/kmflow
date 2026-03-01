@@ -58,7 +58,7 @@ sequenceDiagram
     E->>S: Build Semantic Relationships
     S->>G: Store Knowledge Graph
     C->>A: Generate POV
-    A->>P: LCD Algorithm
+    A->>P: Consensus Algorithm
     P->>DB: Read Fragments
     P->>G: Read Relationships
     P-->>A: Process Model + Confidence Scores

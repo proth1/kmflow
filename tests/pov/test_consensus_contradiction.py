@@ -1,4 +1,4 @@
-"""BDD tests for LCD contradiction resolution (Story #312).
+"""BDD tests for consensus contradiction resolution (Story #312).
 
 Tests the three-way distinction classifier (naming variant, temporal shift,
 genuine disagreement), severity scoring, ConflictObject creation, and

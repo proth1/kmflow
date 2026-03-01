@@ -1,7 +1,7 @@
 """BDD tests for POV Orchestrator API endpoints (Story #318).
 
 Tests the progress tracking and version history endpoints added to
-complete the orchestrator wiring for the 8-step LCD algorithm.
+complete the orchestrator wiring for the 8-step consensus algorithm.
 """
 
 from __future__ import annotations

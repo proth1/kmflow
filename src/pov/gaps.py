@@ -1,4 +1,4 @@
-"""Evidence gap detection for the LCD algorithm.
+"""Evidence gap detection for the consensus algorithm.
 
 Step 8: Identifies missing evidence, weak coverage, and single-source
 elements to highlight areas needing additional evidence collection.
