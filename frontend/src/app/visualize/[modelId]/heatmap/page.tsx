@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { Suspense, useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ComponentErrorBoundary } from "@/components/ComponentErrorBoundary";
@@ -34,6 +34,14 @@ const BPMNViewer = dynamic(() => import("@/components/BPMNViewer"), {
 const noop = () => {};
 
 export default function HeatmapPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-gray-500">Loading...</div>}>
+      <HeatmapPageContent />
+    </Suspense>
+  );
+}
+
+function HeatmapPageContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const modelId = params.modelId as string;

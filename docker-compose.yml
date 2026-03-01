@@ -280,7 +280,7 @@ services:
       target: dev
       args:
         API_URL: http://backend:8000
-    container_name: kmflow-frontend
+    container_name: kmflow-frontend-dev
     security_opt:
       - no-new-privileges:true
     cap_drop:
