@@ -6,7 +6,7 @@
 
 **MVP COMPLETE + WGI ALIGNED** — Platform MVP done. Windows Task Mining Agent fully implemented. WGI Platform Alignment complete.
 
-- **Current version**: 2026.03.205
+- **Current version**: 2026.03.206
 - **Open issues**: 0
 - **Presentation**: deployed to kmflow.agentic-innovations.com via Cloudflare Pages
 
@@ -16,6 +16,7 @@ No active work. Clean backlog.
 
 ## Recently Completed
 
+- **PR #584**: Fix WebSocket dev mode auth and /ws/taskmining/events endpoint — shared `get_websocket_user()`, Redis Pub/Sub channel constant (#583, merged 2026-03-01)
 - **PR #582**: Rename LCD → Consensus Algorithm across entire codebase — 47 files, POV_STEPS, test renames, BPMN, docs, presentation redeployed (#581, merged 2026-03-01)
 - **PR #580**: Fix tunnel-auth Worker session persistence — Descope refresh retry, tunnel 502/503 handling, Set-Cookie RFC fix (merged 2026-03-01)
 - **PR #577**: Fix frontend "Failed to fetch" via Next.js rewrites proxy, centralize API base URL (merged 2026-03-01)
@@ -75,3 +76,7 @@ The project was built over February 2026 in a rapid sprint:
 - **VCE pipeline**: Memory-only image lifecycle, on-device classification, PII redaction
 
 ---
+
+---
+> SESSION END WARNING (2026-03-01T16:51:11Z): activeContext.md was NOT updated during this session.
+> Branch: main, Uncommitted: 31

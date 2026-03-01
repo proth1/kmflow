@@ -3,6 +3,12 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.206] - 2026-03-01
+### Fixed
+- Fix WebSocket auth: add shared `get_websocket_user()` with dev mode auto-auth (#583)
+- Create `/ws/taskmining/events` endpoint for real-time task mining dashboard events (#583)
+- Refactor existing WS endpoints to use shared auth helper (removes ~50 lines duplication)
+
 ## [2026.03.205] - 2026-03-01
 ### Changed
 - Rename LCD → Consensus Algorithm across entire codebase — 47 files, ~200+ occurrences (#581)

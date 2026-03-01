@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.205
+**Version**: 2026.03.206
 **Last Updated**: 2026-03-01
 
 ## Quick Stats
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.206 | 2026-03-01 | Fix WebSocket auth: shared get_websocket_user() with dev mode, /ws/taskmining/events endpoint (#583) |
 | 2026.03.205 | 2026-03-01 | Rename LCD → Consensus Algorithm across entire codebase — 47 files, ~200+ occurrences (#581) |
 | 2026.02.204 | 2026-03-01 | Fix tunnel-auth session persistence — Descope refresh retry, tunnel 502/503 handling, Set-Cookie RFC fix (#578) |
 | 2026.02.203 | 2026-03-01 | Fix frontend "Failed to fetch" via Next.js rewrites proxy, centralize API base URL (#577) |
