@@ -3,6 +3,13 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.209] - 2026-03-01
+### Added
+- State Street APEX presentation auth: custom domain, CF Access, service token, safety comment (#586)
+- Redesign slides 12, 15, 17 with icons, structured layouts, color-coded cards, timeline flows (#586)
+### Changed
+- Deployment rules: Pages-only deploys for content changes; multi-presentation architecture reference (#586)
+
 ## [2026.03.208] - 2026-03-01
 ### Fixed
 - Fix duplicate container_name conflict + add Suspense to heatmap page (PR #585 review follow-up)
