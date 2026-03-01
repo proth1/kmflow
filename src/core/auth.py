@@ -309,6 +309,17 @@ async def get_current_user(
     token = credentials.credentials if credentials is not None else request.cookies.get(ACCESS_COOKIE_NAME)
 
     if token is None:
+        # Dev mode: auto-authenticate as the first platform_admin user
+        if settings.auth_dev_mode:
+            session_factory = request.app.state.db_session_factory
+            async with session_factory() as session:
+                result = await session.execute(
+                    select(User).where(User.role == "platform_admin", User.is_active == True).limit(1)  # noqa: E712
+                )
+                dev_user = result.scalar_one_or_none()
+            if dev_user is not None:
+                logger.debug("Auth dev mode: auto-authenticated as %s", dev_user.email)
+                return dev_user
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
