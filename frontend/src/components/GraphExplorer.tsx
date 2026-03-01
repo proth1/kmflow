@@ -47,6 +47,7 @@ export default function GraphExplorer({ nodes, edges }: GraphExplorerProps) {
   const [selectedNode, setSelectedNode] = useState<Record<string, unknown> | null>(null);
   const [nodeTypes, setNodeTypes] = useState<string[]>([]);
   const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set());
+  const [graphReady, setGraphReady] = useState(false);
 
   // Extract unique node types
   useEffect(() => {
@@ -58,6 +59,7 @@ export default function GraphExplorer({ nodes, edges }: GraphExplorerProps) {
   const initCytoscape = useCallback(async () => {
     if (!containerRef.current) return;
 
+    setGraphReady(false);
     const cytoscape = (await import("cytoscape")).default;
 
     if (cyRef.current) {
@@ -129,6 +131,7 @@ export default function GraphExplorer({ nodes, edges }: GraphExplorerProps) {
     });
 
     cyRef.current = cy;
+    setGraphReady(true);
   }, [nodes, edges, layout, activeTypes]);
 
   useEffect(() => {
@@ -216,10 +219,20 @@ export default function GraphExplorer({ nodes, edges }: GraphExplorerProps) {
           ))}
         </div>
 
-        <div
-          ref={containerRef}
-          className="flex-1 rounded-lg border border-gray-200 bg-white min-h-[500px]"
-        />
+        <div className="relative flex-1">
+          {!graphReady && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg border border-gray-200 bg-white">
+              <div className="text-center">
+                <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+                <p className="text-sm text-gray-500">Rendering graph...</p>
+              </div>
+            </div>
+          )}
+          <div
+            ref={containerRef}
+            className="h-full rounded-lg border border-gray-200 bg-white min-h-[500px]"
+          />
+        </div>
       </div>
 
       {selectedNode && (

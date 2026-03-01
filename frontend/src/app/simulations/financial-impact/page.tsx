@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { Suspense, useState, useCallback, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeftRight, RefreshCw } from "lucide-react";
 import {
@@ -44,6 +44,14 @@ function impactToCostRange(impact: FinancialImpactData): CostRange {
 }
 
 export default function FinancialImpactPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-gray-500">Loading...</div>}>
+      <FinancialImpactContent />
+    </Suspense>
+  );
+}
+
+function FinancialImpactContent() {
   const searchParams = useSearchParams();
   const engagementId = searchParams.get("engagement_id") ?? "";
 

@@ -416,5 +416,3 @@ export default function CapturePolicyPage() {
     </div>
   );
 }
-
-export { isValidBundleId };

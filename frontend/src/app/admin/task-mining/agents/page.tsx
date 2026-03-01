@@ -312,5 +312,3 @@ export default function AgentManagementPage() {
     </div>
   );
 }
-
-export { AgentStatusBadge, formatTimeAgo };
