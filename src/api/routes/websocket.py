@@ -12,13 +12,13 @@ import json
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, Query, Request, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
 
-from src.core.auth import decode_token, get_current_user, get_websocket_user, is_token_blacklisted
+from src.core.auth import get_current_user, get_websocket_user
 from src.core.config import get_settings
 from src.core.models import EngagementMember, User, UserRole
-from src.core.redis import CHANNEL_ALERTS, CHANNEL_DEVIATIONS, CHANNEL_MONITORING
+from src.core.redis import CHANNEL_ALERTS, CHANNEL_DEVIATIONS, CHANNEL_MONITORING, CHANNEL_TASK_MINING
 
 logger = logging.getLogger(__name__)
 
@@ -313,7 +313,7 @@ async def taskmining_events_websocket(
     try:
         redis_client = websocket.app.state.redis_client
         pubsub = redis_client.pubsub()
-        await pubsub.subscribe("taskmining:events")
+        await pubsub.subscribe(CHANNEL_TASK_MINING)
 
         while True:
             # Check Redis for published events
@@ -334,10 +334,10 @@ async def taskmining_events_websocket(
                 pass
     except WebSocketDisconnect:
         logger.debug("Task mining WS client disconnected (user %s)", user.email)
-    except Exception:
+    except Exception:  # Intentionally broad: WebSocket event loop must not crash
         logger.exception("Task mining WS error")
     finally:
-        await pubsub.unsubscribe("taskmining:events")
+        await pubsub.unsubscribe(CHANNEL_TASK_MINING)
         await pubsub.close()
         logger.info("Task mining WS cleaned up for user %s", user.email)
 
