@@ -1,0 +1,2004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>State Street x Apex Fintech Solutions — KMFlow Solution Architecture</title>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans+Condensed:wght@300;700&family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <style>
+    :root {
+      --kmflow-blue: #00338D;
+      --kmflow-medium-blue: #005EB8;
+      --kmflow-light-blue: #0091DA;
+      --kmflow-dark-navy: #001D48;
+      --kmflow-white: #ffffff;
+      --kmflow-light-gray: #f5f5f5;
+      --kmflow-medium-gray: #666666;
+      --kmflow-dark-gray: #333333;
+      --accent-gold: #D4A843;
+      --accent-green: #2D8B4E;
+      --accent-red: #C23B22;
+      --accent-orange: #E67E22;
+      --font-heading: 'Open Sans Condensed', 'Arial Narrow', sans-serif;
+      --font-body: 'Open Sans', Arial, Helvetica, sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; overflow: hidden; height: 100%; }
+
+    body {
+      font-family: var(--font-body);
+      color: var(--kmflow-dark-gray);
+      line-height: 1.6;
+      overflow: hidden;
+      height: 100%;
+      margin: 0;
+    }
+
+    .slides-container {
+      scroll-snap-type: y proximity;
+      overflow-y: scroll;
+      overflow-x: hidden;
+      height: 100vh;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .slides-container::-webkit-scrollbar { width: 0; background: transparent; }
+
+    /* --- Navigation --- */
+    .top-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: rgba(0, 29, 72, 0.95);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      z-index: 1000;
+      border-bottom: 2px solid var(--accent-gold);
+    }
+    .top-nav .nav-title {
+      color: var(--kmflow-white);
+      font-family: var(--font-heading);
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .top-nav .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .top-nav .nav-badge {
+      background: var(--accent-gold);
+      color: var(--kmflow-dark-navy);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 3px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .toc-btn {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.3);
+      color: var(--kmflow-white);
+      padding: 6px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: all 0.2s;
+    }
+    .toc-btn:hover { background: rgba(255,255,255,0.1); border-color: var(--accent-gold); }
+
+    /* --- Slide Indicators --- */
+    .slide-indicator {
+      position: fixed;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 999;
+    }
+    .slide-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(0, 51, 141, 0.3);
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .slide-dot:hover { background: var(--kmflow-light-blue); transform: scale(1.3); }
+    .slide-dot.active { background: var(--kmflow-blue); transform: scale(1.4); }
+
+    /* --- Slides --- */
+    .slide {
+      min-height: 100vh;
+      height: auto;
+      scroll-snap-align: start;
+      padding: 80px 4rem 4rem;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow-y: visible;
+    }
+
+    .slide-hero {
+      background: linear-gradient(135deg, var(--kmflow-dark-navy) 0%, var(--kmflow-blue) 50%, var(--kmflow-medium-blue) 100%);
+      color: var(--kmflow-white);
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    .slide-light { background: var(--kmflow-white); }
+    .slide-dark {
+      background: linear-gradient(135deg, var(--kmflow-dark-navy) 0%, #002255 100%);
+      color: var(--kmflow-white);
+    }
+    .slide-gradient {
+      background: linear-gradient(135deg, var(--kmflow-blue) 0%, var(--kmflow-medium-blue) 50%, var(--kmflow-light-blue) 100%);
+      color: var(--kmflow-white);
+    }
+    .slide-gray { background: var(--kmflow-light-gray); }
+
+    .slide-footer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 2rem;
+      font-size: 0.7rem;
+      color: rgba(128,128,128,0.6);
+      border-top: 1px solid rgba(128,128,128,0.1);
+    }
+    .slide-dark .slide-footer,
+    .slide-gradient .slide-footer,
+    .slide-hero .slide-footer { color: rgba(255,255,255,0.3); border-top-color: rgba(255,255,255,0.1); }
+
+    /* --- Section Headers --- */
+    .section-header { margin-bottom: 2rem; }
+    .section-header h2 {
+      font-family: var(--font-heading);
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    .section-header p {
+      font-size: 1rem;
+      opacity: 0.8;
+      max-width: 700px;
+    }
+    .slide-dark .section-header h2,
+    .slide-gradient .section-header h2 { color: var(--kmflow-white); }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 3px;
+      margin-bottom: 0.5rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .badge-blue { background: var(--kmflow-light-blue); color: white; }
+    .badge-gold { background: var(--accent-gold); color: var(--kmflow-dark-navy); }
+    .badge-green { background: var(--accent-green); color: white; }
+
+    /* --- Cards --- */
+    .card-grid {
+      display: grid;
+      gap: 1.5rem;
+      flex: 1;
+    }
+    .card-grid-2 { grid-template-columns: repeat(2, 1fr); }
+    .card-grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .card-grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      border-left: 4px solid var(--kmflow-light-blue);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+    .card h3 {
+      font-family: var(--font-heading);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--kmflow-blue);
+      margin-bottom: 0.5rem;
+    }
+    .card p { font-size: 0.85rem; color: var(--kmflow-medium-gray); line-height: 1.5; }
+
+    .card-dark {
+      background: rgba(255,255,255,0.08);
+      border-left-color: var(--accent-gold);
+    }
+    .card-dark h3 { color: var(--accent-gold); }
+    .card-dark p { color: rgba(255,255,255,0.75); }
+
+    .card-gradient {
+      background: rgba(255,255,255,0.12);
+      border-left-color: var(--kmflow-white);
+      backdrop-filter: blur(5px);
+    }
+    .card-gradient h3 { color: var(--kmflow-white); }
+    .card-gradient p { color: rgba(255,255,255,0.8); }
+
+    /* --- Tables --- */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin-top: 1rem;
+    }
+    .data-table th {
+      background: var(--kmflow-blue);
+      color: white;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .data-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #eee;
+    }
+    .data-table tr:hover td { background: rgba(0,145,218,0.05); }
+    .data-table .dark th { background: var(--accent-gold); color: var(--kmflow-dark-navy); }
+    .data-table .dark td { color: rgba(255,255,255,0.85); border-bottom-color: rgba(255,255,255,0.1); }
+
+    /* --- Hero Stats --- */
+    .hero-title {
+      font-family: var(--font-heading);
+      font-size: 3rem;
+      font-weight: 700;
+      line-height: 1.15;
+      margin-bottom: 1rem;
+      max-width: 900px;
+    }
+    .hero-subtitle {
+      font-size: 1.2rem;
+      opacity: 0.85;
+      margin-bottom: 2.5rem;
+      font-weight: 300;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2rem;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .stat-item {
+      text-align: center;
+    }
+    .stat-value {
+      font-family: var(--font-heading);
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: var(--accent-gold);
+    }
+    .stat-label {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* --- Timeline --- */
+    .timeline-container {
+      position: relative;
+      margin: 2rem 0;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .timeline-bar {
+      height: 6px;
+      background: #ddd;
+      border-radius: 3px;
+      position: relative;
+      margin: 3rem 0;
+    }
+    .timeline-segment {
+      position: absolute;
+      height: 100%;
+      border-radius: 3px;
+    }
+    .timeline-label {
+      position: absolute;
+      top: -45px;
+      font-family: var(--font-heading);
+      font-size: 1rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .timeline-weeks {
+      position: absolute;
+      bottom: -25px;
+      font-size: 0.75rem;
+      color: var(--kmflow-medium-gray);
+    }
+    .timeline-phase-card {
+      background: white;
+      border-radius: 8px;
+      padding: 1.2rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+      margin-bottom: 1rem;
+    }
+    .timeline-phase-card h4 {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+    .timeline-phase-card p { font-size: 0.82rem; color: var(--kmflow-medium-gray); }
+
+    /* --- Two Column --- */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      flex: 1;
+    }
+    .col-header {
+      font-family: var(--font-heading);
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 3px solid var(--kmflow-light-blue);
+    }
+
+    /* --- Evidence List --- */
+    .evidence-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .evidence-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+    .evidence-icon.telemetry { background: #E8F5E9; }
+    .evidence-icon.docs { background: #E3F2FD; }
+    .evidence-icon.regulatory { background: #FFF3E0; }
+    .evidence-icon.policy { background: #F3E5F5; }
+    .evidence-icon.comms { background: #E0F7FA; }
+    .evidence-icon.api { background: #FFF9C4; }
+    .evidence-item-text h5 {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--kmflow-dark-gray);
+      margin-bottom: 2px;
+    }
+    .evidence-item-text p {
+      font-size: 0.72rem;
+      color: var(--kmflow-medium-gray);
+    }
+
+    /* --- Knowledge Graph Viz --- */
+    #graph-viz {
+      flex: 1;
+      min-height: 400px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    #graph-viz svg { width: 100%; height: 100%; }
+
+    /* --- Confidence Heatmap --- */
+    .domain-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.8rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .domain-label {
+      width: 160px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+    .confidence-bar {
+      flex: 1;
+      height: 28px;
+      border-radius: 4px;
+      display: flex;
+      overflow: hidden;
+    }
+    .conf-bright { background: var(--accent-green); }
+    .conf-dim { background: var(--accent-orange); }
+    .conf-dark { background: rgba(255,255,255,0.15); }
+    .conf-segment {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: white;
+      min-width: 30px;
+    }
+
+    /* --- TOM Hexagons --- */
+    .tom-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      flex: 1;
+      align-content: center;
+    }
+    .tom-card {
+      background: rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.2);
+      transition: transform 0.2s;
+    }
+    .tom-card:hover { transform: scale(1.02); }
+    .tom-card .tom-icon {
+      font-size: 2rem;
+      margin-bottom: 0.75rem;
+      display: block;
+    }
+    .tom-card h4 {
+      font-family: var(--font-heading);
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    .tom-card p {
+      font-size: 0.78rem;
+      opacity: 0.8;
+      line-height: 1.4;
+    }
+
+    /* --- Gap Status --- */
+    .gap-legend {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .gap-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .gap-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+    }
+    .gap-full { background: var(--accent-red); }
+    .gap-partial { background: var(--accent-orange); }
+    .gap-deviation { background: var(--accent-gold); }
+    .gap-none { background: var(--accent-green); }
+
+    #radar-chart {
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    /* --- Governance Chain --- */
+    .gov-chain {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      padding: 0.8rem 0;
+      flex-wrap: wrap;
+    }
+    .gov-node {
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .gov-process { background: rgba(0,145,218,0.3); color: white; }
+    .gov-policy { background: rgba(212,168,67,0.3); color: var(--accent-gold); }
+    .gov-control { background: rgba(45,139,78,0.3); color: #5CDB95; }
+    .gov-regulation { background: rgba(194,59,34,0.3); color: #F08080; }
+    .gov-arrow {
+      color: rgba(255,255,255,0.4);
+      font-size: 0.9rem;
+      padding: 0 6px;
+    }
+    .gov-arrow-label {
+      font-size: 0.55rem;
+      color: rgba(255,255,255,0.4);
+      display: block;
+      text-align: center;
+    }
+
+    /* --- Roadmap --- */
+    .roadmap-phase {
+      display: flex;
+      align-items: stretch;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .roadmap-marker {
+      width: 50px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .roadmap-dot {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--kmflow-light-blue);
+      flex-shrink: 0;
+    }
+    .roadmap-line {
+      width: 2px;
+      flex: 1;
+      background: #ddd;
+    }
+    .roadmap-content {
+      flex: 1;
+      background: white;
+      border-radius: 8px;
+      padding: 1rem 1.2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .roadmap-content h4 {
+      font-family: var(--font-heading);
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--kmflow-blue);
+      margin-bottom: 0.3rem;
+    }
+    .roadmap-tag {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 3px;
+      margin-right: 6px;
+      text-transform: uppercase;
+    }
+    .tag-quick { background: #E8F5E9; color: #2D8B4E; }
+    .tag-foundation { background: #E3F2FD; color: #1565C0; }
+    .tag-transform { background: #FFF3E0; color: #E65100; }
+    .tag-optimize { background: #F3E5F5; color: #7B1FA2; }
+
+    /* --- Differentiator --- */
+    .diff-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 1.2rem;
+      flex: 1;
+      align-content: center;
+    }
+    .diff-card {
+      text-align: center;
+      padding: 1.5rem 1rem;
+    }
+    .diff-number {
+      font-family: var(--font-heading);
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--accent-gold);
+      margin-bottom: 0.5rem;
+    }
+    .diff-card h4 {
+      font-family: var(--font-heading);
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+    .diff-card p {
+      font-size: 0.75rem;
+      opacity: 0.75;
+      line-height: 1.4;
+    }
+
+    /* --- Economics --- */
+    .econ-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+      flex: 1;
+      align-content: center;
+    }
+    .econ-card {
+      background: rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 2rem;
+      text-align: center;
+      border-top: 4px solid var(--accent-gold);
+    }
+    .econ-value {
+      font-family: var(--font-heading);
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--accent-gold);
+    }
+    .econ-label {
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+      opacity: 0.8;
+    }
+    .econ-detail {
+      font-size: 0.75rem;
+      margin-top: 0.75rem;
+      opacity: 0.6;
+      line-height: 1.5;
+    }
+
+    /* --- TOC Modal --- */
+    .toc-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+    .toc-overlay.active { display: flex; }
+    .toc-modal {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .toc-modal h3 {
+      font-family: var(--font-heading);
+      font-size: 1.5rem;
+      color: var(--kmflow-blue);
+      margin-bottom: 1rem;
+    }
+    .toc-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+      text-decoration: none;
+      color: inherit;
+    }
+    .toc-item:hover { background: var(--kmflow-light-gray); }
+    .toc-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--kmflow-blue);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .toc-text { font-size: 0.9rem; font-weight: 600; }
+    .toc-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--kmflow-medium-gray);
+    }
+
+    /* --- Responsive --- */
+    @media (max-width: 900px) {
+      .slide { padding: 70px 2rem 3rem; }
+      .hero-title { font-size: 2rem; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+      .card-grid-2, .card-grid-3, .card-grid-4 { grid-template-columns: 1fr; }
+      .two-col { grid-template-columns: 1fr; }
+      .tom-grid { grid-template-columns: repeat(2, 1fr); }
+      .diff-grid { grid-template-columns: repeat(2, 1fr); }
+      .econ-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <nav class="top-nav">
+    <div class="nav-title">KMFLOW PLATFORM</div>
+    <div class="nav-right">
+      <span class="nav-badge">Confidential</span>
+      <button class="toc-btn" onclick="openTocModal()">Contents</button>
+    </div>
+  </nav>
+
+  <!-- Slide Indicators -->
+  <div class="slide-indicator" id="slideIndicator"></div>
+
+  <!-- TOC Modal -->
+  <div class="toc-overlay" id="tocOverlay">
+    <div class="toc-modal" style="position:relative;">
+      <button class="toc-close" onclick="closeTocModal()">&times;</button>
+      <h3>Contents</h3>
+      <div id="tocList"></div>
+    </div>
+  </div>
+
+  <div class="slides-container" id="slidesContainer">
+
+    <!-- ===================== SLIDE 1: HERO ===================== -->
+    <section id="slide-1" class="slide slide-hero" data-title="Title">
+      <div class="hero-title">State Street x Apex Fintech Solutions</div>
+      <div class="hero-subtitle">Process Integration & Operating Model Transformation</div>
+      <p style="font-size: 0.9rem; opacity: 0.7; margin-bottom: 2.5rem;">KMFlow Platform &mdash; Solution Architecture</p>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-value">$49T</div>
+          <div class="stat-label">AUC/A</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">200+</div>
+          <div class="stat-label">Apex Clients</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">22M</div>
+          <div class="stat-label">Brokerage Accounts</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">100+</div>
+          <div class="stat-label">Markets</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 1</span>
+      </div>
+    </section>
+
+    <!-- ===================== SLIDE 2: THE CHALLENGE ===================== -->
+    <section id="slide-2" class="slide slide-light" data-title="The Challenge">
+      <div class="section-header">
+        <span class="badge badge-blue">Context</span>
+        <h2>The Challenge</h2>
+        <p>Two massive platforms must become one seamless experience for wealth advisors and self-directed investors worldwide.</p>
+      </div>
+      <div class="card-grid card-grid-2">
+        <div class="card" style="border-left-color: var(--kmflow-blue);">
+          <h3>State Street Corporation</h3>
+          <p style="font-weight: 600; color: var(--kmflow-blue); margin-bottom: 0.75rem;">Institutional Infrastructure</p>
+          <p>$49 trillion in assets under custody/administration. $5.1 trillion in assets under management. Charles River Development front-office platform. Global custody, fund administration, and securities lending across 100+ markets.</p>
+          <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <span class="badge badge-blue">Custody</span>
+            <span class="badge badge-blue">Fund Services</span>
+            <span class="badge badge-blue">CRD Platform</span>
+          </div>
+        </div>
+        <div class="card" style="border-left-color: var(--accent-gold);">
+          <h3>Apex Fintech Solutions</h3>
+          <p style="font-weight: 600; color: var(--accent-gold); margin-bottom: 0.75rem;">Digital Clearing & Custody</p>
+          <p>200+ client firms. 22 million brokerage accounts. $200B+ in assets. API-driven digital clearing and custody platform serving wealth advisors and self-directed investors with modern infrastructure.</p>
+          <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <span class="badge badge-gold">Clearing</span>
+            <span class="badge badge-gold">Digital APIs</span>
+            <span class="badge badge-gold">Advisor Platform</span>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top: 1.5rem; text-align: center; padding: 1rem; background: var(--kmflow-light-gray); border-radius: 8px;">
+        <p style="font-size: 0.9rem; color: var(--kmflow-blue); font-weight: 600;">This is fundamentally a process integration and operating model transformation problem &mdash; exactly what KMFlow was built for.</p>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 2</span>
+      </div>
+    </section>
+
+    <!-- ===================== SLIDE 3: WHY KMFLOW ===================== -->
+    <section id="slide-3" class="slide slide-gradient" data-title="Why KMFlow">
+      <div class="section-header">
+        <span class="badge badge-gold">Platform Fit</span>
+        <h2>Why KMFlow</h2>
+        <p>Every partnership need maps directly to a KMFlow capability.</p>
+      </div>
+      <table class="data-table" style="background: rgba(255,255,255,0.08); border-radius: 8px; overflow: hidden;">
+        <thead>
+          <tr style="background: rgba(255,255,255,0.15);">
+            <th style="background: transparent; color: white;">Partnership Need</th>
+            <th style="background: transparent; color: var(--accent-gold);">KMFlow Capability</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td style="color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.1);">Merge two operating models</td><td style="color: var(--accent-gold); border-color: rgba(255,255,255,0.1); font-weight: 600;">TOM Alignment & Gap Analysis Engine</td></tr>
+          <tr><td style="color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.1);">Map advisor workflows across platforms</td><td style="color: var(--accent-gold); border-color: rgba(255,255,255,0.1); font-weight: 600;">Evidence-first Process Discovery</td></tr>
+          <tr><td style="color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.1);">Ensure regulatory compliance across jurisdictions</td><td style="color: var(--accent-gold); border-color: rgba(255,255,255,0.1); font-weight: 600;">Regulatory-Policy-Control Overlay</td></tr>
+          <tr><td style="color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.1);">Integrate API-driven digital with legacy institutional</td><td style="color: var(--accent-gold); border-color: rgba(255,255,255,0.1); font-weight: 600;">Integration Connectors + Custom Parsers</td></tr>
+          <tr><td style="color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.1);">Launch, scale, and innovate at speed</td><td style="color: var(--accent-gold); border-color: rgba(255,255,255,0.1); font-weight: 600;">Confidence-scored Models + Dark Room Targeting</td></tr>
+          <tr><td style="color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.1);">Global scalability across 100+ markets</td><td style="color: var(--accent-gold); border-color: rgba(255,255,255,0.1); font-weight: 600;">Multi-engagement Scoping, RLS, ABAC</td></tr>
+          <tr><td style="color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.1);">Advisor + self-directed experiences</td><td style="color: var(--accent-gold); border-color: rgba(255,255,255,0.1); font-weight: 600;">Process Variant Detection, Epistemic Frames</td></tr>
+        </tbody>
+      </table>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 3</span>
+      </div>
+    </section>
+
+    <!-- ===================== SLIDE 4: THREE-PHASE APPROACH ===================== -->
+    <section id="slide-4" class="slide slide-light" data-title="Three-Phase Approach">
+      <div class="section-header">
+        <span class="badge badge-blue">Engagement Model</span>
+        <h2>Three-Phase Approach</h2>
+        <p>Overlapping phases accelerate delivery while maintaining evidence integrity.</p>
+      </div>
+      <div class="timeline-container">
+        <div class="timeline-bar">
+          <div class="timeline-segment" style="left: 0%; width: 45%; background: var(--kmflow-light-blue); opacity: 0.9;">
+            <span class="timeline-label" style="color: var(--kmflow-blue);">Phase 1: Discovery</span>
+            <span class="timeline-weeks" style="left: 0;">Week 1</span>
+            <span class="timeline-weeks" style="right: 0;">Week 8</span>
+          </div>
+          <div class="timeline-segment" style="left: 30%; width: 45%; background: var(--accent-gold); opacity: 0.8;">
+            <span class="timeline-label" style="color: var(--accent-gold); left: 10px;">Phase 2: TOM & Gap Analysis</span>
+            <span class="timeline-weeks" style="left: 0;">Week 6</span>
+            <span class="timeline-weeks" style="right: 0;">Week 14</span>
+          </div>
+          <div class="timeline-segment" style="left: 65%; width: 35%; background: var(--accent-green); opacity: 0.8;">
+            <span class="timeline-label" style="color: var(--accent-green); left: 10px;">Phase 3: Continuous</span>
+            <span class="timeline-weeks" style="left: 0;">Week 12</span>
+            <span class="timeline-weeks" style="right: 0;">Ongoing</span>
+          </div>
+        </div>
+        <div style="margin-top: 5rem;">
+          <div class="card-grid card-grid-3">
+            <div class="timeline-phase-card" style="border-top: 4px solid var(--kmflow-light-blue);">
+              <h4 style="color: var(--kmflow-blue);">Process Intelligence</h4>
+              <p>Evidence ingestion from both organizations. Knowledge graph construction. Consensus process views with confidence scoring.</p>
+            </div>
+            <div class="timeline-phase-card" style="border-top: 4px solid var(--accent-gold);">
+              <h4 style="color: var(--accent-gold);">Target Operating Model</h4>
+              <p>6-dimension TOM definition. Automated gap detection. Regulatory-policy-control mapping. Transformation roadmap.</p>
+            </div>
+            <div class="timeline-phase-card" style="border-top: 4px solid var(--accent-green);">
+              <h4 style="color: var(--accent-green);">Continuous Intelligence</h4>
+              <p>Conformance monitoring. Dark Room targeting for evidence gaps. Scenario modeling for integration decisions.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 4</span>
+      </div>
+    </section>
+
+    <!-- ===================== SLIDE 5: EVIDENCE INGESTION ===================== -->
+    <section id="slide-5" class="slide slide-light" data-title="Evidence Ingestion">
+      <div class="section-header">
+        <span class="badge badge-blue">Phase 1</span>
+        <h2>Evidence Ingestion</h2>
+        <p>KMFlow's 15+ parsers ingest diverse evidence from both organizations simultaneously.</p>
+      </div>
+      <div class="two-col">
+        <div>
+          <div class="col-header" style="border-bottom-color: var(--kmflow-blue);">State Street &mdash; Institutional</div>
+          <div class="evidence-item">
+            <div class="evidence-icon telemetry">&#x1F4CA;</div>
+            <div class="evidence-item-text">
+              <h5>System Telemetry</h5>
+              <p>CRD API exports, custody transaction logs, fund accounting data</p>
+            </div>
+          </div>
+          <div class="evidence-item">
+            <div class="evidence-icon docs">&#x1F4C4;</div>
+            <div class="evidence-item-text">
+              <h5>Process Documentation</h5>
+              <p>BPMN/Visio models of custody operations, clearing workflows, NAV processes</p>
+            </div>
+          </div>
+          <div class="evidence-item">
+            <div class="evidence-icon regulatory">&#x2696;</div>
+            <div class="evidence-item-text">
+              <h5>Regulatory Corpus</h5>
+              <p>SEC Rules 15c3-3, 17a-5; FINRA rules; global custody regulations</p>
+            </div>
+          </div>
+          <div class="evidence-item">
+            <div class="evidence-icon policy">&#x1F4DC;</div>
+            <div class="evidence-item-text">
+              <h5>Policy Documents</h5>
+              <p>Compliance policies, KYC/AML procedures, fiduciary standards</p>
+            </div>
+          </div>
+          <div class="evidence-item">
+            <div class="evidence-icon comms">&#x1F5E3;</div>
+            <div class="evidence-item-text">
+              <h5>Communications</h5>
+              <p>Stakeholder interviews, workshop transcripts from custody SMEs</p>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="col-header" style="border-bottom-color: var(--accent-gold);">Apex &mdash; Digital</div>
+          <div class="evidence-item">
+            <div class="evidence-icon api">&#x1F517;</div>
+            <div class="evidence-item-text">
+              <h5>API Specifications</h5>
+              <p>OpenAPI/Swagger for Clearing, Advisor Solutions, Silver APIs</p>
+            </div>
+          </div>
+          <div class="evidence-item">
+            <div class="evidence-icon telemetry">&#x1F4CA;</div>
+            <div class="evidence-item-text">
+              <h5>System Telemetry</h5>
+              <p>Brokerage account events, clearing logs, custody movements</p>
+            </div>
+          </div>
+          <div class="evidence-item">
+            <div class="evidence-icon docs">&#x1F4C4;</div>
+            <div class="evidence-item-text">
+              <h5>Platform Documentation</h5>
+              <p>Developer guides, integration playbooks, onboarding workflows</p>
+            </div>
+          </div>
+          <div class="evidence-item">
+            <div class="evidence-icon regulatory">&#x2696;</div>
+            <div class="evidence-item-text">
+              <h5>Regulatory Filings</h5>
+              <p>FINRA membership docs, clearing agency registrations</p>
+            </div>
+          </div>
+          <div class="evidence-item">
+            <div class="evidence-icon comms">&#x1F5E3;</div>
+            <div class="evidence-item-text">
+              <h5>Client Integration Patterns</h5>
+              <p>Reference architectures from 200+ existing Apex client integrations</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 5</span>
+      </div>
+    </section>
+
+    <!-- ===================== SLIDE 6: KNOWLEDGE GRAPH ===================== -->
+    <section id="slide-6" class="slide slide-dark" data-title="Knowledge Graph">
+      <div class="section-header">
+        <span class="badge badge-gold">Phase 1</span>
+        <h2>Unified Knowledge Graph</h2>
+        <p>KMFlow's semantic engine builds a single graph from both organizations' evidence &mdash; preserving each side's perspective.</p>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; flex: 1;">
+        <div id="graph-viz"></div>
+        <div style="display: flex; flex-direction: column; gap: 1rem; justify-content: center;">
+          <div class="card card-dark">
+            <h3>Entity Extraction</h3>
+            <p>Activities, decisions, roles, systems, and documents across both organizations identified and linked.</p>
+          </div>
+          <div class="card card-dark">
+            <h3>Cross-Source Triangulation</h3>
+            <p>Where State Street and Apex describe overlapping processes, detect agreement, naming variants, and genuine conflicts.</p>
+          </div>
+          <div class="card card-dark">
+            <h3>Epistemic Frames</h3>
+            <p>Preserve institutional and digital-first views as separate frames. No premature resolution of conflicting perspectives.</p>
+          </div>
+          <div class="card card-dark">
+            <h3>Controlled Vocabulary</h3>
+            <p>PRECEDES, TRIGGERS, DEPENDS_ON, GOVERNED_BY &mdash; standardized relationship types across the combined landscape.</p>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 6</span>
+      </div>
+    </section>
+
+    <!-- ===================== SLIDE 7: CONSENSUS PROCESS VIEWS ===================== -->
+    <section id="slide-7" class="slide slide-dark" data-title="Consensus Process Views">
+      <div class="section-header">
+        <span class="badge badge-gold">Phase 1</span>
+        <h2>Consensus Process Views &mdash; Confidence Scoring</h2>
+        <p>Five business domains, each element scored with KMFlow's three-dimensional confidence model.</p>
+      </div>
+      <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 0.3rem;">
+        <div style="display: flex; gap: 1rem; margin-bottom: 1rem; justify-content: flex-end;">
+          <span class="gap-badge"><span class="gap-dot conf-bright"></span> Bright (Strong Evidence)</span>
+          <span class="gap-badge"><span class="gap-dot conf-dim"></span> Dim (Partial Evidence)</span>
+          <span class="gap-badge"><span class="gap-dot" style="background: rgba(255,255,255,0.2);"></span> Dark (Missing Evidence)</span>
+        </div>
+        <div class="domain-row">
+          <div class="domain-label">Custody Lifecycle</div>
+          <div class="confidence-bar">
+            <div class="conf-segment conf-bright" style="width: 55%;">55%</div>
+            <div class="conf-segment conf-dim" style="width: 30%;">30%</div>
+            <div class="conf-segment conf-dark" style="width: 15%;">15%</div>
+          </div>
+        </div>
+        <div class="domain-row">
+          <div class="domain-label">Clearing Lifecycle</div>
+          <div class="confidence-bar">
+            <div class="conf-segment conf-bright" style="width: 60%;">60%</div>
+            <div class="conf-segment conf-dim" style="width: 25%;">25%</div>
+            <div class="conf-segment conf-dark" style="width: 15%;">15%</div>
+          </div>
+        </div>
+        <div class="domain-row">
+          <div class="domain-label">Advisor Workflow</div>
+          <div class="confidence-bar">
+            <div class="conf-segment conf-bright" style="width: 40%;">40%</div>
+            <div class="conf-segment conf-dim" style="width: 35%;">35%</div>
+            <div class="conf-segment conf-dark" style="width: 25%;">25%</div>
+          </div>
+        </div>
+        <div class="domain-row">
+          <div class="domain-label">Self-Directed Flow</div>
+          <div class="confidence-bar">
+            <div class="conf-segment conf-bright" style="width: 50%;">50%</div>
+            <div class="conf-segment conf-dim" style="width: 30%;">30%</div>
+            <div class="conf-segment conf-dark" style="width: 20%;">20%</div>
+          </div>
+        </div>
+        <div class="domain-row">
+          <div class="domain-label">Compliance Thread</div>
+          <div class="confidence-bar">
+            <div class="conf-segment conf-bright" style="width: 65%;">65%</div>
+            <div class="conf-segment conf-dim" style="width: 25%;">25%</div>
+            <div class="conf-segment conf-dark" style="width: 10%;">10%</div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 7</span>
+      </div>
+    </section>
+
+    <!-- ===================== SLIDE 8: TOM DEFINITION ===================== -->
+    <section id="slide-8" class="slide slide-gradient" data-title="Target Operating Model">
+      <div class="section-header">
+        <span class="badge badge-gold">Phase 2</span>
+        <h2>Target Operating Model</h2>
+        <p>Six dimensions define the combined State Street x Apex target state.</p>
+      </div>
+      <div class="tom-grid">
+        <div class="tom-card">
+          <span class="tom-icon">&#x2699;</span>
+          <h4>Process Architecture</h4>
+          <p>Unified digital-first custody and clearing with institutional-grade controls</p>
+        </div>
+        <div class="tom-card">
+          <span class="tom-icon">&#x1F465;</span>
+          <h4>People & Organization</h4>
+          <p>Blended teams: Apex tech ops combined with State Street custody specialists</p>
+        </div>
+        <div class="tom-card">
+          <span class="tom-icon">&#x1F4BB;</span>
+          <h4>Technology & Data</h4>
+          <p>Apex API layer as front-end, State Street infrastructure as backbone</p>
+        </div>
+        <div class="tom-card">
+          <span class="tom-icon">&#x1F3DB;</span>
+          <h4>Governance Structures</h4>
+          <p>Combined compliance framework spanning SEC, FINRA, and global regulators</p>
+        </div>
+        <div class="tom-card">
+          <span class="tom-icon">&#x1F4C8;</span>
+          <h4>Performance Management</h4>
+          <p>SLA framework: clearing speed, custody accuracy, advisor satisfaction</p>
+        </div>
+        <div class="tom-card">
+          <span class="tom-icon">&#x1F6E1;</span>
+          <h4>Risk & Compliance</h4>
+          <p>Unified risk model: operational, market, credit, regulatory, cyber</p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 8</span>
+      </div>
+    </section>
+
+    <!-- ===================== SLIDE 9: GAP ANALYSIS ===================== -->
+    <section id="slide-9" class="slide slide-light" data-title="Gap Analysis">
+      <div class="section-header">
+        <span class="badge badge-blue">Phase 2</span>
+        <h2>Automated Gap Analysis</h2>
+        <p>KMFlow's TOM alignment engine classifies gaps across every process element and dimension.</p>
+      </div>
+      <div class="gap-legend">
+        <span class="gap-badge"><span class="gap-dot gap-full"></span> Full Gap</span>
+        <span class="gap-badge"><span class="gap-dot gap-partial"></span> Partial Gap</span>
+        <span class="gap-badge"><span class="gap-dot gap-deviation"></span> Deviation</span>
+        <span class="gap-badge"><span class="gap-dot gap-none"></span> No Gap</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 2rem; flex: 1;">
+        <div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Domain</th>
+                <th>Process</th>
+                <th>People</th>
+                <th>Tech</th>
+                <th>Gov</th>
+                <th>Perf</th>
+                <th>Risk</th>
+              </tr>
+            </thead>
+            <tbody id="gapTableBody"></tbody>
+          </table>
+          <div style="margin-top: 1.5rem;">
+            <h4 style="font-family: var(--font-heading); margin-bottom: 0.5rem;">CMMI Maturity Assessment</h4>
+            <p style="font-size: 0.82rem; color: var(--kmflow-medium-gray);">Each domain assessed from Level 1 (Initial) through Level 5 (Optimizing), with evidence-backed rationale for every score.</p>
+          </div>
+        </div>
+        <div id="radar-chart"></div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 9</span>
+      </div>
+    </section>
+
+    <!-- ===================== SLIDE 10: REGULATORY MAPPING ===================== -->
+    <section id="slide-10" class="slide slide-dark" data-title="Regulatory Mapping">
+      <div class="section-header">
+        <span class="badge badge-gold">Phase 2</span>
+        <h2>Regulatory-Policy-Control Mapping</h2>
+        <p>The governance tissue connecting processes to regulations through policies and controls.</p>
+      </div>
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 1.5rem; justify-content: center;">
+        <div class="gov-chain">
+          <div class="gov-node gov-process">Custody Process</div>
+          <div class="gov-arrow"><div class="gov-arrow-label">governed_by</div>&rarr;</div>
+          <div class="gov-node gov-policy">Fiduciary Policy</div>
+          <div class="gov-arrow"><div class="gov-arrow-label">enforced_by</div>&rarr;</div>
+          <div class="gov-node gov-control">Segregation Control</div>
+          <div class="gov-arrow"><div class="gov-arrow-label">satisfies</div>&rarr;</div>
+          <div class="gov-node gov-regulation">SEC Rule 15c3-3</div>
+        </div>
+        <div class="gov-chain">
+          <div class="gov-node gov-process">Clearing Process</div>
+          <div class="gov-arrow"><div class="gov-arrow-label">governed_by</div>&rarr;</div>
+          <div class="gov-node gov-policy">Settlement Policy</div>
+          <div class="gov-arrow"><div class="gov-arrow-label">enforced_by</div>&rarr;</div>
+          <div class="gov-node gov-control">T+1 Control</div>
+          <div class="gov-arrow"><div class="gov-arrow-label">satisfies</div>&rarr;</div>
+          <div class="gov-node gov-regulation">SEC Rule 15c6-1</div>
+        </div>
+        <div class="gov-chain">
+          <div class="gov-node gov-process">Advisor Workflow</div>
+          <div class="gov-arrow"><div class="gov-arrow-label">governed_by</div>&rarr;</div>
+          <div class="gov-node gov-policy">Suitability Policy</div>
+          <div class="gov-arrow"><div class="gov-arrow-label">enforced_by</div>&rarr;</div>
+          <div class="gov-node gov-control">Best Interest Control</div>
+          <div class="gov-arrow"><div class="gov-arrow-label">satisfies</div>&rarr;</div>
+          <div class="gov-node gov-regulation">Regulation BI</div>
+        </div>
+        <div class="gov-chain">
+          <div class="gov-node gov-process">Self-Directed Flow</div>
+          <div class="gov-arrow"><div class="gov-arrow-label">governed_by</div>&rarr;</div>
+          <div class="gov-node gov-policy">KYC/AML Policy</div>
+          <div class="gov-arrow"><div class="gov-arrow-label">enforced_by</div>&rarr;</div>
+          <div class="gov-node gov-control">Identity Verification</div>
+          <div class="gov-arrow"><div class="gov-arrow-label">satisfies</div>&rarr;</div>
+          <div class="gov-node gov-regulation">Bank Secrecy Act</div>
+        </div>
+        <div style="margin-top: 1rem; text-align: center;">
+          <p style="font-size: 0.82rem; opacity: 0.6;">Control effectiveness scoring identifies where combined operations have gaps in governance coverage.</p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 10</span>
+      </div>
+    </section>
+
+    <!-- ===================== SLIDE 11: ROADMAP ===================== -->
+    <section id="slide-11" class="slide slide-light" data-title="Transformation Roadmap">
+      <div class="section-header">
+        <span class="badge badge-blue">Phase 2</span>
+        <h2>Transformation Roadmap</h2>
+        <p>Prioritized by effort/impact with dependency ordering via topological sort.</p>
+      </div>
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 0;">
+        <div class="roadmap-phase">
+          <div class="roadmap-marker">
+            <div class="roadmap-dot" style="background: var(--accent-green);"></div>
+            <div class="roadmap-line"></div>
+          </div>
+          <div class="roadmap-content">
+            <span class="roadmap-tag tag-quick">Quick Wins</span>
+            <h4>Immediate Integration</h4>
+            <p style="font-size: 0.82rem; color: var(--kmflow-medium-gray);">API gateway unification, shared KYC data flows, common client identifier mapping, unified reporting templates</p>
+          </div>
+        </div>
+        <div class="roadmap-phase">
+          <div class="roadmap-marker">
+            <div class="roadmap-dot" style="background: var(--kmflow-light-blue);"></div>
+            <div class="roadmap-line"></div>
+          </div>
+          <div class="roadmap-content">
+            <span class="roadmap-tag tag-foundation">Foundation</span>
+            <h4>Platform Convergence</h4>
+            <p style="font-size: 0.82rem; color: var(--kmflow-medium-gray);">Unified clearing engine, combined custody platform, consolidated compliance framework, shared risk infrastructure</p>
+          </div>
+        </div>
+        <div class="roadmap-phase">
+          <div class="roadmap-marker">
+            <div class="roadmap-dot" style="background: var(--accent-orange);"></div>
+            <div class="roadmap-line"></div>
+          </div>
+          <div class="roadmap-content">
+            <span class="roadmap-tag tag-transform">Transformation</span>
+            <h4>Global Expansion</h4>
+            <p style="font-size: 0.82rem; color: var(--kmflow-medium-gray);">Multi-jurisdiction regulatory coverage, advanced analytics platform, global custody network integration, new market onboarding</p>
+          </div>
+        </div>
+        <div class="roadmap-phase">
+          <div class="roadmap-marker">
+            <div class="roadmap-dot" style="background: #7B1FA2;"></div>
+            <div class="roadmap-line" style="background: transparent;"></div>
+          </div>
+          <div class="roadmap-content">
+            <span class="roadmap-tag tag-optimize">Optimization</span>
+            <h4>AI-Driven Innovation</h4>
+            <p style="font-size: 0.82rem; color: var(--kmflow-medium-gray);">AI-driven advisor recommendations, predictive compliance, automated corporate actions, continuous process optimization</p>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 11</span>
+      </div>
+    </section>
+
+    <!-- ===================== SLIDE 12: CONTINUOUS INTELLIGENCE ===================== -->
+    <section id="slide-12" class="slide slide-gradient" data-title="Continuous Intelligence" style="background: linear-gradient(160deg, var(--kmflow-dark-navy) 0%, var(--kmflow-blue) 40%, var(--kmflow-medium-blue) 100%); justify-content: center;">
+      <div class="section-header" style="margin-bottom: 0.75rem;">
+        <span class="badge badge-gold">Phase 3</span>
+        <h2 style="font-size: 2.4rem; margin-bottom: 0.25rem;">Continuous Intelligence</h2>
+        <p style="font-size: 1rem; color: rgba(255,255,255,0.7); max-width: 700px;">Transition from project to ongoing process intelligence as the integration executes.</p>
+      </div>
+
+      <!-- Three capability pillars -->
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.75rem; flex: 0;">
+
+        <!-- Conformance Checking -->
+        <div style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 2rem 1.75rem; position: relative; overflow: hidden;">
+          <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--accent-gold), var(--accent-gold) 60%, transparent);"></div>
+          <div style="width: 48px; height: 48px; background: rgba(212,168,67,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+          </div>
+          <h3 style="font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; color: white; margin-bottom: 0.75rem;">Conformance Checking</h3>
+          <ul style="list-style: none; padding: 0; margin: 0;">
+            <li style="color: rgba(255,255,255,0.8); font-size: 0.82rem; line-height: 1.5; padding: 0.35rem 0; padding-left: 1.25rem; position: relative; border-bottom: 1px solid rgba(255,255,255,0.06);"><span style="position: absolute; left: 0; color: var(--accent-gold);">&#9656;</span>Target BPMN becomes the reference model</li>
+            <li style="color: rgba(255,255,255,0.8); font-size: 0.82rem; line-height: 1.5; padding: 0.35rem 0; padding-left: 1.25rem; position: relative; border-bottom: 1px solid rgba(255,255,255,0.06);"><span style="position: absolute; left: 0; color: var(--accent-gold);">&#9656;</span>Dual-platform event stream monitoring</li>
+            <li style="color: rgba(255,255,255,0.8); font-size: 0.82rem; line-height: 1.5; padding: 0.35rem 0; padding-left: 1.25rem; position: relative; border-bottom: 1px solid rgba(255,255,255,0.06);"><span style="position: absolute; left: 0; color: var(--accent-gold);">&#9656;</span>Deviation classification: missing <span style="color: var(--accent-red); font-weight: 600; font-size: 0.7rem; letter-spacing: 0.5px;">HIGH</span> &middot; extra <span style="color: var(--accent-orange); font-weight: 600; font-size: 0.7rem; letter-spacing: 0.5px;">MED</span> &middot; sequence <span style="color: var(--kmflow-light-blue); font-weight: 600; font-size: 0.7rem; letter-spacing: 0.5px;">LOW</span></li>
+            <li style="color: rgba(255,255,255,0.8); font-size: 0.82rem; line-height: 1.5; padding: 0.35rem 0; padding-left: 1.25rem; position: relative;"><span style="position: absolute; left: 0; color: var(--accent-gold);">&#9656;</span>Fitness &amp; precision scoring: reality vs. design</li>
+          </ul>
+        </div>
+
+        <!-- Dark Room Targeting -->
+        <div style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 2rem 1.75rem; position: relative; overflow: hidden;">
+          <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--kmflow-light-blue), var(--kmflow-light-blue) 60%, transparent);"></div>
+          <div style="width: 48px; height: 48px; background: rgba(0,145,218,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--kmflow-light-blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          </div>
+          <h3 style="font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; color: white; margin-bottom: 0.75rem;">Dark Room Targeting</h3>
+          <ul style="list-style: none; padding: 0; margin: 0;">
+            <li style="color: rgba(255,255,255,0.8); font-size: 0.82rem; line-height: 1.5; padding: 0.35rem 0; padding-left: 1.25rem; position: relative; border-bottom: 1px solid rgba(255,255,255,0.06);"><span style="position: absolute; left: 0; color: var(--kmflow-light-blue);">&#9656;</span>Active inferencing identifies evidence gaps</li>
+            <li style="color: rgba(255,255,255,0.8); font-size: 0.82rem; line-height: 1.5; padding: 0.35rem 0; padding-left: 1.25rem; position: relative; border-bottom: 1px solid rgba(255,255,255,0.06);"><span style="position: absolute; left: 0; color: var(--kmflow-light-blue);">&#9656;</span>Shrink rate tracking shows progress</li>
+            <li style="color: rgba(255,255,255,0.8); font-size: 0.82rem; line-height: 1.5; padding: 0.35rem 0; padding-left: 1.25rem; position: relative; border-bottom: 1px solid rgba(255,255,255,0.06);"><span style="position: absolute; left: 0; color: var(--kmflow-light-blue);">&#9656;</span>Targeted requests: Dark &#8594; Dim &#8594; <span style="color: white; font-weight: 600;">Bright</span></li>
+            <li style="color: rgba(255,255,255,0.8); font-size: 0.82rem; line-height: 1.5; padding: 0.35rem 0; padding-left: 1.25rem; position: relative;"><span style="position: absolute; left: 0; color: var(--kmflow-light-blue);">&#9656;</span>Confidence uplift guides collection priority</li>
+          </ul>
+        </div>
+
+        <!-- Scenario Modeling -->
+        <div style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 2rem 1.75rem; position: relative; overflow: hidden;">
+          <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--accent-green), var(--accent-green) 60%, transparent);"></div>
+          <div style="width: 48px; height: 48px; background: rgba(45,139,78,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          </div>
+          <h3 style="font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; color: white; margin-bottom: 0.75rem;">Scenario Modeling</h3>
+          <ul style="list-style: none; padding: 0; margin: 0;">
+            <li style="color: rgba(255,255,255,0.8); font-size: 0.82rem; line-height: 1.5; padding: 0.35rem 0; padding-left: 1.25rem; position: relative; border-bottom: 1px solid rgba(255,255,255,0.06);"><span style="position: absolute; left: 0; color: var(--accent-green);">&#9656;</span>Financial impact analysis for integration decisions</li>
+            <li style="color: rgba(255,255,255,0.8); font-size: 0.82rem; line-height: 1.5; padding: 0.35rem 0; padding-left: 1.25rem; position: relative; border-bottom: 1px solid rgba(255,255,255,0.06);"><span style="position: absolute; left: 0; color: var(--accent-green);">&#9656;</span>Compare: API-first vs. middleware vs. direct</li>
+            <li style="color: rgba(255,255,255,0.8); font-size: 0.82rem; line-height: 1.5; padding: 0.35rem 0; padding-left: 1.25rem; position: relative; border-bottom: 1px solid rgba(255,255,255,0.06);"><span style="position: absolute; left: 0; color: var(--accent-green);">&#9656;</span>Three-point cost modeling (O / E / P ranges)</li>
+            <li style="color: rgba(255,255,255,0.8); font-size: 0.82rem; line-height: 1.5; padding: 0.35rem 0; padding-left: 1.25rem; position: relative;"><span style="position: absolute; left: 0; color: var(--accent-green);">&#9656;</span>Sensitivity analysis reveals key variance drivers</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <!-- Strategic outcome bar -->
+      <div style="margin-top: 1.75rem; display: flex; gap: 1px; border-radius: 10px; overflow: hidden; flex: 0;">
+        <div style="flex: 1; background: rgba(212,168,67,0.12); border-bottom: 2px solid var(--accent-gold); padding: 1rem 1.25rem; text-align: center;">
+          <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent-gold); font-family: var(--font-heading);">Real-Time</div>
+          <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6); margin-top: 0.15rem;">Process Drift Detection</div>
+        </div>
+        <div style="flex: 1; background: rgba(0,145,218,0.12); border-bottom: 2px solid var(--kmflow-light-blue); padding: 1rem 1.25rem; text-align: center;">
+          <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-light-blue); font-family: var(--font-heading);">100%</div>
+          <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6); margin-top: 0.15rem;">Evidence Coverage Target</div>
+        </div>
+        <div style="flex: 1; background: rgba(45,139,78,0.12); border-bottom: 2px solid var(--accent-green); padding: 1rem 1.25rem; text-align: center;">
+          <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent-green); font-family: var(--font-heading);">3-Way</div>
+          <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6); margin-top: 0.15rem;">Architecture Cost Comparison</div>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 12</span>
+      </div>
+    </section>
+
+    <!-- ===================== SLIDE 13: PLATFORM EXTENSIONS ===================== -->
+    <section id="slide-13" class="slide slide-light" data-title="Platform Extensions">
+      <div class="section-header">
+        <span class="badge badge-blue">Extensions</span>
+        <h2>Platform Extensions Required</h2>
+        <p>Targeted additions to serve this engagement &mdash; all buildable in weeks, not months.</p>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Extension</th>
+            <th>Effort</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="font-weight: 600;">Wealth-Specific Seed List</td>
+            <td>1-2 weeks</td>
+            <td>Domain vocabulary for custody, clearing, wealth advisory (trade lifecycle, NAV, corporate actions, custody chains, beneficial ownership)</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">Financial Regulatory Parser</td>
+            <td>2-3 weeks</td>
+            <td>SEC, FINRA, FCA, MAS, HKMA regulation ingestion with section-level linking and obligation extraction</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">Apex API Connector</td>
+            <td>1-2 weeks</td>
+            <td>Custom integration connector for Apex's clearing, custody, and advisor APIs</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">Charles River Connector</td>
+            <td>2-3 weeks</td>
+            <td>Integration with CRD Wealth front-office platform APIs for trade and portfolio data</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">Multi-Jurisdiction Overlay</td>
+            <td>2-4 weeks</td>
+            <td>Extend regulatory-policy-control model for cross-border custody rules across 100+ markets</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">T+1 Settlement Conformance</td>
+            <td>1 week</td>
+            <td>Specialized conformance rule for SEC T+1 settlement compliance monitoring</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="margin-top: 1.5rem; padding: 1rem; background: var(--kmflow-light-gray); border-radius: 8px; text-align: center;">
+        <p style="font-size: 0.85rem; color: var(--kmflow-blue); font-weight: 600;">Total estimated extension effort: 9-15 weeks (parallelizable to 4-6 weeks)</p>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 13</span>
+      </div>
+    </section>
+
+    <!-- ===================== SLIDE 14: DELIVERABLES ===================== -->
+    <section id="slide-14" class="slide slide-gray" data-title="Deliverables">
+      <div class="section-header">
+        <span class="badge badge-blue">Deliverables</span>
+        <h2>Engagement Deliverables</h2>
+        <p>Every deliverable is evidence-backed and platform-generated.</p>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Deliverable</th>
+            <th>KMFlow Feature</th>
+            <th>Format</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="font-weight: 600;">Current-State Process Atlas</td>
+            <td>Consensus POV + Knowledge Graph</td>
+            <td>Interactive BPMN + Neo4j Explorer</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">Confidence Heatmap</td>
+            <td>Three-Dimensional Scoring</td>
+            <td>Dashboard (Bright / Dim / Dark)</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">Integration Gap Report</td>
+            <td>TOM Alignment Engine</td>
+            <td>PDF/HTML with Evidence Links</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">Regulatory Coverage Matrix</td>
+            <td>Policy-Control-Regulation Overlay</td>
+            <td>Interactive Dashboard</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">Transformation Roadmap</td>
+            <td>Roadmap Generator</td>
+            <td>Prioritized Plan with Dependencies</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">Conformance Dashboards</td>
+            <td>Real-time Monitoring</td>
+            <td>Live Dashboards with Alerting</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">Evidence Traceability</td>
+            <td>Source Evidence Chains</td>
+            <td>Audit-Ready Evidence Trails</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 14</span>
+      </div>
+    </section>
+
+    <!-- ===================== SLIDE 15: COMPETITIVE EDGE ===================== -->
+    <section id="slide-15" class="slide slide-dark" data-title="Competitive Edge" style="background: radial-gradient(ellipse at 30% 20%, rgba(0,51,141,0.4) 0%, transparent 50%), radial-gradient(ellipse at 80% 80%, rgba(0,94,184,0.25) 0%, transparent 50%), linear-gradient(160deg, #001029 0%, var(--kmflow-dark-navy) 40%, #001D48 100%); justify-content: center;">
+      <div class="section-header" style="margin-bottom: 1.5rem; text-align: center;">
+        <span class="badge badge-gold">Differentiators</span>
+        <h2 style="font-size: 2.6rem; margin-bottom: 0.25rem;">Competitive Edge</h2>
+        <p style="color: rgba(255,255,255,0.55); font-size: 1rem;">No other platform can deliver this combination of capabilities.</p>
+      </div>
+
+      <!-- Top row: 3 cards -->
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; flex: 0; margin-bottom: 1.25rem;">
+
+        <!-- 1. Days to Insight -->
+        <div style="background: linear-gradient(135deg, rgba(212,168,67,0.1) 0%, rgba(212,168,67,0.03) 100%); border: 1px solid rgba(212,168,67,0.2); border-radius: 14px; padding: 1.75rem 1.5rem; position: relative; overflow: hidden;">
+          <div style="position: absolute; top: -20px; right: -10px; font-family: var(--font-heading); font-size: 6rem; font-weight: 700; color: rgba(212,168,67,0.07); line-height: 1;">1</div>
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+            <div style="width: 42px; height: 42px; background: linear-gradient(135deg, var(--accent-gold), #b8902e); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <h4 style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700; color: var(--accent-gold); margin: 0;">Days to Insight</h4>
+          </div>
+          <p style="font-size: 0.82rem; color: rgba(255,255,255,0.7); line-height: 1.55; margin: 0;">Not months of event log configuration. First process views within the <span style="color: var(--accent-gold); font-weight: 600;">first week</span>.</p>
+        </div>
+
+        <!-- 2. Evidence from Both Sides -->
+        <div style="background: linear-gradient(135deg, rgba(0,145,218,0.1) 0%, rgba(0,145,218,0.03) 100%); border: 1px solid rgba(0,145,218,0.2); border-radius: 14px; padding: 1.75rem 1.5rem; position: relative; overflow: hidden;">
+          <div style="position: absolute; top: -20px; right: -10px; font-family: var(--font-heading); font-size: 6rem; font-weight: 700; color: rgba(0,145,218,0.07); line-height: 1;">2</div>
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+            <div style="width: 42px; height: 42px; background: linear-gradient(135deg, var(--kmflow-light-blue), #0077b3); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+            </div>
+            <h4 style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700; color: var(--kmflow-light-blue); margin: 0;">Evidence from Both Sides</h4>
+          </div>
+          <p style="font-size: 0.82rem; color: rgba(255,255,255,0.7); line-height: 1.55; margin: 0;">Documents, APIs, interviews, system data &mdash; all unified in <span style="color: var(--kmflow-light-blue); font-weight: 600;">one knowledge graph</span>.</p>
+        </div>
+
+        <!-- 3. Confidence Transparency -->
+        <div style="background: linear-gradient(135deg, rgba(45,139,78,0.1) 0%, rgba(45,139,78,0.03) 100%); border: 1px solid rgba(45,139,78,0.2); border-radius: 14px; padding: 1.75rem 1.5rem; position: relative; overflow: hidden;">
+          <div style="position: absolute; top: -20px; right: -10px; font-family: var(--font-heading); font-size: 6rem; font-weight: 700; color: rgba(45,139,78,0.07); line-height: 1;">3</div>
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+            <div style="width: 42px; height: 42px; background: linear-gradient(135deg, var(--accent-green), #1e6b3a); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+            <h4 style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700; color: var(--accent-green); margin: 0;">Confidence Transparency</h4>
+          </div>
+          <p style="font-size: 0.82rem; color: rgba(255,255,255,0.7); line-height: 1.55; margin: 0;">The board sees exactly what's well-evidenced and what's still <span style="color: var(--accent-green); font-weight: 600;">in the dark</span>.</p>
+        </div>
+
+      </div>
+
+      <!-- Bottom row: 2 cards, centered -->
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; flex: 0; max-width: 66.67%; margin: 0 auto;">
+
+        <!-- 4. Regulatory Tissue -->
+        <div style="background: linear-gradient(135deg, rgba(230,126,34,0.1) 0%, rgba(230,126,34,0.03) 100%); border: 1px solid rgba(230,126,34,0.2); border-radius: 14px; padding: 1.75rem 1.5rem; position: relative; overflow: hidden;">
+          <div style="position: absolute; top: -20px; right: -10px; font-family: var(--font-heading); font-size: 6rem; font-weight: 700; color: rgba(230,126,34,0.07); line-height: 1;">4</div>
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+            <div style="width: 42px; height: 42px; background: linear-gradient(135deg, var(--accent-orange), #c0671a); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <h4 style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700; color: var(--accent-orange); margin: 0;">Regulatory Tissue</h4>
+          </div>
+          <p style="font-size: 0.82rem; color: rgba(255,255,255,0.7); line-height: 1.55; margin: 0;">Compliance woven into the process graph &mdash; <span style="color: var(--accent-orange); font-weight: 600;">not bolted on</span> as an afterthought.</p>
+        </div>
+
+        <!-- 5. Active Inferencing -->
+        <div style="background: linear-gradient(135deg, rgba(150,100,220,0.1) 0%, rgba(150,100,220,0.03) 100%); border: 1px solid rgba(150,100,220,0.2); border-radius: 14px; padding: 1.75rem 1.5rem; position: relative; overflow: hidden;">
+          <div style="position: absolute; top: -20px; right: -10px; font-family: var(--font-heading); font-size: 6rem; font-weight: 700; color: rgba(150,100,220,0.07); line-height: 1;">5</div>
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+            <div style="width: 42px; height: 42px; background: linear-gradient(135deg, #9664dc, #7244b8); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <h4 style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700; color: #9664dc; margin: 0;">Active Inferencing</h4>
+          </div>
+          <p style="font-size: 0.82rem; color: rgba(255,255,255,0.7); line-height: 1.55; margin: 0;">The platform tells you what evidence you still need, <span style="color: #9664dc; font-weight: 600;">rather than waiting</span> for you to ask.</p>
+        </div>
+
+      </div>
+
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 15</span>
+      </div>
+    </section>
+
+    <!-- ===================== SLIDE 16: ECONOMICS ===================== -->
+    <section id="slide-16" class="slide slide-gradient" data-title="Engagement Economics">
+      <div class="section-header">
+        <span class="badge badge-gold">Investment</span>
+        <h2>Engagement Economics</h2>
+        <p>A transformational engagement with recurring revenue from continuous monitoring.</p>
+      </div>
+      <div class="econ-grid">
+        <div class="econ-card">
+          <div class="econ-value">$5-15M+</div>
+          <div class="econ-label">Total Engagement Value</div>
+          <div class="econ-detail">Phase 1 Discovery + Phase 2 Transformation + Phase 3 Continuous Monitoring</div>
+        </div>
+        <div class="econ-card">
+          <div class="econ-value">18-24</div>
+          <div class="econ-label">Months Duration</div>
+          <div class="econ-detail">Initial engagement through full integration with ongoing monitoring post-go-live</div>
+        </div>
+        <div class="econ-card">
+          <div class="econ-value">Recurring</div>
+          <div class="econ-label">Continuous Monitoring</div>
+          <div class="econ-detail">Post-integration conformance checking, deviation detection, and ongoing process optimization</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 16</span>
+      </div>
+    </section>
+
+    <!-- ===================== SLIDE 17: NEXT STEPS ===================== -->
+    <section id="slide-17" class="slide slide-hero" data-title="Next Steps" style="background: radial-gradient(ellipse at 50% 30%, rgba(0,94,184,0.3) 0%, transparent 60%), linear-gradient(160deg, var(--kmflow-dark-navy) 0%, var(--kmflow-blue) 50%, var(--kmflow-medium-blue) 100%);">
+
+      <!-- Title block -->
+      <div style="text-align: center; margin-bottom: 2.5rem;">
+        <div style="font-family: var(--font-heading); font-size: 2.8rem; font-weight: 700; color: white; line-height: 1.15; margin-bottom: 0.5rem;">Next Steps</div>
+        <div style="font-size: 1.05rem; color: rgba(255,255,255,0.6); font-weight: 300;">Ready to operationalize the State Street x Apex partnership.</div>
+      </div>
+
+      <!-- Three-step horizontal flow -->
+      <div style="display: flex; align-items: stretch; gap: 0; max-width: 1050px; width: 100%;">
+
+        <!-- Step 1 -->
+        <div style="flex: 1; position: relative;">
+          <div style="background: linear-gradient(135deg, rgba(212,168,67,0.12) 0%, rgba(212,168,67,0.04) 100%); border: 1px solid rgba(212,168,67,0.25); border-radius: 14px; padding: 2rem 1.5rem 1.75rem; text-align: center; height: 100%;">
+            <div style="width: 56px; height: 56px; background: linear-gradient(135deg, var(--accent-gold), #b8902e); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; box-shadow: 0 4px 20px rgba(212,168,67,0.3);">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            </div>
+            <div style="font-family: var(--font-heading); font-size: 0.7rem; font-weight: 700; color: var(--accent-gold); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 0.4rem;">Step 1</div>
+            <h4 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 700; color: white; margin-bottom: 0.6rem;">Scoping Workshop</h4>
+            <p style="font-size: 0.82rem; color: rgba(255,255,255,0.7); line-height: 1.55; margin: 0 0 1rem;">Joint session with State Street and Apex stakeholders to define engagement boundaries and evidence sources.</p>
+            <div style="display: inline-block; background: rgba(212,168,67,0.15); border: 1px solid rgba(212,168,67,0.3); border-radius: 20px; padding: 0.3rem 0.9rem; font-size: 0.7rem; font-weight: 600; color: var(--accent-gold); letter-spacing: 0.5px;">Week 1</div>
+          </div>
+          <!-- Connector arrow -->
+          <div style="position: absolute; right: -18px; top: 50%; transform: translateY(-50%); z-index: 2; width: 36px; height: 36px; background: var(--kmflow-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid rgba(255,255,255,0.15);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+
+        <div style="width: 36px; flex-shrink: 0;"></div>
+
+        <!-- Step 2 -->
+        <div style="flex: 1; position: relative;">
+          <div style="background: linear-gradient(135deg, rgba(0,145,218,0.12) 0%, rgba(0,145,218,0.04) 100%); border: 1px solid rgba(0,145,218,0.25); border-radius: 14px; padding: 2rem 1.5rem 1.75rem; text-align: center; height: 100%;">
+            <div style="width: 56px; height: 56px; background: linear-gradient(135deg, var(--kmflow-light-blue), #0077b3); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; box-shadow: 0 4px 20px rgba(0,145,218,0.3);">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <div style="font-family: var(--font-heading); font-size: 0.7rem; font-weight: 700; color: var(--kmflow-light-blue); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 0.4rem;">Step 2</div>
+            <h4 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 700; color: white; margin-bottom: 0.6rem;">Platform Setup</h4>
+            <p style="font-size: 0.82rem; color: rgba(255,255,255,0.7); line-height: 1.55; margin: 0 0 1rem;">Configure KMFlow engagement, deploy connectors, ingest initial evidence batch from both organizations.</p>
+            <div style="display: inline-block; background: rgba(0,145,218,0.15); border: 1px solid rgba(0,145,218,0.3); border-radius: 20px; padding: 0.3rem 0.9rem; font-size: 0.7rem; font-weight: 600; color: var(--kmflow-light-blue); letter-spacing: 0.5px;">Week 2&ndash;3</div>
+          </div>
+          <!-- Connector arrow -->
+          <div style="position: absolute; right: -18px; top: 50%; transform: translateY(-50%); z-index: 2; width: 36px; height: 36px; background: var(--kmflow-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid rgba(255,255,255,0.15);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+
+        <div style="width: 36px; flex-shrink: 0;"></div>
+
+        <!-- Step 3 -->
+        <div style="flex: 1;">
+          <div style="background: linear-gradient(135deg, rgba(45,139,78,0.12) 0%, rgba(45,139,78,0.04) 100%); border: 1px solid rgba(45,139,78,0.25); border-radius: 14px; padding: 2rem 1.5rem 1.75rem; text-align: center; height: 100%;">
+            <div style="width: 56px; height: 56px; background: linear-gradient(135deg, var(--accent-green), #1e6b3a); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; box-shadow: 0 4px 20px rgba(45,139,78,0.3);">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div style="font-family: var(--font-heading); font-size: 0.7rem; font-weight: 700; color: var(--accent-green); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 0.4rem;">Step 3</div>
+            <h4 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 700; color: white; margin-bottom: 0.6rem;">First Insight</h4>
+            <p style="font-size: 0.82rem; color: rgba(255,255,255,0.7); line-height: 1.55; margin: 0 0 1rem;">Deliver initial process views with confidence scoring within the first week of evidence ingestion.</p>
+            <div style="display: inline-block; background: rgba(45,139,78,0.15); border: 1px solid rgba(45,139,78,0.3); border-radius: 20px; padding: 0.3rem 0.9rem; font-size: 0.7rem; font-weight: 600; color: var(--accent-green); letter-spacing: 0.5px;">Week 4</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- CTA strip -->
+      <div style="margin-top: 2.5rem; text-align: center;">
+        <div style="display: inline-block; background: linear-gradient(135deg, rgba(212,168,67,0.15), rgba(212,168,67,0.05)); border: 1px solid rgba(212,168,67,0.3); border-radius: 12px; padding: 1rem 2.5rem;">
+          <span style="font-family: var(--font-heading); font-size: 1.1rem; font-weight: 700; color: var(--accent-gold);">From kickoff to first process insight in under 4 weeks</span>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 17</span>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    // --- Slide Navigation ---
+    const slidesContainer = document.getElementById('slidesContainer');
+    const slides = document.querySelectorAll('.slide');
+    const indicator = document.getElementById('slideIndicator');
+
+    // Build slide dots
+    slides.forEach((slide, i) => {
+      const dot = document.createElement('div');
+      dot.className = 'slide-dot';
+      dot.title = slide.dataset.title || ('Slide ' + (i + 1));
+      dot.addEventListener('click', () => {
+        slide.scrollIntoView({ behavior: 'smooth' });
+      });
+      indicator.appendChild(dot);
+    });
+
+    const updateActiveDot = () => {
+      const scrollTop = slidesContainer.scrollTop;
+      const windowHeight = window.innerHeight;
+      let activeIndex = 0;
+      slides.forEach((slide, i) => {
+        if (slide.offsetTop <= scrollTop + windowHeight * 0.4) {
+          activeIndex = i;
+        }
+      });
+      document.querySelectorAll('.slide-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === activeIndex);
+      });
+    };
+
+    slidesContainer.addEventListener('scroll', updateActiveDot);
+    updateActiveDot();
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      const currentScroll = slidesContainer.scrollTop;
+      const windowHeight = window.innerHeight;
+
+      if (e.key === 'Escape') {
+        closeTocModal();
+        return;
+      }
+      if (document.getElementById('tocOverlay').classList.contains('active')) return;
+
+      if (e.key === 'ArrowDown' || e.key === 'PageDown') {
+        e.preventDefault();
+        slidesContainer.scrollBy({ top: windowHeight, behavior: 'smooth' });
+      } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+        e.preventDefault();
+        slidesContainer.scrollBy({ top: -windowHeight, behavior: 'smooth' });
+      }
+    });
+
+    // --- TOC Modal ---
+    function buildToc() {
+      const list = document.getElementById('tocList');
+      slides.forEach((slide, i) => {
+        const item = document.createElement('a');
+        item.className = 'toc-item';
+        item.href = '#slide-' + (i + 1);
+        item.innerHTML = '<span class="toc-num">' + (i + 1) + '</span><span class="toc-text">' + (slide.dataset.title || 'Slide ' + (i + 1)) + '</span>';
+        item.addEventListener('click', (e) => {
+          e.preventDefault();
+          closeTocModal();
+          slide.scrollIntoView({ behavior: 'smooth' });
+        });
+        list.appendChild(item);
+      });
+    }
+    buildToc();
+
+    function openTocModal() {
+      document.getElementById('tocOverlay').classList.add('active');
+    }
+    function closeTocModal() {
+      document.getElementById('tocOverlay').classList.remove('active');
+    }
+    document.getElementById('tocOverlay').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('tocOverlay')) closeTocModal();
+    });
+
+    // --- D3: Knowledge Graph Visualization ---
+    (function() {
+      const container = document.getElementById('graph-viz');
+      if (!container) return;
+
+      const width = 500;
+      const height = 400;
+
+      const nodes = [
+        { id: 'Trade Settlement', group: 'activity', x: 250, y: 200 },
+        { id: 'Custody Account', group: 'activity', x: 150, y: 100 },
+        { id: 'Clearing Validation', group: 'activity', x: 350, y: 100 },
+        { id: 'NAV Calculation', group: 'activity', x: 100, y: 250 },
+        { id: 'KYC Screening', group: 'activity', x: 400, y: 250 },
+        { id: 'Portfolio Manager', group: 'role', x: 80, y: 160 },
+        { id: 'Clearing Specialist', group: 'role', x: 420, y: 160 },
+        { id: 'Compliance Officer', group: 'role', x: 250, y: 320 },
+        { id: 'CRD Platform', group: 'system', x: 150, y: 340 },
+        { id: 'Apex Clearing', group: 'system', x: 350, y: 340 },
+        { id: 'SEC 15c3-3', group: 'regulation', x: 180, y: 50 },
+        { id: 'Reg BI', group: 'regulation', x: 320, y: 50 },
+        { id: 'FINRA', group: 'regulation', x: 250, y: 380 }
+      ];
+
+      const links = [
+        { source: 'Trade Settlement', target: 'Custody Account', type: 'PRECEDES' },
+        { source: 'Trade Settlement', target: 'Clearing Validation', type: 'TRIGGERS' },
+        { source: 'Portfolio Manager', target: 'Trade Settlement', type: 'PERFORMED_BY' },
+        { source: 'Clearing Specialist', target: 'Clearing Validation', type: 'PERFORMED_BY' },
+        { source: 'Trade Settlement', target: 'SEC 15c3-3', type: 'GOVERNED_BY' },
+        { source: 'KYC Screening', target: 'Compliance Officer', type: 'PERFORMED_BY' },
+        { source: 'Custody Account', target: 'CRD Platform', type: 'USES' },
+        { source: 'Clearing Validation', target: 'Apex Clearing', type: 'USES' },
+        { source: 'NAV Calculation', target: 'CRD Platform', type: 'USES' },
+        { source: 'KYC Screening', target: 'FINRA', type: 'GOVERNED_BY' },
+        { source: 'Trade Settlement', target: 'Reg BI', type: 'GOVERNED_BY' },
+        { source: 'Compliance Officer', target: 'FINRA', type: 'GOVERNED_BY' }
+      ];
+
+      const colorMap = {
+        activity: '#0091DA',
+        role: '#D4A843',
+        system: '#2D8B4E',
+        regulation: '#C23B22'
+      };
+
+      const svg = d3.select(container)
+        .append('svg')
+        .attr('viewBox', '0 0 ' + width + ' ' + height)
+        .attr('preserveAspectRatio', 'xMidYMid meet');
+
+      // Links
+      const nodeMap = {};
+      nodes.forEach(n => { nodeMap[n.id] = n; });
+
+      svg.selectAll('line')
+        .data(links)
+        .enter()
+        .append('line')
+        .attr('x1', d => nodeMap[d.source].x)
+        .attr('y1', d => nodeMap[d.source].y)
+        .attr('x2', d => nodeMap[d.target].x)
+        .attr('y2', d => nodeMap[d.target].y)
+        .attr('stroke', 'rgba(255,255,255,0.15)')
+        .attr('stroke-width', 1.5);
+
+      // Nodes
+      svg.selectAll('circle')
+        .data(nodes)
+        .enter()
+        .append('circle')
+        .attr('cx', d => d.x)
+        .attr('cy', d => d.y)
+        .attr('r', d => d.group === 'activity' ? 12 : 8)
+        .attr('fill', d => colorMap[d.group])
+        .attr('opacity', 0.9);
+
+      // Labels
+      svg.selectAll('text')
+        .data(nodes)
+        .enter()
+        .append('text')
+        .attr('x', d => d.x)
+        .attr('y', d => d.y + (d.group === 'activity' ? 24 : 18))
+        .attr('text-anchor', 'middle')
+        .attr('fill', 'rgba(255,255,255,0.7)')
+        .attr('font-size', '9px')
+        .attr('font-family', 'Open Sans, sans-serif')
+        .text(d => d.id);
+
+      // Legend
+      const legend = svg.append('g').attr('transform', 'translate(10, 10)');
+      const types = [
+        { label: 'Activity', color: colorMap.activity },
+        { label: 'Role', color: colorMap.role },
+        { label: 'System', color: colorMap.system },
+        { label: 'Regulation', color: colorMap.regulation }
+      ];
+      types.forEach((t, i) => {
+        legend.append('circle').attr('cx', 8).attr('cy', i * 18).attr('r', 5).attr('fill', t.color);
+        legend.append('text').attr('x', 18).attr('y', i * 18 + 4).attr('fill', 'rgba(255,255,255,0.6)').attr('font-size', '9px').text(t.label);
+      });
+    })();
+
+    // --- D3: Radar Chart ---
+    (function() {
+      const container = document.getElementById('radar-chart');
+      if (!container) return;
+
+      const w = 350, h = 350;
+      const cx = w / 2, cy = h / 2;
+      const r = 130;
+      const dims = ['Process', 'People', 'Tech', 'Governance', 'Performance', 'Risk'];
+      const current = [2.5, 2.0, 3.0, 2.5, 1.5, 2.0];
+      const target = [4.5, 4.0, 4.5, 5.0, 4.0, 4.5];
+      const n = dims.length;
+      const angleSlice = (2 * Math.PI) / n;
+
+      const svg = d3.select(container)
+        .append('svg')
+        .attr('viewBox', '0 0 ' + w + ' ' + h)
+        .attr('preserveAspectRatio', 'xMidYMid meet');
+
+      // Grid
+      for (let level = 1; level <= 5; level++) {
+        const rr = (r / 5) * level;
+        const pts = dims.map((_, i) => {
+          const a = angleSlice * i - Math.PI / 2;
+          return [cx + rr * Math.cos(a), cy + rr * Math.sin(a)];
+        });
+        svg.append('polygon')
+          .attr('points', pts.map(p => p.join(',')).join(' '))
+          .attr('fill', 'none')
+          .attr('stroke', '#ddd')
+          .attr('stroke-width', 0.5);
+      }
+
+      // Axes
+      dims.forEach((d, i) => {
+        const a = angleSlice * i - Math.PI / 2;
+        svg.append('line')
+          .attr('x1', cx).attr('y1', cy)
+          .attr('x2', cx + r * Math.cos(a))
+          .attr('y2', cy + r * Math.sin(a))
+          .attr('stroke', '#ddd')
+          .attr('stroke-width', 0.5);
+
+        const lx = cx + (r + 20) * Math.cos(a);
+        const ly = cy + (r + 20) * Math.sin(a);
+        svg.append('text')
+          .attr('x', lx).attr('y', ly)
+          .attr('text-anchor', 'middle')
+          .attr('dominant-baseline', 'central')
+          .attr('fill', '#666')
+          .attr('font-size', '10px')
+          .attr('font-weight', '600')
+          .text(d);
+      });
+
+      // Target polygon
+      const targetPts = target.map((v, i) => {
+        const a = angleSlice * i - Math.PI / 2;
+        const rr = (r / 5) * v;
+        return [cx + rr * Math.cos(a), cy + rr * Math.sin(a)];
+      });
+      svg.append('polygon')
+        .attr('points', targetPts.map(p => p.join(',')).join(' '))
+        .attr('fill', 'rgba(0,145,218,0.1)')
+        .attr('stroke', 'var(--kmflow-light-blue)')
+        .attr('stroke-width', 2);
+
+      // Current polygon
+      const currentPts = current.map((v, i) => {
+        const a = angleSlice * i - Math.PI / 2;
+        const rr = (r / 5) * v;
+        return [cx + rr * Math.cos(a), cy + rr * Math.sin(a)];
+      });
+      svg.append('polygon')
+        .attr('points', currentPts.map(p => p.join(',')).join(' '))
+        .attr('fill', 'rgba(212,168,67,0.15)')
+        .attr('stroke', 'var(--accent-gold)')
+        .attr('stroke-width', 2)
+        .attr('stroke-dasharray', '4,3');
+
+      // Legend
+      svg.append('rect').attr('x', 10).attr('y', h - 40).attr('width', 14).attr('height', 3).attr('fill', 'var(--kmflow-light-blue)');
+      svg.append('text').attr('x', 28).attr('y', h - 37).attr('fill', '#666').attr('font-size', '9px').text('Target State');
+      svg.append('rect').attr('x', 10).attr('y', h - 25).attr('width', 14).attr('height', 3).attr('fill', 'var(--accent-gold)').attr('stroke-dasharray', '3,2');
+      svg.append('text').attr('x', 28).attr('y', h - 22).attr('fill', '#666').attr('font-size', '9px').text('Current State');
+    })();
+
+    // --- Gap Analysis Table Data ---
+    (function() {
+      const tbody = document.getElementById('gapTableBody');
+      if (!tbody) return;
+
+      const data = [
+        { domain: 'Custody Lifecycle', gaps: ['partial', 'full', 'deviation', 'partial', 'full', 'partial'] },
+        { domain: 'Clearing Lifecycle', gaps: ['deviation', 'partial', 'none', 'partial', 'deviation', 'partial'] },
+        { domain: 'Advisor Workflow', gaps: ['full', 'full', 'partial', 'full', 'full', 'full'] },
+        { domain: 'Self-Directed Flow', gaps: ['partial', 'deviation', 'none', 'partial', 'deviation', 'none'] },
+        { domain: 'Compliance Thread', gaps: ['deviation', 'partial', 'partial', 'none', 'partial', 'deviation'] },
+        { domain: 'Corp. Actions', gaps: ['full', 'partial', 'full', 'partial', 'full', 'partial'] }
+      ];
+
+      const colors = { full: '#C23B22', partial: '#E67E22', deviation: '#D4A843', none: '#2D8B4E' };
+      const labels = { full: 'FULL', partial: 'PARTIAL', deviation: 'DEV', none: 'NONE' };
+
+      data.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td style="font-weight:600;">' + row.domain + '</td>' +
+          row.gaps.map(g =>
+            '<td><span style="display:inline-block;padding:2px 8px;border-radius:3px;font-size:0.65rem;font-weight:700;background:' + colors[g] + ';color:white;">' + labels[g] + '</span></td>'
+          ).join('');
+        tbody.appendChild(tr);
+      });
+    })();
+  </script>
+
+</body>
+</html>

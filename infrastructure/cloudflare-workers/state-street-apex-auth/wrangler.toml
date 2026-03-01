@@ -1,0 +1,18 @@
+name = "state-street-apex-auth"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# Protected URL: https://kmflow-state-street-apex.pages.dev
+#
+# This worker protects the State Street APEX presentation with:
+# - Descope OTP authentication
+# - Email restrictions: proth1@gmail.com, drj.infinity@gmail.com, @kpmg.com
+
+[vars]
+DESCOPE_PROJECT_ID = "P39ERvEl6A8ec0DKtrKBvzM4Ue5V"
+PAGES_URL = "https://kmflow-state-street-apex.pages.dev"
+WORKER_DOMAIN = "https://state-street-apex.agentic-innovations.com"
+
+# CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET must be set as secrets:
+# wrangler secret put CF_ACCESS_CLIENT_ID
+# wrangler secret put CF_ACCESS_CLIENT_SECRET

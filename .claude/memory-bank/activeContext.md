@@ -6,7 +6,7 @@
 
 **MVP COMPLETE + WGI ALIGNED** — Platform MVP done. Windows Task Mining Agent fully implemented. WGI Platform Alignment complete.
 
-- **Current version**: 2026.03.207
+- **Current version**: 2026.03.208
 - **Open issues**: 0
 - **Presentation**: deployed to kmflow.agentic-innovations.com via Cloudflare Pages
 

@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.207
+**Version**: 2026.03.208
 **Last Updated**: 2026-03-01
 
 ## Quick Stats
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.208 | 2026-03-01 | Fix duplicate container_name + heatmap Suspense (PR #585 review follow-up) |
 | 2026.03.207 | 2026-03-01 | Frontend production build + graph loading optimization (#585) |
 | 2026.03.206 | 2026-03-01 | Fix WebSocket auth: shared get_websocket_user() with dev mode, /ws/taskmining/events endpoint (#583) |
 | 2026.03.205 | 2026-03-01 | Rename LCD → Consensus Algorithm across entire codebase — 47 files, ~200+ occurrences (#581) |
