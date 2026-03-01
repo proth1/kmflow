@@ -3,6 +3,11 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.02.204] - 2026-03-01
+### Fixed
+- Fix tunnel-auth Worker session persistence — retry Descope refresh, handle tunnel 502/503, fix Set-Cookie RFC violation (#578)
+- Add next.config.js volume mount to prevent stale frontend config on container restarts
+
 ## [2026.02.203] - 2026-03-01
 ### Fixed
 - Fix frontend "Failed to fetch" errors via Next.js rewrites proxy (#577)

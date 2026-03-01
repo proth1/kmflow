@@ -1,7 +1,7 @@
 # KMFlow Platform State
 
-**Version**: 2026.02.203
-**Last Updated**: 2026-02-28
+**Version**: 2026.02.204
+**Last Updated**: 2026-03-01
 
 ## Quick Stats
 
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.02.204 | 2026-03-01 | Fix tunnel-auth session persistence — Descope refresh retry, tunnel 502/503 handling, Set-Cookie RFC fix (#578) |
 | 2026.02.203 | 2026-03-01 | Fix frontend "Failed to fetch" via Next.js rewrites proxy, centralize API base URL (#577) |
 | 2026.02.202 | 2026-02-28 | Tunnel-auth Worker, Neo4j optimization, Descope JWT issuer fix (91510ce) |
 | 2026.02.201 | 2026-02-28 | WGI alignment: codebase-wide formatting, TYPE_CHECKING, pre-merge gates, RLS TOM context (#576) |
