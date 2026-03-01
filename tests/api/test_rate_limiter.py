@@ -114,7 +114,7 @@ class TestRateLimitFallback:
     @pytest.mark.asyncio
     async def test_redis_error_allows_request(self) -> None:
         """When the Redis pipeline raises RedisError, the request is allowed."""
-        import aioredis
+        import redis.asyncio as aioredis
 
         pipe = AsyncMock()
         pipe.execute = AsyncMock(side_effect=aioredis.RedisError("connection refused"))
