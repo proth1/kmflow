@@ -6,7 +6,7 @@
 
 **MVP COMPLETE + WGI ALIGNED** — Platform MVP done. Windows Task Mining Agent fully implemented. WGI Platform Alignment complete.
 
-- **Current version**: 2026.02.204
+- **Current version**: 2026.03.205
 - **Open issues**: 0
 - **Presentation**: deployed to kmflow.agentic-innovations.com via Cloudflare Pages
 
@@ -16,6 +16,7 @@ No active work. Clean backlog.
 
 ## Recently Completed
 
+- **PR #582**: Rename LCD → Consensus Algorithm across entire codebase — 47 files, POV_STEPS, test renames, BPMN, docs, presentation redeployed (#581, merged 2026-03-01)
 - **PR #580**: Fix tunnel-auth Worker session persistence — Descope refresh retry, tunnel 502/503 handling, Set-Cookie RFC fix (merged 2026-03-01)
 - **PR #577**: Fix frontend "Failed to fetch" via Next.js rewrites proxy, centralize API base URL (merged 2026-03-01)
 - **Commit 91510ce**: Add tunnel-auth Cloudflare Worker, optimize Neo4j Docker, fix Descope JWT issuer validation (pushed 2026-02-28)
