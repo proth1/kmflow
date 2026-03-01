@@ -3,6 +3,14 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.208] - 2026-03-01
+### Fixed
+- Fix duplicate container_name conflict + add Suspense to heatmap page (PR #585 review follow-up)
+
+## [2026.03.207] - 2026-03-01
+### Fixed
+- Frontend production build + graph loading optimization (#585)
+
 ## [2026.03.206] - 2026-03-01
 ### Fixed
 - Fix WebSocket auth: add shared `get_websocket_user()` with dev mode auto-auth (#583)

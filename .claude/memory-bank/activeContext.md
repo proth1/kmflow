@@ -6,7 +6,7 @@
 
 **MVP COMPLETE + WGI ALIGNED** — Platform MVP done. Windows Task Mining Agent fully implemented. WGI Platform Alignment complete.
 
-- **Current version**: 2026.03.206
+- **Current version**: 2026.03.207
 - **Open issues**: 0
 - **Presentation**: deployed to kmflow.agentic-innovations.com via Cloudflare Pages
 
@@ -16,6 +16,7 @@ No active work. Clean backlog.
 
 ## Recently Completed
 
+- **PR #585**: Frontend production build + graph loading optimization (#585, merged 2026-03-01)
 - **PR #584**: Fix WebSocket dev mode auth and /ws/taskmining/events endpoint — shared `get_websocket_user()`, Redis Pub/Sub channel constant (#583, merged 2026-03-01)
 - **PR #582**: Rename LCD → Consensus Algorithm across entire codebase — 47 files, POV_STEPS, test renames, BPMN, docs, presentation redeployed (#581, merged 2026-03-01)
 - **PR #580**: Fix tunnel-auth Worker session persistence — Descope refresh retry, tunnel 502/503 handling, Set-Cookie RFC fix (merged 2026-03-01)
