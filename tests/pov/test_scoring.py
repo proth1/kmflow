@@ -1,4 +1,4 @@
-"""Tests for confidence scoring (LCD Step 6)."""
+"""Tests for confidence scoring (Consensus Step 6)."""
 
 from __future__ import annotations
 

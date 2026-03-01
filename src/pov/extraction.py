@@ -1,4 +1,4 @@
-"""Entity extraction wrapper for the LCD algorithm.
+"""Entity extraction wrapper for the consensus algorithm.
 
 Step 2: Uses the semantic/entity_extraction module to extract activities,
 decisions, roles, systems, and documents from evidence fragments. Builds

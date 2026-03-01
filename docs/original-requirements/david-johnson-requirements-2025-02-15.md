@@ -1,7 +1,7 @@
 # Original Requirements - David Johnson
 ## Captured: February 15, 2025 (Signal voice call transcript + follow-up messages)
 
-> **Note**: This transcript was captured via speech-to-text from a Signal video call between David Johnson and Paul Roth. Some words may be mistranscribed. The term "least competent nominator" in the transcript is believed to be a mistranscription of "least common denominator" (LCD), though David may have intended a different term - see LCD note at bottom.
+> **Note**: References to "LCD" (Least Common Denominator) in this original transcript have been renamed to "Consensus algorithm" in the codebase. The original text is preserved here as-is for historical accuracy. This transcript was captured via speech-to-text from a Signal video call between David Johnson and Paul Roth. Some words may be mistranscribed. The term "least competent nominator" in the transcript is believed to be a mistranscription of "least common denominator" (LCD), though David may have intended a different term - see LCD note at bottom.
 
 ---
 
@@ -104,6 +104,6 @@ David provided:
 
 ---
 
-## LCD Terminology Note
+## Terminology Note
 
-In the transcript, David says "least competent nominator" which appears to be a speech-to-text error. In the PRD and all platform materials, this was interpreted as **"Least Common Denominator" (LCD)** - meaning the baseline/consensus process view synthesized from all available evidence. If David intended a different term, this should be clarified with him directly.
+In the transcript, David says "least competent nominator" which appears to be a speech-to-text error. This was originally interpreted as "Least Common Denominator" (LCD) in the PRD and codebase. As of v2026.03.205, the algorithm has been renamed to **"Consensus algorithm"** throughout the platform — meaning the baseline/consensus process view synthesized from all available evidence. If David intended a different term, this should be clarified with him directly.

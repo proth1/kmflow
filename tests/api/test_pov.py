@@ -32,7 +32,7 @@ def mock_process_model():
     model.contradiction_count = 1
     model.metadata_json = {"overall_confidence_level": "HIGH"}
     model.generated_at = None
-    model.generated_by = "lcd_algorithm"
+    model.generated_by = "consensus_algorithm"
     return model
 
 

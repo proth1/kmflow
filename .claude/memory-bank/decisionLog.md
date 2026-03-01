@@ -68,7 +68,7 @@ Each entry follows:
 
 **Alternatives**: Event-log-first (like Celonis), structured-input-only, manual process mapping.
 
-**Consequences**: 15+ parsers needed (PDF, Excel, BPMN, audio, video, SaaS exports, etc.). Quality scoring engine needed to weight heterogeneous evidence. LCD (Least Common Denominator) algorithm synthesizes consensus from potentially contradictory sources. Three-dimensional confidence model (score + brightness + grade) communicates certainty to users.
+**Consequences**: 15+ parsers needed (PDF, Excel, BPMN, audio, video, SaaS exports, etc.). Quality scoring engine needed to weight heterogeneous evidence. Consensus algorithm synthesizes agreement from potentially contradictory sources. Three-dimensional confidence model (score + brightness + grade) communicates certainty to users.
 
 ---
 

@@ -1,6 +1,6 @@
-"""POV Generator - Main pipeline for the LCD algorithm.
+"""POV Generator - Main pipeline for the consensus algorithm.
 
-Orchestrates all steps of the LCD algorithm:
+Orchestrates all steps of the consensus algorithm:
 1. Evidence Aggregation
 2. Entity Extraction
 3. Cross-Source Triangulation
@@ -73,11 +73,11 @@ async def generate_pov(
     session: AsyncSession,
     engagement_id: str,
     scope: str = "all",
-    generated_by: str = "lcd_algorithm",
+    generated_by: str = "consensus_algorithm",
 ) -> GenerationResult:
     """Generate a Process Point of View for an engagement.
 
-    Orchestrates the full LCD algorithm pipeline:
+    Orchestrates the full consensus algorithm pipeline:
     1. Aggregate validated evidence
     2. Extract entities from fragments
     3. Triangulate across sources

@@ -19,7 +19,7 @@ KMFlow is an AI-powered Process Intelligence platform designed for consulting en
 **What KMFlow Does**:
 - Ingests diverse client evidence per business area (not cross-enterprise)
 - Builds semantic relationships across all evidence items using a controlled edge vocabulary
-- Synthesizes a "least common denominator" (LCD) first-pass process point of view — the baseline consensus view from all available evidence, including elements mentioned by any source weighted by evidence type and confidence
+- Synthesizes a Consensus first-pass process point of view — the baseline consensus view from all available evidence, including elements mentioned by any source weighted by evidence type and confidence
 - Scores every process element with a three-dimensional confidence model (numeric score + brightness classification + evidence grade)
 - Captures structured process knowledge via survey bot with domain-seeded probes
 - Aligns against Target Operating Models, best practices, and industry benchmarks
@@ -63,7 +63,7 @@ Organizations have fragmented process knowledge spread across BPM tools (ARIS, V
 
 KMFlow transforms consulting delivery by enabling data-driven process conversations from day one of client engagement.
 
-**Vision Statement**: Ingest a focused body of evidence related to a specific business area. Actively elicit structured process knowledge through domain-seeded probes. Create consistent semantic relationships between all evidence items using a controlled edge vocabulary. Produce a "least common denominator" (LCD) first-pass point of view across the evidence corpus — the baseline consensus including all evidence-supported elements, weighted by source type and confidence. Score every process element with confidence based on evidence coverage, quality, and agreement. Preserve plural truths through epistemic frames when sources legitimately disagree. Align against TOMs, best practices, and industry benchmarks. Generate prioritized gap analysis with evidence-backed recommendations. Know what you don't know — and target evidence acquisition to fill the gaps.
+**Vision Statement**: Ingest a focused body of evidence related to a specific business area. Actively elicit structured process knowledge through domain-seeded probes. Create consistent semantic relationships between all evidence items using a controlled edge vocabulary. Produce a Consensus first-pass point of view across the evidence corpus — the baseline consensus including all evidence-supported elements, weighted by source type and confidence. Score every process element with confidence based on evidence coverage, quality, and agreement. Preserve plural truths through epistemic frames when sources legitimately disagree. Align against TOMs, best practices, and industry benchmarks. Generate prioritized gap analysis with evidence-backed recommendations. Know what you don't know — and target evidence acquisition to fill the gaps.
 
 **Guiding Principles**:
 - Evidence-first: every assertion is traceable to source evidence
@@ -970,7 +970,7 @@ Every processing activity requires a documented lawful basis per GDPR Article 6:
 3. System performs cross-source triangulation
 4. Cross-source consistency checks detect mismatches (6 rules)
 5. Three-way distinction classifies each mismatch (genuine disagreement / naming variant / temporal shift)
-6. LCD algorithm synthesizes consensus process model (evidence-weighted, not limited to universal agreement)
+6. Consensus algorithm synthesizes consensus process model (evidence-weighted, not limited to universal agreement)
 7. Three-dimensional confidence scores assigned per element (numeric + brightness + evidence grade)
 8. Contradictions flagged with ConflictObjects and alternative views
 9. BPMN process model generated with evidence citations

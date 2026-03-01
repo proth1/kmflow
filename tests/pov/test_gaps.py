@@ -1,4 +1,4 @@
-"""Tests for gap detection (LCD Step 8)."""
+"""Tests for gap detection (Consensus Step 8)."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""BDD tests for LCD Step 3: Cross-Source Triangulation Engine.
+"""BDD tests for Consensus Step 3: Cross-Source Triangulation Engine.
 
 Story #306: Validate process elements by corroboration across multiple
 evidence types with evidence plane classification, coverage/agreement

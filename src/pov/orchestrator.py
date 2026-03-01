@@ -1,13 +1,13 @@
 """POV Generation Orchestrator (Story #318).
 
-Wraps the LCD algorithm pipeline (``generate_pov``) into the async task
+Wraps the consensus algorithm pipeline (``generate_pov``) into the async task
 architecture (``TaskWorker``/``TaskQueue``) with:
 - 8-step progress tracking with named steps
 - Partial result preservation on failure (``FAILED_PARTIAL``)
 - Versioned POV history (``SUPERSEDED`` previous versions)
 - Step-level timing for SLA monitoring
 
-The 8 LCD algorithm steps:
+The 8 consensus algorithm steps:
   1. Evidence Aggregation
   2. Entity Extraction
   3. Cross-Source Triangulation
@@ -29,8 +29,8 @@ from src.core.tasks.base import TaskWorker
 
 logger = logging.getLogger(__name__)
 
-# LCD algorithm step definitions
-LCD_STEPS: list[dict[str, str]] = [
+# Consensus algorithm step definitions
+POV_STEPS: list[dict[str, str]] = [
     {"number": "1", "name": "Evidence Aggregation"},
     {"number": "2", "name": "Entity Extraction"},
     {"number": "3", "name": "Cross-Source Triangulation"},
@@ -41,12 +41,12 @@ LCD_STEPS: list[dict[str, str]] = [
     {"number": "8", "name": "Gap Detection"},
 ]
 
-TOTAL_STEPS = len(LCD_STEPS)
+TOTAL_STEPS = len(POV_STEPS)
 
 
 @dataclass
 class PovStepResult:
-    """Result from a single LCD algorithm step.
+    """Result from a single consensus algorithm step.
 
     Attributes:
         step_number: Which step (1-8) this result is from.
@@ -99,7 +99,7 @@ class PovGenerationState:
     @property
     def step_name(self) -> str:
         if self.current_step < TOTAL_STEPS:
-            return LCD_STEPS[self.current_step]["name"]
+            return POV_STEPS[self.current_step]["name"]
         return "Complete"
 
     @property
@@ -144,7 +144,7 @@ class PovGenerationState:
 class PovGenerationWorker(TaskWorker):
     """Task worker that executes the POV generation pipeline.
 
-    Provides step-by-step progress tracking through the 8 LCD
+    Provides step-by-step progress tracking through the 8 consensus
     algorithm steps.  On failure, preserves partial results from
     completed steps.
 
@@ -190,7 +190,7 @@ class PovGenerationWorker(TaskWorker):
         pipeline_start = time.monotonic()
 
         # Execute each step with progress tracking
-        for i, step_def in enumerate(LCD_STEPS):
+        for i, step_def in enumerate(POV_STEPS):
             step_num = i + 1
             step_name = step_def["name"]
             step_start = time.monotonic()
@@ -256,7 +256,7 @@ class PovGenerationWorker(TaskWorker):
         scope: str,
         state: PovGenerationState,
     ) -> dict[str, Any]:
-        """Execute a single LCD step (stub for direct pipeline delegation).
+        """Execute a single consensus step (stub for direct pipeline delegation).
 
         In the current implementation, this provides the step structure
         for progress tracking.  The actual work is performed by
@@ -274,7 +274,7 @@ class PovGenerationWorker(TaskWorker):
         Returns:
             Step result data dict.
         """
-        step_name = LCD_STEPS[step_number - 1]["name"]
+        step_name = POV_STEPS[step_number - 1]["name"]
 
         # Each step records what it processed for partial preservation
         step_data: dict[str, Any] = {
@@ -294,7 +294,7 @@ class PovGenerationWorker(TaskWorker):
 
 
 def get_step_info(step_number: int) -> dict[str, str]:
-    """Get information about an LCD algorithm step.
+    """Get information about a consensus algorithm step.
 
     Args:
         step_number: Step number (1-8).
@@ -307,7 +307,7 @@ def get_step_info(step_number: int) -> dict[str, str]:
     """
     if step_number < 1 or step_number > TOTAL_STEPS:
         raise ValueError(f"Step number must be between 1 and {TOTAL_STEPS}, got {step_number}")
-    return LCD_STEPS[step_number - 1]
+    return POV_STEPS[step_number - 1]
 
 
 def compute_version_diff(

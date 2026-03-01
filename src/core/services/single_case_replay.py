@@ -16,7 +16,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# Brightness thresholds (aligned with LCD confidence model)
+# Brightness thresholds (aligned with consensus confidence model)
 _DARK_THRESHOLD = 0.4
 _DIM_THRESHOLD = 0.7
 

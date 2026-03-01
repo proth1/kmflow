@@ -54,7 +54,7 @@ def _mock_pov(
     pov.element_count = 3
     pov.evidence_count = 10
     pov.metadata_json = {}
-    pov.generated_by = "lcd_algorithm"
+    pov.generated_by = "consensus_algorithm"
     return pov
 
 

@@ -1,4 +1,4 @@
-"""Tests for cross-source triangulation (LCD Step 3)."""
+"""Tests for cross-source triangulation (Consensus Step 3)."""
 
 from __future__ import annotations
 

@@ -11,7 +11,7 @@ KMFlow is an AI-powered Process Intelligence platform for consulting engagements
 ```
 Frontend (Next.js 14+, Port 3000)
   -> API Gateway (FastAPI, Port 8000)
-    -> Processing Services (Evidence, Semantic, LCD, TOM, Gap, RAG)
+    -> Processing Services (Evidence, Semantic, Consensus, TOM, Gap, RAG)
       -> Data Layer (PostgreSQL+pgvector, Neo4j, Redis)
 ```
 
@@ -25,7 +25,7 @@ src/
   core/             # Domain models (46), config, database, auth, RLS, encryption
   evidence/         # Evidence ingestion: 15+ parsers, pipeline, quality scoring, lifecycle
   semantic/         # Knowledge graph engine, entity extraction, confidence scoring
-  pov/              # LCD algorithm, POV generator, consensus, triangulation, orchestrator
+  pov/              # Consensus algorithm, POV generator, consensus building, triangulation, orchestrator
   tom/              # TOM alignment, gap analysis, maturity scoring, roadmap generation
   integrations/     # External connectors (Celonis, Soroco, SAP, ARIS, Visio, XES)
   conformance/      # BPMN/event stream conformance checking

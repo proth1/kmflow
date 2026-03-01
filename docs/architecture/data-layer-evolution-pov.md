@@ -774,7 +774,7 @@ The Delta table format written by delta-rs is byte-compatible with Databricks. A
 These files are explicitly not in scope for the data layer evolution. They do their job and the storage changes are designed not to touch them:
 
 - `src/evidence/parsers/` — all 14 parsers (document, BPMN, XES, ARIS, controls, SaaS, etc.)
-- `src/pov/` — LCD algorithm and POV generation
+- `src/pov/` — Consensus algorithm and POV generation
 - `src/tom/` — TOM alignment
 - `src/conformance/` — BPMN conformance checking
 - `src/monitoring/` — process monitoring and alerting (Phase E adds a new alert type but does not modify existing code)

@@ -83,7 +83,7 @@ src/
   core/          # Models, auth, config, encryption
   evidence/      # Evidence ingestion and processing
   semantic/      # Knowledge graph engine
-  pov/           # LCD algorithm and POV generator
+  pov/           # Consensus algorithm and POV generator
   tom/           # TOM alignment and gap analysis
   rag/           # RAG copilot (hybrid retrieval)
   conformance/   # BPMN conformance checking

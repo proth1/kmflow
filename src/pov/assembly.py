@@ -1,4 +1,4 @@
-"""BPMN 2.0 XML assembly for the LCD algorithm.
+"""BPMN 2.0 XML assembly for the consensus algorithm.
 
 Step 9: Generates valid BPMN 2.0 XML from scored process elements with
 activities, gateways, events, sequence flows, and custom properties

@@ -1,4 +1,4 @@
-"""Tests for evidence aggregation (LCD Step 1)."""
+"""Tests for evidence aggregation (Consensus Step 1)."""
 
 from __future__ import annotations
 

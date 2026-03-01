@@ -1,6 +1,6 @@
-"""Contradiction resolution for the LCD algorithm.
+"""Contradiction resolution for the consensus algorithm.
 
-Step 8 of the 8-step LCD algorithm: Resolves conflicts forwarded from
+Step 8 of the 8-step consensus algorithm: Resolves conflicts forwarded from
 consensus building (Step 6-7) using a three-way distinction classifier:
 
 1. Naming Variant — Entity names resolve to the same canonical seed term
