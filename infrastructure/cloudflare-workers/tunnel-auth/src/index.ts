@@ -95,21 +95,37 @@ async function refreshSessionServerSide(
   refreshToken: string,
   env: Env
 ): Promise<{ success: boolean; sessionJwt?: string; refreshJwt?: string }> {
-  try {
-    const response = await fetch('https://api.descope.com/v1/auth/refresh', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${env.DESCOPE_PROJECT_ID}`,
-      },
-      body: JSON.stringify({ refreshJwt: refreshToken }),
-    });
-    if (!response.ok) return { success: false };
-    const data = await response.json() as { sessionJwt?: string; refreshJwt?: string };
-    return { success: true, sessionJwt: data.sessionJwt, refreshJwt: data.refreshJwt };
-  } catch {
-    return { success: false };
+  const MAX_ATTEMPTS = 2;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const response = await fetch('https://api.descope.com/v1/auth/refresh', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${env.DESCOPE_PROJECT_ID}`,
+        },
+        body: JSON.stringify({ refreshJwt: refreshToken }),
+      });
+      if (response.ok) {
+        const data = await response.json() as { sessionJwt?: string; refreshJwt?: string };
+        return { success: true, sessionJwt: data.sessionJwt, refreshJwt: data.refreshJwt };
+      }
+      // Don't retry on client errors (invalid token, unauthorized, etc.)
+      if (response.status >= 400 && response.status < 500) {
+        return { success: false };
+      }
+      // Server error — retry if attempts remain
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    } catch {
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise((r) => setTimeout(r, 500));
+        continue;
+      }
+    }
   }
+  return { success: false };
 }
 
 function redirectToLogin(originalUrl: URL): Response {
@@ -197,16 +213,11 @@ async function proxyToTunnelWithNewSession(
 
 function handleLogout(url: URL): Response {
   const loginUrl = new URL(LOGIN_PATH, url.origin);
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: loginUrl.toString(),
-      'Set-Cookie': [
-        `${SESSION_COOKIE}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`,
-        `${REFRESH_COOKIE}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`,
-      ].join(', '),
-    },
-  });
+  const headers = new Headers();
+  headers.set('Location', loginUrl.toString());
+  headers.append('Set-Cookie', `${SESSION_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT`);
+  headers.append('Set-Cookie', `${REFRESH_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT`);
+  return new Response(null, { status: 302, headers });
 }
 
 async function handleSendOTP(request: Request, env: Env, url: URL): Promise<Response> {
@@ -482,6 +493,55 @@ function renderLoginPage(url: URL, request: Request): Response {
   });
 }
 
+function renderServiceUnavailablePage(hostname: string): Response {
+  const serviceName = SERVICE_NAMES[hostname] || 'KMFlow';
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="refresh" content="5">
+  <title>Service Restarting - ${escapeHtml(serviceName)}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans+Condensed:wght@300;700&family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Open Sans', Arial, sans-serif;
+      display: flex; justify-content: center; align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #00338D 0%, #005EB8 100%);
+    }
+    .container {
+      background: white; padding: 48px 40px; border-radius: 8px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+      max-width: 480px; width: 100%; margin: 20px; text-align: center;
+    }
+    .spinner { width: 48px; height: 48px; border: 4px solid #e0e0e0; border-top-color: #00338D; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 24px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    h1 { font-family: 'Open Sans Condensed', sans-serif; font-size: 28px; color: #00338D; margin-bottom: 12px; }
+    p { color: #666; margin-bottom: 8px; line-height: 1.6; }
+    .retry-note { font-size: 13px; color: #94a3b8; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="spinner"></div>
+    <h1>Service Restarting</h1>
+    <p>${escapeHtml(serviceName)} is temporarily unavailable while a container restarts.</p>
+    <p class="retry-note">This page will automatically retry in 5 seconds.</p>
+  </div>
+</body>
+</html>`;
+  return new Response(html, {
+    status: 503,
+    headers: {
+      'Content-Type': 'text/html;charset=UTF-8',
+      'Retry-After': '5',
+      'Cache-Control': 'no-store',
+    },
+  });
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -511,7 +571,15 @@ export default {
         if (validation.valid) {
           const email = validation.payload?.email as string | undefined;
           if (!email || !isEmailAuthorized(email)) return renderUnauthorizedPage(email);
-          return proxyToTunnelWithNewSession(request, url, env, refreshResult.sessionJwt, refreshResult.refreshJwt);
+          try {
+            const response = await proxyToTunnelWithNewSession(request, url, env, refreshResult.sessionJwt, refreshResult.refreshJwt);
+            if (response.status === 502 || response.status === 503) {
+              return renderServiceUnavailablePage(url.hostname);
+            }
+            return response;
+          } catch {
+            return renderServiceUnavailablePage(url.hostname);
+          }
         }
       }
       return redirectToLogin(url);
@@ -524,6 +592,14 @@ export default {
     if (!email || !isEmailAuthorized(email)) return renderUnauthorizedPage(email);
 
     // Proxy authenticated request to tunnel backend
-    return proxyToTunnel(request, url, env);
+    try {
+      const response = await proxyToTunnel(request, url, env);
+      if (response.status === 502 || response.status === 503) {
+        return renderServiceUnavailablePage(url.hostname);
+      }
+      return response;
+    } catch {
+      return renderServiceUnavailablePage(url.hostname);
+    }
   },
 };
