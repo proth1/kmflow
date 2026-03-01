@@ -95,21 +95,37 @@ async function refreshSessionServerSide(
   refreshToken: string,
   env: Env
 ): Promise<{ success: boolean; sessionJwt?: string; refreshJwt?: string }> {
-  try {
-    const response = await fetch('https://api.descope.com/v1/auth/refresh', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${env.DESCOPE_PROJECT_ID}`,
-      },
-      body: JSON.stringify({ refreshJwt: refreshToken }),
-    });
-    if (!response.ok) return { success: false };
-    const data = await response.json() as { sessionJwt?: string; refreshJwt?: string };
-    return { success: true, sessionJwt: data.sessionJwt, refreshJwt: data.refreshJwt };
-  } catch {
-    return { success: false };
+  const MAX_ATTEMPTS = 2;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const response = await fetch('https://api.descope.com/v1/auth/refresh', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${env.DESCOPE_PROJECT_ID}`,
+        },
+        body: JSON.stringify({ refreshJwt: refreshToken }),
+      });
+      if (response.ok) {
+        const data = await response.json() as { sessionJwt?: string; refreshJwt?: string };
+        return { success: true, sessionJwt: data.sessionJwt, refreshJwt: data.refreshJwt };
+      }
+      // 4xx errors are not transient — don't retry
+      if (response.status >= 400 && response.status < 500) {
+        return { success: false };
+      }
+      // 5xx — retry after short delay
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    } catch {
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise((r) => setTimeout(r, 500));
+        continue;
+      }
+    }
   }
+  return { success: false };
 }
 
 function redirectToLogin(originalUrl: URL): Response {
@@ -124,6 +140,58 @@ function redirectToLoginWithError(url: URL, error: string, redirect: string, ste
   loginUrl.searchParams.set('redirect', redirect);
   if (step) loginUrl.searchParams.set('step', step);
   return Response.redirect(loginUrl.toString(), 302);
+}
+
+function renderServiceUnavailablePage(url: URL): Response {
+  const serviceName = SERVICE_NAMES[url.hostname] || 'KMFlow';
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Service Restarting - ${escapeHtml(serviceName)}</title>
+  <meta http-equiv="refresh" content="5">
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans+Condensed:wght@300;700&family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Open Sans', Arial, sans-serif;
+      display: flex; justify-content: center; align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #00338D 0%, #005EB8 100%);
+    }
+    .container {
+      background: white; padding: 48px 40px; border-radius: 8px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+      max-width: 480px; width: 100%; margin: 20px; text-align: center;
+    }
+    .icon { width: 64px; height: 64px; background: #fef3c7; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; }
+    .icon svg { width: 32px; height: 32px; color: #d97706; }
+    h1 { font-family: 'Open Sans Condensed', sans-serif; font-size: 28px; color: #00338D; margin-bottom: 12px; }
+    p { color: #666; margin-bottom: 8px; line-height: 1.6; }
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid #e0e0e0; border-top-color: #00338D; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .retry { margin-top: 16px; color: #94a3b8; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg></div>
+    <h1>${escapeHtml(serviceName)}</h1>
+    <p><span class="spinner"></span>Service is restarting...</p>
+    <p>Your session is preserved. This page will auto-refresh in a few seconds.</p>
+    <p class="retry">If the page doesn't reload, <a href="${escapeHtml(url.pathname + url.search)}">click here</a>.</p>
+  </div>
+</body>
+</html>`;
+  return new Response(html, {
+    status: 503,
+    headers: {
+      'Content-Type': 'text/html;charset=UTF-8',
+      'Cache-Control': 'no-store',
+      'Retry-After': '5',
+    },
+  });
 }
 
 async function proxyToTunnel(request: Request, url: URL, env?: Env): Promise<Response> {
@@ -197,16 +265,11 @@ async function proxyToTunnelWithNewSession(
 
 function handleLogout(url: URL): Response {
   const loginUrl = new URL(LOGIN_PATH, url.origin);
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: loginUrl.toString(),
-      'Set-Cookie': [
-        `${SESSION_COOKIE}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`,
-        `${REFRESH_COOKIE}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`,
-      ].join(', '),
-    },
-  });
+  const headers = new Headers();
+  headers.set('Location', loginUrl.toString());
+  headers.append('Set-Cookie', `${SESSION_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT`);
+  headers.append('Set-Cookie', `${REFRESH_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Expires=Thu, 01 Jan 1970 00:00:00 GMT`);
+  return new Response(null, { status: 302, headers });
 }
 
 async function handleSendOTP(request: Request, env: Env, url: URL): Promise<Response> {
@@ -511,7 +574,15 @@ export default {
         if (validation.valid) {
           const email = validation.payload?.email as string | undefined;
           if (!email || !isEmailAuthorized(email)) return renderUnauthorizedPage(email);
-          return proxyToTunnelWithNewSession(request, url, env, refreshResult.sessionJwt, refreshResult.refreshJwt);
+          try {
+            const response = await proxyToTunnelWithNewSession(request, url, env, refreshResult.sessionJwt, refreshResult.refreshJwt);
+            if (response.status === 502 || response.status === 503) {
+              return renderServiceUnavailablePage(url);
+            }
+            return response;
+          } catch {
+            return renderServiceUnavailablePage(url);
+          }
         }
       }
       return redirectToLogin(url);
@@ -524,6 +595,16 @@ export default {
     if (!email || !isEmailAuthorized(email)) return renderUnauthorizedPage(email);
 
     // Proxy authenticated request to tunnel backend
-    return proxyToTunnel(request, url, env);
+    try {
+      const response = await proxyToTunnel(request, url, env);
+      // Tunnel backend down (container restarting) — show friendly retry page
+      if (response.status === 502 || response.status === 503) {
+        return renderServiceUnavailablePage(url);
+      }
+      return response;
+    } catch {
+      // Network error reaching tunnel — service is down
+      return renderServiceUnavailablePage(url);
+    }
   },
 };

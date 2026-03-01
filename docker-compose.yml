@@ -260,6 +260,7 @@ services:
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
+      - ./frontend/next.config.js:/app/next.config.js
     depends_on:
       backend:
         condition: service_healthy
