@@ -247,14 +247,13 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:${BACKEND_PORT:-8002}
+        API_URL: http://backend:8000
     container_name: kmflow-frontend
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:${BACKEND_PORT:-8002}
       API_URL: http://backend:8000
     ports:
       - "3002:3000"

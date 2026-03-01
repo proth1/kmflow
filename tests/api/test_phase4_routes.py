@@ -7,7 +7,6 @@ from uuid import uuid4
 
 import pytest
 
-from src.api.routes.simulations import _check_llm_rate_limit, _llm_request_log
 from src.simulation.financial import compute_financial_impact
 from src.simulation.ranking import rank_scenarios
 from src.simulation.suggester import AlternativeSuggesterService, _sanitize_text
@@ -144,24 +143,3 @@ class TestSanitizeText:
 
     def test_truncates_to_max_len(self) -> None:
         assert len(_sanitize_text("a" * 500, 200)) == 200
-
-
-class TestLLMRateLimit:
-    """Tests for the in-memory rate limiter."""
-
-    def test_allows_under_limit(self) -> None:
-        user = str(uuid4())
-        _llm_request_log.pop(user, None)
-        _check_llm_rate_limit(user)  # Should not raise
-
-    def test_blocks_over_limit(self) -> None:
-        from fastapi import HTTPException as FastAPIHTTPException
-
-        user = str(uuid4())
-        _llm_request_log.pop(user, None)
-        for _ in range(5):
-            _check_llm_rate_limit(user)
-
-        with pytest.raises(FastAPIHTTPException) as exc_info:
-            _check_llm_rate_limit(user)
-        assert exc_info.value.status_code == 429

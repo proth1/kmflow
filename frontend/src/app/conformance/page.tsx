@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { apiGet, apiPost } from "@/lib/api";
 
 interface ReferenceModel {
   id: string;
@@ -70,14 +69,12 @@ export default function ConformanceDashboard() {
     abortRef.current = controller;
     setModelsLoading(true);
     try {
-      const response = await fetch(
-        `${API_BASE}/api/v1/conformance/reference-models`,
-        { signal: controller.signal, credentials: "include" }
+      const data = await apiGet<ReferenceModel[] | { items: ReferenceModel[] }>(
+        "/api/v1/conformance/reference-models",
+        controller.signal,
       );
-      if (!response.ok) throw new Error("Failed to load reference models");
-      const data = await response.json();
       if (!controller.signal.aborted) {
-        setReferenceModels(data.items ?? data);
+        setReferenceModels(Array.isArray(data) ? data : data.items ?? []);
       }
     } catch (err) {
       if (!controller.signal.aborted) {
@@ -97,21 +94,7 @@ export default function ConformanceDashboard() {
     setSuccess(null);
 
     try {
-      const response = await fetch(
-        `${API_BASE}/api/v1/conformance/reference-models`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify(uploadForm),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Failed to upload reference model");
-      }
-
+      await apiPost("/api/v1/conformance/reference-models", uploadForm);
       setSuccess("Reference model uploaded successfully");
       setUploadForm({ name: "", industry: "", process_area: "", bpmn_xml: "" });
       await loadReferenceModels();
@@ -130,19 +113,7 @@ export default function ConformanceDashboard() {
     setConformanceResult(null);
 
     try {
-      const response = await fetch(`${API_BASE}/api/v1/conformance/check`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(checkForm),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Conformance check failed");
-      }
-
-      const result = await response.json();
+      const result = await apiPost<ConformanceResult>("/api/v1/conformance/check", checkForm);
       setConformanceResult(result);
       setSuccess("Conformance check completed");
     } catch (err) {

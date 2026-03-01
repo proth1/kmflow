@@ -5,6 +5,7 @@ import {
   fetchEngagementReport,
   fetchGapReport,
   fetchGovernanceReport,
+  API_BASE_URL,
   type ReportResponse,
 } from "@/lib/api";
 import { isValidEngagementId } from "@/lib/validation";
@@ -19,11 +20,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Download, RefreshCw, AlertCircle } from "lucide-react";
-
-const API_BASE =
-  typeof window === "undefined"
-    ? process.env.API_URL || "http://localhost:8000"
-    : process.env.NEXT_PUBLIC_API_URL || "http://localhost:8002";
 
 type ReportType = "summary" | "gap-analysis" | "governance";
 
@@ -96,7 +92,7 @@ export default function ReportsPage() {
   function downloadPdf(type: ReportType) {
     if (!engagementId || !isValidEngagementId(engagementId)) return;
     window.open(
-      `${API_BASE}/api/v1/reports/${encodeURIComponent(engagementId)}/${encodeURIComponent(type)}?format=pdf`,
+      `${API_BASE_URL}/api/v1/reports/${encodeURIComponent(engagementId)}/${encodeURIComponent(type)}?format=pdf`,
       "_blank",
     );
   }
