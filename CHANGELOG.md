@@ -3,6 +3,12 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.02.203] - 2026-03-01
+### Fixed
+- Fix frontend "Failed to fetch" errors via Next.js rewrites proxy (#577)
+- Centralize API base URL, remove 3 duplicated API_BASE definitions
+- Fix EvidenceUploader and rate limiter test failures
+
 ## [2026.02.202] - 2026-02-28
 ### Infrastructure
 - Add tunnel-auth Cloudflare Worker with Descope OTP auth for kmflow-dev and cockpit endpoints
