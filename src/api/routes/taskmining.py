@@ -75,9 +75,28 @@ from src.core.models.taskmining import (
     VCETriggerReason,
     VisualContextEvent,
 )
+from src.core.models.auth import UserRole
 from src.core.permissions import require_permission
+from src.core.rls import set_engagement_context, set_rls_bypass
 
 logger = logging.getLogger(__name__)
+
+
+async def _apply_rls_context(
+    session: AsyncSession,
+    user: User,
+    engagement_id: UUID | None,
+) -> None:
+    """Set RLS context for admin read endpoints.
+
+    If an engagement_id is provided, scope to that engagement.
+    Otherwise, if the user is a platform admin, bypass RLS so they
+    can see data across all engagements (admin dashboards).
+    """
+    if engagement_id:
+        await set_engagement_context(session, engagement_id)
+    elif user.role == UserRole.PLATFORM_ADMIN:
+        await set_rls_bypass(session, True)
 
 router = APIRouter(prefix="/api/v1/taskmining", tags=["taskmining"])
 
@@ -256,6 +275,8 @@ async def list_agents(
     current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
     """List registered agents with optional filters."""
+    await _apply_rls_context(session, current_user, engagement_id)
+
     query = select(TaskMiningAgent)
     count_query = select(func.count(TaskMiningAgent.id))
 
@@ -448,6 +469,8 @@ async def list_sessions(
     current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
     """List capture sessions with optional filters."""
+    await _apply_rls_context(session, current_user, engagement_id)
+
     query = select(TaskMiningSession)
     count_query = select(func.count(TaskMiningSession.id))
 
@@ -485,6 +508,8 @@ async def list_actions(
     current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
     """List aggregated user actions with optional filters."""
+    await _apply_rls_context(session, current_user, engagement_id)
+
     query = select(TaskMiningAction)
     count_query = select(func.count(TaskMiningAction.id))
 
@@ -524,6 +549,8 @@ async def list_quarantine(
     current_user: User = Depends(require_permission("taskmining:admin")),
 ) -> dict[str, Any]:
     """List PII quarantine items for review."""
+    await _apply_rls_context(session, current_user, engagement_id)
+
     query = select(PIIQuarantine)
     count_query = select(func.count(PIIQuarantine.id))
 
@@ -598,6 +625,8 @@ async def get_dashboard_stats(
     current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
     """Return aggregated dashboard statistics for task mining."""
+    await _apply_rls_context(session, current_user, engagement_id)
+
     filters = []
     if engagement_id:
         filters.append(TaskMiningAgent.engagement_id == engagement_id)

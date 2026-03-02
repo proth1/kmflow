@@ -126,7 +126,7 @@ TODAY = date.today()
 # ---------------------------------------------------------------------------
 # Database connection — matches docker-compose.yml defaults
 # ---------------------------------------------------------------------------
-DB_URL = "postgresql+asyncpg://kmflow:kmflow_dev_password@localhost:5433/kmflow"
+DB_URL = "postgresql+asyncpg://postgres:postgres_dev@localhost:5433/kmflow"
 NEO4J_URI = "bolt://localhost:7688"
 NEO4J_USER = "neo4j"
 NEO4J_PASSWORD = "neo4j_dev_password"
@@ -141,6 +141,9 @@ async def reset_data(session: AsyncSession) -> None:
     await session.execute(text("DELETE FROM benchmarks WHERE industry = 'Financial Services'"))
     await session.execute(text("DELETE FROM success_metrics WHERE name LIKE 'Loan%'"))
     await session.execute(text("DELETE FROM pattern_library_entries WHERE industry = 'Financial Services'"))
+    # Conformance reference models (deterministic IDs)
+    for cid in CONFORMANCE_IDS:
+        await session.execute(text("DELETE FROM reference_process_models WHERE id = :id"), {"id": str(cid)})
     await session.commit()
     logger.info("PostgreSQL demo data cleared.")
 
@@ -498,7 +501,7 @@ def seed_process_model() -> list:
         ),
     ]
 
-    return [pm, *elements, *contradictions, *gaps]
+    return {"model": [pm], "children": [*elements, *contradictions, *gaps]}
 
 
 def seed_tom() -> list:
@@ -1485,31 +1488,37 @@ def seed_wgi_features() -> dict:
     traces = [
         SwitchingTrace(
             id=SWITCHING_TRACE_IDS[0], engagement_id=ENG_ID,
-            agent_id=AGENT_IDS[0], session_id=SESSION_IDS[0],
+            session_id=SESSION_IDS[0],
             trace_sequence=["Temenos T24", "Microsoft Excel", "Temenos T24"],
             dwell_durations=[45000, 12000, 38000],
+            total_duration_ms=95000,
+            started_at=NOW - timedelta(hours=8), ended_at=NOW - timedelta(hours=8) + timedelta(milliseconds=95000),
             friction_score=0.72, is_ping_pong=True, ping_pong_count=1, app_count=2,
         ),
         SwitchingTrace(
             id=SWITCHING_TRACE_IDS[1], engagement_id=ENG_ID,
-            agent_id=AGENT_IDS[0], session_id=SESSION_IDS[1],
+            session_id=SESSION_IDS[1],
             trace_sequence=["Google Chrome", "Microsoft Outlook", "Google Chrome", "Temenos T24"],
             dwell_durations=[30000, 8000, 15000, 52000],
+            total_duration_ms=105000,
+            started_at=NOW - timedelta(hours=6), ended_at=NOW - timedelta(hours=6) + timedelta(milliseconds=105000),
             friction_score=0.45, is_ping_pong=True, ping_pong_count=1, app_count=3,
         ),
         SwitchingTrace(
             id=SWITCHING_TRACE_IDS[2], engagement_id=ENG_ID,
-            agent_id=AGENT_IDS[1], session_id=SESSION_IDS[2],
+            session_id=SESSION_IDS[2],
             trace_sequence=["Temenos T24", "Microsoft Excel"],
             dwell_durations=[120000, 25000],
+            total_duration_ms=145000,
+            started_at=NOW - timedelta(hours=4), ended_at=NOW - timedelta(hours=4) + timedelta(milliseconds=145000),
             friction_score=0.15, is_ping_pong=False, ping_pong_count=0, app_count=2,
         ),
     ]
 
     matrix = TransitionMatrix(
         id=TRANSITION_MATRIX_ID, engagement_id=ENG_ID,
-        role_id="role-loan-officer", period_start=TODAY - timedelta(days=7),
-        period_end=TODAY,
+        role_id=None, period_start=NOW - timedelta(days=7),
+        period_end=NOW,
         matrix_data={
             "Temenos T24": {"Microsoft Excel": 45, "Google Chrome": 30, "Microsoft Outlook": 12},
             "Microsoft Excel": {"Temenos T24": 42, "Google Chrome": 8},
@@ -1528,6 +1537,7 @@ def seed_wgi_features() -> dict:
         VisualContextEvent(
             id=VCE_IDS[0], engagement_id=ENG_ID,
             agent_id=AGENT_IDS[0], session_id=SESSION_IDS[0],
+            timestamp=NOW - timedelta(hours=6),
             screen_state_class=ScreenStateClass.DATA_ENTRY,
             system_guess="Temenos T24", module_guess="Loan Application Entry",
             confidence=0.85, trigger_reason=VCETriggerReason.HIGH_DWELL,
@@ -1537,6 +1547,7 @@ def seed_wgi_features() -> dict:
         VisualContextEvent(
             id=VCE_IDS[1], engagement_id=ENG_ID,
             agent_id=AGENT_IDS[0], session_id=SESSION_IDS[0],
+            timestamp=NOW - timedelta(hours=5, minutes=30),
             screen_state_class=ScreenStateClass.SEARCH,
             system_guess="Equifax", module_guess="Credit Bureau Lookup",
             confidence=0.72, trigger_reason=VCETriggerReason.LOW_CONFIDENCE,
@@ -1546,6 +1557,7 @@ def seed_wgi_features() -> dict:
         VisualContextEvent(
             id=VCE_IDS[2], engagement_id=ENG_ID,
             agent_id=AGENT_IDS[0], session_id=SESSION_IDS[1],
+            timestamp=NOW - timedelta(hours=4),
             screen_state_class=ScreenStateClass.ERROR,
             system_guess="Temenos T24", module_guess="Validation Error",
             confidence=0.92, trigger_reason=VCETriggerReason.RECURRING_EXCEPTION,
@@ -1555,6 +1567,7 @@ def seed_wgi_features() -> dict:
         VisualContextEvent(
             id=VCE_IDS[3], engagement_id=ENG_ID,
             agent_id=AGENT_IDS[1], session_id=SESSION_IDS[2],
+            timestamp=NOW - timedelta(hours=3),
             screen_state_class=ScreenStateClass.REVIEW,
             system_guess="Microsoft Excel", module_guess="Credit Score Calculation",
             confidence=0.68, trigger_reason=VCETriggerReason.HIGH_DWELL,
@@ -1564,6 +1577,7 @@ def seed_wgi_features() -> dict:
         VisualContextEvent(
             id=VCE_IDS[4], engagement_id=ENG_ID,
             agent_id=AGENT_IDS[1], session_id=SESSION_IDS[3],
+            timestamp=NOW - timedelta(hours=2),
             screen_state_class=ScreenStateClass.WAITING_LATENCY,
             system_guess="Temenos T24", module_guess="System Loading",
             confidence=0.95, trigger_reason=VCETriggerReason.HIGH_DWELL,
@@ -1575,19 +1589,19 @@ def seed_wgi_features() -> dict:
     case_links = [
         CaseLinkEdge(
             id=CASE_LINK_IDS[0], engagement_id=ENG_ID,
-            endpoint_event_id=str(SESSION_IDS[0]), case_id="LOAN-2025-001",
+            event_id=SESSION_IDS[0], case_id="LOAN-2025-001",
             method="deterministic", confidence=0.98,
             explainability={"method": "window_title_regex", "pattern": r"LOAN-\d{4}-\d{3}", "match": "LOAN-2025-001"},
         ),
         CaseLinkEdge(
             id=CASE_LINK_IDS[1], engagement_id=ENG_ID,
-            endpoint_event_id=str(SESSION_IDS[1]), case_id="LOAN-2025-002",
+            event_id=SESSION_IDS[1], case_id="LOAN-2025-002",
             method="deterministic", confidence=0.95,
             explainability={"method": "window_title_regex", "pattern": r"LOAN-\d{4}-\d{3}", "match": "LOAN-2025-002"},
         ),
         CaseLinkEdge(
             id=CASE_LINK_IDS[2], engagement_id=ENG_ID,
-            endpoint_event_id=str(SESSION_IDS[2]), case_id="LOAN-2025-001",
+            event_id=SESSION_IDS[2], case_id="LOAN-2025-001",
             method="assisted", confidence=0.72,
             explainability={
                 "method": "probabilistic", "features": {
@@ -1597,7 +1611,7 @@ def seed_wgi_features() -> dict:
         ),
         CaseLinkEdge(
             id=CASE_LINK_IDS[3], engagement_id=ENG_ID,
-            endpoint_event_id=str(SESSION_IDS[3]), case_id="LOAN-2025-003",
+            event_id=SESSION_IDS[3], case_id="LOAN-2025-003",
             method="role_association", confidence=0.45,
             explainability={"method": "role_fallback", "role": "Loan Officer", "period": "2025-02-20"},
         ),
@@ -1609,6 +1623,97 @@ def seed_wgi_features() -> dict:
         "vce_events": vce_events,
         "case_links": case_links,
     }
+
+
+# Conformance reference model IDs
+CONFORMANCE_IDS = [_uid(f"conformance-ref-{i}") for i in range(3)]
+
+
+def seed_conformance() -> list:
+    from src.core.models.conformance import ReferenceProcessModel
+
+    models_data = [
+        (
+            CONFORMANCE_IDS[0],
+            "Loan Origination — Standard",
+            "Financial Services",
+            "Underwriting",
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" '
+            'xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" '
+            'xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" '
+            'xmlns:di="http://www.omg.org/spec/DD/20100524/DI" '
+            'id="Definitions_loan" targetNamespace="http://kmflow.io/conformance">'
+            '<bpmn:process id="Process_LoanOrig" isExecutable="false">'
+            '<bpmn:startEvent id="Start_1" name="Application Received"/>'
+            '<bpmn:task id="Task_VerifyID" name="Verify Identity"/>'
+            '<bpmn:task id="Task_CreditCheck" name="Run Credit Check"/>'
+            '<bpmn:task id="Task_IncomeVerify" name="Verify Income"/>'
+            '<bpmn:task id="Task_Underwrite" name="Underwriting Decision"/>'
+            '<bpmn:task id="Task_GenOffer" name="Generate Offer Letter"/>'
+            '<bpmn:endEvent id="End_1" name="Application Complete"/>'
+            '<bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_VerifyID"/>'
+            '<bpmn:sequenceFlow id="Flow_2" sourceRef="Task_VerifyID" targetRef="Task_CreditCheck"/>'
+            '<bpmn:sequenceFlow id="Flow_3" sourceRef="Task_CreditCheck" targetRef="Task_IncomeVerify"/>'
+            '<bpmn:sequenceFlow id="Flow_4" sourceRef="Task_IncomeVerify" targetRef="Task_Underwrite"/>'
+            '<bpmn:sequenceFlow id="Flow_5" sourceRef="Task_Underwrite" targetRef="Task_GenOffer"/>'
+            '<bpmn:sequenceFlow id="Flow_6" sourceRef="Task_GenOffer" targetRef="End_1"/>'
+            '</bpmn:process></bpmn:definitions>',
+        ),
+        (
+            CONFORMANCE_IDS[1],
+            "Claims Processing — P&C",
+            "Insurance",
+            "Claims",
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" '
+            'id="Definitions_claims" targetNamespace="http://kmflow.io/conformance">'
+            '<bpmn:process id="Process_Claims" isExecutable="false">'
+            '<bpmn:startEvent id="Start_C" name="Claim Filed"/>'
+            '<bpmn:task id="Task_Triage" name="Triage &amp; Assign"/>'
+            '<bpmn:task id="Task_Investigate" name="Investigation"/>'
+            '<bpmn:task id="Task_Assess" name="Damage Assessment"/>'
+            '<bpmn:task id="Task_Adjudicate" name="Adjudication"/>'
+            '<bpmn:task id="Task_Settle" name="Settlement"/>'
+            '<bpmn:endEvent id="End_C" name="Claim Closed"/>'
+            '<bpmn:sequenceFlow id="FC_1" sourceRef="Start_C" targetRef="Task_Triage"/>'
+            '<bpmn:sequenceFlow id="FC_2" sourceRef="Task_Triage" targetRef="Task_Investigate"/>'
+            '<bpmn:sequenceFlow id="FC_3" sourceRef="Task_Investigate" targetRef="Task_Assess"/>'
+            '<bpmn:sequenceFlow id="FC_4" sourceRef="Task_Assess" targetRef="Task_Adjudicate"/>'
+            '<bpmn:sequenceFlow id="FC_5" sourceRef="Task_Adjudicate" targetRef="Task_Settle"/>'
+            '<bpmn:sequenceFlow id="FC_6" sourceRef="Task_Settle" targetRef="End_C"/>'
+            '</bpmn:process></bpmn:definitions>',
+        ),
+        (
+            CONFORMANCE_IDS[2],
+            "Customer Onboarding — KYC",
+            "Banking",
+            "Operations",
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" '
+            'id="Definitions_kyc" targetNamespace="http://kmflow.io/conformance">'
+            '<bpmn:process id="Process_KYC" isExecutable="false">'
+            '<bpmn:startEvent id="Start_K" name="Customer Request"/>'
+            '<bpmn:task id="Task_CollectDocs" name="Collect Documents"/>'
+            '<bpmn:task id="Task_KYCCheck" name="KYC Screening"/>'
+            '<bpmn:task id="Task_RiskRate" name="Risk Rating"/>'
+            '<bpmn:task id="Task_Approve" name="Approval"/>'
+            '<bpmn:task id="Task_Activate" name="Account Activation"/>'
+            '<bpmn:endEvent id="End_K" name="Onboarding Complete"/>'
+            '<bpmn:sequenceFlow id="FK_1" sourceRef="Start_K" targetRef="Task_CollectDocs"/>'
+            '<bpmn:sequenceFlow id="FK_2" sourceRef="Task_CollectDocs" targetRef="Task_KYCCheck"/>'
+            '<bpmn:sequenceFlow id="FK_3" sourceRef="Task_KYCCheck" targetRef="Task_RiskRate"/>'
+            '<bpmn:sequenceFlow id="FK_4" sourceRef="Task_RiskRate" targetRef="Task_Approve"/>'
+            '<bpmn:sequenceFlow id="FK_5" sourceRef="Task_Approve" targetRef="Task_Activate"/>'
+            '<bpmn:sequenceFlow id="FK_6" sourceRef="Task_Activate" targetRef="End_K"/>'
+            '</bpmn:process></bpmn:definitions>',
+        ),
+    ]
+
+    return [
+        ReferenceProcessModel(id=mid, name=name, industry=industry, process_area=area, bpmn_xml=xml)
+        for mid, name, industry, area, xml in models_data
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -1635,24 +1740,19 @@ async def main(reset: bool = False) -> None:
 
         logger.info("Seeding demo data for 'Acme Corp Loan Origination'...")
 
-        # Temporarily disable FK trigger checks on all tables so we can insert in any order
-        result = await session.execute(text(
-            "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"
-        ))
-        tables = [row[0] for row in result.fetchall()]
-        for t in tables:
-            await session.execute(text(f'ALTER TABLE "{t}" DISABLE TRIGGER ALL'))
+        # Bypass all FK constraints and RLS policies for bulk seed insertion
+        await session.execute(text("SET session_replication_role = 'replica'"))
 
         mon = seed_monitoring()
         sim = seed_simulations()
         tm = seed_task_mining()
-        wgi = seed_wgi_features()
+        pm = seed_process_model()
 
         all_objects = [
             *seed_users(),
             *seed_engagement(),
             *seed_evidence(),
-            *seed_process_model(),
+            *pm["model"], *pm["children"],
             *seed_tom(),
             *mon["baselines"], *mon["metrics"], *mon["jobs"],
             *mon["deviations"], *mon["alerts"], *mon["readings"],
@@ -1661,17 +1761,32 @@ async def main(reset: bool = False) -> None:
             *seed_shelf_requests(),
             *seed_patterns(),
             *tm["agents"], *tm["sessions"], *tm["events"], *tm["actions"], *tm["quarantine"],
-            *wgi["traces"], *wgi["matrix"], *wgi["vce_events"], *wgi["case_links"],
+            *seed_conformance(),
         ]
 
         session.add_all(all_objects)
         await session.commit()
 
-        # Re-enable FK trigger checks on all tables
-        for t in tables:
-            await session.execute(text(f'ALTER TABLE "{t}" ENABLE TRIGGER ALL'))
+        # WGI features (switching traces, VCE, case links) require enum types
+        # that may not exist if migrations 080-082 haven't run against current DB.
+        wgi_count = 0
+        try:
+            wgi = seed_wgi_features()
+            wgi_objects = [
+                *wgi["traces"], *wgi["matrix"], *wgi["vce_events"], *wgi["case_links"],
+            ]
+            session.add_all(wgi_objects)
+            await session.commit()
+            wgi_count = len(wgi_objects)
+        except Exception as e:
+            await session.rollback()
+            logger.warning("Skipping WGI features (missing schema): %s", e)
+
+        # Restore normal FK/RLS enforcement
+        await session.execute(text("SET session_replication_role = 'origin'"))
         await session.commit()
-        total = len(all_objects)
+
+        total = len(all_objects) + wgi_count
         logger.info("PostgreSQL seeded: %d objects", total)
 
     await engine.dispose()
@@ -1705,6 +1820,7 @@ async def main(reset: bool = False) -> None:
     logger.info("    3 switching traces, 1 transition matrix")
     logger.info("    5 visual context events across 4 screen states")
     logger.info("    4 case link edges (2 deterministic, 1 assisted, 1 role)")
+    logger.info("    3 conformance reference models (Loan, Claims, KYC)")
 
 
 if __name__ == "__main__":

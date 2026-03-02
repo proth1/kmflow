@@ -14,7 +14,9 @@ CAMUNDA_PASSWORD="${CAMUNDA_DB_PASSWORD:-camunda_dev}"
 # Create users with passwords from environment
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
     -- Create users with dedicated passwords
-    CREATE USER kmflow WITH PASSWORD '${KMFLOW_PASSWORD}';
+    -- BYPASSRLS required: admin routes use SET LOCAL row_security = off
+    -- to let platform_admin users see data across all engagements
+    CREATE USER kmflow WITH PASSWORD '${KMFLOW_PASSWORD}' BYPASSRLS;
     CREATE USER camunda WITH PASSWORD '${CAMUNDA_PASSWORD}';
 
     -- =========================================================================

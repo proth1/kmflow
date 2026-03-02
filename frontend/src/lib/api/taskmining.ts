@@ -15,7 +15,7 @@ export interface TaskMiningAgent {
   os_version: string;
   agent_version: string;
   machine_id: string;
-  status: "pending_approval" | "approved" | "revoked" | "consent_revoked";
+  status: "pending_approval" | "approved" | "active" | "paused" | "revoked" | "expired" | "consent_revoked";
   deployment_mode: string;
   capture_granularity: string;
   last_heartbeat_at: string | null;

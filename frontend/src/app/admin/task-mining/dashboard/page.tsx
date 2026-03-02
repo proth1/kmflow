@@ -91,7 +91,9 @@ export default function TaskMiningDashboard() {
         fetchAgents(debouncedEngagementId || undefined),
       ]);
       setStats(statsResult);
-      setAgents((agentsResult.agents ?? []).filter((a) => a.status === "approved"));
+      setAgents((agentsResult.agents ?? []).filter(
+        (a) => a.status === "approved" || a.status === "active"
+      ));
 
       if (debouncedEngagementId) {
         const usage = await fetchAppUsage(debouncedEngagementId, dateRange);
@@ -248,7 +250,7 @@ export default function TaskMiningDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-2xl font-bold">
-                  {stats?.events_today != null ? stats.events_today.toLocaleString() : "—"}
+                  {(stats?.events_today ?? stats?.events_last_24h) != null ? (stats?.events_today ?? stats?.events_last_24h)!.toLocaleString() : "—"}
                 </p>
                 <p className="text-xs text-muted-foreground">Events Today</p>
               </div>
@@ -261,7 +263,7 @@ export default function TaskMiningDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-2xl font-bold">
-                  {stats?.actions_today != null ? stats.actions_today.toLocaleString() : "—"}
+                  {(stats?.actions_today ?? stats?.total_actions) != null ? (stats?.actions_today ?? stats?.total_actions)!.toLocaleString() : "—"}
                 </p>
                 <p className="text-xs text-muted-foreground">Actions Today</p>
               </div>
@@ -351,7 +353,7 @@ export default function TaskMiningDashboard() {
           <CardHeader>
             <CardTitle className="text-lg">Agent Health</CardTitle>
             <CardDescription>
-              {agents.length} approved agent{agents.length !== 1 ? "s" : ""}
+              {agents.length} active agent{agents.length !== 1 ? "s" : ""}
               {attentionAgents.length > 0 && (
                 <Badge variant="outline" className="ml-2 bg-yellow-50 text-yellow-800 border-yellow-200">
                   {attentionAgents.length} need attention
