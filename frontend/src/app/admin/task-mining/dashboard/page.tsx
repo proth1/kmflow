@@ -91,7 +91,7 @@ export default function TaskMiningDashboard() {
         fetchAgents(debouncedEngagementId || undefined),
       ]);
       setStats(statsResult);
-      setAgents(agentsResult.agents.filter((a) => a.status === "approved"));
+      setAgents((agentsResult.agents ?? []).filter((a) => a.status === "approved"));
 
       if (debouncedEngagementId) {
         const usage = await fetchAppUsage(debouncedEngagementId, dateRange);
