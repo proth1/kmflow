@@ -6,7 +6,7 @@
 
 **MVP COMPLETE + WGI ALIGNED** — Platform MVP done. Windows Task Mining Agent fully implemented. WGI Platform Alignment complete.
 
-- **Current version**: 2026.03.209
+- **Current version**: 2026.03.210
 - **Open issues**: 0
 - **Presentations**: kmflow.agentic-innovations.com + state-street-apex.agentic-innovations.com
 
@@ -16,6 +16,7 @@ No active work. Clean backlog.
 
 ## Recently Completed
 
+- **PR #588**: Populate presentation screenshots with seeded demo data — RLS bypass for admin, dashboard filter fix, conformance seeding, Playwright capture script (merged 2026-03-02)
 - **PR #587**: State Street APEX presentation auth fix + slide redesign — custom domain, CF Access, 3 slide redesigns, deployment rules (#586, merged 2026-03-01)
 - **PR #585**: Frontend production build + graph loading optimization (#585, merged 2026-03-01)
 - **PR #584**: Fix WebSocket dev mode auth and /ws/taskmining/events endpoint — shared `get_websocket_user()`, Redis Pub/Sub channel constant (#583, merged 2026-03-01)
@@ -78,11 +79,3 @@ The project was built over February 2026 in a rapid sprint:
 - **VCE pipeline**: Memory-only image lifecycle, on-device classification, PII redaction
 
 ---
-
----
-> SESSION END WARNING (2026-03-01T16:51:11Z): activeContext.md was NOT updated during this session.
-> Branch: main, Uncommitted: 31
-
----
-> SESSION END WARNING (2026-03-01T20:36:55Z): activeContext.md was NOT updated during this session.
-> Branch: main, Uncommitted: 35

@@ -3,6 +3,14 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.210] - 2026-03-02
+### Fixed
+- Populate presentation screenshots with seeded demo data (#588)
+- Fix dashboard agent filter to include "active" status alongside "approved"
+- Add RLS bypass for platform_admin on taskmining admin endpoints
+- Add seed_conformance() with 3 reference BPMN models
+- Add permanent Playwright screenshot capture script
+
 ## [2026.03.209] - 2026-03-01
 ### Added
 - State Street APEX presentation auth: custom domain, CF Access, service token, safety comment (#586)
