@@ -60,6 +60,7 @@ from src.api.schemas.taskmining import (
     VCETriggerSummaryResponse,
 )
 from src.core.models import User
+from src.core.models.auth import UserRole
 from src.core.models.taskmining import (
     AgentStatus,
     PIIQuarantine,
@@ -75,7 +76,6 @@ from src.core.models.taskmining import (
     VCETriggerReason,
     VisualContextEvent,
 )
-from src.core.models.auth import UserRole
 from src.core.permissions import require_permission
 from src.core.rls import set_engagement_context, set_rls_bypass
 
@@ -97,6 +97,7 @@ async def _apply_rls_context(
         await set_engagement_context(session, engagement_id)
     elif user.role == UserRole.PLATFORM_ADMIN:
         await set_rls_bypass(session, True)
+
 
 router = APIRouter(prefix="/api/v1/taskmining", tags=["taskmining"])
 
