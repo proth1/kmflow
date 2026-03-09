@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.211
+**Version**: 2026.03.212
 **Last Updated**: 2026-03-09
 
 ## Quick Stats
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.212 | 2026-03-09 | Upgrade jira-manager to v3.0 with PRD-driven templates, BDD/Gherkin AC (#591) |
 | 2026.03.211 | 2026-03-09 | Zero-config Docker startup, ApiRequestError, inline migration RLS (#589) |
 | 2026.03.210 | 2026-03-02 | Populate presentation screenshots with seeded demo data (#588) |
 | 2026.03.209 | 2026-03-01 | State Street APEX presentation auth + slide redesign (#586) |
