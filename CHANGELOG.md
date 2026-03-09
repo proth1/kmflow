@@ -3,6 +3,14 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.211] - 2026-03-09
+### Fixed
+- Add ApiRequestError class for status-based error handling in API client (#589)
+- Replace string-matching 404 detection with instanceof check in Visualize page (#589)
+- Inline RLS helpers in migrations 039/080/081/082 to eliminate runtime src imports (#589)
+- Move import os to top-level in seed_demo.py (#589)
+- Fix zero-config Docker startup: migrations, seeding, and Visualize page (#589)
+
 ## [2026.03.210] - 2026-03-02
 ### Fixed
 - Populate presentation screenshots with seeded demo data (#588)

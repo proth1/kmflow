@@ -1,7 +1,7 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.210
-**Last Updated**: 2026-03-02
+**Version**: 2026.03.211
+**Last Updated**: 2026-03-09
 
 ## Quick Stats
 
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.211 | 2026-03-09 | Zero-config Docker startup, ApiRequestError, inline migration RLS (#589) |
 | 2026.03.210 | 2026-03-02 | Populate presentation screenshots with seeded demo data (#588) |
 | 2026.03.209 | 2026-03-01 | State Street APEX presentation auth + slide redesign (#586) |
 | 2026.03.208 | 2026-03-01 | Fix duplicate container_name + heatmap Suspense (PR #585 review follow-up) |

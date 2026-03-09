@@ -1,12 +1,12 @@
 # Active Context
 
-**Last Updated**: 2026-03-01
+**Last Updated**: 2026-03-09
 
 ## Project Status
 
 **MVP COMPLETE + WGI ALIGNED** — Platform MVP done. Windows Task Mining Agent fully implemented. WGI Platform Alignment complete.
 
-- **Current version**: 2026.03.210
+- **Current version**: 2026.03.211
 - **Open issues**: 0
 - **Presentations**: kmflow.agentic-innovations.com + state-street-apex.agentic-innovations.com
 
@@ -16,6 +16,7 @@ No active work. Clean backlog.
 
 ## Recently Completed
 
+- **PR #590**: Zero-config Docker startup + PR review fixes — ApiRequestError class, status-based 404 detection, inline RLS in migrations, seed_demo import fix, backend entrypoint with auto-migrate/seed (#589, merged 2026-03-09)
 - **PR #588**: Populate presentation screenshots with seeded demo data — RLS bypass for admin, dashboard filter fix, conformance seeding, Playwright capture script (merged 2026-03-02)
 - **PR #587**: State Street APEX presentation auth fix + slide redesign — custom domain, CF Access, 3 slide redesigns, deployment rules (#586, merged 2026-03-01)
 - **PR #585**: Frontend production build + graph loading optimization (#585, merged 2026-03-01)
@@ -77,5 +78,7 @@ The project was built over February 2026 in a rapid sprint:
 - **CDD workflow**: Evidence posted as GitHub Issue comments for traceability
 - **ABAC PDP**: 8 attributes, obligation enforcement (masking/suppression/watermarking)
 - **VCE pipeline**: Memory-only image lifecycle, on-device classification, PII redaction
+
+---
 
 ---
