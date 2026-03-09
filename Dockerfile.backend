@@ -10,6 +10,7 @@ RUN apt-get update && \
 # Copy project files needed for install
 COPY pyproject.toml ./
 COPY src/ ./src/
+COPY scripts/ ./scripts/
 COPY alembic/ ./alembic/
 COPY alembic.ini ./
 
@@ -34,12 +35,14 @@ COPY --from=builder /install /usr/local
 
 # Copy application source
 COPY --from=builder /app/src ./src
+COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/alembic ./alembic
 COPY --from=builder /app/alembic.ini ./alembic.ini
 COPY --from=builder /app/pyproject.toml ./pyproject.toml
+COPY docker/backend-entrypoint.sh ./entrypoint.sh
 
 EXPOSE 8000
 
 USER appuser
 
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["./entrypoint.sh"]

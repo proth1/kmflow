@@ -180,6 +180,30 @@ export async function fetchBPMNXml(modelId: string): Promise<BPMNData> {
 }
 
 /**
+ * Response from the engagement latest-model endpoint.
+ */
+export interface EngagementModelData {
+  engagement_id: string;
+  model_id: string;
+  version: number;
+  bpmn_xml: string;
+  confidence_score: number;
+  element_count: number;
+  elements: ProcessElementData[];
+}
+
+/**
+ * Fetch the latest process model for an engagement (includes BPMN + elements).
+ */
+export async function fetchEngagementLatestModel(
+  engagementId: string,
+): Promise<EngagementModelData> {
+  return apiGet<EngagementModelData>(
+    `/api/v1/pov/engagement/${engagementId}/latest-model`,
+  );
+}
+
+/**
  * Fetch process elements for a model.
  */
 export async function fetchProcessElements(

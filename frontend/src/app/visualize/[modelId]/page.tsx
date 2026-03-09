@@ -16,6 +16,7 @@ import { ComponentErrorBoundary } from "@/components/ComponentErrorBoundary";
 import {
   fetchBPMNXml,
   fetchProcessElements,
+  fetchEngagementLatestModel,
   type BPMNData,
   type ProcessElementData,
 } from "@/lib/api";
@@ -51,6 +52,25 @@ export default function VisualizePage() {
       setLoading(true);
       setError(null);
       try {
+        // Try engagement-based lookup first (sidebar links use engagement IDs).
+        // Falls back to direct model ID lookup if that 404s.
+        try {
+          const data = await fetchEngagementLatestModel(modelId);
+          const confidences: Record<string, number> = {};
+          for (const elem of data.elements) {
+            confidences[elem.name] = elem.confidence_score;
+          }
+          setBpmnData({
+            model_id: data.model_id,
+            bpmn_xml: data.bpmn_xml,
+            element_confidences: confidences,
+          });
+          setElements(data.elements);
+          return;
+        } catch {
+          // Not an engagement ID — fall through to direct model lookup
+        }
+
         const [bpmn, elemData] = await Promise.all([
           fetchBPMNXml(modelId),
           fetchProcessElements(modelId, 200),

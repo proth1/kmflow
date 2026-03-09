@@ -8,6 +8,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import ARRAY, JSON, UUID
 
+from src.core.rls import apply_engagement_rls, remove_engagement_rls
+
 revision = "080"
 down_revision = "079"
 branch_labels = None
@@ -67,8 +69,17 @@ def upgrade() -> None:
     op.create_index("ix_transition_matrices_engagement_id", "transition_matrices", ["engagement_id"])
     op.create_index("ix_transition_matrices_role_id", "transition_matrices", ["role_id"])
 
+    # Apply RLS to newly created engagement-scoped tables
+    for table in ("switching_traces", "transition_matrices"):
+        for stmt in apply_engagement_rls(table):
+            op.execute(stmt)
+
 
 def downgrade() -> None:
+    for table in ("transition_matrices", "switching_traces"):
+        for stmt in remove_engagement_rls(table):
+            op.execute(stmt)
+
     op.drop_index("ix_transition_matrices_role_id", table_name="transition_matrices")
     op.drop_index("ix_transition_matrices_engagement_id", table_name="transition_matrices")
     op.drop_table("transition_matrices")

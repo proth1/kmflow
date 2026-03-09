@@ -8,6 +8,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 
+from src.core.rls import apply_engagement_rls, remove_engagement_rls
+
 revision = "081"
 down_revision = "080"
 branch_labels = None
@@ -64,8 +66,15 @@ def upgrade() -> None:
     op.create_index("ix_vce_trigger_reason", "visual_context_events", ["trigger_reason"])
     op.create_index("ix_vce_timestamp", "visual_context_events", ["timestamp"])
 
+    # Apply RLS to newly created engagement-scoped table
+    for stmt in apply_engagement_rls("visual_context_events"):
+        op.execute(stmt)
+
 
 def downgrade() -> None:
+    for stmt in remove_engagement_rls("visual_context_events"):
+        op.execute(stmt)
+
     op.drop_index("ix_vce_timestamp", table_name="visual_context_events")
     op.drop_index("ix_vce_trigger_reason", table_name="visual_context_events")
     op.drop_index("ix_vce_screen_state_class", table_name="visual_context_events")

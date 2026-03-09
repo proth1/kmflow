@@ -132,6 +132,30 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.db_session_factory = session_factory
     logger.info("PostgreSQL connection pool initialized")
 
+    # -- Dev mode: seed admin user if none exists ---
+    if settings.auth_dev_mode:
+        from sqlalchemy import select as sa_select
+
+        from src.core.models import User
+
+        async with session_factory() as session:
+            result = await session.execute(
+                sa_select(User).where(User.role == "platform_admin").limit(1)
+            )
+            if result.scalar_one_or_none() is None:
+                import uuid
+
+                dev_user = User(
+                    id=uuid.uuid4(),
+                    email="admin@kmflow.dev",
+                    name="Dev Admin",
+                    role="platform_admin",
+                    is_active=True,
+                )
+                session.add(dev_user)
+                await session.commit()
+                logger.info("Dev mode: seeded admin user admin@kmflow.dev")
+
     # -- Neo4j ---
     neo4j_driver = create_neo4j_driver(settings)
     app.state.neo4j_driver = neo4j_driver

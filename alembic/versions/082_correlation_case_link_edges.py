@@ -8,6 +8,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import JSON, UUID
 
+from src.core.rls import apply_engagement_rls, remove_engagement_rls
+
 revision = "082"
 down_revision = "081"
 branch_labels = None
@@ -49,8 +51,15 @@ def upgrade() -> None:
     op.add_column("canonical_activity_events", sa.Column("link_method", sa.String(50), nullable=True))
     op.add_column("canonical_activity_events", sa.Column("link_confidence", sa.Float(), nullable=True))
 
+    # Apply RLS to newly created engagement-scoped table
+    for stmt in apply_engagement_rls("case_link_edges"):
+        op.execute(stmt)
+
 
 def downgrade() -> None:
+    for stmt in remove_engagement_rls("case_link_edges"):
+        op.execute(stmt)
+
     op.drop_column("canonical_activity_events", "link_confidence")
     op.drop_column("canonical_activity_events", "link_method")
 

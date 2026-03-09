@@ -16,8 +16,9 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from alembic import op
+from sqlalchemy import text
 
-from src.core.rls import ENGAGEMENT_SCOPED_TABLES, apply_engagement_rls, remove_engagement_rls
+from src.core.rls import apply_engagement_rls, remove_engagement_rls
 
 # revision identifiers, used by Alembic
 revision: str = "039"
@@ -25,16 +26,65 @@ down_revision: str | None = "038"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
+# Tables that existed at the time of this migration (up to revision 038).
+# Tables created in later migrations (080+) apply their own RLS.
+_TABLES_AT_039: list[str] = [
+    "annotations",
+    "audit_logs",
+    "conflict_objects",
+    "conformance_results",
+    "controls",
+    "copilot_messages",
+    "data_catalog_entries",
+    "epistemic_frames",
+    "evidence_items",
+    "financial_assumptions",
+    "gap_analysis_results",
+    "integration_connections",
+    "metric_readings",
+    "monitoring_alerts",
+    "monitoring_jobs",
+    "pattern_access_rules",
+    "pii_quarantine",
+    "policies",
+    "process_baselines",
+    "process_deviations",
+    "process_models",
+    "regulations",
+    "seed_terms",
+    "semantic_relationships",
+    "shelf_data_requests",
+    "simulation_scenarios",
+    "survey_claims",
+    "target_operating_models",
+    "task_mining_actions",
+    "task_mining_agents",
+    "task_mining_events",
+    "task_mining_sessions",
+]
+
+
+def _table_exists(table_name: str) -> bool:
+    """Check if a table exists in the current database."""
+    conn = op.get_bind()
+    result = conn.execute(
+        text("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = :t)"),
+        {"t": table_name},
+    )
+    return result.scalar()
+
 
 def upgrade() -> None:
-    """Enable RLS on all engagement-scoped tables."""
-    for table_name in ENGAGEMENT_SCOPED_TABLES:
-        for stmt in apply_engagement_rls(table_name):
-            op.execute(stmt)
+    """Enable RLS on all engagement-scoped tables that exist at this revision."""
+    for table_name in _TABLES_AT_039:
+        if _table_exists(table_name):
+            for stmt in apply_engagement_rls(table_name):
+                op.execute(stmt)
 
 
 def downgrade() -> None:
     """Disable RLS and remove all policies."""
-    for table_name in ENGAGEMENT_SCOPED_TABLES:
-        for stmt in remove_engagement_rls(table_name):
-            op.execute(stmt)
+    for table_name in _TABLES_AT_039:
+        if _table_exists(table_name):
+            for stmt in remove_engagement_rls(table_name):
+                op.execute(stmt)
