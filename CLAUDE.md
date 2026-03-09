@@ -1,4 +1,6 @@
-# KMFlow Platform - Development Guide
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
@@ -9,153 +11,126 @@ KMFlow is an AI-powered Process Intelligence platform for consulting engagements
 ## Architecture
 
 ```
-Frontend (Next.js 14+, Port 3000)
+Frontend (Next.js 15+, Port 3000)
   -> API Gateway (FastAPI, Port 8000)
     -> Processing Services (Evidence, Semantic, Consensus, TOM, Gap, RAG)
-      -> Data Layer (PostgreSQL+pgvector, Neo4j, Redis)
+      -> Data Layer (PostgreSQL+pgvector, Neo4j, Redis, MinIO)
 ```
 
-**Tech Stack**: Python 3.12+ (FastAPI), Next.js 14+ (React 18), Neo4j 5.x, PostgreSQL 15 (pgvector), Redis 7
+**Tech Stack**: Python 3.12+ (FastAPI), Next.js 15+ (React 18), Neo4j 5.x, PostgreSQL 15 (pgvector), Redis 7, CIB7 (Camunda BPMN engine), MinIO (object storage)
+
+## Development Commands
+
+```bash
+# ── Infrastructure ──
+docker compose up -d postgres neo4j redis          # Core data services
+docker compose up -d                                # All services (includes cib7, minio, backend, frontend)
+docker compose --profile dev up frontend-dev        # Frontend with hot reload (local dev only)
+
+# ── Backend ──
+pip install -e ".[dev]"                             # Install with dev deps
+uvicorn src.api.main:app --reload --port 8000       # Run API server
+
+# ── Frontend ──
+cd frontend && npm install && npm run dev           # Dev server (port 3000)
+cd frontend && npm run build                        # Production build
+
+# ── Backend Tests ──
+pytest tests/                                       # All backend tests
+pytest tests/ --cov --cov-report=term-missing       # With coverage
+pytest tests/evidence/test_pipeline.py              # Single test file
+pytest tests/evidence/test_pipeline.py::test_ingest # Single test function
+pytest tests/ -k "keyword"                          # Filter by keyword
+
+# ── Frontend Tests ──
+cd frontend && npm test                             # All Jest tests
+cd frontend && npm test -- --testPathPattern=MyComp # Single component
+cd frontend && npm run test:coverage                # With coverage
+
+# ── E2E Tests ──
+cd frontend && npm run test:e2e                     # Playwright (headless)
+cd frontend && npm run test:e2e:ui                  # Playwright (interactive UI)
+
+# ── Lint & Type Check ──
+ruff check src/ tests/                              # Lint Python
+ruff format src/ tests/                             # Format Python
+mypy src/ --ignore-missing-imports                  # Type check Python
+cd frontend && npm run lint                         # Lint frontend (Next.js)
+
+# ── Database Migrations ──
+alembic upgrade head                                # Apply all migrations
+alembic revision --autogenerate -m "description"    # Create new migration
+alembic downgrade -1                                # Rollback one migration
+```
+
+## Docker Port Mappings
+
+Host ports differ from container-internal ports:
+
+| Service | Host Port | Container Port | URL |
+|---------|-----------|----------------|-----|
+| PostgreSQL | 5433 | 5432 | `localhost:5433` |
+| Neo4j Browser | 7475 | 7474 | `http://localhost:7475` |
+| Neo4j Bolt | 7688 | 7687 | `bolt://localhost:7688` |
+| Redis | 6380 | 6379 | `localhost:6380` |
+| Backend (Docker) | 8002 | 8000 | `http://localhost:8002` |
+| CIB7 (Camunda) | 8081 | 8080 | `http://localhost:8081` |
+| MinIO API | 9002 | 9000 | `http://localhost:9002` |
+| MinIO Console | 9003 | 9001 | `http://localhost:9003` |
+| Frontend | 3002 | 3000 | `http://localhost:3002` |
+| Mailpit UI | 8026 | 8025 | `http://localhost:8026` |
+
+When running backend/frontend locally (not in Docker), they use standard ports (8000, 3000).
 
 ## Key Directories
 
 ```
 src/
-  api/              # FastAPI routes (77 route files), schemas, middleware
-  core/             # Domain models (46), config, database, auth, RLS, encryption
-  evidence/         # Evidence ingestion: 15+ parsers, pipeline, quality scoring, lifecycle
+  api/              # FastAPI routes, schemas, middleware
+  core/             # Domain models, config, database, auth, RLS, encryption
+  evidence/         # Evidence ingestion: 15+ parsers, pipeline, quality scoring
   semantic/         # Knowledge graph engine, entity extraction, confidence scoring
-  pov/              # Consensus algorithm, POV generator, consensus building, triangulation, orchestrator
-  tom/              # TOM alignment, gap analysis, maturity scoring, roadmap generation
+  pov/              # Consensus algorithm, POV generator, triangulation
+  tom/              # TOM alignment, gap analysis, maturity scoring
   integrations/     # External connectors (Celonis, Soroco, SAP, ARIS, Visio, XES)
-  conformance/      # BPMN/event stream conformance checking
-  datalake/         # Analytics data warehouse (Databricks, lineage)
-  governance/       # Policy, compliance, effectiveness tracking
-  gdpr/             # GDPR compliance, retention enforcement
-  monitoring/       # Agent framework, deviation detection, dashboards, alerting
-  patterns/         # Pattern library, ML classification
   rag/              # Retrieval-augmented generation, copilot
-  security/         # PDP, incident response, consent, watermarking
-  simulation/       # Scenario modeling, financial impact, sensitivity analysis
+  security/         # PDP/ABAC, incident response, consent, watermarking
   taskmining/       # Desktop task mining (PII, processor, worker, ML)
-  validation/       # Review workflow, evidence grading, dark room
-  mcp/              # Model Context Protocol integration
-  agents/           # SubAgent integrations
-  data/             # Data layer utilities
 frontend/
-  src/
-    app/            # Next.js app router pages
-    components/     # React components
-    hooks/          # Custom React hooks
-    lib/            # Client utilities, API client
-    __tests__/      # Jest tests
+  src/app/          # Next.js app router pages
+  src/components/   # React components
   e2e/              # Playwright E2E tests
-docs/
-  prd/              # Product requirements (PRD v2.1)
-  presentations/    # Stakeholder presentation (Cloudflare Pages)
-  original-requirements/  # David Johnson founding requirements
-evidence/           # CDD evidence artifacts (loan-origination case study)
 platform/           # BPMN orchestration workflows (L3/L4 models)
 alembic/            # Database migrations (80+ versions)
 infrastructure/     # Cloudflare Workers (presentation auth)
-agent/              # macOS desktop agent (Swift + Python)
+agent/              # Desktop agent: macOS (Swift) + Windows (C#) + shared Python
+evidence/           # CDD evidence artifacts (loan-origination case study)
+docs/presentations/ # Stakeholder presentations (deployed to Cloudflare Pages)
 ```
 
 ## Project Management
 
-- **Tool**: GitHub Issues (configured in `.claude/config/project-management.yaml`)
-- **Repository**: `proth1/kmflow`
-- **Agent**: Use `github-issues-manager` subagent for issue operations
-- **Label Taxonomy**: `.claude/config/label-taxonomy.yaml`
-- **Label Sync**: `.claude/scripts/gh-sync-labels.sh proth1/kmflow`
+- **Primary tool**: Jira (`https://agentic-sdlc.atlassian.net`, project: KMFLOW)
+- **Legacy**: GitHub Issues (#1-#590, `proth1/kmflow`)
+- **Branch format**: `feature/{issue-number}-{description}`
+- **PR body**: Always include `Closes #{issue-number}` to auto-close
 
-### Issue Hierarchy (Label-Based)
-```
-Epic (label: epic)
-  -> Story (body: "Part of epic #XXX") (label: story)
-    -> Task (body: "Related to story #XXX") (label: task)
-```
+### Git Worktree Conventions
 
-### Branch Format
-```
-feature/{issue-number}-{description}
-```
-
-### PR Linking
-Always include `Closes #{issue-number}` in PR body to auto-close issues on merge.
-
-## Git Worktree Conventions
-
-- **Main worktree** (`/repos/kmflow`): PRD, documentation, infrastructure changes
-- **Feature worktrees**: Created per-epic for isolated development
-- **Naming**: `kmflow-{issue-number}` (e.g., `kmflow-12` for issue #12)
-- **Creation**: `git worktree add ../kmflow-{issue} feature/{issue}-{description}`
+- **Main worktree** (`/repos/kmflow`): PRD, documentation, infrastructure
+- **Feature worktrees**: `git worktree add ../kmflow-{issue} feature/{issue}-{description}`
 - **Cleanup**: `git worktree remove ../kmflow-{issue}` after PR merge
-- Each worktree has independent dependency installs
 
-## SDLC Phases
+## SDLC & CDD
 
-### Phase 1 - Strategic Intelligence
-- PRD analysis and work item decomposition
-- Memory Bank initialization
-- Quality gates: `prd_exists`, `work_items_created`
+The project follows a 4-phase SDLC with Compliance-Driven Development (CDD) evidence collection:
 
-### Phase 2 - Automated Development
-- Code generation with TDD/BDD test writing
-- CDD evidence collection
-- Quality gates: `tests_pass`, `coverage_above_80`, `no_critical_vulnerabilities`
+1. **Strategic Intelligence**: PRD analysis, work item decomposition
+2. **Automated Development**: TDD/BDD, >80% coverage, security scans
+3. **Orchestrated Deployment**: PR creation, `pr-orchestrator` review (9 agents), merge
+4. **Lifecycle Management**: Memory Bank persistence, pattern learning
 
-### Phase 3 - Orchestrated Deployment
-- PR creation with `Closes #` linking
-- Code review via `pr-orchestrator`
-- Quality gates: `pr_approved`, `ci_green`, `evidence_attached`
-
-### Phase 4 - Lifecycle Management
-- Memory Bank persistence
-- Pattern learning and session handoff
-- Quality gates: `memory_bank_updated`, `patterns_documented`
-
-## CDD Evidence Requirements
-
-Configuration: `.claude/config/cdd-config.yaml`
-
-Evidence is posted as GitHub Issue comments for traceability. Each phase requires specific evidence types:
-- **Phase 1**: PRD traceability matrix, work item mapping, architectural decision records
-- **Phase 2**: Unit test results, code coverage reports, security scan outputs, BDD scenario results
-- **Phase 3**: PR review evidence, CI/CD pipeline logs, deployment verification
-- **Phase 4**: Memory Bank snapshots, pattern documentation, session handoff records
-
-## PR Workflow
-
-1. Create feature branch: `feature/{issue}-{description}`
-2. Develop with tests (>80% coverage)
-3. Create PR with `Closes #{issue}` and BDD test plan
-4. PR review via `pr-orchestrator` (9 review agents)
-5. Collect CDD evidence and attach to PR/issue
-6. Merge to main
-7. Cleanup: delete branch, remove worktree, update issue labels, close issue
-
-Template: `.github/pull_request_template.md`
-
-## Current Stats (v2026.02.192)
-
-| Metric | Value |
-|--------|-------|
-| SQLAlchemy Models | 92 |
-| API Routers | 65 |
-| Backend Tests | 5,162 |
-| Frontend Tests | 635 |
-| Total LOC | 101,811 |
-| Database Migrations | 80+ |
-| BPMN Process Models | 44 |
-| Coverage | >80% |
-
-## Testing Requirements
-
-- **Backend**: pytest with >80% coverage
-- **Frontend**: Jest for unit tests
-- **E2E**: Playwright for critical flows
-- **BDD**: Gherkin scenarios in every Story issue
+CDD config: `.claude/config/cdd-config.yaml`. Evidence posted as GitHub Issue comments.
 
 ## API Conventions
 
@@ -164,29 +139,18 @@ Template: `.github/pull_request_template.md`
 - Error format: `{"detail": "message", "status_code": int}`
 - Authentication: OAuth2/OIDC bearer tokens
 - Pagination: `?limit=N&offset=M`
+- Interactive docs: `http://localhost:8000/docs`
 
-## Evidence Taxonomy Reference
+## Versioning
 
-12 categories: Documents, Images, Audio, Video, Structured Data, SaaS Exports, KM4Work, BPM Process Models, Regulatory/Policy, Controls/Evidence, Domain Communications, Job Aids/Edge Cases
+CalVer format: `YYYY.MM.MICRO` (e.g., `2026.03.211`). MICRO is monotonically incrementing and never resets. Current version stored in `.current-version`.
 
-See PRD Section 5 for full details.
+## Important Conventions
 
-## Development Commands
-
-```bash
-# Backend
-cd src && uvicorn api.main:app --reload --port 8000
-
-# Frontend
-cd frontend && npm run dev
-
-# Tests
-pytest src/ --cov --cov-report=html
-cd frontend && npm test
-
-# Database
-docker compose up -d postgres neo4j redis
-
-# Label sync
-.claude/scripts/gh-sync-labels.sh proth1/kmflow
-```
+- The "LCD" algorithm was renamed to **"Consensus algorithm"** — never use "LCD" in any content
+- Heavy frontend visualization libs (cytoscape, bpmn-js, recharts) must use `next/dynamic` with `ssr: false`
+- Coding standards are in `.claude/rules/coding-standards.md`
+- Post-merge update process is in `.claude/rules/post-merge-updates.md`
+- Presentation deployment rules are in `.claude/rules/presentation-deployment.md`
+- PR review requirements are in `.claude/rules/pr-auto-review.md`
+- Frontend Docker build rules are in `.claude/rules/frontend-docker-build.md`
