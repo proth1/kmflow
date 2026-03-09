@@ -8,12 +8,37 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import JSON, UUID
 
-from src.core.rls import apply_engagement_rls, remove_engagement_rls
-
 revision = "082"
 down_revision = "081"
 branch_labels = None
 depends_on = None
+
+_RLS_VAR = "app.current_engagement_id"
+
+
+def _apply_rls(table: str) -> list[str]:
+    policy = f"engagement_isolation_{table}"
+    cond = f"engagement_id = NULLIF(current_setting('{_RLS_VAR}', true), '')::uuid"
+    return [
+        f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY",
+        f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY",
+        f"CREATE POLICY {policy}_select ON {table} FOR SELECT USING ({cond})",
+        f"CREATE POLICY {policy}_insert ON {table} FOR INSERT WITH CHECK ({cond})",
+        f"CREATE POLICY {policy}_update ON {table} FOR UPDATE USING ({cond}) WITH CHECK ({cond})",
+        f"CREATE POLICY {policy}_delete ON {table} FOR DELETE USING ({cond})",
+    ]
+
+
+def _remove_rls(table: str) -> list[str]:
+    policy = f"engagement_isolation_{table}"
+    return [
+        f"DROP POLICY IF EXISTS {policy}_select ON {table}",
+        f"DROP POLICY IF EXISTS {policy}_insert ON {table}",
+        f"DROP POLICY IF EXISTS {policy}_update ON {table}",
+        f"DROP POLICY IF EXISTS {policy}_delete ON {table}",
+        f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY",
+        f"ALTER TABLE {table} NO FORCE ROW LEVEL SECURITY",
+    ]
 
 
 def upgrade() -> None:
@@ -52,12 +77,12 @@ def upgrade() -> None:
     op.add_column("canonical_activity_events", sa.Column("link_confidence", sa.Float(), nullable=True))
 
     # Apply RLS to newly created engagement-scoped table
-    for stmt in apply_engagement_rls("case_link_edges"):
+    for stmt in _apply_rls("case_link_edges"):
         op.execute(stmt)
 
 
 def downgrade() -> None:
-    for stmt in remove_engagement_rls("case_link_edges"):
+    for stmt in _remove_rls("case_link_edges"):
         op.execute(stmt)
 
     op.drop_column("canonical_activity_events", "link_confidence")

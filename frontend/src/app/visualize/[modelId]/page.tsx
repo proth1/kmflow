@@ -17,6 +17,7 @@ import {
   fetchBPMNXml,
   fetchProcessElements,
   fetchEngagementLatestModel,
+  ApiRequestError,
   type BPMNData,
   type ProcessElementData,
 } from "@/lib/api";
@@ -70,8 +71,7 @@ export default function VisualizePage() {
         } catch (engErr: unknown) {
           // Only fall through on 404 (not an engagement ID).
           // Re-throw server errors so the outer catch handles them.
-          const msg = engErr instanceof Error ? engErr.message : "";
-          if (!msg.includes("not found") && !msg.includes("404")) {
+          if (!(engErr instanceof ApiRequestError && engErr.status === 404)) {
             throw engErr;
           }
         }

@@ -18,13 +18,39 @@ from collections.abc import Sequence
 from alembic import op
 from sqlalchemy import text
 
-from src.core.rls import apply_engagement_rls, remove_engagement_rls
-
 # revision identifiers, used by Alembic
 revision: str = "039"
 down_revision: str | None = "038"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
+
+_RLS_VAR = "app.current_engagement_id"
+
+
+def _apply_rls(table: str) -> list[str]:
+    policy = f"engagement_isolation_{table}"
+    cond = f"engagement_id = NULLIF(current_setting('{_RLS_VAR}', true), '')::uuid"
+    return [
+        f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY",
+        f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY",
+        f"CREATE POLICY {policy}_select ON {table} FOR SELECT USING ({cond})",
+        f"CREATE POLICY {policy}_insert ON {table} FOR INSERT WITH CHECK ({cond})",
+        f"CREATE POLICY {policy}_update ON {table} FOR UPDATE USING ({cond}) WITH CHECK ({cond})",
+        f"CREATE POLICY {policy}_delete ON {table} FOR DELETE USING ({cond})",
+    ]
+
+
+def _remove_rls(table: str) -> list[str]:
+    policy = f"engagement_isolation_{table}"
+    return [
+        f"DROP POLICY IF EXISTS {policy}_select ON {table}",
+        f"DROP POLICY IF EXISTS {policy}_insert ON {table}",
+        f"DROP POLICY IF EXISTS {policy}_update ON {table}",
+        f"DROP POLICY IF EXISTS {policy}_delete ON {table}",
+        f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY",
+        f"ALTER TABLE {table} NO FORCE ROW LEVEL SECURITY",
+    ]
+
 
 # Tables that existed at the time of this migration (up to revision 038).
 # Tables created in later migrations (080+) apply their own RLS.
@@ -78,7 +104,7 @@ def upgrade() -> None:
     """Enable RLS on all engagement-scoped tables that exist at this revision."""
     for table_name in _TABLES_AT_039:
         if _table_exists(table_name):
-            for stmt in apply_engagement_rls(table_name):
+            for stmt in _apply_rls(table_name):
                 op.execute(stmt)
 
 
@@ -86,5 +112,5 @@ def downgrade() -> None:
     """Disable RLS and remove all policies."""
     for table_name in _TABLES_AT_039:
         if _table_exists(table_name):
-            for stmt in remove_engagement_rls(table_name):
+            for stmt in _remove_rls(table_name):
                 op.execute(stmt)

@@ -41,6 +41,7 @@ def _patched_enum_init(self, *enums, **kw):
 
 sa.Enum.__init__ = _patched_enum_init
 
+import os as _os  # noqa: E402
 import bcrypt  # noqa: E402
 
 from sqlalchemy import text  # noqa: E402
@@ -126,8 +127,6 @@ TODAY = date.today()
 # ---------------------------------------------------------------------------
 # Database connection — env-var overrides for Docker, defaults for local dev
 # ---------------------------------------------------------------------------
-import os as _os
-
 DB_URL = _os.environ.get(
     "SEED_DB_URL",
     "postgresql+asyncpg://postgres:postgres_dev@localhost:5433/kmflow",
