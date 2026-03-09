@@ -3,7 +3,7 @@
 
 project_management_tool: "Jira"
 repository: "proth1/kmflow"
-branch_format: "feature/KMFLOW-{id}-{description}"
+branch_format: "feature/{id}-{description}"
 
 jira:
   url: "https://agentic-sdlc.atlassian.net"
@@ -85,5 +85,6 @@ bdd:
 
 # PM Tool Lock
 _installation_locked: true
-_installed_at: "2026-03-09T00:00:00Z"
+_installed_at: "2026-02-15T22:50:00Z"
+_migrated_to_jira_at: "2026-03-09T00:00:00Z"
 _platform_version: "4.1.0"

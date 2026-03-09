@@ -11,13 +11,13 @@ KMFlow is an AI-powered Process Intelligence platform for consulting engagements
 ## Architecture
 
 ```
-Frontend (Next.js 14+, Port 3000)
+Frontend (Next.js 15+, Port 3000)
   -> API Gateway (FastAPI, Port 8000)
     -> Processing Services (Evidence, Semantic, Consensus, TOM, Gap, RAG)
       -> Data Layer (PostgreSQL+pgvector, Neo4j, Redis, MinIO)
 ```
 
-**Tech Stack**: Python 3.12+ (FastAPI), Next.js 14+ (React 18), Neo4j 5.x, PostgreSQL 15 (pgvector), Redis 7, CIB7 (Camunda BPMN engine), MinIO (object storage)
+**Tech Stack**: Python 3.12+ (FastAPI), Next.js 15+ (React 18), Neo4j 5.x, PostgreSQL 15 (pgvector), Redis 7, CIB7 (Camunda BPMN engine), MinIO (object storage)
 
 ## Development Commands
 

@@ -5,7 +5,7 @@
 **Last Updated**: 2026-03-09
 **Author**: David Johnson, Paul Roth
 **Classification**: Internal - Confidential
-**Revision Note v3.0**: Reflects implemented platform state as of v2026.03.211. All Phase 1-3 capabilities are built and operational. Phase 4 substantially complete. Adds Desktop Agent Platform (Section 6.13), Process Orchestration (Section 6.14), Analytics Data Layer (Section 6.15) sections. Updates data model to 96+ models, 67 routers, 508+ endpoints, 83 migrations. Platform scale: ~113K LOC, 6,035+ tests, 19 evidence parsers, 12+ integration connectors.
+**Revision Note v3.0**: Reflects implemented platform state as of v2026.03.211. All Phase 1-3 capabilities are built and operational. Phase 4 substantially complete. Adds Desktop Agent Platform (Section 6.13), Process Orchestration (Section 6.14), Analytics Data Layer (Section 6.15) sections. Updates data model to 96+ models, 66 routers, 508+ endpoints, 83 migrations. Platform scale: ~113K LOC, 6,035+ tests, 16 evidence parsers, 12+ integration connectors.
 **Revision Note v2.1**: Incorporates 10-perspective expert review findings. Key changes: restructured confidence model, added process structure discovery step, security architecture section, async task architecture, GDPR/consent requirements moved to Phase 1, cross-store consistency model, acceptance criteria. See `docs/prd/PRD_v2_Expert_Review_Synthesis.md` for full review synthesis.
 **Revision Note v2.0**: Incorporates KM4ProcessBot v1, WorkGraphIQ gap analysis, David Johnson architectural vision. See `docs/analysis/KMFlow-vs-WGI-Gap-Analysis.md` for full gap analysis.
 
@@ -37,8 +37,8 @@ KMFlow is an AI-powered Process Intelligence platform designed for consulting en
 | Total Lines of Code | ~113,000 |
 | Backend + Frontend Tests | 6,035+ |
 | SQLAlchemy Models | 96 |
-| API Route Files / Endpoints | 67 / 508+ |
-| Evidence Parsers | 19 |
+| API Route Files / Endpoints | 66 / 508+ |
+| Evidence Parsers | 16 |
 | Integration Connectors | 12+ |
 | Alembic Migrations | 83 |
 | BPMN Orchestration Workflows | 8 |
@@ -151,7 +151,7 @@ The 12 evidence categories are organized into four **evidence planes** — an or
 
 The four planes ensure comprehensive evidence coverage. No single plane is sufficient — process intelligence requires triangulation across all four. The seed list (Section 6.10.3) acts as a cross-cutting domain lens that focuses capture and extraction across all planes.
 
-### 5.2 Parser Inventory (19 Implemented)
+### 5.2 Parser Inventory (16 Implemented)
 
 All parsers reside in `src/evidence/parsers/` with a factory pattern (`factory.py`) for format detection and routing.
 
@@ -202,7 +202,7 @@ Multi-format document processing pipeline with format-specific parsers for all 1
 - Content hashing (SHA-256) for integrity verification and content-addressable deduplication
 - Complete audit trail for evidence provenance
 - MinIO object storage backend for evidence file persistence
-- Evidence lifecycle management with full state machine (10+ states including `PENDING`, `VALIDATED`, `ACTIVE`, `EXPIRED`, `ARCHIVED`, `WRONG_FORMAT_RECEIVED`, `ESCALATED`, `CLIENT_PUSH_BACK`, `SUBSTITUTION_OFFERED`, `CLOSED_INCOMPLETE`)
+- Evidence lifecycle management with full state machine (10 states: `PENDING`, `VALIDATED`, `ACTIVE`, `EXPIRED`, `ARCHIVED`, `WRONG_FORMAT_RECEIVED`, `ESCALATED`, `CLIENT_PUSH_BACK`, `SUBSTITUTION_OFFERED`, `CLOSED_INCOMPLETE`)
 
 ### 6.2 Semantic Relationship Engine
 
@@ -948,7 +948,7 @@ PostgreSQL is the **system of record** for all entities. Neo4j is a **derived pr
 
 ## 8. API Specification
 
-**Implementation**: 67 route files, 508+ endpoints across all domain areas. All APIs follow the conventions in Section 14 (base path `/api/v1/`, JSON responses, Pydantic schemas, OAuth2 auth, `?limit=N&offset=M` pagination).
+**Implementation**: 66 route files, 508+ endpoints across all domain areas. All APIs follow the conventions in Section 14 (base path `/api/v1/`, JSON responses, Pydantic schemas, OAuth2 auth, `?limit=N&offset=M` pagination).
 
 ### 8.1 Evidence APIs
 - `POST /api/v1/evidence/upload` - Upload evidence with metadata
@@ -1431,7 +1431,7 @@ As of v2026.03.211 (March 2026), **Phases 1-3 are fully implemented** and **Phas
 +-------------------------------------------------------------------+
 |                     API GATEWAY (FastAPI)                           |
 |                      (Port 8000/8002)                              |
-|  67 route files, 508+ endpoints                                    |
+|  66 route files, 508+ endpoints                                    |
 |  Evidence | POV | TOM | Graph | Engagement | Survey | Seed List   |
 |  Validation | Replay | Scenario | Monitoring | Governance | PDP   |
 |  TaskMining | Camunda | Copilot | Portal | WebSocket              |
