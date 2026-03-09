@@ -6,16 +6,18 @@
 
 **MVP COMPLETE + WGI ALIGNED** — Platform MVP done. Windows Task Mining Agent fully implemented. WGI Platform Alignment complete.
 
-- **Current version**: 2026.03.212
+- **Current version**: 2026.03.213
 - **Open issues**: 0
+- **PM tool**: Jira (KMFLOW project at agentic-sdlc.atlassian.net)
 - **Presentations**: kmflow.agentic-innovations.com + state-street-apex.agentic-innovations.com
 
 ## Current Focus
 
-No active work. Clean backlog.
+PRD v3.0 decomposition into Jira Epics/Stories for Phase 5 (Production Hardening) and remaining Phase 4 work.
 
 ## Recently Completed
 
+- **PR #592**: Align PRD v3.0 with implemented platform state — version 3.0.0, remove Phase labels, add Desktop Agent/Process Orchestration/Analytics sections, update data model + API + security + phased delivery (KMFLOW-1, merged 2026-03-09)
 - **PR #591**: Upgrade jira-manager to v3.0 with world-class PRD-driven templates — BDD/Gherkin AC, 10-section Epic template, mandatory 6-8 sub-task breakdown, ADF formatting (merged 2026-03-09)
 - **PR #590**: Zero-config Docker startup + PR review fixes — ApiRequestError class, status-based 404 detection, inline RLS in migrations, seed_demo import fix, backend entrypoint with auto-migrate/seed (#589, merged 2026-03-09)
 - **PR #588**: Populate presentation screenshots with seeded demo data — RLS bypass for admin, dashboard filter fix, conformance seeding, Playwright capture script (merged 2026-03-02)

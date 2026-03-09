@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.212
+**Version**: 2026.03.213
 **Last Updated**: 2026-03-09
 
 ## Quick Stats
@@ -16,7 +16,7 @@
 | Coverage | >80% |
 | Python Version | 3.12+ |
 | FastAPI Version | 0.109+ |
-| Frontend | Next.js 14+ |
+| Frontend | Next.js 15+ |
 
 ## Runtime Requirements
 
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.213 | 2026-03-09 | Align PRD v3.0 with implemented platform state (KMFLOW-1, PR #592) |
 | 2026.03.212 | 2026-03-09 | Upgrade jira-manager to v3.0 with PRD-driven templates, BDD/Gherkin AC (#591) |
 | 2026.03.211 | 2026-03-09 | Zero-config Docker startup, ApiRequestError, inline migration RLS (#589) |
 | 2026.03.210 | 2026-03-02 | Populate presentation screenshots with seeded demo data (#588) |

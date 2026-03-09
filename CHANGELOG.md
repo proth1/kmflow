@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.213] - 2026-03-09
+### Changed
+- Align PRD v3.0 with implemented platform state (KMFLOW-1)
+
 ## [2026.03.212] - 2026-03-09
 ### Changed
 - Upgrade jira-manager agent to v3.0 with world-class PRD-driven templates (#591)
