@@ -139,9 +139,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         from src.core.models import User
 
         async with session_factory() as session:
-            result = await session.execute(
-                sa_select(User).where(User.role == "platform_admin").limit(1)
-            )
+            result = await session.execute(sa_select(User).where(User.role == "platform_admin").limit(1))
             if result.scalar_one_or_none() is None:
                 import uuid
 
