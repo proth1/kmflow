@@ -216,10 +216,12 @@ services:
       CORS_ORIGINS: '["http://localhost:3000","http://frontend:3000","http://localhost:3002"]'
       AUTH_DEV_MODE: "true"
       COOKIE_SECURE: "false"
+      POSTGRES_SUPERUSER_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:-postgres_dev}
     ports:
       - "${BACKEND_PORT:-8002}:8000"
     volumes:
       - ./src:/app/src
+      - ./scripts:/app/scripts
       - ./alembic:/app/alembic
       - ./alembic.ini:/app/alembic.ini
     depends_on:

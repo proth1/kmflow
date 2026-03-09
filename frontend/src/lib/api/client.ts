@@ -40,6 +40,15 @@ export interface ApiError {
   status_code: number;
 }
 
+export class ApiRequestError extends Error {
+  public readonly status: number;
+  constructor(detail: string, status: number) {
+    super(detail);
+    this.name = "ApiRequestError";
+    this.status = status;
+  }
+}
+
 // -- Generic HTTP helpers -----------------------------------------------------
 
 /**
@@ -53,7 +62,7 @@ export async function fetchHealth(): Promise<HealthResponse> {
   });
 
   if (!response.ok) {
-    throw new Error(`Health check failed: ${response.status}`);
+    throw new ApiRequestError(`Health check failed: ${response.status}`, response.status);
   }
 
   return response.json() as Promise<HealthResponse>;
@@ -71,7 +80,7 @@ export async function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> 
 
   if (!response.ok) {
     const error: ApiError = await response.json().catch(() => ({ detail: `Request failed: ${response.status}`, status_code: response.status }));
-    throw new Error(error.detail || `Request failed: ${response.status}`);
+    throw new ApiRequestError(error.detail || `Request failed: ${response.status}`, response.status);
   }
 
   return response.json() as Promise<T>;
@@ -91,7 +100,7 @@ export async function apiPost<T>(path: string, body: unknown, signal?: AbortSign
 
   if (!response.ok) {
     const error: ApiError = await response.json().catch(() => ({ detail: `Request failed: ${response.status}`, status_code: response.status }));
-    throw new Error(error.detail || `Request failed: ${response.status}`);
+    throw new ApiRequestError(error.detail || `Request failed: ${response.status}`, response.status);
   }
 
   return response.json() as Promise<T>;
@@ -107,7 +116,7 @@ export async function apiPut<T>(path: string, body: unknown, signal?: AbortSigna
   });
   if (!response.ok) {
     const error: ApiError = await response.json().catch(() => ({ detail: `Request failed: ${response.status}`, status_code: response.status }));
-    throw new Error(error.detail || `Request failed: ${response.status}`);
+    throw new ApiRequestError(error.detail || `Request failed: ${response.status}`, response.status);
   }
   return response.json() as Promise<T>;
 }
@@ -122,7 +131,7 @@ export async function apiPatch<T>(path: string, body: unknown, signal?: AbortSig
   });
   if (!response.ok) {
     const error: ApiError = await response.json().catch(() => ({ detail: `Request failed: ${response.status}`, status_code: response.status }));
-    throw new Error(error.detail || `Request failed: ${response.status}`);
+    throw new ApiRequestError(error.detail || `Request failed: ${response.status}`, response.status);
   }
   return response.json() as Promise<T>;
 }
@@ -136,6 +145,6 @@ export async function apiDelete(path: string, signal?: AbortSignal): Promise<voi
   });
   if (!response.ok) {
     const error: ApiError = await response.json().catch(() => ({ detail: `Request failed: ${response.status}`, status_code: response.status }));
-    throw new Error(error.detail || `Request failed: ${response.status}`);
+    throw new ApiRequestError(error.detail || `Request failed: ${response.status}`, response.status);
   }
 }

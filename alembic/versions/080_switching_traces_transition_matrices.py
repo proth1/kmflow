@@ -13,6 +13,33 @@ down_revision = "079"
 branch_labels = None
 depends_on = None
 
+_RLS_VAR = "app.current_engagement_id"
+
+
+def _apply_rls(table: str) -> list[str]:
+    policy = f"engagement_isolation_{table}"
+    cond = f"engagement_id = NULLIF(current_setting('{_RLS_VAR}', true), '')::uuid"
+    return [
+        f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY",
+        f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY",
+        f"CREATE POLICY {policy}_select ON {table} FOR SELECT USING ({cond})",
+        f"CREATE POLICY {policy}_insert ON {table} FOR INSERT WITH CHECK ({cond})",
+        f"CREATE POLICY {policy}_update ON {table} FOR UPDATE USING ({cond}) WITH CHECK ({cond})",
+        f"CREATE POLICY {policy}_delete ON {table} FOR DELETE USING ({cond})",
+    ]
+
+
+def _remove_rls(table: str) -> list[str]:
+    policy = f"engagement_isolation_{table}"
+    return [
+        f"DROP POLICY IF EXISTS {policy}_select ON {table}",
+        f"DROP POLICY IF EXISTS {policy}_insert ON {table}",
+        f"DROP POLICY IF EXISTS {policy}_update ON {table}",
+        f"DROP POLICY IF EXISTS {policy}_delete ON {table}",
+        f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY",
+        f"ALTER TABLE {table} NO FORCE ROW LEVEL SECURITY",
+    ]
+
 
 def upgrade() -> None:
     op.create_table(
@@ -67,8 +94,17 @@ def upgrade() -> None:
     op.create_index("ix_transition_matrices_engagement_id", "transition_matrices", ["engagement_id"])
     op.create_index("ix_transition_matrices_role_id", "transition_matrices", ["role_id"])
 
+    # Apply RLS to newly created engagement-scoped tables
+    for table in ("switching_traces", "transition_matrices"):
+        for stmt in _apply_rls(table):
+            op.execute(stmt)
+
 
 def downgrade() -> None:
+    for table in ("transition_matrices", "switching_traces"):
+        for stmt in _remove_rls(table):
+            op.execute(stmt)
+
     op.drop_index("ix_transition_matrices_role_id", table_name="transition_matrices")
     op.drop_index("ix_transition_matrices_engagement_id", table_name="transition_matrices")
     op.drop_table("transition_matrices")

@@ -41,6 +41,7 @@ def _patched_enum_init(self, *enums, **kw):
 
 sa.Enum.__init__ = _patched_enum_init
 
+import os as _os  # noqa: E402
 import bcrypt  # noqa: E402
 
 from sqlalchemy import text  # noqa: E402
@@ -124,12 +125,15 @@ TODAY = date.today()
 
 
 # ---------------------------------------------------------------------------
-# Database connection — matches docker-compose.yml defaults
+# Database connection — env-var overrides for Docker, defaults for local dev
 # ---------------------------------------------------------------------------
-DB_URL = "postgresql+asyncpg://postgres:postgres_dev@localhost:5433/kmflow"
-NEO4J_URI = "bolt://localhost:7688"
-NEO4J_USER = "neo4j"
-NEO4J_PASSWORD = "neo4j_dev_password"
+DB_URL = _os.environ.get(
+    "SEED_DB_URL",
+    "postgresql+asyncpg://postgres:postgres_dev@localhost:5433/kmflow",
+)
+NEO4J_URI = _os.environ.get("SEED_NEO4J_URI", "bolt://localhost:7688")
+NEO4J_USER = _os.environ.get("SEED_NEO4J_USER", "neo4j")
+NEO4J_PASSWORD = _os.environ.get("SEED_NEO4J_PASSWORD", "neo4j_dev_password")
 
 
 async def reset_data(session: AsyncSession) -> None:
@@ -419,11 +423,93 @@ def seed_process_model() -> list:
         ProcessModelStatus,
     )
 
+    # Minimal BPMN XML with the 8 activity elements for visualization
+    bpmn_xml = '''<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Definitions_1" targetNamespace="http://kmflow.dev/bpmn">
+  <bpmn:process id="Process_LoanOrigination" name="Loan Origination" isExecutable="false">
+    <bpmn:startEvent id="Start_1" name="Application Received">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_1" name="Receive Application">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_2" name="Verify Identity">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_3" name="Credit Check">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_4" name="Income Verification">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_5" name="Risk Assessment">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_6" name="Underwriting Decision">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_7" name="Generate Offer">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_8" name="Notify Applicant">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_1" name="Process Complete">
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_1"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_1" targetRef="Task_2"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_2" targetRef="Task_3"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_3" targetRef="Task_4"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_4" targetRef="Task_5"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_5" targetRef="Task_6"/>
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Task_6" targetRef="Task_7"/>
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Task_7" targetRef="Task_8"/>
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Task_8" targetRef="End_1"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_LoanOrigination">
+      <bpmndi:BPMNShape id="Start_1_di" bpmnElement="Start_1"><dc:Bounds x="180" y="200" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_1_di" bpmnElement="Task_1"><dc:Bounds x="270" y="178" width="100" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_2_di" bpmnElement="Task_2"><dc:Bounds x="420" y="178" width="100" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_3_di" bpmnElement="Task_3"><dc:Bounds x="570" y="178" width="100" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_4_di" bpmnElement="Task_4"><dc:Bounds x="720" y="178" width="100" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_5_di" bpmnElement="Task_5"><dc:Bounds x="870" y="178" width="100" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_6_di" bpmnElement="Task_6"><dc:Bounds x="1020" y="178" width="100" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_7_di" bpmnElement="Task_7"><dc:Bounds x="1170" y="178" width="100" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_8_di" bpmnElement="Task_8"><dc:Bounds x="1320" y="178" width="100" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_1_di" bpmnElement="End_1"><dc:Bounds x="1472" y="200" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><di:waypoint x="216" y="218"/><di:waypoint x="270" y="218"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2"><di:waypoint x="370" y="218"/><di:waypoint x="420" y="218"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3"><di:waypoint x="520" y="218"/><di:waypoint x="570" y="218"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4"><di:waypoint x="670" y="218"/><di:waypoint x="720" y="218"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5"><di:waypoint x="820" y="218"/><di:waypoint x="870" y="218"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6"><di:waypoint x="970" y="218"/><di:waypoint x="1020" y="218"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7"><di:waypoint x="1120" y="218"/><di:waypoint x="1170" y="218"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_8_di" bpmnElement="Flow_8"><di:waypoint x="1270" y="218"/><di:waypoint x="1320" y="218"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_9_di" bpmnElement="Flow_9"><di:waypoint x="1420" y="218"/><di:waypoint x="1472" y="218"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>'''
+
     pm = ProcessModel(
         id=PM_ID, engagement_id=ENG_ID, version=3,
         scope="Loan Origination: Application Intake through Offer Generation",
         status=ProcessModelStatus.COMPLETED,
         confidence_score=0.78,
+        bpmn_xml=bpmn_xml,
         element_count=11, evidence_count=15, contradiction_count=2,
         generated_at=NOW - timedelta(hours=6),
         metadata_json={"lcd_version": "2.1", "triangulation_sources": 15, "iteration": 3},
@@ -1740,13 +1826,47 @@ async def main(reset: bool = False) -> None:
 
         logger.info("Seeding demo data for 'Acme Corp Loan Origination'...")
 
-        # Bypass all FK constraints and RLS policies for bulk seed insertion
-        await session.execute(text("SET session_replication_role = 'replica'"))
-
+        # Build seed objects first (imports all ORM models → populates metadata)
         mon = seed_monitoring()
         sim = seed_simulations()
         tm = seed_task_mining()
         pm = seed_process_model()
+
+        # Reconcile PostgreSQL enum types: ORM models auto-name enums as
+        # lowercase class names, but some migrations created them with mixed
+        # case (e.g. "shelfrequestItempriority"). Patch ORM type references
+        # to match existing DB types, and create any that are missing.
+        from src.core.database import Base
+
+        rows = await session.execute(text(
+            "SELECT typname FROM pg_type WHERE typtype = 'e'"
+        ))
+        existing: dict[str, str] = {}  # lowercase → actual name
+        for row in rows:
+            existing[row[0].lower()] = row[0]
+
+        created = 0
+        for table in Base.metadata.sorted_tables:
+            for col in table.columns:
+                if isinstance(col.type, sa.Enum) and col.type.name:
+                    key = col.type.name.lower()
+                    if key in existing:
+                        # Use the exact name from the DB (handles case mismatch)
+                        col.type.name = existing[key]
+                    else:
+                        # Create the type
+                        name = col.type.name
+                        values = ", ".join(f"'{v}'" for v in col.type.enums)
+                        await session.execute(text(
+                            f"CREATE TYPE {name} AS ENUM ({values})"
+                        ))
+                        existing[key] = name
+                        created += 1
+        await session.commit()
+        logger.info("Reconciled enum types: %d created, %d reused", created, len(existing) - created)
+
+        # Bypass all FK constraints and RLS policies for bulk seed insertion
+        await session.execute(text("SET session_replication_role = 'replica'"))
 
         all_objects = [
             *seed_users(),
