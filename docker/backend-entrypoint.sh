@@ -15,5 +15,8 @@ if [ "${AUTH_DEV_MODE}" = "true" ] || [ "${AUTH_DEV_MODE}" = "True" ]; then
     python -m scripts.seed_demo || echo "WARNING: seed_demo failed (non-fatal)"
 fi
 
+# Clear superuser credentials so the app process doesn't inherit them
+unset SEED_DB_URL SEED_NEO4J_URI SEED_NEO4J_USER SEED_NEO4J_PASSWORD POSTGRES_SUPERUSER_PASSWORD
+
 echo "Starting application..."
 exec uvicorn src.api.main:app --host 0.0.0.0 --port 8000

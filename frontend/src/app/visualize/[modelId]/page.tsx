@@ -53,7 +53,7 @@ export default function VisualizePage() {
       setError(null);
       try {
         // Try engagement-based lookup first (sidebar links use engagement IDs).
-        // Falls back to direct model ID lookup if that 404s.
+        // Falls back to direct model ID lookup only on 404.
         try {
           const data = await fetchEngagementLatestModel(modelId);
           const confidences: Record<string, number> = {};
@@ -67,8 +67,13 @@ export default function VisualizePage() {
           });
           setElements(data.elements);
           return;
-        } catch {
-          // Not an engagement ID — fall through to direct model lookup
+        } catch (engErr: unknown) {
+          // Only fall through on 404 (not an engagement ID).
+          // Re-throw server errors so the outer catch handles them.
+          const msg = engErr instanceof Error ? engErr.message : "";
+          if (!msg.includes("not found") && !msg.includes("404")) {
+            throw engErr;
+          }
         }
 
         const [bpmn, elemData] = await Promise.all([
