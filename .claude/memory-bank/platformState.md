@@ -1,7 +1,7 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.214
-**Last Updated**: 2026-03-09
+**Version**: 2026.03.215
+**Last Updated**: 2026-03-10
 
 ## Quick Stats
 
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.215 | 2026-03-10 | Git hooks to enforce SDLC branch protection — pre-commit/pre-push block main, install script (PR #595) |
 | 2026.03.214 | 2026-03-09 | Redis worker wiring: task runner, REST endpoints, WebSocket progress, evidence batch + GDPR workers (KMFLOW-58, PR #594) |
 | 2026.03.213 | 2026-03-09 | Align PRD v3.0 with implemented platform state (KMFLOW-1, PR #592) |
 | 2026.03.212 | 2026-03-09 | Upgrade jira-manager to v3.0 with PRD-driven templates, BDD/Gherkin AC (#591) |

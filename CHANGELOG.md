@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.215] - 2026-03-10
+### Added
+- Git hooks to enforce SDLC branch protection — pre-commit blocks main commits, pre-push blocks main pushes, install-hooks.sh for fresh clones (#595)
+
 ## [2026.03.214] - 2026-03-09
 ### Added
 - Wire Worker.py Redis background processing — unified task runner, POV/evidence/GDPR workers, REST + WebSocket endpoints (KMFLOW-58)
