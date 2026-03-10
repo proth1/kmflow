@@ -16,8 +16,18 @@ echo "Installing git hooks..."
 # Copy tracked hooks to .git/hooks/
 for hook in "${HOOKS_SRC}"/*; do
     hook_name=$(basename "${hook}")
-    cp "${hook}" "${HOOKS_DST}/${hook_name}"
-    chmod +x "${HOOKS_DST}/${hook_name}"
+    dest="${HOOKS_DST}/${hook_name}"
+
+    # Back up existing hooks that differ from what we're installing
+    if ! diff -q "${hook}" "${dest}" &>/dev/null; then
+        if [[ -f "${dest}" ]]; then
+            cp "${dest}" "${dest}.bak"
+            echo "  WARNING: Existing ${hook_name} differs — backed up to ${hook_name}.bak"
+        fi
+    fi
+
+    cp "${hook}" "${dest}"
+    chmod +x "${dest}"
     echo "  Installed: ${hook_name}"
 done
 
