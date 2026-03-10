@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Pre-commit hook: Block direct commits to main/master.
+# All work must go through feature branches and PRs.
+#
+# Install: cp .githooks/* .git/hooks/ && chmod +x .git/hooks/pre-commit .git/hooks/pre-push
+# Or run: .claude/scripts/install-hooks.sh
+
+set -euo pipefail
+
+BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+
+if [[ "${BRANCH}" == "main" || "${BRANCH}" == "master" ]]; then
+    # Allow post-merge update commits (CHANGELOG, version bumps) via env var.
+    # The post-merge-hook.sh sets this when instructing Claude to commit updates.
+    if [[ "${KMFLOW_ALLOW_MAIN_COMMIT:-}" == "1" ]]; then
+        exit 0
+    fi
+
+    echo ""
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║  COMMIT BLOCKED: Direct commits to '${BRANCH}' are not allowed  ║"
+    echo "╠══════════════════════════════════════════════════════════════╣"
+    echo "║                                                            ║"
+    echo "║  Use the full SDLC workflow:                               ║"
+    echo "║    1. Create a feature branch:                             ║"
+    echo "║       git checkout -b feature/{issue}-{description}        ║"
+    echo "║    2. Make your changes and commit                         ║"
+    echo "║    3. Create a PR: gh pr create                            ║"
+    echo "║    4. Merge via: gh pr merge                               ║"
+    echo "║                                                            ║"
+    echo "║  Escape hatch (use sparingly):                             ║"
+    echo "║    KMFLOW_ALLOW_MAIN_COMMIT=1 git commit ...               ║"
+    echo "║                                                            ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    exit 1
+fi
+
+# Run pre-commit framework hooks (ruff, mypy) on feature branches
+if command -v pre-commit &>/dev/null; then
+    exec pre-commit run --hook-stage pre-commit "$@"
+fi
