@@ -6,17 +6,19 @@
 
 **MVP COMPLETE + WGI ALIGNED** — Platform MVP done. Windows Task Mining Agent fully implemented. WGI Platform Alignment complete.
 
-- **Current version**: 2026.03.213
+- **Current version**: 2026.03.214
 - **Open issues**: 0
 - **PM tool**: Jira (KMFLOW project at agentic-sdlc.atlassian.net)
 - **Presentations**: kmflow.agentic-innovations.com + state-street-apex.agentic-innovations.com
 
 ## Current Focus
 
-PRD v3.0 decomposition into Jira Epics/Stories for Phase 5 (Production Hardening) and remaining Phase 4 work.
+Pick up next Jira backlog item from KMFLOW board.
 
 ## Recently Completed
 
+- **PR #594**: Redis worker wiring (KMFLOW-58) — unified task runner, POST/GET task endpoints, WebSocket progress, EvidenceBatchWorker, GdprErasureWorker, per-type auth, fresh-instance concurrency fix, 26 BDD tests (merged 2026-03-09)
+- **PR #593**: Fix GitHub Issues → Jira references in CLAUDE.md, activeContext.md, MEMORY.md (merged 2026-03-09)
 - **PR #592**: Align PRD v3.0 with implemented platform state — version 3.0.0, remove Phase labels, add Desktop Agent/Process Orchestration/Analytics sections, update data model + API + security + phased delivery (KMFLOW-1, merged 2026-03-09)
 - **PR #591**: Upgrade jira-manager to v3.0 with world-class PRD-driven templates — BDD/Gherkin AC, 10-section Epic template, mandatory 6-8 sub-task breakdown, ADF formatting (merged 2026-03-09)
 - **PR #590**: Zero-config Docker startup + PR review fixes — ApiRequestError class, status-based 404 detection, inline RLS in migrations, seed_demo import fix, backend entrypoint with auto-migrate/seed (#589, merged 2026-03-09)

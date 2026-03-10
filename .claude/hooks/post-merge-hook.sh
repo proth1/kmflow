@@ -30,7 +30,7 @@ fi
 cat <<EOF
 {
   "hookSpecificOutput": {
-    "additionalContext": "POST-MERGE HOOK TRIGGERED. PR #${PR_NUMBER:-unknown} merged. Issue #${ISSUE_NUMBER:-unknown}. You MUST now perform ALL post-merge updates as defined in .claude/rules/post-merge-updates.md:\n\n1. Update CHANGELOG.md with CalVer entry\n2. Update .current-version\n3. Update .claude/memory-bank/platformState.md (recent releases table)\n4. Update .claude/memory-bank/activeContext.md (clear current work)\n5. Remove worktree: git worktree remove ../kmflow-${ISSUE_NUMBER:-unknown}\n6. Delete branch: git branch -d feature/${ISSUE_NUMBER:-unknown}-*\n7. Pull main: git checkout main && git pull\n8. Verify issue #${ISSUE_NUMBER:-unknown} is closed (should be auto-closed by Closes # in PR)\n\nDo NOT skip any of these steps."
+    "additionalContext": "POST-MERGE HOOK TRIGGERED. PR #${PR_NUMBER:-unknown} merged. Issue #${ISSUE_NUMBER:-unknown}. You MUST now perform ALL post-merge updates as defined in .claude/rules/post-merge-updates.md:\n\n1. Update CHANGELOG.md with CalVer entry\n2. Update .current-version\n3. Update .claude/memory-bank/platformState.md (recent releases table)\n4. Update .claude/memory-bank/activeContext.md (clear current work)\n5. Remove worktree: git worktree remove ../kmflow-${ISSUE_NUMBER:-unknown}\n6. Delete branch: git branch -d feature/${ISSUE_NUMBER:-unknown}-*\n7. Pull main: git checkout main && git pull\n8. Verify issue #${ISSUE_NUMBER:-unknown} is closed (should be auto-closed by Closes # in PR)\n\nIMPORTANT: The pre-commit hook blocks direct commits to main. For post-merge update commits, prefix with: KMFLOW_ALLOW_MAIN_COMMIT=1 git commit ...\nSimilarly for pushing: KMFLOW_ALLOW_MAIN_PUSH=1 git push origin main\n\nDo NOT skip any of these steps."
   }
 }
 EOF

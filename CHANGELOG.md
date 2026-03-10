@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.214] - 2026-03-09
+### Added
+- Wire Worker.py Redis background processing — unified task runner, POV/evidence/GDPR workers, REST + WebSocket endpoints (KMFLOW-58)
+
 ## [2026.03.213] - 2026-03-09
 ### Changed
 - Align PRD v3.0 with implemented platform state (KMFLOW-1)

@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.213
+**Version**: 2026.03.214
 **Last Updated**: 2026-03-09
 
 ## Quick Stats
@@ -8,7 +8,7 @@
 | Metric | Value |
 |--------|-------|
 | SQLAlchemy Models | 96 |
-| API Routers | 68 |
+| API Routers | 69 |
 | Test Count | 5,400+ backend + 635 frontend (6,035+ total) |
 | Total LOC | ~113,000 (430+ Python / 115 TypeScript / 39 Swift / 63 C#/C) |
 | Database Migrations | 84 |
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.214 | 2026-03-09 | Redis worker wiring: task runner, REST endpoints, WebSocket progress, evidence batch + GDPR workers (KMFLOW-58, PR #594) |
 | 2026.03.213 | 2026-03-09 | Align PRD v3.0 with implemented platform state (KMFLOW-1, PR #592) |
 | 2026.03.212 | 2026-03-09 | Upgrade jira-manager to v3.0 with PRD-driven templates, BDD/Gherkin AC (#591) |
 | 2026.03.211 | 2026-03-09 | Zero-config Docker startup, ApiRequestError, inline migration RLS (#589) |
