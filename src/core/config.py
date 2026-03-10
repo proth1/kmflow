@@ -131,6 +131,10 @@ class Settings(BaseSettings):
     embedding_model: str = "all-mpnet-base-v2"
     embedding_dimension: int = 768
 
+    # ── Task Queue (KMFLOW-58) ────────────────────────────────────
+    task_worker_count: int = 2
+    task_worker_block_ms: int = 2000
+
     # ── Monitoring (Phase 3) ─────────────────────────────────────
     monitoring_worker_count: int = 2
     monitoring_stream_max_len: int = 10000

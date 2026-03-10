@@ -29,6 +29,7 @@ CHANNEL_DEVIATIONS = "kmflow:realtime:deviations"
 CHANNEL_ALERTS = "kmflow:realtime:alerts"
 CHANNEL_MONITORING = "kmflow:realtime:monitoring"
 CHANNEL_TASK_MINING = "kmflow:realtime:task_mining"
+CHANNEL_TASKS = "kmflow:realtime:tasks"
 
 
 def create_redis_client(settings: Settings) -> aioredis.Redis:

@@ -18,7 +18,13 @@ from sqlalchemy import select
 from src.core.auth import get_current_user, get_websocket_user
 from src.core.config import get_settings
 from src.core.models import EngagementMember, User, UserRole
-from src.core.redis import CHANNEL_ALERTS, CHANNEL_DEVIATIONS, CHANNEL_MONITORING, CHANNEL_TASK_MINING
+from src.core.redis import (
+    CHANNEL_ALERTS,
+    CHANNEL_DEVIATIONS,
+    CHANNEL_MONITORING,
+    CHANNEL_TASK_MINING,
+    CHANNEL_TASKS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -340,6 +346,65 @@ async def taskmining_events_websocket(
         await pubsub.unsubscribe(CHANNEL_TASK_MINING)
         await pubsub.close()
         logger.info("Task mining WS cleaned up for user %s", user.email)
+
+
+@router.websocket("/ws/tasks/{task_id}")
+async def task_progress_websocket(
+    websocket: WebSocket,
+    task_id: str,
+    token: str | None = Query(default=None),
+) -> None:
+    """WebSocket endpoint for real-time task progress updates (KMFLOW-58).
+
+    Subscribes to the ``CHANNEL_TASKS`` Pub/Sub channel and filters
+    messages for the specified ``task_id``.  Clients receive progress
+    updates as the background worker processes the task.
+
+    Authentication:
+        Accepts JWT via query param ``?token=<jwt>`` or ``kmflow_access``
+        cookie.
+    """
+    user = await get_websocket_user(websocket, token)
+    if user is None:
+        await websocket.close(code=1008, reason="Not authenticated")
+        return
+
+    await websocket.accept()
+    logger.info("Task progress WS connected: task=%s user=%s", task_id, user.email)
+
+    try:
+        redis_client = websocket.app.state.redis_client
+        pubsub = redis_client.pubsub()
+        await pubsub.subscribe(CHANNEL_TASKS)
+
+        while True:
+            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+            if message and message["type"] == "message":
+                try:
+                    data = json.loads(message["data"])
+                    # Filter for this specific task
+                    if data.get("task_id") == task_id:
+                        await websocket.send_json(data)
+                        # Close when task is terminal
+                        if data.get("status") in ("COMPLETED", "FAILED"):
+                            await websocket.close(code=1000, reason="Task finished")
+                            return
+                except (json.JSONDecodeError, TypeError) as e:
+                    logger.debug("Skipping malformed task message: %s", e)
+
+            try:
+                data = await asyncio.wait_for(websocket.receive_text(), timeout=0.1)
+                if data == "ping":
+                    await websocket.send_text("pong")
+            except TimeoutError:
+                pass
+    except WebSocketDisconnect:
+        logger.debug("Task progress WS disconnected: task=%s", task_id)
+    except Exception:
+        logger.exception("Task progress WS error: task=%s", task_id)
+    finally:
+        await pubsub.unsubscribe(CHANNEL_TASKS)
+        await pubsub.close()
 
 
 @router.get("/api/v1/ws/status")

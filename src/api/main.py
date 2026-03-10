@@ -88,6 +88,7 @@ from src.api.routes import (
     survey_claims,
     survey_sessions,
     taskmining,
+    tasks,
     tom,
     transfer_controls,
     transformation_templates,
@@ -183,11 +184,33 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     else:
         logger.warning("CIB7 is not reachable; starting in degraded mode")
 
-    # -- Monitoring Workers ---
+    # -- Task Queue (KMFLOW-58) ---
+    from src.core.tasks import TaskQueue
+    from src.core.tasks.runner import run_task_worker
+    from src.evidence.batch_worker import EvidenceBatchWorker
+    from src.gdpr.erasure_worker import GdprErasureWorker
+    from src.pov.orchestrator import PovGenerationWorker
+
+    task_queue = TaskQueue(redis_client)
+    task_queue.register_worker(PovGenerationWorker())
+    task_queue.register_worker(EvidenceBatchWorker())
+    task_queue.register_worker(GdprErasureWorker())
+    await task_queue.ensure_consumer_groups()
+    app.state.task_queue = task_queue
+
+    # -- Workers ---
     shutdown_event = asyncio.Event()
     app.state.monitoring_shutdown = shutdown_event
     worker_tasks = []
 
+    # Task queue workers (KMFLOW-58)
+    if settings.task_worker_count > 0:
+        for i in range(settings.task_worker_count):
+            t = asyncio.create_task(run_task_worker(task_queue, f"task-worker-{i}", shutdown_event, redis_client))
+            worker_tasks.append(t)
+        logger.info("Started %d task queue workers", settings.task_worker_count)
+
+    # Monitoring workers
     if settings.monitoring_worker_count > 0:
         from src.monitoring.worker import run_worker
 
@@ -196,7 +219,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             worker_tasks.append(task)
         logger.info("Started %d monitoring workers", settings.monitoring_worker_count)
 
-    # -- Task Mining Workers ---
+    # Task mining workers
     if settings.taskmining_enabled and settings.taskmining_worker_count > 0:
         from src.taskmining.worker import run_worker as run_tm_worker
 
@@ -215,7 +238,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         task.cancel()
     if worker_tasks:
         await asyncio.gather(*worker_tasks, return_exceptions=True)
-        logger.info("Monitoring workers stopped")
+        logger.info("All background workers stopped")
 
     await redis_client.close()
     await neo4j_driver.close()
@@ -411,6 +434,9 @@ def create_app() -> FastAPI:
 
     # -- Correlation Engine Routes ---
     app.include_router(correlation_routes.router)
+
+    # -- Task Queue Routes (KMFLOW-58) ---
+    app.include_router(tasks.router)
 
     # -- Error Handlers ---
     @app.exception_handler(ValueError)

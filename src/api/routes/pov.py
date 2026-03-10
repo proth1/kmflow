@@ -374,15 +374,48 @@ async def trigger_pov_generation(
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("pov:generate")),
 ) -> dict[str, Any]:
-    """Trigger POV generation for an engagement.
+    """Trigger async POV generation for an engagement.
 
-    Runs the consensus algorithm synchronously (MVP) and returns a job ID
-    for tracking. In a future version, this would dispatch to a
-    background task queue.
+    Dispatches to the background task queue and returns a task_id for
+    polling progress via GET /api/v1/tasks/{task_id}.
     """
-    job_id = uuid.uuid4().hex
+    from src.core.tasks import TaskQueue
 
-    # Track job as in-progress with initial progress
+    task_queue: TaskQueue | None = getattr(request.app.state, "task_queue", None)
+
+    if task_queue is not None and "pov_generation" in task_queue._workers:
+        # Async path: dispatch to task queue (KMFLOW-58)
+        task_id = await task_queue.enqueue(
+            task_type="pov_generation",
+            payload={
+                "engagement_id": payload.engagement_id,
+                "scope": payload.scope,
+                "generated_by": payload.generated_by,
+            },
+            max_retries=1,
+        )
+
+        try:
+            eng_uuid = uuid.UUID(payload.engagement_id)
+            await log_audit(
+                session,
+                eng_uuid,
+                AuditAction.POV_GENERATED,
+                f"POV generation queued (task={task_id}) scope={payload.scope}",
+                actor=str(user.id),
+            )
+            await session.commit()
+        except ValueError:
+            pass
+
+        return {
+            "job_id": task_id,
+            "status": "queued",
+            "message": "POV generation queued. Poll GET /api/v1/tasks/" + task_id,
+        }
+
+    # Fallback: synchronous execution (degraded mode / task queue unavailable)
+    job_id = uuid.uuid4().hex
     await _set_job(
         request,
         job_id,
@@ -418,7 +451,7 @@ async def trigger_pov_generation(
                 actor=str(user.id),
             )
         except ValueError:
-            pass  # engagement_id is not a valid UUID, skip audit
+            pass
 
         await session.commit()
 
