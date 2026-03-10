@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Pre-push hook: Block direct pushes to main/master.
+# Only gh pr merge (which uses the GitHub API, not git push) should update main.
+#
+# Install: cp .githooks/* .git/hooks/ && chmod +x .git/hooks/pre-commit .git/hooks/pre-push
+# Or run: .claude/scripts/install-hooks.sh
+
+set -euo pipefail
+
+# Read stdin for ref info (required by pre-push hook protocol)
+while read -r local_ref local_sha remote_ref remote_sha; do
+    # Block pushes targeting main or master
+    if [[ "${remote_ref}" == "refs/heads/main" || "${remote_ref}" == "refs/heads/master" ]]; then
+
+        # Allow if KMFLOW_ALLOW_MAIN_PUSH is set (escape hatch)
+        if [[ "${KMFLOW_ALLOW_MAIN_PUSH:-}" == "1" ]]; then
+            continue
+        fi
+
+        echo ""
+        echo "╔══════════════════════════════════════════════════════════════╗"
+        echo "║  PUSH BLOCKED: Direct pushes to '${remote_ref##*/}' are not allowed   ║"
+        echo "╠══════════════════════════════════════════════════════════════╣"
+        echo "║                                                            ║"
+        echo "║  Use the full SDLC workflow:                               ║"
+        echo "║    1. Push your feature branch:                            ║"
+        echo "║       git push -u origin feature/{issue}-{description}     ║"
+        echo "║    2. Create a PR: gh pr create                            ║"
+        echo "║    3. Merge via: gh pr merge                               ║"
+        echo "║                                                            ║"
+        echo "║  Escape hatch (use sparingly):                             ║"
+        echo "║    KMFLOW_ALLOW_MAIN_PUSH=1 git push ...                   ║"
+        echo "║                                                            ║"
+        echo "╚══════════════════════════════════════════════════════════════╝"
+        echo ""
+        exit 1
+    fi
+done
+
+exit 0
