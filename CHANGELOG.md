@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.216] - 2026-03-10
+### Fixed
+- Fix two LOW security findings in git hooks — backup before overwriting in install-hooks.sh, replace box-drawing art with simple output in pre-commit/pre-push (#596)
+
 ## [2026.03.215] - 2026-03-10
 ### Added
 - Git hooks to enforce SDLC branch protection — pre-commit blocks main commits, pre-push blocks main pushes, install-hooks.sh for fresh clones (#595)

@@ -6,7 +6,7 @@
 
 **MVP COMPLETE + WGI ALIGNED** — Platform MVP done. Windows Task Mining Agent fully implemented. WGI Platform Alignment complete.
 
-- **Current version**: 2026.03.215
+- **Current version**: 2026.03.216
 - **Open issues**: 0
 - **PM tool**: Jira (KMFLOW project at agentic-sdlc.atlassian.net)
 - **Presentations**: kmflow.agentic-innovations.com + state-street-apex.agentic-innovations.com
@@ -17,6 +17,7 @@ Pick up next Jira backlog item from KMFLOW board.
 
 ## Recently Completed
 
+- **PR #596**: Fix two LOW security findings in git hooks — backup before overwrite, simple output replacing box art (#595 follow-up, merged 2026-03-10)
 - **PR #595**: Git hooks to enforce SDLC branch protection — pre-commit/pre-push block main, install-hooks.sh, GitHub branch protection enabled (merged 2026-03-10)
 - **PR #594**: Redis worker wiring (KMFLOW-58) — unified task runner, POST/GET task endpoints, WebSocket progress, EvidenceBatchWorker, GdprErasureWorker, per-type auth, fresh-instance concurrency fix, 26 BDD tests (merged 2026-03-09)
 - **PR #593**: Fix GitHub Issues → Jira references in CLAUDE.md, activeContext.md, MEMORY.md (merged 2026-03-09)
