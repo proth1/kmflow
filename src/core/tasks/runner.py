@@ -59,7 +59,7 @@ async def run_task_worker(
         shutdown_event: Set to signal graceful shutdown.
         redis_client: Redis client for Pub/Sub progress notifications.
     """
-    task_types = list(task_queue._workers.keys())
+    task_types = sorted(task_queue.registered_types)
     if not task_types:
         logger.warning("Task worker %s: no task types registered, exiting", worker_id)
         return
@@ -137,4 +137,4 @@ async def _publish_task_progress(
         await publish_event(redis_client, CHANNEL_TASKS, event)
     except Exception:
         # Non-fatal — progress notification is best-effort
-        logger.debug("Failed to publish task progress for %s", progress.task_id)
+        logger.warning("Failed to publish task progress for %s", progress.task_id)

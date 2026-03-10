@@ -3,7 +3,6 @@
 Provides endpoints for:
 - ``POST /api/v1/tasks/submit`` — Submit a new async task
 - ``GET /api/v1/tasks/{task_id}`` — Poll task status and progress
-- ``GET /api/v1/tasks`` — List recent tasks (optional task_type filter)
 """
 
 from __future__ import annotations
@@ -16,7 +15,16 @@ from pydantic import BaseModel, Field
 
 from src.core.auth import get_current_user
 from src.core.models import User
+from src.core.permissions import has_permission
 from src.core.tasks import TaskProgress, TaskQueue, TaskStatus
+
+# Permission required per task type.  Tasks not listed here are
+# forbidden — only explicitly mapped types can be submitted.
+TASK_TYPE_PERMISSIONS: dict[str, str] = {
+    "pov_generation": "pov:generate",
+    "evidence_batch": "evidence:write",
+    "gdpr_erasure": "gdpr:admin",
+}
 
 logger = logging.getLogger(__name__)
 
@@ -106,14 +114,28 @@ async def submit_task(
     """Submit an async background task.
 
     Returns a task_id for polling status via GET /tasks/{task_id}.
+    Each task type requires a specific permission (see TASK_TYPE_PERMISSIONS).
     """
     queue = _get_task_queue(request)
 
     # Validate task type is registered
-    if body.task_type not in queue._workers:
+    if body.task_type not in queue.registered_types:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unknown task type: {body.task_type}. Available: {', '.join(sorted(queue._workers.keys()))}",
+            detail=f"Unknown task type: {body.task_type}. Available: {', '.join(sorted(queue.registered_types))}",
+        )
+
+    # Enforce per-type authorization
+    required_perm = TASK_TYPE_PERMISSIONS.get(body.task_type)
+    if required_perm is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Task type '{body.task_type}' has no permission mapping",
+        )
+    if not has_permission(user, required_perm):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Permission denied: {required_perm} required for task type '{body.task_type}'",
         )
 
     task_id = await queue.enqueue(

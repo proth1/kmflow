@@ -410,14 +410,14 @@ class TestWorkerRunnerPubSub:
             run_then_stop(),
         )
 
-        # Verify task was processed
-        assert worker.call_count == 1
-        # Verify progress was published to Pub/Sub
+        # Verify task was processed (check via Pub/Sub events, not instance
+        # state, since execute_task creates a fresh worker instance)
         assert len(redis._published) >= 1
         _, data = redis._published[0]
         parsed = json.loads(data)
         assert parsed["event"] == "task_progress"
         assert parsed["task_type"] == "test_counting"
+        assert parsed["status"] == "COMPLETED"
 
 
 # =============================================================================
@@ -449,8 +449,15 @@ class TestMultipleTaskTypes:
             run_then_stop(),
         )
 
-        assert worker1.call_count == 1
-        assert crash_worker.attempts == 3  # 2 failures + 1 success
+        # Verify both task types were processed (check via Pub/Sub events,
+        # not instance state, since execute_task creates fresh instances)
+        completed_types = {
+            json.loads(data)["task_type"]
+            for _, data in redis._published
+            if json.loads(data).get("status") == "COMPLETED"
+        }
+        assert "test_counting" in completed_types
+        assert "test_crash_recover" in completed_types
 
 
 # =============================================================================

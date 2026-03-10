@@ -93,6 +93,11 @@ class TaskQueue:
             raise ValueError("TaskWorker.task_type must be set")
         self._workers[worker.task_type] = worker
 
+    @property
+    def registered_types(self) -> set[str]:
+        """Return the set of registered task type names."""
+        return set(self._workers.keys())
+
     # -- Enqueue ---------------------------------------------------------------
 
     async def enqueue(
@@ -258,8 +263,8 @@ class TaskQueue:
         Returns:
             Final TaskProgress after execution completes or fails.
         """
-        worker = self._workers.get(task_type)
-        if not worker:
+        template = self._workers.get(task_type)
+        if not template:
             await self._update_progress(
                 task_id,
                 status=TaskStatus.FAILED,
@@ -268,9 +273,13 @@ class TaskQueue:
             )
             return await self.get_status(task_id)
 
+        # Create a fresh worker instance to avoid shared state corruption
+        # when multiple runners process the same task type concurrently.
+        worker = type(template)()
+
         progress_key = f"{PROGRESS_PREFIX}:{task_id}"
         data = await self._redis.hgetall(progress_key)
-        max_retries = int(data.get("max_retries", str(worker.max_retries)))
+        max_retries = int(data.get("max_retries", str(template.max_retries)))
 
         attempt = 0
         last_error = ""
