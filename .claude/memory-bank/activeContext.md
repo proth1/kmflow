@@ -78,7 +78,7 @@ The project was built over February 2026 in a rapid sprint:
 - **Multi-store**: PostgreSQL (OLTP) + Neo4j (graph) + Redis (cache/queue/streams)
 - **RLS**: Row-level security on 36 engagement-scoped tables
 - **IDOR protection**: Every endpoint checks engagement membership
-- **CDD workflow**: Evidence posted as GitHub Issue comments for traceability
+- **CDD workflow**: Evidence posted as Jira issue comments for traceability
 - **ABAC PDP**: 8 attributes, obligation enforcement (masking/suppression/watermarking)
 - **VCE pipeline**: Memory-only image lifecycle, on-device classification, PII redaction
 

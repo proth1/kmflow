@@ -110,10 +110,10 @@ docs/presentations/ # Stakeholder presentations (deployed to Cloudflare Pages)
 
 ## Project Management
 
-- **Primary tool**: Jira (`https://agentic-sdlc.atlassian.net`, project: KMFLOW)
-- **Legacy**: GitHub Issues (#1-#590, `proth1/kmflow`)
-- **Branch format**: `feature/{issue-number}-{description}`
-- **PR body**: Always include `Closes #{issue-number}` to auto-close
+- **Tool**: Jira (`https://agentic-sdlc.atlassian.net`, project: KMFLOW, board: 567)
+- **Agent**: `jira-manager` subagent for issue operations
+- **Branch format**: `feature/KMFLOW-{id}-{description}`
+- **PR body**: Always include `Resolves: KMFLOW-{id}` to link to Jira
 
 ### Git Worktree Conventions
 
@@ -130,7 +130,7 @@ The project follows a 4-phase SDLC with Compliance-Driven Development (CDD) evid
 3. **Orchestrated Deployment**: PR creation, `pr-orchestrator` review (9 agents), merge
 4. **Lifecycle Management**: Memory Bank persistence, pattern learning
 
-CDD config: `.claude/config/cdd-config.yaml`. Evidence posted as GitHub Issue comments.
+CDD config: `.claude/config/cdd-config.yaml`. Evidence posted as Jira issue comments.
 
 ## API Conventions
 
