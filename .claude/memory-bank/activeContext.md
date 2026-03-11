@@ -1,12 +1,12 @@
 # Active Context
 
-**Last Updated**: 2026-03-09
+**Last Updated**: 2026-03-11
 
 ## Project Status
 
 **MVP COMPLETE + WGI ALIGNED** — Platform MVP done. Windows Task Mining Agent fully implemented. WGI Platform Alignment complete.
 
-- **Current version**: 2026.03.216
+- **Current version**: 2026.03.217
 - **Open issues**: 0
 - **PM tool**: Jira (KMFLOW project at agentic-sdlc.atlassian.net)
 - **Presentations**: kmflow.agentic-innovations.com + state-street-apex.agentic-innovations.com
@@ -17,6 +17,7 @@ Pick up next Jira backlog item from KMFLOW board.
 
 ## Recently Completed
 
+- **PR #597**: Decision Knowledge Module for KM4ProcessBot — DMN 1.3 parser/generator, 5 decision API routes, deep rule probes (5 sub-types), decision seed list, job aids rule extraction, gateway condition expressions, frontend decision dashboard, 69 new tests (KMFLOW-103, merged 2026-03-11)
 - **PR #596**: Fix two LOW security findings in git hooks — backup before overwrite, simple output replacing box art (#595 follow-up, merged 2026-03-10)
 - **PR #595**: Git hooks to enforce SDLC branch protection — pre-commit/pre-push block main, install-hooks.sh, GitHub branch protection enabled (merged 2026-03-10)
 - **PR #594**: Redis worker wiring (KMFLOW-58) — unified task runner, POST/GET task endpoints, WebSocket progress, EvidenceBatchWorker, GdprErasureWorker, per-type auth, fresh-instance concurrency fix, 26 BDD tests (merged 2026-03-09)
@@ -89,3 +90,7 @@ The project was built over February 2026 in a rapid sprint:
 ---
 
 ---
+
+---
+> SESSION END WARNING (2026-03-11T21:22:54Z): activeContext.md was NOT updated during this session.
+> Branch: main, Uncommitted: 23

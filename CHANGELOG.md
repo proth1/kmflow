@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.217] - 2026-03-11
+### Added
+- Decision Knowledge Module for KM4ProcessBot — DMN 1.3 parser/generator, 5 decision API endpoints, deep rule probes, decision seed list, job aids rule extraction, gateway condition expressions, frontend decision dashboard, 69 new tests (KMFLOW-103, PR #597)
+
 ## [2026.03.216] - 2026-03-10
 ### Fixed
 - Fix two LOW security findings in git hooks — backup before overwriting in install-hooks.sh, replace box-drawing art with simple output in pre-commit/pre-push (#596)
