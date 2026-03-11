@@ -1,15 +1,15 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.217
+**Version**: 2026.03.218
 **Last Updated**: 2026-03-11
 
 ## Quick Stats
 
 | Metric | Value |
 |--------|-------|
-| SQLAlchemy Models | 96 |
-| API Routers | 70 |
-| Test Count | 5,470+ backend + 635 frontend (6,105+ total) |
+| SQLAlchemy Models | 97 |
+| API Routers | 71 |
+| Test Count | 5,500+ backend + 635 frontend (6,135+ total) |
 | Total LOC | ~113,000 (430+ Python / 115 TypeScript / 39 Swift / 63 C#/C) |
 | Database Migrations | 84 |
 | BPMN Process Models | 44 |
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.218 | 2026-03-11 | Assessment Overlay Matrix — Value x Ability-to-Execute scatter chart, quadrant analysis, composite scoring, 33 tests (KMFLOW-4, PR #598) |
 | 2026.03.217 | 2026-03-11 | Decision Knowledge Module — DMN parser/generator, decision API, deep rule probes, seed list, 69 tests (KMFLOW-103, PR #597) |
 | 2026.03.216 | 2026-03-10 | Fix two LOW security findings in git hooks — backup + simple output (#596) |
 | 2026.03.215 | 2026-03-10 | Git hooks to enforce SDLC branch protection — pre-commit/pre-push block main, install script (PR #595) |
