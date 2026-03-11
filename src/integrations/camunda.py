@@ -6,6 +6,7 @@ for process deployment, instance management, and task queries.
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
@@ -185,7 +186,7 @@ class CamundaClient:
         """Get activity instance tree for a process instance."""
         return await self._request("GET", f"/process-instance/{process_instance_id}/activity-instances")
 
-    async def delete_process_instance(self, process_instance_id: str, reason: str = "") -> None:
+    async def delete_process_instance(self, process_instance_id: str) -> None:
         """Delete (cancel) a process instance."""
         await self._request(
             "DELETE",
@@ -226,8 +227,6 @@ class CamundaClient:
             elif isinstance(value, float):
                 result[key] = {"value": value, "type": "Double"}
             elif isinstance(value, dict | list):
-                import json
-
                 result[key] = {"value": json.dumps(value), "type": "Json"}
             else:
                 result[key] = {"value": str(value), "type": "String"}

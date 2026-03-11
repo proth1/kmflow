@@ -106,23 +106,28 @@ async def list_process_instances(
     try:
         instances = await client.get_process_instances(active=active)
 
-        # Enrich with incident counts
+        # Fetch all incidents once to avoid N+1 queries
+        try:
+            all_incidents = await client.get_incidents()
+        except (httpx.HTTPError, ConnectionError):
+            all_incidents = []
+
+        # Group incident counts by process instance ID
+        incident_counts: dict[str, int] = {}
+        for inc in all_incidents:
+            pid = inc.get("processInstanceId", "")
+            incident_counts[pid] = incident_counts.get(pid, 0) + 1
+
         enriched: list[dict[str, Any]] = []
         for inst in instances:
             instance_id = inst.get("id", "")
-            try:
-                incidents = await client.get_incidents(process_instance_id=instance_id)
-                incident_count = len(incidents)
-            except (httpx.HTTPError, ConnectionError):
-                incident_count = 0
-
             enriched.append(
                 {
                     "id": instance_id,
                     "business_key": inst.get("businessKey"),
                     "process_definition_id": inst.get("definitionId"),
                     "suspended": inst.get("suspended", False),
-                    "incident_count": incident_count,
+                    "incident_count": incident_counts.get(instance_id, 0),
                 }
             )
 

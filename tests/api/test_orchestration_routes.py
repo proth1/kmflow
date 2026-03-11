@@ -84,7 +84,8 @@ class TestListProcessInstances:
                 {"id": "pid-1", "businessKey": "ENG-001", "definitionId": "def-1", "suspended": False},
             ]
         )
-        mock_client.get_incidents = AsyncMock(return_value=[{"id": "inc-1"}])
+        # All incidents fetched in one call (N+1 fix)
+        mock_client.get_incidents = AsyncMock(return_value=[{"id": "inc-1", "processInstanceId": "pid-1"}])
 
         request = _mock_request(mock_client)
         result = await list_process_instances(request, True, _mock_user())
@@ -92,6 +93,8 @@ class TestListProcessInstances:
         assert result["total"] == 1
         assert result["instances"][0]["incident_count"] == 1
         assert result["instances"][0]["business_key"] == "ENG-001"
+        # Verify incidents fetched once (not per-instance)
+        mock_client.get_incidents.assert_awaited_once_with()
 
     @pytest.mark.asyncio
     async def test_handles_engine_error(self) -> None:
