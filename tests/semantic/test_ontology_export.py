@@ -172,11 +172,10 @@ class TestOwlExport:
 
 class TestExportNotFound:
     @pytest.mark.asyncio
-    async def test_returns_error_for_missing_ontology(self) -> None:
+    async def test_raises_for_missing_ontology(self) -> None:
         session = AsyncMock()
         session.get = AsyncMock(return_value=None)
 
         service = OntologyExportService(session)
-        result = await service.export(uuid.uuid4())
-
-        assert "error" in result
+        with pytest.raises(ValueError, match="not found"):
+            await service.export(uuid.uuid4())

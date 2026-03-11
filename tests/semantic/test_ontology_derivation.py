@@ -345,13 +345,13 @@ class TestOntologyValidationService:
         assert any(o["name"] == "Activity" for o in report["orphan_classes"])
 
     @pytest.mark.asyncio
-    async def test_not_found(self) -> None:
+    async def test_not_found_raises(self) -> None:
         session = AsyncMock()
         session.get = AsyncMock(return_value=None)
 
         service = OntologyValidationService(session)
-        report = await service.validate(uuid.uuid4())
-        assert "error" in report
+        with pytest.raises(ValueError, match="not found"):
+            await service.validate(uuid.uuid4())
 
     @pytest.mark.asyncio
     async def test_generates_recommendations(self) -> None:

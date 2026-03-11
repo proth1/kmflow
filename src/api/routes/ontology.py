@@ -31,6 +31,20 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/engagements", tags=["ontology"])
 
 
+async def _get_latest_ontology(session: AsyncSession, engagement_id: UUID) -> OntologyVersion:
+    """Fetch the latest ontology version for an engagement or raise 404."""
+    result = await session.execute(
+        select(OntologyVersion)
+        .where(OntologyVersion.engagement_id == engagement_id)
+        .order_by(OntologyVersion.version.desc())
+        .limit(1)
+    )
+    ontology = result.scalar_one_or_none()
+    if not ontology:
+        raise HTTPException(status_code=404, detail="No ontology found for this engagement")
+    return ontology
+
+
 @router.post("/{engagement_id}/ontology/derive")
 async def derive_ontology(
     engagement_id: UUID,
@@ -50,6 +64,7 @@ async def derive_ontology(
 
     service = OntologyDerivationService(session, neo4j_driver)
     result = await service.derive(engagement_id)
+    await session.commit()
     return result
 
 
@@ -64,15 +79,7 @@ async def get_ontology(
 
     Returns the ontology version with all classes, properties, and axioms.
     """
-    result = await session.execute(
-        select(OntologyVersion)
-        .where(OntologyVersion.engagement_id == engagement_id)
-        .order_by(OntologyVersion.version.desc())
-        .limit(1)
-    )
-    ontology = result.scalar_one_or_none()
-    if not ontology:
-        raise HTTPException(status_code=404, detail="No ontology found for this engagement")
+    ontology = await _get_latest_ontology(session, engagement_id)
 
     # Fetch related entities
     classes_result = await session.execute(select(OntologyClass).where(OntologyClass.ontology_id == ontology.id))
@@ -142,21 +149,11 @@ async def export_ontology(
 
     Returns the serialized content with a SHA-256 hash for integrity verification.
     """
-    result = await session.execute(
-        select(OntologyVersion)
-        .where(OntologyVersion.engagement_id == engagement_id)
-        .order_by(OntologyVersion.version.desc())
-        .limit(1)
-    )
-    ontology = result.scalar_one_or_none()
-    if not ontology:
-        raise HTTPException(status_code=404, detail="No ontology found for this engagement")
+    ontology = await _get_latest_ontology(session, engagement_id)
 
     service = OntologyExportService(session)
     export_result = await service.export(ontology.id, fmt=fmt)
-    if "error" in export_result:
-        raise HTTPException(status_code=404, detail=export_result["error"])
-
+    await session.commit()
     return export_result
 
 
@@ -172,15 +169,9 @@ async def validate_ontology(
     Returns orphan classes, disconnected subgraphs, completeness score,
     and enrichment recommendations.
     """
-    result = await session.execute(
-        select(OntologyVersion)
-        .where(OntologyVersion.engagement_id == engagement_id)
-        .order_by(OntologyVersion.version.desc())
-        .limit(1)
-    )
-    ontology = result.scalar_one_or_none()
-    if not ontology:
-        raise HTTPException(status_code=404, detail="No ontology found for this engagement")
+    ontology = await _get_latest_ontology(session, engagement_id)
 
     service = OntologyValidationService(session)
-    return await service.validate(ontology.id)
+    report = await service.validate(ontology.id)
+    await session.commit()
+    return report

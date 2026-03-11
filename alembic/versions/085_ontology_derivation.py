@@ -77,6 +77,16 @@ def upgrade() -> None:
     )
     op.create_index("ix_ontology_classes_ontology_id", "ontology_classes", ["ontology_id"])
 
+    # RLS — join through ontology_versions for engagement isolation
+    op.execute("ALTER TABLE ontology_classes ENABLE ROW LEVEL SECURITY")
+    op.execute(
+        """CREATE POLICY ontology_classes_engagement_isolation ON ontology_classes
+           USING (ontology_id IN (
+               SELECT id FROM ontology_versions
+               WHERE engagement_id = current_setting('app.current_engagement_id')::uuid
+           ))"""
+    )
+
     # -- ontology_properties --
     op.create_table(
         "ontology_properties",
@@ -107,6 +117,16 @@ def upgrade() -> None:
     )
     op.create_index("ix_ontology_properties_ontology_id", "ontology_properties", ["ontology_id"])
 
+    # RLS
+    op.execute("ALTER TABLE ontology_properties ENABLE ROW LEVEL SECURITY")
+    op.execute(
+        """CREATE POLICY ontology_properties_engagement_isolation ON ontology_properties
+           USING (ontology_id IN (
+               SELECT id FROM ontology_versions
+               WHERE engagement_id = current_setting('app.current_engagement_id')::uuid
+           ))"""
+    )
+
     # -- ontology_axioms --
     op.create_table(
         "ontology_axioms",
@@ -124,6 +144,16 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
     )
     op.create_index("ix_ontology_axioms_ontology_id", "ontology_axioms", ["ontology_id"])
+
+    # RLS
+    op.execute("ALTER TABLE ontology_axioms ENABLE ROW LEVEL SECURITY")
+    op.execute(
+        """CREATE POLICY ontology_axioms_engagement_isolation ON ontology_axioms
+           USING (ontology_id IN (
+               SELECT id FROM ontology_versions
+               WHERE engagement_id = current_setting('app.current_engagement_id')::uuid
+           ))"""
+    )
 
 
 def downgrade() -> None:

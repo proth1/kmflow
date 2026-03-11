@@ -52,7 +52,7 @@ class OntologyExportService:
         """
         ontology = await self.session.get(OntologyVersion, ontology_id)
         if not ontology:
-            return {"error": "Ontology not found"}
+            raise ValueError(f"Ontology {ontology_id} not found")
 
         classes = await self._get_classes(ontology_id)
         properties = await self._get_properties(ontology_id)
@@ -67,7 +67,7 @@ class OntologyExportService:
 
         # Update status
         ontology.status = OntologyStatus.EXPORTED
-        await self.session.commit()
+        await self.session.flush()
 
         return {
             "content": content,

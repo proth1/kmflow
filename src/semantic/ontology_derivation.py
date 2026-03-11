@@ -96,7 +96,7 @@ class OntologyDerivationService:
         ontology.axiom_count = len(axioms)
         ontology.completeness_score = completeness
 
-        await self.session.commit()
+        await self.session.flush()
 
         return {
             "ontology_id": str(ontology.id),
@@ -175,7 +175,7 @@ class OntologyDerivationService:
                         }
                     )
         except Exception:
-            logger.warning("Neo4j pattern extraction failed; continuing with empty patterns")
+            logger.exception("Neo4j pattern extraction failed; continuing with empty patterns")
 
         return patterns
 
@@ -360,7 +360,7 @@ class OntologyValidationService:
         """
         ontology = await self.session.get(OntologyVersion, ontology_id)
         if not ontology:
-            return {"error": "Ontology not found"}
+            raise ValueError(f"Ontology {ontology_id} not found")
 
         # Get all classes
         result = await self.session.execute(select(OntologyClass).where(OntologyClass.ontology_id == ontology_id))
@@ -433,7 +433,7 @@ class OntologyValidationService:
 
         # Update ontology status
         ontology.status = OntologyStatus.VALIDATED
-        await self.session.commit()
+        await self.session.flush()
 
         return {
             "ontology_id": str(ontology_id),
