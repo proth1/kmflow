@@ -29,6 +29,7 @@ BPMNDI_NS = "http://www.omg.org/spec/BPMN/20100524/DI"
 DC_NS = "http://www.omg.org/spec/DD/20100524/DC"
 DI_NS = "http://www.omg.org/spec/DD/20100524/DI"
 KMFLOW_NS = "http://kmflow.ai/bpmn/extensions"
+XSI_NS = "http://www.w3.org/2001/XMLSchema-instance"
 
 # Entity type to BPMN element mapping
 _ENTITY_TO_BPMN = {
@@ -248,6 +249,7 @@ def assemble_bpmn(
     ET.register_namespace("dc", DC_NS)
     ET.register_namespace("di", DI_NS)
     ET.register_namespace("kmflow", KMFLOW_NS)
+    ET.register_namespace("xsi", XSI_NS)
 
     # Root definitions element
     definitions = ET.Element(
@@ -350,7 +352,7 @@ def assemble_bpmn(
             cond_elem = ET.SubElement(
                 flow_elem,
                 f"{{{BPMN_NS}}}conditionExpression",
-                {"xsi:type": "bpmn:tFormalExpression"},
+                {f"{{{XSI_NS}}}type": "bpmn:tFormalExpression"},
             )
             cond_elem.text = gateway_conditions[source_id]
 

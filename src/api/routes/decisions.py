@@ -126,6 +126,7 @@ async def list_decisions(
 
     stmt = (
         _elements_for_engagement(engagement_id, [ProcessElementType.GATEWAY])
+        .where(ProcessElement.confidence_score >= min_confidence)
         .order_by(ProcessElement.confidence_score.desc())
         .limit(limit)
         .offset(offset)
@@ -137,8 +138,6 @@ async def list_decisions(
     decisions = []
     for elem in elements:
         score = elem.confidence_score
-        if score < min_confidence:
-            continue
         brightness = "BRIGHT" if score >= 0.75 else ("DIM" if score >= 0.40 else "DARK")
         decisions.append(
             {
