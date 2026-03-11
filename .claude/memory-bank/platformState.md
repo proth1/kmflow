@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.218
+**Version**: 2026.03.219
 **Last Updated**: 2026-03-11
 
 ## Quick Stats
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.219 | 2026-03-11 | Activate BPMN workflows in Camunda — external task worker, orchestration API, 8 new CamundaClient methods, 39 tests (KMFLOW-5, PR #599) |
 | 2026.03.218 | 2026-03-11 | Assessment Overlay Matrix — Value x Ability-to-Execute scatter chart, quadrant analysis, composite scoring, 33 tests (KMFLOW-4, PR #598) |
 | 2026.03.217 | 2026-03-11 | Decision Knowledge Module — DMN parser/generator, decision API, deep rule probes, seed list, 69 tests (KMFLOW-103, PR #597) |
 | 2026.03.216 | 2026-03-10 | Fix two LOW security findings in git hooks — backup + simple output (#596) |

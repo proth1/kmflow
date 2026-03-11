@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.219] - 2026-03-11
+### Added
+- Activate BPMN workflows in Camunda (KMFLOW-5) — external task worker (fetch-and-lock pattern), orchestration API (deploy/instances/retry/cancel), CamundaClient extended with 8 new methods, variable type inference, batch L4 workflow deployment, 39 new tests (PR #599)
+
 ## [2026.03.218] - 2026-03-11
 ### Added
 - Assessment Overlay Matrix — 2D scatter chart (Value x Ability-to-Execute) with quadrant analysis, composite scoring from process elements/maturity/compliance/simulations, 3 API endpoints, frontend recharts dashboard, 33 new tests (KMFLOW-4, PR #598)
