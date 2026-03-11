@@ -127,6 +127,18 @@ class Settings(BaseSettings):
     databricks_schema: str = "evidence"
     databricks_volume: str = "raw_evidence"
 
+    # ── LLM Provider (KMFLOW-7) ─────────────────────────────────
+    llm_provider: str = ""  # "anthropic" | "ollama" | "stub" | "" (auto-detect)
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = "llama3.1:8b"
+
+    # ── Data Residency (KMFLOW-7) ─────────────────────────────
+    # Platform-level default; per-engagement override in engagements table.
+    default_data_residency: str = "none"  # "none" | "eu_only" | "uk_only" | "custom"
+    # Comma-separated list of allowed outbound API hostnames.
+    # When data_residency is not "none", only these hosts may be called.
+    allowed_api_hosts: str = ""
+
     # ── Embeddings ───────────────────────────────────────────────
     embedding_model: str = "all-mpnet-base-v2"
     embedding_dimension: int = 768

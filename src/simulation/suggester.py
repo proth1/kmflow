@@ -12,8 +12,6 @@ import re
 from typing import Any
 from uuid import UUID
 
-import anthropic
-
 from src.core.config import Settings, get_settings
 
 logger = logging.getLogger(__name__)
@@ -134,24 +132,16 @@ Surface unknowns and areas where evidence is insufficient for confident recommen
         return prompt
 
     async def _call_llm(self, prompt: str) -> str:
-        """Call LLM using Anthropic SDK.
+        """Call the configured LLM provider.
 
-        The SDK reads ANTHROPIC_API_KEY from the environment automatically.
-        Raises anthropic.APIError on failure (caught by generate_suggestions
-        which returns a fallback).
+        Provider is selected via LLM_PROVIDER env var or auto-detected.
+        Raises on failure (caught by generate_suggestions which returns a fallback).
         """
-        try:
-            client = anthropic.AsyncAnthropic()  # Uses ANTHROPIC_API_KEY env var
-            model = self._settings.suggester_model
-            response = await client.messages.create(
-                model=model,
-                max_tokens=2000,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            return response.content[0].text
-        except Exception as e:  # Intentionally broad: re-raised after logging
-            logger.error("LLM call failed: %s", e)
-            raise
+        from src.core.llm import get_llm_provider
+
+        llm = get_llm_provider()
+        model = self._settings.suggester_model
+        return await llm.generate(prompt, model=model, max_tokens=2000)
 
     _MAX_SUGGESTION_LEN = 2000
 

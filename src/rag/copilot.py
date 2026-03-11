@@ -141,33 +141,29 @@ class CopilotOrchestrator:
         user_prompt: str,
         history: list[dict[str, Any]] | None = None,
     ) -> str:
-        """Generate a response using Claude API or fallback."""
+        """Generate a response using the configured LLM provider or fallback."""
         try:
-            import anthropic
+            from src.core.llm import get_llm_provider
 
-            client = anthropic.AsyncAnthropic()
-            messages = []
-
-            # Add conversation history
+            llm = get_llm_provider()
+            msgs: list[dict[str, str]] = []
             if history:
                 for msg in history[-5:]:  # Keep last 5 messages for context
-                    messages.append({"role": msg["role"], "content": msg["content"]})
+                    msgs.append({"role": msg["role"], "content": msg["content"]})
 
-            messages.append({"role": "user", "content": user_prompt})
-
-            response = await client.messages.create(
+            return await llm.generate(
+                user_prompt,
+                system=system_prompt,
                 model=self.settings.copilot_model,
                 max_tokens=self.settings.copilot_max_response_tokens,
-                system=system_prompt,
-                messages=messages,  # type: ignore[arg-type]
+                messages=msgs,
             )
-            return response.content[0].text  # type: ignore[union-attr]
 
         except ImportError:
-            logger.warning("anthropic package not installed, using stub response")
+            logger.warning("LLM provider not available, using stub response")
             return self._stub_response(user_prompt)
-        except Exception as e:  # Intentionally broad: anthropic SDK error hierarchy is not stable
-            logger.error("Claude API call failed: %s", e)
+        except Exception as e:  # Intentionally broad: provider error hierarchies vary
+            logger.error("LLM call failed: %s", e)
             return self._stub_response(user_prompt)
 
     async def chat_streaming(
@@ -222,36 +218,35 @@ class CopilotOrchestrator:
 
         # 3. Stream response
         try:
-            import anthropic
+            from src.core.llm import get_llm_provider
 
-            client = anthropic.AsyncAnthropic()
-            messages: list[dict[str, str]] = []
+            llm = get_llm_provider()
+            msgs: list[dict[str, str]] = []
 
             if history:
                 for msg in history[-5:]:
-                    messages.append({"role": msg["role"], "content": msg["content"]})
-            messages.append({"role": "user", "content": user_prompt})
+                    msgs.append({"role": msg["role"], "content": msg["content"]})
 
             total_streamed = 0
             max_response_len = 10000
-            async with client.messages.stream(
+            async for text_chunk in llm.generate_stream(
+                user_prompt,
+                system=SYSTEM_PROMPT,
                 model=self.settings.copilot_model,
                 max_tokens=self.settings.copilot_max_response_tokens,
-                system=SYSTEM_PROMPT,
-                messages=messages,  # type: ignore[arg-type]
-            ) as stream:
-                async for text_chunk in stream.text_stream:
-                    if total_streamed >= max_response_len:
-                        break
-                    validated_chunk = self._validate_response(text_chunk)
-                    total_streamed += len(validated_chunk)
-                    yield f"data: {validated_chunk}\n\n"
+                messages=msgs,
+            ):
+                if total_streamed >= max_response_len:
+                    break
+                validated_chunk = self._validate_response(text_chunk)
+                total_streamed += len(validated_chunk)
+                yield f"data: {validated_chunk}\n\n"
 
         except ImportError:
-            logger.warning("anthropic package not installed, yielding stub response")
+            logger.warning("LLM provider not available, yielding stub response")
             yield f"data: {self._stub_response(user_prompt)}\n\n"
-        except Exception as e:  # Intentionally broad: anthropic SDK error hierarchy is not stable
-            logger.error("Claude streaming failed: %s", e)
+        except Exception as e:  # Intentionally broad: provider error hierarchies vary
+            logger.error("LLM streaming failed: %s", e)
             yield f"data: {self._stub_response(user_prompt)}\n\n"
 
         yield "data: [DONE]\n\n"
