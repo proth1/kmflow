@@ -100,6 +100,13 @@ from src.core.models.monitoring import (
     ProcessDeviation,
     SuccessMetric,
 )
+from src.core.models.ontology import (
+    OntologyAxiom,
+    OntologyClass,
+    OntologyProperty,
+    OntologyStatus,
+    OntologyVersion,
+)
 from src.core.models.pattern import (
     PatternAccessRule,
     PatternCategory,
@@ -304,6 +311,12 @@ __all__ = [
     "Policy",
     "PolicyType",
     "Regulation",
+    # ontology
+    "OntologyAxiom",
+    "OntologyClass",
+    "OntologyProperty",
+    "OntologyStatus",
+    "OntologyVersion",
     # monitoring
     "AlertSeverity",
     "AlertStatus",
