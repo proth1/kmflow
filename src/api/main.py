@@ -33,6 +33,7 @@ from src.api.middleware.security import (
 )
 from src.api.routes import (
     admin,
+    assessment_matrix,
     assumptions,
     audit_logs,
     camunda,
@@ -309,6 +310,7 @@ def create_app() -> FastAPI:
     app.include_router(simulations.router)
     app.include_router(scenario_comparison.router)  # Must precede scenarios (static /compare before /{id})
     app.include_router(scenarios.router)
+    app.include_router(assessment_matrix.router)
     app.include_router(portal.router)
     app.include_router(mcp_router)
     app.include_router(camunda.router)

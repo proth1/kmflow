@@ -4,6 +4,7 @@ This package re-exports all models and enums from domain-specific modules
 so that existing code using ``from src.core.models import X`` continues to work.
 """
 
+from src.core.models.assessment_matrix import AssessmentMatrixEntry, Quadrant
 from src.core.models.audit import AuditAction, AuditLog, HttpAuditEvent
 from src.core.models.auth import (
     CopilotMessage,
@@ -217,6 +218,9 @@ from src.core.models.validation_decision import (
 from src.security.consent.models import EndpointConsentRecord, EndpointConsentType, PolicyBundle
 
 __all__ = [
+    # assessment_matrix
+    "AssessmentMatrixEntry",
+    "Quadrant",
     # audit
     "AuditAction",
     "AuditLog",
