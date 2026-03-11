@@ -363,16 +363,22 @@ class OntologyValidationService:
             raise ValueError(f"Ontology {ontology_id} not found")
 
         # Get all classes
-        result = await self.session.execute(select(OntologyClass).where(OntologyClass.ontology_id == ontology_id))
-        classes = list(result.scalars().all())
+        classes_result = await self.session.execute(
+            select(OntologyClass).where(OntologyClass.ontology_id == ontology_id)
+        )
+        classes: list[OntologyClass] = list(classes_result.scalars().all())
 
         # Get all properties
-        result = await self.session.execute(select(OntologyProperty).where(OntologyProperty.ontology_id == ontology_id))
-        properties = list(result.scalars().all())
+        props_result = await self.session.execute(
+            select(OntologyProperty).where(OntologyProperty.ontology_id == ontology_id)
+        )
+        properties: list[OntologyProperty] = list(props_result.scalars().all())
 
         # Get all axioms
-        result = await self.session.execute(select(OntologyAxiom).where(OntologyAxiom.ontology_id == ontology_id))
-        axioms = list(result.scalars().all())
+        axioms_result = await self.session.execute(
+            select(OntologyAxiom).where(OntologyAxiom.ontology_id == ontology_id)
+        )
+        axioms: list[OntologyAxiom] = list(axioms_result.scalars().all())
 
         # Find orphan classes (no incoming or outgoing properties)
         connected_ids: set[uuid.UUID] = set()
