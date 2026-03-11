@@ -113,19 +113,29 @@ def generate_bpmn_xml(
         },
     )
 
-    # Create task elements
+    # Create task/gateway elements
     task_ids: list[str] = []
     for activity in activities:
         task_id = activity.id
         task_ids.append(task_id)
-        ET.SubElement(
-            process,
-            f"{{{BPMN_NS}}}task",
-            {
-                "id": task_id,
-                "name": activity.name,
-            },
-        )
+        if activity.is_gateway:
+            ET.SubElement(
+                process,
+                f"{{{BPMN_NS}}}exclusiveGateway",
+                {
+                    "id": task_id,
+                    "name": activity.name,
+                },
+            )
+        else:
+            ET.SubElement(
+                process,
+                f"{{{BPMN_NS}}}task",
+                {
+                    "id": task_id,
+                    "name": activity.name,
+                },
+            )
 
     # Create sequence flows: Start -> Task1 -> Task2 -> ... -> End
     flow_elements: list[tuple[str, str, str]] = []

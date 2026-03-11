@@ -78,7 +78,8 @@ def validate_schema() -> list[str]:
         errors.append(f"Expected 26 relationship types, found {len(rel_types)}: {sorted(rel_types)}")
 
     # Check extractable types cover the EntityType enum values (8 in PRD v2.1)
-    extractable = {defn["entity_type"] for defn in ontology["node_types"].values() if defn.get("extractable")}
+    extractable = {defn.get("entity_type") for defn in ontology["node_types"].values() if defn.get("extractable")}
+    extractable.discard(None)  # Remove None entries from missing entity_type
     expected_extractable = {"activity", "decision", "role", "system", "document", "data_object", "event", "gateway"}
     if extractable != expected_extractable:
         missing = expected_extractable - extractable

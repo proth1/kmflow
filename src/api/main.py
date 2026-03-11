@@ -46,6 +46,7 @@ from src.api.routes import (
     cost_modeling,
     dashboard,
     data_classification,
+    decisions,
     deviations,
     engagements,
     event_spine,
@@ -292,6 +293,7 @@ def create_app() -> FastAPI:
     app.include_router(shelf_requests.router)
     app.include_router(graph.router)
     app.include_router(pov.router)
+    app.include_router(decisions.router)
     app.include_router(dashboard.router)
     app.include_router(auth_routes.router)
     app.include_router(users.router)

@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 # Probe templates for each of the 8 probe types.
 # Ordered to minimize SME fatigue: broad existence → specific details → edge cases.
-PROBE_TEMPLATES: dict[ProbeType, dict[str, str]] = {
+PROBE_TEMPLATES: dict[ProbeType, dict[str, str | dict[str, dict[str, str]]]] = {
     ProbeType.EXISTENCE: {
         "question": "Does '{term}' happen in your area?",
         "expected_response": "exists (Yes/No), frequency, exceptions, respondent_role",
@@ -43,6 +43,28 @@ PROBE_TEMPLATES: dict[ProbeType, dict[str, str]] = {
     ProbeType.GOVERNANCE: {
         "question": "What rules or criteria govern '{term}'?",
         "expected_response": "business rules, regulatory requirements, approval criteria",
+        "sub_probes": {
+            "threshold": {
+                "question": "What is the exact cutoff, limit, or threshold for '{term}'?",
+                "expected_response": "numeric value, boundary condition, measurement unit",
+            },
+            "exception": {
+                "question": "When does the rule for '{term}' NOT apply? What are the exceptions?",
+                "expected_response": "exception conditions, waiver criteria, override scenarios",
+            },
+            "override": {
+                "question": "Who can override the rule for '{term}', and under what conditions?",
+                "expected_response": "override authority, approval level, compensating factors required",
+            },
+            "hierarchy": {
+                "question": "If rules conflict for '{term}', which takes precedence?",
+                "expected_response": "priority order, regulatory vs policy, temporal precedence",
+            },
+            "authority": {
+                "question": "Where is the rule for '{term}' formally documented?",
+                "expected_response": "policy document, regulation reference, SOP section, effective date",
+            },
+        },
     },
     ProbeType.PERFORMER: {
         "question": "Who performs '{term}' and what role do they play?",
@@ -157,6 +179,7 @@ class SurveyBotService:
         *,
         session_id: uuid.UUID,
         probe_types: list[ProbeType] | None = None,
+        include_deep_rule_probes: bool = False,
     ) -> list[dict[str, Any]]:
         """Generate probes for seed terms, ordered by fatigue-minimization.
 
@@ -164,6 +187,9 @@ class SurveyBotService:
             terms: List of seed term dicts with id, term, domain, category.
             session_id: The survey session ID.
             probe_types: Optional subset of probe types to generate.
+            include_deep_rule_probes: If True, generate deep rule sub-probes
+                for GOVERNANCE probe type (threshold, exception, override,
+                hierarchy, authority).
 
         Returns:
             List of probe dicts ordered for optimal SME experience.
@@ -182,10 +208,25 @@ class SurveyBotService:
                         "seed_term_id": term["id"],
                         "seed_term": term["term"],
                         "probe_type": probe_type.value,
-                        "question": template["question"].replace("{term}", term["term"]),
-                        "expected_response": template["expected_response"],
+                        "question": str(template["question"]).replace("{term}", term["term"]),
+                        "expected_response": str(template["expected_response"]),
                     }
                 )
+
+                # Deep rule sub-probes for GOVERNANCE
+                if include_deep_rule_probes and probe_type == ProbeType.GOVERNANCE:
+                    sub_probes: dict[str, dict[str, str]] = template.get("sub_probes", {})  # type: ignore[assignment]
+                    for sub_type, sub_template in sub_probes.items():
+                        probes.append(
+                            {
+                                "session_id": str(session_id),
+                                "seed_term_id": term["id"],
+                                "seed_term": term["term"],
+                                "probe_type": f"governance:{sub_type}",
+                                "question": sub_template["question"].replace("{term}", term["term"]),
+                                "expected_response": sub_template["expected_response"],
+                            }
+                        )
 
         return probes
 
