@@ -25,6 +25,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["assessment-matrix"])
 
 
+def _quadrant_summary(entries: list[dict[str, Any]]) -> dict[str, int]:
+    """Count entries per quadrant."""
+    counts: dict[str, int] = {}
+    for entry in entries:
+        q = entry["quadrant"]
+        counts[q] = counts.get(q, 0) + 1
+    return counts
+
+
 @router.get("/engagements/{engagement_id}/assessment-matrix")
 async def get_assessment_matrix(
     engagement_id: UUID,
@@ -40,17 +49,11 @@ async def get_assessment_matrix(
     service = AssessmentMatrixService(session)
     entries = await service.get_matrix(engagement_id)
 
-    # Compute quadrant summaries
-    quadrant_counts: dict[str, int] = {}
-    for entry in entries:
-        q = entry["quadrant"]
-        quadrant_counts[q] = quadrant_counts.get(q, 0) + 1
-
     return {
         "engagement_id": str(engagement_id),
         "entries": entries,
         "total": len(entries),
-        "quadrant_summary": quadrant_counts,
+        "quadrant_summary": _quadrant_summary(entries),
     }
 
 
@@ -79,16 +82,11 @@ async def compute_assessment_matrix(
     )
     await session.commit()
 
-    quadrant_counts: dict[str, int] = {}
-    for entry in entries:
-        q = entry["quadrant"]
-        quadrant_counts[q] = quadrant_counts.get(q, 0) + 1
-
     return {
         "engagement_id": str(engagement_id),
         "entries": entries,
         "total": len(entries),
-        "quadrant_summary": quadrant_counts,
+        "quadrant_summary": _quadrant_summary(entries),
     }
 
 

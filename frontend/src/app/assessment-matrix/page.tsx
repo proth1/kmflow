@@ -18,6 +18,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -96,6 +98,7 @@ function quadrantBadgeClass(quadrant: string): string {
 export default function AssessmentMatrixPage() {
   const [engagementId, setEngagementId] = useState("");
   const [computing, setComputing] = useState(false);
+  const [computeError, setComputeError] = useState<string | null>(null);
 
   const fetchData = useCallback(
     async (id: string, signal: AbortSignal) => {
@@ -112,11 +115,12 @@ export default function AssessmentMatrixPage() {
   const handleCompute = async () => {
     if (!engagementId) return;
     setComputing(true);
+    setComputeError(null);
     try {
       await computeAssessmentMatrix(engagementId);
       refetch();
-    } catch {
-      // Error handled by refetch
+    } catch (err) {
+      setComputeError(err instanceof Error ? err.message : "Failed to compute matrix");
     } finally {
       setComputing(false);
     }
@@ -141,24 +145,24 @@ export default function AssessmentMatrixPage() {
     >
       <div className="space-y-4">
         <div className="flex items-center gap-4">
-          <input
+          <Input
             type="text"
             placeholder="Engagement ID"
             value={engagementId}
             onChange={(e) => setEngagementId(e.target.value)}
-            className="border rounded px-3 py-2 w-80"
+            className="w-80"
           />
-          <button
+          <Button
             onClick={handleCompute}
             disabled={!engagementId || computing}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
           >
             {computing ? "Computing..." : "Compute Matrix"}
-          </button>
+          </Button>
         </div>
 
         {loading && <p className="text-muted-foreground">Loading...</p>}
         {error && <p className="text-red-600">{error}</p>}
+        {computeError && <p className="text-red-600">{computeError}</p>}
 
         {data && entries.length > 0 && (
           <>
