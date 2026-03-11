@@ -29,6 +29,7 @@ BPMNDI_NS = "http://www.omg.org/spec/BPMN/20100524/DI"
 DC_NS = "http://www.omg.org/spec/DD/20100524/DC"
 DI_NS = "http://www.omg.org/spec/DD/20100524/DI"
 KMFLOW_NS = "http://kmflow.ai/bpmn/extensions"
+XSI_NS = "http://www.w3.org/2001/XMLSchema-instance"
 
 # Entity type to BPMN element mapping
 _ENTITY_TO_BPMN = {
@@ -248,6 +249,7 @@ def assemble_bpmn(
     ET.register_namespace("dc", DC_NS)
     ET.register_namespace("di", DI_NS)
     ET.register_namespace("kmflow", KMFLOW_NS)
+    ET.register_namespace("xsi", XSI_NS)
 
     # Root definitions element
     definitions = ET.Element(
@@ -267,6 +269,8 @@ def assemble_bpmn(
 
     # Collect flow elements for sequence flows
     flow_node_ids: list[str] = []
+    gateway_ids: set[str] = set()  # Track gateway node IDs for conditionExpression
+    gateway_conditions: dict[str, str] = {}  # gateway_id → condition text from metadata
     gap_count = 0
 
     # Start event
@@ -293,6 +297,12 @@ def assemble_bpmn(
             bpmn_tag = f"{{{BPMN_NS}}}task"
         elif entity.entity_type == EntityType.DECISION:
             bpmn_tag = f"{{{BPMN_NS}}}exclusiveGateway"
+            gateway_ids.add(elem_id)
+            # Extract condition text from entity metadata if available
+            if entity.metadata.get("rule_text"):
+                gateway_conditions[elem_id] = entity.metadata["rule_text"]
+            elif entity.metadata.get("condition"):
+                gateway_conditions[elem_id] = entity.metadata["condition"]
         else:
             continue
 
@@ -326,7 +336,7 @@ def assemble_bpmn(
     # Sequence flows connecting all elements linearly
     for i in range(len(flow_node_ids) - 1):
         flow_id = _make_id("flow")
-        ET.SubElement(
+        flow_elem = ET.SubElement(
             process_elem,
             f"{{{BPMN_NS}}}sequenceFlow",
             {
@@ -335,6 +345,16 @@ def assemble_bpmn(
                 "targetRef": flow_node_ids[i + 1],
             },
         )
+
+        # Add conditionExpression on flows leaving gateways
+        source_id = flow_node_ids[i]
+        if source_id in gateway_ids and source_id in gateway_conditions:
+            cond_elem = ET.SubElement(
+                flow_elem,
+                f"{{{BPMN_NS}}}conditionExpression",
+                {f"{{{XSI_NS}}}type": "bpmn:tFormalExpression"},
+            )
+            cond_elem.text = gateway_conditions[source_id]
 
     # Add data store references for systems
     systems = [

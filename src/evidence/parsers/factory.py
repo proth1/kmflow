@@ -15,6 +15,7 @@ from src.evidence.parsers.base import BaseParser, ParseResult
 from src.evidence.parsers.bpmn_parser import BpmnParser
 from src.evidence.parsers.communication_parser import CommunicationParser
 from src.evidence.parsers.controls_parser import ControlsParser
+from src.evidence.parsers.dmn_parser import DmnParser
 from src.evidence.parsers.document_parser import DocumentParser
 from src.evidence.parsers.image_parser import ImageParser
 from src.evidence.parsers.job_aids_parser import JobAidsParser
@@ -45,6 +46,7 @@ _PARSERS: list[BaseParser] = [
     SaaSExportsParser(),
     ControlsParser(),
     ArisParser(),
+    DmnParser(),
 ]
 
 # Extension to EvidenceCategory mapping for auto-classification
@@ -114,6 +116,8 @@ EXTENSION_TO_CATEGORY: dict[str, str] = {
     ".monitor": "controls_evidence",
     # ARIS Process Models
     ".aml": "bpm_process_models",
+    # Decision Models (DMN)
+    ".dmn": "decision_models",
 }
 
 # MIME type to file extension mapping

@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KM4ProcessBot &amp; Decision Intelligence — Status Report</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+  <style type="text/css">
+    /* Reset */
+    body, table, td, p, a, li { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+    body { margin: 0; padding: 0; width: 100% !important; }
+
+    /* Brand Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&family=Open+Sans+Condensed:wght@300;700&display=swap');
+
+    /* Brand Colors */
+    :root {
+      --brand-blue: #00338D;
+      --brand-medium-blue: #005EB8;
+      --brand-light-blue: #0091DA;
+      --brand-dark-navy: #001D48;
+      --brand-white: #ffffff;
+      --brand-light-gray: #f5f5f5;
+      --brand-medium-gray: #666666;
+      --brand-dark-gray: #333333;
+      --status-green: #27ae60;
+      --status-amber: #f39c12;
+      --status-red: #c0392b;
+    }
+  </style>
+</head>
+<body style="margin:0; padding:0; background-color:#f0f2f5; font-family:'Open Sans', Arial, Helvetica, sans-serif;">
+
+<!-- Outer wrapper -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f0f2f5;">
+  <tr>
+    <td align="center" style="padding:24px 16px;">
+
+      <!-- Email container -->
+      <table role="presentation" width="720" cellpadding="0" cellspacing="0" border="0" style="max-width:720px; width:100%; background-color:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+
+        <!-- Header banner -->
+        <tr>
+          <td style="background: linear-gradient(135deg, #001D48 0%, #00338D 50%, #005EB8 100%); padding:32px 40px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td>
+                  <!-- Logo -->
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td style="font-family:'Open Sans Condensed', 'Arial Narrow', Arial, sans-serif; font-size:32px; font-weight:700; color:#ffffff; letter-spacing:1px;">
+                        KMFlow
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="font-family:'Open Sans', Arial, sans-serif; font-size:11px; font-weight:300; color:rgba(255,255,255,0.7); letter-spacing:2px; text-transform:uppercase; padding-top:2px;">
+                        AI-Powered Process Intelligence
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding-top:24px;">
+                  <h1 style="margin:0; font-family:'Open Sans Condensed', 'Arial Narrow', Arial, sans-serif; font-size:26px; font-weight:700; color:#ffffff; line-height:1.3;">
+                    KM4ProcessBot &amp; Decision Intelligence
+                  </h1>
+                  <p style="margin:6px 0 0 0; font-family:'Open Sans', Arial, sans-serif; font-size:14px; font-weight:400; color:rgba(255,255,255,0.85);">
+                    Comprehensive Status &amp; Findings Report &mdash; March 11, 2026
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Executive Summary -->
+        <tr>
+          <td style="padding:32px 40px 0 40px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#eff6ff; border-left:4px solid #00338D; border-radius:0 6px 6px 0; padding:20px 24px;">
+              <tr>
+                <td style="padding:20px 24px;">
+                  <h2 style="margin:0 0 12px 0; font-family:'Open Sans Condensed', 'Arial Narrow', Arial, sans-serif; font-size:18px; font-weight:700; color:#00338D;">
+                    Executive Summary
+                  </h2>
+                  <p style="margin:0; font-family:'Open Sans', Arial, sans-serif; font-size:13px; color:#333333; line-height:1.6;">
+                    A 5-agent deep audit confirmed that <strong>KM4ProcessBot is fully implemented</strong> across the platform under distributed module names (13 modules, ~3,700 LOC for the consensus algorithm alone). However, <strong>decision intelligence has significant gaps</strong> that prevent world-class process+decision mining. A new <strong>Decision Knowledge Module</strong> has been designed and partially implemented to close these gaps.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Key Metrics Strip -->
+        <tr>
+          <td style="padding:24px 40px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td width="25%" style="padding:0 6px 0 0;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f5f5; border-radius:6px; text-align:center;">
+                    <tr><td style="padding:16px 8px 4px 8px; font-family:'Open Sans Condensed', Arial, sans-serif; font-size:28px; font-weight:700; color:#27ae60;">14/14</td></tr>
+                    <tr><td style="padding:0 8px 16px 8px; font-family:'Open Sans', Arial, sans-serif; font-size:10px; color:#666666; text-transform:uppercase; letter-spacing:0.5px;">PRD Concepts Built</td></tr>
+                  </table>
+                </td>
+                <td width="25%" style="padding:0 6px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f5f5; border-radius:6px; text-align:center;">
+                    <tr><td style="padding:16px 8px 4px 8px; font-family:'Open Sans Condensed', Arial, sans-serif; font-size:28px; font-weight:700; color:#c0392b;">10</td></tr>
+                    <tr><td style="padding:0 8px 16px 8px; font-family:'Open Sans', Arial, sans-serif; font-size:10px; color:#666666; text-transform:uppercase; letter-spacing:0.5px;">Decision Gaps</td></tr>
+                  </table>
+                </td>
+                <td width="25%" style="padding:0 6px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f5f5; border-radius:6px; text-align:center;">
+                    <tr><td style="padding:16px 8px 4px 8px; font-family:'Open Sans Condensed', Arial, sans-serif; font-size:28px; font-weight:700; color:#00338D;">68%</td></tr>
+                    <tr><td style="padding:0 8px 16px 8px; font-family:'Open Sans', Arial, sans-serif; font-size:10px; color:#666666; text-transform:uppercase; letter-spacing:0.5px;">Test Coverage</td></tr>
+                  </table>
+                </td>
+                <td width="25%" style="padding:0 0 0 6px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f5f5; border-radius:6px; text-align:center;">
+                    <tr><td style="padding:16px 8px 4px 8px; font-family:'Open Sans Condensed', Arial, sans-serif; font-size:28px; font-weight:700; color:#f39c12;">9</td></tr>
+                    <tr><td style="padding:0 8px 16px 8px; font-family:'Open Sans', Arial, sans-serif; font-size:10px; color:#666666; text-transform:uppercase; letter-spacing:0.5px;">Failing Tests</td></tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Divider -->
+        <tr>
+          <td style="padding:0 40px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr><td style="border-top:1px solid #e5e7eb; font-size:1px; line-height:1px;">&nbsp;</td></tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Section 1: KM4ProcessBot Status -->
+        <tr>
+          <td style="padding:24px 40px 0 40px;">
+            <h2 style="margin:0 0 4px 0; font-family:'Open Sans Condensed', 'Arial Narrow', Arial, sans-serif; font-size:20px; font-weight:700; color:#00338D;">
+              KM4ProcessBot &mdash; Fully Implemented
+            </h2>
+            <p style="margin:0 0 16px 0; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#666666;">
+              All 14 PRD concepts are built under distributed module names across the platform.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 40px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e5e7eb; border-radius:6px; overflow:hidden;">
+              <!-- Table header -->
+              <tr>
+                <td width="30%" style="padding:10px 14px; background-color:#00338D; font-family:'Open Sans', Arial, sans-serif; font-size:11px; font-weight:700; color:#ffffff; text-transform:uppercase; letter-spacing:0.5px;">PRD Concept</td>
+                <td width="35%" style="padding:10px 14px; background-color:#00338D; font-family:'Open Sans', Arial, sans-serif; font-size:11px; font-weight:700; color:#ffffff; text-transform:uppercase; letter-spacing:0.5px;">Implementation</td>
+                <td width="25%" style="padding:10px 14px; background-color:#00338D; font-family:'Open Sans', Arial, sans-serif; font-size:11px; font-weight:700; color:#ffffff; text-transform:uppercase; letter-spacing:0.5px;">Location</td>
+                <td width="10%" style="padding:10px 14px; background-color:#00338D; font-family:'Open Sans', Arial, sans-serif; font-size:11px; font-weight:700; color:#ffffff; text-transform:uppercase; letter-spacing:0.5px; text-align:center;">Status</td>
+              </tr>
+              <!-- Row 1 -->
+              <tr>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0;">9 Universal Knowledge Forms</td>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0;">KnowledgeFormsCoverageService</td>
+                <td style="padding:9px 14px; font-family:'Courier New', monospace; font-size:11px; color:#005EB8; border-bottom:1px solid #f0f0f0;">governance/knowledge_forms.py</td>
+                <td style="padding:9px 14px; text-align:center; border-bottom:1px solid #f0f0f0;"><span style="display:inline-block; padding:2px 10px; background-color:#dcfce7; color:#166534; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">BUILT</span></td>
+              </tr>
+              <!-- Row 2 -->
+              <tr>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0; background-color:#fafafa;">Seed List Pipeline</td>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0; background-color:#fafafa;">SeedListService + 2 domain YAMLs</td>
+                <td style="padding:9px 14px; font-family:'Courier New', monospace; font-size:11px; color:#005EB8; border-bottom:1px solid #f0f0f0; background-color:#fafafa;">core/services/seed_list_service.py</td>
+                <td style="padding:9px 14px; text-align:center; border-bottom:1px solid #f0f0f0; background-color:#fafafa;"><span style="display:inline-block; padding:2px 10px; background-color:#dcfce7; color:#166534; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">BUILT</span></td>
+              </tr>
+              <!-- Row 3 -->
+              <tr>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0;">Structured Survey Bot (8 probes)</td>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0;">SurveyBotService</td>
+                <td style="padding:9px 14px; font-family:'Courier New', monospace; font-size:11px; color:#005EB8; border-bottom:1px solid #f0f0f0;">core/services/survey_bot_service.py</td>
+                <td style="padding:9px 14px; text-align:center; border-bottom:1px solid #f0f0f0;"><span style="display:inline-block; padding:2px 10px; background-color:#dcfce7; color:#166534; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">BUILT</span></td>
+              </tr>
+              <!-- Row 4 -->
+              <tr>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0; background-color:#fafafa;">Epistemic Frames</td>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0; background-color:#fafafa;">FrameKind enum + EpistemicFrame model</td>
+                <td style="padding:9px 14px; font-family:'Courier New', monospace; font-size:11px; color:#005EB8; border-bottom:1px solid #f0f0f0; background-color:#fafafa;">core/models/survey.py</td>
+                <td style="padding:9px 14px; text-align:center; border-bottom:1px solid #f0f0f0; background-color:#fafafa;"><span style="display:inline-block; padding:2px 10px; background-color:#dcfce7; color:#166534; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">BUILT</span></td>
+              </tr>
+              <!-- Row 5 -->
+              <tr>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0;">Cross-Source Consistency (6 checks)</td>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0;">All 6 conflict detectors</td>
+                <td style="padding:9px 14px; font-family:'Courier New', monospace; font-size:11px; color:#005EB8; border-bottom:1px solid #f0f0f0;">semantic/conflict_detection.py</td>
+                <td style="padding:9px 14px; text-align:center; border-bottom:1px solid #f0f0f0;"><span style="display:inline-block; padding:2px 10px; background-color:#dcfce7; color:#166534; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">BUILT</span></td>
+              </tr>
+              <!-- Row 6 -->
+              <tr>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0; background-color:#fafafa;">Consensus Algorithm (8-step)</td>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0; background-color:#fafafa;">Full orchestrator pipeline</td>
+                <td style="padding:9px 14px; font-family:'Courier New', monospace; font-size:11px; color:#005EB8; border-bottom:1px solid #f0f0f0; background-color:#fafafa;">pov/ (13 modules, ~3,700 LOC)</td>
+                <td style="padding:9px 14px; text-align:center; border-bottom:1px solid #f0f0f0; background-color:#fafafa;"><span style="display:inline-block; padding:2px 10px; background-color:#dcfce7; color:#166534; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">BUILT</span></td>
+              </tr>
+              <!-- Row 7 -->
+              <tr>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0;">BPMN Assembly (Decision&rarr;Gateway)</td>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0;">EntityType.DECISION &rarr; exclusiveGateway</td>
+                <td style="padding:9px 14px; font-family:'Courier New', monospace; font-size:11px; color:#005EB8; border-bottom:1px solid #f0f0f0;">pov/assembly.py</td>
+                <td style="padding:9px 14px; text-align:center; border-bottom:1px solid #f0f0f0;"><span style="display:inline-block; padding:2px 10px; background-color:#dcfce7; color:#166534; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">BUILT</span></td>
+              </tr>
+              <!-- Row 8 -->
+              <tr>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0; background-color:#fafafa;">Evidence Triangulation (3 planes)</td>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0; background-color:#fafafa;">system_behavioral, documented_formal, human_interpretation</td>
+                <td style="padding:9px 14px; font-family:'Courier New', monospace; font-size:11px; color:#005EB8; border-bottom:1px solid #f0f0f0; background-color:#fafafa;">pov/triangulation.py</td>
+                <td style="padding:9px 14px; text-align:center; border-bottom:1px solid #f0f0f0; background-color:#fafafa;"><span style="display:inline-block; padding:2px 10px; background-color:#dcfce7; color:#166534; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">BUILT</span></td>
+              </tr>
+              <!-- Row 9 -->
+              <tr>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333;">Confidence Scoring (brightness/grade)</td>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333;">BRIGHT/DIM/DARK + A/B/C/D/U grades</td>
+                <td style="padding:9px 14px; font-family:'Courier New', monospace; font-size:11px; color:#005EB8;">pov/scoring.py</td>
+                <td style="padding:9px 14px; text-align:center;"><span style="display:inline-block; padding:2px 10px; background-color:#dcfce7; color:#166534; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">BUILT</span></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Section 2: Decision Intelligence Gaps -->
+        <tr>
+          <td style="padding:32px 40px 0 40px;">
+            <h2 style="margin:0 0 4px 0; font-family:'Open Sans Condensed', 'Arial Narrow', Arial, sans-serif; font-size:20px; font-weight:700; color:#c0392b;">
+              Decision Intelligence &mdash; Critical Gaps Identified
+            </h2>
+            <p style="margin:0 0 16px 0; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#666666;">
+              10 gaps preventing world-class process + decision mining output.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 40px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e5e7eb; border-radius:6px; overflow:hidden;">
+              <tr>
+                <td width="30%" style="padding:10px 14px; background-color:#7f1d1d; font-family:'Open Sans', Arial, sans-serif; font-size:11px; font-weight:700; color:#ffffff; text-transform:uppercase; letter-spacing:0.5px;">Gap</td>
+                <td width="55%" style="padding:10px 14px; background-color:#7f1d1d; font-family:'Open Sans', Arial, sans-serif; font-size:11px; font-weight:700; color:#ffffff; text-transform:uppercase; letter-spacing:0.5px;">Impact</td>
+                <td width="15%" style="padding:10px 14px; background-color:#7f1d1d; font-family:'Open Sans', Arial, sans-serif; font-size:11px; font-weight:700; color:#ffffff; text-transform:uppercase; letter-spacing:0.5px; text-align:center;">Remediation</td>
+              </tr>
+              <!-- Gap 1 -->
+              <tr>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; font-weight:600; border-bottom:1px solid #f0f0f0;">No DMN parser</td>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0;">Cannot ingest decision models. <code style="font-size:11px; background:#f3f4f6; padding:1px 4px; border-radius:3px;">.dmn</code> extension not registered &mdash; loan-origination DMN treated as opaque evidence.</td>
+                <td style="padding:9px 14px; text-align:center; border-bottom:1px solid #f0f0f0;"><span style="display:inline-block; padding:2px 10px; background-color:#dcfce7; color:#166534; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">DONE</span></td>
+              </tr>
+              <!-- Gap 2 -->
+              <tr>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; font-weight:600; border-bottom:1px solid #f0f0f0; background-color:#fafafa;">No DMN generation</td>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0; background-color:#fafafa;">Cannot output decision tables. Platform outputs BPMN but not the companion DMN 1.3 XML.</td>
+                <td style="padding:9px 14px; text-align:center; border-bottom:1px solid #f0f0f0; background-color:#fafafa;"><span style="display:inline-block; padding:2px 10px; background-color:#dcfce7; color:#166534; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">DONE</span></td>
+              </tr>
+              <!-- Gap 3 -->
+              <tr>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; font-weight:600; border-bottom:1px solid #f0f0f0;">Job Aids Parser is a stub</td>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0;">PRD promise broken. Was 47-line thin wrapper around DocumentParser with zero rule extraction.</td>
+                <td style="padding:9px 14px; text-align:center; border-bottom:1px solid #f0f0f0;"><span style="display:inline-block; padding:2px 10px; background-color:#dcfce7; color:#166534; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">DONE</span></td>
+              </tr>
+              <!-- Gap 4 -->
+              <tr>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; font-weight:600; border-bottom:1px solid #f0f0f0; background-color:#fafafa;">bpmn_generator.py gateways</td>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0; background-color:#fafafa;"><code style="font-size:11px; background:#f3f4f6; padding:1px 4px; border-radius:3px;">is_gateway</code> flag was dead code &mdash; XML generation only created <code style="font-size:11px; background:#f3f4f6; padding:1px 4px; border-radius:3px;">&lt;task&gt;</code> elements.</td>
+                <td style="padding:9px 14px; text-align:center; border-bottom:1px solid #f0f0f0; background-color:#fafafa;"><span style="display:inline-block; padding:2px 10px; background-color:#dcfce7; color:#166534; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">DONE</span></td>
+              </tr>
+              <!-- Gap 5 -->
+              <tr>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; font-weight:600; border-bottom:1px solid #f0f0f0;">No conditionExpressions</td>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0;">Generated gateways had no condition logic on outgoing sequence flows &mdash; just structural splits.</td>
+                <td style="padding:9px 14px; text-align:center; border-bottom:1px solid #f0f0f0;"><span style="display:inline-block; padding:2px 10px; background-color:#dcfce7; color:#166534; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">DONE</span></td>
+              </tr>
+              <!-- Gap 6 -->
+              <tr>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; font-weight:600; border-bottom:1px solid #f0f0f0; background-color:#fafafa;">No deep rule probes</td>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0; background-color:#fafafa;">Only 1 generic GOVERNANCE probe. Missing: threshold, exception, override, hierarchy, authority probes.</td>
+                <td style="padding:9px 14px; text-align:center; border-bottom:1px solid #f0f0f0; background-color:#fafafa;"><span style="display:inline-block; padding:2px 10px; background-color:#dcfce7; color:#166534; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">DONE</span></td>
+              </tr>
+              <!-- Gap 7 -->
+              <tr>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; font-weight:600; border-bottom:1px solid #f0f0f0;">No decision seed list</td>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0;">DMN vocabulary not seeded. 2 domain seed lists existed but none for decision-logic terms.</td>
+                <td style="padding:9px 14px; text-align:center; border-bottom:1px solid #f0f0f0;"><span style="display:inline-block; padding:2px 10px; background-color:#dcfce7; color:#166534; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">DONE</span></td>
+              </tr>
+              <!-- Gap 8 -->
+              <tr>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; font-weight:600; border-bottom:1px solid #f0f0f0; background-color:#fafafa;">LLM extraction is stub</td>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0; background-color:#fafafa;"><code style="font-size:11px; background:#f3f4f6; padding:1px 4px; border-radius:3px;">use_llm=True</code> path declared but not implemented. All decision extraction runs on regex at 0.6 confidence.</td>
+                <td style="padding:9px 14px; text-align:center; border-bottom:1px solid #f0f0f0; background-color:#fafafa;"><span style="display:inline-block; padding:2px 10px; background-color:#fef9c3; color:#854d0e; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">BACKLOG</span></td>
+              </tr>
+              <!-- Gap 9 -->
+              <tr>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; font-weight:600; border-bottom:1px solid #f0f0f0;">No frontend decision UI</td>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0;">Zero decision intelligence visualization &mdash; no DMN viewer, no decision table editor, no traceability.</td>
+                <td style="padding:9px 14px; text-align:center; border-bottom:1px solid #f0f0f0;"><span style="display:inline-block; padding:2px 10px; background-color:#dcfce7; color:#166534; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">DONE</span></td>
+              </tr>
+              <!-- Gap 10 -->
+              <tr>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; font-weight:600;">No decision API endpoints</td>
+                <td style="padding:9px 14px; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333;">No <code style="font-size:11px; background:#f3f4f6; padding:1px 4px; border-radius:3px;">/api/v1/decisions/</code> routes. Decisions only accessible as ProcessElement.GATEWAY via POV endpoints.</td>
+                <td style="padding:9px 14px; text-align:center;"><span style="display:inline-block; padding:2px 10px; background-color:#dcfce7; color:#166534; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">DONE</span></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Section 3: What Was Delivered -->
+        <tr>
+          <td style="padding:32px 40px 0 40px;">
+            <h2 style="margin:0 0 4px 0; font-family:'Open Sans Condensed', 'Arial Narrow', Arial, sans-serif; font-size:20px; font-weight:700; color:#00338D;">
+              Delivered &mdash; Decision Knowledge Module
+            </h2>
+            <p style="margin:0 0 16px 0; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#666666;">
+              9 of 10 gaps closed. 10 new files, 7 modified files, 43 new tests &mdash; all passing.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 40px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <!-- Deliverable cards row 1 -->
+              <tr>
+                <td width="50%" style="padding:0 8px 12px 0; vertical-align:top;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f5f5; border-radius:6px; border-left:3px solid #27ae60;">
+                    <tr>
+                      <td style="padding:14px 16px;">
+                        <p style="margin:0 0 4px 0; font-family:'Open Sans', Arial, sans-serif; font-size:13px; font-weight:700; color:#333333;">DMN 1.3 Parser</p>
+                        <p style="margin:0; font-family:'Open Sans', Arial, sans-serif; font-size:11px; color:#666666; line-height:1.5;">Parses decisions, tables, input/output columns, rules, hit policies. Verified against real underwriting DMN: 2 decisions, 14 rules extracted.</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+                <td width="50%" style="padding:0 0 12px 8px; vertical-align:top;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f5f5; border-radius:6px; border-left:3px solid #27ae60;">
+                    <tr>
+                      <td style="padding:14px 16px;">
+                        <p style="margin:0 0 4px 0; font-family:'Open Sans', Arial, sans-serif; font-size:13px; font-weight:700; color:#333333;">DMN 1.3 Generator</p>
+                        <p style="margin:0; font-family:'Open Sans', Arial, sans-serif; font-size:11px; color:#666666; line-height:1.5;">Generates valid DMN XML from validated BusinessRule graph nodes. Supports hit policies, typed columns, allowed values, multi-decision models.</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <!-- Deliverable cards row 2 -->
+              <tr>
+                <td width="50%" style="padding:0 8px 12px 0; vertical-align:top;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f5f5; border-radius:6px; border-left:3px solid #27ae60;">
+                    <tr>
+                      <td style="padding:14px 16px;">
+                        <p style="margin:0 0 4px 0; font-family:'Open Sans', Arial, sans-serif; font-size:13px; font-weight:700; color:#333333;">Job Aids Rule Extraction</p>
+                        <p style="margin:0; font-family:'Open Sans', Arial, sans-serif; font-size:11px; color:#666666; line-height:1.5;">4 pattern extractors: thresholds/limits, if/then conditions, exception/override handling, decision tree branches.</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+                <td width="50%" style="padding:0 0 12px 8px; vertical-align:top;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f5f5; border-radius:6px; border-left:3px solid #27ae60;">
+                    <tr>
+                      <td style="padding:14px 16px;">
+                        <p style="margin:0 0 4px 0; font-family:'Open Sans', Arial, sans-serif; font-size:13px; font-weight:700; color:#333333;">5 Deep Rule Probes</p>
+                        <p style="margin:0; font-family:'Open Sans', Arial, sans-serif; font-size:11px; color:#666666; line-height:1.5;">Threshold, exception, override, hierarchy, authority sub-probes under GOVERNANCE for deep decision elicitation.</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <!-- Deliverable cards row 3 -->
+              <tr>
+                <td width="50%" style="padding:0 8px 12px 0; vertical-align:top;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f5f5; border-radius:6px; border-left:3px solid #27ae60;">
+                    <tr>
+                      <td style="padding:14px 16px;">
+                        <p style="margin:0 0 4px 0; font-family:'Open Sans', Arial, sans-serif; font-size:13px; font-weight:700; color:#333333;">Decision API (5 endpoints)</p>
+                        <p style="margin:0; font-family:'Open Sans', Arial, sans-serif; font-size:11px; color:#666666; line-height:1.5;">List decisions, get rules, export DMN, SME validation, Form 5 coverage gaps. Full Pydantic schemas.</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+                <td width="50%" style="padding:0 0 12px 8px; vertical-align:top;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f5f5; border-radius:6px; border-left:3px solid #27ae60;">
+                    <tr>
+                      <td style="padding:14px 16px;">
+                        <p style="margin:0 0 4px 0; font-family:'Open Sans', Arial, sans-serif; font-size:13px; font-weight:700; color:#333333;">Frontend Decision Page</p>
+                        <p style="margin:0; font-family:'Open Sans', Arial, sans-serif; font-size:11px; color:#666666; line-height:1.5;">Decision Discovery dashboard with confidence/brightness table and Form 5 coverage gap tab. TypeScript API client.</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Section 4: Test Coverage -->
+        <tr>
+          <td style="padding:32px 40px 0 40px;">
+            <h2 style="margin:0 0 4px 0; font-family:'Open Sans Condensed', 'Arial Narrow', Arial, sans-serif; font-size:20px; font-weight:700; color:#00338D;">
+              Test Coverage
+            </h2>
+            <p style="margin:0 0 16px 0; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#666666;">
+              43 new tests added. 0% coverage modules now have 90%+ coverage.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 40px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e5e7eb; border-radius:6px; overflow:hidden;">
+              <tr>
+                <td width="40%" style="padding:10px 14px; background-color:#00338D; font-family:'Open Sans', Arial, sans-serif; font-size:11px; font-weight:700; color:#ffffff; text-transform:uppercase;">Module</td>
+                <td width="15%" style="padding:10px 14px; background-color:#00338D; font-family:'Open Sans', Arial, sans-serif; font-size:11px; font-weight:700; color:#ffffff; text-transform:uppercase; text-align:center;">Before</td>
+                <td width="15%" style="padding:10px 14px; background-color:#00338D; font-family:'Open Sans', Arial, sans-serif; font-size:11px; font-weight:700; color:#ffffff; text-transform:uppercase; text-align:center;">After</td>
+                <td width="15%" style="padding:10px 14px; background-color:#00338D; font-family:'Open Sans', Arial, sans-serif; font-size:11px; font-weight:700; color:#ffffff; text-transform:uppercase; text-align:center;">Tests</td>
+                <td width="15%" style="padding:10px 14px; background-color:#00338D; font-family:'Open Sans', Arial, sans-serif; font-size:11px; font-weight:700; color:#ffffff; text-transform:uppercase; text-align:center;">Result</td>
+              </tr>
+              <tr>
+                <td style="padding:9px 14px; font-family:'Courier New', monospace; font-size:11px; color:#005EB8; border-bottom:1px solid #f0f0f0;">pov/bpmn_generator.py</td>
+                <td style="padding:9px 14px; text-align:center; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#c0392b; font-weight:600; border-bottom:1px solid #f0f0f0;">0%</td>
+                <td style="padding:9px 14px; text-align:center; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#27ae60; font-weight:600; border-bottom:1px solid #f0f0f0;">95%</td>
+                <td style="padding:9px 14px; text-align:center; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0;">15</td>
+                <td style="padding:9px 14px; text-align:center; border-bottom:1px solid #f0f0f0;"><span style="display:inline-block; padding:2px 10px; background-color:#dcfce7; color:#166534; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">PASS</span></td>
+              </tr>
+              <tr>
+                <td style="padding:9px 14px; font-family:'Courier New', monospace; font-size:11px; color:#005EB8; border-bottom:1px solid #f0f0f0; background-color:#fafafa;">semantic/ontology/validate.py</td>
+                <td style="padding:9px 14px; text-align:center; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#c0392b; font-weight:600; border-bottom:1px solid #f0f0f0; background-color:#fafafa;">0%</td>
+                <td style="padding:9px 14px; text-align:center; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#27ae60; font-weight:600; border-bottom:1px solid #f0f0f0; background-color:#fafafa;">90%</td>
+                <td style="padding:9px 14px; text-align:center; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0; background-color:#fafafa;">9</td>
+                <td style="padding:9px 14px; text-align:center; border-bottom:1px solid #f0f0f0; background-color:#fafafa;"><span style="display:inline-block; padding:2px 10px; background-color:#dcfce7; color:#166534; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">PASS</span></td>
+              </tr>
+              <tr>
+                <td style="padding:9px 14px; font-family:'Courier New', monospace; font-size:11px; color:#005EB8; border-bottom:1px solid #f0f0f0;">evidence/parsers/dmn_parser.py</td>
+                <td style="padding:9px 14px; text-align:center; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#666666; border-bottom:1px solid #f0f0f0;">&mdash;</td>
+                <td style="padding:9px 14px; text-align:center; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#27ae60; font-weight:600; border-bottom:1px solid #f0f0f0;">95%</td>
+                <td style="padding:9px 14px; text-align:center; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; border-bottom:1px solid #f0f0f0;">9</td>
+                <td style="padding:9px 14px; text-align:center; border-bottom:1px solid #f0f0f0;"><span style="display:inline-block; padding:2px 10px; background-color:#dcfce7; color:#166534; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">PASS</span></td>
+              </tr>
+              <tr>
+                <td style="padding:9px 14px; font-family:'Courier New', monospace; font-size:11px; color:#005EB8; background-color:#fafafa;">pov/dmn_generator.py</td>
+                <td style="padding:9px 14px; text-align:center; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#666666; background-color:#fafafa;">&mdash;</td>
+                <td style="padding:9px 14px; text-align:center; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#27ae60; font-weight:600; background-color:#fafafa;">95%</td>
+                <td style="padding:9px 14px; text-align:center; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; background-color:#fafafa;">10</td>
+                <td style="padding:9px 14px; text-align:center; background-color:#fafafa;"><span style="display:inline-block; padding:2px 10px; background-color:#dcfce7; color:#166534; font-family:'Open Sans', Arial, sans-serif; font-size:10px; font-weight:600; border-radius:10px;">PASS</span></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Section 5: Remaining Backlog -->
+        <tr>
+          <td style="padding:32px 40px 0 40px;">
+            <h2 style="margin:0 0 4px 0; font-family:'Open Sans Condensed', 'Arial Narrow', Arial, sans-serif; font-size:20px; font-weight:700; color:#00338D;">
+              Remaining Backlog
+            </h2>
+            <p style="margin:0 0 16px 0; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#666666;">
+              Items requiring follow-up work or Jira epic creation.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 40px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <!-- Backlog item 1 -->
+              <tr>
+                <td style="padding:0 0 10px 0;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fef9e7; border-left:3px solid #f39c12; border-radius:0 6px 6px 0;">
+                    <tr>
+                      <td style="padding:12px 16px;">
+                        <p style="margin:0 0 4px 0; font-family:'Open Sans', Arial, sans-serif; font-size:13px; font-weight:600; color:#854d0e;">LLM Entity Extraction for Decisions</p>
+                        <p style="margin:0; font-family:'Open Sans', Arial, sans-serif; font-size:11px; color:#666666; line-height:1.5;">Implement the <code style="font-size:11px; background:#f3f4f6; padding:1px 4px; border-radius:3px;">use_llm=True</code> path in <code style="font-size:11px; background:#f3f4f6; padding:1px 4px; border-radius:3px;">extract_entities()</code> for decision patterns. Raise decision confidence from 0.6 baseline when multiple evidence sources corroborate.</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <!-- Backlog item 2 -->
+              <tr>
+                <td style="padding:0 0 10px 0;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fef9e7; border-left:3px solid #f39c12; border-radius:0 6px 6px 0;">
+                    <tr>
+                      <td style="padding:12px 16px;">
+                        <p style="margin:0 0 4px 0; font-family:'Open Sans', Arial, sans-serif; font-size:13px; font-weight:600; color:#854d0e;">Fix 9 Pre-Existing Failing Tests</p>
+                        <p style="margin:0; font-family:'Open Sans', Arial, sans-serif; font-size:11px; color:#666666; line-height:1.5;">6 in switching, 2 in semantic builder, 1 in semantic bridge. Align test expectations with current function signatures.</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <!-- Backlog item 3 -->
+              <tr>
+                <td style="padding:0 0 10px 0;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fef9e7; border-left:3px solid #f39c12; border-radius:0 6px 6px 0;">
+                    <tr>
+                      <td style="padding:12px 16px;">
+                        <p style="margin:0 0 4px 0; font-family:'Open Sans', Arial, sans-serif; font-size:13px; font-weight:600; color:#854d0e;">Jira Epic: Decision Knowledge Module</p>
+                        <p style="margin:0; font-family:'Open Sans', Arial, sans-serif; font-size:11px; color:#666666; line-height:1.5;">Create KMFLOW epic with stories for each delivered component. Track remaining LLM extraction and DMN viewer work items.</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <!-- Backlog item 4 -->
+              <tr>
+                <td style="padding:0 0 10px 0;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fef9e7; border-left:3px solid #f39c12; border-radius:0 6px 6px 0;">
+                    <tr>
+                      <td style="padding:12px 16px;">
+                        <p style="margin:0 0 4px 0; font-family:'Open Sans', Arial, sans-serif; font-size:13px; font-weight:600; color:#854d0e;">Prerequisites: KMFLOW-58 &amp; KMFLOW-5</p>
+                        <p style="margin:0; font-family:'Open Sans', Arial, sans-serif; font-size:11px; color:#666666; line-height:1.5;">KMFLOW-58 (Redis worker wiring) blocks async POV/evidence jobs. KMFLOW-5 (Camunda activation) blocks executable workflow deployment.</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Divider -->
+        <tr>
+          <td style="padding:24px 40px 0 40px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr><td style="border-top:1px solid #e5e7eb; font-size:1px; line-height:1px;">&nbsp;</td></tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Architecture Decision callout -->
+        <tr>
+          <td style="padding:24px 40px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#eff6ff; border:1px solid #bfdbfe; border-radius:6px;">
+              <tr>
+                <td style="padding:20px 24px;">
+                  <p style="margin:0 0 8px 0; font-family:'Open Sans', Arial, sans-serif; font-size:13px; font-weight:700; color:#00338D;">Architecture Decision: Extension, Not Separate Bot</p>
+                  <p style="margin:0; font-family:'Open Sans', Arial, sans-serif; font-size:12px; color:#333333; line-height:1.6;">
+                    Decision intelligence is implemented as a <strong>Decision Knowledge Module within KM4ProcessBot</strong>, not a separate KM4DecisionBot. Decisions are discovered in context of processes (at gateways), the 9 Knowledge Forms architecture already integrates Rules as Form 5, and evidence sources feed both process and decision knowledge. A separate bot would create artificial graph boundaries.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background-color:#001D48; padding:24px 40px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td>
+                  <p style="margin:0 0 4px 0; font-family:'Open Sans Condensed', 'Arial Narrow', Arial, sans-serif; font-size:18px; font-weight:700; color:#ffffff; letter-spacing:1px;">KMFlow</p>
+                  <p style="margin:0 0 12px 0; font-family:'Open Sans', Arial, sans-serif; font-size:10px; color:rgba(255,255,255,0.5); letter-spacing:1px; text-transform:uppercase;">AI-Powered Process Intelligence</p>
+                  <p style="margin:0; font-family:'Open Sans', Arial, sans-serif; font-size:11px; color:rgba(255,255,255,0.6); line-height:1.5;">
+                    Version 2026.03.216 &bull; Platform: Python 3.12+ / FastAPI / Next.js 15 / Neo4j 5.x<br />
+                    This report was generated from a 5-agent deep audit of the KMFlow codebase.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+      </table>
+      <!-- /Email container -->
+
+    </td>
+  </tr>
+</table>
+<!-- /Outer wrapper -->
+
+</body>
+</html>
