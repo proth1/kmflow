@@ -70,6 +70,7 @@ from src.api.routes import (
     metrics,
     micro_surveys,
     monitoring,
+    ontology,
     orchestration,
     patterns,
     pdp,
@@ -316,6 +317,7 @@ def create_app() -> FastAPI:
     app.include_router(mcp_router)
     app.include_router(camunda.router)
     app.include_router(orchestration.router)
+    app.include_router(ontology.router)
 
     # -- Phase 4 Routes ---
     app.include_router(copilot.router)
