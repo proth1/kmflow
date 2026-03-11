@@ -1,17 +1,17 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.219
+**Version**: 2026.03.220
 **Last Updated**: 2026-03-11
 
 ## Quick Stats
 
 | Metric | Value |
 |--------|-------|
-| SQLAlchemy Models | 97 |
-| API Routers | 71 |
-| Test Count | 5,500+ backend + 635 frontend (6,135+ total) |
-| Total LOC | ~113,000 (430+ Python / 115 TypeScript / 39 Swift / 63 C#/C) |
-| Database Migrations | 84 |
+| SQLAlchemy Models | 101 |
+| API Routers | 72 |
+| Test Count | 5,530+ backend + 635 frontend (6,165+ total) |
+| Total LOC | ~115,500 (440+ Python / 120 TypeScript / 39 Swift / 63 C#/C) |
+| Database Migrations | 85 |
 | BPMN Process Models | 44 |
 | Coverage | >80% |
 | Python Version | 3.12+ |
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.220 | 2026-03-11 | Ontology derivation from knowledge graph — seed term clustering, Neo4j patterns, OWL/YAML export, validation, Cytoscape viz, 30 tests (KMFLOW-6, PR #600) |
 | 2026.03.219 | 2026-03-11 | Activate BPMN workflows in Camunda — external task worker, orchestration API, 8 new CamundaClient methods, 39 tests (KMFLOW-5, PR #599) |
 | 2026.03.218 | 2026-03-11 | Assessment Overlay Matrix — Value x Ability-to-Execute scatter chart, quadrant analysis, composite scoring, 33 tests (KMFLOW-4, PR #598) |
 | 2026.03.217 | 2026-03-11 | Decision Knowledge Module — DMN parser/generator, decision API, deep rule probes, seed list, 69 tests (KMFLOW-103, PR #597) |

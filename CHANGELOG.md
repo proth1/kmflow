@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.220] - 2026-03-11
+### Added
+- Ontology derivation from knowledge graph (KMFLOW-6) — seed term clustering, Neo4j pattern extraction, property mapping with domain/range inference, axiom generation (existential + domain_range), completeness scoring, OWL 2 XML + YAML export, validation with orphan/subgraph detection, RLS on all 4 tables, Cytoscape graph visualization, 30 new tests (PR #600)
+
 ## [2026.03.219] - 2026-03-11
 ### Added
 - Activate BPMN workflows in Camunda (KMFLOW-5) — external task worker (fetch-and-lock pattern), orchestration API (deploy/instances/retry/cancel), CamundaClient extended with 8 new methods, variable type inference, batch L4 workflow deployment, 39 new tests (PR #599)
