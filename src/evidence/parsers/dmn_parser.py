@@ -13,7 +13,7 @@ from pathlib import Path
 from lxml import etree
 
 from src.core.models import FragmentType
-from src.evidence.parsers.base import BaseParser, ParsedFragment, ParseResult
+from src.evidence.parsers.base import BaseParser, ParsedFragment, ParseResult, detect_xml_namespace
 
 logger = logging.getLogger(__name__)
 
@@ -210,22 +210,4 @@ class DmnParser(BaseParser):
 
     def _detect_namespace(self, root: etree._Element) -> dict[str, str]:
         """Detect the DMN namespace from the root element."""
-        nsmap: dict[str, str] = {}
-
-        # Check root tag namespace
-        if root.tag.startswith("{"):
-            ns = root.tag.split("}")[0].strip("{")
-            if "dmn" in ns.lower() or "omg.org" in ns:
-                nsmap["dmn"] = ns
-
-        # Check explicit namespaces
-        for _prefix, uri in (root.nsmap or {}).items():
-            if uri and ("dmn" in uri.lower() or "omg.org/spec/DMN" in uri):
-                nsmap["dmn"] = uri
-                break
-
-        # Fallback to standard namespace
-        if "dmn" not in nsmap:
-            nsmap["dmn"] = DMN_NS
-
-        return nsmap
+        return detect_xml_namespace(root, "dmn", DMN_NS, spec_path="omg.org/spec/DMN")

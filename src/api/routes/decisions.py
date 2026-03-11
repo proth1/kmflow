@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.deps import get_session
 from src.core.models import User
 from src.core.permissions import require_engagement_access, require_permission
+from src.pov.constants import BRIGHTNESS_BRIGHT_THRESHOLD, BRIGHTNESS_DIM_THRESHOLD
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +139,11 @@ async def list_decisions(
     decisions = []
     for elem in elements:
         score = elem.confidence_score
-        brightness = "BRIGHT" if score >= 0.75 else ("DIM" if score >= 0.40 else "DARK")
+        brightness = (
+            "BRIGHT"
+            if score >= BRIGHTNESS_BRIGHT_THRESHOLD
+            else ("DIM" if score >= BRIGHTNESS_DIM_THRESHOLD else "DARK")
+        )
         decisions.append(
             {
                 "id": str(elem.id),
@@ -318,7 +323,7 @@ async def validate_decision_rule(
             "corrected_text": payload.corrected_text,
             "reasoning": payload.reasoning,
             "confidence_override": payload.confidence_override,
-            "validated_by": str(_user.id) if hasattr(_user, "id") else "unknown",
+            "validated_by": str(_user.id),
         }
     )
     meta["validations"] = validations
@@ -364,18 +369,18 @@ async def get_decision_coverage(
     covered_count = 0
     for elem in elements:
         rule_count = elem.metadata_json.get("rule_count", 0) if elem.metadata_json else 0
-        has_rules = rule_count > 0
-        if has_rules:
+        if rule_count > 0:
             covered_count += 1
-        gaps.append(
-            {
-                "activity_name": elem.name,
-                "has_rules": has_rules,
-                "rule_count": rule_count,
-                "gap_weight": 1.2,
-                "probe_generated": not has_rules,
-            }
-        )
+        else:
+            gaps.append(
+                {
+                    "activity_name": elem.name,
+                    "has_rules": False,
+                    "rule_count": 0,
+                    "gap_weight": 1.2,
+                    "probe_generated": True,
+                }
+            )
 
     total = len(elements)
     coverage_pct = (covered_count / total * 100) if total > 0 else 0.0
@@ -384,6 +389,6 @@ async def get_decision_coverage(
         "engagement_id": str(engagement_id),
         "total_activities": total,
         "covered": covered_count,
-        "gaps": [g for g in gaps if not g["has_rules"]],
+        "gaps": gaps,
         "coverage_percentage": round(coverage_pct, 2),
     }

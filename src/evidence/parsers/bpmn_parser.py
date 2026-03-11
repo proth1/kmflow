@@ -12,7 +12,7 @@ from pathlib import Path
 from lxml import etree
 
 from src.core.models import FragmentType
-from src.evidence.parsers.base import BaseParser, ParsedFragment, ParseResult
+from src.evidence.parsers.base import BaseParser, ParsedFragment, ParseResult, detect_xml_namespace
 
 logger = logging.getLogger(__name__)
 
@@ -217,22 +217,4 @@ class BpmnParser(BaseParser):
 
         Handles both standard and Camunda namespaced BPMN files.
         """
-        nsmap: dict[str, str] = {}
-
-        # Check root tag namespace
-        if root.tag.startswith("{"):
-            ns = root.tag.split("}")[0].strip("{")
-            if "bpmn" in ns.lower() or "omg.org" in ns:
-                nsmap["bpmn"] = ns
-
-        # Check explicit namespaces
-        for _prefix, uri in (root.nsmap or {}).items():
-            if uri and ("bpmn" in uri.lower() or "omg.org/spec/BPMN" in uri):
-                nsmap["bpmn"] = uri
-                break
-
-        # Fallback to standard namespace
-        if "bpmn" not in nsmap:
-            nsmap["bpmn"] = BPMN_NS
-
-        return nsmap
+        return detect_xml_namespace(root, "bpmn", BPMN_NS, spec_path="omg.org/spec/BPMN")

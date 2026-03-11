@@ -12,9 +12,10 @@ import uuid
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 
+from src.evidence.parsers.dmn_parser import DMN_NS
+
 logger = logging.getLogger(__name__)
 
-DMN_NS = "https://www.omg.org/spec/DMN/20191111/MODEL/"
 DMNDI_NS = "https://www.omg.org/spec/DMN/20191111/DMNDI/"
 DC_NS = "http://www.omg.org/spec/DMN/20180521/DC/"
 

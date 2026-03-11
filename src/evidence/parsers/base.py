@@ -74,3 +74,42 @@ class BaseParser(abc.ABC):
             True if this parser can handle the file format.
         """
         return file_extension.lower() in self.supported_formats
+
+
+def detect_xml_namespace(
+    root: object,
+    keyword: str,
+    fallback_ns: str,
+    spec_path: str = "",
+) -> dict[str, str]:
+    """Detect an XML namespace from a root element.
+
+    Shared utility for BPMN, DMN, and other XML-based parsers.
+
+    Args:
+        root: lxml root element.
+        keyword: Namespace keyword to search for (e.g., "bpmn", "dmn").
+        fallback_ns: Default namespace URI if detection fails.
+        spec_path: Optional spec path fragment for URI matching (e.g., "omg.org/spec/BPMN").
+
+    Returns:
+        Dict mapping the keyword to the detected namespace URI.
+    """
+    nsmap: dict[str, str] = {}
+
+    tag = getattr(root, "tag", "")
+    if isinstance(tag, str) and tag.startswith("{"):
+        ns = tag.split("}")[0].strip("{")
+        if keyword in ns.lower() or "omg.org" in ns:
+            nsmap[keyword] = ns
+
+    root_nsmap = getattr(root, "nsmap", None) or {}
+    for _prefix, uri in root_nsmap.items():
+        if uri and (keyword in uri.lower() or (spec_path and spec_path in uri)):
+            nsmap[keyword] = uri
+            break
+
+    if keyword not in nsmap:
+        nsmap[keyword] = fallback_ns
+
+    return nsmap

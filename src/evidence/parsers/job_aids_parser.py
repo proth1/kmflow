@@ -16,6 +16,8 @@ from src.evidence.parsers.document_parser import DocumentParser
 
 logger = logging.getLogger(__name__)
 
+_EVIDENCE_CATEGORY = "job_aids_edge_cases"
+
 # Rule extraction patterns for job aids
 _THRESHOLD_PATTERN = re.compile(
     r"(?:threshold|limit|cutoff|minimum|maximum|at\s+least|no\s+more\s+than|"
@@ -74,11 +76,11 @@ class JobAidsParser(BaseParser):
         """
         result = await self._doc_parser.parse(file_path, file_name)
 
-        result.metadata["evidence_category"] = "job_aids_edge_cases"
+        result.metadata["evidence_category"] = _EVIDENCE_CATEGORY
         result.metadata["parser"] = "job_aids"
 
         for fragment in result.fragments:
-            fragment.metadata["evidence_category"] = "job_aids_edge_cases"
+            fragment.metadata["evidence_category"] = _EVIDENCE_CATEGORY
 
         # Extract rules from text fragments
         rule_fragments = self._extract_rules(result.fragments)
@@ -86,6 +88,21 @@ class JobAidsParser(BaseParser):
         result.metadata["extracted_rule_count"] = len(rule_fragments)
 
         return result
+
+    @staticmethod
+    def _make_rule_fragment(rule_text: str, rule_type: str, extra_meta: dict[str, str | None]) -> ParsedFragment:
+        """Create a businessRule ParsedFragment with standard metadata."""
+        metadata: dict[str, str | int | float | bool | list[str] | None] = {
+            "element_type": "businessRule",
+            "rule_type": rule_type,
+            "evidence_category": _EVIDENCE_CATEGORY,
+        }
+        metadata.update(extra_meta)
+        return ParsedFragment(
+            fragment_type=FragmentType.PROCESS_ELEMENT,
+            content=f"businessRule: {rule_text}",
+            metadata=metadata,
+        )
 
     def _extract_rules(self, fragments: list[ParsedFragment]) -> list[ParsedFragment]:
         """Extract business rules from parsed text fragments.
@@ -99,6 +116,12 @@ class JobAidsParser(BaseParser):
         """
         rules: list[ParsedFragment] = []
         seen_rules: set[str] = set()
+
+        def _add_if_new(rule_text: str, rule_type: str, extra_meta: dict[str, str | None]) -> None:
+            rule_key = rule_text.lower()
+            if rule_key not in seen_rules:
+                seen_rules.add(rule_key)
+                rules.append(self._make_rule_fragment(rule_text, rule_type, extra_meta))
 
         for fragment in fragments:
             if fragment.fragment_type != FragmentType.TEXT:
@@ -114,95 +137,32 @@ class JobAidsParser(BaseParser):
                 context_end = min(len(text), match.end() + 50)
                 context = text[context_start:context_end].strip()
 
-                rule_text = f"Threshold: {value}"
-                if upper:
-                    rule_text = f"Range: {value} to {upper}"
-
-                rule_key = rule_text.lower()
-                if rule_key not in seen_rules:
-                    seen_rules.add(rule_key)
-                    rules.append(
-                        ParsedFragment(
-                            fragment_type=FragmentType.PROCESS_ELEMENT,
-                            content=f"businessRule: {rule_text}",
-                            metadata={
-                                "element_type": "businessRule",
-                                "rule_type": "threshold",
-                                "threshold_value": value,
-                                "upper_bound": upper,
-                                "context": context,
-                                "evidence_category": "job_aids_edge_cases",
-                            },
-                        )
-                    )
+                rule_text = f"Range: {value} to {upper}" if upper else f"Threshold: {value}"
+                _add_if_new(
+                    rule_text, "threshold", {"threshold_value": value, "upper_bound": upper, "context": context}
+                )
 
             # Extract if/then condition-action pairs
             for match in _IF_THEN_PATTERN.finditer(text):
                 condition = match.group(1).strip()
                 action = match.group(2).strip()
-                rule_text = f"IF {condition} THEN {action}"
-
-                rule_key = rule_text.lower()
-                if rule_key not in seen_rules:
-                    seen_rules.add(rule_key)
-                    rules.append(
-                        ParsedFragment(
-                            fragment_type=FragmentType.PROCESS_ELEMENT,
-                            content=f"businessRule: {rule_text}",
-                            metadata={
-                                "element_type": "businessRule",
-                                "rule_type": "condition_action",
-                                "condition": condition,
-                                "action": action,
-                                "evidence_category": "job_aids_edge_cases",
-                            },
-                        )
-                    )
+                _add_if_new(
+                    f"IF {condition} THEN {action}", "condition_action", {"condition": condition, "action": action}
+                )
 
             # Extract exception handling rules
             for match in _EXCEPTION_PATTERN.finditer(text):
                 exception_text = match.group(1).strip()
                 if len(exception_text) < 15:
                     continue
-
-                rule_text = f"Exception: {exception_text}"
-                rule_key = rule_text.lower()
-                if rule_key not in seen_rules:
-                    seen_rules.add(rule_key)
-                    rules.append(
-                        ParsedFragment(
-                            fragment_type=FragmentType.PROCESS_ELEMENT,
-                            content=f"businessRule: {rule_text}",
-                            metadata={
-                                "element_type": "businessRule",
-                                "rule_type": "exception",
-                                "exception_text": exception_text,
-                                "evidence_category": "job_aids_edge_cases",
-                            },
-                        )
-                    )
+                _add_if_new(f"Exception: {exception_text}", "exception", {"exception_text": exception_text})
 
             # Extract decision tree branches
             for match in _DECISION_TREE_PATTERN.finditer(text):
                 branch_text = match.group(1).strip()
                 if len(branch_text) < 10:
                     continue
-
                 full_match = match.group(0).strip()
-                rule_key = full_match.lower()
-                if rule_key not in seen_rules:
-                    seen_rules.add(rule_key)
-                    rules.append(
-                        ParsedFragment(
-                            fragment_type=FragmentType.PROCESS_ELEMENT,
-                            content=f"businessRule: {full_match}",
-                            metadata={
-                                "element_type": "businessRule",
-                                "rule_type": "decision_branch",
-                                "branch_outcome": branch_text,
-                                "evidence_category": "job_aids_edge_cases",
-                            },
-                        )
-                    )
+                _add_if_new(full_match, "decision_branch", {"branch_outcome": branch_text})
 
         return rules
