@@ -39,6 +39,7 @@ from src.api.routes import (
     camunda,
     claim_write_back,
     cohort,
+    confidence,
     conflicts,
     conformance,
     consent,
@@ -62,6 +63,7 @@ from src.api.routes import (
     governance_flags,
     governance_overlay,
     graph,
+    graph_analytics,
     health,
     incidents,
     integrations,
@@ -86,6 +88,7 @@ from src.api.routes import (
     scenarios,
     schema_library,
     seed_lists,
+    semantic,
     sensitivity,
     shelf_requests,
     simulations,
@@ -320,6 +323,9 @@ def create_app() -> FastAPI:
     app.include_router(orchestration.router)
     app.include_router(ontology.router)
     app.include_router(deployment.router)
+    app.include_router(semantic.router)
+    app.include_router(confidence.router)
+    app.include_router(graph_analytics.router)
 
     # -- Phase 4 Routes ---
     app.include_router(copilot.router)
