@@ -137,5 +137,5 @@ export async function computeConfidence(params: {
 export async function getGraphMetrics(
   engagementId: string
 ): Promise<GraphMetrics> {
-  return apiRequest(`/api/v1/graph/metrics/${engagementId}`);
+  return apiRequest(`/api/v1/graph-analytics/metrics/${engagementId}`);
 }

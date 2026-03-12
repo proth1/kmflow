@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
+from src.core.auth import get_current_user
 from src.core.models import User
 from src.core.permissions import require_engagement_access
 
@@ -125,6 +126,7 @@ class SemanticSearchResponse(BaseModel):
 @router.post("/extract", response_model=EntityExtractionResponse)
 async def extract_entities_endpoint(
     body: EntityExtractionRequest,
+    user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Extract entities from arbitrary text.
 
@@ -166,6 +168,7 @@ async def extract_entities_endpoint(
 @router.post("/resolve", response_model=EntityResolutionResponse)
 async def resolve_entities_endpoint(
     body: EntityResolutionRequest,
+    user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Resolve duplicate entities by merging near-duplicates.
 
@@ -224,6 +227,7 @@ async def resolve_entities_endpoint(
 @router.post("/embed", response_model=EmbeddingResponse)
 async def generate_embeddings_endpoint(
     body: EmbeddingRequest,
+    user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Generate embeddings for a list of texts.
 
@@ -337,8 +341,11 @@ async def list_engagement_entities(
                             "properties": node.properties,
                         }
                     )
-        except (ValueError, Exception):
-            logger.debug("Skipping label %s for engagement %s", label, engagement_id)
+        except ValueError:
+            logger.debug("Skipping invalid label %s for engagement %s", label, engagement_id)
+            continue
+        except Exception:
+            logger.warning("Failed to query label %s for engagement %s", label, engagement_id, exc_info=True)
             continue
 
     # Sort by confidence descending, apply offset/limit

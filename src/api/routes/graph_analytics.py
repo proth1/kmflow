@@ -20,7 +20,7 @@ from src.core.permissions import require_engagement_access
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/graph", tags=["graph-analytics"])
+router = APIRouter(prefix="/api/v1/graph-analytics", tags=["graph-analytics"])
 
 
 # -- Request/Response Schemas ------------------------------------------------
@@ -215,7 +215,6 @@ async def get_triangulation_results(
 async def get_node_relationships(
     node_id: str,
     engagement_id: UUID = Query(..., description="Engagement ID for access control"),
-    request: Request = None,  # type: ignore[assignment]
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:

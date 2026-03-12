@@ -8,8 +8,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
+
+from src.core.auth import get_current_user
+from src.core.models import User
 
 router = APIRouter(prefix="/api/v1/confidence", tags=["confidence"])
 
@@ -59,6 +62,7 @@ class BatchConfidenceResponse(BaseModel):
 @router.post("/compute", response_model=ConfidenceResponse)
 async def compute_confidence_endpoint(
     body: ConfidenceRequest,
+    user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Compute a three-dimensional confidence score.
 
@@ -103,6 +107,7 @@ async def compute_confidence_endpoint(
 @router.post("/compute/batch", response_model=BatchConfidenceResponse)
 async def compute_confidence_batch_endpoint(
     body: BatchConfidenceRequest,
+    user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Compute confidence scores for multiple items in a single request."""
     from src.semantic.confidence import (
