@@ -39,29 +39,13 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
-
-type AgentHealth = "healthy" | "warning" | "critical";
-
-function getAgentHealth(lastHeartbeat: string | null): AgentHealth {
-  if (!lastHeartbeat) return "critical";
-  const elapsed = Date.now() - new Date(lastHeartbeat).getTime();
-  const minutes = elapsed / 60000;
-  if (minutes < 15) return "healthy";
-  if (minutes < 60) return "warning";
-  return "critical";
-}
+import { getAgentHealth, formatDuration, type AgentHealth } from "../utils";
 
 const HEALTH_CONFIG: Record<AgentHealth, { label: string; className: string }> = {
   healthy: { label: "Active", className: "bg-green-100 text-green-800 border-green-200" },
   warning: { label: "Stale", className: "bg-yellow-100 text-yellow-800 border-yellow-200" },
   critical: { label: "Offline", className: "bg-red-100 text-red-800 border-red-200" },
 };
-
-function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
-  return `${(seconds / 3600).toFixed(1)}h`;
-}
 
 const DATE_RANGES = [
   { label: "Today", days: 1 },

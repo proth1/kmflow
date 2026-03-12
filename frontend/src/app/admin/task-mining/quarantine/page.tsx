@@ -35,20 +35,9 @@ import {
   Clock,
 } from "lucide-react";
 
-type QuarantineFilter = "all" | "expiring_soon" | "expired";
+import { getTimeRemaining } from "../utils";
 
-function getTimeRemaining(autoDeleteAt: string): { text: string; urgent: boolean; expired: boolean } {
-  const remaining = new Date(autoDeleteAt).getTime() - Date.now();
-  if (remaining <= 0) return { text: "Expired", urgent: true, expired: true };
-  const hours = remaining / 3600000;
-  if (hours < 1) {
-    const minutes = Math.floor(remaining / 60000);
-    return { text: `${minutes}m remaining`, urgent: true, expired: false };
-  }
-  if (hours < 2) return { text: `${hours.toFixed(1)}h remaining`, urgent: true, expired: false };
-  if (hours < 24) return { text: `${Math.floor(hours)}h remaining`, urgent: false, expired: false };
-  return { text: `${Math.floor(hours / 24)}d remaining`, urgent: false, expired: false };
-}
+type QuarantineFilter = "all" | "expiring_soon" | "expired";
 
 export default function QuarantineReviewPage() {
   const [items, setItems] = useState<QuarantineItem[]>([]);

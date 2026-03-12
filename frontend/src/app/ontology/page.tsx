@@ -51,17 +51,17 @@ export default function OntologyPage() {
   const [validation, setValidation] = useState<ValidationReport | null>(null);
 
   const fetchData = useCallback(
-    async (id: string) => {
+    async (id: string, _signal: AbortSignal) => {
       const ontology = await getOntology(id);
       return { ontology } as OntologyData;
     },
     [],
   );
 
-  const { data, loading, error, refetch } = useEngagementData<OntologyData>({
+  const { data, loading, error, refetch } = useEngagementData<OntologyData>(
     engagementId,
-    fetcher: fetchData,
-  });
+    fetchData,
+  );
 
   const handleDerive = async () => {
     if (!engagementId) return;
