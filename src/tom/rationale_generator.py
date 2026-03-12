@@ -241,24 +241,12 @@ class RationaleGeneratorService:
         return results
 
     async def _call_llm(self, prompt: str) -> str:
-        """Call the LLM API."""
-        try:
-            import anthropic
+        """Call the configured LLM provider."""
+        from src.core.llm import get_llm_provider
 
-            client = anthropic.AsyncAnthropic()
-            model = getattr(self._settings, "suggester_model", "claude-sonnet-4-5-20250929")
-            response = await client.messages.create(
-                model=model,
-                max_tokens=1000,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            return response.content[0].text
-        except ImportError:
-            logger.warning("anthropic package not available, using fallback")
-            raise
-        except Exception:
-            logger.exception("LLM API call failed")
-            raise
+        llm = get_llm_provider()
+        model = getattr(self._settings, "suggester_model", "claude-sonnet-4-5-20250929")
+        return await llm.generate(prompt, model=model, max_tokens=1000)
 
     def _parse_response(self, response_text: str) -> dict[str, str]:
         """Parse LLM response into rationale and recommendation."""

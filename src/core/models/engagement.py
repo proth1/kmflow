@@ -99,6 +99,9 @@ class Engagement(Base):
         Integer, nullable=True, default=None
     )  # Cohort suppression threshold; None = use platform default (5)
     metadata_json: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=None)
+    data_residency_restriction: Mapped[str] = mapped_column(
+        String(20), default="none", server_default="none", nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

@@ -1,0 +1,53 @@
+# KMFlow On-Premises / Air-Gapped Deployment (KMFLOW-7)
+#
+# Self-contained deployment with NO external API dependencies.
+# All services run locally including LLM inference via Ollama.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.on-prem.yaml up -d
+#
+# This overlay adds Ollama for local LLM inference and configures all
+# services to avoid external network calls.
+
+services:
+  # ── Local LLM (Ollama) ──────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: kmflow-ollama
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Backend overrides for on-prem ───────────────────────────
+  backend:
+    environment:
+      # LLM routes to local Ollama instead of Anthropic cloud
+      LLM_PROVIDER: "ollama"
+      OLLAMA_BASE_URL: "http://ollama:11434"
+      OLLAMA_MODEL: "llama3.1:8b"
+      # Disable cloud API keys
+      ANTHROPIC_API_KEY: ""
+      # Data residency enforcement
+      DEFAULT_DATA_RESIDENCY: "custom"
+      # Embedding model (already local, no change needed)
+      EMBEDDING_MODEL: "all-mpnet-base-v2"
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+volumes:
+  ollama_data:
+    driver: local

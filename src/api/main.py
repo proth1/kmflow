@@ -48,6 +48,7 @@ from src.api.routes import (
     dashboard,
     data_classification,
     decisions,
+    deployment,
     deviations,
     engagements,
     event_spine,
@@ -318,6 +319,7 @@ def create_app() -> FastAPI:
     app.include_router(camunda.router)
     app.include_router(orchestration.router)
     app.include_router(ontology.router)
+    app.include_router(deployment.router)
 
     # -- Phase 4 Routes ---
     app.include_router(copilot.router)

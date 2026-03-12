@@ -48,6 +48,7 @@ class EngagementCreate(BaseModel):
     description: str | None = None
     status: EngagementStatus = EngagementStatus.DRAFT
     team: list[str] = Field(default_factory=list)
+    data_residency_restriction: str = Field(default="none", pattern="^(none|eu_only|uk_only|custom)$")
 
 
 class EngagementUpdate(BaseModel):
@@ -59,6 +60,7 @@ class EngagementUpdate(BaseModel):
     description: str | None = None
     status: EngagementStatus | None = None
     team: list[str] | None = None
+    data_residency_restriction: str | None = Field(None, pattern="^(none|eu_only|uk_only|custom)$")
 
 
 class EngagementResponse(BaseModel):
@@ -73,6 +75,7 @@ class EngagementResponse(BaseModel):
     description: str | None
     status: EngagementStatus
     team: list[str] | None = None
+    data_residency_restriction: str = "none"
 
 
 class EngagementList(BaseModel):
