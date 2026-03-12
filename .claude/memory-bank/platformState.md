@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.224
+**Version**: 2026.03.225
 **Last Updated**: 2026-03-12
 
 ## Quick Stats
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.225 | 2026-03-12 | Extract task mining utils for Next.js 15 compliance — 6 functions to shared modules, fix build errors (KMFLOW-114, PR #606) |
 | 2026.03.224 | 2026-03-12 | Remediate 25/26 CVEs — 14 Python package upgrades, cryptography 46.0.5, accepted risks documented (KMFLOW-113, PR #605) |
 | 2026.03.223 | 2026-03-12 | Fix 64 pre-existing test failures — RLS side-effects, lazy import patches, mock API drift, exception types, WebSocket auth (19 files, PR #604) |
 | 2026.03.222 | 2026-03-12 | REST endpoints for graph/semantic/ML services — entity extraction/resolution, embeddings, semantic search, confidence scoring, graph metrics/triangulation/relationships, frontend API client, 12 tests (KMFLOW-67, PR #602) |
