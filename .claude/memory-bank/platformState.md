@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.220
+**Version**: 2026.03.221
 **Last Updated**: 2026-03-11
 
 ## Quick Stats
@@ -8,10 +8,10 @@
 | Metric | Value |
 |--------|-------|
 | SQLAlchemy Models | 101 |
-| API Routers | 72 |
-| Test Count | 5,530+ backend + 635 frontend (6,165+ total) |
-| Total LOC | ~115,500 (440+ Python / 120 TypeScript / 39 Swift / 63 C#/C) |
-| Database Migrations | 85 |
+| API Routers | 73 |
+| Test Count | 5,560+ backend + 635 frontend (6,195+ total) |
+| Total LOC | ~117,000 (440+ Python / 120 TypeScript / 39 Swift / 63 C#/C) |
+| Database Migrations | 86 |
 | BPMN Process Models | 44 |
 | Coverage | >80% |
 | Python Version | 3.12+ |
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.221 | 2026-03-11 | Hybrid/on-prem deployment — LLM provider abstraction (Anthropic/Ollama/Stub), data residency enforcement, deployment capabilities API, on-prem Docker overlay, air-gapped build, 28 tests (KMFLOW-7, PR #601) |
 | 2026.03.220 | 2026-03-11 | Ontology derivation from knowledge graph — seed term clustering, Neo4j patterns, OWL/YAML export, validation, Cytoscape viz, 30 tests (KMFLOW-6, PR #600) |
 | 2026.03.219 | 2026-03-11 | Activate BPMN workflows in Camunda — external task worker, orchestration API, 8 new CamundaClient methods, 39 tests (KMFLOW-5, PR #599) |
 | 2026.03.218 | 2026-03-11 | Assessment Overlay Matrix — Value x Ability-to-Execute scatter chart, quadrant analysis, composite scoring, 33 tests (KMFLOW-4, PR #598) |

@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.221] - 2026-03-11
+### Added
+- Hybrid/on-prem deployment with LLM provider abstraction (KMFLOW-7) — AnthropicProvider, OllamaProvider, StubProvider with auto-detection, data residency enforcement middleware, deployment capabilities API, on-prem Docker overlay with Ollama, air-gapped build script, 28 new tests (PR #601)
+
 ## [2026.03.220] - 2026-03-11
 ### Added
 - Ontology derivation from knowledge graph (KMFLOW-6) — seed term clustering, Neo4j pattern extraction, property mapping with domain/range inference, axiom generation (existential + domain_range), completeness scoring, OWL 2 XML + YAML export, validation with orphan/subgraph detection, RLS on all 4 tables, Cytoscape graph visualization, 30 new tests (PR #600)

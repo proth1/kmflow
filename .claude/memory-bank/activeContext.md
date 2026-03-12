@@ -6,7 +6,7 @@
 
 **MVP COMPLETE + WGI ALIGNED** — Platform MVP done. Windows Task Mining Agent fully implemented. WGI Platform Alignment complete.
 
-- **Current version**: 2026.03.220
+- **Current version**: 2026.03.221
 - **Open issues**: 0
 - **PM tool**: Jira (KMFLOW project at agentic-sdlc.atlassian.net)
 - **Presentations**: kmflow.agentic-innovations.com + state-street-apex.agentic-innovations.com
@@ -17,6 +17,7 @@ Pick up next Jira backlog item from KMFLOW board.
 
 ## Recently Completed
 
+- **PR #601**: Hybrid/on-prem deployment (KMFLOW-7) — LLM provider abstraction (Anthropic/Ollama/Stub with auto-detection), data residency enforcement middleware, deployment capabilities API, on-prem Docker overlay with Ollama, air-gapped build script with SHA-256 manifest, 28 new tests (merged 2026-03-11)
 - **PR #600**: Ontology derivation from knowledge graph — seed term clustering, Neo4j pattern extraction, property mapping with domain/range, axiom generation, completeness scoring, OWL 2 XML + YAML export, validation (orphan/subgraph), RLS on all 4 tables, Cytoscape graph viz, 30 tests (KMFLOW-6, merged 2026-03-11)
 - **PR #599**: Activate BPMN workflows in Camunda — external task worker (fetch-and-lock), orchestration API (deploy/instances/retry/cancel), CamundaClient extended with 8 methods, variable type inference, 39 tests (KMFLOW-5, merged 2026-03-11)
 - **PR #598**: Assessment Overlay Matrix — Value x Ability-to-Execute scatter chart with quadrant analysis, composite scoring, 3 API endpoints, recharts frontend, 33 tests (KMFLOW-4, merged 2026-03-11)
