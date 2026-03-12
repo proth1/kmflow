@@ -27,12 +27,7 @@ import {
   ShieldAlert,
   Save,
 } from "lucide-react";
-
-const BUNDLE_ID_PATTERN = /^[a-zA-Z][a-zA-Z0-9-]*(\.[a-zA-Z0-9][a-zA-Z0-9-]*)+$/;
-
-function isValidBundleId(id: string): boolean {
-  return BUNDLE_ID_PATTERN.test(id);
-}
+import { isValidBundleId } from "../utils";
 
 interface AppListEditorProps {
   label: string;

@@ -5,7 +5,7 @@
  * semantic search, and confidence scoring endpoints.
  */
 
-import { apiRequest } from './client';
+import { apiGet, apiPost } from './client';
 
 // -- Types ------------------------------------------------------------------
 
@@ -83,28 +83,19 @@ export async function extractEntities(
   text: string,
   options?: { use_llm?: boolean; seed_terms?: string[] }
 ): Promise<EntityExtractionResponse> {
-  return apiRequest('/api/v1/semantic/extract', {
-    method: 'POST',
-    body: JSON.stringify({ text, ...options }),
-  });
+  return apiPost('/api/v1/semantic/extract', { text, ...options });
 }
 
 export async function resolveEntities(
   entities: ExtractedEntity[]
 ): Promise<EntityResolutionResponse> {
-  return apiRequest('/api/v1/semantic/resolve', {
-    method: 'POST',
-    body: JSON.stringify({ entities }),
-  });
+  return apiPost('/api/v1/semantic/resolve', { entities });
 }
 
 export async function generateEmbeddings(
   texts: string[]
 ): Promise<EmbeddingResponse> {
-  return apiRequest('/api/v1/semantic/embed', {
-    method: 'POST',
-    body: JSON.stringify({ texts }),
-  });
+  return apiPost('/api/v1/semantic/embed', { texts });
 }
 
 export async function semanticSearch(
@@ -112,10 +103,7 @@ export async function semanticSearch(
   query: string,
   topK: number = 10
 ): Promise<SemanticSearchResponse> {
-  return apiRequest(`/api/v1/semantic/search/${engagementId}`, {
-    method: 'POST',
-    body: JSON.stringify({ query, top_k: topK }),
-  });
+  return apiPost(`/api/v1/semantic/search/${engagementId}`, { query, top_k: topK });
 }
 
 export async function computeConfidence(params: {
@@ -128,14 +116,11 @@ export async function computeConfidence(params: {
   source_plane_count?: number;
   has_sme_validation?: boolean;
 }): Promise<ConfidenceResult> {
-  return apiRequest('/api/v1/confidence/compute', {
-    method: 'POST',
-    body: JSON.stringify(params),
-  });
+  return apiPost('/api/v1/confidence/compute', params);
 }
 
 export async function getGraphMetrics(
   engagementId: string
 ): Promise<GraphMetrics> {
-  return apiRequest(`/api/v1/graph-analytics/metrics/${engagementId}`);
+  return apiGet(`/api/v1/graph-analytics/metrics/${engagementId}`);
 }

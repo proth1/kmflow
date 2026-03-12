@@ -15,8 +15,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { AgentStatusBadge } from "../components/AgentStatusBadge";
+import { formatTimeAgo } from "../utils";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -34,51 +35,6 @@ import {
   XCircle,
   ShieldAlert,
 } from "lucide-react";
-
-const STATUS_CONFIG: Record<
-  string,
-  { label: string; className: string }
-> = {
-  pending_approval: {
-    label: "Pending",
-    className: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  },
-  approved: {
-    label: "Approved",
-    className: "bg-green-100 text-green-800 border-green-200",
-  },
-  revoked: {
-    label: "Revoked",
-    className: "bg-red-100 text-red-800 border-red-200",
-  },
-  consent_revoked: {
-    label: "Consent Revoked",
-    className: "bg-orange-100 text-orange-800 border-orange-200",
-  },
-};
-
-function AgentStatusBadge({ status }: { status: string }) {
-  const config = STATUS_CONFIG[status] ?? {
-    label: status,
-    className: "",
-  };
-  return (
-    <Badge variant="outline" className={config.className}>
-      {config.label}
-    </Badge>
-  );
-}
-
-function formatTimeAgo(dateStr: string | null): string {
-  if (!dateStr) return "Never";
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
 
 export default function AgentManagementPage() {
   const [agents, setAgents] = useState<TaskMiningAgent[]>([]);
