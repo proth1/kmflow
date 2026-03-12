@@ -1,15 +1,15 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.221
-**Last Updated**: 2026-03-11
+**Version**: 2026.03.222
+**Last Updated**: 2026-03-12
 
 ## Quick Stats
 
 | Metric | Value |
 |--------|-------|
 | SQLAlchemy Models | 101 |
-| API Routers | 73 |
-| Test Count | 5,560+ backend + 635 frontend (6,195+ total) |
+| API Routers | 76 |
+| Test Count | 5,572+ backend + 635 frontend (6,207+ total) |
 | Total LOC | ~117,000 (440+ Python / 120 TypeScript / 39 Swift / 63 C#/C) |
 | Database Migrations | 86 |
 | BPMN Process Models | 44 |
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.222 | 2026-03-12 | REST endpoints for graph/semantic/ML services — entity extraction/resolution, embeddings, semantic search, confidence scoring, graph metrics/triangulation/relationships, frontend API client, 12 tests (KMFLOW-67, PR #602) |
 | 2026.03.221 | 2026-03-11 | Hybrid/on-prem deployment — LLM provider abstraction (Anthropic/Ollama/Stub), data residency enforcement, deployment capabilities API, on-prem Docker overlay, air-gapped build, 28 tests (KMFLOW-7, PR #601) |
 | 2026.03.220 | 2026-03-11 | Ontology derivation from knowledge graph — seed term clustering, Neo4j patterns, OWL/YAML export, validation, Cytoscape viz, 30 tests (KMFLOW-6, PR #600) |
 | 2026.03.219 | 2026-03-11 | Activate BPMN workflows in Camunda — external task worker, orchestration API, 8 new CamundaClient methods, 39 tests (KMFLOW-5, PR #599) |

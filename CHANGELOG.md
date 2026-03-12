@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.222] - 2026-03-12
+### Added
+- Complete REST endpoints for graph/semantic/ML services (KMFLOW-67) — entity extraction, entity resolution, embedding generation, semantic search, entity listing, confidence scoring (single + batch), graph metrics, triangulation, node relationships, frontend TypeScript API client, 12 tests (PR #602)
+
 ## [2026.03.221] - 2026-03-11
 ### Added
 - Hybrid/on-prem deployment with LLM provider abstraction (KMFLOW-7) — AnthropicProvider, OllamaProvider, StubProvider with auto-detection, data residency enforcement middleware, deployment capabilities API, on-prem Docker overlay with Ollama, air-gapped build script, 28 new tests (PR #601)
