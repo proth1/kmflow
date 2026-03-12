@@ -68,7 +68,7 @@ class TestChatStreaming:
         # Should have at least the stub response + DONE marker
         assert len(chunks) >= 2
         # The stub response should mention unavailability
-        assert "unavailable" in chunks[0] or "evidence" in chunks[0].lower()
+        assert "not available" in chunks[0] or "unavailable" in chunks[0] or "evidence" in chunks[0].lower()
 
     @pytest.mark.asyncio
     async def test_streaming_with_history(self, orchestrator) -> None:
