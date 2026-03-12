@@ -751,14 +751,14 @@ async def get_engagement_lead_dashboard(
             .where(EvidenceGap.model_id == latest_model.id)
             .group_by(EvidenceGap.severity)
         )
-        for row in gap_sev_result.all():
-            sev = str(row.severity).lower()
+        for gap_sev_row in gap_sev_result.all():
+            sev = str(gap_sev_row.severity).lower()
             if sev == "high":
-                gap_counts.high = row.cnt
+                gap_counts.high = gap_sev_row.cnt
             elif sev == "medium":
-                gap_counts.medium = row.cnt
+                gap_counts.medium = gap_sev_row.cnt
             elif sev == "low":
-                gap_counts.low = row.cnt
+                gap_counts.low = gap_sev_row.cnt
 
     # Seed list coverage (active terms / total terms)
     seed_result = await session.execute(

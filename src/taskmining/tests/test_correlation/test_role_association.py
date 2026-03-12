@@ -94,6 +94,7 @@ class TestRoleAssociator:
         assert count == 1
         edge: CaseLinkEdge = session.add.call_args.args[0]
         assert edge.case_id == f"{ROLE_AGGREGATE_PREFIX}:unknown_role"
+        assert edge.explainability is not None
         assert edge.explainability["role"] == "unknown_role"
 
     @pytest.mark.asyncio
@@ -115,4 +116,5 @@ class TestRoleAssociator:
         await self.assoc.associate_unlinked(session, self.engagement_id)
 
         edge: CaseLinkEdge = session.add.call_args.args[0]
+        assert edge.explainability is not None
         assert edge.explainability["reason"] == "no_deterministic_or_assisted_match"

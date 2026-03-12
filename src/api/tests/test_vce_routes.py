@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -19,7 +20,6 @@ from src.core.models.taskmining import ScreenStateClass, VCETriggerReason
 
 @pytest.fixture
 def app():
-
     test_app = FastAPI()
     test_app.include_router(router)
     return test_app
@@ -39,7 +39,7 @@ def mock_user():
 
 def _vce_dict(**overrides):
     engagement_id = str(uuid.uuid4())
-    base = {
+    base: dict[str, Any] = {
         "id": str(uuid.uuid4()),
         "engagement_id": engagement_id,
         "session_id": None,
@@ -76,7 +76,7 @@ class TestPostVCEEvents:
         agent_id = str(uuid.uuid4())
         engagement_id = str(uuid.uuid4())
 
-        payload = {
+        payload: dict[str, Any] = {
             "agent_id": agent_id,
             "events": [
                 {

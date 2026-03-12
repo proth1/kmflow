@@ -113,7 +113,7 @@ def _extract_attribute_value(elem: Any) -> tuple[str, Any]:
 def _open_xes_file(path: Path) -> IO[bytes]:
     """Open a .xes or .xes.gz file for reading."""
     if path.name.endswith(".gz"):
-        return gzip.open(path, "rb")
+        return gzip.open(path, "rb")  # type: ignore[return-value]  # GzipFile implements IO[bytes]
     return open(path, "rb")  # noqa: SIM115
 
 

@@ -223,8 +223,8 @@ def apply_decisions_to_elements(
             if action == "reject":
                 rejected_names.add(name)
             elif action == "correct" and isinstance(payload, dict):
-                el = elements_by_name.get(name)
-                if el:
+                target_el = elements_by_name.get(name)
+                if target_el:
                     # Apply corrections from payload
                     if "name" in payload:
                         new_name = str(payload["name"])
@@ -232,15 +232,15 @@ def apply_decisions_to_elements(
                             msg = f"Cannot rename '{name}' to '{new_name}': element with that name already exists"
                             raise ValueError(msg)
                         elements_by_name[new_name] = ElementSnapshot(
-                            element_id=el.element_id,
+                            element_id=target_el.element_id,
                             name=new_name,
-                            element_type=el.element_type,
-                            confidence_score=el.confidence_score,
-                            evidence_grade=el.evidence_grade,
-                            brightness_classification=el.brightness_classification,
-                            evidence_count=el.evidence_count,
-                            evidence_ids=list(el.evidence_ids),
-                            metadata=dict(el.metadata) if el.metadata else None,
+                            element_type=target_el.element_type,
+                            confidence_score=target_el.confidence_score,
+                            evidence_grade=target_el.evidence_grade,
+                            brightness_classification=target_el.brightness_classification,
+                            evidence_count=target_el.evidence_count,
+                            evidence_ids=list(target_el.evidence_ids),
+                            metadata=dict(target_el.metadata) if target_el.metadata else None,
                         )
                         del elements_by_name[name]
                     # Apply other field corrections

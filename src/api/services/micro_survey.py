@@ -96,7 +96,8 @@ class MicroSurveyService:
             Created MicroSurvey or None if deviation doesn't exceed threshold.
         """
         # Check threshold — deviation must have severity_score or magnitude
-        magnitude = getattr(deviation, "severity_score", None) or getattr(deviation, "magnitude", 0.0)
+        _raw_mag = getattr(deviation, "severity_score", None) or getattr(deviation, "magnitude", 0.0)
+        magnitude = float(_raw_mag) if _raw_mag is not None else 0.0
         if magnitude <= anomaly_threshold:
             return None
 
@@ -104,7 +105,10 @@ class MicroSurveyService:
         if hasattr(category, "value"):
             category = category.value
 
-        description = getattr(deviation, "description", "") or f"Anomalous pattern detected at {deviation.element_name}"
+        description = (
+            getattr(deviation, "description", "")
+            or f"Anomalous pattern detected at {getattr(deviation, 'process_element_id', str(deviation.id))}"
+        )
 
         probes = self.select_probes(
             deviation_category=category,

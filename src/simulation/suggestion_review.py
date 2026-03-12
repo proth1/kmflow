@@ -102,12 +102,14 @@ async def review_suggestion(
         suggestion.modified_content = modified_content
 
         # Create modification from modified content
+        # modified_content is guaranteed non-None here: validated at line 72
+        _content = modified_content or {}
         modification = ScenarioModification(
             scenario_id=scenario_id,
             modification_type=ModificationType.TASK_MODIFY,
             element_id=str(suggestion_id),
-            element_name=modified_content.get("name", suggestion.suggestion_text[:512]),
-            change_data=modified_content,
+            element_name=_content.get("name", suggestion.suggestion_text[:512]),
+            change_data=_content,
             template_source="llm_suggestion",
             original_suggestion_id=suggestion_id,
         )

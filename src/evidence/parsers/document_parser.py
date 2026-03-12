@@ -188,8 +188,8 @@ class DocumentParser(BaseParser):
         body = tree.find(".//body")
         if body is not None:
             for element in body.iter("script", "style"):
-                element.drop_tree()
-            text = body.text_content()
+                element.drop_tree()  # type: ignore[attr-defined]  # lxml HtmlElement method
+            text = body.text_content()  # type: ignore[attr-defined]  # lxml HtmlElement method
             if text and text.strip():
                 fragments.append(
                     ParsedFragment(

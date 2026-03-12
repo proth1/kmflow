@@ -4938,44 +4938,43 @@ confidence = (
       </div>
     </section>
 
-    <!-- Slide 52: What's New — WGI Platform Alignment -->
+    <!-- Slide 52: What's New — Decision Intelligence -->
     <section id="slide-52" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Changelog</span>
-        <h2>What&rsquo;s New &mdash; WGI Platform Alignment</h2>
+        <h2>What&rsquo;s New &mdash; Decision Intelligence</h2>
       </div>
       <div class="two-col">
         <div>
-          <h3>WGI Platform Alignment (New)</h3>
+          <h3>Decision Intelligence (New)</h3>
           <ul class="feature-list">
-            <li><strong>Switching Sequences</strong> &mdash; SwitchingTrace + TransitionMatrix models; friction scoring (frequency, duration, PII exposure); deterministic + ML-assisted correlation</li>
-            <li><strong>Visual Context Events (VCE)</strong> &mdash; VisualContextEvent model; 5 trigger types (screenshot, OCR, UI inspection, manual annotation, ML inference); 8 screen state classes</li>
-            <li><strong>Correlation Engine</strong> &mdash; dedicated router; deterministic matching, Claude-assisted disambiguation, role-linkage across agents</li>
-            <li><strong>ABAC / Policy Decision Point</strong> &mdash; PDPPolicyBundle + PolicyObligation models; obligation enforcement before data release; CaseLinkEdge for cross-case graph traversal</li>
-            <li><strong>4 new migrations</strong> (080&ndash;083) &mdash; switching_traces, transition_matrices, visual_context_events, case_link_edges, pdp_policy_bundles, policy_obligations</li>
+            <li><strong>KM4ProcessBot</strong> &mdash; entity extraction engine (Activities, Decisions, Roles, Systems, Documents) with rule-based NLP + LLM path; confidence scoring + entity resolution (631 LOC)</li>
+            <li><strong>KM4DecisionBot</strong> &mdash; DMN decision table parser + generator; evidence-to-decision-logic pipeline; decision coverage analysis and gap detection (399 LOC)</li>
+            <li><strong>Decision Intelligence UI</strong> &mdash; React decision explorer page; decision table visualization, rule inspection, coverage metrics</li>
+            <li><strong>Test migration</strong> &mdash; 54 task mining tests migrated from tests/ to src/taskmining/tests/ for co-location; 67 new decision + entity tests</li>
           </ul>
           <h3 style="margin-top: 1rem;">Previously Delivered</h3>
           <ul class="feature-list">
+            <li><strong>WGI Platform Alignment</strong> &mdash; Switching Sequences, VCE, Correlation Engine, ABAC/PDP</li>
             <li><strong>All 106 platform stories</strong> across 18 epics + <strong>45 Windows Agent stories</strong> across 8 epics</li>
-            <li><strong>Windows Agent</strong> &mdash; C# .NET 8 NativeAOT, WPF tray app, WiX MSI/MSIX, Intune/SCCM/GPO</li>
           </ul>
         </div>
         <div>
           <div style="background: var(--kmflow-blue); color: white; padding: 1.5rem; border-radius: 12px; text-align: center; margin-bottom: 1rem;">
-            <div style="font-size: 2rem; font-weight: 700;">113,000+</div>
+            <div style="font-size: 2rem; font-weight: 700;">115,000+</div>
             <div style="font-size: 0.85rem; opacity: 0.9;">Lines of Code</div>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
             <div style="background: var(--kmflow-light-gray); padding: 1rem; border-radius: 8px; text-align: center;">
-              <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-blue);">5,797+</div>
+              <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-blue);">6,035+</div>
               <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">Total Tests</div>
             </div>
             <div style="background: var(--kmflow-light-gray); padding: 1rem; border-radius: 8px; text-align: center;">
-              <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-blue);">188</div>
+              <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-blue);">215</div>
               <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">Merged PRs</div>
             </div>
             <div style="background: var(--kmflow-light-gray); padding: 1rem; border-radius: 8px; text-align: center;">
-              <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-blue);">68</div>
+              <div style="font-size: 1.5rem; font-weight: 700; color: var(--kmflow-blue);">75</div>
               <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">API Routers</div>
             </div>
             <div style="background: var(--kmflow-light-gray); padding: 1rem; border-radius: 8px; text-align: center;">
@@ -6564,17 +6563,162 @@ confidence = (
     </section>
     <!-- WALKTHROUGH-APPENDIX-END -->
 
+    <!-- Slide 124: KM4ProcessBot — Entity Extraction -->
+    <section id="slide-124" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Decision Intelligence</span>
+        <h2>KM4ProcessBot &mdash; Entity Extraction</h2>
+        <p>Automated extraction of typed entities from evidence fragments</p>
+      </div>
+      <div class="two-col">
+        <div>
+          <h3>Capabilities</h3>
+          <ul class="feature-list">
+            <li><strong>5 entity types</strong> &mdash; Activities, Decisions, Roles, Systems, Documents extracted from unstructured text</li>
+            <li><strong>Dual extraction paths</strong> &mdash; rule-based NLP patterns (MVP) with LLM-based extraction via Claude API for higher accuracy</li>
+            <li><strong>Confidence scoring</strong> &mdash; each entity carries a 0.0&ndash;1.0 confidence score based on pattern strength and context</li>
+            <li><strong>Entity resolution</strong> &mdash; detects when different names refer to the same entity; maintains aliases and canonical names</li>
+            <li><strong>Knowledge graph integration</strong> &mdash; extracted entities flow into Neo4j via the semantic builder pipeline</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Architecture</h3>
+          <div style="background: var(--kmflow-light-gray); padding: 1.25rem; border-radius: 8px; font-size: 0.85rem; line-height: 1.8;">
+            <div><strong>Entry:</strong> <code>entity_extraction.py</code> (631 LOC)</div>
+            <div><strong>Models:</strong> <code>EntityType</code> (StrEnum), <code>ExtractedEntity</code>, <code>ExtractionResult</code></div>
+            <div><strong>Patterns:</strong> regex + keyword seed lists per entity type</div>
+            <div><strong>Resolution:</strong> fuzzy matching + alias graph</div>
+            <div><strong>Tests:</strong> 32 unit tests covering all entity types</div>
+          </div>
+          <div style="margin-top: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div style="background: var(--kmflow-blue); color: white; padding: 0.75rem; border-radius: 8px; text-align: center;">
+              <div style="font-size: 1.5rem; font-weight: 700;">631</div>
+              <div style="font-size: 0.7rem; opacity: 0.9;">Lines of Code</div>
+            </div>
+            <div style="background: var(--kmflow-blue); color: white; padding: 0.75rem; border-radius: 8px; text-align: center;">
+              <div style="font-size: 1.5rem; font-weight: 700;">32</div>
+              <div style="font-size: 0.7rem; opacity: 0.9;">Unit Tests</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 124</span>
+      </div>
+    </section>
+
+    <!-- Slide 125: KM4DecisionBot — Decision Intelligence -->
+    <section id="slide-125" class="slide slide-gradient">
+      <div class="section-header">
+        <span class="badge badge-blue" style="background: rgba(255,255,255,0.2); color: white;">Decision Intelligence</span>
+        <h2 style="color: white;">KM4DecisionBot &mdash; Decision Tables</h2>
+        <p style="color: rgba(255,255,255,0.85);">Evidence-to-decision-logic pipeline with DMN generation</p>
+      </div>
+      <div class="two-col">
+        <div>
+          <h3 style="color: white;">DMN Parser + Generator</h3>
+          <ul class="feature-list" style="color: rgba(255,255,255,0.9);">
+            <li><strong style="color: white;">DMN 1.3 parsing</strong> &mdash; reads decision tables from XML/DMN evidence files; extracts inputs, outputs, rules, and hit policies</li>
+            <li><strong style="color: white;">Decision generation</strong> &mdash; transforms process knowledge into DMN decision models; maps entities to decision inputs</li>
+            <li><strong style="color: white;">Coverage analysis</strong> &mdash; identifies decision gaps by comparing evidence decisions against process model requirements</li>
+            <li><strong style="color: white;">API endpoints</strong> &mdash; 16 REST endpoints for decision CRUD, analysis, and export via dedicated decisions router</li>
+          </ul>
+        </div>
+        <div>
+          <h3 style="color: white;">Technical Stack</h3>
+          <div style="background: rgba(255,255,255,0.1); padding: 1.25rem; border-radius: 8px; font-size: 0.85rem; line-height: 1.8; color: rgba(255,255,255,0.9);">
+            <div><code style="color: white;">dmn_parser.py</code> &mdash; 213 LOC, 9 tests</div>
+            <div><code style="color: white;">dmn_generator.py</code> &mdash; 186 LOC, 10 tests</div>
+            <div><code style="color: white;">decisions.py</code> (router) &mdash; 394 LOC, 16 tests</div>
+            <div><code style="color: white;">decision_logic.yaml</code> &mdash; seed list for decision entity extraction</div>
+          </div>
+          <div style="margin-top: 1rem; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem;">
+            <div style="background: rgba(255,255,255,0.15); padding: 0.75rem; border-radius: 8px; text-align: center;">
+              <div style="font-size: 1.3rem; font-weight: 700; color: white;">793</div>
+              <div style="font-size: 0.7rem; color: rgba(255,255,255,0.8);">LOC</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.15); padding: 0.75rem; border-radius: 8px; text-align: center;">
+              <div style="font-size: 1.3rem; font-weight: 700; color: white;">35</div>
+              <div style="font-size: 0.7rem; color: rgba(255,255,255,0.8);">Tests</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.15); padding: 0.75rem; border-radius: 8px; text-align: center;">
+              <div style="font-size: 1.3rem; font-weight: 700; color: white;">16</div>
+              <div style="font-size: 0.7rem; color: rgba(255,255,255,0.8);">Endpoints</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 125</span>
+      </div>
+    </section>
+
+    <!-- Slide 126: Decision Intelligence UI -->
+    <section id="slide-126" class="slide slide-light">
+      <div class="section-header">
+        <span class="badge badge-blue">Decision Intelligence</span>
+        <h2>Decision Intelligence UI</h2>
+        <p>Interactive decision table explorer in the frontend</p>
+      </div>
+      <div class="two-col">
+        <div>
+          <h3>Frontend Features</h3>
+          <ul class="feature-list">
+            <li><strong>Decision explorer page</strong> &mdash; browse and filter decision tables by engagement, process area, and coverage status</li>
+            <li><strong>Rule inspection</strong> &mdash; drill into individual decision rules with input/output conditions and hit policy visualization</li>
+            <li><strong>Coverage metrics</strong> &mdash; visual indicators showing which process decisions have DMN coverage vs gaps</li>
+            <li><strong>API integration</strong> &mdash; dedicated <code>decisions.ts</code> client library with typed endpoints for the decisions router</li>
+          </ul>
+          <h3 style="margin-top: 1rem;">File Structure</h3>
+          <div style="background: var(--kmflow-light-gray); padding: 1rem; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.8rem; line-height: 1.7;">
+            <div>frontend/src/app/decisions/page.tsx &mdash; 197 LOC</div>
+            <div>frontend/src/lib/api/decisions.ts &mdash; 159 LOC</div>
+          </div>
+        </div>
+        <div>
+          <h3>Integration Points</h3>
+          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <div style="background: var(--kmflow-light-gray); padding: 1rem; border-radius: 8px;">
+              <div style="font-weight: 600; color: var(--kmflow-blue); margin-bottom: 0.25rem;">Entity Extraction</div>
+              <div style="font-size: 0.85rem;">KM4ProcessBot extracts decision entities from evidence &rarr; stored in knowledge graph</div>
+            </div>
+            <div style="background: var(--kmflow-light-gray); padding: 1rem; border-radius: 8px;">
+              <div style="font-weight: 600; color: var(--kmflow-blue); margin-bottom: 0.25rem;">DMN Generation</div>
+              <div style="font-size: 0.85rem;">KM4DecisionBot transforms extracted decisions &rarr; DMN 1.3 decision tables</div>
+            </div>
+            <div style="background: var(--kmflow-light-gray); padding: 1rem; border-radius: 8px;">
+              <div style="font-weight: 600; color: var(--kmflow-blue); margin-bottom: 0.25rem;">Gap Analysis</div>
+              <div style="font-size: 0.85rem;">Decision coverage compared against TOM requirements &rarr; gaps surfaced in UI</div>
+            </div>
+            <div style="background: var(--kmflow-light-gray); padding: 1rem; border-radius: 8px;">
+              <div style="font-weight: 600; color: var(--kmflow-blue); margin-bottom: 0.25rem;">Process Model</div>
+              <div style="font-size: 0.85rem;">Decisions linked to BPMN activities &rarr; full traceability from evidence to process</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Confidential</span>
+        <span>KMFlow Platform</span>
+        <span>Slide 126</span>
+      </div>
+    </section>
+
         <!-- Slide 122: Project Stats Dashboard -->
     <section id="slide-122" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Appendix</span>
         <h2>Project Stats Dashboard</h2>
-        <p>v2026.02.199 &mdash; WGI Platform Alignment</p>
+        <p>v2026.03.225 &mdash; Decision Intelligence</p>
       </div>
       <div class="two-col">
         <div>
           <div style="background: var(--kmflow-blue); color: white; padding: 1.5rem; border-radius: 12px; text-align: center; margin-bottom: 1.25rem;">
-            <div style="font-size: 2.5rem; font-weight: 700;">113,000+</div>
+            <div style="font-size: 2.5rem; font-weight: 700;">115,000+</div>
             <div style="font-size: 0.9rem; opacity: 0.9;">Total Lines of Code</div>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem;">
@@ -6602,11 +6746,11 @@ confidence = (
           <h3 style="margin-bottom: 0.5rem;">Test Coverage</h3>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
             <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid var(--kmflow-border);">
-              <div style="font-size: 1.8rem; font-weight: 700; color: var(--kmflow-blue);">5,162</div>
+              <div style="font-size: 1.8rem; font-weight: 700; color: var(--kmflow-blue);">5,335</div>
               <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">Backend Tests</div>
             </div>
             <div style="background: white; padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid var(--kmflow-border);">
-              <div style="font-size: 1.8rem; font-weight: 700; color: var(--kmflow-blue);">635</div>
+              <div style="font-size: 1.8rem; font-weight: 700; color: var(--kmflow-blue);">700</div>
               <div style="font-size: 0.75rem; color: var(--kmflow-medium-gray);">Frontend Tests</div>
             </div>
           </div>
@@ -6617,7 +6761,7 @@ confidence = (
             <tbody>
               <tr style="border-bottom: 1px solid var(--kmflow-border);">
                 <td style="padding: 0.6rem 0; font-weight: 600;">API Routers</td>
-                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">68</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">75</td>
               </tr>
               <tr style="border-bottom: 1px solid var(--kmflow-border);">
                 <td style="padding: 0.6rem 0; font-weight: 600;">SQLAlchemy Models</td>
@@ -6625,7 +6769,7 @@ confidence = (
               </tr>
               <tr style="border-bottom: 1px solid var(--kmflow-border);">
                 <td style="padding: 0.6rem 0; font-weight: 600;">Database Migrations</td>
-                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">84</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">86</td>
               </tr>
               <tr style="border-bottom: 1px solid var(--kmflow-border);">
                 <td style="padding: 0.6rem 0; font-weight: 600;">BPMN Process Models</td>
@@ -6633,7 +6777,7 @@ confidence = (
               </tr>
               <tr>
                 <td style="padding: 0.6rem 0; font-weight: 600;">Total Tests</td>
-                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">5,797+</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">6,035+</td>
               </tr>
             </tbody>
           </table>
@@ -6642,15 +6786,15 @@ confidence = (
             <tbody>
               <tr style="border-bottom: 1px solid var(--kmflow-border);">
                 <td style="padding: 0.6rem 0; font-weight: 600;">Commits</td>
-                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">383</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">441</td>
               </tr>
               <tr style="border-bottom: 1px solid var(--kmflow-border);">
                 <td style="padding: 0.6rem 0; font-weight: 600;">Merged PRs</td>
-                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">188</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">215</td>
               </tr>
               <tr style="border-bottom: 1px solid var(--kmflow-border);">
                 <td style="padding: 0.6rem 0; font-weight: 600;">Closed Issues</td>
-                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">366</td>
+                <td style="padding: 0.6rem 0; text-align: right; color: var(--kmflow-blue); font-weight: 700;">384</td>
               </tr>
               <tr style="border-bottom: 1px solid var(--kmflow-border);">
                 <td style="padding: 0.6rem 0; padding-left: 1rem; color: var(--kmflow-medium-gray);">Stories</td>
@@ -6692,8 +6836,13 @@ confidence = (
         </thead>
         <tbody>
           <tr style="border-bottom: 1px solid var(--kmflow-border); background: rgba(0,82,204,0.04);">
-            <td style="padding: 0.75rem; font-weight: 600;">2026-02-28</td>
-            <td style="padding: 0.75rem;"><strong>v6.0</strong></td>
+            <td style="padding: 0.75rem; font-weight: 600;">2026-03-12</td>
+            <td style="padding: 0.75rem;"><strong>v7.0</strong></td>
+            <td style="padding: 0.75rem;">Decision Intelligence &mdash; added 3 new slides: KM4ProcessBot (entity extraction, 631 LOC, 32 tests), KM4DecisionBot (DMN parser/generator, 793 LOC, 35 tests), Decision Intelligence UI (React explorer page); updated What&rsquo;s New for decision intelligence delivery; refreshed Project Stats to v2026.03.225 (115K+ LOC, 6,035+ tests, 75 routers, 86 migrations, 441 commits, 215 PRs)</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--kmflow-border);">
+            <td style="padding: 0.75rem;">2026-02-28</td>
+            <td style="padding: 0.75rem;">v6.0</td>
             <td style="padding: 0.75rem;">WGI Platform Alignment &mdash; added 4 new SQLAlchemy models (SwitchingTrace, TransitionMatrix, VisualContextEvent, CaseLinkEdge, PDPPolicyBundle, PolicyObligation), 3 new API routers (correlation, taskmining update, replay update), 4 migrations (080&ndash;083); updated stats to 113K+ LOC, 96 models, 68 routers, 84 migrations; refreshed What&rsquo;s New slide; updated roadmap with WGI card</td>
           </tr>
           <tr style="border-bottom: 1px solid var(--kmflow-border);">
@@ -7677,14 +7826,17 @@ confidence = (
         description: "Where KMFlow has been and where it's going — the full MVP is delivered with 113K+ LOC, 5,797+ tests, and all 26 epics complete including the Windows Agent and WGI alignment. Next: intelligence enhancements, autonomous agents, and multi-tenant SaaS.",
         highlights: [
           "MVP Complete: 106 platform stories (18 epics) + 45 Windows Agent stories (8 epics) — 366 issues closed, 188 PRs merged",
+          "Decision Intelligence: KM4ProcessBot entity extraction + KM4DecisionBot DMN pipeline + Decision UI",
           "WGI Alignment: Switching Sequences, Visual Context Events, Correlation Engine, ABAC/PDP Policy",
-          "Full-stack platform: 68 API routers, 96 models, 84 migrations, 44 BPMN process models",
-          "Cross-platform desktop agents: macOS (Swift) + Windows (C# .NET 8 NativeAOT) with shared Python layer",
-          "Phase 2 roadmap: autonomous evidence collection agents, cross-engagement pattern intelligence"
+          "Full-stack platform: 75 API routers, 96 models, 86 migrations, 44 BPMN process models",
+          "Cross-platform desktop agents: macOS (Swift) + Windows (C# .NET 8 NativeAOT) with shared Python layer"
         ],
         slides: [
           { name: "MVP Delivered", id: "slide-51" },
           { name: "What's New", id: "slide-52" },
+          { name: "KM4ProcessBot", id: "slide-124" },
+          { name: "KM4DecisionBot", id: "slide-125" },
+          { name: "Decision Intelligence UI", id: "slide-126" },
           { name: "Phase 2: Intelligence", id: "slide-53" },
           { name: "Phase 3: Scale", id: "slide-54" },
           { name: "Measuring Success", id: "slide-55" },
@@ -7698,11 +7850,11 @@ confidence = (
         link: "#slide-122",
         description: "Project-level metrics, codebase statistics, and a changelog of this presentation itself — documenting what was built and how the story evolved.",
         highlights: [
-          "113,000+ lines of code across Python, TypeScript, Swift, and C#",
-          "5,797+ tests (5,162 backend + 635 frontend) for comprehensive coverage",
-          "96 SQLAlchemy models, 68 API routers, 84 migrations, 44 BPMN process models",
-          "383 commits, 188 merged PRs, 366 closed issues across 26 epics",
-          "Presentation changelog tracking 8 major versions from v1.0 to v6.0"
+          "115,000+ lines of code across Python, TypeScript, Swift, and C#",
+          "6,035+ tests (5,335 backend + 700 frontend) for comprehensive coverage",
+          "96 SQLAlchemy models, 75 API routers, 86 migrations, 44 BPMN process models",
+          "441 commits, 215 merged PRs, 384 closed issues across 26 epics",
+          "Presentation changelog tracking 9 major versions from v1.0 to v7.0"
         ],
         slides: [
           { name: "Project Stats Dashboard", id: "slide-122" },

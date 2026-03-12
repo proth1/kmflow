@@ -66,7 +66,7 @@ async def check_governance_flags(
     )
 
     flag_dicts = [f.to_dict() for f in flags]
-    suggestion.governance_flags = flag_dicts if flag_dicts else None
+    suggestion.governance_flags = flag_dicts if flag_dicts else None  # type: ignore[assignment]  # JSON column accepts list
     await session.commit()
 
     return {

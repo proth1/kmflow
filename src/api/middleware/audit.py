@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from typing import Any
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -45,8 +46,8 @@ def _extract_resource_type(path: str) -> str | None:
 
 
 async def _persist_audit_event(
-    session_factory: object | None,
-    **kwargs: object,
+    session_factory: Any,
+    **kwargs: Any,
 ) -> None:
     """Persist an audit event to the database (fire-and-forget).
 

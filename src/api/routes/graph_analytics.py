@@ -88,7 +88,7 @@ async def get_graph_metrics(
     """
     from src.semantic.graph import KnowledgeGraphService
 
-    graph_service = KnowledgeGraphService()
+    graph_service = KnowledgeGraphService(request.app.state.neo4j_driver)
     stats = await graph_service.get_stats(str(engagement_id))
 
     total_nodes = sum(stats.nodes_by_label.values())
@@ -213,6 +213,7 @@ async def get_triangulation_results(
 
 @router.get("/relationships/{node_id}")
 async def get_node_relationships(
+    request: Request,
     node_id: str,
     engagement_id: UUID = Query(..., description="Engagement ID for access control"),
     session: AsyncSession = Depends(get_session),
@@ -225,7 +226,7 @@ async def get_node_relationships(
     """
     from src.semantic.graph import KnowledgeGraphService
 
-    graph_service = KnowledgeGraphService()
+    graph_service = KnowledgeGraphService(request.app.state.neo4j_driver)
     node = await graph_service.get_node(node_id)
 
     if not node:
@@ -245,11 +246,11 @@ async def get_node_relationships(
     for rel in relationships:
         rel_dict = {
             "relationship_type": rel.relationship_type,
-            "source_id": rel.source_id,
-            "target_id": rel.target_id,
+            "source_id": rel.from_id,
+            "target_id": rel.to_id,
             "properties": rel.properties,
         }
-        if rel.target_id == node_id:
+        if rel.to_id == node_id:
             incoming.append(rel_dict)
         else:
             outgoing.append(rel_dict)

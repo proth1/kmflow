@@ -111,7 +111,7 @@ async def cleanup_old_copilot_messages(session: AsyncSession, retention_days: in
     """
     cutoff = datetime.now(UTC) - timedelta(days=retention_days)
     result = await session.execute(delete(CopilotMessage).where(CopilotMessage.created_at < cutoff))
-    deleted = result.rowcount or 0
+    deleted = getattr(result, "rowcount", 0) or 0
     if deleted:
         await session.commit()
         logger.info("Retention cleanup: deleted %d copilot_messages older than %d days", deleted, retention_days)
@@ -127,7 +127,7 @@ async def cleanup_old_http_audit_events(session: AsyncSession, retention_days: i
     """
     cutoff = datetime.now(UTC) - timedelta(days=retention_days)
     result = await session.execute(delete(HttpAuditEvent).where(HttpAuditEvent.created_at < cutoff))
-    deleted = result.rowcount or 0
+    deleted = getattr(result, "rowcount", 0) or 0
     if deleted:
         await session.commit()
         logger.info("Retention cleanup: deleted %d http_audit_events older than %d days", deleted, retention_days)
@@ -144,7 +144,7 @@ async def cleanup_old_task_mining_events(session: AsyncSession, retention_days: 
     """
     cutoff = datetime.now(UTC) - timedelta(days=retention_days)
     result = await session.execute(delete(TaskMiningEvent).where(TaskMiningEvent.created_at < cutoff))
-    deleted = result.rowcount or 0
+    deleted = getattr(result, "rowcount", 0) or 0
     if deleted:
         await session.commit()
         logger.info("Retention cleanup: deleted %d task_mining_events older than %d days", deleted, retention_days)
@@ -160,7 +160,7 @@ async def cleanup_old_task_mining_actions(session: AsyncSession, retention_days:
     """
     cutoff = datetime.now(UTC) - timedelta(days=retention_days)
     result = await session.execute(delete(TaskMiningAction).where(TaskMiningAction.created_at < cutoff))
-    deleted = result.rowcount or 0
+    deleted = getattr(result, "rowcount", 0) or 0
     if deleted:
         await session.commit()
         logger.info("Retention cleanup: deleted %d task_mining_actions older than %d days", deleted, retention_days)
@@ -182,7 +182,7 @@ async def cleanup_expired_pii_quarantine(session: AsyncSession) -> int:
             PIIQuarantine.auto_delete_at <= now,
         )
     )
-    deleted = result.rowcount or 0
+    deleted = getattr(result, "rowcount", 0) or 0
     if deleted:
         await session.commit()
         logger.info("Retention cleanup: auto-deleted %d expired PII quarantine items", deleted)

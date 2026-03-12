@@ -139,8 +139,8 @@ async def list_raci_cells(
 
 @router.post("/derive", response_model=RACIDeriveResponse)
 async def derive_raci_matrix(
+    request: Request,
     engagement_id: UUID = Query(..., description="Engagement to derive RACI matrix for"),
-    request: Request = None,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
@@ -206,7 +206,7 @@ async def validate_raci_cell(
     request: Request,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
-) -> dict[str, Any]:
+) -> Any:
     """SME validates a RACI cell, changing status from 'proposed' to 'validated'.
 
     Loads the cell first, then verifies the user has access to the cell's

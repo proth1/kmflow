@@ -50,7 +50,7 @@ async def run_quarantine_cleanup(
         PIIQuarantine.status.in_(_CLEANUP_STATUSES),
     )
     result = await session.execute(delete_stmt)
-    rows_deleted = result.rowcount or 0
+    rows_deleted = getattr(result, "rowcount", 0) or 0
 
     if rows_deleted > 0:
         await session.flush()

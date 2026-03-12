@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,7 +41,7 @@ class TaskMiningAuditLogger:
         Returns None if engagement_id is not available (logs to structured
         logger instead for SIEM ingestion).
         """
-        details = {"agent_id": str(agent_id)}
+        details: dict[str, Any] = {"agent_id": str(agent_id)}
         for key, value in kwargs.items():
             details[key] = str(value) if isinstance(value, UUID) else value
 

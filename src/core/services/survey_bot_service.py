@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
 
@@ -286,7 +287,7 @@ class SurveyBotService:
 
     @staticmethod
     def _build_session_summary(
-        claims: list[SurveyClaim],
+        claims: Sequence[SurveyClaim],
     ) -> dict[str, Any]:
         """Build a session summary from claims."""
         # Group by probe type

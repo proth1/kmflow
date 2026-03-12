@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
 from src.core.models import AuditAction, AuditLog, User
+from src.core.models.auth import UserRole
 from src.core.permissions import require_role
 
 logger = logging.getLogger(__name__)
@@ -76,7 +77,7 @@ async def list_audit_logs(
     limit: int = Query(20, ge=1, le=100, description="Page size"),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(require_role("PLATFORM_ADMIN")),
+    current_user: User = Depends(require_role(UserRole.PLATFORM_ADMIN)),
 ) -> dict[str, Any]:
     """Query audit logs with optional filters.
 
