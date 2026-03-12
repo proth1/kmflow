@@ -21,16 +21,6 @@ from src.core.models.transfer import DataResidencyRestriction
 
 logger = logging.getLogger(__name__)
 
-# Hosts that are considered external cloud AI services
-CLOUD_AI_HOSTS = frozenset(
-    {
-        "api.anthropic.com",
-        "api.openai.com",
-        "generativelanguage.googleapis.com",
-        "api.cohere.ai",
-    }
-)
-
 
 async def check_data_residency(
     engagement_id: UUID,

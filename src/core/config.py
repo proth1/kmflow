@@ -135,9 +135,6 @@ class Settings(BaseSettings):
     # ── Data Residency (KMFLOW-7) ─────────────────────────────
     # Platform-level default; per-engagement override in engagements table.
     default_data_residency: str = "none"  # "none" | "eu_only" | "uk_only" | "custom"
-    # Comma-separated list of allowed outbound API hostnames.
-    # When data_residency is not "none", only these hosts may be called.
-    allowed_api_hosts: str = ""
 
     # ── Embeddings ───────────────────────────────────────────────
     embedding_model: str = "all-mpnet-base-v2"

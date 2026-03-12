@@ -94,6 +94,15 @@ class AnthropicProvider(LLMProvider):
 
     def __init__(self, default_model: str = "claude-sonnet-4-5-20250929") -> None:
         self._default_model = default_model
+        self._client: Any = None
+
+    def _get_client(self) -> Any:
+        """Return cached Anthropic client (enables connection pooling)."""
+        if self._client is None:
+            import anthropic
+
+            self._client = anthropic.AsyncAnthropic()
+        return self._client
 
     async def generate(
         self,
@@ -104,9 +113,7 @@ class AnthropicProvider(LLMProvider):
         max_tokens: int = 2000,
         messages: list[dict[str, str]] | None = None,
     ) -> str:
-        import anthropic
-
-        client = anthropic.AsyncAnthropic()
+        client = self._get_client()
         msgs: list[dict[str, str]] = []
         if messages:
             msgs.extend(messages)
@@ -132,9 +139,7 @@ class AnthropicProvider(LLMProvider):
         max_tokens: int = 2000,
         messages: list[dict[str, str]] | None = None,
     ) -> AsyncGenerator[str, None]:
-        import anthropic
-
-        client = anthropic.AsyncAnthropic()
+        client = self._get_client()
         msgs: list[dict[str, str]] = []
         if messages:
             msgs.extend(messages)
