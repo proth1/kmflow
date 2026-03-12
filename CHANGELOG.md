@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.224] - 2026-03-12
+### Security
+- Remediate 25/26 CVEs across 14 Python packages (KMFLOW-113) — cryptography 46.0.5, pypdf 6.8.0, pillow 12.1.1, urllib3 2.6.3, werkzeug 3.1.6, flask 3.1.3, pdfminer.six, filelock, pyasn1, pynacl, azure-core, wheel, black, pip; documented 1 unfixable CVE (ecdsa) and 4 LOW npm findings as accepted risks (PR #605)
+
 ## [2026.03.223] - 2026-03-12
 ### Fixed
 - Fix 64 pre-existing test failures across 19 test files (#603) — RLS side-effect exhaustion, lazy import patch targets, mock API drift (batch APIs), exception type specificity, WebSocket auth dual-module patching (PR #604)

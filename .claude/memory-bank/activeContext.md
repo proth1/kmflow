@@ -6,7 +6,7 @@
 
 **MVP COMPLETE + WGI ALIGNED** — Platform MVP done. Windows Task Mining Agent fully implemented. WGI Platform Alignment complete.
 
-- **Current version**: 2026.03.223
+- **Current version**: 2026.03.224
 - **Open issues**: 0
 - **PM tool**: Jira (KMFLOW project at agentic-sdlc.atlassian.net)
 - **Presentations**: kmflow.agentic-innovations.com + state-street-apex.agentic-innovations.com
@@ -17,6 +17,7 @@ Pick up next Jira backlog item from KMFLOW board.
 
 ## Recently Completed
 
+- **PR #605**: Remediate 25/26 CVEs across 14 Python packages (KMFLOW-113) — cryptography 46.0.5, pypdf 6.8.0, pillow, urllib3, werkzeug, flask, pdfminer.six, filelock, pyasn1, pynacl, azure-core, wheel, black, pip; accepted risks documented (merged 2026-03-12)
 - **PR #604**: Fix 64 pre-existing test failures across 19 test files (#603) — RLS side-effect exhaustion, lazy import patch targets, mock API drift, exception type specificity, WebSocket auth dual-module patching (merged 2026-03-12)
 - **PR #602**: REST endpoints for graph/semantic/ML services (KMFLOW-67) — 3 route files (semantic, confidence, graph_analytics), 10 endpoints, frontend TypeScript API client, 12 tests (merged 2026-03-12)
 - **PR #601**: Hybrid/on-prem deployment (KMFLOW-7) — LLM provider abstraction (Anthropic/Ollama/Stub with auto-detection), data residency enforcement middleware, deployment capabilities API, on-prem Docker overlay with Ollama, air-gapped build script with SHA-256 manifest, 28 new tests (merged 2026-03-11)
