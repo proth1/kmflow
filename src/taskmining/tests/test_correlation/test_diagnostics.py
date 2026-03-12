@@ -133,7 +133,7 @@ class TestCorrelationDiagnostics:
 
         # Both events in hour 14, neither linked to a real case
         events = [_make_event(event_a_id, hour=14), _make_event(event_b_id, hour=14)]
-        links = []  # no links at all
+        links: list[MagicMock] = []  # no links at all
 
         session = _build_session(total_count=2, links=links, all_events=events)
 

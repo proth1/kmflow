@@ -133,7 +133,9 @@ async def _handle_assemble_switching(task_data: dict[str, Any]) -> dict[str, Any
         return {"status": "error", "detail": "invalid UUID"}
 
     # Lazy imports to avoid circular dependency at module load time
-    from src.core.database import async_session_factory
+    from src.core.config import Settings
+    from src.core.database import async_session_factory  # type: ignore[attr-defined]
+    from src.core.neo4j import create_neo4j_driver
     from src.semantic.graph import KnowledgeGraphService
     from src.taskmining.graph_ingest import ingest_switching_traces
     from src.taskmining.switching import assemble_switching_traces
@@ -150,7 +152,8 @@ async def _handle_assemble_switching(task_data: dict[str, Any]) -> dict[str, Any
         await db_session.commit()
         traces_created = len(traces)
 
-    graph_service = KnowledgeGraphService()
+    driver = create_neo4j_driver(Settings())
+    graph_service = KnowledgeGraphService(driver=driver)
     async with async_session_factory() as db_session:
         graph_summary = await ingest_switching_traces(
             db_session=db_session,

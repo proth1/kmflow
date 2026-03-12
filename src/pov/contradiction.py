@@ -485,6 +485,7 @@ def _resolve_as_temporal_shift(
     alt_year = alt_date.year if isinstance(alt_date, datetime) else None
 
     # Determine which is older / newer
+    newer_year: int | None = None
     if pref_year and alt_year:
         if pref_year <= alt_year:
             older_value, newer_value = stub.preferred_value, stub.alternative_value
@@ -618,14 +619,14 @@ def resolve_contradictions(
             )
 
         elif classification == ResolutionType.TEMPORAL_SHIFT.value:
-            resolution = _resolve_as_temporal_shift(stub, evidence_map)
-            result.temporal_resolutions.append(resolution)
+            temporal_resolution = _resolve_as_temporal_shift(stub, evidence_map)
+            result.temporal_resolutions.append(temporal_resolution)
             logger.info(
                 "Temporal shift resolved: %r (valid_to=%s) → %r (valid_from=%s)",
-                resolution.older_value,
-                resolution.older_valid_to,
-                resolution.newer_value,
-                resolution.newer_valid_from,
+                temporal_resolution.older_value,
+                temporal_resolution.older_valid_to,
+                temporal_resolution.newer_value,
+                temporal_resolution.newer_valid_from,
             )
 
         else:

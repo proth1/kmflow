@@ -205,6 +205,7 @@ class TestAssistedLinker:
 
         assert len(edges) == 1
         explainability = edges[0].explainability
+        assert explainability is not None
         assert explainability["role_match"] == 1.0
         assert explainability["system_match"] == 1.0
 
@@ -233,6 +234,7 @@ class TestAssistedLinker:
 
         assert len(edges) == 1
         expl = edges[0].explainability
+        assert expl is not None
         for key in ("time_proximity", "role_match", "system_match", "combined"):
             assert key in expl, f"Missing explainability key: {key}"
 

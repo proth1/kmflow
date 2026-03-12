@@ -63,7 +63,9 @@ class GapProbeGenerator:
         self._graph = graph_service
         self._coverage_service = KnowledgeFormsCoverageService(graph_service)
 
-    async def _get_activity_brightness(self, engagement_id: str, activity_ids: list[str]) -> dict[str, str]:
+    async def _get_activity_brightness(
+        self, engagement_id: str, activity_ids: list[str]
+    ) -> dict[str, BrightnessClassification]:
         """Fetch brightness classification for activities from Neo4j."""
         query = (
             "MATCH (a:Activity) "
@@ -88,7 +90,7 @@ class GapProbeGenerator:
     def _compute_uplift(
         self,
         form: KnowledgeForm,
-        brightness: str,
+        brightness: BrightnessClassification,
         centrality: float,
     ) -> float:
         """Compute estimated confidence uplift for filling a gap.

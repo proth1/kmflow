@@ -160,7 +160,7 @@ class KnowledgeGraphBuilder:
         entity_evidence_map: dict[str, list[str]] = {}
 
         for (fragment_id, _content, evidence_id), result in zip(fragments, raw_results, strict=False):
-            if isinstance(result, Exception):
+            if isinstance(result, BaseException):
                 logger.warning("Entity extraction failed for fragment %s: %s", fragment_id, result)
                 continue
             for entity in result.entities:
@@ -228,9 +228,9 @@ class KnowledgeGraphBuilder:
         # Build the entity.id -> node_id mapping for callers
         result: dict[str, str] = {}
         for entity in entities:
-            node_id = entity_id_to_node_id.get(entity.id)
-            if node_id and node_id in entity_to_node:
-                result[entity.id] = node_id
+            mapped_node_id: str | None = entity_id_to_node_id.get(entity.id)
+            if mapped_node_id and mapped_node_id in entity_to_node:
+                result[entity.id] = mapped_node_id
 
         return result
 

@@ -233,7 +233,7 @@ async def get_review_pack(
     engagement_id: uuid.UUID = Query(..., description="Engagement ID for access scoping"),
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(require_engagement_access),
-) -> dict[str, Any]:
+) -> Any:
     """Retrieve a single review pack by ID.
 
     Returns full pack details including segment activities, evidence list,
@@ -538,7 +538,7 @@ async def republish_pov(
     )
     decisions = decisions_result.scalars().all()
 
-    decision_dicts = [
+    decision_dicts: list[dict[str, object]] = [
         {
             "element_id": d.element_id,
             "action": d.action,
@@ -1027,7 +1027,7 @@ async def get_grading_progression(
     result = await session.execute(snapshot_query)
     snapshots = result.scalars().all()
 
-    snapshot_dicts = [
+    snapshot_dicts: list[dict[str, int | str | float | None]] = [
         {
             "version_number": s.version_number,
             "pov_version_id": str(s.pov_version_id),

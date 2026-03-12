@@ -192,7 +192,7 @@ async def _topological_sort_activities(
 
     # Walk the chain from start
     ordered: list[str] = []
-    current = starts[0]
+    current: str | None = starts[0]
     visited: set[str] = set()
     while current and current not in visited:
         ordered.append(current)

@@ -271,7 +271,7 @@ def create_app() -> FastAPI:
     # Register the limiter on app.state so SlowAPIMiddleware and the
     # @limiter.limit decorators on individual routes can find it.
     app.state.limiter = limiter
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]  # slowapi handler signature differs from Starlette's ExceptionHandler
 
     # -- Security Middleware ---
     # Note: middleware is applied in reverse order (last added = first executed).

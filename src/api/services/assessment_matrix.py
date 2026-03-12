@@ -149,7 +149,7 @@ class AssessmentMatrixService:
     async def _load_maturity_scores(self, engagement_id: uuid.UUID) -> dict[str, float]:
         """Load latest maturity scores keyed by dimension type."""
         stmt = (
-            select(TOMDimensionRecord.dimension_type, MaturityScore.overall_maturity)
+            select(TOMDimensionRecord.dimension_type, MaturityScore.level_number)
             .join(TargetOperatingModel, TOMDimensionRecord.tom_id == TargetOperatingModel.id)
             .outerjoin(
                 MaturityScore,

@@ -308,7 +308,7 @@ async def list_engagement_entities(
     """
     from src.semantic.graph import KnowledgeGraphService
 
-    graph_service = KnowledgeGraphService()
+    graph_service = KnowledgeGraphService(request.app.state.neo4j_driver)
 
     # Map entity types to Neo4j node labels
     label_map = {

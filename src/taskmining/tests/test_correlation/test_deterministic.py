@@ -178,5 +178,6 @@ class TestLinkEventsToCases:
 
         edges = await self.linker.link_events_to_cases(session, self.engagement_id, [event])
 
+        assert edges[0].explainability is not None
         assert edges[0].explainability["window_title"] == title
         assert edges[0].explainability["extracted_id"] == "CHG0001234"

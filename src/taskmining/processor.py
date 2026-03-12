@@ -141,7 +141,7 @@ def _redact_event_data(event_data: dict[str, Any]) -> dict[str, Any]:
     This ensures no plaintext PII persists in the database even
     during the 24h quarantine review window.
     """
-    redacted = {}
+    redacted: dict[str, Any] = {}
     for key, value in event_data.items():
         if isinstance(value, str):
             redacted[key] = redact_text(value)

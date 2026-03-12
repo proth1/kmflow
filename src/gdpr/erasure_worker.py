@@ -50,7 +50,7 @@ class GdprErasureWorker(TaskWorker):
         # Step 1: Find eligible users
         from sqlalchemy import select
 
-        from src.core.database import async_session_factory
+        from src.core.database import async_session_factory  # type: ignore[attr-defined]
         from src.core.models import User
 
         async with async_session_factory() as session:

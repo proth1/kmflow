@@ -148,7 +148,7 @@ def decode_token(token: str, settings: Settings | None = None) -> dict[str, Any]
 # ---------------------------------------------------------------------------
 
 
-async def is_token_blacklisted(request: Request, token: str) -> bool:
+async def is_token_blacklisted(request: Request | WebSocket, token: str) -> bool:
     """Check if a token has been blacklisted in Redis.
 
     Returns True if Redis is unavailable (fail-closed for security).

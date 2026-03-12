@@ -375,7 +375,7 @@ class TestReportDownload:
         request = _make_mock_request(job_data)
         user = _make_mock_user()
 
-        result = await download_report(eng_id, "report-dl", "html", request, user, user)
+        result = await download_report(request, eng_id, "report-dl", "html", user, user)
 
         assert result.status_code == 200
         assert b"Executive Report" in result.body
@@ -396,7 +396,7 @@ class TestReportDownload:
         request = _make_mock_request(job_data)
         user = _make_mock_user()
 
-        result = await download_report(eng_id, "report-pdf", "pdf", request, user, user)
+        result = await download_report(request, eng_id, "report-pdf", "pdf", user, user)
 
         assert result.status_code == 200
         assert result.body == pdf_content
@@ -417,7 +417,7 @@ class TestReportDownload:
         user = _make_mock_user()
 
         with pytest.raises(HTTPException) as exc_info:
-            await download_report(eng_id, "report-wip", "html", request, user, user)
+            await download_report(request, eng_id, "report-wip", "html", user, user)
 
         assert exc_info.value.status_code == 409
 
@@ -431,7 +431,7 @@ class TestReportDownload:
         user = _make_mock_user()
 
         with pytest.raises(HTTPException) as exc_info:
-            await download_report(eng_id, "nonexistent", "html", request, user, user)
+            await download_report(request, eng_id, "nonexistent", "html", user, user)
 
         assert exc_info.value.status_code == 404
 
@@ -451,7 +451,7 @@ class TestReportDownload:
         user = _make_mock_user()
 
         with pytest.raises(HTTPException) as exc_info:
-            await download_report(eng_id, "report-nopdf", "pdf", request, user, user)
+            await download_report(request, eng_id, "report-nopdf", "pdf", user, user)
 
         assert exc_info.value.status_code == 404
 

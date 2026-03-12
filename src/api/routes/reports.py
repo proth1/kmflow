@@ -301,10 +301,10 @@ async def get_report_status(
 
 @router.get("/engagements/{engagement_id}/download/{report_id}")
 async def download_report(
+    request: Request,
     engagement_id: UUID,
     report_id: str,
     output_format: str = Query(default="html", alias="format", pattern="^(html|pdf)$"),
-    request: Request = None,  # FastAPI injects automatically
     user: User = Depends(require_permission("engagement:read")),
     _engagement_user: User = Depends(require_engagement_access),
 ) -> Any:

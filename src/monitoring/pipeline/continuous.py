@@ -145,8 +145,8 @@ class ContinuousEvidencePipeline:
         success = True
 
         try:
-            evidence_id = data.get(b"evidence_id", data.get("evidence_id", ""))
-            engagement_id = data.get(b"engagement_id", data.get("engagement_id", ""))
+            evidence_id = data.get(b"evidence_id", data.get("evidence_id", ""))  # type: ignore[call-overload]
+            engagement_id = data.get(b"engagement_id", data.get("engagement_id", ""))  # type: ignore[call-overload]
 
             if isinstance(evidence_id, bytes):
                 evidence_id = evidence_id.decode()

@@ -40,7 +40,7 @@ async def get_vce_distribution(
     query = (
         select(
             VisualContextEvent.screen_state_class,
-            func.count(VisualContextEvent.id).label("count"),
+            func.count(VisualContextEvent.id).label("cnt"),
         )
         .where(VisualContextEvent.engagement_id == engagement_id)
         .group_by(VisualContextEvent.screen_state_class)
@@ -54,12 +54,12 @@ async def get_vce_distribution(
     result = await session.execute(query)
     rows = result.all()
 
-    total = sum(row.count for row in rows)
+    total = sum(row.cnt for row in rows)
     distributions = [
         {
             "screen_state_class": row.screen_state_class,
-            "count": row.count,
-            "percentage": round(row.count / total * 100, 2) if total > 0 else 0.0,
+            "count": row.cnt,
+            "percentage": round(row.cnt / total * 100, 2) if total > 0 else 0.0,
         }
         for row in rows
     ]

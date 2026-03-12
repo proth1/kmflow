@@ -234,7 +234,9 @@ async def ingest_vce_events(
 
     # Existing Application nodes
     existing_apps = await graph_service.find_nodes("Application", {"engagement_id": engagement_id})
-    app_node_map: dict[str, str] = {n.properties.get("name"): n.id for n in existing_apps if n.properties.get("name")}
+    app_node_map: dict[str, str] = {
+        str(n.properties.get("name")): n.id for n in existing_apps if n.properties.get("name")
+    }
 
     # -- ScreenState nodes (dedup per engagement) -----------------------------
     new_screen_states: list[dict[str, Any]] = []
@@ -415,13 +417,13 @@ async def ingest_case_link_edges(
     # Existing Case nodes
     existing_case_nodes = await graph_service.find_nodes("Case", {"engagement_id": engagement_id})
     case_node_map: dict[str, str] = {
-        n.properties.get("case_id"): n.id for n in existing_case_nodes if n.properties.get("case_id")
+        str(n.properties.get("case_id")): n.id for n in existing_case_nodes if n.properties.get("case_id")
     }
 
     # Existing CanonicalEvent graph nodes
     existing_ce_nodes = await graph_service.find_nodes("CanonicalEvent", {"engagement_id": engagement_id})
     ce_node_map: dict[str, str] = {
-        n.properties.get("source_event_id"): n.id for n in existing_ce_nodes if n.properties.get("source_event_id")
+        str(n.properties.get("source_event_id")): n.id for n in existing_ce_nodes if n.properties.get("source_event_id")
     }
 
     # -- Create missing Case nodes --------------------------------------------

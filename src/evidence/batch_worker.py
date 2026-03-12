@@ -60,7 +60,7 @@ class EvidenceBatchWorker(TaskWorker):
         results: list[dict[str, Any]] = []
 
         # Lazy imports to avoid circular dependencies
-        from src.core.database import async_session_factory
+        from src.core.database import async_session_factory  # type: ignore[attr-defined]
 
         async with async_session_factory() as session:
             for i, item_id in enumerate(item_ids):
