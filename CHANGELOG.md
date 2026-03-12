@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.223] - 2026-03-12
+### Fixed
+- Fix 64 pre-existing test failures across 19 test files (#603) — RLS side-effect exhaustion, lazy import patch targets, mock API drift (batch APIs), exception type specificity, WebSocket auth dual-module patching (PR #604)
+
 ## [2026.03.222] - 2026-03-12
 ### Added
 - Complete REST endpoints for graph/semantic/ML services (KMFLOW-67) — entity extraction, entity resolution, embedding generation, semantic search, entity listing, confidence scoring (single + batch), graph metrics, triangulation, node relationships, frontend TypeScript API client, 12 tests (PR #602)

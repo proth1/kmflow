@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.222
+**Version**: 2026.03.223
 **Last Updated**: 2026-03-12
 
 ## Quick Stats
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.223 | 2026-03-12 | Fix 64 pre-existing test failures — RLS side-effects, lazy import patches, mock API drift, exception types, WebSocket auth (19 files, PR #604) |
 | 2026.03.222 | 2026-03-12 | REST endpoints for graph/semantic/ML services — entity extraction/resolution, embeddings, semantic search, confidence scoring, graph metrics/triangulation/relationships, frontend API client, 12 tests (KMFLOW-67, PR #602) |
 | 2026.03.221 | 2026-03-11 | Hybrid/on-prem deployment — LLM provider abstraction (Anthropic/Ollama/Stub), data residency enforcement, deployment capabilities API, on-prem Docker overlay, air-gapped build, 28 tests (KMFLOW-7, PR #601) |
 | 2026.03.220 | 2026-03-11 | Ontology derivation from knowledge graph — seed term clustering, Neo4j patterns, OWL/YAML export, validation, Cytoscape viz, 30 tests (KMFLOW-6, PR #600) |
