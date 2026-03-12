@@ -75,7 +75,7 @@ class EngagementResponse(BaseModel):
     description: str | None
     status: EngagementStatus
     team: list[str] | None = None
-    data_residency_restriction: str = "none"
+    data_residency_restriction: str | None = "none"
 
 
 class EngagementList(BaseModel):

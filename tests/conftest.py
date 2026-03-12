@@ -43,10 +43,24 @@ def test_settings() -> Settings:
     )
 
 
-def _default_refresh_side_effect(obj: Any) -> None:
-    """Simulate session.refresh by ensuring the object has an id."""
+def _default_refresh_side_effect(obj: Any, attribute_names: Any = None, **kwargs: Any) -> None:
+    """Simulate session.refresh by ensuring the object has core attributes."""
+    from datetime import UTC, datetime
+
     if hasattr(obj, "id") and obj.id is None:
         obj.id = uuid.uuid4()
+    # Resolve SQLAlchemy SQL expressions back to concrete values
+    if hasattr(obj, "version") and not isinstance(obj.version, int):
+        obj.version = 1
+    # Ensure timestamps are set (server_default in DB, not set in Python)
+    now = datetime.now(tz=UTC)
+    if hasattr(obj, "created_at") and obj.created_at is None:
+        obj.created_at = now
+    if hasattr(obj, "updated_at") and obj.updated_at is None:
+        obj.updated_at = now
+    # Set empty relationship collections
+    if hasattr(obj, "dimension_records") and obj.dimension_records is None:
+        obj.dimension_records = []
 
 
 @pytest.fixture
@@ -105,6 +119,14 @@ def mock_redis_client() -> AsyncMock:
     # Pub/Sub support
     client.publish = AsyncMock(return_value=0)
     client.pubsub = MagicMock()
+    # Pipeline support (redis-py pipeline() is synchronous, returns a Pipeline object)
+    mock_pipe = MagicMock()
+    mock_pipe.zremrangebyscore = MagicMock(return_value=mock_pipe)
+    mock_pipe.zcard = MagicMock(return_value=mock_pipe)
+    mock_pipe.zadd = MagicMock(return_value=mock_pipe)
+    mock_pipe.expire = MagicMock(return_value=mock_pipe)
+    mock_pipe.execute = AsyncMock(return_value=[0, 0, True, True])
+    client.pipeline = MagicMock(return_value=mock_pipe)
     return client
 
 

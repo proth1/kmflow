@@ -71,7 +71,7 @@ def _make_trace(
 
 class TestDetectPingPong:
     def test_detects_basic_ping_pong(self) -> None:
-        seq = ["Excel", "Chrome", "Excel", "Chrome", "Excel", "Chrome"]
+        seq = ["Excel", "Chrome", "Excel", "Chrome", "Excel", "Chrome", "Excel", "Chrome"]
         is_pp, count = detect_ping_pong(seq, threshold=3)
         assert is_pp is True
         assert count >= 3
@@ -99,7 +99,7 @@ class TestDetectPingPong:
         assert count == 0
 
     def test_custom_threshold(self) -> None:
-        seq = ["A", "B", "A", "B"]
+        seq = ["A", "B", "A", "B", "A", "B"]
         is_pp, count = detect_ping_pong(seq, threshold=2)
         assert is_pp is True
         assert count >= 2

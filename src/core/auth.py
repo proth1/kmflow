@@ -157,7 +157,7 @@ async def is_token_blacklisted(request: Request, token: str) -> bool:
         redis_client = request.app.state.redis_client
         result = await redis_client.get(f"token:blacklist:{token}")
         return result is not None
-    except _aioredis.RedisError:
+    except (ConnectionError, OSError, _aioredis.RedisError):
         logger.warning("Redis unavailable for token blacklist check — failing closed")
         return True
 
@@ -173,7 +173,7 @@ async def blacklist_token(request: Request, token: str, expires_in: int = 1800) 
     try:
         redis_client = request.app.state.redis_client
         await redis_client.setex(f"token:blacklist:{token}", expires_in, "1")
-    except _aioredis.RedisError:
+    except (ConnectionError, OSError, _aioredis.RedisError):
         logger.warning("Redis unavailable for token blacklisting")
 
 

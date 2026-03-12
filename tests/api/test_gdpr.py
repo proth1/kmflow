@@ -151,12 +151,14 @@ class TestDataExport:
         audit = _make_audit(str(user_id))
         annotation = _make_annotation(str(user_id))
 
-        # Execute is called three times: members, audit_logs, annotations
+        # Execute is called five times: members, audit_logs, annotations, consents, copilot_messages
         mock_db_session.execute = AsyncMock(
             side_effect=[
                 _scalars_result([member]),
                 _scalars_result([audit]),
                 _scalars_result([annotation]),
+                _scalars_result([]),  # consents
+                _scalars_result([]),  # copilot_messages
             ]
         )
 
@@ -196,6 +198,8 @@ class TestDataExport:
                 _scalars_result([]),  # memberships
                 _scalars_result([]),  # audit_logs
                 _scalars_result([]),  # annotations
+                _scalars_result([]),  # consents
+                _scalars_result([]),  # copilot_messages
             ]
         )
 

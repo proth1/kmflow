@@ -258,15 +258,23 @@ class TestCookieAuth:
         assert user.id == user_id
 
     @pytest.mark.asyncio
-    async def test_no_token_no_cookie_raises_401(self, auth_settings: Settings) -> None:
-        """Should raise 401 when neither bearer header nor cookie is present."""
+    async def test_no_token_no_cookie_raises_401(self) -> None:
+        """Should raise 401 when neither bearer header nor cookie is present.
+
+        Uses auth_dev_mode=False so the dev bypass doesn't auto-authenticate.
+        """
+        strict_settings = Settings(
+            jwt_secret_key="test-secret-key-for-tests",
+            jwt_algorithm="HS256",
+            auth_dev_mode=False,
+        )
         request = self._make_mock_request()
 
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(
                 request=request,
                 credentials=None,
-                settings=auth_settings,
+                settings=strict_settings,
             )
         assert exc_info.value.status_code == 401
         assert "Not authenticated" in exc_info.value.detail

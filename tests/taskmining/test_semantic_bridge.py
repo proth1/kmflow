@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
+from neo4j.exceptions import Neo4jError
 
 from src.semantic.graph import GraphNode, GraphRelationship
 from src.taskmining.semantic_bridge import (
@@ -302,7 +303,7 @@ class TestEdgeCases:
                 [[0.95, 0.31]],
             ]
         )
-        mock_graph_service.create_relationship = AsyncMock(side_effect=RuntimeError("Neo4j unavailable"))
+        mock_graph_service.create_relationship = AsyncMock(side_effect=Neo4jError("Neo4j unavailable"))
 
         result = await run_semantic_bridge(mock_graph_service, mock_embedding_service, "eng-1")
 

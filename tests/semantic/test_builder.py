@@ -11,6 +11,7 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from neo4j.exceptions import Neo4jError
 
 from src.semantic.builder import BuildResult, KnowledgeGraphBuilder
 from src.semantic.embeddings import EmbeddingService
@@ -53,6 +54,7 @@ def mock_embedding_service() -> MagicMock:
     service = MagicMock(spec=EmbeddingService)
     service.generate_embedding_async = AsyncMock(return_value=[0.1] * 768)
     service.store_embedding = AsyncMock()
+    service.store_embeddings_batch = AsyncMock()
     return service
 
 
@@ -294,7 +296,7 @@ class TestEmbeddingGeneration:
         await builder.build_knowledge_graph(session, "eng-1")
 
         assert mock_embedding_service.generate_embedding_async.call_count == 2
-        assert mock_embedding_service.store_embedding.call_count == 2
+        assert mock_embedding_service.store_embeddings_batch.call_count >= 1
 
     @pytest.mark.asyncio
     async def test_embedding_failure_does_not_fail_build(
@@ -332,8 +334,8 @@ class TestErrorHandling:
     ) -> None:
         """Should continue building even if individual node creation fails."""
         mock_graph = AsyncMock(spec=KnowledgeGraphService)
-        mock_graph.create_node = AsyncMock(side_effect=Exception("Neo4j error"))
-        mock_graph.batch_create_nodes = AsyncMock(side_effect=Exception("Neo4j error"))
+        mock_graph.create_node = AsyncMock(side_effect=Neo4jError("Neo4j error"))
+        mock_graph.batch_create_nodes = AsyncMock(side_effect=Neo4jError("Neo4j error"))
         mock_graph.get_node = AsyncMock(return_value=None)
         mock_graph.create_relationship = AsyncMock()
 

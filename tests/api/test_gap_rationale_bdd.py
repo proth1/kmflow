@@ -304,7 +304,8 @@ class TestGapPrioritySorting:
         gaps_result = MagicMock()
         gaps_result.scalars.return_value.all.return_value = [gap_mid, gap_low, gap_high]
 
-        mock_session.execute = AsyncMock(side_effect=[count_result, gaps_result])
+        rls_result = MagicMock()  # set_engagement_context
+        mock_session.execute = AsyncMock(side_effect=[rls_result, count_result, gaps_result])
 
         app = _make_app_with_session(mock_session)
 
@@ -337,7 +338,8 @@ class TestGapPrioritySorting:
         gaps_result = MagicMock()
         gaps_result.scalars.return_value.all.return_value = [gap1, gap2]
 
-        mock_session.execute = AsyncMock(side_effect=[count_result, gaps_result])
+        rls_result = MagicMock()  # set_engagement_context
+        mock_session.execute = AsyncMock(side_effect=[rls_result, count_result, gaps_result])
 
         app = _make_app_with_session(mock_session)
 
@@ -387,7 +389,8 @@ class TestRegulatoryGapWeighting:
         gaps_result = MagicMock()
         gaps_result.scalars.return_value.all.return_value = [gap_b, gap_a]  # B first (wrong order)
 
-        mock_session.execute = AsyncMock(side_effect=[count_result, gaps_result])
+        rls_result = MagicMock()  # set_engagement_context
+        mock_session.execute = AsyncMock(side_effect=[rls_result, count_result, gaps_result])
 
         app = _make_app_with_session(mock_session)
 
@@ -460,7 +463,8 @@ class TestRationaleGeneration:
         tom_result = MagicMock()
         tom_result.scalar_one_or_none.return_value = tom
 
-        mock_session.execute = AsyncMock(side_effect=[gap_result, tom_result])
+        rls_result = MagicMock()  # set_engagement_context
+        mock_session.execute = AsyncMock(side_effect=[gap_result, rls_result, tom_result])
         mock_session.commit = AsyncMock()
 
         app = _make_app_with_session(mock_session)

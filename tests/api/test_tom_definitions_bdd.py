@@ -411,9 +411,9 @@ class TestScenario2VersionHistory:
         mock_versions_result = MagicMock()
         mock_versions_result.scalars.return_value.all.return_value = [v1]
 
-        # Admin bypass: no member check query
-        # 1st call: TOM lookup, 2nd call: versions query
-        session.execute.side_effect = [mock_tom_result, mock_versions_result]
+        rls_result = MagicMock()  # set_engagement_context
+        # 1st call: TOM lookup, 2nd: RLS context, 3rd: versions query
+        session.execute.side_effect = [mock_tom_result, rls_result, mock_versions_result]
         _override_deps(session)
 
         async with AsyncClient(transport=ASGITransport(app=APP), base_url="http://test") as ac:

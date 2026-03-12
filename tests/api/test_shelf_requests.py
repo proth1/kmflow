@@ -17,6 +17,7 @@ from src.core.models import (
     ShelfDataRequest,
     ShelfDataRequestItem,
     ShelfRequestItemPriority,
+    ShelfRequestItemSource,
     ShelfRequestItemStatus,
     ShelfRequestStatus,
     ValidationStatus,
@@ -54,6 +55,7 @@ def _make_shelf_item(**overrides) -> ShelfDataRequestItem:  # noqa: ANN003
         "description": "Current state P2P process map",
         "priority": ShelfRequestItemPriority.HIGH,
         "status": ShelfRequestItemStatus.PENDING,
+        "source": ShelfRequestItemSource.MANUAL,
         "matched_evidence_id": None,
     }
     defaults.update(overrides)
