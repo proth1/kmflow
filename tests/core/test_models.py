@@ -216,7 +216,7 @@ class TestAuditLog:
     def test_audit_actions(self) -> None:
         """All expected audit actions should be defined."""
         actions = list(AuditAction)
-        assert len(actions) == 65
+        assert len(actions) == 72
         assert AuditAction.ENGAGEMENT_CREATED in actions
         assert AuditAction.ENGAGEMENT_UPDATED in actions
         assert AuditAction.ENGAGEMENT_ARCHIVED in actions
@@ -270,7 +270,7 @@ class TestShelfDataRequest:
     def test_shelf_request_statuses(self) -> None:
         """All expected shelf request statuses should be defined."""
         statuses = list(ShelfRequestStatus)
-        assert len(statuses) == 5
+        assert len(statuses) == 8
         assert ShelfRequestStatus.DRAFT in statuses
         assert ShelfRequestStatus.SENT in statuses
         assert ShelfRequestStatus.COMPLETED in statuses
@@ -360,7 +360,7 @@ class TestShelfDataRequestItem:
     def test_item_statuses(self) -> None:
         """All expected item statuses should be defined."""
         statuses = list(ShelfRequestItemStatus)
-        assert len(statuses) == 3
+        assert len(statuses) == 6
         assert ShelfRequestItemStatus.PENDING in statuses
         assert ShelfRequestItemStatus.RECEIVED in statuses
         assert ShelfRequestItemStatus.OVERDUE in statuses
@@ -505,4 +505,4 @@ class TestPhase3Enums:
         # Phase 3.2: 1 new action (epistemic_plan_generated)
         # Phase 4: 4 new actions (suggestion_created/accepted/rejected, financial_assumption_created)
         # Total: 38 actions
-        assert len(actions) == 65
+        assert len(actions) == 72

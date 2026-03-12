@@ -180,7 +180,7 @@ class TestGetTransitionMatrix:
         mock_db_session.refresh = AsyncMock(side_effect=lambda obj: setattr(obj, "id", computed_matrix.id))
 
         with patch(
-            "src.api.routes.taskmining.compute_transition_matrix",
+            "src.taskmining.switching.compute_transition_matrix",
             new=AsyncMock(return_value=computed_matrix),
         ):
             response = await client.get(
@@ -212,7 +212,7 @@ class TestGetFrictionAnalysis:
         }
 
         with patch(
-            "src.api.routes.taskmining.get_friction_analysis",
+            "src.taskmining.switching.get_friction_analysis",
             new=AsyncMock(return_value=expected_result),
         ):
             response = await client.get(
@@ -240,7 +240,7 @@ class TestGetFrictionAnalysis:
         }
 
         with patch(
-            "src.api.routes.taskmining.get_friction_analysis",
+            "src.taskmining.switching.get_friction_analysis",
             new=AsyncMock(return_value=empty_result),
         ):
             response = await client.get(
@@ -265,7 +265,7 @@ class TestAssembleSwitching:
 
         mock_trace = _make_trace_orm(engagement_id=engagement_id)
         with patch(
-            "src.api.routes.taskmining.assemble_switching_traces",
+            "src.taskmining.switching.assemble_switching_traces",
             new=AsyncMock(return_value=[mock_trace, mock_trace]),
         ):
             response = await client.post(
@@ -284,7 +284,7 @@ class TestAssembleSwitching:
         session_id = uuid.uuid4()
 
         with patch(
-            "src.api.routes.taskmining.assemble_switching_traces",
+            "src.taskmining.switching.assemble_switching_traces",
             new=AsyncMock(return_value=[]),
         ):
             response = await client.post(

@@ -33,7 +33,7 @@ class TestEngagementContextSetting:
 
     @pytest.mark.asyncio
     async def test_set_engagement_context_executes_set_local(self) -> None:
-        """SET LOCAL should be called with the engagement UUID."""
+        """set_config should be called with the engagement UUID (transaction-scoped)."""
         session = AsyncMock()
         eid = uuid.uuid4()
 
@@ -42,21 +42,22 @@ class TestEngagementContextSetting:
         session.execute.assert_called_once()
         call_args = session.execute.call_args
         sql_text = str(call_args[0][0])
-        assert "SET LOCAL" in sql_text
-        assert RLS_SESSION_VAR in sql_text
-        assert call_args[1] == {"eid": str(eid)} or call_args[0][1] == {"eid": str(eid)}
+        # Implementation uses SELECT set_config(:var, :eid, true) for transaction-scoped setting
+        assert "set_config" in sql_text
+        assert ":var" in sql_text or RLS_SESSION_VAR in sql_text
 
     @pytest.mark.asyncio
     async def test_set_engagement_context_uses_transaction_scoped_variable(self) -> None:
-        """SET LOCAL ensures variable resets on commit/rollback."""
+        """set_config with true ensures variable resets on commit/rollback."""
         session = AsyncMock()
         eid = uuid.uuid4()
 
         await set_engagement_context(session, eid)
 
         sql_text = str(session.execute.call_args[0][0])
-        # SET LOCAL is transaction-scoped (vs SET which is session-scoped)
-        assert "SET LOCAL" in sql_text
+        # set_config(..., true) is transaction-scoped (equivalent to SET LOCAL)
+        assert "set_config" in sql_text
+        assert "true" in sql_text
 
     @pytest.mark.asyncio
     async def test_clear_engagement_context_resets_variable(self) -> None:

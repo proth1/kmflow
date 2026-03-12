@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -39,12 +40,16 @@ def sample_engagement(sample_engagement_id: uuid.UUID) -> Engagement:
 
 @pytest.fixture
 def sample_tom(sample_engagement_id: uuid.UUID) -> TargetOperatingModel:
+    now = datetime.now(tz=UTC)
     return TargetOperatingModel(
         id=uuid.uuid4(),
         engagement_id=sample_engagement_id,
         name="Digital TOM",
+        version=1,
         dimensions={"process_architecture": {"target": "defined"}},
         maturity_targets={"process_architecture": "defined"},
+        created_at=now,
+        updated_at=now,
     )
 
 
@@ -77,16 +82,20 @@ class TestTOMRoutes:
         sample_engagement: Engagement,
     ) -> None:
         """POST /api/v1/tom/models creates a TOM."""
+        rls_result = MagicMock()
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = sample_engagement
-        mock_db_session.execute.return_value = mock_result
+        # RLS set_engagement_context + engagement lookup
+        mock_db_session.execute.side_effect = [rls_result, mock_result]
 
         response = await client.post(
             "/api/v1/tom/models",
             json={
                 "engagement_id": str(sample_engagement.id),
                 "name": "Digital TOM",
-                "dimensions": {"process_architecture": {"target": "defined"}},
+                "dimensions": [
+                    {"dimension_type": "process_architecture", "maturity_target": 3},
+                ],
             },
         )
 
@@ -131,7 +140,9 @@ class TestTOMRoutes:
         mock_count_result = MagicMock()
         mock_count_result.scalar.return_value = 1
 
-        mock_db_session.execute.side_effect = [mock_list_result, mock_count_result]
+        # RLS set_engagement_context + list query + count query
+        rls_result = MagicMock()
+        mock_db_session.execute.side_effect = [rls_result, mock_list_result, mock_count_result]
 
         response = await client.get(
             "/api/v1/tom/models",
@@ -246,7 +257,9 @@ class TestGapRoutes:
         mock_count_result = MagicMock()
         mock_count_result.scalar.return_value = 1
 
-        mock_db_session.execute.side_effect = [mock_list_result, mock_count_result]
+        # RLS set_engagement_context + list query + count query
+        rls_result = MagicMock()
+        mock_db_session.execute.side_effect = [rls_result, mock_list_result, mock_count_result]
 
         response = await client.get(
             "/api/v1/tom/gaps",

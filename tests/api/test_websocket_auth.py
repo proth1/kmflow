@@ -53,6 +53,31 @@ def _make_valid_access_token(role: str = "platform_admin") -> str:
     return _make_token(payload)
 
 
+def _make_mock_user(user_id: str | None = None) -> MagicMock:
+    """Create a mock User for WS auth."""
+    from src.core.models import User, UserRole
+
+    user = MagicMock(spec=User)
+    user.id = uuid.UUID(user_id) if user_id else uuid.uuid4()
+    user.email = "test@kmflow.dev"
+    user.name = "Test User"
+    user.role = UserRole.PLATFORM_ADMIN
+    user.is_active = True
+    return user
+
+
+def _make_session_factory(user: MagicMock | None = None) -> MagicMock:
+    """Create a mock session factory that returns a user on execute."""
+    mock_session = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = user
+    mock_session.execute = AsyncMock(return_value=mock_result)
+    mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_session.__aexit__ = AsyncMock(return_value=None)
+    factory = MagicMock(return_value=mock_session)
+    return factory
+
+
 def _make_app(redis_client: AsyncMock | None = None) -> FastAPI:
     """Build a minimal FastAPI app with the websocket router."""
     from src.core.config import get_settings
@@ -60,6 +85,10 @@ def _make_app(redis_client: AsyncMock | None = None) -> FastAPI:
     app = FastAPI()
     app.include_router(router)
     app.state.redis_client = redis_client or AsyncMock()
+
+    # Provide a session factory for get_websocket_user DB lookups
+    mock_user = _make_mock_user()
+    app.state.db_session_factory = _make_session_factory(mock_user)
 
     test_settings = _make_settings()
     app.dependency_overrides[get_settings] = lambda: test_settings
@@ -116,7 +145,10 @@ class TestWebSocketValidToken:
 
         app = _make_app(redis_mock)
 
-        with patch("src.api.routes.websocket.get_settings", return_value=_make_settings()):
+        with (
+            patch("src.api.routes.websocket.get_settings", return_value=_make_settings()),
+            patch("src.core.auth.get_settings", return_value=_make_settings()),
+        ):
             client = TestClient(app)
             with client.websocket_connect(f"/ws/monitoring/eng-123?token={token}") as ws:
                 # Connection accepted — send a ping to verify it's live
@@ -173,7 +205,10 @@ class TestWebSocketEngagementMembership:
 
         app = _make_app(redis_mock)
 
-        with patch("src.api.routes.websocket.get_settings", return_value=_make_settings()):
+        with (
+            patch("src.api.routes.websocket.get_settings", return_value=_make_settings()),
+            patch("src.core.auth.get_settings", return_value=_make_settings()),
+        ):
             client = TestClient(app)
             with client.websocket_connect(f"/ws/monitoring/eng-123?token={token}") as ws:
                 ws.send_text("ping")

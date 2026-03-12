@@ -92,14 +92,16 @@ class TestBuildFragmentGraph:
 
         mock_driver = AsyncMock()
         mock_graph_service = AsyncMock()
-        mock_graph_service.create_node = AsyncMock(side_effect=lambda label, props: MagicMock(id=props["id"]))
+        mock_graph_service.batch_create_nodes = AsyncMock(
+            side_effect=lambda label, props_list: [p["id"] for p in props_list]
+        )
         mock_graph_service.create_relationship = AsyncMock()
 
         with patch("src.semantic.graph.KnowledgeGraphService", return_value=mock_graph_service):
             result = await build_fragment_graph([frag], "eng-1", neo4j_driver=mock_driver)
 
         assert result["node_count"] == 2
-        assert mock_graph_service.create_node.call_count == 2
+        assert mock_graph_service.batch_create_nodes.call_count >= 1
 
 
 class TestGenerateFragmentEmbeddings:

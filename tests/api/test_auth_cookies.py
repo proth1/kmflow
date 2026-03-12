@@ -323,8 +323,21 @@ async def test_cookie_auth_reaches_protected_endpoint(
 async def test_no_auth_returns_401(
     auth_app: tuple[Any, MagicMock, AsyncMock],
 ) -> None:
-    """GET /api/v1/auth/me with no token (no cookie, no header) should return 401."""
+    """GET /api/v1/auth/me with no token (no cookie, no header) should return 401.
+
+    Temporarily disables auth_dev_mode so the dev bypass doesn't kick in.
+    """
     app, _, _ = auth_app
+
+    # Override settings with auth_dev_mode=False for this test
+    strict_settings = Settings(
+        app_env="development",
+        jwt_secret_key="test-cookie-secret-key",
+        jwt_algorithm="HS256",
+        auth_dev_mode=False,
+        monitoring_worker_count=0,
+    )
+    app.dependency_overrides[get_settings] = lambda: strict_settings
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
