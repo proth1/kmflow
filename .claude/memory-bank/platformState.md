@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.225
+**Version**: 2026.03.226
 **Last Updated**: 2026-03-12
 
 ## Quick Stats
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.226 | 2026-03-12 | Decision Intelligence presentation + mypy fixes — 3 new slides, updated stats to v7.0, fixed all 79 mypy errors across 38 files (#607, PR #608) |
 | 2026.03.225 | 2026-03-12 | Extract task mining utils for Next.js 15 compliance — 6 functions to shared modules, fix build errors (KMFLOW-114, PR #606) |
 | 2026.03.224 | 2026-03-12 | Remediate 25/26 CVEs — 14 Python package upgrades, cryptography 46.0.5, accepted risks documented (KMFLOW-113, PR #605) |
 | 2026.03.223 | 2026-03-12 | Fix 64 pre-existing test failures — RLS side-effects, lazy import patches, mock API drift, exception types, WebSocket auth (19 files, PR #604) |

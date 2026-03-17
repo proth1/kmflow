@@ -3,6 +3,13 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.226] - 2026-03-12
+### Added
+- Decision Intelligence presentation slides — KM4ProcessBot (entity extraction), KM4DecisionBot (DMN pipeline), Decision Intelligence UI; updated What's New, Project Stats Dashboard, Presentation Changelog to v7.0 (#607, PR #608)
+
+### Fixed
+- Fix all 79 pre-existing mypy type errors across 38 source files — Optional narrowing, Result.rowcount access, missing KnowledgeGraphService driver args, implicit Optional parameters, lxml stub gaps; add types-PyYAML to pre-commit (PR #608)
+
 ## [2026.03.225] - 2026-03-12
 ### Fixed
 - Extract task mining utilities from page files for Next.js 15 compliance (KMFLOW-114) — 6 functions moved to shared modules, fix ontology page hook args, fix semantic API client import; all 242 frontend tests pass, production build succeeds (PR #606)
