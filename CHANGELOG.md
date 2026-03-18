@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.227] - 2026-03-18
+### Changed
+- Improve Knowledge Graph Explorer readability — hide edge labels by default (show on hover), increase node size, add hover highlighting for connected nodes/edges, tune force-directed layout spacing (#611, PR #610)
+
 ## [2026.03.226] - 2026-03-12
 ### Added
 - Decision Intelligence presentation slides — KM4ProcessBot (entity extraction), KM4DecisionBot (DMN pipeline), Decision Intelligence UI; updated What's New, Project Stats Dashboard, Presentation Changelog to v7.0 (#607, PR #608)

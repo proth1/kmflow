@@ -1,12 +1,12 @@
 # Active Context
 
-**Last Updated**: 2026-03-12
+**Last Updated**: 2026-03-18
 
 ## Project Status
 
 **MVP COMPLETE + WGI ALIGNED** — Platform MVP done. Windows Task Mining Agent fully implemented. WGI Platform Alignment complete.
 
-- **Current version**: 2026.03.226
+- **Current version**: 2026.03.227
 - **Open issues**: 0
 - **PM tool**: Jira (KMFLOW project at agentic-sdlc.atlassian.net)
 - **Presentations**: kmflow.agentic-innovations.com + state-street-apex.agentic-innovations.com
@@ -17,6 +17,7 @@ Pick up next Jira backlog item from KMFLOW board.
 
 ## Recently Completed
 
+- **PR #610**: Improve Knowledge Graph Explorer readability (#611) — hide edge labels (hover-to-reveal), larger nodes (40→50px), hover highlighting for connected nodes/edges, force-directed layout tuning, faded search class (merged 2026-03-18)
 - **PR #608**: Decision Intelligence presentation slides + fix all 79 mypy errors (#607) — 3 new slides (KM4ProcessBot, KM4DecisionBot, Decision UI), updated What's New/Stats/Changelog to v7.0, 79→0 mypy errors across 38 files, types-PyYAML added to pre-commit (merged 2026-03-12)
 - **PR #606**: Extract task mining utilities for Next.js 15 compliance (KMFLOW-114) — 6 functions to shared modules, fix ontology hook args, fix semantic API client (merged 2026-03-12)
 - **PR #605**: Remediate 25/26 CVEs across 14 Python packages (KMFLOW-113) — cryptography 46.0.5, pypdf 6.8.0, pillow, urllib3, werkzeug, flask, pdfminer.six, filelock, pyasn1, pynacl, azure-core, wheel, black, pip; accepted risks documented (merged 2026-03-12)
@@ -103,3 +104,15 @@ The project was built over February 2026 in a rapid sprint:
 ---
 > SESSION END WARNING (2026-03-11T21:22:54Z): activeContext.md was NOT updated during this session.
 > Branch: main, Uncommitted: 23
+
+---
+> SESSION END WARNING (2026-03-12T17:35:42Z): activeContext.md was NOT updated during this session.
+> Branch: main, Uncommitted: 23
+
+---
+> SESSION END WARNING (2026-03-17T19:16:48Z): activeContext.md was NOT updated during this session.
+> Branch: main, Uncommitted: 24
+
+---
+> SESSION END WARNING (2026-03-18T21:06:40Z): activeContext.md was NOT updated during this session.
+> Branch: main, Uncommitted: 24
