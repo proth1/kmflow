@@ -83,29 +83,88 @@ export default function GraphExplorer({ nodes, edges }: GraphExplorerProps) {
           selector: "node",
           style: {
             label: "data(label)",
-            "text-valign": "center",
+            "text-valign": "bottom",
             "text-halign": "center",
-            "font-size": "10px",
+            "text-margin-y": 6,
+            "font-size": "11px",
+            "font-weight": "bold" as any,
             "text-wrap": "wrap",
-            "text-max-width": "80px",
-            width: 40,
-            height: 40,
+            "text-max-width": "100px",
+            width: 50,
+            height: 50,
             "background-color": (ele: any) => NODE_COLORS[ele.data("type")] ?? "#9ca3af",
+            "border-width": 2,
+            "border-color": (ele: any) => {
+              const base = NODE_COLORS[ele.data("type")] ?? "#9ca3af";
+              return base;
+            },
+            "border-opacity": 0.3,
             color: "#1f2937",
+            "text-background-color": "#ffffff",
+            "text-background-opacity": 0.85,
+            "text-background-padding": "2px" as any,
+            "text-background-shape": "roundrectangle",
+          },
+        },
+        {
+          selector: "node:active",
+          style: {
+            "overlay-opacity": 0.1,
           },
         },
         {
           selector: "edge",
           style: {
-            label: "data(label)",
-            "font-size": "8px",
-            "text-rotation": "autorotate",
+            label: "",
             "curve-style": "bezier",
             "target-arrow-shape": "triangle",
-            "line-color": "#d1d5db",
-            "target-arrow-color": "#d1d5db",
-            width: 1,
-            color: "#9ca3af",
+            "line-color": "#cbd5e1",
+            "target-arrow-color": "#cbd5e1",
+            width: 1.5,
+            opacity: 0.6,
+          },
+        },
+        {
+          selector: "edge:active, edge.hover",
+          style: {
+            label: "data(label)",
+            "font-size": "10px",
+            "text-rotation": "autorotate",
+            "text-background-color": "#ffffff",
+            "text-background-opacity": 0.95,
+            "text-background-padding": "3px" as any,
+            "text-background-shape": "roundrectangle",
+            color: "#374151",
+            "line-color": "#6366f1",
+            "target-arrow-color": "#6366f1",
+            width: 2.5,
+            opacity: 1,
+            "z-index": 10,
+          },
+        },
+        {
+          selector: "node.highlight",
+          style: {
+            "border-width": 3,
+            "border-color": "#2563eb",
+            "border-opacity": 1,
+          },
+        },
+        {
+          selector: "edge.highlight",
+          style: {
+            label: "data(label)",
+            "font-size": "10px",
+            "text-rotation": "autorotate",
+            "text-background-color": "#ffffff",
+            "text-background-opacity": 0.95,
+            "text-background-padding": "3px" as any,
+            "text-background-shape": "roundrectangle",
+            color: "#374151",
+            "line-color": "#6366f1",
+            "target-arrow-color": "#6366f1",
+            width: 2.5,
+            opacity: 1,
           },
         },
         {
@@ -115,8 +174,29 @@ export default function GraphExplorer({ nodes, edges }: GraphExplorerProps) {
             "border-color": "#2563eb",
           },
         },
+        {
+          selector: ".faded",
+          style: {
+            opacity: 0.15,
+          },
+        },
       ],
-      layout: { name: layout, animate: true },
+      layout: {
+        name: layout,
+        animate: true,
+        ...(layout === "cose"
+          ? {
+              idealEdgeLength: 120,
+              nodeOverlap: 30,
+              nodeRepulsion: 8000 as any,
+              gravity: 0.4,
+              padding: 50,
+            }
+          : {}),
+        ...(layout === "breadthfirst" ? { spacingFactor: 1.5, padding: 30 } : {}),
+        ...(layout === "circle" ? { spacingFactor: 1.3, padding: 30 } : {}),
+        ...(layout === "grid" ? { spacingFactor: 1.5, padding: 30 } : {}),
+      },
     });
 
     cy.on("tap", "node", (event: any) => {
@@ -128,6 +208,29 @@ export default function GraphExplorer({ nodes, edges }: GraphExplorerProps) {
       if (event.target === cy) {
         setSelectedNode(null);
       }
+    });
+
+    // Hover: highlight connected edges + show their labels
+    cy.on("mouseover", "node", (event: any) => {
+      const node = event.target;
+      node.addClass("highlight");
+      node.connectedEdges().addClass("highlight");
+      node.neighborhood("node").addClass("highlight");
+    });
+
+    cy.on("mouseout", "node", (event: any) => {
+      const node = event.target;
+      node.removeClass("highlight");
+      node.connectedEdges().removeClass("highlight");
+      node.neighborhood("node").removeClass("highlight");
+    });
+
+    cy.on("mouseover", "edge", (event: any) => {
+      event.target.addClass("hover");
+    });
+
+    cy.on("mouseout", "edge", (event: any) => {
+      event.target.removeClass("hover");
     });
 
     cyRef.current = cy;
