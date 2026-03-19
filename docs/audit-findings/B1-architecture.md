@@ -1,8 +1,8 @@
-# B1: Architecture Audit Findings (Re-Audit #2)
+# B1: Architecture Audit Findings (Re-Audit #3)
 
 **Agent**: B1 (Architecture Auditor)  
 **Date**: 2026-03-19  
-**Prior Audits**: 2026-02-20, 2026-02-26  
+**Prior Audits**: 2026-02-20, 2026-02-26, 2026-03-19 (Re-Audit #2)  
 **Scope**: Module boundaries, god files, coupling analysis, async patterns, scalability concerns  
 
 ## Summary
@@ -10,233 +10,163 @@
 | Severity | Count |
 |----------|-------|
 | CRITICAL | 0 |
-| HIGH | 3 |
-| MEDIUM | 5 |
+| HIGH | 2 |
+| MEDIUM | 4 |
 | LOW | 3 |
-| SOUND | 6 |
+| SOUND | 8 |
 
-**Overall Architecture Risk Score**: MEDIUM  
-**Design Pattern Compliance**: 7/10  
-**SOLID Compliance**: 7/10  
+**Overall Architecture Risk Score**: MEDIUM (improved from prior)  
+**Design Pattern Compliance**: 8/10  
+**SOLID Compliance**: 8/10  
 
 ### Prior-Audit Remediation Status
 
 | Prior Finding | Status | Notes |
 |---------------|--------|-------|
-| CRITICAL: Sync simulation engine blocking event loop | **RESOLVED** | Now wrapped in `asyncio.to_thread()` (line 216) |
-| HIGH: GOD-FILE `src/core/models.py` (1717 lines) | **RESOLVED** | Split into 33 domain-specific modules under `src/core/models/` (6063 total lines, largest 506) |
-| HIGH: `src/api/routes/simulations.py` (1309 lines) | **PARTIALLY RESOLVED** | Schemas extracted; route file reduced to 1177 lines but has grown new endpoints |
-| HIGH: Schemas defined inline in 14+ route files | **NOT RESOLVED** | Still only `simulations` and `taskmining` have extracted schemas |
-| HIGH: Encapsulation violation `engine._assess_dimension_maturity` | **RESOLVED** | No longer present in tom.py |
-| MEDIUM: In-memory rate limiter `_llm_request_log` in simulations.py | **RESOLVED** | Removed from simulations.py |
-| MEDIUM: Inconsistent API_BASE in frontend | **RESOLVED** | All files now import `API_BASE_URL` from `@/lib/api/client` |
-| MEDIUM: Evidence pipeline 849 lines spanning 5 concerns | **NOT RESOLVED** | Grown to 865 lines |
-| LOW: `_check_engagement_member` duplication in tom.py | **NOT RESOLVED** | Still present, used 15 times |
+| CRITICAL: Sync simulation engine blocking event loop | **RESOLVED** | Wrapped in `asyncio.to_thread()` (simulations.py:216) |
+| HIGH: GOD-FILE `src/core/models.py` (1717 lines) | **RESOLVED** | Split into 33 domain modules under `src/core/models/` |
+| HIGH: `src/api/routes/simulations.py` (1309 lines) | **RESOLVED** | Schemas extracted to `src/api/schemas/simulations.py`; route file now 1177 lines |
+| HIGH: Schemas defined inline in 14+ route files | **PARTIALLY RESOLVED** | 16 schema files now exist; 6 route files still have inline schemas |
+| HIGH: Encapsulation violation `engine._assess_dimension_maturity` | **RESOLVED** | No longer present |
+| MEDIUM: In-memory rate limiter in simulations.py | **RESOLVED** | Replaced with Redis sliding-window (lines 84-122) |
+| MEDIUM: Inconsistent API_BASE in frontend | **RESOLVED** | All files import from `@/lib/api/client` |
+| MEDIUM: Evidence pipeline imports HTTPException | **RESOLVED** | Now uses `EvidenceValidationError` domain exception |
+| MEDIUM: Dashboard in-memory cache | **RESOLVED** | Now Redis-backed via `request.app.state.redis_client` |
+| LOW: `_check_engagement_member` duplication in tom.py | **RESOLVED** | Replaced with shared `verify_engagement_member` from `src/core/permissions` |
 
 ---
 
 ## Findings
 
-### [HIGH] GOD-FILE: `src/api/routes/tom.py` is 2274 lines with 35 route handlers and 51 inline schemas
+### [HIGH] GOD-FILE: Route files tom.py (1751 lines) and pov.py (1496 lines) remain oversized
 
-**File**: `/Users/proth/repos/kmflow/src/api/routes/tom.py:1-2274`  
+**File**: `/Users/proth/repos/kmflow/src/api/routes/tom.py:1-1751`  
 **Agent**: B1 (Architecture Auditor)  
 **Evidence**:
 ```python
-# 51 Pydantic schemas defined inline (lines 86-1900):
-class DimensionInput(BaseModel):          # line 86
-class TOMCreate(BaseModel):               # line 94
-class GapDashboardResponse(BaseModel):    # line 1402
-class MaturityHeatmapResponse(BaseModel): # line 1867
-class AlignmentRunResultsResponse(BaseModel):  # line 1900
-
-# 35 route handlers in a single file:
-@router.post("/", ...)                    # create TOM
-@router.get("/{tom_id}", ...)             # get TOM
-# ... 33 more handlers
+# tom.py: 1751 lines, 35 route handlers spanning 8 sub-domains:
+async def create_tom(                    # line 139 - TOM CRUD
+async def create_gap(                    # line 426 - Gap analysis
+async def create_best_practice(          # line 595 - Best practices
+async def create_benchmark(              # line 674 - Benchmarks
+async def generate_roadmap(              # line 1202 - Roadmaps
+async def compute_maturity_scores(       # line 1396 - Maturity
+async def trigger_alignment_scoring(     # line 1583 - Alignment runs
+async def _run_alignment_scoring_async(  # line 1702 - Background task
 ```
-**Description**: This file has grown to become the largest route file in the codebase at 2274 lines, surpassing even the previously-flagged simulations.py (now 1177 lines). It contains 51 Pydantic schema classes and 35 route handlers. The file covers TOMs, gap analysis, best practices, benchmarks, roadmaps, maturity scoring, alignment runs, and conformance checking -- at least 8 distinct sub-domains packed into one module. The file also defines its own authorization helper (`_check_engagement_member`) rather than using the shared `require_engagement_access` dependency.  
-**Risk**: Merge conflicts when multiple developers work on TOM-adjacent features. A single import failure or syntax error in any of the 51 schemas or 35 handlers disables the entire TOM subsystem. Testing requires loading 2274 lines of code to test any single endpoint.  
-**Recommendation**: Split into sub-routers: `tom/core.py` (CRUD), `tom/gaps.py` (gap analysis), `tom/benchmarks.py` (best practices + benchmarks), `tom/roadmaps.py` (roadmaps), `tom/maturity.py` (scoring + alignment). Extract all 51 schemas to `src/api/schemas/tom.py`. Remove `_check_engagement_member` in favor of `Depends(require_engagement_access)`.
+**Description**: tom.py is 1751 lines with 35 async route handlers. It covers TOMs, gap analysis, best practices, benchmarks, roadmaps, maturity scoring, conformance, and alignment runs -- at least 8 distinct sub-domains. Schemas have been properly extracted to `src/api/schemas/tom.py` (539 lines), which is a significant improvement from the prior audit, but the route logic itself remains monolithic. pov.py follows the same pattern at 1496 lines with schemas extracted to `src/api/schemas/pov.py`.  
+**Risk**: Merge conflicts when multiple developers work on TOM-adjacent features. A syntax error anywhere in the file disables the entire TOM subsystem (all 35 endpoints). High cognitive load for reviewers.  
+**Recommendation**: Split into sub-routers: `tom/core.py` (CRUD), `tom/gaps.py`, `tom/benchmarks.py`, `tom/roadmaps.py`, `tom/maturity.py`, `tom/alignment.py`. Same for pov.py.
 
 ---
 
-### [HIGH] GOD-FILE: `src/api/routes/pov.py` is 1875 lines with 22 route handlers and 35 inline schemas
+### [HIGH] SCHEMA-COUPLING: 6 route files still define 104+ Pydantic schemas inline
 
-**File**: `/Users/proth/repos/kmflow/src/api/routes/pov.py:1-1875`  
+**File**: `/Users/proth/repos/kmflow/src/api/routes/monitoring.py:52` (representative)  
 **Agent**: B1 (Architecture Auditor)  
 **Evidence**:
 ```python
-# 35 Pydantic schemas defined inline:
-class POVGenerateRequest(BaseModel):      # line 78
-class ProcessModelResponse(BaseModel):    # line 94
-class DarkRoomResponse(BaseModel):        # line 1557
-class IlluminationPlanResponse(BaseModel): # line 1654
-class SegmentCompletionResponse(BaseModel): # line 1694
+# Inline schema counts per route file (still not extracted):
+# monitoring.py:      22 schemas
+# governance.py:      20 schemas
+# validation.py:      20 schemas
+# dashboard.py:       18 schemas
+# regulatory.py:      14 schemas
+# pipeline_quality.py: 10 schemas
+# Total inline:       104 schemas
+
+# Meanwhile, 16 schema files already exist in src/api/schemas/:
+# tom.py (539 lines), pov.py, simulations.py, taskmining.py, etc.
 ```
-**Description**: The POV route file is the second largest at 1875 lines. It spans POV generation, process model retrieval, evidence mapping, confidence scoring, version diffing, reverse evidence lookup, dark room analysis, and illumination planning. These are at least 5 distinct functional areas that have accumulated in a single file. The file also contains Redis-backed job management (`_set_job`, `_get_job`) that is infrastructure logic, not route logic.  
-**Risk**: Same risks as tom.py -- merge conflicts, blast radius, cognitive load. The Redis job management functions are duplicated logic that could be shared across other route files needing async job patterns.  
-**Recommendation**: Split into `pov/generation.py`, `pov/models.py`, `pov/confidence.py`, `pov/dark_room.py`, `pov/illumination.py`. Extract Redis job helpers to a shared `src/api/services/job_store.py`. Extract schemas to `src/api/schemas/pov.py`.
+**Description**: The project coding standards mandate "Pydantic models for all request/response schemas (in `src/api/schemas/`)". While tom.py, pov.py, simulations.py, and taskmining.py schemas have been properly extracted, 6 route files still define 104+ Pydantic schema classes inline. The extraction pattern is well-established and proven; it simply has not been applied consistently.  
+**Risk**: Schema duplication risk when multiple routes need the same response shape. Inline schemas inflate route files, contributing directly to god-file size. SDK/OpenAPI schema re-use becomes harder.  
+**Recommendation**: Extract schemas for monitoring.py, governance.py, validation.py, dashboard.py, regulatory.py, and pipeline_quality.py. Each extraction would shrink the corresponding route file by 200-400 lines.
 
 ---
 
-### [HIGH] SCHEMA-COUPLING: 14+ route files still define Pydantic schemas inline
-
-**File**: `/Users/proth/repos/kmflow/src/api/routes/tom.py:86-1900` (representative)  
-**Agent**: B1 (Architecture Auditor)  
-**Evidence**:
-```python
-# Inline schema counts per route file (unchanged since prior audit):
-# tom.py:         51 schemas (was 14 -- has tripled)
-# pov.py:         35 schemas
-# governance.py:  20 schemas
-# monitoring.py:  22 schemas
-# validation.py:  20 schemas
-# dashboard.py:   18 schemas
-
-# Only simulations.py and taskmining.py use src/api/schemas/:
-from src.api.schemas.simulations import (
-    ScenarioCreate,
-    ScenarioResponse,
-    # ...
-)
-```
-**Description**: The pattern established by `src/api/schemas/simulations.py` (263 lines) and `src/api/schemas/taskmining.py` has not been replicated. The combined inline schema count across route files now exceeds 200 classes. The tom.py file alone has 51 schemas -- more than the entire extracted simulations schema file. This violates the project's own coding standards which specify "Pydantic models for all request/response schemas (in `src/api/schemas/`)".  
-**Risk**: Schema duplication when multiple routes need the same response shape. Cannot generate SDK clients from schema-only imports. Inline schemas inflate route files past maintainability thresholds, contributing directly to the god-file findings above.  
-**Recommendation**: Systematically extract schemas for the top 6 route files by size. Start with tom.py (51 schemas) and pov.py (35 schemas) which would each shrink by ~800-1000 lines.
-
----
-
-### [MEDIUM] DEFERRED-IMPORTS: 60+ deferred imports indicate hidden dependency graph
+### [MEDIUM] DEFERRED-IMPORTS: 30+ deferred imports indicate hidden coupling in service modules
 
 **File**: Multiple files across `/Users/proth/repos/kmflow/src/`  
 **Agent**: B1 (Architecture Auditor)  
 **Evidence**:
 ```python
-# src/evidence/pipeline.py - 10 deferred imports inside function bodies:
-    from src.datalake.backend import StorageBackend           # line 195
-    from src.semantic.entity_extraction import extract_entities # line 293
-    from src.semantic.graph import KnowledgeGraphService       # line 378
-    from src.rag.embeddings import EmbeddingService            # line 514
-    from src.datalake.lineage import create_lineage_record     # line 780
-    from src.datalake.silver import SilverLayerWriter          # line 814
+# src/mcp/server.py - 6 deferred imports inside tool handlers:
+async def _tool_get_engagement(session_factory, args, *, user_id):
+    from src.core.models import Engagement, EngagementMember, EvidenceItem  # line 162
 
-# src/mcp/server.py - 7 deferred imports inside tool handlers:
-    from src.core.models import Engagement, EvidenceItem       # line 160
-    from src.core.models import ProcessModel                   # line 210
-    from src.core.models import GapAnalysisResult              # line 236
-    from src.core.models import AlertStatus, MonitoringAlert   # line 258
+# src/taskmining/worker.py - 6 deferred imports:
+async def _ingest_session(session_id, redis_client):
+    from src.core.config import Settings                    # line 137
+    from src.core.database import async_session_factory     # line 138
+    from src.core.neo4j import create_neo4j_driver          # line 139
+    from src.semantic.graph import KnowledgeGraphService     # line 140
+
+# src/api/routes/tom.py - 4 deferred imports in route handlers:
+    from src.semantic.graph import KnowledgeGraphService     # line 933
+    from src.tom.alignment import TOMAlignmentEngine         # line 934
 ```
-**Description**: Over 60 imports are deferred to function-level scope. While some are justified (e.g., `src/integrations/base.py` factory method loading connectors on demand, `src/mcp/server.py` lazy-loading models for tool handlers), the pattern in `evidence/pipeline.py` is a code smell -- the file imports from 6 different packages at function scope, suggesting it has too many responsibilities rather than truly optional dependencies. The `api/main.py` lifespan function also uses 6 deferred imports for worker classes.  
-**Risk**: Deferred imports hide the true dependency graph from static analysis. Import-time errors surface only at runtime when the specific code path is hit. This makes dead code detection and dependency auditing unreliable.  
-**Recommendation**: Categorize each deferred import as: (a) lazy-loading optional heavy dependency, (b) avoiding circular import, or (c) unnecessary. For pipeline.py, splitting responsibilities (per MEDIUM finding below) would allow most imports to move to top level.
+**Description**: Over 30 imports are deferred to function-level scope across the codebase. In `mcp/server.py`, every tool handler re-imports models on each invocation. In `taskmining/worker.py`, 6 imports are deferred inside the main processing function. The tom.py route handlers also defer service imports. While some are justified (e.g., `datalake/backend.py` lazily loading optional `DatabricksBackend`), many appear to be avoiding import-time side effects or circular references rather than truly optional dependencies.  
+**Risk**: Import-time errors surface only at runtime when specific code paths are hit. Static analysis tools cannot trace the full dependency graph. Performance overhead from repeated module lookups (mitigated by Python's import cache, but still a code smell).  
+**Recommendation**: Categorize each deferred import as (a) lazy-loading optional heavy dependency, (b) avoiding circular import, or (c) unnecessary. Move category (c) to top level.
 
 ---
 
-### [MEDIUM] MUTABLE-GLOBAL-STATE: In-memory dashboard cache breaks stateless service design
+### [MEDIUM] PIPELINE-RESPONSIBILITY: Evidence pipeline is 870 lines spanning 5 architectural concerns
 
-**File**: `/Users/proth/repos/kmflow/src/api/routes/dashboard.py:54-72`  
-**Agent**: B1 (Architecture Auditor)  
-**Evidence**:
-```python
-_DASHBOARD_CACHE_TTL = 30  # seconds
-_dashboard_cache: dict[str, tuple[float, Any]] = {}
-
-def _cache_get(key: str) -> Any | None:
-    entry = _dashboard_cache.get(key)
-    if entry is None:
-        return None
-    ts, value = entry
-    if time.monotonic() - ts > _DASHBOARD_CACHE_TTL:
-        del _dashboard_cache[key]
-        return None
-    return value
-```
-**Description**: The dashboard cache is a module-level mutable dictionary. The prior audit's `_llm_request_log` in simulations.py has been removed (remediated), but this dashboard cache remains. In a multi-worker deployment (`uvicorn --workers N`), each worker maintains its own cache, leading to N copies of the same data in memory and inconsistent cache behavior across workers. The codebase has Redis infrastructure available via `app.state.redis_client`.  
-**Risk**: In multi-worker deployments, cache hit rates drop to ~1/N. Memory usage scales linearly with worker count. Cache invalidation is impossible across workers.  
-**Recommendation**: Replace with Redis-backed cache using `app.state.redis_client`. A 30-second TTL maps directly to Redis `SETEX`. The `_cache_get`/`_cache_set` API can remain identical with a Redis backend swap.
-
----
-
-### [MEDIUM] PIPELINE-RESPONSIBILITY: Evidence pipeline is 865 lines spanning 5 architectural concerns
-
-**File**: `/Users/proth/repos/kmflow/src/evidence/pipeline.py:1-865`  
+**File**: `/Users/proth/repos/kmflow/src/evidence/pipeline.py:1-870`  
 **Agent**: B1 (Architecture Auditor)  
 **Evidence**:
 ```python
 # Five distinct responsibilities in one file:
-# 1. File validation (lines 44-135): MIME detection, size checks
-# 2. Storage operations (lines 137-227): hashing, dedup, file I/O
-# 3. Parsing orchestration (lines 230-271): fragment extraction
-# 4. Intelligence pipeline (lines 279-600): entity extraction, graph, embeddings, bridges
-# 5. Master orchestrator (lines 700-865): ingest_evidence (170 lines, 9 steps)
-
-# The file also imports HTTPException from FastAPI (line 19):
-from fastapi import HTTPException
+async def check_duplicate(...)           # line 150 - Storage concern
+async def store_file(...)                # line 171 - Storage concern
+async def process_evidence(...)          # line 231 - Parse orchestration
+async def extract_fragment_entities(...) # line 280 - NLP/semantic
+async def build_fragment_graph(...)      # line 358 - Knowledge graph
+async def generate_fragment_embeddings(...)  # line 501 - RAG
+async def run_semantic_bridges(...)      # line 555 - Semantic linking
+async def run_intelligence_pipeline(...) # line 616 - Orchestrator
+async def ingest_evidence(...)           # line 702 - Master orchestrator
 ```
-**Description**: This file has grown from 849 to 865 lines since the prior audit. The `ingest_evidence` function orchestrates 9 sequential steps across 170 lines. The intelligence pipeline section (279-600) imports from semantic, rag, and datalake packages. Notably, the file imports `HTTPException` from FastAPI -- a presentation-layer concern in what should be a service-layer module. The `validate_file_type` function raises `HTTPException(415)` directly, coupling the pipeline to FastAPI's error model.  
-**Risk**: The `HTTPException` import makes this module untestable without FastAPI context. The service layer should raise domain exceptions (`UnsupportedFileType`, `FileTooLarge`) and let the route handler translate to HTTP errors. The 10 deferred imports make dependency analysis unreliable.  
-**Recommendation**: Extract `evidence/validation.py`, `evidence/storage.py`, `evidence/intelligence.py`. Replace `HTTPException` raises with domain-specific exceptions. The pipeline module becomes a thin orchestrator.
+**Description**: This file orchestrates the entire evidence lifecycle from upload through intelligence extraction. It imports from 6 packages (`core`, `evidence`, `semantic`, `rag`, `datalake`, `quality`). The layering violation (FastAPI HTTPException import) from the prior audit has been resolved -- the file now correctly uses `EvidenceValidationError` from `src/evidence/exceptions.py`. However, the file still mixes storage operations, parse orchestration, entity extraction, graph building, embedding generation, and semantic bridging in a single module.  
+**Risk**: Testing any single pipeline stage requires loading the entire 870-line module. Changes to the embedding step risk breaking the parsing step through shared state.  
+**Recommendation**: Extract `evidence/storage.py` (store_file, check_duplicate), `evidence/intelligence.py` (extract, graph, embeddings, bridges). Keep `pipeline.py` as a thin orchestrator composing these modules.
 
 ---
 
-### [MEDIUM] LAYERING-VIOLATION: Evidence pipeline raises FastAPI HTTPException from service layer
+### [MEDIUM] BACKGROUND-TASK-PATTERN: Module-level mutable sets in 3 route files for asyncio task GC prevention
 
-**File**: `/Users/proth/repos/kmflow/src/evidence/pipeline.py:19,123,130,733`  
+**File**: `/Users/proth/repos/kmflow/src/api/routes/tom.py:92`  
 **Agent**: B1 (Architecture Auditor)  
 **Evidence**:
 ```python
-from fastapi import HTTPException  # line 19
+# Three separate route modules maintain identical patterns:
+# tom.py:92
+_background_tasks: set[asyncio.Task[None]] = set()
+# validation.py:65
+_background_tasks: set[asyncio.Task[None]] = set()
+# scenario_simulation.py:40
+_background_tasks: set[asyncio.Task[None]] = set()
 
-# In validate_file_type():
-    raise HTTPException(              # line 123
-        status_code=415,
-        detail="File type 'application/octet-stream' is not allowed..."
-    )
-
-# In ingest_evidence():
-    raise HTTPException(              # line 733
-        status_code=413,
-        detail=f"File size {len(file_content)} exceeds maximum..."
-    )
+# Usage pattern (tom.py:1640-1648):
+task = asyncio.create_task(
+    _run_alignment_scoring_async(run_id=run_id, ...)
+)
+_background_tasks.add(task)
+task.add_done_callback(_background_tasks.discard)
 ```
-**Description**: The evidence pipeline is architecturally a service-layer module (it sits under `src/evidence/`, not `src/api/`). However, it directly raises `HTTPException`, which is a FastAPI presentation-layer concern. This creates a dependency from the service layer back to the web framework, violating dependency inversion. The pipeline cannot be reused from CLI tools, background workers, or test scripts without importing FastAPI.  
-**Risk**: If the pipeline is called from a non-HTTP context (e.g., the `EvidenceBatchWorker` background task), the `HTTPException` will propagate as an unhandled exception rather than being caught and logged properly. The batch worker at `src/evidence/batch_worker.py` calls pipeline functions and would need to catch `HTTPException` -- a web framework exception in a background job.  
-**Recommendation**: Define `class EvidenceValidationError(ValueError)` in `src/evidence/exceptions.py`. Replace `HTTPException` raises in pipeline.py with `EvidenceValidationError`. Have the route handler in `src/api/routes/evidence.py` catch `EvidenceValidationError` and re-raise as `HTTPException`.
+**Description**: Three route modules independently implement the same fire-and-forget task pattern with module-level `set()` for GC prevention. The `add_done_callback(discard)` pattern is correctly used to clean up completed tasks, so the prior audit's memory leak concern is addressed. However, the pattern is duplicated across 3 files with no shared abstraction. Additionally, these sets are not drained during application shutdown (the lifespan shutdown only cancels `app.state.worker_tasks`).  
+**Risk**: On graceful shutdown, background tasks in these sets may be orphaned or interrupted mid-operation without cleanup. DRY violation makes it easy to add a new background task site without the done callback.  
+**Recommendation**: Create a shared `BackgroundTaskManager` class (or use FastAPI's built-in `BackgroundTasks`) registered in `app.state`. Centralize the add/discard/shutdown pattern.
 
 ---
 
-### [MEDIUM] DUPLICATE-AUTH-LOGIC: `_check_engagement_member` in tom.py duplicates shared dependency
-
-**File**: `/Users/proth/repos/kmflow/src/api/routes/tom.py:60-80`  
-**Agent**: B1 (Architecture Auditor)  
-**Evidence**:
-```python
-async def _check_engagement_member(session: AsyncSession, user: User, engagement_id: UUID) -> None:
-    """Verify user is a member of the engagement and set RLS context."""
-    await set_engagement_context(session, engagement_id)
-    if user.role == UserRole.PLATFORM_ADMIN:
-        return
-    result = await session.execute(
-        select(EngagementMember).where(
-            EngagementMember.engagement_id == engagement_id,
-            EngagementMember.user_id == user.id,
-        )
-    )
-```
-**Description**: This function is called 15 times within tom.py (lines 315, 365, 401, 422, 479, 520, 555, 611, 659, 724, 1430, 1757, 1793, 2198, and more). The shared `require_engagement_access` dependency in `src/core/permissions.py` performs the same check and is used by other route files. Having two authorization code paths increases the risk that a security fix in the shared dependency is not applied to tom.py's local copy.  
-**Risk**: Authorization bypass if the shared dependency is updated with additional checks (e.g., engagement status validation, IP allowlisting) but the local copy is not. Security audit complexity increases with duplicate authorization implementations.  
-**Recommendation**: Replace all 15 call sites with `Depends(require_engagement_access)`. The RLS context setting can be moved into the shared dependency if not already present.
-
----
-
-### [LOW] EMBEDDING-SERVICE-SINGLETON: Module-level mutable dict for singleton instances
+### [MEDIUM] MUTABLE-GLOBAL-STATE: Embedding service singleton dict without thread safety
 
 **File**: `/Users/proth/repos/kmflow/src/rag/embeddings.py:24`  
 **Agent**: B1 (Architecture Auditor)  
 **Evidence**:
 ```python
-# Module-level singleton instances keyed by (model_name, dimension).
 _instances: dict[tuple[str, int], EmbeddingService] = {}
 
 def get_embedding_service(
@@ -248,36 +178,15 @@ def get_embedding_service(
         _instances[key] = EmbeddingService(model_name=model_name, dimension=dimension)
     return _instances[key]
 ```
-**Description**: The singleton pattern uses a module-level dict without thread safety. While asyncio is single-threaded per event loop, if `get_embedding_service` is called from `asyncio.to_thread` (which it might be, since embedding generation uses `asyncio.to_thread` for SentenceTransformer), concurrent access to `_instances` could cause race conditions. Additionally, some call sites construct `EmbeddingService()` directly (e.g., pipeline.py line 520: `rag_service = EmbeddingService()`) bypassing the factory function entirely.  
-**Risk**: Low -- asyncio's GIL protects dict operations. The bypassed factory is a missed optimization (model loaded multiple times).  
-**Recommendation**: Ensure all call sites use `get_embedding_service()` instead of `EmbeddingService()` directly. Consider adding a thread lock if `to_thread` usage expands.
+**Description**: The singleton factory uses a module-level dict without thread-safety. The `EmbeddingService` is used via `asyncio.to_thread()` (lines 83, 99), meaning model inference runs in a thread pool. While `get_embedding_service()` itself is only called from the async context (protected by the GIL for dict operations), the check-then-set pattern is a TOCTOU race if called from multiple async tasks simultaneously.  
+**Risk**: Low in practice (Python GIL protects dict operations), but if the factory is ever called from `to_thread`, concurrent initialization could create duplicate model instances consuming significant GPU/CPU memory.  
+**Recommendation**: Use `functools.lru_cache` or a `threading.Lock` to make the singleton pattern thread-safe.
 
 ---
 
-### [LOW] BACKGROUND-TASK-LEAK-GUARD: Module-level sets for asyncio task references
+### [LOW] ROUTE-FILE-PROLIFERATION: 77 route modules registered in main.py
 
-**File**: `/Users/proth/repos/kmflow/src/api/routes/tom.py:57`, `/Users/proth/repos/kmflow/src/api/routes/validation.py:63`, `/Users/proth/repos/kmflow/src/api/routes/scenario_simulation.py:40`  
-**Agent**: B1 (Architecture Auditor)  
-**Evidence**:
-```python
-# tom.py:
-_background_tasks: set[asyncio.Task[None]] = set()
-
-# validation.py:
-_background_tasks: set[asyncio.Task[None]] = set()
-
-# scenario_simulation.py:
-_background_tasks: set[asyncio.Task[None]] = set()
-```
-**Description**: Three route modules maintain module-level sets to hold references to background `asyncio.Task` objects, preventing garbage collection from cancelling them. This is a valid Python pattern for fire-and-forget tasks, but the sets grow monotonically -- completed tasks are only removed via weak reference callbacks (if implemented) or never removed at all. There is no size limit or cleanup mechanism visible.  
-**Risk**: Memory growth proportional to the number of background tasks launched over the process lifetime. In a long-running server, this could accumulate thousands of completed task references.  
-**Recommendation**: Use `task.add_done_callback(_background_tasks.discard)` to automatically remove completed tasks. Verify this callback is already in place; if not, add it at each `_background_tasks.add(task)` call site.
-
----
-
-### [LOW] ROUTE-FILE-PROLIFERATION: 77 route files registered in main.py
-
-**File**: `/Users/proth/repos/kmflow/src/api/main.py:34-107`  
+**File**: `/Users/proth/repos/kmflow/src/api/main.py:34-117`  
 **Agent**: B1 (Architecture Auditor)  
 **Evidence**:
 ```python
@@ -287,13 +196,53 @@ from src.api.routes import (
     assumptions,
     audit_logs,
     camunda,
-    # ... 72 more imports
+    # ... 72 more imports across 4 import blocks
     websocket,
 )
 ```
-**Description**: The application registers 77 route modules. While each module is individually reasonable in scope, the sheer number creates a large import surface at startup. The `main.py` file is 482 lines, with 73 lines dedicated solely to route imports. Route registration is procedural (each `app.include_router(X.router)`) rather than declarative or auto-discovered.  
-**Risk**: Low -- this is a scaling pattern issue rather than a correctness issue. Adding a new route requires modifying main.py in two places (import + include_router). Startup time increases with each import.  
-**Recommendation**: Consider route auto-discovery (scan `src/api/routes/` for modules with a `router` attribute) or grouping related routes into sub-packages with their own `__init__.py` that aggregates sub-routers.
+**Description**: The application registers 77 route modules in main.py across 4 import blocks (lines 34-117). Each requires a corresponding `app.include_router()` call. Adding a new route requires modifying main.py in two places.  
+**Risk**: Low -- this is a maintainability concern, not a correctness issue.  
+**Recommendation**: Consider route auto-discovery or grouping related routes into sub-packages.
+
+---
+
+### [LOW] GOD-FILE-RISK: 8 route files between 500-1259 lines trending toward god-file threshold
+
+**File**: Multiple route files  
+**Agent**: B1 (Architecture Auditor)  
+**Evidence**:
+```python
+# Route files in the 500-1259 line danger zone:
+# governance.py:      1259 lines, 20 inline schemas
+# validation.py:      1099 lines, 20 inline schemas
+# dashboard.py:       1079 lines, 18 inline schemas
+# taskmining.py:      1068 lines (schemas extracted)
+# monitoring.py:      1008 lines, 22 inline schemas
+# regulatory.py:       688 lines, 14 inline schemas
+# pipeline_quality.py:  559 lines, 10 inline schemas
+# evidence.py:          526 lines
+```
+**Description**: Eight route files are between 500-1259 lines. Those with inline schemas (governance, validation, dashboard, monitoring) would each drop 200-400 lines simply by extracting schemas. After extraction, only governance.py might still exceed the 500-line threshold, requiring further sub-router decomposition.  
+**Risk**: Without schema extraction, these files will continue growing as features are added.  
+**Recommendation**: Prioritize schema extraction for governance.py (20 schemas), monitoring.py (22 schemas), and validation.py (20 schemas) as the highest-leverage cleanup.
+
+---
+
+### [LOW] EMBEDDING-SERVICE-BYPASS: Some call sites construct EmbeddingService() directly
+
+**File**: `/Users/proth/repos/kmflow/src/api/routes/tom.py:1725-1727`  
+**Agent**: B1 (Architecture Auditor)  
+**Evidence**:
+```python
+# tom.py line 1725-1727 (inside _run_alignment_scoring_async):
+embedding_service = None
+try:
+    from src.rag.embeddings import EmbeddingService
+    embedding_service = EmbeddingService()
+```
+**Description**: The `get_embedding_service()` factory was created to ensure singleton behavior and avoid reloading the SentenceTransformer model, but some call sites still construct `EmbeddingService()` directly, bypassing the cache.  
+**Risk**: The SentenceTransformer model may be loaded multiple times, consuming extra memory. In the alignment scoring background task, this happens once per run, so impact is low.  
+**Recommendation**: Replace `EmbeddingService()` with `get_embedding_service()` at all call sites.
 
 ---
 
@@ -303,7 +252,7 @@ from src.api.routes import (
 
 **File**: `/Users/proth/repos/kmflow/src/core/models/`  
 **Agent**: B1 (Architecture Auditor)  
-**Description**: The model layer is now 33 domain-specific files totaling 6063 lines (average 184 lines/file, largest is taskmining.py at 506). The barrel `__init__.py` re-exports 170+ symbols for backward compatibility. This is well-organized domain-driven decomposition. The split from a single 1717-line file is complete and stable.
+**Description**: 33 domain-specific model files totaling 6064 lines (average 184 lines/file, largest taskmining.py at 506). The barrel `__init__.py` (466 lines) re-exports 170+ symbols. This is clean domain-driven decomposition, fully resolved from the original 1717-line monolith.
 
 ---
 
@@ -311,16 +260,7 @@ from src.api.routes import (
 
 **File**: `/Users/proth/repos/kmflow/frontend/src/lib/api/`  
 **Agent**: B1 (Architecture Auditor)  
-**Evidence**:
-```typescript
-// 23 domain-specific API modules:
-// client.ts, dashboard.ts, simulations.ts, tom.ts, governance.ts,
-// monitoring.ts, semantic.ts, annotations.ts, etc.
-
-// All components now import from the shared client:
-import { API_BASE_URL } from "@/lib/api";
-```
-**Description**: The prior audit's INCONSISTENT-API-BASE finding has been fully resolved. All frontend files now import `API_BASE_URL` from the shared `@/lib/api/client` module. No local `const API_BASE` definitions remain. The API client is properly decomposed into 23 domain modules with a barrel export. The frontend's largest TypeScript files (532, 517, 507 lines) are within acceptable bounds.
+**Description**: 23 domain-specific API modules with a shared `client.ts` (151 lines) providing typed generic `apiGet/apiPost/apiPut/apiPatch/apiDelete` helpers. All frontend files import from the shared client. The largest TypeScript files (532, 517, 507 lines) are within acceptable bounds. Cookie-based auth with `credentials: "include"` is consistent across all helpers.
 
 ---
 
@@ -336,7 +276,72 @@ engine_result = await asyncio.to_thread(
     parameters=scenario.parameters or {},
     simulation_type=scenario.simulation_type.value
 ```
-**Description**: The prior audit's CRITICAL finding (sync simulation engine blocking the event loop) has been remediated. The call is now properly wrapped in `asyncio.to_thread()`. All other sync-to-async bridges in the codebase (`rag/retrieval.py:114`, `rag/embeddings.py:83,99`, `evidence/parsers/layout_parser.py:82`) also correctly use `asyncio.to_thread()`. No blocking `time.sleep` calls exist in the src/ tree.
+**Description**: All sync-to-async bridges correctly use `asyncio.to_thread()`: simulations engine, embedding generation (2 call sites), cross-encoder reranking, and layout parsing. No `time.sleep` or blocking `requests` calls exist in `src/`. The prior CRITICAL finding is fully resolved and the pattern is consistently applied.
+
+---
+
+### [SOUND] Evidence Pipeline Layering (Remediated)
+
+**File**: `/Users/proth/repos/kmflow/src/evidence/pipeline.py` and `/Users/proth/repos/kmflow/src/evidence/exceptions.py`  
+**Agent**: B1 (Architecture Auditor)  
+**Evidence**:
+```python
+# exceptions.py - Domain exception with HTTP hint:
+class EvidenceValidationError(ValueError):
+    def __init__(self, message: str, *, status_hint: int = 400) -> None:
+        super().__init__(message)
+        self.status_hint = status_hint
+
+# pipeline.py line 123 - Uses domain exception, not HTTPException:
+raise EvidenceValidationError(
+    "File type 'application/octet-stream' is not allowed...",
+    status_hint=415,
+)
+```
+**Description**: The prior MEDIUM layering violation (pipeline importing FastAPI HTTPException) has been resolved. The pipeline now raises `EvidenceValidationError` with a `status_hint`, and the API route handler translates it to HTTPException. This properly separates service-layer concerns from presentation-layer concerns.
+
+---
+
+### [SOUND] Dashboard Redis Cache (Remediated)
+
+**File**: `/Users/proth/repos/kmflow/src/api/routes/dashboard.py:58-76`  
+**Agent**: B1 (Architecture Auditor)  
+**Evidence**:
+```python
+async def _cache_get(request: Request, key: str) -> Any | None:
+    redis_client = request.app.state.redis_client
+    raw = await redis_client.get(f"dashboard:{key}")
+    if raw is not None:
+        return json.loads(raw)
+
+async def _cache_set(request: Request, key: str, value: Any) -> None:
+    redis_client = request.app.state.redis_client
+    await redis_client.setex(f"dashboard:{key}", _DASHBOARD_CACHE_TTL, json.dumps(value, default=str))
+```
+**Description**: The prior MEDIUM finding (in-memory dict cache breaking stateless design) has been resolved. The dashboard cache now uses Redis via `request.app.state.redis_client` with `SETEX` for TTL. Graceful fallback on Redis errors preserves availability. This correctly supports multi-worker horizontal scaling.
+
+---
+
+### [SOUND] Shared Authorization (Remediated)
+
+**File**: `/Users/proth/repos/kmflow/src/api/routes/tom.py:82`  
+**Agent**: B1 (Architecture Auditor)  
+**Evidence**:
+```python
+from src.core.permissions import require_engagement_access, require_permission, verify_engagement_member
+# Used 15 times throughout the file:
+await verify_engagement_member(session, user, payload.engagement_id)  # line 145
+await verify_engagement_member(session, user, engagement_id)          # line 195
+```
+**Description**: The prior MEDIUM finding (duplicated `_check_engagement_member` local function) has been resolved. All 15 call sites now use `verify_engagement_member` from `src/core/permissions`, ensuring a single authorization code path.
+
+---
+
+### [SOUND] No Circular Dependencies or Layering Violations
+
+**File**: `/Users/proth/repos/kmflow/src/core/`  
+**Agent**: B1 (Architecture Auditor)  
+**Description**: `src/core/` does not import from `src/api/`. No route-to-route imports exist (zero matches for `from src.api.routes.X` inside another route file). Dependency direction is consistently downward: `api/ -> core/ -> (no upward imports)`. The evidence pipeline no longer imports from FastAPI.
 
 ---
 
@@ -344,23 +349,7 @@ engine_result = await asyncio.to_thread(
 
 **File**: `/Users/proth/repos/kmflow/src/evidence/parsers/`  
 **Agent**: B1 (Architecture Auditor)  
-**Description**: 15+ format-specific parsers (PDF, DOCX, BPMN, XES, Visio, ARIS, audio, video, etc.) follow the Open/Closed principle via `parsers/base.py` base class and `parsers/factory.py` dispatch. New formats are added without modifying existing parsers.
-
----
-
-### [SOUND] FastAPI Dependency Injection
-
-**File**: `/Users/proth/repos/kmflow/src/api/deps.py` and `/Users/proth/repos/kmflow/src/core/permissions.py`  
-**Agent**: B1 (Architecture Auditor)  
-**Description**: Consistent use of `Depends()` for database sessions, authentication, and authorization. Permission checks are composable injectable dependencies. The lifespan pattern properly initializes and tears down PostgreSQL, Neo4j, Redis, and Camunda connections.
-
----
-
-### [SOUND] No Circular Dependencies or Layering Violations in Core
-
-**File**: `/Users/proth/repos/kmflow/src/core/`  
-**Agent**: B1 (Architecture Auditor)  
-**Description**: The `src/core/` package does not import from `src/api/`. No route-to-route imports exist (`from src.api.routes.X` inside another route file -- zero matches). Dependency direction is consistently downward: `api/ -> core/ -> (no upward imports)`. The deferred imports in service modules are for lazy loading, not circular dependency avoidance (verified: none of the deferred import targets import back from their callers).
+**Description**: 15+ format-specific parsers follow the Open/Closed principle via `parsers/base.py` base class and `parsers/factory.py` dispatch. New formats are added without modifying existing parsers.
 
 ---
 
@@ -369,8 +358,9 @@ engine_result = await asyncio.to_thread(
 ### Dependency Direction (Healthy Patterns)
 ```
 api/routes    -> core/models, core/permissions, core/audit     (correct)
+api/routes    -> api/schemas/{domain}                           (correct)
 api/routes    -> {service modules}                              (correct)
-evidence/     -> core/models                                    (correct)
+evidence/     -> core/models, evidence/exceptions               (correct)
 semantic/     -> core/models                                    (correct)
 simulation/   -> core/models, core/config                       (correct)
 datalake/     -> core/models                                    (correct)
@@ -378,16 +368,15 @@ datalake/     -> core/models                                    (correct)
 
 ### Dependency Concerns
 ```
-api/routes/tom.py       -> 7 service modules + 15 model imports (high fan-out)
-api/routes/pov.py       -> 5 service modules (high fan-out)
-evidence/pipeline.py    -> 6 packages via deferred imports      (hidden coupling)
-api/main.py             -> 77 route modules                     (import surface)
+api/routes/tom.py       -> 7 service modules (high fan-out, justified by domain breadth)
+evidence/pipeline.py    -> 6 packages via deferred imports (hidden coupling)
+mcp/server.py           -> 6 deferred imports per tool handler (lazy loading pattern)
+api/main.py             -> 77 route modules (import surface)
 ```
 
 ### Cross-Cutting Concerns
 ```
-evidence/pipeline.py imports from fastapi  (layering violation -- MEDIUM finding above)
-All other service modules correctly avoid web framework imports
+All service modules correctly avoid web framework imports (0 violations)
 ```
 
 ---
@@ -398,28 +387,28 @@ All other service modules correctly avoid web framework imports
 
 | File | Lines | Route Handlers | Inline Schemas | Status |
 |------|-------|---------------|----------------|--------|
-| `api/routes/tom.py` | 2274 | 35 | 51 | **NEW GOD FILE** |
-| `api/routes/pov.py` | 1875 | 22 | 35 | **NEW GOD FILE** |
-| `api/routes/governance.py` | 1259 | 18 | 20 | At risk |
+| `api/routes/tom.py` | 1751 | 35 | 0 (extracted) | **GOD FILE** - needs sub-router split |
+| `api/routes/pov.py` | 1496 | 34 | 0 (extracted) | **GOD FILE** - needs sub-router split |
+| `api/routes/governance.py` | 1259 | 18 | 20 | At risk - extract schemas |
 | `api/routes/simulations.py` | 1177 | 22 | 0 (extracted) | Improved |
-| `api/routes/dashboard.py` | 1072 | 7 | 18 | At risk |
+| `api/routes/validation.py` | 1099 | -- | 20 | At risk - extract schemas |
+| `api/routes/dashboard.py` | 1079 | 7 | 18 | At risk - extract schemas |
 | `api/routes/taskmining.py` | 1068 | -- | 0 (extracted) | Acceptable |
-| `api/routes/validation.py` | 1067 | -- | 20 | At risk |
-| `api/routes/monitoring.py` | 1008 | -- | 22 | At risk |
+| `api/routes/monitoring.py` | 1008 | -- | 22 | At risk - extract schemas |
 | `semantic/conflict_detection.py` | 943 | -- | -- | Acceptable (algorithm) |
-| `evidence/pipeline.py` | 865 | -- | -- | Needs split |
+| `evidence/pipeline.py` | 870 | -- | -- | Needs responsibility split |
 | `semantic/entity_extraction.py` | 800 | -- | -- | Acceptable (algorithm) |
-| `semantic/graph.py` | 796 | -- | -- | Acceptable (service) |
+| `semantic/graph.py` | 798 | -- | -- | Acceptable (service) |
 | `pov/contradiction.py` | 735 | -- | -- | Acceptable (algorithm) |
-| `api/routes/regulatory.py` | 688 | -- | -- | Borderline |
+| `api/routes/regulatory.py` | 688 | -- | 14 | Borderline - extract schemas |
 | `taskmining/graph_ingest.py` | 645 | -- | -- | Acceptable |
-| `monitoring/alerting/engine.py` | 606 | -- | -- | Acceptable |
+| `monitoring/alerting/engine.py` | 613 | -- | -- | Acceptable |
 | `integrations/celonis_ems.py` | 565 | -- | -- | Acceptable |
 | `semantic/builder.py` | 562 | -- | -- | Acceptable |
-| `api/routes/pipeline_quality.py` | 557 | -- | -- | Borderline |
-| `api/routes/evidence.py` | 520 | -- | -- | Borderline |
+| `api/routes/pipeline_quality.py` | 559 | -- | 10 | Borderline - extract schemas |
+| `api/schemas/tom.py` | 539 | -- | -- | Acceptable (schema-only) |
+| `api/routes/evidence.py` | 526 | -- | -- | Borderline |
 | `core/models/taskmining.py` | 506 | -- | -- | Acceptable |
-| `core/services/aggregate_replay.py` | 501 | -- | -- | Acceptable |
 
 ### TypeScript/TSX files under frontend/src/ exceeding 500 lines:
 
@@ -435,14 +424,14 @@ All other service modules correctly avoid web framework imports
 
 | Concern | Rating | Notes |
 |---------|--------|-------|
-| Stateless service design | PARTIAL | Dashboard in-memory cache breaks statelessness |
+| Stateless service design | GOOD | Dashboard cache moved to Redis (remediated) |
 | Database connection pooling | GOOD | `pool_size` + `max_overflow` + `pool_pre_ping` configured |
 | Async architecture | GOOD | All sync calls properly wrapped in `asyncio.to_thread()` |
 | Session management | GOOD | Cookie-based auth, no server-side session state |
-| Horizontal scaling | PARTIAL | Must move dashboard cache to Redis before adding workers |
+| Horizontal scaling | GOOD | Redis-backed caching and rate limiting throughout |
 | Data isolation | GOOD | Engagement-scoped queries + RLS throughout |
 | Background workers | GOOD | Redis-backed monitoring, POV generation, task mining workers |
-| Background task GC | AT RISK | `_background_tasks` sets may leak completed task references |
+| Background task shutdown | AT RISK | Module-level `_background_tasks` sets not drained on shutdown |
 
 ---
 
@@ -450,11 +439,10 @@ All other service modules correctly avoid web framework imports
 
 | Priority | Finding | Effort | Impact |
 |----------|---------|--------|--------|
-| 1 | Split tom.py (2274 lines) into sub-routers + extract schemas | High | Eliminates largest god file |
-| 2 | Split pov.py (1875 lines) into sub-routers + extract schemas | High | Eliminates second god file |
-| 3 | Extract inline schemas from remaining 14+ route files | Medium | Coding standards compliance |
-| 4 | Replace dashboard in-memory cache with Redis | Low | Enables multi-worker scaling |
-| 5 | Extract HTTPException from evidence/pipeline.py | Low | Fixes layering violation |
-| 6 | Decompose evidence pipeline into focused modules | Medium | Reduces coupling |
-| 7 | Consolidate `_check_engagement_member` into shared dependency | Low | Single authorization path |
-| 8 | Add done callbacks to `_background_tasks` sets | Low | Prevents memory growth |
+| 1 | Extract inline schemas from 6 remaining route files (104 schemas) | Medium | Standards compliance; shrinks 6 files by 200-400 lines each |
+| 2 | Split tom.py (1751 lines) into sub-routers | Medium | Eliminates largest god file |
+| 3 | Split pov.py (1496 lines) into sub-routers | Medium | Eliminates second god file |
+| 4 | Decompose evidence pipeline into focused modules | Medium | Reduces coupling and improves testability |
+| 5 | Centralize background task management pattern | Low | DRY; enables graceful shutdown |
+| 6 | Audit and rationalize deferred imports | Low | Improves static analysis accuracy |
+| 7 | Use `get_embedding_service()` factory consistently | Low | Prevents duplicate model loading |

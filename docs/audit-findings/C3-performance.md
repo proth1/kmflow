@@ -3,7 +3,7 @@
 **Auditor**: C3 (Performance Auditor)
 **Date**: 2026-03-19
 **Scope**: N+1 queries, async anti-patterns, memory leaks, connection pooling, caching strategy
-**Files examined**: `src/api/routes/copilot.py`, `src/api/routes/evidence.py`, `src/api/routes/engagements.py`, `src/api/middleware/security.py`, `src/evidence/pipeline.py`, `src/evidence/chunking.py`, `src/semantic/graph.py`, `src/semantic/embeddings.py`, `src/semantic/bridges/process_evidence.py`, `src/semantic/bridges/evidence_policy.py`, `src/semantic/bridges/process_tom.py`, `src/semantic/bridges/communication_deviation.py`, `src/rag/retrieval.py`, `src/monitoring/alerting/engine.py`, `src/core/database.py`, `src/core/config.py`, `src/api/main.py`
+**Files examined**: `src/api/routes/evidence.py`, `src/api/routes/engagements.py`, `src/api/routes/graph.py`, `src/api/middleware/security.py`, `src/evidence/pipeline.py`, `src/semantic/graph.py`, `src/semantic/embeddings.py`, `src/semantic/builder.py`, `src/semantic/bridges/process_evidence.py`, `src/taskmining/semantic_bridge.py`, `src/rag/embeddings.py`, `src/core/regulatory.py`, `src/core/database.py`, `src/core/neo4j.py`, `src/core/config.py`, `src/evaluation/graph_health.py`, `src/monitoring/pipeline/continuous.py`, `src/api/main.py`
 
 ## Summary
 
@@ -19,24 +19,23 @@
 
 ## Findings
 
-### [CRITICAL] N+1 WRITE: `generate_fragment_embeddings` issues one SQL UPDATE per fragment inside a sequential loop
+### [CRITICAL] N+1 GRAPH READ: `search_similar` in `KnowledgeGraphService` issues one `get_node()` call per pgvector result row
 
-**File**: `src/evidence/pipeline.py:539`
+**File**: `src/semantic/graph.py:612`
 **Agent**: C3 (Performance Auditor)
 **Evidence**:
 ```python
-stored = 0
-for frag, embedding in zip(valid_fragments, embeddings, strict=True):
-    try:
-        await semantic_service.store_embedding(session, str(frag.id), embedding)
-        stored += 1
-    except (ValueError, ConnectionError, RuntimeError) as e:
-        logger.warning("Failed to store embedding for fragment %s: %s", frag.id, e)
+rows = result.fetchall()
+results: list[dict[str, Any]] = []
+for row in rows:
+    entity_id = str(row.evidence_id)
+    node = await self.get_node(entity_id)   # one Neo4j round-trip per row
 ```
-**Description**: `generate_fragment_embeddings` in `pipeline.py` calls `semantic_service.store_embedding()` once per fragment inside a sequential loop. Each `store_embedding` call executes a raw `UPDATE evidence_fragments SET embedding = :embedding WHERE id = :fragment_id` statement — a separate database round-trip. For a document that produces 50 fragments, this generates 50 sequential UPDATE queries, all holding the SQLAlchemy session open for the duration of the upload request. Ironically, `EmbeddingService.store_embeddings_batch()` already exists (at `src/semantic/embeddings.py:131`) and performs the same operation as a single `executemany` round-trip — it is simply not called here.
+**Description**: `KnowledgeGraphService.search_similar` executes a pgvector query that returns `top_k` rows (default 10), then enters a loop that calls `self.get_node(entity_id)` once per row. Each `get_node` call opens `async with self._driver.session()`, runs `MATCH (n {id: $node_id}) RETURN n, labels(n)`, and closes the session. For `top_k=10` this is 10 sequential Neo4j sessions opened and closed after every pgvector search. This is called from the RAG retrieval pipeline on every copilot query.
 
-**Risk**: On a document upload producing 100 fragments, this path executes 100 sequential UPDATE statements after the batch embedding generation completes. Combined with the synchronous execution within the upload request handler, this adds measurable latency to every file upload. The `store_embeddings_batch` method exists specifically to fix this and is documented with a reference to this finding class (comment: `C3-H2`), but `generate_fragment_embeddings` was not updated to use it.
-**Recommendation**: Replace the per-fragment loop with a single call to `semantic_service.store_embeddings_batch(session, [(str(frag.id), embedding) for frag, embedding in zip(valid_fragments, embeddings)])`. This collapses N database round-trips to 1.
+**Risk**: Each `get_node` round-trip adds approximately 2-5ms of Neo4j latency. For `top_k=10`, this adds 20-50ms to every semantic search operation. The RAG copilot and graph search endpoints call this path on every user query. Under concurrent load with 20 simultaneous copilot sessions, this generates 200 sequential Neo4j queries that could otherwise be a single `MATCH (n) WHERE n.id IN $ids` batch fetch.
+
+**Recommendation**: Replace the per-row `get_node` loop with a single batch query: collect all `entity_id` values from the pgvector results into a list, then issue `MATCH (n) WHERE n.id IN $ids RETURN n, labels(n)` once. Build a lookup dict from the batch result and map rows to nodes without per-row round-trips.
 
 ---
 
@@ -57,39 +56,39 @@ for ev_id, entity_ids in evidence_to_entities.items():
                 properties={"evidence_id": ev_id},
             )
 ```
-**Description**: The CO_OCCURS_WITH relationship creation loop is O(N²) in the number of co-occurring entities per evidence item. Each `create_relationship` call opens a new `async with self._driver.session()` context in `graph.py:182` and issues a single `MATCH ... CREATE` Cypher statement. For an evidence item with 20 co-occurring entities, this generates up to 190 sequential Neo4j sessions and queries. `KnowledgeGraphService.batch_create_relationships()` (at `src/semantic/graph.py:387`) already implements the correct `UNWIND`-based batch path but is not used here.
+**Description**: The `build_fragment_graph` function in `pipeline.py` creates CO_OCCURS_WITH relationships inside a triple-nested loop (evidence items × entity pairs). Each `create_relationship` call opens a new `async with self._driver.session()` context and issues a single `MATCH ... CREATE` Cypher statement. For an evidence item with 20 co-occurring entities this generates up to 190 sequential Neo4j sessions. `KnowledgeGraphService.batch_create_relationships()` at `src/semantic/graph.py:387` implements the correct `UNWIND`-based batch path but is not used here. The builder module (`src/semantic/builder.py`) correctly uses `batch_create_relationships` for the same operation — only this older pipeline function does not.
 
-**Risk**: A moderately complex document producing 30 entities and 30 evidence nodes generates up to 435 sequential Neo4j round-trips for relationships alone, each with its own session open/close overhead (~2-5ms). This accumulates to 1-2 seconds of Neo4j overhead per document, executed synchronously inside the upload request.
-**Recommendation**: Collect all (from_id, to_id, properties) tuples for CO_OCCURS_WITH relationships into a list, then call `graph_service.batch_create_relationships("CO_OCCURS_WITH", rels)` once. This reduces N² sessions to a single `UNWIND`-based transaction.
+**Risk**: A moderately complex document producing 30 entities and 30 evidence nodes generates up to 435 sequential Neo4j round-trips for relationships alone, each with its own session open/close overhead of 2-5ms. This accumulates to approximately 1-2 seconds of Neo4j overhead per document, executed synchronously inside the upload request handler.
+
+**Recommendation**: Collect all (from_id, to_id, properties) tuples for CO_OCCURS_WITH relationships into a list before the loop, then call `graph_service.batch_create_relationships("CO_OCCURS_WITH", rels)` once after. This reduces O(N²) sessions to a single `UNWIND`-based transaction matching the pattern already used in `builder.py`.
 
 ---
 
-### [HIGH] N+1 GRAPH WRITE: All four semantic bridges call `create_relationship` per matching node pair inside nested loops
+### [HIGH] N+1 GRAPH READS: `build_governance_chains` in `RegulatoryOverlayEngine` issues `get_node()` and `get_relationships()` once per process node inside a loop
 
-**File**: `src/semantic/bridges/process_evidence.py:110`, `src/semantic/bridges/evidence_policy.py:86`, `src/semantic/bridges/process_tom.py:65`, `src/semantic/bridges/communication_deviation.py:76`
+**File**: `src/core/regulatory.py:171`
 **Agent**: C3 (Performance Auditor)
 **Evidence**:
 ```python
-# process_evidence.py — O(P * E) Neo4j calls
-for p_idx, proc in enumerate(all_process_nodes):
-    for e_idx, ev in enumerate(evidence_nodes):
-        if is_match:
-            await self._graph.create_relationship(
-                from_id=proc.id, to_id=ev.id,
-                relationship_type="SUPPORTED_BY",
-                properties={"source": "process_evidence_bridge", "confidence": confidence},
-            )
+for proc in process_nodes:
+    rels = await self._graph.get_relationships(proc.id, direction="outgoing",
+                                               relationship_type="GOVERNED_BY")
+    for rel in rels:
+        policy_node = await self._graph.get_node(rel.to_id)
+        if policy_node:
+            chain.policies.append(...)
 ```
-**Description**: All four semantic bridges (`ProcessEvidenceBridge`, `EvidencePolicyBridge`, `ProcessTOMBridge`, `CommunicationDeviationBridge`) share the same anti-pattern: nested loops over node pairs with an individual `create_relationship` call inside the innermost loop body. `ProcessTOMBridge.run()` is O(nodes × dimensions × tom_nodes) — three nested loops. Each `create_relationship` call spawns a new Neo4j write transaction. `batch_create_relationships` in `KnowledgeGraphService` exists precisely for this use case.
+**Description**: `build_governance_chains` iterates over every process node and calls `get_relationships()` once per process (one Neo4j session per process node), then calls `get_node()` once per returned relationship (one more Neo4j session per related policy). Additionally, the node creation loop above this (lines 106-168) calls `get_node()` individually for each policy, control, and regulation before potentially calling `create_node()` — yielding 3 round-trips per entity for the existence check pattern (`get_node` + conditional `create_node`). For an engagement with 10 processes and 5 policies each, this generates 10 + (10*5) = 60 sequential Neo4j sessions for traversal alone.
 
-**Risk**: For an engagement with 50 process nodes and 100 evidence nodes, `ProcessEvidenceBridge` can issue up to 5,000 individual Neo4j write transactions. These bridges run serially within `run_semantic_bridges`, which is called synchronously inside the upload pipeline. Total bridge latency can reach tens of seconds on non-trivial engagements.
-**Recommendation**: In each bridge's `run()` method, accumulate matching pairs into a `rels: list[dict]` and call `graph_service.batch_create_relationships(relationship_type, rels)` once after the matching loop completes. This pattern collapses all Neo4j round-trips per bridge into one.
+**Risk**: `build_governance_chains` is called from the regulatory overlay route. For engagements with 50 processes and moderate policy coverage, this can generate 250+ sequential Neo4j sessions. The `get_node` existence check before `create_node` is also avoidable — Neo4j's `MERGE` operation handles upsert atomically without a prior read.
+
+**Recommendation**: Replace the per-process `get_relationships` loop with a single Cypher query: `MATCH (p {engagement_id: $eid})-[r:GOVERNED_BY]->(pol) RETURN p.id, pol.id, pol.name`. Replace the `get_node` + `create_node` pattern with `MERGE (n:{label} {id: $id}) ON CREATE SET n = $props` to eliminate the read-before-write. Replace per-entity `get_node` existence checks with `batch_create_nodes` (which already uses `CREATE` not `MERGE` — consider adding a `batch_upsert_nodes` using `MERGE`).
 
 ---
 
-### [HIGH] MEMORY LEAK: `AlertEngine` accumulates all alerts and all notification log entries in unbounded in-memory lists
+### [HIGH] MEMORY LEAK: `AlertEngine` accumulates all alerts and notification log entries in unbounded in-memory lists
 
-**File**: `src/monitoring/alerting/engine.py:448`
+**File**: `src/monitoring/alerting/engine.py`
 **Agent**: C3 (Performance Auditor)
 **Evidence**:
 ```python
@@ -103,105 +102,125 @@ class AlertEngine:
         self.alerts.append(deduped)
         self._notification_log.append({...})
 ```
-**Description**: `AlertEngine` stores every generated alert and every notification dispatch event in plain Python lists (`self.alerts`, `self._notification_log`) with no eviction, TTL, or size cap. The `query_alerts` method filters `self.alerts` entirely in Python, iterating the full list on every query call. Since `AlertEngine` is presumably instantiated as a long-lived singleton or per-monitoring-worker, these lists grow indefinitely for the lifetime of the process. The `_open_alerts` dict in `AlertDeduplicator` has a `clear_expired()` method but no automatic scheduling — it is never called by the engine itself.
+**Description**: `AlertEngine` stores every generated alert and every notification dispatch event in plain Python lists with no eviction, TTL, or size cap. The `query_alerts` method filters `self.alerts` entirely in Python, performing a full linear scan on every API call. Since `AlertEngine` is a long-lived object (monitoring worker or singleton), these lists grow for the lifetime of the process. The `_open_alerts` dict in `AlertDeduplicator` has a `clear_expired()` method but it is never called automatically by the engine.
 
-**Risk**: In a high-alert environment processing hundreds of events per hour, `self.alerts` accumulates without bound. After days of operation, a query that applies 6 Python-level filters against a 100,000-element list executes a full linear scan on every API call to `/api/v1/monitoring/alerts`. `_notification_log` has no cap at all and accumulates the full payload of every alert dispatched.
-**Recommendation**: Persist alerts to the database (the `MonitoringAlert` model already exists) rather than keeping them in memory. The in-memory store is appropriate only for a write-through cache with a size cap. Call `deduplicator.clear_expired()` periodically (e.g., every N events). Cap `_notification_log` at a fixed maximum (e.g., last 1,000 entries) using `collections.deque(maxlen=1000)`.
+**Risk**: In a high-alert environment processing hundreds of events per hour, `self.alerts` accumulates without bound. After days of operation, a query applying 6 Python-level filters against a 100,000-element list executes a full linear scan on every call to `/api/v1/monitoring/alerts`. `_notification_log` has no cap at all and accumulates the full payload of every alert dispatched.
+
+**Recommendation**: Persist alerts to the database (the `MonitoringAlert` model already exists) and remove the in-memory store. If a hot-path cache is needed, cap it with `collections.deque(maxlen=1000)`. Call `deduplicator.clear_expired()` on a schedule (e.g., every 1,000 events or every 60 seconds).
 
 ---
 
-### [HIGH] ASYNC ANTI-PATTERN: `SecurityHeadersMiddleware` calls `get_settings()` on every HTTP request
+### [HIGH] UNBOUNDED GRAPH TRAVERSAL: `_count_components` in graph health analysis fetches all edges with no LIMIT
 
-**File**: `src/api/middleware/security.py:57`
+**File**: `src/evaluation/graph_health.py:94`
 **Agent**: C3 (Performance Auditor)
 **Evidence**:
 ```python
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        settings = get_settings()
-        response = await call_next(request)
-        ...
-        if not getattr(settings, "debug", False):
-            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+edge_result = await neo4j_session.run(
+    "MATCH (a {engagement_id: $eid})--(b {engagement_id: $eid}) "
+    "RETURN id(a) AS a_id, id(b) AS b_id",
+    eid=engagement_id,
+)
+async for record in edge_result:
+    uf._ensure(a_id)
+    uf._ensure(b_id)
+    uf.union(a_id, b_id)
 ```
-**Description**: `SecurityHeadersMiddleware.dispatch` calls `get_settings()` on every HTTP request solely to check the `debug` flag. While `get_settings()` is cached via `@functools.lru_cache` (making the call cheap), this pattern runs on every request including health checks, WebSocket frames, and high-frequency API calls. The `debug` flag cannot change at runtime. All header values are static strings that are re-assigned to every response individually.
+**Description**: `_count_components` fetches every edge in the engagement's subgraph — both directions (no `LIMIT`) — and streams all records into a Python union-find structure. For a 500-node engagement with average degree 10, this transfers 5,000 edge records across the Neo4j driver connection. The union-find is computed entirely in Python rather than using a graph algorithm at the database layer. This function is called inside `analyze_graph_health` which uses a single `async with neo4j_driver.session()` for all 10 health queries sequentially, holding the Neo4j session open for the full analysis duration.
 
-**Risk**: MEDIUM individually. At 1,000 requests/second across all workers, this is 1,000 unnecessary function call dispatches per second. The deeper issue is the pattern: settings are static config resolved at startup and should never be re-fetched in hot paths.
-**Recommendation**: Resolve `settings.debug` once in `__init__` as `self._debug: bool`. Pre-build the full static header dict at construction time (`self._static_headers: dict[str, str]`). In `dispatch`, call `response.headers.update(self._static_headers)` in a single operation instead of 8 individual assignments.
+**Risk**: For large engagements (1,000+ nodes), this query transfers tens of thousands of records to Python for an algorithm that could be approximated with a much cheaper Cypher query. The graph health endpoint is not paginated and returns the full analysis in a single synchronous pass.
+
+**Recommendation**: Add `LIMIT 10000` to the edge query to prevent runaway transfers on large graphs and log a warning when the limit is hit. Consider whether connected component count is needed at all or if a simpler approximation (orphan node count) suffices. If precision is required, run the analysis as a background job rather than in a synchronous API handler.
 
 ---
 
-### [MEDIUM] UNBOUNDED GRAPH QUERY: `get_stats` relationship query does not scope target node by engagement_id
+### [MEDIUM] MISSING NEO4J INDEXES: `engagement_id` property not indexed on most node labels
 
-**File**: `src/semantic/graph.py:777`
+**File**: `src/core/neo4j.py:84`
 **Agent**: C3 (Performance Auditor)
 **Evidence**:
 ```python
-rel_query = """
-MATCH (a {engagement_id: $engagement_id})-[r]->(b)
-RETURN type(r) AS rel_type, count(r) AS count
-"""
-rel_records = await self._run_query(rel_query, {"engagement_id": engagement_id})
+indexes = [
+    "CREATE INDEX IF NOT EXISTS FOR (p:Process) ON (p.engagement_id)",
+    "CREATE INDEX IF NOT EXISTS FOR (e:Evidence) ON (e.engagement_id, e.category)",
+    "CREATE INDEX IF NOT EXISTS FOR (a:Activity) ON (a.process_id)",
+    "CREATE INDEX IF NOT EXISTS FOR (g:Gap) ON (g.engagement_id, g.severity)",
+]
 ```
-**Description**: The relationship count query in `get_stats` matches all outgoing relationships from nodes in the engagement but does not filter the target node `(b)` by `engagement_id`. This means it counts relationships that cross engagement boundaries — including any cross-engagement links created by bugs or data migration errors. More critically, it does not include a `LIMIT` clause, so the aggregation must scan every relationship attached to every engagement node. On large graphs this is a full graph traversal.
+**Description**: Only 4 of the 13 constrained node labels (Process, Evidence, Activity, Gap) have `engagement_id` indexes. All Cypher queries in `KnowledgeGraphService` scope by `engagement_id` — including `find_nodes`, `get_stats`, `get_engagement_subgraph`, `traverse`, and `delete_engagement_subgraph`. Labels missing `engagement_id` indexes include: Role, System, Control, Policy, Regulation, TOM, Document, Subprocess, Decision. Every query against these labels performs a full label scan filtered in Neo4j's execution engine by property comparison rather than an index seek.
 
-**Risk**: For an engagement with 1,000 nodes each with 10 outgoing relationships, Neo4j must evaluate 10,000 relationship traversals to compute the `count(r) GROUP BY type(r)`. Without a label constraint on `(a)` or `(b)`, Neo4j cannot use label-scoped indexes and must fall back to a property scan.
-**Recommendation**: Add `AND b.engagement_id = $engagement_id` to the relationship query. Add label constraints to both `(a)` and `(b)` or use a pattern like `MATCH (a)-[r]->(b) WHERE a.engagement_id = $engagement_id AND b.engagement_id = $engagement_id`. Consider caching the stats result with a Redis TTL since graph stats do not change on every API call.
+**Risk**: For an engagement with 500 Role nodes across multiple engagements, `find_nodes("Role", {"engagement_id": "..."})` must scan all Role nodes across all engagements rather than seeking directly to the matching ones. This degrades linearly as the number of engagements and nodes grows.
+
+**Recommendation**: Add `engagement_id` indexes for all node labels that are queried by engagement scope: Role, System, Control, Policy, Regulation, TOM, Document, Subprocess, Decision. Also add `UserAction` and `Application` which are used by the task mining semantic bridge. Pattern: `"CREATE INDEX IF NOT EXISTS FOR (n:{Label}) ON (n.engagement_id)"`.
 
 ---
 
-### [MEDIUM] MEMORY: Full file content read into memory on every upload before any validation
+### [MEDIUM] MEMORY: Full file content read into memory before size validation on upload
 
-**File**: `src/api/routes/evidence.py:179`
+**File**: `src/api/routes/evidence.py:180`
 **Agent**: C3 (Performance Auditor)
 **Evidence**:
 ```python
 @router.post("/upload", ...)
 async def upload_evidence(...):
-    file_content = await file.read()
+    file_content = await file.read()   # reads up to 100MB into process memory
     if not file_content:
         raise HTTPException(status_code=400, detail="Uploaded file is empty")
     ...
-    evidence_item, fragments, duplicate_of_id = await ingest_evidence(
-        session=session, file_content=file_content, ...
-    )
+    # size check and MIME detection happen inside ingest_evidence()
 ```
-**Description**: The upload handler reads the entire file into memory (`await file.read()`) before any validation or size check. The size check (`MAX_UPLOAD_SIZE = 100 MB`) occurs later inside `ingest_evidence`. A client can send a 100 MB file and have all 100 MB buffered in the Python process before the size validation rejects it. With concurrent uploads, the server can buffer `concurrent_uploads * 100 MB` before any are rejected. The SHA-256 hash computation and MIME detection only need partial data (MIME needs 8KB; hash needs streaming) but receive the full buffer.
+**Description**: The upload handler reads the entire file into process memory before any size validation. `MAX_UPLOAD_SIZE = 100 MB` is enforced inside `ingest_evidence`, not before. A client can send a 100 MB file and have all 100 MB buffered in the Python process before rejection. With concurrent uploads, the server buffers `concurrent_uploads × 100 MB` before any are validated. MIME detection via `magic.from_buffer` only reads the first 8 KB; SHA-256 hashing supports incremental streaming — neither requires the full file in memory simultaneously.
 
-**Risk**: 10 concurrent 100 MB uploads hold 1 GB of file bytes in process memory simultaneously. On a 2 GB container, this alone can exhaust memory before any processing begins.
-**Recommendation**: Move the size check to the upload handler before reading, using `file.size` if available or reading in chunks. Stream the file directly to object storage. Compute SHA-256 incrementally using `hashlib.sha256().update(chunk)`. Read only the first 8 KB for MIME detection. This requires refactoring `ingest_evidence` to accept an async stream rather than raw bytes.
+**Risk**: 10 concurrent 100 MB uploads hold up to 1 GB of file bytes in process memory simultaneously. On a container with 2 GB memory limit, this can exhaust available memory before a single upload completes processing.
+
+**Recommendation**: Check `Content-Length` header or read the first chunk before `await file.read()` to enforce the size limit early. For MIME detection, use only `await file.read(8192)` then seek back. Compute SHA-256 incrementally using `hashlib.sha256()` updated in chunks. Long-term, stream directly to MinIO/object storage and avoid buffering file content in the API worker process at all.
 
 ---
 
-### [MEDIUM] OVER-FETCH: Graph expansion in `HybridRetriever` fetches `top_k * 10` nodes per query with full in-Python scoring
+### [MEDIUM] PER-REQUEST INSTANTIATION: `EmbeddingService()` constructed fresh on every `semantic_search` call
 
-**File**: `src/rag/retrieval.py:355`
+**File**: `src/api/routes/graph.py:238`
 **Agent**: C3 (Performance Auditor)
 **Evidence**:
 ```python
-result = await neo4j_session.run(
-    """
-    MATCH (n)-[r]-(m)
-    WHERE n.engagement_id = $engagement_id
-      AND m.engagement_id = $engagement_id
-      AND n.name IS NOT NULL
-    WITH DISTINCT n, labels(n)[0] as label, elementId(n) as node_id
-    RETURN n.name as name, n.description as description, label, node_id
-    LIMIT $fetch_limit
-    """,
-    engagement_id=engagement_id,
-    fetch_limit=top_k * 10,  # Over-fetch for scoring
-)
-records = [record async for record in result]
+@router.get("/search", response_model=list[SearchResult])
+async def semantic_search(query: str, top_k: int = 10, ...) -> list[dict[str, Any]]:
+    ...
+    embedding_service = EmbeddingService()   # new instance on every request
+    results = await embedding_service.search_by_text(...)
 ```
-**Description**: The graph expansion path in `_graph_expand` fetches `top_k * 10` graph nodes (default: 50 nodes when `top_k=5`) from Neo4j, transfers all node data to the Python process, then scores each node with a Python-level string-matching loop. The Cypher query joins every node to its neighbors (`MATCH (n)-[r]-(m)`) which forces a relationship traversal scan before the `DISTINCT` de-duplication. The scoring and filtering that reduce 50 results to 5 happen entirely in Python rather than at the database layer.
+**Description**: `semantic_search` constructs a new `EmbeddingService()` instance on every request. `EmbeddingService.__init__` calls `_get_rag_embedding_service()` which returns a singleton — so the SentenceTransformer model is not re-loaded. However, the `EmbeddingService` object itself is constructed and garbage-collected on every call. Separately, the `get_embedding_service` dependency function (line 122) is defined but not used in `semantic_search` — it constructs the service inline instead. The `src/rag/embeddings.py` module already provides a `get_embedding_service()` singleton factory for exactly this purpose.
 
-**Risk**: The `MATCH (n)-[r]-(m)` pattern scans all relationships to filter by node property, which is expensive on large graphs. Fetching 50 nodes when only 5 are needed transfers up to 10x more data than necessary over the Neo4j driver connection.
-**Recommendation**: Push term matching into the Cypher query using `WHERE any(term IN $terms WHERE toLower(n.name) CONTAINS term)`. Reduce `fetch_limit` to `top_k * 2` since server-side filtering eliminates most nodes before transfer. Use `apoc.text.levenshteinSimilarity` or Neo4j full-text search indexes for name matching at the database layer.
+**Risk**: LOW per individual call. The concern is the inconsistent pattern: the dependency function `get_embedding_service()` exists in the same file but is bypassed. This creates confusion about which code path actually runs, and makes it harder to swap embedding backends or inject test doubles.
+
+**Recommendation**: Use the `get_embedding_service()` FastAPI dependency already defined in the same file: `embedding_service: EmbeddingService = Depends(get_embedding_service)`. This aligns with the dependency injection pattern used throughout other routes and makes the service substitutable in tests.
 
 ---
 
-### [LOW] SERIALIZATION: Embedding vectors formatted as ASCII strings rather than native pgvector type
+### [MEDIUM] O(N²) IN-PYTHON COSINE SIMILARITY: Task mining semantic bridge scores all UserAction×Activity pairs sequentially
+
+**File**: `src/taskmining/semantic_bridge.py:122`
+**Agent**: C3 (Performance Auditor)
+**Evidence**:
+```python
+for i, ua_node in enumerate(user_actions):
+    best_sim = 0.0
+    best_act_idx = -1
+    for j, _act_node in enumerate(activities):
+        sim = _cosine_similarity(ua_embeddings[i], act_embeddings[j])
+        if sim > best_sim:
+            best_sim = sim
+            best_act_idx = j
+```
+**Description**: `_link_actions_to_activities` and `_link_apps_to_systems` compute cosine similarity for every (UserAction, Activity) and (Application, System) pair using a Python-level nested loop. For N UserActions and M Activities, this is O(N×M) Python function calls each performing a NumPy dot product. The `_MAX_NODES = 10000` constant at the top of the file means these loops can run up to 100,000,000 iterations. Individually, each call to `_cosine_similarity` creates two NumPy arrays, computes norms, and a dot product — manageable per call but expensive in aggregate. The correct approach is to use NumPy matrix operations to compute all pairwise similarities in one vectorized call.
+
+**Risk**: For an engagement with 500 UserActions and 200 Activities, this executes 100,000 Python function calls with NumPy array construction on each. At ~5µs per call, this takes approximately 500ms of CPU time per bridge run, executed synchronously within the request handler.
+
+**Recommendation**: Replace the nested loop with NumPy matrix multiplication: `similarity_matrix = ua_embeddings_np @ act_embeddings_np.T` where both are pre-normalized. Then use `np.argmax(similarity_matrix, axis=1)` and `np.max(similarity_matrix, axis=1)` to find best matches in vectorized form. This reduces O(N×M) Python calls to a single BLAS matrix multiply.
+
+---
+
+### [LOW] SERIALIZATION: Embedding vectors serialized as ASCII strings instead of using pgvector native type
 
 **File**: `src/semantic/embeddings.py:124`
 **Agent**: C3 (Performance Auditor)
@@ -212,14 +231,15 @@ async def store_embedding(self, session, fragment_id, embedding):
     query = text("UPDATE evidence_fragments SET embedding = :embedding WHERE id = :fragment_id")
     await session.execute(query, {"embedding": vector_str, "fragment_id": fragment_id})
 ```
-**Description**: The 768-dimensional embedding vector is converted to an ASCII string representation before being sent to PostgreSQL via raw SQL. Each 768-float vector produces approximately 6-10 KB of text. PostgreSQL must parse this string into a native `vector` type on every write and every similarity query. This same pattern is used in `search_similar`, `store_embeddings_batch`, and `src/rag/retrieval.py`. The `pgvector` Python package provides a SQLAlchemy type that handles efficient binary wire encoding automatically.
+**Description**: The 768-dimensional embedding vector is serialized to an ASCII string (approximately 6-10 KB of text per vector) before being sent to PostgreSQL. PostgreSQL must parse this string into a native `vector` type on every write and every similarity query. This pattern is used in `store_embedding`, `store_embeddings_batch`, `search_similar`, and `src/semantic/graph.py:search_similar`. The `pgvector` Python package provides a `sqlalchemy.Vector` type that handles binary wire encoding automatically, eliminating the text serialization round-trip.
 
-**Risk**: LOW per individual operation. At scale the cumulative ASCII parse overhead on the PostgreSQL server is measurable. The raw SQL also bypasses SQLAlchemy's ORM type safety.
-**Recommendation**: Use `pgvector.sqlalchemy.Vector` as the column type on `EvidenceFragment.embedding` and pass embedding values as Python lists or numpy arrays directly through the ORM. This removes the manual string formatting from all call sites.
+**Risk**: LOW per individual operation. At scale — storing embeddings for 10,000 fragments or running 1,000 similarity searches — the cumulative ASCII-parse overhead on the PostgreSQL server becomes measurable. The raw SQL also bypasses SQLAlchemy's ORM type system.
+
+**Recommendation**: Declare `embedding = mapped_column(Vector(768))` on `EvidenceFragment` using `pgvector.sqlalchemy.Vector`. Pass embedding values as Python lists directly through the ORM. This removes the manual string formatting from all four call sites and uses the optimized binary protocol.
 
 ---
 
-### [LOW] CONNECTION POOL: Default pool settings unsafe for multi-worker deployments
+### [LOW] CONNECTION POOL: Default pool settings can exceed PostgreSQL `max_connections` in multi-worker deployments
 
 **File**: `src/core/database.py:39`
 **Agent**: C3 (Performance Auditor)
@@ -227,39 +247,43 @@ async def store_embedding(self, session, fragment_id, embedding):
 ```python
 engine = create_async_engine(
     settings.database_url or "",
-    pool_size=settings.db_pool_size,      # default: 20
-    max_overflow=settings.db_max_overflow, # default: 10
+    pool_size=settings.db_pool_size,       # default: 20
+    max_overflow=settings.db_max_overflow,  # default: 10
     pool_pre_ping=True,
     pool_recycle=300,
 )
 ```
-**Description**: With `pool_size=20` and `max_overflow=10`, each uvicorn worker can hold up to 30 PostgreSQL connections. The default uvicorn deployment uses 4 workers, producing up to 120 connections. PostgreSQL's default `max_connections=100` is less than this — a standard 4-worker deployment exhausts the connection limit under full load before overflow connections are counted. The `db_pool_size` and `db_max_overflow` config values are documented but carry no warning about the per-worker multiplication effect.
+**Description**: With `pool_size=20` and `max_overflow=10`, each uvicorn worker can hold up to 30 PostgreSQL connections. The default uvicorn deployment uses 4 workers, producing a maximum of 120 connections. PostgreSQL's default `max_connections=100` is less than this figure — a standard 4-worker production deployment can exhaust the PostgreSQL connection limit under peak load before overflow connections are even counted. The settings are documented in `config.py` but carry no warning about the per-worker multiplication effect.
 
-**Risk**: In multi-worker deployments without PgBouncer, connection exhaustion produces `asyncpg.exceptions.TooManyConnectionsError` under load. The defaults are appropriate for single-worker dev mode but dangerous for production deployments.
-**Recommendation**: Reduce defaults to `pool_size=5, max_overflow=5`. Add a docstring comment: `# This is per-worker. Total connections = pool_size * num_workers. Ensure total < postgres max_connections.` Use PgBouncer in transaction pooling mode for production deployments to decouple application pool size from PostgreSQL connection limits.
+**Risk**: In multi-worker deployments without PgBouncer, connection exhaustion produces `asyncpg.exceptions.TooManyConnectionsError` under sustained load. The defaults are appropriate for single-worker development but dangerous for production with 4+ workers.
+
+**Recommendation**: Reduce defaults to `db_pool_size=5, db_max_overflow=5` (giving 40 total connections for 4 workers). Add a startup warning if `pool_size * expected_workers > postgres_max_connections`. Document that PgBouncer in transaction pooling mode should be used for production deployments to decouple application pool size from PostgreSQL connection limits.
 
 ---
 
-### [LOW] RATE LIMITER: In-process RateLimitMiddleware state is not shared across workers
+### [LOW] RATE LIMITER: `RateLimitMiddleware` operates per-worker; effective limit multiplies by worker count
 
-**File**: `src/api/middleware/security.py:95`
+**File**: `src/api/middleware/security.py:98`
 **Agent**: C3 (Performance Auditor)
 **Evidence**:
 ```python
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Simple in-memory per-IP rate limiter.
-
-    Note: This is per-process only. In multi-worker deployments the
-    effective limit is ``workers * max_requests``. For production
-    multi-worker deployments, replace with Redis-backed rate limiting.
+    """Redis-backed per-IP rate limiter (multi-worker safe).
+    Uses an atomic Lua script (INCR + EXPIRE) for fixed-window counting.
+    Each client IP gets a Redis key ``ratelimit:{ip}`` with a TTL equal
+    to the window. The counter is shared across all uvicorn workers via
+    the same Redis instance.
     """
-    def __init__(self, app, max_requests=100, window_seconds=60):
-        self._clients: dict[str, _RateLimitEntry] = defaultdict(_RateLimitEntry)
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        ...
+        if redis_client is not None:
+            result = await redis_client.eval(_RATE_LIMIT_SCRIPT, 1, key, self.window_seconds)
 ```
-**Description**: The `RateLimitMiddleware` docstring correctly documents this limitation but the code remains in production use. In a 4-worker deployment, each worker allows 100 requests/minute per IP, making the effective limit 400 requests/minute. A determined client can trivially bypass the rate limit by cycling connections across workers. The `_prune_stale` method runs a full linear scan of `self._clients` on every 1,000th request or when the dict exceeds 50,000 entries — both conditions represent O(N) scans in the hot path.
+**Description**: The `RateLimitMiddleware` is correctly Redis-backed and multi-worker-safe when Redis is available. However, it explicitly fail-opens (`count = 0`) when Redis is unavailable. During a Redis outage, all rate limiting is silently disabled — there is no fallback in-process counter, no header indicating that limiting is inactive, and no alert or metric increment. The Lua script atomically handles the `INCR + EXPIRE` correctly, but the `except Exception` catch is overly broad and swallows all Redis errors including connection refused, timeout, and script errors.
 
-**Risk**: The rate limit is functionally ineffective in multi-worker deployments. The per-IP limit multiplies by worker count, making it suitable only for single-worker or development deployments.
-**Recommendation**: The comment acknowledges the correct fix: Redis-backed rate limiting. Use `slowapi` with a Redis backend (the `limiter` from `src/api/routes/auth.py` already uses `slowapi` — extend it to cover all routes). Remove `RateLimitMiddleware` once `slowapi` covers the same routes.
+**Risk**: During a Redis outage, the rate limiter provides zero protection. A client performing a brute-force attack coinciding with a Redis restart can bypass all rate limits without any indication in logs beyond a single DEBUG message.
+
+**Recommendation**: Log at WARNING (not DEBUG) when Redis is unavailable so the failure is visible in monitoring. Consider adding a lightweight in-process fallback counter (per-IP, evicting old entries) that limits to `max_requests * 5` during Redis unavailability, providing degraded but non-zero protection. Increment a `ratelimit.redis_failures` metric counter when the exception is caught.
 
 ---
 
@@ -267,12 +291,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
 **Overall Risk: HIGH**
 
-The async foundation is sound — routes use `async def`, SQLAlchemy sessions are properly managed, database engine uses `asyncpg`, and the embedding generation path already performs batch operations correctly. The primary risks concentrate in three areas:
+The async and database infrastructure is sound — routes use `async def`, SQLAlchemy uses asyncpg, the embedding pipeline uses batch operations for the primary path, and connection pooling is configured. The primary risks concentrate in three areas:
 
-1. **N+1 write patterns in the intelligence pipeline** (CRITICAL + HIGH): `generate_fragment_embeddings` uses a per-row UPDATE loop despite a batch method existing in the same service class. The CO_OCCURS_WITH relationship loop and all four semantic bridges issue one Neo4j write transaction per matching pair. The batch infrastructure (`batch_create_relationships`, `store_embeddings_batch`) is already implemented and just needs to be wired in.
+1. **N+1 graph operation patterns** (CRITICAL + HIGH + HIGH): `KnowledgeGraphService.search_similar` issues one Neo4j `get_node` call per pgvector result row. The `build_fragment_graph` CO_OCCURS_WITH loop calls `create_relationship` per pair rather than using the existing `batch_create_relationships`. The `RegulatoryOverlayEngine` performs `get_relationships` and `get_node` per process node. In each case, the batch infrastructure already exists in the codebase and just needs to be wired in.
 
-2. **Unbounded in-memory state** (HIGH): `AlertEngine` accumulates every alert and notification log entry without eviction. For long-running monitoring workers this is a slow memory leak that degrades query performance over time as the Python-level list filters grow.
+2. **Unbounded in-memory state** (HIGH): `AlertEngine` accumulates every alert and notification log entry without eviction. The graph health `_count_components` fetches all engagement edges with no LIMIT clause.
 
-3. **Infrastructure defaults that do not scale** (HIGH + LOW): The PostgreSQL connection pool defaults exceed PostgreSQL's default `max_connections` in a 4-worker deployment. The in-process rate limiter is documented as ineffective in multi-worker deployments but remains the primary rate limiting mechanism for non-auth routes.
+3. **Computational inefficiency** (MEDIUM): The task mining semantic bridge uses a Python nested loop for O(N×M) cosine similarity when NumPy matrix multiplication can reduce this to a single BLAS operation.
 
-No blocking `time.sleep()` calls were found in async handlers. The chunking pipeline, dashboard routes, and copilot history endpoint all use correct pagination with LIMIT/OFFSET. The `get_settings()` call in SecurityHeadersMiddleware is cheap due to `lru_cache` but represents an avoidable hot-path call that should be resolved at construction time.
+Several previously-reported issues have been resolved: `generate_fragment_embeddings` now uses `store_embeddings_batch` as the primary path (N+1 is only in the error fallback). `ProcessEvidenceBridge` correctly uses `batch_create_relationships`. `SecurityHeadersMiddleware` pre-builds all static headers in `__init__` — no per-request settings access.

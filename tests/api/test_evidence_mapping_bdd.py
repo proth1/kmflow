@@ -12,13 +12,15 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.api.routes.pov import (
+    _suggest_evidence_actions,
+    get_dark_elements,
+    get_elements_for_evidence,
+)
+from src.api.schemas.pov import (
     DarkElementEntry,
     DarkElementsResponse,
     ReverseElementEntry,
     ReverseEvidenceLookupResponse,
-    _suggest_evidence_actions,
-    get_dark_elements,
-    get_elements_for_evidence,
 )
 from src.core.models import UserRole
 

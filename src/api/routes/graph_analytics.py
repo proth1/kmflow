@@ -127,15 +127,24 @@ async def get_triangulation_results(
     evidence from multiple planes (system_behavioral, documented_formal,
     human_interpretation).
     """
-    # Fetch evidence fragments for the engagement
+    # Fetch evidence fragments for the engagement (capped to prevent memory exhaustion)
     from sqlalchemy import select
 
     from src.core.models import EvidenceItem
     from src.pov.triangulation import triangulate_elements
     from src.semantic.entity_extraction import extract_entities
 
-    evidence_result = await session.execute(select(EvidenceItem).where(EvidenceItem.engagement_id == engagement_id))
+    max_evidence_items = 500
+    evidence_result = await session.execute(
+        select(EvidenceItem).where(EvidenceItem.engagement_id == engagement_id).limit(max_evidence_items)
+    )
     evidence_items = list(evidence_result.scalars().all())
+    if len(evidence_items) >= max_evidence_items:
+        logger.warning(
+            "Triangulation capped at %d evidence items for engagement %s",
+            max_evidence_items,
+            engagement_id,
+        )
 
     if not evidence_items:
         return {

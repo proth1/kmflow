@@ -524,6 +524,8 @@ class KnowledgeGraphService:
         """
         if depth < 1:
             return []
+        if depth > 10:
+            depth = 10
 
         rel_filter = ""
         if relationship_types:
@@ -607,11 +609,26 @@ class KnowledgeGraphService:
             if not rows:
                 return []
 
-            # Map fragment IDs to Neo4j nodes for graph context
+            # Collect all entity IDs for a single batch Neo4j lookup
+            entity_ids = [str(row.evidence_id) for row in rows]
+            batch_records = await self._run_query(
+                "MATCH (n) WHERE n.id IN $ids RETURN n, labels(n) AS labels",
+                {"ids": entity_ids},
+            )
+            node_lookup: dict[str, GraphNode] = {
+                record["n"].get("id", ""): GraphNode(
+                    id=record["n"].get("id", ""),
+                    label=record["labels"][0] if record["labels"] else "Unknown",
+                    properties=dict(record["n"]),
+                )
+                for record in batch_records
+            }
+
+            # Map rows to results using the pre-fetched node lookup
             results: list[dict[str, Any]] = []
             for row in rows:
                 entity_id = str(row.evidence_id)
-                node = await self.get_node(entity_id)
+                node = node_lookup.get(entity_id)
 
                 result_entry: dict[str, Any] = {
                     "entity_id": entity_id,

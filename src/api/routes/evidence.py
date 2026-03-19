@@ -28,7 +28,12 @@ from src.core.models import (
     User,
     ValidationStatus,
 )
-from src.core.permissions import require_classification_access, require_engagement_access, require_permission
+from src.core.permissions import (
+    require_classification_access,
+    require_engagement_access,
+    require_permission,
+    verify_engagement_member,
+)
 from src.evidence.exceptions import EvidenceValidationError
 from src.evidence.pipeline import ingest_evidence
 from src.evidence.quality import score_evidence
@@ -321,6 +326,7 @@ async def get_evidence(
             detail=f"Evidence item {evidence_id} not found",
         )
 
+    await verify_engagement_member(session, user, evidence.engagement_id)
     require_classification_access(evidence.classification, user)
 
     # Count fragments
@@ -382,6 +388,7 @@ async def list_evidence(
     count_query = select(func.count()).select_from(EvidenceItem)
 
     if engagement_id is not None:
+        await verify_engagement_member(session, user, engagement_id)
         query = query.where(EvidenceItem.engagement_id == engagement_id)
         count_query = count_query.where(EvidenceItem.engagement_id == engagement_id)
     if category is not None:
@@ -425,6 +432,7 @@ async def update_validation_status(
             detail=f"Evidence item {evidence_id} not found",
         )
 
+    await verify_engagement_member(session, user, evidence.engagement_id)
     old_status = evidence.validation_status
     evidence.validation_status = payload.validation_status
 
@@ -508,13 +516,15 @@ async def get_fragments(
     - limit: Maximum results to return (default 100, max 1000)
     - offset: Number of results to skip (default 0)
     """
-    # Verify evidence exists
-    ev_result = await session.execute(select(EvidenceItem.id).where(EvidenceItem.id == evidence_id))
-    if not ev_result.scalar_one_or_none():
+    # Verify evidence exists and check engagement membership
+    ev_result = await session.execute(select(EvidenceItem).where(EvidenceItem.id == evidence_id))
+    evidence = ev_result.scalar_one_or_none()
+    if not evidence:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Evidence item {evidence_id} not found",
         )
+    await verify_engagement_member(session, user, evidence.engagement_id)
 
     query = select(EvidenceFragment).where(EvidenceFragment.evidence_id == evidence_id)
     if fragment_type is not None:

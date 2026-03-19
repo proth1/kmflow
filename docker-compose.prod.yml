@@ -119,3 +119,22 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+
+  cib7:
+    ports: []  # No host port exposure in production
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  minio:
+    ports: []  # No host port exposure in production
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  mailpit:
+    ports: []  # No host port exposure in production
+    profiles:
+      - never  # Never start mailpit in production

@@ -180,7 +180,11 @@ class TestGetProcessElements:
         """Returns paginated elements when found."""
         model_id = uuid.uuid4()
 
-        # First call: check model exists, Second call: get elements, Third call: count
+        # Calls: model exists check, set_engagement_context RLS, elements query, count query
+        mock_model = MagicMock()
+        mock_model.id = model_id
+        mock_model.engagement_id = uuid.uuid4()
+
         call_count = 0
 
         async def side_effect(*args, **kwargs):
@@ -188,9 +192,12 @@ class TestGetProcessElements:
             call_count += 1
             result = MagicMock()
             if call_count == 1:
-                # Model exists check
-                result.scalar_one_or_none.return_value = model_id
+                # Model exists check — return a ProcessModel with engagement_id
+                result.scalar_one_or_none.return_value = mock_model
             elif call_count == 2:
+                # set_engagement_context RLS call
+                pass
+            elif call_count == 3:
                 # Elements query
                 result.scalars.return_value.all.return_value = [mock_process_element]
             else:

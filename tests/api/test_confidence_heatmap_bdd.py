@@ -12,11 +12,13 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.api.routes.pov import (
+    get_confidence_map,
+    get_confidence_summary,
+)
+from src.api.schemas.pov import (
     ConfidenceMapResponse,
     ConfidenceSummaryResponse,
     ElementConfidenceEntry,
-    get_confidence_map,
-    get_confidence_summary,
 )
 from src.core.models import UserRole
 

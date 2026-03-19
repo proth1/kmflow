@@ -63,6 +63,7 @@ class AuditAction(enum.StrEnum):
     SUGGESTION_ACCEPTED = "suggestion_accepted"
     SUGGESTION_REJECTED = "suggestion_rejected"
     FINANCIAL_ASSUMPTION_CREATED = "financial_assumption_created"
+    FINANCIAL_ASSUMPTION_DELETED = "financial_assumption_deleted"
     # -- Cross-cutting audit actions ---------------------------------------------
     DATA_MODIFIED = "data_modified"
     USER_CREATED = "user_created"

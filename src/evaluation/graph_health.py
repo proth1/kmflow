@@ -6,6 +6,7 @@ schema conformance, and entity type coverage — no GDS plugin required.
 
 from __future__ import annotations
 
+import logging
 import time
 import uuid
 from collections.abc import Iterator
@@ -17,6 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.models.pipeline_quality import GraphHealthSnapshot
 from src.semantic.ontology.loader import get_entity_type_to_label, get_valid_node_labels, get_valid_relationship_types
+
+logger = logging.getLogger(__name__)
 
 # Relationship types that are always considered valid regardless of ontology.
 _ALWAYS_VALID_REL_TYPES: frozenset[str] = frozenset(
@@ -90,17 +93,29 @@ async def _count_components(
     """
     uf = _UnionFind()
 
-    # Collect all edges first.
+    # Collect all edges first (capped at 10 000 to avoid unbounded scans).
+    edge_limit = 10_000
     edge_result = await neo4j_session.run(
-        "MATCH (a {engagement_id: $eid})--(b {engagement_id: $eid}) RETURN id(a) AS a_id, id(b) AS b_id",
+        "MATCH (a {engagement_id: $eid})--(b {engagement_id: $eid}) RETURN id(a) AS a_id, id(b) AS b_id LIMIT $lim",
         eid=engagement_id,
+        lim=edge_limit,
     )
+    edge_count = 0
     async for record in edge_result:
         a_id: int = record["a_id"]
         b_id: int = record["b_id"]
         uf._ensure(a_id)
         uf._ensure(b_id)
         uf.union(a_id, b_id)
+        edge_count += 1
+
+    if edge_count >= edge_limit:
+        logger.warning(
+            "_count_components hit the %d-edge LIMIT for engagement %s; "
+            "component counts may be approximate for large graphs.",
+            edge_limit,
+            engagement_id,
+        )
 
     # Collect orphan nodes (they will not appear in edge results).
     orphan_result = await neo4j_session.run(
@@ -185,7 +200,8 @@ async def analyze_graph_health(
             "MATCH (n {engagement_id: $eid}) RETURN count(n) AS cnt",
             eid=engagement_id,
         )
-        node_count: int = (await res.single())["cnt"]
+        _rec = await res.single()
+        node_count: int = _rec["cnt"] if _rec is not None else 0
 
         # 2. Relationship count (divide by 2 — each edge appears twice in
         #    undirected MATCH)
@@ -193,14 +209,16 @@ async def analyze_graph_health(
             "MATCH (n {engagement_id: $eid})-[r]-() RETURN count(r) / 2 AS cnt",
             eid=engagement_id,
         )
-        relationship_count: int = (await res.single())["cnt"]
+        _rec = await res.single()
+        relationship_count: int = _rec["cnt"] if _rec is not None else 0
 
         # 3. Orphan nodes
         res = await neo4j_session.run(
             "MATCH (n {engagement_id: $eid}) WHERE NOT (n)--() RETURN count(n) AS cnt",
             eid=engagement_id,
         )
-        orphan_node_count: int = (await res.single())["cnt"]
+        _rec = await res.single()
+        orphan_node_count: int = _rec["cnt"] if _rec is not None else 0
 
         # 4. Connected components via union-find (includes orphan collection)
         connected_components, largest_component_size = await _count_components(neo4j_session, engagement_id)
@@ -239,7 +257,8 @@ async def analyze_graph_health(
             "MATCH (n {engagement_id: $eid}) WHERE n.name IS NULL OR n.confidence IS NULL RETURN count(n) AS cnt",
             eid=engagement_id,
         )
-        missing_required_props: int = (await res.single())["cnt"]
+        _rec = await res.single()
+        missing_required_props: int = _rec["cnt"] if _rec is not None else 0
 
         # 9. Entity types present / missing
         #    entity_type_to_label maps e.g. "activity" -> "Activity"
@@ -261,8 +280,12 @@ async def analyze_graph_health(
             eid=engagement_id,
         )
         conf_record = await res.single()
-        avg_confidence: float = conf_record["avg_conf"] if conf_record["avg_conf"] is not None else 0.0
-        low_confidence_count: int = conf_record["low_conf"] if conf_record["low_conf"] is not None else 0
+        avg_confidence: float = (
+            conf_record["avg_conf"] if conf_record is not None and conf_record["avg_conf"] is not None else 0.0
+        )
+        low_confidence_count: int = (
+            conf_record["low_conf"] if conf_record is not None and conf_record["low_conf"] is not None else 0
+        )
 
     duration_ms = (time.perf_counter() - t_start) * 1000.0
 

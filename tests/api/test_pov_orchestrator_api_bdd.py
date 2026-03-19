@@ -468,7 +468,7 @@ class TestVersionHistoryResponseSchema:
 
     def test_version_diff_response_validates(self) -> None:
         """VersionDiffResponse fields are all present."""
-        from src.api.routes.pov import VersionDiffResponse
+        from src.api.schemas.pov import VersionDiffResponse
 
         diff = VersionDiffResponse(
             added_count=2,

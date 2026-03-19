@@ -17,7 +17,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.api.deps import get_session
+from src.core.audit import log_audit
 from src.core.models import (
+    AuditAction,
     EngagementMember,
     ScenarioModification,
     SimulationResult,
@@ -65,6 +67,13 @@ async def trigger_simulation(
         status=SimulationStatus.PENDING,
     )
     session.add(sim_result)
+    await log_audit(
+        session,
+        scenario.engagement_id,
+        AuditAction.SIMULATION_CREATED,
+        f"Simulation result created for scenario {scenario_id}",
+        actor=str(user.id),
+    )
     await session.commit()
     await session.refresh(sim_result)
 

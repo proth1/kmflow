@@ -14,7 +14,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.models import GapAnalysisResult, TargetOperatingModel
+from src.core.models import GapAnalysisResult, LLMAuditLog, TargetOperatingModel
 
 logger = logging.getLogger(__name__)
 
@@ -161,6 +161,7 @@ class RationaleGeneratorService:
         gap: GapAnalysisResult,
         tom_specification: str | None = None,
         activity_description: str | None = None,
+        session: AsyncSession | None = None,
     ) -> dict[str, str]:
         """Generate rationale for a single gap.
 
@@ -169,6 +170,7 @@ class RationaleGeneratorService:
             tom_specification: The TOM dimension specification text.
             activity_description: Description of the current-state activity.
                 Falls back to gap.activity_name or gap_type if not provided.
+            session: Optional database session for LLM audit logging.
 
         Returns:
             Dict with 'rationale' and 'recommendation' keys.
@@ -183,12 +185,37 @@ class RationaleGeneratorService:
             confidence=gap.confidence,
         )
 
+        model_name = getattr(self._settings, "suggester_model", "claude-sonnet-4-5-20250929")
+        response_text: str | None = None
+        error_message: str | None = None
+
         try:
             response_text = await self._call_llm(prompt)
-            return self._parse_response(response_text)
-        except Exception:
+            result = self._parse_response(response_text)
+        except Exception as exc:
+            error_message = str(exc)
             logger.exception("Failed to generate rationale for gap %s", gap.id)
-            return self._fallback_rationale(gap)
+            result = self._fallback_rationale(gap)
+
+        if session is not None:
+            try:
+                audit_entry = LLMAuditLog(
+                    scenario_id=None,
+                    user_id=None,
+                    prompt_text=prompt[:10000],
+                    response_text=(response_text or "")[:10000],
+                    evidence_ids=None,
+                    prompt_tokens=len(prompt) // 4,
+                    completion_tokens=len(response_text) // 4 if response_text else 0,
+                    model_name=model_name,
+                    error_message=error_message,
+                )
+                session.add(audit_entry)
+                await session.flush()
+            except Exception:
+                logger.exception("Failed to persist LLM audit log for TOM rationale gap %s", gap.id)
+
+        return result
 
     async def generate_bulk_rationales(
         self,
@@ -224,7 +251,7 @@ class RationaleGeneratorService:
         results = []
         for gap in gaps:
             spec = tom_specs.get(str(gap.dimension), None)
-            rationale_data = await self.generate_rationale(gap, spec)
+            rationale_data = await self.generate_rationale(gap, spec, session=session)
 
             gap.rationale = rationale_data["rationale"]
             gap.recommendation = rationale_data["recommendation"]

@@ -119,17 +119,21 @@ async def _link_actions_to_activities(
     ua_embeddings = await embedding_service.embed_texts_async(ua_texts)
     act_embeddings = await embedding_service.embed_texts_async(act_texts)
 
+    ua_matrix = np.array(ua_embeddings)
+    act_matrix = np.array(act_embeddings)
+    ua_norms = np.linalg.norm(ua_matrix, axis=1, keepdims=True)
+    act_norms = np.linalg.norm(act_matrix, axis=1, keepdims=True)
+    ua_matrix = ua_matrix / np.where(ua_norms > 0, ua_norms, 1)
+    act_matrix = act_matrix / np.where(act_norms > 0, act_norms, 1)
+    similarity_matrix = ua_matrix @ act_matrix.T
+    best_indices = np.argmax(similarity_matrix, axis=1)
+    best_sims = np.max(similarity_matrix, axis=1)
+
     for i, ua_node in enumerate(user_actions):
-        best_sim = 0.0
-        best_act_idx = -1
+        best_sim = float(best_sims[i])
+        best_act_idx = int(best_indices[i])
 
-        for j, _act_node in enumerate(activities):
-            sim = _cosine_similarity(ua_embeddings[i], act_embeddings[j])
-            if sim > best_sim:
-                best_sim = sim
-                best_act_idx = j
-
-        if best_sim < _SUGGESTED_THRESHOLD or best_act_idx < 0:
+        if best_sim < _SUGGESTED_THRESHOLD:
             continue
 
         link_type = "confirmed" if best_sim >= _CONFIRMED_THRESHOLD else "suggested"
@@ -167,17 +171,21 @@ async def _link_apps_to_systems(
     app_embeddings = await embedding_service.embed_texts_async(app_texts)
     sys_embeddings = await embedding_service.embed_texts_async(sys_texts)
 
+    app_matrix = np.array(app_embeddings)
+    sys_matrix = np.array(sys_embeddings)
+    app_norms = np.linalg.norm(app_matrix, axis=1, keepdims=True)
+    sys_norms = np.linalg.norm(sys_matrix, axis=1, keepdims=True)
+    app_matrix = app_matrix / np.where(app_norms > 0, app_norms, 1)
+    sys_matrix = sys_matrix / np.where(sys_norms > 0, sys_norms, 1)
+    similarity_matrix = app_matrix @ sys_matrix.T
+    best_indices = np.argmax(similarity_matrix, axis=1)
+    best_sims = np.max(similarity_matrix, axis=1)
+
     for i, app_node in enumerate(applications):
-        best_sim = 0.0
-        best_sys_idx = -1
+        best_sim = float(best_sims[i])
+        best_sys_idx = int(best_indices[i])
 
-        for j, _sys_node in enumerate(systems):
-            sim = _cosine_similarity(app_embeddings[i], sys_embeddings[j])
-            if sim > best_sim:
-                best_sim = sim
-                best_sys_idx = j
-
-        if best_sim < _MAPS_TO_THRESHOLD or best_sys_idx < 0:
+        if best_sim < _MAPS_TO_THRESHOLD:
             continue
 
         try:

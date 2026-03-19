@@ -31,6 +31,7 @@ from src.core.models import (
     ShelfDataRequest,
     ShelfRequestStatus,
 )
+from src.semantic.graph import KnowledgeGraphService
 
 logger = logging.getLogger(__name__)
 
@@ -207,7 +208,7 @@ class SequenceConflictDetector:
     and (B)-[:PRECEDES]->(A) from different sources.
     """
 
-    def __init__(self, graph_service: Any) -> None:
+    def __init__(self, graph_service: KnowledgeGraphService) -> None:
         self._graph = graph_service
 
     async def detect(self, engagement_id: str) -> list[DetectedConflict]:
@@ -277,7 +278,7 @@ class RoleConflictDetector:
     different roles from different source evidence items.
     """
 
-    def __init__(self, graph_service: Any) -> None:
+    def __init__(self, graph_service: KnowledgeGraphService) -> None:
         self._graph = graph_service
 
     async def detect(self, engagement_id: str) -> list[DetectedConflict]:
@@ -351,7 +352,7 @@ class RuleConflictDetector:
     a TEMPORAL_SHIFT resolution hint is suggested.
     """
 
-    def __init__(self, graph_service: Any) -> None:
+    def __init__(self, graph_service: KnowledgeGraphService) -> None:
         self._graph = graph_service
 
     async def detect(self, engagement_id: str) -> list[DetectedConflict]:
@@ -454,7 +455,7 @@ class ExistenceConflictDetector:
     Authority weight of each source determines severity.
     """
 
-    def __init__(self, graph_service: Any) -> None:
+    def __init__(self, graph_service: KnowledgeGraphService) -> None:
         self._graph = graph_service
 
     async def detect(self, engagement_id: str) -> list[DetectedConflict]:
@@ -575,7 +576,7 @@ class IOMismatchDetector:
     artifacts are reported.
     """
 
-    def __init__(self, graph_service: Any) -> None:
+    def __init__(self, graph_service: KnowledgeGraphService) -> None:
         self._graph = graph_service
 
     async def detect(self, engagement_id: str) -> list[DetectedConflict]:
@@ -679,7 +680,7 @@ class ControlGapDetector:
     compliance gaps that should trigger shelf data requests.
     """
 
-    def __init__(self, graph_service: Any) -> None:
+    def __init__(self, graph_service: KnowledgeGraphService) -> None:
         self._graph = graph_service
 
     async def detect(self, engagement_id: str) -> list[DetectedConflict]:
@@ -827,7 +828,7 @@ async def _create_shelf_requests_for_control_gaps(
 
 
 async def run_conflict_detection(
-    graph_service: Any,
+    graph_service: KnowledgeGraphService,
     session: AsyncSession,
     engagement_id: str,
 ) -> DetectionResult:

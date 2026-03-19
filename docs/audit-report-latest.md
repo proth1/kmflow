@@ -1,475 +1,492 @@
 # KMFlow Platform Code Audit Report — 2026-03-19
 
-**Classification**: Confidential — Security Audit Finding
-**Auditor**: Claude Opus 4.6 (12 specialized agents, 4 squads)
-**Prior Audits**: 2026-02-20, 2026-02-26
-
 ## Executive Summary
 
-- **Total findings**: 107
-- **By severity**: 6 CRITICAL / 34 HIGH / 37 MEDIUM / 30 LOW
-- **By squad**: Security (21) / Architecture (28) / Quality (35) / Coverage & Compliance (23)
-- **Agents deployed**: 12 (5 Opus, 7 Sonnet)
-- **Prior audit resolved**: 7 findings remediated since 2026-02-26
+- **Total findings: 108**
+- **By severity: 3 CRITICAL / 29 HIGH / 41 MEDIUM / 35 LOW**
+- **By squad: Security (17) / Architecture (35) / Quality (26) / Coverage (30)**
 
-### Trend Since Prior Audit
+| Squad | Agent | C | H | M | L | Total | Score |
+|-------|-------|---|---|---|---|-------|-------|
+| A: Security | A1 AuthZ | 0 | 2 | 2 | 1 | 5 | 8.0/10 |
+| | A2 Injection | 0 | 0 | 3 | 2 | 5 | 7.5/10 |
+| | A3 Infrastructure | 0 | 1 | 3 | 3 | 7 | 8.6/10 |
+| B: Architecture | B1 Architecture | 0 | 2 | 4 | 3 | 9 | 8/10 |
+| | B2 Data Integrity | 0 | 2 | 6 | 5 | 13 | 7.9/10 |
+| | B3 API Compliance | 1 | 3 | 5 | 4 | 13 | 7.5/10 |
+| C: Quality | C1 Python | 0 | 5 | 3 | 2 | 10 | 6.5/10 |
+| | C2 Frontend | 0 | 1 | 0 | 3 | 4 | 7.5/10 |
+| | C3 Performance | 1 | 4 | 4 | 3 | 12 | HIGH risk |
+| D: Coverage | D1 Tests | 1 | 5 | 4 | 2 | 12 | WARNING |
+| | D2 Compliance | 0 | 2 | 3 | 2 | 7 | — |
+| | D3 Dependencies | 0 | 2 | 4 | 5 | 11 | MED-HIGH |
+| **Total** | | **3** | **29** | **41** | **35** | **108** | |
 
-| Metric | 2026-02-26 | 2026-03-19 | Trend |
-|--------|------------|------------|-------|
-| CRITICAL | 2 | 6 | +4 (expanded scope, new regressions) |
-| HIGH | 18 | 34 | +16 (expanded scope — 456 endpoints vs 210) |
-| Resolved | — | 7 | Improvements |
-| New | — | 6 | New regressions |
+### Remediation Progress
 
-### Key Corrections to Pre-Identified Findings
+This is the 4th comprehensive audit. Significant progress since the initial audit (2026-02-20):
 
-The audit corrected 3 of the 10 pre-identified findings:
-1. `require_engagement_access()` IS actively used across 44 route files (not dead code)
-2. MCP `verify_api_key()` DOES perform DB lookup with HMAC comparison (not format-only)
-3. JWT in `localStorage` was RESOLVED — auth is now exclusively via HttpOnly cookies
+- **30+ prior findings resolved** across all squads
+- Several pre-identified findings from the audit checklist were already remediated:
+  - `require_engagement_access()` is now called in 44+ route files
+  - MCP `validate_api_key()` now performs proper DB lookup + HMAC comparison
+  - Redis has `--requirepass` authentication
+  - CORS uses explicit method/header lists (not wildcards)
+  - Default secrets are blocked by production startup validator
+  - Fernet KDF upgraded to PBKDF2 with 600K iterations
+  - JWT stored in HttpOnly cookies (not localStorage)
+  - RAG copilot now sanitizes user queries and conversation history
 
 ---
 
 ## Top 10 Critical & High Findings
 
-| # | Severity | Finding | File | Agent |
-|---|----------|---------|------|-------|
-| 1 | **CRITICAL** | `search_similar()` queries non-existent `fragment_embeddings` table — silently returns empty | `src/semantic/graph.py:587` | B2 |
-| 2 | **CRITICAL** | N+1 embedding UPDATEs — batch method exists but not wired in | `src/evidence/pipeline.py:539` | C3 |
-| 3 | **CRITICAL** | In-memory rate limiter ineffective in multi-worker deployments | `src/api/middleware/security.py:95` | B3 |
-| 4 | **CRITICAL** | `generate_gap_probes` returns HTTP 201 but creates nothing in DB | `src/api/routes/gap_probes.py:82` | B3 |
-| 5 | **CRITICAL** | `fail_under = 70` — 20 points below mandatory 90% threshold | `pyproject.toml:115` | D1 |
-| 6 | **CRITICAL** | `debug: bool = True` default with incomplete production guard | `src/core/config.py:34` | C1 |
-| 7 | **HIGH** | Conflict resolution routes entirely unauthenticated (5 endpoints) | `src/api/routes/conflicts.py:99` | A1 |
-| 8 | **HIGH** | XXE regression in financial regulatory parser (missing safe XMLParser) | `src/evidence/parsers/financial_regulatory_parser.py:213` | A2 |
-| 9 | **HIGH** | MCP tool handlers bypass engagement-level authorization | `src/mcp/server.py:155` | A1 |
-| 10 | **HIGH** | AlertEngine unbounded in-memory lists — slow memory leak | `src/monitoring/alerting/engine.py:448` | C3 |
+1. **[CRITICAL] N+1 Graph Read in `search_similar`** — `src/semantic/graph.py:612` — Every copilot/semantic search issues 10 sequential Neo4j sessions (one per pgvector result row). Batch fetch with `WHERE n.id IN $ids` eliminates this.
+
+2. **[CRITICAL] Auth Rate Limiter IP-Only, Not Per-Account** — `src/api/routes/auth.py:46` — `slowapi` is per-process (not Redis-backed) and IP-only. Distributed credential stuffing from multiple IPs evades all controls.
+
+3. **[CRITICAL] Coverage Threshold Below Mandate** — `pyproject.toml` — `fail_under = 80` while 246 of 408 source modules have no test file. CI passes while critical security paths are untested.
+
+4. **[HIGH] IDOR: POV Model-ID Routes Skip Engagement Check** — `src/api/routes/pov.py:445` — 6 endpoints check `require_permission("pov:read")` but skip engagement membership on model-ID routes. Cross-tenant data access.
+
+5. **[HIGH] IDOR: Evidence Routes Skip Engagement Check** — `src/api/routes/evidence.py:309` — `get_evidence`, `update_validation_status`, `get_fragments` skip engagement membership. Cross-tenant data access and mutation.
+
+6. **[HIGH] 33+ Tables Missing from RLS Engagement Scoping** — `src/core/rls.py:42` — Only 31 tables have RLS policies; 33+ engagement-scoped tables (including `incidents`, `compliance_assessments`) are missing.
+
+7. **[HIGH] requirements.lock Stale — Docker Builds with CVE-Vulnerable Packages** — `requirements.lock` — Pins `cryptography==43.0.3` (floor is `>=46.0.5`), `pyjwt==2.11.0` (CVE-2026-32597), omits `pyopenssl`/`pyasn1`.
+
+8. **[HIGH] requirements.lock Lacks Hash Verification** — No SHA-256 hashes for supply chain tamper detection in Docker builds.
+
+9. **[HIGH] Memory Leak in AlertEngine** — `src/monitoring/alerting/engine.py` — Unbounded lists grow for process lifetime with linear scan on every query.
+
+10. **[HIGH] LLM Calls Not Recorded in LLMAuditLog** — `src/rag/copilot.py:158` — Copilot and TOM rationale generator create no audit records. EU AI Act Art. 12 compliance gap.
 
 ---
 
 ## CRITICAL Findings
 
-### [CRITICAL] DATA-INTEGRITY: `search_similar()` queries non-existent table
-**File**: `src/semantic/graph.py:587-594`
-**Agent**: B2 (Data Integrity Auditor)
-**Evidence**:
-```python
-pgvector_query = text(
-    "SELECT id, entity_id, entity_type, "
-    "1 - (embedding <=> :embedding::vector) AS similarity "
-    "FROM fragment_embeddings "  # Table does not exist!
-    "WHERE (:engagement_id IS NULL OR engagement_id = :engagement_id::uuid) "
-    "ORDER BY embedding <=> :embedding::vector "
-    "LIMIT :top_k"
-)
-```
-**Description**: Queries table `fragment_embeddings` which doesn't exist in any migration or ORM model. Actual table is `evidence_fragments`. Also references non-existent columns. Exception swallowed by broad `except Exception` on line 634, silently returning empty results.
-**Risk**: Semantic search via graph service is completely broken. Users get no results with no error indication.
-**Recommendation**: Rewrite query to use `evidence_fragments` table with correct column names. Fix the broad exception catch.
-
----
-
-### [CRITICAL] PERFORMANCE: N+1 embedding UPDATEs — batch method exists but not called
-**File**: `src/evidence/pipeline.py:539`
+### [CRITICAL] PERFORMANCE: N+1 Graph Read in `search_similar`
+**File**: `src/semantic/graph.py:612`
 **Agent**: C3 (Performance Auditor)
 **Evidence**:
 ```python
-for frag, embedding in zip(valid_fragments, embeddings, strict=True):
-    try:
-        await semantic_service.store_embedding(session, str(frag.id), embedding)
-        stored += 1
-    except (ValueError, ConnectionError, RuntimeError) as e:
-        logger.warning("Failed to store embedding for fragment %s: %s", frag.id, e)
+rows = result.fetchall()
+results: list[dict[str, Any]] = []
+for row in rows:
+    entity_id = str(row.evidence_id)
+    node = await self.get_node(entity_id)   # one Neo4j round-trip per row
 ```
-**Description**: Sequential per-fragment UPDATE loop. `store_embeddings_batch()` already exists in `embeddings.py:131` and does this in a single `executemany` call.
-**Risk**: 100-fragment document = 100 sequential database round-trips during upload.
-**Recommendation**: Replace loop with single call to `semantic_service.store_embeddings_batch()`.
+**Description**: After every pgvector similarity query, the function calls `get_node()` once per result row. Each call opens/closes a Neo4j session. For `top_k=10`, this is 10 sequential Neo4j sessions per semantic search, called on every copilot query.
+**Risk**: 20-50ms added to every semantic search. Under 20 concurrent copilot sessions, generates 200 sequential Neo4j queries.
+**Recommendation**: Batch fetch: `MATCH (n) WHERE n.id IN $ids RETURN n, labels(n)`.
 
 ---
 
-### [CRITICAL] API-COMPLIANCE: In-memory rate limiter ineffective in multi-worker deployments
-**File**: `src/api/middleware/security.py:95`
+### [CRITICAL] API: Auth Endpoint Rate Limiter Not Per-Account
+**File**: `src/api/routes/auth.py:46`
 **Agent**: B3 (API Compliance Auditor)
 **Evidence**:
 ```python
-class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Simple in-memory per-IP rate limiter.
-    Note: This is per-process only. In multi-worker deployments the
-    effective limit is ``workers * max_requests``."""
+limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
+
+@router.post("/token", response_model=TokenResponse)
+@limiter.limit("5/minute")
+async def get_token(request: Request, payload: TokenRequest, ...) -> dict[str, Any]:
 ```
-**Description**: Three separate rate-limiting mechanisms all use process-local memory. In N-worker deployment, effective limits multiply by N. Auth `/login` (5 req/min) becomes N*5.
-**Risk**: Brute-force protection and LLM cost controls negated in production.
-**Recommendation**: Replace with Redis-backed atomic counters using `INCR` + `EXPIRE`. Redis client already available on `app.state`.
+**Description**: `slowapi` limits by IP only (no per-email lockout), is per-process (not Redis-backed), and multi-worker deployments multiply the per-IP window.
+**Risk**: Distributed credential stuffing from multiple IPs evades all controls.
+**Recommendation**: (1) Back slowapi with Redis. (2) Add per-email lockout counter in Redis.
 
 ---
 
-### [CRITICAL] API-COMPLIANCE: `generate_gap_probes` stub returns 201 but creates nothing
-**File**: `src/api/routes/gap_probes.py:82`
-**Agent**: B3 (API Compliance Auditor)
-**Evidence**:
-```python
-    """Generate gap-targeted probes for an engagement.
-    TODO: Persist generated probes to database for stable IDs and
-    referenceability by survey bot. Currently recomputes on every call."""
-```
-**Description**: Returns HTTP 201 Created but creates nothing in the database. Downstream survey bot integration is silently broken.
-**Risk**: Callers expecting a resource with stable IDs receive none.
-**Recommendation**: Either persist probes or change status code to 200 and document results as ephemeral.
-
----
-
-### [CRITICAL] TEST-COVERAGE: `fail_under = 70` below mandatory 90% threshold
-**File**: `pyproject.toml:115`
+### [CRITICAL] COVERAGE: Coverage Threshold Below Audit Mandate
+**File**: `pyproject.toml`
 **Agent**: D1 (Test Coverage Auditor)
 **Evidence**:
 ```toml
 [tool.coverage.report]
-fail_under = 70
+fail_under = 80
 ```
-**Description**: CI gate set 20 points below mandatory minimum. Actual coverage is ~84% but regressions to 71% would pass silently.
-**Risk**: Coverage erosion undetected by CI.
-**Recommendation**: Raise to at minimum 80% immediately (per CLAUDE.md), targeting 90%.
-
----
-
-### [CRITICAL] CONFIG: `debug: bool = True` default with incomplete production guard
-**File**: `src/core/config.py:34`
-**Agent**: C1 (Python Quality Auditor)
-**Evidence**:
-```python
-app_env: str = "development"
-debug: bool = True
-neo4j_password: str = "neo4j_dev_password"
-postgres_password: str = "kmflow_dev_password"
-```
-**Description**: `debug=True` has no production guard. `neo4j_password` and `postgres_password` not checked by `reject_default_secrets_in_production`. If `APP_ENV` left as `"development"`, all defaults silently accepted.
-**Risk**: Misconfigured environment exposes stack traces and accepts known-weak passwords.
-**Recommendation**: Add database passwords to production validator. Guard debug flag outside development.
+**Description**: The `fail_under` threshold is 80% while 246 of 408 source modules have no corresponding test file. CI passes while entire subsystems (simulation engine, GDPR agent, watermark extractor) are untested.
+**Risk**: Critical security and compliance paths can reach production without test coverage.
+**Recommendation**: Raise to 90 after addressing critical coverage gaps.
 
 ---
 
 ## HIGH Findings
 
-### Squad A: Security & Authorization
-
-#### [HIGH] MISSING_AUTH: Conflict Resolution Routes Unauthenticated
-**File**: `src/api/routes/conflicts.py:99-364`
+### [HIGH] AUTHZ: IDOR on POV Model-ID Routes
+**File**: `src/api/routes/pov.py:445-469`
 **Agent**: A1 (AuthZ Auditor)
 **Evidence**:
 ```python
-@router.get("/engagements/{engagement_id}/conflicts", response_model=ConflictListResponse)
-async def list_conflicts(
-    engagement_id: uuid.UUID,
+@router.get("/{model_id}", response_model=ProcessModelResponse)
+async def get_process_model(
+    model_id: str,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("pov:read")),
+) -> dict[str, Any]:
+    result = await session.execute(select(ProcessModel).where(ProcessModel.id == model_uuid))
 ```
-**Description**: All 5 endpoints lack any authentication. Any unauthenticated caller can read, resolve, and escalate conflicts across all engagements.
-**Risk**: Information disclosure, data integrity violation, denial of service via mass escalations.
-**Recommendation**: Add `Depends(require_engagement_access)` to engagement-scoped endpoints.
+**Description**: Six POV endpoints check `require_permission("pov:read")` but skip engagement membership on model-ID routes.
+**Risk**: Cross-tenant data leakage — process models, BPMN XML, evidence maps from other engagements accessible by UUID.
+**Recommendation**: Call `_check_engagement_member(session, user, model.engagement_id)` after fetching the model.
 
 ---
 
-#### [HIGH] MISSING_AUTHZ: MCP Tool Handlers Bypass Engagement Isolation
-**File**: `src/mcp/server.py:155-329`
+### [HIGH] AUTHZ: IDOR on Evidence Detail/Mutation Routes
+**File**: `src/api/routes/evidence.py:309-519`
 **Agent**: A1 (AuthZ Auditor)
 **Evidence**:
 ```python
-async def _tool_get_engagement(session_factory: Any, args: dict[str, Any]) -> dict[str, Any]:
-    eid = UUID(args["engagement_id"])
-    async with session_factory() as session:
-        result = await session.execute(select(Engagement).where(Engagement.id == eid))
+@router.get("/{evidence_id}", response_model=EvidenceDetailResponse)
+async def get_evidence(
+    evidence_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("evidence:read")),
+) -> dict[str, Any]:
 ```
-**Description**: API key validated, but authenticated client info never passed to tool handlers. Any valid API key accesses any engagement's data.
-**Risk**: Any valid MCP API key holder can access data from any engagement, violating multi-tenant isolation.
-**Recommendation**: Pass `client["user_id"]` into tool handlers and verify engagement membership.
+**Description**: `get_evidence`, `update_validation_status`, `get_fragments` skip engagement membership verification. `list_evidence` allows enumeration across all engagements.
+**Risk**: Cross-tenant data access and data integrity violation.
+**Recommendation**: Call `verify_engagement_member(session, user, evidence.engagement_id)` after fetching.
 
 ---
 
-#### [HIGH] XXE-REGRESSION: Unsafe XML Parsing in Financial Regulatory Parser
-**File**: `src/evidence/parsers/financial_regulatory_parser.py:213`
-**Agent**: A2 (Injection Auditor)
-**Evidence**:
-```python
-async def _parse_xml(self, file_path: str, file_name: str) -> ParseResult:
-    from lxml import etree
-    with open(file_path, encoding="utf-8", errors="replace") as fh:
-        content = fh.read()
-    try:
-        root = etree.fromstring(content.encode())  # Missing safe XMLParser!
-```
-**Description**: `etree.fromstring()` without safe XMLParser. All other parsers use `XMLParser(resolve_entities=False, no_network=True)`. One-line fix.
-**Risk**: XXE attack via crafted regulatory XML upload.
-**Recommendation**: Add `parser = etree.XMLParser(resolve_entities=False, no_network=True)` and pass to `fromstring()`.
-
----
-
-#### [HIGH] SECRETS: Config Fields Not Using SecretStr
-**File**: `src/core/config.py:42-70`
+### [HIGH] INFRA: Production Overlay Missing CIB7/MinIO Overrides
+**File**: `docker-compose.prod.yml`
 **Agent**: A3 (Infrastructure Security Auditor)
 **Evidence**:
-```python
-postgres_password: str = "kmflow_dev_password"
-neo4j_password: str = "neo4j_dev_password"
-jwt_secret_key: str = "dev-secret-key-change-in-production"
-encryption_key: str = "dev-encryption-key-change-in-production"
-watermark_signing_key: str = "dev-watermark-key-change-in-production"
+```yaml
+# docker-compose.yml:104-105 (CIB7 -- exposed with no auth override)
+    ports:
+      - "${CIB7_PORT:-8081}:8080"
 ```
-**Description**: Five security-critical fields are plain `str` instead of `SecretStr`. `databricks_token` already demonstrates the correct pattern.
-**Risk**: Accidental exposure of secrets in logs, debug output, or error traces.
-**Recommendation**: Change to `SecretStr` type. Update code to call `.get_secret_value()`.
+**Description**: Production overlay sets `ports: []` for postgres, neo4j, redis but has no entries for CIB7, MinIO, or Mailpit.
+**Risk**: CIB7's REST API allows unauthenticated process deployment. MinIO console uses default credentials.
+**Recommendation**: Add `ports: []` for CIB7, MinIO, Mailpit in `docker-compose.prod.yml`.
 
 ---
 
-### Squad B: Architecture & Data Integrity
-
-#### [HIGH] GOD-FILE: `tom.py` — 2274 lines, 35 handlers, 51 inline schemas
-**File**: `src/api/routes/tom.py`
-**Agent**: B1 (Architecture Auditor)
-**Description**: Largest route file. Covers TOMs, gap analysis, best practices, benchmarks, roadmaps, maturity scoring, alignment runs, and conformance checking. Tripled in schema count since Feb.
-**Recommendation**: Split into sub-routers. Extract schemas to `src/api/schemas/tom.py`.
-
----
-
-#### [HIGH] GOD-FILE: `pov.py` — 1875 lines, 22 handlers, 35 inline schemas
-**File**: `src/api/routes/pov.py`
-**Agent**: B1 (Architecture Auditor)
-**Description**: Second largest route file. Redis job management logic mixed with route logic.
-**Recommendation**: Split into `pov/generation.py`, `pov/models.py`, `pov/confidence.py`, etc.
-
----
-
-#### [HIGH] SCHEMA-COUPLING: 14+ route files define 200+ schemas inline
-**File**: Multiple route files
-**Agent**: B1 (Architecture Auditor)
-**Description**: Only `simulations.py` and `taskmining.py` use `src/api/schemas/`. Violates project coding standards.
-**Recommendation**: Extract schemas for top 6 route files by size.
-
----
-
-#### [HIGH] NEO4J-DEAD-CODE: Graph cleanup method exists but never called
-**File**: `src/semantic/graph.py:663-680`
+### [HIGH] DATA: 33+ Tables Missing from RLS Engagement Scoping
+**File**: `src/core/rls.py:42-79`
 **Agent**: B2 (Data Integrity Auditor)
-**Description**: `delete_engagement_subgraph()` implemented but never invoked from retention or deletion paths.
-**Risk**: Neo4j accumulates orphaned graph data for deleted engagements. GDPR violation.
-**Recommendation**: Call from retention cleanup and engagement delete routes.
+**Evidence**:
+```python
+ENGAGEMENT_SCOPED_TABLES: list[str] = [
+    "annotations", "audit_logs", "case_link_edges",
+    # ... 31 tables total
+]
+# Missing: incidents, review_packs, compliance_assessments,
+# transfer_impact_assessments, dark_room_snapshots, ...
+```
+**Description**: 31 tables have RLS policies. 33+ tables with non-nullable `engagement_id` FK are missing, including security-sensitive tables.
+**Risk**: Cross-engagement data leak bypassing application layer.
+**Recommendation**: Add all tables with non-nullable `engagement_id` FK. Consider generating the list programmatically.
 
 ---
 
-#### [HIGH] PAGINATION: Multiple list endpoints without bounds
-**Files**: `users.py:350`, `cost_modeling.py:129,174`
+### [HIGH] API: Unbounded Query in `graph_analytics.py`
+**File**: `src/api/routes/graph_analytics.py:137`
 **Agent**: B3 (API Compliance Auditor)
-**Description**: Unbounded SELECT queries. `total: len(items)` pattern produces wrong totals.
-**Recommendation**: Add `limit`/`offset` params; use separate `COUNT(*)` query for total.
+**Description**: Fetches all evidence items with no `.limit()`, then calls `extract_entities()` in O(N) loop.
+**Risk**: Memory exhaustion and timeout on large engagements.
+**Recommendation**: Add pagination with `le=500` cap.
 
 ---
 
-### Squad C: Code Quality & Performance
-
-#### [HIGH] EXCEPTION: 56 unjustified `except Exception` catches
-**File**: Multiple
-**Agent**: C1 (Python Quality Auditor)
-**Evidence**:
-```python
-# src/core/auth.py:431 — silent swallow on blacklist check
-try:
-    if await is_token_blacklisted(websocket, jwt_token):
-        return None
-except Exception:
-    return None  # no log — exception type and message lost entirely
-```
-**Description**: Most severe: `core/auth.py:431` silently swallows blacklist check errors. Redis failure and code bug produce identical invisible behavior.
-**Recommendation**: Catch specific exceptions. Log at minimum `logger.warning` before returning.
+### [HIGH] API: Unbounded Query in `correlation.py`
+**File**: `src/api/routes/correlation.py:63`
+**Agent**: B3 (API Compliance Auditor)
+**Description**: Fetches all `CanonicalActivityEvent` rows unboundedly.
+**Risk**: Memory exhaustion proportional to event volume.
+**Recommendation**: Process in batches or as a background task.
 
 ---
 
-#### [HIGH] STUBS: Fabricated responses from stub implementations
-**Files**: `taskmining/worker.py:43`, `security/consent/service.py:96`
+### [HIGH] API: ~35 Endpoints Missing `response_model`
+**File**: Multiple — `governance.py:330`, `data_classification.py:97`, `consent.py:76`, `camunda.py:53`
+**Agent**: B3 (API Compliance Auditor)
+**Description**: ~35 route handlers have no `response_model`. `governance.py /policies` exposes server filesystem path.
+**Risk**: Response drift undetectable; information disclosure; ~8% of endpoints undocumented in OpenAPI.
+**Recommendation**: Define Pydantic response models for all 35 endpoints.
+
+---
+
+### [HIGH] ARCHITECTURE: God Route Files (tom.py 1751 lines, pov.py 1496 lines)
+**File**: `src/api/routes/tom.py`, `src/api/routes/pov.py`
+**Agent**: B1 (Architecture Auditor)
+**Description**: tom.py has 35 route handlers spanning 8 sub-domains. Schemas extracted but route logic monolithic.
+**Risk**: Merge conflicts; syntax error disables entire subsystem.
+**Recommendation**: Split into sub-routers by domain.
+
+---
+
+### [HIGH] ARCHITECTURE: 104 Inline Pydantic Schemas in 6 Route Files
+**File**: `monitoring.py` (22), `governance.py` (20), `validation.py` (20), `dashboard.py` (18), `regulatory.py` (14), `pipeline_quality.py` (10)
+**Agent**: B1 (Architecture Auditor)
+**Description**: 104 schemas defined inline, violating project coding standards requiring schemas in `src/api/schemas/`.
+**Risk**: Schema duplication; inflated route files.
+**Recommendation**: Extract schemas for all 6 files (each drops 200-400 lines).
+
+---
+
+### [HIGH] QUALITY: 138 Broad `except Exception` Catches (~56 Unjustified)
+**File**: Multiple — `semantic/conflict_detection.py` (6), `conflict_classifier.py` (6), `websocket.py` (5)
+**Agent**: C1 (Python Quality Auditor)
+**Description**: 138 total `except Exception` catches. ~22 carry justification comments; ~56 are unjustified.
+**Risk**: Programming errors masked alongside infrastructure errors.
+**Recommendation**: Catch specific exceptions; add justification comments to intentionally broad catches.
+
+---
+
+### [HIGH] QUALITY: 168 `Any` Type Annotations
+**File**: Multiple — `semantic/conflict_detection.py`, `mcp/server.py`, `monitoring/pipeline/continuous.py`
+**Agent**: C1 (Python Quality Auditor)
+**Description**: All 6 detector classes accept `graph_service: Any`; all 8 MCP tool functions use `session_factory: Any`.
+**Risk**: `mypy` cannot validate attribute access. Method renames fail only at runtime.
+**Recommendation**: Replace with concrete types.
+
+---
+
+### [HIGH] QUALITY: 10 God Classes Exceeding 300 Lines
+**File**: `src/semantic/graph.py:94` (705 lines), + 9 more
+**Agent**: C1 (Python Quality Auditor)
+**Description**: `KnowledgeGraphService` at 705 lines has 8+ responsibilities, injected into 12+ modules.
+**Recommendation**: Split into `GraphReadService`, `GraphWriteService`, `GraphSearchService`.
+
+---
+
+### [HIGH] QUALITY: 3 Functions Exceeding 200 Lines
+**File**: `src/data/seeds.py:12` (224), `src/api/main.py:258` (221), `src/pov/generator.py:72` (205)
+**Agent**: C1 (Python Quality Auditor)
+**Recommendation**: Move seed data to YAML; extract helpers from `create_app`; decompose pipeline.
+
+---
+
+### [HIGH] QUALITY: Stub Implementations (Including GDPR Consent)
+**File**: `src/taskmining/worker.py:43`, `src/security/consent/service.py:96`
 **Agent**: C1 (Python Quality Auditor)
 **Evidence**:
 ```python
-if task_type == "aggregate":
-    return {"status": "aggregated"}  # fabricated — no actual aggregation occurs
-
 deletion_task_id = uuid.uuid4()
-return {"status": "withdrawal_accepted", "deletion_task_id": str(deletion_task_id)}
-# ID is never stored or tracked
+# returns tracking ID but never stores, dispatches, or tracks it
 ```
-**Description**: Worker returns `"aggregated"` without aggregating. Consent service generates deletion UUID that's never dispatched.
-**Risk**: GDPR erasure request acknowledged but never executed.
-**Recommendation**: Implement dispatch or change response to document deferred state.
+**Description**: Consent service returns deletion task ID without any deletion mechanism. GDPR Art. 17 risk.
+**Recommendation**: Implement Redis Stream dispatch or change response to indicate manual deletion pending.
 
 ---
 
-#### [HIGH] N+1-GRAPH: CO_OCCURS_WITH and semantic bridges — per-pair Neo4j writes
-**Files**: `pipeline.py:466`, `bridges/process_evidence.py:110` + 3 others
+### [HIGH] QUALITY: `as unknown as` Casts in BPMNViewer
+**File**: `frontend/src/components/BPMNViewer.tsx:95`
+**Agent**: C2 (Frontend Quality Auditor)
+**Description**: Six `as unknown as BpmnViewer` double casts bypass TypeScript's type system.
+**Risk**: Library API changes silently ignored by compiler.
+**Recommendation**: Use typed service retrieval; single cast at import point.
+
+---
+
+### [HIGH] PERFORMANCE: N+1 Graph Write in `build_fragment_graph`
+**File**: `src/evidence/pipeline.py:466`
 **Agent**: C3 (Performance Auditor)
-**Description**: O(N^2) Neo4j sessions. `batch_create_relationships()` exists but not used.
-**Risk**: Up to 5,000 sequential Neo4j transactions for 50 process + 100 evidence nodes.
-**Recommendation**: Collect tuples and call `batch_create_relationships()` once per bridge.
+**Description**: CO_OCCURS_WITH relationships created one-at-a-time in nested loop. `batch_create_relationships()` exists but isn't used here.
+**Risk**: 30 entities generate 435 sequential Neo4j sessions (~1-2s per document).
+**Recommendation**: Collect tuples and call `batch_create_relationships` once.
 
 ---
 
-#### [HIGH] MEMORY-LEAK: AlertEngine unbounded in-memory lists
-**File**: `src/monitoring/alerting/engine.py:448`
+### [HIGH] PERFORMANCE: N+1 Graph Reads in `build_governance_chains`
+**File**: `src/core/regulatory.py:171`
 **Agent**: C3 (Performance Auditor)
-**Evidence**:
-```python
-class AlertEngine:
-    def __init__(self, ...):
-        self.alerts: list[Alert] = []
-        self._notification_log: list[dict[str, Any]] = []
-```
-**Description**: Every alert and notification accumulated without eviction. `query_alerts` scans full list on every API call.
-**Risk**: Memory growth and degrading query performance over process lifetime.
-**Recommendation**: Persist to DB. Use `deque(maxlen=1000)` for notification log.
+**Description**: Per-process-node `get_relationships()` + per-relationship `get_node()` calls.
+**Risk**: 50 processes generates 250+ sequential Neo4j sessions.
+**Recommendation**: Single Cypher join; replace existence check with `MERGE`.
 
 ---
 
-### Squad D: Coverage, Compliance & Risk
+### [HIGH] PERFORMANCE: Unbounded Graph Traversal in `_count_components`
+**File**: `src/evaluation/graph_health.py:94`
+**Agent**: C3 (Performance Auditor)
+**Description**: Fetches all edges in engagement with no LIMIT, streams into Python union-find.
+**Recommendation**: Add `LIMIT 10000`; consider background job.
 
-#### [HIGH] MISSING-TESTS: GDPR erasure worker `execute()` untested
-**File**: `src/gdpr/erasure_worker.py`
+---
+
+### [HIGH] COVERAGE: Flaky Timing-Dependent Tests (27 instances)
+**File**: `tests/monitoring/test_agent_framework_bdd.py`, `tests/core/tasks/test_worker_wiring_bdd.py`
 **Agent**: D1 (Test Coverage Auditor)
-**Description**: Cross-store coordination (PG + Neo4j + Redis) has zero test coverage. PG-only helper tested; wrapper is not.
-**Risk**: Erasure bugs in Neo4j or Redis purge paths undetected.
+**Description**: 27 `asyncio.sleep()` calls with wall-clock assertions (0.05s-0.5s).
+**Recommendation**: Replace with event-driven synchronization.
 
 ---
 
-#### [HIGH] AUDIT-TRAIL: HttpAuditEvent silently discards IP, user agent, resource type
-**Files**: `src/core/audit.py:62-72`, `src/core/models/audit.py:145-169`
+### [HIGH] COVERAGE: Simulation Engine Untested
+**File**: `src/simulation/engine.py`
+**Agent**: D1 (Test Coverage Auditor)
+**Description**: Core `run_simulation` function has no test file.
+**Risk**: Bugs in simulation engine corrupt client deliverables.
+
+---
+
+### [HIGH] COVERAGE: Worker Dispatch Stubs Untested
+**File**: `src/taskmining/worker.py`, `src/monitoring/worker.py`
+**Agent**: D1 (Test Coverage Auditor)
+**Description**: Redis Stream consumers with stubs and real code paths — zero test coverage.
+
+---
+
+### [HIGH] COVERAGE: Agent GDPR Subsystem Untested
+**File**: `agent/python/kmflow_agent/gdpr/purge.py`, `audit_logger.py`, `retention.py`
+**Agent**: D1 (Test Coverage Auditor)
+**Description**: GDPR Art. 17 compliance modules with no tests. Purge manager opens real SQLite without isolation.
+
+---
+
+### [HIGH] COVERAGE: Watermark Extractor Untested
+**File**: `src/security/watermark/extractor.py`
+**Agent**: D1 (Test Coverage Auditor)
+**Description**: HMAC-SHA256 tamper detection for exported documents has no tests.
+
+---
+
+### [HIGH] COMPLIANCE: LLM Calls Not Recorded in LLMAuditLog
+**File**: `src/rag/copilot.py:158`, `src/tom/rationale_generator.py:249`
 **Agent**: D2 (Compliance Auditor)
-**Evidence**:
-```python
-event = HttpAuditEvent(
-    method=method, path=path, user_id=user_id,
-    status_code=status_code, engagement_id=engagement_id,
-    duration_ms=duration_ms,
-    # ip_address, user_agent, resource_type — silently dropped
-)
-```
-**Description**: Middleware extracts IP, user agent, and resource type from every request, but `HttpAuditEvent` model has no columns for them.
-**Risk**: Critical forensic data lost. Investigators must cross-reference app logs with DB.
-**Recommendation**: Add columns to model. Create migration. Pass values through.
+**Description**: `LLMAuditLog` model exists but only used in simulation suggestion engine. Copilot and TOM rationale generator create no audit records.
+**Risk**: Cannot track token consumption or prompt injection attempts. EU AI Act Art. 12 gap.
 
 ---
 
-#### [HIGH] LOCK-FILE: requirements.lock stale — cryptography violates declared floor
-**Files**: `requirements.lock:30-34`, `pyproject.toml:54`
-**Agent**: D3 (Dependency & Regression Auditor)
+### [HIGH] COMPLIANCE: Simulation/Assumption Deletion Unaudited
+**File**: `src/api/routes/scenario_simulation.py:62`, `src/api/routes/simulations.py:840`
+**Agent**: D2 (Compliance Auditor)
+**Description**: Financial assumption deletion has no `log_audit()` call (creation correctly logs). SOC2 CC7.2 violation.
+
+---
+
+### [HIGH] DEPENDENCIES: requirements.lock Stale
+**File**: `requirements.lock`
+**Agent**: D3 (Dependency Auditor)
 **Evidence**:
 ```
-# requirements.lock
-cryptography==43.0.3
-
-# pyproject.toml
-"cryptography>=46.0.5,<48.0",
+cryptography==43.0.3     # pyproject.toml requires >=46.0.5
 ```
-**Description**: Lock file last regenerated in PR #175 (Feb 2026). Six CVE remediation PRs updated `pyproject.toml` but none regenerated the lock. CVE floor packages `pyopenssl`, `pyasn1`, `pypdf` absent from lock entirely.
-**Risk**: Lock-file-based installs get vulnerable cryptography version.
-**Recommendation**: Regenerate with `uv pip compile --generate-hashes`. Wire into Dockerfile.
+**Description**: Lock compiled 2026-02-20, never updated. Docker builds install CVE-vulnerable versions.
+**Recommendation**: `uv pip compile pyproject.toml -o requirements.lock --generate-hashes`.
+
+---
+
+### [HIGH] DEPENDENCIES: requirements.lock Lacks Hash Verification
+**File**: `requirements.lock`
+**Agent**: D3 (Dependency Auditor)
+**Description**: No SHA-256 hashes for supply chain tamper detection. Agent's `requirements.txt` and frontend's `package-lock.json` both have integrity hashes.
+**Recommendation**: Regenerate with `--generate-hashes`; add `--require-hashes` to Dockerfile.
 
 ---
 
 ## MEDIUM Findings
 
-| # | Category | Title | File | Agent |
-|---|----------|-------|------|-------|
-| 1 | Security | Watermark signing key not validated in production | `config.py:70` | A1 |
-| 2 | Security | Hardcoded development credentials in config defaults | `config.py:42-70` | A1 |
-| 3 | Injection | File type detection falls back to client MIME type | `pipeline.py:105` | A2 |
-| 4 | Injection | Delta Lake delete predicate string interpolation | `backend.py:396` | A2 |
-| 5 | Injection | ServiceNow table name URL injection | `servicenow.py:85` | A2 |
-| 6 | Injection | LLM history injection via unsanitized history | `copilot.py:150` | A2 |
-| 7 | Infra | Source volume mounts without `:ro` flag | `docker-compose.yml:222` | A3 |
-| 8 | Infra | Fixed PBKDF2 salt in encryption | `encryption.py:29` | A3 |
-| 9 | Infra | Unencrypted database connections | `config.py:48` | A3 |
-| 10 | Infra | Production overlay missing CIB7/MinIO/Mailpit overrides | `docker-compose.prod.yml` | A3 |
-| 11 | Arch | 60+ deferred imports hide dependency graph | Multiple | B1 |
-| 12 | Arch | Dashboard in-memory cache breaks stateless design | `dashboard.py:54` | B1 |
-| 13 | Arch | Evidence pipeline 865 lines spanning 5 concerns | `pipeline.py` | B1 |
-| 14 | Arch | HTTPException raised from service layer | `pipeline.py:19` | B1 |
-| 15 | Arch | Duplicate `_check_engagement_member` in tom.py | `tom.py:60` | B1 |
-| 16 | Data | PDPAuditEntry.policy_id has no FK constraint | `pdp.py:165` | B2 |
-| 17 | Data | JSON array columns store FK references (carried) | Multiple | B2 |
-| 18 | Data | Engagement lacks ORM cascade for 21+ children (carried) | Multiple | B2 |
-| 19 | Data | No CHECK constraints on score columns (carried) | Multiple | B2 |
-| 20 | Data | Actor columns use String instead of FK (carried) | Multiple | B2 |
-| 21 | Data | Missing HNSW on pattern_library_entries (carried) | Multiple | B2 |
-| 22 | API | Auth endpoints not account-level rate limited | `auth.py:116` | B3 |
-| 23 | API | Governance policies endpoint exposes filesystem path | `governance.py:330` | B3 |
-| 24 | API | TOM endpoints missing response_model | `tom.py:533` | B3 |
-| 25 | API | Governance export missing responses declaration | `governance.py:389` | B3 |
-| 26 | API | Inconsistent pagination ceiling (100-2000) | Multiple | B3 |
-| 27 | API | seed_lists.py DELETE returns 200 instead of 204 | `seed_lists.py:161` | B3 |
-| 28 | Quality | 5 TODO comments in source code | Multiple | C1 |
-| 29 | Quality | Duplicate `_parse_timestamp` — 3 copies, divergent behavior | Multiple | C1 |
-| 30 | Quality | `Any` for datetime fields in 16 Pydantic schemas | Multiple | C1 |
-| 31 | Frontend | Form inputs without labels (accessibility) | `FinancialTab.tsx:116` | C2 |
-| 32 | Frontend | Icon-only delete button — no accessible name | `FinancialTab.tsx:228` | C2 |
-| 33 | Frontend | Hardcoded engagement UUID in navigation | `AppShell.tsx:64` | C2 |
-| 34 | Frontend | eslint-disable without justification | `conformance/page.tsx:64` | C2 |
-| 35 | Perf | Graph stats query not scoped on target node | `graph.py:777` | C3 |
-| 36 | Perf | Full file read into memory before validation | `evidence.py:179` | C3 |
-| 37 | Perf | Graph expansion over-fetches top_k * 10 nodes | `retrieval.py:355` | C3 |
-| 38 | Coverage | Security modules no dedicated test directory | `src/security/` | D1 |
-| 39 | Coverage | No concurrency tests for auth/rate-limiting | Multiple | D1 |
-| 40 | Coverage | Pipeline integration test 70% mocking | `test_pipeline_integration.py` | D1 |
-| 41 | Coverage | Cookie auth tests fragmented across files | Multiple | D1 |
-| 42 | Coverage | 39 model files with 1 partial test file | `tests/core/test_models.py` | D1 |
-| 43 | Compliance | DataClassification stored but not enforced | `evidence.py:129` | D2 |
-| 44 | Compliance | AlternativeSuggestion stores prompts permanently | `suggester.py:144` | D2 |
-| 45 | Compliance | Audit log immutability gap — docstring claims nonexistent trigger | `audit.py:104` | D2 |
-| 46 | Compliance | Consent not enforced before processing | `copilot.py:83` | D2 |
-| 47 | Deps | Agent pyproject.toml allows vulnerable PyJWT | `agent/python/pyproject.toml:13` | D3 |
-| 48 | Deps | CVE floor packages absent from lock file | `requirements.lock` | D3 |
-| 49 | Deps | Coverage threshold inconsistent with standard | `pyproject.toml:114` | D3 |
-| 50 | Deps | Lock file lacks hash verification | `requirements.lock` | D3 |
-| 51 | Deps | bpmn-js watermark preservation not verified | `BPMNViewer.tsx` | D3 |
+### Squad A: Security (8 findings)
+
+| # | Finding | File | Agent |
+|---|---------|------|-------|
+| 1 | Dev mode auto-authenticates as platform_admin at DEBUG level | `src/core/auth.py:311` | A1 |
+| 2 | Hardcoded default credentials with env-dependent guard | `src/core/config.py:42-69` | A1 |
+| 3 | File type detection falls back to client MIME type | `src/evidence/pipeline.py:105` | A2 |
+| 4 | Delta Lake delete predicate string interpolation | `src/datalake/backend.py:396` | A2 |
+| 5 | ServiceNow table_name URL interpolation without validation | `src/integrations/servicenow.py:85` | A2 |
+| 6 | PBKDF2 salt derived deterministically from secret | `src/core/encryption.py:37` | A3 |
+| 7 | Neo4j and PostgreSQL use unencrypted connections | `src/core/config.py:48` | A3 |
+| 8 | Redis URL fallback omits password | `src/core/config.py:216` | A3 |
+
+### Squad B: Architecture & Data (15 findings)
+
+| # | Finding | File | Agent |
+|---|---------|------|-------|
+| 9 | 30+ deferred imports hide dependency graph | Multiple | B1 |
+| 10 | Evidence pipeline 870 lines spanning 5 concerns | `src/evidence/pipeline.py` | B1 |
+| 11 | Duplicated background task GC pattern in 3 files | `tom.py`, `validation.py`, `scenario_simulation.py` | B1 |
+| 12 | Embedding service singleton without thread safety | `src/rag/embeddings.py:24` | B1 |
+| 13 | Neo4j traversal depth no upper bound | `src/semantic/graph.py:535` | B2 |
+| 14 | JSON array columns store FK references without integrity | Multiple models | B2 |
+| 15 | Engagement lacks ORM cascade for 27+ children | `src/core/models/` | B2 |
+| 16 | No CHECK constraints on score/confidence columns | Multiple models | B2 |
+| 17 | Actor columns use String instead of FK | Multiple models | B2 |
+| 18 | Missing HNSW index on pattern_library_entries | Migrations | B2 |
+| 19 | PATCH /engagements/{id}/archive without body | `src/api/routes/engagements.py:271` | B3 |
+| 20 | DELETE /seed-lists returns 200 vs convention 204 | `src/api/routes/seed_lists.py:161` | B3 |
+| 21 | Inconsistent limit ceilings (100 to 2000) | Multiple route files | B3 |
+| 22 | Rate limit 429 response shapes differ | `security.py:148`, `main.py:275` | B3 |
+| 23 | Governance /policies returns filesystem path | `src/api/routes/governance.py:330` | B3 |
+
+### Squad C: Quality & Performance (7 findings)
+
+| # | Finding | File | Agent |
+|---|---------|------|-------|
+| 24 | 5 TODO comments (2 linked to stubs) | Multiple | C1 |
+| 25 | `_parse_timestamp` duplicated 3x with divergent behavior | 3 modules | C1 |
+| 26 | `Any` for datetime fields in Pydantic schemas | Multiple route files | C1 |
+| 27 | Missing Neo4j indexes on 9 node labels | `src/core/neo4j.py:84` | C3 |
+| 28 | Full file read into memory before size validation | `src/api/routes/evidence.py:180` | C3 |
+| 29 | EmbeddingService() constructed per-request | `src/api/routes/graph.py:238` | C3 |
+| 30 | O(N^2) Python cosine similarity in semantic bridge | `src/taskmining/semantic_bridge.py:122` | C3 |
+
+### Squad D: Coverage & Compliance (11 findings)
+
+| # | Finding | File | Agent |
+|---|---------|------|-------|
+| 31 | `re_encrypt_value` and key rotation fallback untested | `src/core/encryption.py:116` | D1 |
+| 32 | Worker wiring tests use wall-clock sleeps | `tests/core/tasks/test_worker_wiring_bdd.py` | D1 |
+| 33 | Unspec'd MagicMock() in POV tests | `tests/pov/test_generator.py` | D1 |
+| 34 | 40+ API route modules lack HTTP-layer tests | `src/api/routes/` | D1 |
+| 35 | Agent platform modules untested | `agent/python/kmflow_agent/platform/` | D1 |
+| 36 | Classification enforcement limited to single route | `src/api/routes/evidence.py:324` | D2 |
+| 37 | GDPR consent not enforced before processing (4th audit) | `src/api/routes/copilot.py:56` | D2 |
+| 38 | File storage not cleaned during retention enforcement | `src/core/retention.py:102` | D2 |
+| 39 | CVE floor packages absent from lock file | `requirements.lock` | D3 |
+| 40 | Worker package.json uses caret ranges for jose | Worker package.json files | D3 |
+| 41 | aiofiles declared without upper version cap | `pyproject.toml:38` | D3 |
 
 ---
 
 ## LOW Findings
 
-| # | Category | Title | File | Agent |
-|---|----------|-------|------|-------|
-| 1 | Auth | Deployment capabilities endpoint unauthenticated | `deployment.py:19` | A1 |
-| 2 | Injection | Internal file paths exposed in API responses | `evidence.py:54` | A2 |
-| 3 | Injection | Salesforce timestamp unsanitized in SOQL | `salesforce.py:177` | A2 |
-| 4 | Infra | Redis URL built without password when not set | `config.py:216` | A3 |
-| 5 | Infra | Descope project ID hardcoded in worker source | `index.ts:299` | A3 |
-| 6 | Infra | AUTH_DEV_MODE enabled in docker compose | `docker-compose.yml:217` | A3 |
-| 7 | Infra | Superuser password fallback in compose | `docker-compose.yml:12` | A3 |
-| 8 | Arch | Embedding service singleton bypassed | `embeddings.py:24` | B1 |
-| 9 | Arch | Background task sets may leak references | Multiple | B1 |
-| 10 | Arch | 77 route files registered procedurally | `main.py:34` | B1 |
-| 11 | Data | Pipeline quality models missing explicit nullable=False | `pipeline_quality.py:40` | B2 |
-| 12 | Data | JSON column default mismatch (carried) | Multiple | B2 |
-| 13 | Data | Hardcoded 768 dimension (carried) | Multiple | B2 |
-| 14 | Data | SuccessMetric not engagement-scoped (carried) | Multiple | B2 |
-| 15 | API | Router prefix missing on 3 route files | `users.py:31` | B3 |
-| 16 | API | Manual depth validation instead of Query() | `graph.py:180` | B3 |
-| 17 | API | TOM seed endpoint not idempotent | `tom.py:503` | B3 |
-| 18 | API | Rate limit 429 body format inconsistent | `security.py:155` | B3 |
-| 19 | API | PATCH archive without request body | `engagements.py:270` | B3 |
-| 20 | Quality | 90-entry stopwords set inline in method body | `retrieval.py:244` | C1 |
-| 21 | Quality | TaskProgress available but not imported | `runner.py:118` | C1 |
-| 22 | Frontend | No per-route error.tsx files | `frontend/src/app/` | C2 |
-| 23 | Frontend | Inline style for dynamic height | `graph/page.tsx:82` | C2 |
-| 24 | Frontend | OntologyGraph synchronous cytoscape import | `OntologyGraph.tsx:4` | C2 |
-| 25 | Frontend | Sidebar toggle missing aria-expanded | `AppShell.tsx:255` | C2 |
-| 26 | Perf | Embedding vectors as ASCII strings | `embeddings.py:124` | C3 |
-| 27 | Perf | Default pool settings unsafe for multi-worker | `database.py:39` | C3 |
-| 28 | Perf | In-process rate limiter state not shared | `security.py:95` | C3 |
-| 29 | Coverage | audit_logs PLATFORM_ADMIN route untested | `audit_logs.py:80` | D1 |
-| 30 | Coverage | test_pipeline.py covers only 2 utility functions | `test_pipeline.py` | D1 |
-| 31 | Coverage | Agent tests use wall-clock time.time() | `test_auth.py:87` | D1 |
-| 32 | Compliance | Pattern anonymizer PII detection incomplete | `anonymizer.py:17` | D2 |
-| 33 | Compliance | Retention cleanup disabled by default | `config.py:103` | D2 |
-| 34 | Compliance | No DPA template or tracking | `config.py:100` | D2 |
-| 35 | Deps | minio/mc uses floating :latest tag | `docker-compose.yml` | D3 |
-| 36 | Deps | Base images use floating minor tags | `Dockerfile.backend:1` | D3 |
-| 37 | Deps | minimatch override required for CVE | `package.json:41` | D3 |
-| 38 | Deps | Wrangler version inconsistency across workers | Multiple | D3 |
-| 39 | Deps | langdetect at end of active maintenance | `pyproject.toml:48` | D3 |
+| # | Finding | File | Agent |
+|---|---------|------|-------|
+| 1 | Default password in Neo4j validation utility | `src/semantic/ontology/validate.py:95` | A1 |
+| 2 | Internal file paths in API responses | `src/api/routes/evidence.py:55` | A2 |
+| 3 | Salesforce SOQL timestamp interpolation | `src/integrations/salesforce.py:177` | A2 |
+| 4 | Frontend-dev volume mounts lack :ro flag | `docker-compose.yml:294` | A3 |
+| 5 | AUTH_DEV_MODE not explicit in prod overlay | `docker-compose.prod.yml:78` | A3 |
+| 6 | PostgreSQL superuser password naming asymmetry | `docker-compose.yml:12` | A3 |
+| 7 | 77 route modules in main.py | `src/api/main.py:34` | B1 |
+| 8 | 8 route files trending toward god-file | Multiple | B1 |
+| 9 | Call sites bypass embedding factory | `src/api/routes/tom.py:1725` | B1 |
+| 10 | ConsentRecord ORM-migration type drift | `src/taskmining/consent.py:69` | B2 |
+| 11 | PDPAuditEntry.policy_id no FK (partially fixed) | `src/core/models/pdp.py` | B2 |
+| 12 | pipeline_quality models omit nullable=False | Multiple | B2 |
+| 13 | JSON columns default mismatch | Multiple | B2 |
+| 14 | Hardcoded 768 embedding dimension | `src/semantic/embeddings.py` | B2 |
+| 15 | 3 route files hardcode /api/v1/ in decorators | `users.py`, `gdpr.py`, `health.py` | B3 |
+| 16 | Manual validation instead of Query bounds | `src/api/routes/graph.py:217` | B3 |
+| 17 | DELETE /orchestration lacks explicit status_code | `orchestration.py:202` | B3 |
+| 18 | TOM seed creates duplicates on repeat calls | `src/api/routes/tom.py:739` | B3 |
+| 19 | 2 functions missing type annotations | `rate_limiter.py:21`, `gdpr.py:254` | C1 |
+| 20 | 90-entry stopwords set inline in method | `src/rag/retrieval.py` | C1 |
+| 21 | No per-route error.tsx boundaries | `frontend/src/app/layout.tsx` | C2 |
+| 22 | Silent error discard in ontology page | `frontend/src/app/ontology/page.tsx:85` | C2 |
+| 23 | Index keys in 3 list renders | `copilot/page.tsx`, `RoadmapTimeline.tsx`, `conformance/page.tsx` | C2 |
+| 24 | Embedding vectors serialized as ASCII | `src/semantic/embeddings.py:124` | C3 |
+| 25 | Pool defaults can exceed max_connections | `src/core/database.py:39` | C3 |
+| 26 | Rate limiter fail-opens during Redis outage | `src/api/middleware/security.py:98` | C3 |
+| 27 | Test DB infrastructure checks config not runtime | `tests/core/test_database_infrastructure.py` | D1 |
+| 28 | `src/api/deps.py` untested | `src/api/deps.py` | D1 |
+| 29 | Pattern anonymizer only 3 regex patterns | `src/patterns/anonymizer.py:17` | D2 |
+| 30 | No DPA template or tracking | `src/core/config.py:100` | D2 |
+| 31 | minio/mc uses floating :latest tag | `docker-compose.yml` | D3 |
+| 32 | Base images use floating minor tags | `Dockerfile.backend:1` | D3 |
+| 33 | minimatch override lacks CVE comment | `frontend/package.json:41` | D3 |
+| 34 | Wrangler version inconsistency | Worker package.json files | D3 |
+| 35 | langdetect at end of maintenance | `pyproject.toml:48` | D3 |
 
 ---
 
@@ -477,102 +494,58 @@ cryptography==43.0.3
 
 ### A: Security & Authorization
 
-**Overall Security Score: 7.5/10**
+Full findings: [`A1-authz.md`](audit-findings/A1-authz.md), [`A2-injection.md`](audit-findings/A2-injection.md), [`A3-infra-security.md`](audit-findings/A3-infra-security.md)
 
-#### A1: Authorization & Authentication (5 findings: 2 HIGH, 2 MEDIUM, 1 LOW)
-- JWT authentication, token blacklisting, cookie security, and RBAC are well-implemented
-- `require_engagement_access()` actively enforced across 44 route files (correcting pre-identified finding)
-- MCP API key authentication performs proper DB lookup with HMAC (correcting pre-identified finding)
-- **Gaps**: Conflict routes unauthenticated; MCP tool handlers skip engagement isolation
+**Overall Security Posture: GOOD (8.0/10)**
 
-#### A2: Injection & Input Validation (7 findings: 1 HIGH, 4 MEDIUM, 2 LOW)
-- No SQL injection, XSS, command injection, or CSRF vectors found
-- Cypher injection protection solid with label whitelisting and parameterized values
-- **XXE regression**: New parser added after prior remediation wave, missed safe XMLParser
-- 1 prior finding (Cypher injection in traversal) fully remediated
-
-#### A3: Infrastructure Security (9 findings: 1 HIGH, 4 MEDIUM, 4 LOW)
-- Score improved from 7.9/10 to 8.3/10 — XSS and init script credentials remediated
-- Container hardening excellent: `no-new-privileges`, `cap_drop: ALL`, resource limits
-- CORS now uses explicit origins, methods, headers
-- **Main gap**: 5 secret fields as plain `str` instead of `SecretStr`
+13+ prior findings remediated including Redis auth, CORS hardening, default secret validation, Fernet KDF upgrade, XXE prevention, LLM prompt sanitization, SecretStr migration, worker XSS fixes. Remaining: 2 IDOR vulnerabilities, CIB7/MinIO exposure, 3 integration connector injection vectors, deterministic PBKDF2 salt, unencrypted DB connections.
 
 ### B: Architecture & Data Integrity
 
-#### B1: Architecture (11 findings: 3 HIGH, 5 MEDIUM, 3 LOW)
-- Prior CRITICAL (async/sync mixing) fully resolved
-- Prior HIGH (1717-line models.py) resolved — split into 33 domain modules
-- No circular dependencies or upward layering violations
-- **New god files**: `tom.py` (2274 lines) and `pov.py` (1875 lines)
+Full findings: [`B1-architecture.md`](audit-findings/B1-architecture.md), [`B2-data-integrity.md`](audit-findings/B2-data-integrity.md), [`B3-api-compliance.md`](audit-findings/B3-api-compliance.md)
 
-#### B2: Data Integrity (14 findings: 1 CRITICAL, 3 HIGH, 6 MEDIUM, 4 LOW)
-- Migration chain (001-087) fully linear with no gaps
-- All ForeignKey definitions have explicit `ondelete` policies
-- pgvector dimension (768) consistent throughout
-- **Critical**: `search_similar()` queries non-existent table
+**Architecture: 8/10 | Data Integrity: 7.9/10 | API: 7.5/10**
 
-#### B3: API Compliance (18 findings: 2 CRITICAL, 5 HIGH, 6 MEDIUM, 5 LOW)
-- 456 endpoints across 76 files with ~95% response format consistency
-- Pagination bounds on ~92% of list endpoints
-- HTTP status codes correct on ~98% of endpoints
-- Code quality score: 7.0/10
+7 of 9 prior architecture findings resolved. Core models split into 33 domain modules. Dashboard cache moved to Redis. No circular dependencies. Remaining: god route files, inline schemas, RLS gap (33+ tables), auth rate limiter gap, 88 migrations fully linear.
 
 ### C: Code Quality & Performance
 
-#### C1: Python Quality (11 findings: 1 CRITICAL, 5 HIGH, 3 MEDIUM, 2 LOW)
-- Zero bare `except:`, zero `datetime.utcnow()`, zero f-string loggers
-- Structured logging with `__name__` throughout
-- Fail-closed authentication pattern
-- **Concerns**: 56 broad catches, 154 `: Any`, 2 fabricated stubs
+Full findings: [`C1-python-quality.md`](audit-findings/C1-python-quality.md), [`C2-frontend-quality.md`](audit-findings/C2-frontend-quality.md), [`C3-performance.md`](audit-findings/C3-performance.md)
 
-#### C2: Frontend Quality (11 findings: 0 CRITICAL, 3 HIGH, 4 MEDIUM, 4 LOW)
-- Prior CRITICAL (localStorage JWT) fully resolved
-- No `dangerouslySetInnerHTML`, no `console.log`
-- Error boundaries on high-risk visualization components
-- AbortController in 24/25 data-fetching files
+**Python: 6.5/10 | Frontend: 7.5/10 | Performance: HIGH risk**
 
-#### C3: Performance (12 findings: 1 CRITICAL, 4 HIGH, 4 MEDIUM, 3 LOW)
-- Async foundation sound
-- Batch infrastructure built but not wired to callers
-- AlertEngine unbounded memory growth
-- Performance risk: HIGH
+Zero bare excepts, zero `datetime.utcnow()`, zero f-string loggers. Frontend improved from 11 to 4 findings; JWT now secure (HttpOnly cookies). Remaining: N+1 graph patterns (batch infra exists), AlertEngine memory leak, 138 broad catches, 168 Any annotations, 10 god classes.
 
 ### D: Coverage, Compliance & Risk
 
-#### D1: Test Coverage (10 findings: 1 CRITICAL, 3 HIGH, 4 MEDIUM, 3 LOW)
-- 341 test files, ~5,941 test functions, 77.2% file ratio
-- Critical auth paths well-tested
-- **Gaps**: Coverage threshold too low; 10 routes untested; GDPR cross-store erasure untested
+Full findings: [`D1-test-coverage.md`](audit-findings/D1-test-coverage.md), [`D2-compliance.md`](audit-findings/D2-compliance.md), [`D3-dependencies.md`](audit-findings/D3-dependencies.md)
 
-#### D2: Compliance (10 findings: 0 CRITICAL, 3 HIGH, 4 MEDIUM, 3 LOW)
-- Prior CRITICAL (GDPR erasure) fully resolved
-- GDPR export now comprehensive (6 sources)
-- 4 findings persisted across all 3 audits (require architectural decisions)
+**Coverage: WARNING | Compliance: 7 findings (down from 16) | Supply Chain: MEDIUM-HIGH**
 
-#### D3: Dependencies (13 findings: 0 CRITICAL, 2 HIGH, 6 MEDIUM, 5 LOW)
-- JavaScript supply chain healthy
-- **Python supply chain gap**: Lock file stale; CVE floor packages absent; Dockerfile non-deterministic
+5,772 tests across 312 files. Critical auth/JWT/GDPR paths well-tested. Compliance improved materially: forensic capture comprehensive, retention automatic. Stale lock file is the highest-impact supply chain issue.
 
 ---
 
 ## Recommendations
 
-### Top 10 Highest-Impact Actions (Ranked by Risk Reduction)
+Top 10 highest-impact actions ranked by risk reduction:
 
-| Priority | Action | Findings Resolved | Effort |
-|----------|--------|-------------------|--------|
-| 1 | **Fix `search_similar()` phantom table query** | B2-CRITICAL | Low (1 hour) |
-| 2 | **Wire batch APIs to callers** — embeddings + graph relationships | C3-CRITICAL + 2 C3-HIGH | Medium (1 day) |
-| 3 | **Move rate limiting to Redis** | B3-CRITICAL + C3-LOW | Medium (1 day) |
-| 4 | **Add auth to conflict routes + MCP engagement scoping** | A1-HIGH x2 | Low (half day) |
-| 5 | **Fix XXE regression** — add safe XMLParser to financial_regulatory_parser | A2-HIGH | Low (1 hour) |
-| 6 | **Regenerate requirements.lock + wire into Dockerfile** | D3-HIGH x2 | Low (half day) |
-| 7 | **Raise `fail_under` to 80+** | D1-CRITICAL + D3-MEDIUM | Low (5 min) |
-| 8 | **Add `debug` and DB password guards + migrate to SecretStr** | C1-CRITICAL + A3-HIGH | Medium (half day) |
-| 9 | **Cap AlertEngine memory** — persist to DB or use deque(maxlen) | C3-HIGH | Low (half day) |
-| 10 | **Split tom.py and pov.py** — extract schemas, create sub-routers | B1-HIGH x3 | High (2-3 days) |
+1. **Regenerate `requirements.lock` with hashes** — `uv pip compile pyproject.toml -o requirements.lock --generate-hashes` — fixes 2 HIGH supply chain findings immediately.
 
----
+2. **Add engagement membership checks to POV and evidence ID-based routes** — fixes 2 HIGH IDOR cross-tenant access vulnerabilities.
 
-*Report generated by 12 autonomous audit agents (5 Opus, 7 Sonnet) on 2026-03-19.*
-*Individual agent reports available in `docs/audit-findings/`.*
+3. **Batch-fetch Neo4j nodes in `search_similar`** — single `WHERE n.id IN $ids` query eliminates CRITICAL N+1 on every copilot query.
+
+4. **Add all engagement-scoped tables to `ENGAGEMENT_SCOPED_TABLES`** — fixes HIGH RLS gap affecting 33+ tables.
+
+5. **Back slowapi with Redis + add per-email lockout** — fixes CRITICAL auth rate limiter gap.
+
+6. **Add CIB7, MinIO, Mailpit overrides to `docker-compose.prod.yml`** — fixes HIGH production port exposure.
+
+7. **Wire `batch_create_relationships` into `build_fragment_graph`** — fixes HIGH N+1 graph write (existing function, just needs connecting).
+
+8. **Create test files for simulation engine, watermark extractor, GDPR agent** — addresses 3 HIGH coverage gaps.
+
+9. **Add `LLMAuditLog` creation to copilot and TOM rationale generator** — fixes HIGH EU AI Act Art. 12 compliance gap.
+
+10. **Extract inline Pydantic schemas from 6 route files** — fixes HIGH coding standards violation, shrinks 6 files by 200-400 lines each.
