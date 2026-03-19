@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.230] - 2026-03-18
+### Security
+- Bump undici 7.18.2→7.24.4 (CVE-2026-1525, CVE-2026-1528, CVE-2026-2581, CVE-2026-1527) and wrangler 4.69.0→4.75.0 in tunnel-auth worker (PR #615)
+
 ## [2026.03.229] - 2026-03-18
 ### Security
 - Remove unused dependencies to eliminate CVEs — python-jose (+ transitive ecdsa CVE-2024-23342), passlib, pypdf floor pin; pip-audit now reports 0 known vulnerabilities (#614, PR #617)
