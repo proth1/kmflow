@@ -6,7 +6,7 @@
 
 **MVP COMPLETE + WGI ALIGNED** — Platform MVP done. Windows Task Mining Agent fully implemented. WGI Platform Alignment complete.
 
-- **Current version**: 2026.03.233
+- **Current version**: 2026.03.234
 - **Open issues**: 0
 - **PM tool**: Jira (KMFLOW project at agentic-sdlc.atlassian.net)
 - **Presentations**: kmflow.agentic-innovations.com + state-street-apex.agentic-innovations.com
@@ -17,6 +17,7 @@ Pick up next Jira backlog item from KMFLOW board.
 
 ## Recently Completed
 
+- **PR #623**: Fix BPMN viewer top clipping — add 30px viewbox padding after fit-viewport so pool headers and confidence badges aren't cut off (merged 2026-03-19)
 - **PR #622**: Ingestion pipeline optimization — token-aware chunking, nomic-embed-text-v1.5 upgrade, graph expansion fix, cross-encoder reranking, MMR diversity, DataObject/Event/Gateway entity extraction, layout-aware PDF parser, domain config bundles, 49 new tests (merged 2026-03-19)
 - **PR #621**: ADR: Dependency version pinning strategy — patch-only policy, 7 revisit triggers (#620, merged 2026-03-18)
 - **PR #619**: Upgrade Next.js 15.5.10 → 15.5.13 — CVE-2026-29057 HTTP request smuggling fix (#618, merged 2026-03-18)
@@ -121,3 +122,7 @@ The project was built over February 2026 in a rapid sprint:
 ---
 > SESSION END WARNING (2026-03-18T21:06:40Z): activeContext.md was NOT updated during this session.
 > Branch: main, Uncommitted: 24
+
+---
+> SESSION END WARNING (2026-03-19T12:50:08Z): activeContext.md was NOT updated during this session.
+> Branch: main, Uncommitted: 41

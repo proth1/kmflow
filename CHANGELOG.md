@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.234] - 2026-03-19
+### Fixed
+- Fix BPMN viewer top clipping — add 30px viewbox padding after fit-viewport so pool headers and confidence badges aren't cut off (#623)
+
 ## [2026.03.233] - 2026-03-19
 ### Added
 - Token-aware post-parse chunking module with 384-token target, 50-token overlap, table-aware splitting, heading propagation (PR #622)

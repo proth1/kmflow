@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.233
+**Version**: 2026.03.234
 **Last Updated**: 2026-03-19
 
 ## Quick Stats
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.234 | 2026-03-19 | Fix BPMN viewer top clipping — 30px viewbox padding after fit-viewport (PR #623) |
 | 2026.03.233 | 2026-03-19 | Ingestion pipeline optimization — chunking, nomic embeddings, graph expansion fix, reranking/MMR, 3 new entity types, layout parser, domain config (PR #622) |
 | 2026.03.232 | 2026-03-18 | ADR: Dependency version pinning strategy — patch-only policy, 7 revisit triggers (#620, PR #621) |
 | 2026.03.231 | 2026-03-18 | Upgrade Next.js 15.5.10 → 15.5.13 — CVE-2026-29057 HTTP request smuggling fix (#618, PR #619) |
