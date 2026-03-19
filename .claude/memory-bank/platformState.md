@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.228
+**Version**: 2026.03.229
 **Last Updated**: 2026-03-18
 
 ## Quick Stats
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.229 | 2026-03-18 | Remove unused deps (python-jose, passlib, pypdf) — pip-audit 0 CVEs (#614, PR #617) |
 | 2026.03.228 | 2026-03-18 | Remediate 6 Python CVEs — PyJWT, pyopenssl, pyasn1, pypdf; accepted risks documented (#612, PR #613) |
 | 2026.03.227 | 2026-03-18 | Improve Knowledge Graph Explorer readability — hide edge labels (hover-to-reveal), larger nodes, hover highlighting, layout tuning (#611, PR #610) |
 | 2026.03.226 | 2026-03-12 | Decision Intelligence presentation + mypy fixes — 3 new slides, updated stats to v7.0, fixed all 79 mypy errors across 38 files (#607, PR #608) |

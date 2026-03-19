@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.229] - 2026-03-18
+### Security
+- Remove unused dependencies to eliminate CVEs — python-jose (+ transitive ecdsa CVE-2024-23342), passlib, pypdf floor pin; pip-audit now reports 0 known vulnerabilities (#614, PR #617)
+
 ## [2026.03.228] - 2026-03-18
 ### Security
 - Remediate 6 Python CVEs — PyJWT 2.10.1→2.12.1 (CVE-2026-32597), pyopenssl ≥26.0.0 (CVE-2026-27448/27459), pyasn1 ≥0.6.3 (CVE-2026-30922), pypdf ≥6.9.1 (CVE-2026-33123); accepted risk: ecdsa CVE-2024-23342 (no fix), npm advisories (breaking upgrades required) (#612, PR #613)
