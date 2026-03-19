@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.227
+**Version**: 2026.03.228
 **Last Updated**: 2026-03-18
 
 ## Quick Stats
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.228 | 2026-03-18 | Remediate 6 Python CVEs — PyJWT, pyopenssl, pyasn1, pypdf; accepted risks documented (#612, PR #613) |
 | 2026.03.227 | 2026-03-18 | Improve Knowledge Graph Explorer readability — hide edge labels (hover-to-reveal), larger nodes, hover highlighting, layout tuning (#611, PR #610) |
 | 2026.03.226 | 2026-03-12 | Decision Intelligence presentation + mypy fixes — 3 new slides, updated stats to v7.0, fixed all 79 mypy errors across 38 files (#607, PR #608) |
 | 2026.03.225 | 2026-03-12 | Extract task mining utils for Next.js 15 compliance — 6 functions to shared modules, fix build errors (KMFLOW-114, PR #606) |
