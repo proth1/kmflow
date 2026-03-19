@@ -76,6 +76,16 @@ export default function BPMNViewerComponent({
       const canvas = viewer.get("canvas") as any;
       canvas.zoom("fit-viewport");
 
+      // Add padding so overlays and pool headers aren't clipped
+      const vb = canvas.viewbox();
+      const pad = 30;
+      canvas.viewbox({
+        x: vb.x - pad,
+        y: vb.y - pad,
+        width: vb.width + pad * 2,
+        height: vb.height + pad * 2,
+      });
+
       // Apply overlays
       if (showConfidenceOverlay || showEvidenceOverlay) {
         const overlays = viewer.get("overlays") as any;
