@@ -24,6 +24,9 @@ class EntityType(enum.StrEnum):
     ROLE = "role"
     SYSTEM = "system"
     DOCUMENT = "document"
+    DATA_OBJECT = "data_object"
+    EVENT = "event"
+    GATEWAY = "gateway"
 
 
 @dataclass
@@ -194,6 +197,76 @@ _DOCUMENT_PATTERNS: list[re.Pattern[str]] = [
         r"Bill\s+of\s+Materials|BOM|Bill\s+of\s+Lading|BOL|"
         r"Terms\s+of\s+Reference|TOR|Statement\s+of\s+Work|SOW)"
         r"(?:\s+\#?\d+)?)\b",
+        re.IGNORECASE,
+    ),
+]
+
+
+# DataObject patterns: inputs, outputs, data artifacts
+_DATA_OBJECT_PATTERNS: list[re.Pattern[str]] = [
+    # Explicit data references: "customer data", "loan file", "application form"
+    re.compile(
+        r"\b([A-Z][a-z]+(?:\s+[A-Z]?[a-z]+)*\s+"
+        r"(?:data|file|record|log|report|spreadsheet|database|dataset|"
+        r"form|application|request|submission|notification|email|"
+        r"message|letter|receipt|ticket|queue|list|register|ledger|"
+        r"journal|batch|feed|extract|dump|backup|snapshot|archive))\b",
+        re.IGNORECASE,
+    ),
+    # Data flow patterns: "input from", "output to", "data from"
+    re.compile(
+        r"\b(?:input|output|data|information|payload)\s+"
+        r"(?:from|to|for|of)\s+([A-Za-z]+(?:\s+[A-Za-z]+){0,3})",
+        re.IGNORECASE,
+    ),
+]
+
+# Event patterns: business events, triggers, milestones
+_EVENT_PATTERNS: list[re.Pattern[str]] = [
+    # Named events: "order received", "payment completed", "deadline reached"
+    re.compile(
+        r"\b([A-Z][a-z]+(?:\s+[A-Z]?[a-z]+)*\s+"
+        r"(?:received|completed|started|ended|triggered|expired|"
+        r"arrived|submitted|approved|rejected|cancelled|failed|"
+        r"escalated|resolved|closed|opened|created|deleted|"
+        r"updated|modified|notified|acknowledged|confirmed))\b",
+        re.IGNORECASE,
+    ),
+    # Event trigger patterns: "when X occurs", "upon X", "on receipt of"
+    re.compile(
+        r"\b(?:upon|on\s+receipt\s+of|at\s+the\s+start\s+of|"
+        r"at\s+the\s+end\s+of|on\s+completion\s+of)\s+"
+        r"([A-Za-z]+(?:\s+[A-Za-z]+){0,4})",
+        re.IGNORECASE,
+    ),
+    # Timer/deadline patterns
+    re.compile(
+        r"\b(?:deadline|timer|timeout|SLA\s+breach|due\s+date|"
+        r"expiration|reminder)\s+(?:for|of|on)?\s*"
+        r"([A-Za-z]+(?:\s+[A-Za-z]+){0,3})",
+        re.IGNORECASE,
+    ),
+]
+
+# Gateway patterns: decision points, routing, branching
+_GATEWAY_PATTERNS: list[re.Pattern[str]] = [
+    # Explicit gateway language
+    re.compile(
+        r"\b(?:exclusive|parallel|inclusive)\s+"
+        r"(?:gateway|branch|split|fork|join|merge)\b",
+        re.IGNORECASE,
+    ),
+    # Routing patterns: "route to", "branch based on", "split into"
+    re.compile(
+        r"\b(?:route|branch|split|fork|diverge|converge)\s+"
+        r"(?:to|based\s+on|into|from)\s+([A-Za-z]+(?:\s+[A-Za-z]+){0,3})",
+        re.IGNORECASE,
+    ),
+    # Conditional branching: "either...or", "one of the following"
+    re.compile(
+        r"\b(?:either|one\s+of\s+the\s+following|"
+        r"depending\s+on|based\s+on\s+the)\s+"
+        r"([A-Za-z]+(?:\s+[A-Za-z]+){0,4})",
         re.IGNORECASE,
     ),
 ]
@@ -403,6 +476,99 @@ def _extract_documents(text: str) -> list[ExtractedEntity]:
     return entities
 
 
+def _extract_data_objects(text: str) -> list[ExtractedEntity]:
+    """Extract data object entities from text using pattern matching."""
+    entities: list[ExtractedEntity] = []
+    seen_names: set[str] = set()
+
+    for pattern in _DATA_OBJECT_PATTERNS:
+        for match in pattern.finditer(text):
+            if match.lastindex and match.lastindex >= 1:
+                name = _clean_entity_name(match.group(1))
+            else:
+                name = _clean_entity_name(match.group(0))
+
+            name_lower = name.lower()
+            if name_lower in seen_names or len(name) < 4:
+                continue
+            seen_names.add(name_lower)
+
+            entity_id = _generate_entity_id("data_object", name)
+            entities.append(
+                ExtractedEntity(
+                    id=entity_id,
+                    entity_type=EntityType.DATA_OBJECT,
+                    name=name,
+                    confidence=0.65,
+                    source_span=match.group(0),
+                )
+            )
+
+    return entities
+
+
+def _extract_events(text: str) -> list[ExtractedEntity]:
+    """Extract event entities from text using pattern matching."""
+    entities: list[ExtractedEntity] = []
+    seen_names: set[str] = set()
+
+    for pattern in _EVENT_PATTERNS:
+        for match in pattern.finditer(text):
+            if match.lastindex and match.lastindex >= 1:
+                name = _clean_entity_name(match.group(1))
+            else:
+                name = _clean_entity_name(match.group(0))
+
+            name_lower = name.lower()
+            if name_lower in seen_names or len(name) < 5:
+                continue
+            seen_names.add(name_lower)
+
+            entity_id = _generate_entity_id("event", name)
+            entities.append(
+                ExtractedEntity(
+                    id=entity_id,
+                    entity_type=EntityType.EVENT,
+                    name=name,
+                    confidence=0.6,
+                    source_span=match.group(0),
+                )
+            )
+
+    return entities
+
+
+def _extract_gateways(text: str) -> list[ExtractedEntity]:
+    """Extract gateway entities from text using pattern matching."""
+    entities: list[ExtractedEntity] = []
+    seen_names: set[str] = set()
+
+    for pattern in _GATEWAY_PATTERNS:
+        for match in pattern.finditer(text):
+            if match.lastindex and match.lastindex >= 1:
+                name = _clean_entity_name(match.group(1))
+            else:
+                name = _clean_entity_name(match.group(0))
+
+            name_lower = name.lower()
+            if name_lower in seen_names or len(name) < 5:
+                continue
+            seen_names.add(name_lower)
+
+            entity_id = _generate_entity_id("gateway", name)
+            entities.append(
+                ExtractedEntity(
+                    id=entity_id,
+                    entity_type=EntityType.GATEWAY,
+                    name=name,
+                    confidence=0.6,
+                    source_span=match.group(0),
+                )
+            )
+
+    return entities
+
+
 SEED_TERM_CONFIDENCE_BOOST: float = 0.15
 """Confidence boost for entities that match an engagement seed term."""
 
@@ -437,13 +603,16 @@ async def extract_entities(
             raw_text_length=0,
         )
 
-    # Rule-based extraction (MVP)
+    # Rule-based extraction (MVP + Phase 4 entity types)
     all_entities: list[ExtractedEntity] = []
     all_entities.extend(_extract_activities(text))
     all_entities.extend(_extract_roles(text))
     all_entities.extend(_extract_systems(text))
     all_entities.extend(_extract_decisions(text))
     all_entities.extend(_extract_documents(text))
+    all_entities.extend(_extract_data_objects(text))
+    all_entities.extend(_extract_events(text))
+    all_entities.extend(_extract_gateways(text))
 
     # Apply seed term confidence boost
     if seed_terms:

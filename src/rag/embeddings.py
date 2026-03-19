@@ -25,7 +25,7 @@ _instances: dict[tuple[str, int], EmbeddingService] = {}
 
 
 def get_embedding_service(
-    model_name: str = "all-mpnet-base-v2",
+    model_name: str = "nomic-ai/nomic-embed-text-v1.5",
     dimension: int = EMBEDDING_DIMENSION,
 ) -> EmbeddingService:
     """Return a cached EmbeddingService singleton for the given config.
@@ -47,7 +47,7 @@ class EmbeddingService:
     pgvector search functionality.
     """
 
-    def __init__(self, model_name: str = "all-mpnet-base-v2", dimension: int = EMBEDDING_DIMENSION):
+    def __init__(self, model_name: str = "nomic-ai/nomic-embed-text-v1.5", dimension: int = EMBEDDING_DIMENSION):
         self.model_name = model_name
         self.dimension = dimension
         self._model = None
@@ -57,7 +57,7 @@ class EmbeddingService:
             try:
                 from sentence_transformers import SentenceTransformer
 
-                self._model = SentenceTransformer(self.model_name)
+                self._model = SentenceTransformer(self.model_name, trust_remote_code=True)
             except ImportError:
                 logger.warning("sentence-transformers not installed, using random embeddings")
                 self._model = None
