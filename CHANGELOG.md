@@ -3,6 +3,30 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.237] - 2026-03-19
+### Security
+- Add engagement membership checks to 6 POV model-ID routes and 4 evidence routes (IDOR fix) (#629)
+- Add 34 tables to ENGAGEMENT_SCOPED_TABLES for RLS coverage (36→70) (#629)
+- Close CIB7/MinIO/Mailpit ports in docker-compose.prod.yml (#629)
+- Regenerate requirements.lock with --generate-hashes (cryptography 46.0.5, pyjwt 2.12.1) (#629)
+- Add --require-hashes to Dockerfile.backend pip install (#629)
+- Back slowapi with Redis + per-email lockout on auth endpoints (#629)
+### Fixed
+- Batch-fetch Neo4j nodes in search_similar — 10 sessions → 1 per search (#629)
+- Wire batch_create_relationships in build_fragment_graph pipeline (#629)
+- Replace N+1 queries in regulatory governance chains with batch Cypher (#629)
+- Add LIMIT 10000 to graph health _count_components (#629)
+- Cap Neo4j traversal depth to 10 (#629)
+- Replace O(N²) cosine similarity with numpy matrix multiply (#629)
+- Add pagination caps to graph_analytics (500) and correlation (10000) (#629)
+- Add LLMAuditLog to copilot and TOM rationale generator (#629)
+- Add audit logging to financial assumption deletion and simulation creation (#629)
+- Unlink evidence files from disk during retention cleanup (#629)
+- Replace graph_service: Any with KnowledgeGraphService in 7 locations (#629)
+- Replace session_factory: Any with typed SessionFactory in 8 MCP functions (#629)
+- Add 11 Neo4j engagement_id indexes for missing node labels (#629)
+- Raise coverage fail_under from 80 to 85 (#629)
+
 ## [2026.03.236] - 2026-03-19
 ### Fixed
 - Replace `_check_engagement_member` with shared `verify_engagement_member` in permissions.py (#627)
