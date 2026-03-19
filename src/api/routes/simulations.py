@@ -838,12 +838,19 @@ async def delete_financial_assumption(
     user: User = Depends(require_permission("simulation:create")),
 ) -> None:
     """Delete a financial assumption."""
-    await get_scenario_or_404(session, scenario_id)
+    scenario = await get_scenario_or_404(session, scenario_id)
     result = await session.execute(select(FinancialAssumption).where(FinancialAssumption.id == assumption_id))
     assumption = result.scalar_one_or_none()
     if not assumption:
         raise HTTPException(status_code=404, detail=f"Assumption {assumption_id} not found")
     await session.delete(assumption)
+    await log_audit(
+        session,
+        scenario.engagement_id,
+        AuditAction.FINANCIAL_ASSUMPTION_DELETED,
+        f"Deleted assumption {assumption_id}",
+        actor=str(user.id),
+    )
     await session.commit()
 
 

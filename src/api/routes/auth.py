@@ -10,6 +10,7 @@ Provides:
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from typing import Any
 from uuid import UUID
@@ -43,7 +44,74 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 bearer_scheme = HTTPBearer(auto_error=False)
-limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
+
+# Use Redis-backed storage for multi-worker safety when REDIS_URL is available.
+_redis_url: str | None = None
+try:
+    _settings = Settings()
+    _redis_url = _settings.redis_url
+except Exception:
+    pass
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["100/minute"],
+    storage_uri=_redis_url or "memory://",
+)
+
+# Per-email lockout constants
+_LOGIN_LOCKOUT_MAX_ATTEMPTS = 10
+_LOGIN_LOCKOUT_WINDOW_SECONDS = 900  # 15 minutes
+
+
+async def _check_email_lockout(email: str, request: Request) -> None:
+    """Check per-email failed login counter in Redis.
+
+    Blocks login attempts for an email after too many failures,
+    regardless of source IP. This defends against distributed
+    credential stuffing attacks.
+    """
+    redis_client = getattr(getattr(request, "app", None), "state", None)
+    redis_client = getattr(redis_client, "redis_client", None) if redis_client else None
+    if redis_client is None:
+        return
+    key = f"login_lockout:{email}"
+    try:
+        count = await redis_client.get(key)
+        if count is not None and int(count) >= _LOGIN_LOCKOUT_MAX_ATTEMPTS:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many failed login attempts. Try again later.",
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        logger.debug("Email lockout check failed, allowing request")
+
+
+async def _record_failed_login(email: str, request: Request) -> None:
+    """Increment per-email failed login counter in Redis."""
+    redis_client = getattr(getattr(request, "app", None), "state", None)
+    redis_client = getattr(redis_client, "redis_client", None) if redis_client else None
+    if redis_client is None:
+        return
+    key = f"login_lockout:{email}"
+    try:
+        pipe = redis_client.pipeline()
+        pipe.incr(key)
+        pipe.expire(key, _LOGIN_LOCKOUT_WINDOW_SECONDS)
+        await pipe.execute()
+    except Exception:
+        logger.debug("Failed to record login failure for email lockout")
+
+
+async def _clear_login_lockout(email: str, request: Request) -> None:
+    """Clear per-email failed login counter on successful login."""
+    redis_client = getattr(getattr(request, "app", None), "state", None)
+    redis_client = getattr(redis_client, "redis_client", None) if redis_client else None
+    if redis_client is None:
+        return
+    with contextlib.suppress(Exception):
+        await redis_client.delete(f"login_lockout:{email}")
 
 
 # ---------------------------------------------------------------------------
@@ -131,17 +199,22 @@ async def get_token(
             detail="Dev-mode token endpoint is disabled",
         )
 
+    # Per-email lockout check (defends against distributed credential stuffing)
+    await _check_email_lockout(payload.email, request)
+
     # Look up user
     result = await session.execute(select(User).where(User.email == payload.email))
     user = result.scalar_one_or_none()
 
     if user is None or user.hashed_password is None:
+        await _record_failed_login(payload.email, request)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
 
     if not verify_password(payload.password, user.hashed_password):
+        await _record_failed_login(payload.email, request)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
@@ -152,6 +225,8 @@ async def get_token(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User account is disabled",
         )
+
+    await _clear_login_lockout(payload.email, request)
 
     # Build token claims
     claims = {
@@ -234,16 +309,21 @@ async def login(
     The access cookie uses SameSite=Lax, which provides baseline CSRF
     protection for state-changing requests from third-party contexts.
     """
+    # Per-email lockout check (defends against distributed credential stuffing)
+    await _check_email_lockout(payload.email, request)
+
     result = await session.execute(select(User).where(User.email == payload.email))
     user = result.scalar_one_or_none()
 
     if user is None or user.hashed_password is None:
+        await _record_failed_login(payload.email, request)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
 
     if not verify_password(payload.password, user.hashed_password):
+        await _record_failed_login(payload.email, request)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
@@ -254,6 +334,8 @@ async def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User account is disabled",
         )
+
+    await _clear_login_lockout(payload.email, request)
 
     claims = {
         "sub": str(user.id),

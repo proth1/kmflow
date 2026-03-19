@@ -12,10 +12,13 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.mcp.auth import validate_api_key
 from src.mcp.schemas import MCPServerInfo, MCPToolCall, MCPToolResult
 from src.mcp.tools import TOOL_DEFINITIONS
+
+SessionFactory = async_sessionmaker[AsyncSession]
 
 logger = logging.getLogger(__name__)
 
@@ -154,7 +157,9 @@ async def _execute_tool(
         raise ValueError(f"Unhandled tool: {tool_name}")
 
 
-async def _tool_get_engagement(session_factory: Any, args: dict[str, Any], *, user_id: str) -> dict[str, Any]:
+async def _tool_get_engagement(
+    session_factory: SessionFactory, args: dict[str, Any], *, user_id: str
+) -> dict[str, Any]:
     from uuid import UUID
 
     from sqlalchemy import func, select
@@ -191,7 +196,7 @@ async def _tool_get_engagement(session_factory: Any, args: dict[str, Any], *, us
         }
 
 
-async def _tool_list_evidence(session_factory: Any, args: dict[str, Any], *, user_id: str) -> dict[str, Any]:
+async def _tool_list_evidence(session_factory: SessionFactory, args: dict[str, Any], *, user_id: str) -> dict[str, Any]:
     from uuid import UUID
 
     from sqlalchemy import select
@@ -224,7 +229,9 @@ async def _tool_list_evidence(session_factory: Any, args: dict[str, Any], *, use
         return {"items": items, "total": len(items)}
 
 
-async def _tool_get_process_model(session_factory: Any, args: dict[str, Any], *, user_id: str) -> dict[str, Any]:
+async def _tool_get_process_model(
+    session_factory: SessionFactory, args: dict[str, Any], *, user_id: str
+) -> dict[str, Any]:
     from uuid import UUID
 
     from sqlalchemy import select
@@ -260,7 +267,7 @@ async def _tool_get_process_model(session_factory: Any, args: dict[str, Any], *,
         }
 
 
-async def _tool_get_gaps(session_factory: Any, args: dict[str, Any], *, user_id: str) -> dict[str, Any]:
+async def _tool_get_gaps(session_factory: SessionFactory, args: dict[str, Any], *, user_id: str) -> dict[str, Any]:
     from uuid import UUID
 
     from sqlalchemy import select
@@ -292,7 +299,9 @@ async def _tool_get_gaps(session_factory: Any, args: dict[str, Any], *, user_id:
         return {"gaps": gaps, "total": len(gaps)}
 
 
-async def _tool_get_monitoring_status(session_factory: Any, args: dict[str, Any], *, user_id: str) -> dict[str, Any]:
+async def _tool_get_monitoring_status(
+    session_factory: SessionFactory, args: dict[str, Any], *, user_id: str
+) -> dict[str, Any]:
     from uuid import UUID
 
     from sqlalchemy import func, select
@@ -329,7 +338,9 @@ async def _tool_get_monitoring_status(session_factory: Any, args: dict[str, Any]
         return {"active_jobs": active, "open_alerts": open_alerts}
 
 
-async def _tool_get_deviations(session_factory: Any, args: dict[str, Any], *, user_id: str) -> dict[str, Any]:
+async def _tool_get_deviations(
+    session_factory: SessionFactory, args: dict[str, Any], *, user_id: str
+) -> dict[str, Any]:
     from uuid import UUID
 
     from sqlalchemy import select
@@ -364,7 +375,9 @@ async def _tool_get_deviations(session_factory: Any, args: dict[str, Any], *, us
         return {"deviations": devs, "total": len(devs)}
 
 
-async def _tool_search_patterns(session_factory: Any, args: dict[str, Any], *, user_id: str) -> dict[str, Any]:
+async def _tool_search_patterns(
+    session_factory: SessionFactory, args: dict[str, Any], *, user_id: str
+) -> dict[str, Any]:
     # Pattern search is not engagement-scoped but user_id is accepted for API consistency
     _ = user_id  # Reserved for future per-user pattern filtering
     from sqlalchemy import select
@@ -385,7 +398,9 @@ async def _tool_search_patterns(session_factory: Any, args: dict[str, Any], *, u
         return {"patterns": patterns, "total": len(patterns)}
 
 
-async def _tool_run_simulation(session_factory: Any, args: dict[str, Any], *, user_id: str) -> dict[str, Any]:
+async def _tool_run_simulation(
+    session_factory: SessionFactory, args: dict[str, Any], *, user_id: str
+) -> dict[str, Any]:
     # user_id is accepted for API consistency; simulation scoping added here when queue is wired
     _ = user_id
     return {

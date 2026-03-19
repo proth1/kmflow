@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from sqlalchemy import delete, select
@@ -109,6 +110,29 @@ async def cleanup_expired_engagements(
             logger.info(
                 "Retention cleanup: deleted fragments for %d evidence items in engagement %s",
                 len(evidence_ids),
+                eng.id,
+            )
+
+        # 2b. Unlink evidence files from disk/object storage before deleting DB rows.
+        file_paths_result = await session.execute(
+            select(EvidenceItem.file_path).where(
+                EvidenceItem.engagement_id == eng.id,
+                EvidenceItem.file_path.isnot(None),
+            )
+        )
+        files_deleted = 0
+        for (file_path,) in file_paths_result:
+            try:
+                p = Path(file_path)
+                if p.exists():
+                    p.unlink()
+                    files_deleted += 1
+            except Exception:
+                logger.warning("Retention cleanup: failed to delete file %s", file_path)
+        if files_deleted:
+            logger.info(
+                "Retention cleanup: deleted %d evidence files for engagement %s",
+                files_deleted,
                 eng.id,
             )
 

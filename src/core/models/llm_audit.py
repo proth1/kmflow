@@ -26,8 +26,8 @@ class LLMAuditLog(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    scenario_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("simulation_scenarios.id", ondelete="CASCADE"), nullable=False
+    scenario_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("simulation_scenarios.id", ondelete="CASCADE"), nullable=True
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
@@ -47,7 +47,7 @@ class LLMAuditLog(Base):
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    scenario: Mapped[SimulationScenario] = relationship("SimulationScenario")
+    scenario: Mapped[SimulationScenario | None] = relationship("SimulationScenario")
 
     def __repr__(self) -> str:
         return f"<LLMAuditLog(id={self.id}, scenario_id={self.scenario_id}, model={self.model_name})>"

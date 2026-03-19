@@ -463,6 +463,7 @@ async def build_fragment_graph(
             evidence_to_entities[ev_id].add(eid)
 
     created_pairs: set[tuple[str, str]] = set()
+    relationships_to_create: list[dict[str, Any]] = []
     for ev_id, entity_ids in evidence_to_entities.items():
         entity_list = sorted(entity_ids)
         for i, eid_a in enumerate(entity_list):
@@ -476,16 +477,22 @@ async def build_fragment_graph(
                 node_b = entity_to_node.get(eid_b)
                 if not node_a or not node_b:
                     continue
-                try:
-                    await graph_service.create_relationship(
-                        from_id=node_a,
-                        to_id=node_b,
-                        relationship_type="CO_OCCURS_WITH",
-                        properties={"evidence_id": ev_id},
-                    )
-                    relationship_count += 1
-                except (ConnectionError, RuntimeError) as e:
-                    errors.append(f"Relationship failed {node_a}->{node_b}: {e}")
+                relationships_to_create.append(
+                    {
+                        "from_id": node_a,
+                        "to_id": node_b,
+                        "properties": {"evidence_id": ev_id},
+                    }
+                )
+
+    if relationships_to_create:
+        try:
+            relationship_count += await graph_service.batch_create_relationships(
+                "CO_OCCURS_WITH", relationships_to_create
+            )
+        except (ConnectionError, RuntimeError, ValueError) as e:
+            errors.append(f"Batch relationship creation failed: {e}")
+            logger.warning("Batch CO_OCCURS_WITH creation failed: %s", e)
 
     logger.info(
         "Graph build for engagement %s: %d nodes, %d relationships",

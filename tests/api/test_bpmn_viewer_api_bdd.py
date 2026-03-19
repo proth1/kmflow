@@ -12,13 +12,15 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.api.routes.pov import (
+    get_element_evidence,
+    get_engagement_dashboard,
+    get_latest_model_for_engagement,
+)
+from src.api.schemas.pov import (
     DashboardKPIs,
     ElementEvidenceResponse,
     EngagementBPMNResponse,
     ProcessElementDetailResponse,
-    get_element_evidence,
-    get_engagement_dashboard,
-    get_latest_model_for_engagement,
 )
 from src.core.models import UserRole
 

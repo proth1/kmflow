@@ -12,6 +12,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import get_settings
+from src.core.models import LLMAuditLog
 from src.rag.embeddings import EmbeddingService
 from src.rag.prompts import SYSTEM_PROMPT, build_context_string, get_prompt_template, strip_system_prompt_leakage
 from src.rag.retrieval import HybridRetriever, RetrievalResult
@@ -107,13 +108,30 @@ class CopilotOrchestrator:
         )
 
         # 4. Generate response (using Anthropic API if available, else stub)
-        answer = self._validate_response(
-            await self._generate_response(
-                system_prompt=SYSTEM_PROMPT,
-                user_prompt=user_prompt,
-                history=history,
-            )
+        raw_answer = await self._generate_response(
+            system_prompt=SYSTEM_PROMPT,
+            user_prompt=user_prompt,
+            history=history,
         )
+        answer = self._validate_response(raw_answer)
+
+        # 4a. Persist LLM audit log entry
+        try:
+            audit_entry = LLMAuditLog(
+                scenario_id=None,
+                user_id=None,
+                prompt_text=user_prompt[:10000],
+                response_text=answer[:10000],
+                evidence_ids=None,
+                prompt_tokens=len(user_prompt) // 4,
+                completion_tokens=len(answer) // 4,
+                model_name=self.settings.copilot_model,
+                error_message=None,
+            )
+            session.add(audit_entry)
+            await session.flush()
+        except Exception:
+            logger.exception("Failed to persist LLM audit log for copilot chat")
 
         # 5. Extract citations from retrieval results
         citations = [
@@ -221,6 +239,8 @@ class CopilotOrchestrator:
         )
 
         # 3. Stream response
+        full_response: list[str] = []
+        error_message: str | None = None
         try:
             from src.core.llm import get_llm_provider
 
@@ -248,14 +268,40 @@ class CopilotOrchestrator:
                     break
                 validated_chunk = self._validate_response(text_chunk)
                 total_streamed += len(validated_chunk)
+                full_response.append(validated_chunk)
                 yield f"data: {validated_chunk}\n\n"
 
         except ImportError:
             logger.warning("LLM provider not available, yielding stub response")
-            yield f"data: {self._stub_response(user_prompt)}\n\n"
+            stub = self._stub_response(user_prompt)
+            full_response.append(stub)
+            error_message = "LLM provider not available"
+            yield f"data: {stub}\n\n"
         except Exception as e:  # Intentionally broad: provider error hierarchies vary
             logger.error("LLM streaming failed: %s", e)
-            yield f"data: {self._stub_response(user_prompt)}\n\n"
+            stub = self._stub_response(user_prompt)
+            full_response.append(stub)
+            error_message = str(e)
+            yield f"data: {stub}\n\n"
+
+        # Persist LLM audit log after stream completes
+        response_text = "".join(full_response)
+        try:
+            audit_entry = LLMAuditLog(
+                scenario_id=None,
+                user_id=None,
+                prompt_text=user_prompt[:10000],
+                response_text=response_text[:10000],
+                evidence_ids=None,
+                prompt_tokens=len(user_prompt) // 4,
+                completion_tokens=len(response_text) // 4,
+                model_name=self.settings.copilot_model,
+                error_message=error_message,
+            )
+            session.add(audit_entry)
+            await session.flush()
+        except Exception:
+            logger.exception("Failed to persist LLM audit log for copilot streaming")
 
         yield "data: [DONE]\n\n"
 

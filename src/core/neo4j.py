@@ -86,6 +86,17 @@ async def setup_neo4j_constraints(driver: AsyncDriver) -> None:
         "CREATE INDEX IF NOT EXISTS FOR (e:Evidence) ON (e.engagement_id, e.category)",
         "CREATE INDEX IF NOT EXISTS FOR (a:Activity) ON (a.process_id)",
         "CREATE INDEX IF NOT EXISTS FOR (g:Gap) ON (g.engagement_id, g.severity)",
+        "CREATE INDEX IF NOT EXISTS FOR (r:Role) ON (r.engagement_id)",
+        "CREATE INDEX IF NOT EXISTS FOR (s:System) ON (s.engagement_id)",
+        "CREATE INDEX IF NOT EXISTS FOR (c:Control) ON (c.engagement_id)",
+        "CREATE INDEX IF NOT EXISTS FOR (p:Policy) ON (p.engagement_id)",
+        "CREATE INDEX IF NOT EXISTS FOR (r:Regulation) ON (r.engagement_id)",
+        "CREATE INDEX IF NOT EXISTS FOR (t:TOM) ON (t.engagement_id)",
+        "CREATE INDEX IF NOT EXISTS FOR (d:Document) ON (d.engagement_id)",
+        "CREATE INDEX IF NOT EXISTS FOR (s:Subprocess) ON (s.engagement_id)",
+        "CREATE INDEX IF NOT EXISTS FOR (d:Decision) ON (d.engagement_id)",
+        "CREATE INDEX IF NOT EXISTS FOR (u:UserAction) ON (u.engagement_id)",
+        "CREATE INDEX IF NOT EXISTS FOR (a:Application) ON (a.engagement_id)",
     ]
 
     async with driver.session() as session:

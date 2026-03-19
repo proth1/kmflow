@@ -102,85 +102,127 @@ class RegulatoryOverlayEngine:
 
         chains: list[GovernanceChain] = []
 
-        # Create Policy nodes and GOVERNED_BY edges
+        # Upsert Policy nodes via MERGE (avoids get_node + create_node round-trips)
         for policy in policies:
             policy_node_id = f"policy-{policy.id}"
             try:
-                existing = await self._graph.get_node(policy_node_id)
-                if not existing:
-                    await self._graph.create_node(
-                        "Policy",
-                        {
-                            "id": policy_node_id,
-                            "name": policy.name,
-                            "engagement_id": engagement_id,
-                            "policy_type": str(policy.policy_type),
-                        },
-                    )
+                await self._graph.run_write_query(
+                    """
+                    MERGE (n {id: $id})
+                    ON CREATE SET n:Policy, n.name = $name,
+                                  n.engagement_id = $engagement_id,
+                                  n.policy_type = $policy_type
+                    ON MATCH SET  n.name = $name,
+                                  n.policy_type = $policy_type
+                    """,
+                    {
+                        "id": policy_node_id,
+                        "name": policy.name,
+                        "engagement_id": engagement_id,
+                        "policy_type": str(policy.policy_type),
+                    },
+                )
             except Neo4jError as e:
-                logger.warning("Failed to create Policy node: %s", e)
+                logger.warning("Failed to upsert Policy node: %s", e)
 
-        # Create Control nodes and ENFORCED_BY edges
+        # Upsert Control nodes and GOVERNED_BY edges via MERGE
         for control in controls:
             control_node_id = f"control-{control.id}"
             try:
-                existing = await self._graph.get_node(control_node_id)
-                if not existing:
-                    await self._graph.create_node(
-                        "Control",
-                        {
-                            "id": control_node_id,
-                            "name": control.name,
-                            "engagement_id": engagement_id,
-                            "effectiveness": str(control.effectiveness),
-                        },
-                    )
+                await self._graph.run_write_query(
+                    """
+                    MERGE (n {id: $id})
+                    ON CREATE SET n:Control, n.name = $name,
+                                  n.engagement_id = $engagement_id,
+                                  n.effectiveness = $effectiveness
+                    ON MATCH SET  n.name = $name,
+                                  n.effectiveness = $effectiveness
+                    """,
+                    {
+                        "id": control_node_id,
+                        "name": control.name,
+                        "engagement_id": engagement_id,
+                        "effectiveness": str(control.effectiveness),
+                    },
+                )
 
                 # Link control to its policies
                 for pid in control.linked_policy_ids or []:
                     policy_node_id = f"policy-{pid}"
                     with contextlib.suppress(Neo4jError):
-                        await self._graph.create_relationship(
-                            from_id=policy_node_id,
-                            to_id=control_node_id,
-                            relationship_type="GOVERNED_BY",
-                            properties={"source": "regulatory_overlay"},
+                        await self._graph.run_write_query(
+                            """
+                            MATCH (pol {id: $pol_id}), (ctrl {id: $ctrl_id})
+                            MERGE (pol)-[r:GOVERNED_BY]->(ctrl)
+                            ON CREATE SET r.source = 'regulatory_overlay'
+                            """,
+                            {"pol_id": policy_node_id, "ctrl_id": control_node_id},
                         )
             except Neo4jError as e:
-                logger.warning("Failed to create Control node: %s", e)
+                logger.warning("Failed to upsert Control node: %s", e)
 
-        # Create Regulation nodes
+        # Upsert Regulation nodes via MERGE
         for regulation in regulations:
             reg_node_id = f"reg-{regulation.id}"
             try:
-                existing = await self._graph.get_node(reg_node_id)
-                if not existing:
-                    await self._graph.create_node(
-                        "Regulation",
-                        {
-                            "id": reg_node_id,
-                            "name": regulation.name,
-                            "engagement_id": engagement_id,
-                            "framework": regulation.framework or "",
-                        },
-                    )
+                await self._graph.run_write_query(
+                    """
+                    MERGE (n {id: $id})
+                    ON CREATE SET n:Regulation, n.name = $name,
+                                  n.engagement_id = $engagement_id,
+                                  n.framework = $framework
+                    ON MATCH SET  n.name = $name,
+                                  n.framework = $framework
+                    """,
+                    {
+                        "id": reg_node_id,
+                        "name": regulation.name,
+                        "engagement_id": engagement_id,
+                        "framework": regulation.framework or "",
+                    },
+                )
             except Neo4jError as e:
-                logger.warning("Failed to create Regulation node: %s", e)
+                logger.warning("Failed to upsert Regulation node: %s", e)
 
-        # Build chains for each process node
-        for proc in process_nodes:
-            chain = GovernanceChain(
-                process_id=proc.id,
-                process_name=proc.properties.get("name", ""),
+        # Fetch all governance chains in a single batch query instead of
+        # N get_relationships() + N*M get_node() calls (was 250+ sessions for
+        # 50 processes × 5 policies each).
+        try:
+            rows = await self._graph.run_query(
+                """
+                MATCH (p {engagement_id: $eid})-[r:GOVERNED_BY]->(pol)
+                WHERE p.id IS NOT NULL
+                RETURN p.id AS process_id, p.name AS process_name,
+                       pol.id AS policy_id, pol.name AS policy_name,
+                       type(r) AS rel_type
+                """,
+                {"eid": engagement_id},
             )
-            # Find connected policies via GOVERNED_BY
-            rels = await self._graph.get_relationships(proc.id, direction="outgoing", relationship_type="GOVERNED_BY")
-            for rel in rels:
-                policy_node = await self._graph.get_node(rel.to_id)
-                if policy_node:
-                    chain.policies.append({"id": policy_node.id, "name": policy_node.properties.get("name", "")})
-            chains.append(chain)
+        except Neo4jError as e:
+            logger.warning("Failed to fetch governance chains: %s", e)
+            rows = []
 
+        # Index batch results by process_id, then append ungoverned processes
+        chains_by_process: dict[str, GovernanceChain] = {}
+        for row in rows:
+            pid = row["process_id"]
+            if pid not in chains_by_process:
+                chains_by_process[pid] = GovernanceChain(
+                    process_id=pid,
+                    process_name=row.get("process_name") or "",
+                )
+            chains_by_process[pid].policies.append({"id": row["policy_id"], "name": row.get("policy_name") or ""})
+
+        # Include processes that have no governance links
+        governed_ids = set(chains_by_process)
+        for proc in process_nodes:
+            if proc.id not in governed_ids:
+                chains_by_process[proc.id] = GovernanceChain(
+                    process_id=proc.id,
+                    process_name=proc.properties.get("name", ""),
+                )
+
+        chains = list(chains_by_process.values())
         return chains
 
     async def assess_compliance(
@@ -205,16 +247,37 @@ class RegulatoryOverlayEngine:
         state = ComplianceState(engagement_id=engagement_id)
         state.total_processes = len(process_nodes)
 
+        # Single batch query: count GOVERNED_BY relationships per process
+        try:
+            rows = await self._graph.run_query(
+                """
+                MATCH (p {engagement_id: $eid})
+                WHERE p.id IS NOT NULL
+                OPTIONAL MATCH (p)-[:GOVERNED_BY]->(pol)
+                RETURN p.id AS process_id, p.name AS process_name,
+                       count(pol) AS policy_count
+                """,
+                {"eid": engagement_id},
+            )
+        except Neo4jError as e:
+            logger.warning("Failed to fetch compliance data: %s", e)
+            rows = []
+
+        # Build a lookup from process_id -> policy_count for the batch results
+        policy_count_by_id: dict[str, int] = {
+            row["process_id"]: int(row["policy_count"]) for row in rows if row["process_id"]
+        }
+
         for proc in process_nodes:
-            rels = await self._graph.get_relationships(proc.id, direction="outgoing", relationship_type="GOVERNED_BY")
-            if rels:
+            policy_count = policy_count_by_id.get(proc.id, 0)
+            if policy_count > 0:
                 state.governed_count += 1
                 state.details.append(
                     {
                         "process_id": proc.id,
                         "process_name": proc.properties.get("name", ""),
                         "governed": True,
-                        "policy_count": len(rels),
+                        "policy_count": policy_count,
                     }
                 )
             else:
@@ -257,18 +320,34 @@ class RegulatoryOverlayEngine:
         """
         process_nodes = await self._graph.find_nodes("Process", filters={"engagement_id": engagement_id})
 
-        ungoverned = []
-        for proc in process_nodes:
-            rels = await self._graph.get_relationships(proc.id, direction="outgoing", relationship_type="GOVERNED_BY")
-            if not rels:
-                ungoverned.append(
-                    {
-                        "process_id": proc.id,
-                        "process_name": proc.properties.get("name", ""),
-                    }
-                )
-
-        return ungoverned
+        # Single batch query: find processes with no outgoing GOVERNED_BY edges
+        try:
+            rows = await self._graph.run_query(
+                """
+                MATCH (p {engagement_id: $eid})
+                WHERE p.id IS NOT NULL
+                  AND NOT (p)-[:GOVERNED_BY]->()
+                RETURN p.id AS process_id, p.name AS process_name
+                """,
+                {"eid": engagement_id},
+            )
+            return [
+                {
+                    "process_id": row["process_id"],
+                    "process_name": row.get("process_name") or "",
+                }
+                for row in rows
+            ]
+        except Neo4jError as e:
+            logger.warning("Failed to fetch ungoverned processes: %s", e)
+            # Fallback: derive from in-memory process_nodes list
+            return [
+                {
+                    "process_id": proc.id,
+                    "process_name": proc.properties.get("name", ""),
+                }
+                for proc in process_nodes
+            ]
 
     async def _fetch_policies(self, session: AsyncSession, engagement_id: str) -> list[Policy]:
         result = await session.execute(select(Policy).where(Policy.engagement_id == engagement_id))

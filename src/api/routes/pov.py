@@ -466,6 +466,8 @@ async def get_process_model(
             detail=f"Process model {model_id} not found",
         )
 
+    await _check_engagement_member(session, user, model.engagement_id)
+
     return _model_to_response(model)
 
 
@@ -486,13 +488,15 @@ async def get_process_elements(
             detail="Invalid model ID format",
         ) from None
 
-    # Verify model exists
-    model_result = await session.execute(select(ProcessModel.id).where(ProcessModel.id == model_uuid))
-    if not model_result.scalar_one_or_none():
+    # Verify model exists and check engagement membership
+    model_result = await session.execute(select(ProcessModel).where(ProcessModel.id == model_uuid))
+    model = model_result.scalar_one_or_none()
+    if not model:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Process model {model_id} not found",
         )
+    await _check_engagement_member(session, user, model.engagement_id)
 
     # Get elements
     query = select(ProcessElement).where(ProcessElement.model_id == model_uuid).offset(offset).limit(limit)
@@ -527,6 +531,16 @@ async def get_evidence_map(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid model ID format",
         ) from None
+
+    # Verify model exists and check engagement membership
+    model_result = await session.execute(select(ProcessModel).where(ProcessModel.id == model_uuid))
+    model = model_result.scalar_one_or_none()
+    if not model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Process model {model_id} not found",
+        )
+    await _check_engagement_member(session, user, model.engagement_id)
 
     # Get elements for this model with pagination
     query = select(ProcessElement).where(ProcessElement.model_id == model_uuid).limit(limit).offset(offset)
@@ -576,6 +590,16 @@ async def get_evidence_gaps(
             detail="Invalid model ID format",
         ) from None
 
+    # Verify model exists and check engagement membership
+    model_result = await session.execute(select(ProcessModel).where(ProcessModel.id == model_uuid))
+    model = model_result.scalar_one_or_none()
+    if not model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Process model {model_id} not found",
+        )
+    await _check_engagement_member(session, user, model.engagement_id)
+
     query = select(EvidenceGap).where(EvidenceGap.model_id == model_uuid).limit(limit).offset(offset)
     result = await session.execute(query)
     gaps = list(result.scalars().all())
@@ -599,6 +623,16 @@ async def get_contradictions(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid model ID format",
         ) from None
+
+    # Verify model exists and check engagement membership
+    model_result = await session.execute(select(ProcessModel).where(ProcessModel.id == model_uuid))
+    model = model_result.scalar_one_or_none()
+    if not model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Process model {model_id} not found",
+        )
+    await _check_engagement_member(session, user, model.engagement_id)
 
     query = select(Contradiction).where(Contradiction.model_id == model_uuid).limit(limit).offset(offset)
     result = await session.execute(query)
@@ -634,6 +668,8 @@ async def get_bpmn_xml(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Process model {model_id} not found",
         )
+
+    await _check_engagement_member(session, user, model.engagement_id)
 
     if not model.bpmn_xml:
         raise HTTPException(

@@ -101,6 +101,7 @@ class TestGetEvidence:
         ev = _make_evidence()
         mock_db_session.execute.side_effect = [
             _mock_scalar_result(ev),
+            MagicMock(),  # set_engagement_context RLS call
             _mock_count_result(5),
         ]
 
@@ -281,8 +282,10 @@ class TestGetFragments:
         frag1 = _make_fragment(evidence_id=ev_id, fragment_type=FragmentType.TEXT)
         frag2 = _make_fragment(evidence_id=ev_id, fragment_type=FragmentType.TABLE)
 
+        ev = _make_evidence(id=ev_id)
         mock_db_session.execute.side_effect = [
-            _mock_scalar_result(ev_id),  # verify evidence exists
+            _mock_scalar_result(ev),  # verify evidence exists
+            MagicMock(),  # set_engagement_context RLS call
             _mock_scalars_result([frag1, frag2]),
         ]
 
