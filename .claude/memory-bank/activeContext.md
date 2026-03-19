@@ -6,7 +6,7 @@
 
 **MVP COMPLETE + WGI ALIGNED** — Platform MVP done. Windows Task Mining Agent fully implemented. WGI Platform Alignment complete.
 
-- **Current version**: 2026.03.230
+- **Current version**: 2026.03.231
 - **Open issues**: 0
 - **PM tool**: Jira (KMFLOW project at agentic-sdlc.atlassian.net)
 - **Presentations**: kmflow.agentic-innovations.com + state-street-apex.agentic-innovations.com
@@ -17,6 +17,7 @@ Pick up next Jira backlog item from KMFLOW board.
 
 ## Recently Completed
 
+- **PR #619**: Upgrade Next.js 15.5.10 → 15.5.13 — CVE-2026-29057 HTTP request smuggling fix (#618, merged 2026-03-18)
 - **PR #617**: Remove unused deps, eliminate all Python CVEs (#614) — python-jose/ecdsa/passlib removed, pypdf floor pin removed; pip-audit 0 CVEs (merged 2026-03-18)
 - **PR #613**: Remediate 6 Python CVEs (#612) — PyJWT 2.12.1, pyopenssl ≥26.0.0, pyasn1 ≥0.6.3, pypdf ≥6.9.1; ecdsa + npm accepted risks (merged 2026-03-18)
 - **PR #610**: Improve Knowledge Graph Explorer readability (#611) — hide edge labels (hover-to-reveal), larger nodes (40→50px), hover highlighting for connected nodes/edges, force-directed layout tuning, faded search class (merged 2026-03-18)

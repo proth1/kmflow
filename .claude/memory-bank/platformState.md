@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.230
+**Version**: 2026.03.231
 **Last Updated**: 2026-03-18
 
 ## Quick Stats
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.231 | 2026-03-18 | Upgrade Next.js 15.5.10 → 15.5.13 — CVE-2026-29057 HTTP request smuggling fix (#618, PR #619) |
 | 2026.03.230 | 2026-03-18 | Bump undici/wrangler in tunnel-auth — 4 CVEs fixed (Dependabot PR #615) |
 | 2026.03.229 | 2026-03-18 | Remove unused deps (python-jose, passlib, pypdf) — pip-audit 0 CVEs (#614, PR #617) |
 | 2026.03.228 | 2026-03-18 | Remediate 6 Python CVEs — PyJWT, pyopenssl, pyasn1, pypdf; accepted risks documented (#612, PR #613) |

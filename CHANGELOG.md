@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.231] - 2026-03-18
+### Security
+- Upgrade Next.js 15.5.10 → 15.5.13 to fix CVE-2026-29057 — HTTP request smuggling in rewrites (PR #619)
+
 ## [2026.03.230] - 2026-03-18
 ### Security
 - Bump undici 7.18.2→7.24.4 (CVE-2026-1525, CVE-2026-1528, CVE-2026-2581, CVE-2026-1527) and wrangler 4.69.0→4.75.0 in tunnel-auth worker (PR #615)
