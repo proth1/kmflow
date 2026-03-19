@@ -80,6 +80,16 @@ dev = [
 ml = [
     # Semantic similarity (optional, for enhanced embeddings)
     "scikit-learn>=1.5.0",
+    # Embedding model + cross-encoder reranking
+    "sentence-transformers>=3.0.0",
+    # Nomic embedding model support
+    "einops>=0.8.0",
+]
+layout = [
+    # Layout-aware PDF parsing (Unstructured.io)
+    "unstructured[pdf]>=0.16.0",
+    # Alternative layout-aware parser (IBM Docling) for evaluation
+    "docling>=2.0.0",
 ]
 pdf = [
     # PDF report generation
@@ -169,5 +179,8 @@ module = [
     "slowapi.*",
     "langdetect.*",
     "reportlab.*",
+    "unstructured.*",
+    "docling.*",
+    "einops.*",
 ]
 ignore_missing_imports = true

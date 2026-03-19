@@ -1,0 +1,69 @@
+# Domain Configuration: Mortgage Lending
+# ========================================
+# Reference domain config for the KMFlow mortgage lending case study.
+# Bundles all domain-specific settings into a single portable config.
+
+domain: mortgage_lending
+display_name: "Mortgage Lending"
+description: >
+  Residential mortgage lending process — covers origination, underwriting,
+  appraisal, closing, and post-closing. Optimized for US regulatory
+  environment (TRID, HMDA, Fair Lending).
+
+# Seed lists to activate for entity boosting
+seed_lists:
+  - financial_regulations
+  - wealth_management
+
+# Embedding model configuration
+embedding:
+  model: nomic-ai/nomic-embed-text-v1.5
+  dimension: 768
+
+# Chunking configuration
+chunking:
+  target_tokens: 384
+  overlap_tokens: 50
+  max_tokens: 512
+  min_tokens: 30
+
+# Entity extraction mode
+entity_extraction:
+  mode: rule_based  # Options: rule_based, llm, hybrid
+  # LLM extraction config (when mode is llm or hybrid)
+  llm:
+    model: claude-sonnet-4-6
+    max_entities_per_fragment: 20
+
+# Evidence type weights for consensus scoring
+evidence_weights:
+  documents: 1.0
+  structured_data: 1.0
+  bpm_process_models: 1.2
+  regulatory_policy: 1.1
+  controls_evidence: 1.0
+  domain_communications: 0.8
+  job_aids_edge_cases: 0.7
+  saas_exports: 0.9
+  images: 0.5
+  audio: 0.6
+  video: 0.6
+  km4work: 0.8
+
+# Domain-specific entity patterns (extend the base patterns)
+entity_patterns:
+  activities:
+    - "\\b(Originate|Underwrite|Appraise|Close|Fund|Service|Foreclose)\\s+([A-Z][a-zA-Z]*(?:\\s+[A-Z][a-zA-Z]*){0,3})\\b"
+  roles:
+    - "\\b(Loan\\s+Officer|Underwriter|Appraiser|Closing\\s+Agent|Processor|Servicer|Title\\s+Agent)\\b"
+  systems:
+    - "\\b(LoanPro|Encompass|Calyx|DU|LP|LPA|MERS|FHA\\s+Connection|VA\\s+Portal)\\b"
+  documents:
+    - "\\b(Closing\\s+Disclosure|Loan\\s+Estimate|HUD-1|Good\\s+Faith\\s+Estimate|1003|URLA|Title\\s+Report|Appraisal\\s+Report|PMI\\s+Certificate)\\b"
+
+# Quality scoring thresholds
+quality_thresholds:
+  completeness_min: 0.6
+  reliability_min: 0.7
+  freshness_max_days: 365
+  consistency_min: 0.5

@@ -28,6 +28,7 @@ from src.core.models import (
     EvidenceFragment,
     EvidenceItem,
 )
+from src.evidence.chunking import chunk_fragments
 from src.evidence.parsers.base import ParseResult
 from src.evidence.parsers.factory import classify_by_extension, detect_format, parse_file
 
@@ -250,9 +251,12 @@ async def process_evidence(
     if parse_result.error:
         logger.warning("Parse error for %s: %s", evidence_item.name, parse_result.error)
 
+    # Post-parse chunking: split large fragments into embedding-friendly chunks
+    chunked_fragments = chunk_fragments(parse_result.fragments)
+
     # Create fragment records
     fragments: list[EvidenceFragment] = []
-    for parsed_frag in parse_result.fragments:
+    for parsed_frag in chunked_fragments:
         fragment = EvidenceFragment(
             evidence_id=evidence_item.id,
             fragment_type=parsed_frag.fragment_type,
