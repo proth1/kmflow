@@ -1,12 +1,12 @@
 # Active Context
 
-**Last Updated**: 2026-03-18
+**Last Updated**: 2026-03-19
 
 ## Project Status
 
 **MVP COMPLETE + WGI ALIGNED** — Platform MVP done. Windows Task Mining Agent fully implemented. WGI Platform Alignment complete.
 
-- **Current version**: 2026.03.232
+- **Current version**: 2026.03.233
 - **Open issues**: 0
 - **PM tool**: Jira (KMFLOW project at agentic-sdlc.atlassian.net)
 - **Presentations**: kmflow.agentic-innovations.com + state-street-apex.agentic-innovations.com
@@ -17,6 +17,7 @@ Pick up next Jira backlog item from KMFLOW board.
 
 ## Recently Completed
 
+- **PR #622**: Ingestion pipeline optimization — token-aware chunking, nomic-embed-text-v1.5 upgrade, graph expansion fix, cross-encoder reranking, MMR diversity, DataObject/Event/Gateway entity extraction, layout-aware PDF parser, domain config bundles, 49 new tests (merged 2026-03-19)
 - **PR #621**: ADR: Dependency version pinning strategy — patch-only policy, 7 revisit triggers (#620, merged 2026-03-18)
 - **PR #619**: Upgrade Next.js 15.5.10 → 15.5.13 — CVE-2026-29057 HTTP request smuggling fix (#618, merged 2026-03-18)
 - **PR #617**: Remove unused deps, eliminate all Python CVEs (#614) — python-jose/ecdsa/passlib removed, pypdf floor pin removed; pip-audit 0 CVEs (merged 2026-03-18)

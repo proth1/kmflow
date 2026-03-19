@@ -3,6 +3,19 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.233] - 2026-03-19
+### Added
+- Token-aware post-parse chunking module with 384-token target, 50-token overlap, table-aware splitting, heading propagation (PR #622)
+- Cross-encoder reranking (ms-marco-MiniLM-L-12-v2) and MMR diversity filtering in hybrid retriever (PR #622)
+- DataObject, Event, Gateway entity extraction patterns — all 8/8 ontology types now implemented (PR #622)
+- Layout-aware PDF parser using Unstructured.io with bounding box metadata and pdfplumber fallback (PR #622)
+- Domain configuration bundles for multi-domain portability with mortgage_lending reference config (PR #622)
+- Parser evaluation script (Unstructured vs Docling) and embedding migration script (PR #622)
+- 49 new tests across chunking, retrieval, entity extraction, and domain config (PR #622)
+### Changed
+- Upgraded default embedding model from all-mpnet-base-v2 to nomic-embed-text-v1.5 (same 768-dim, 8K context) (PR #622)
+- Graph expansion now uses query-term matching with relevance scoring instead of flat 0.5 scores (PR #622)
+
 ## [2026.03.232] - 2026-03-18
 ### Added
 - ADR: Dependency version pinning strategy — documents decision to stay on current majors with patch-only security fixes and 7 trigger conditions to revisit (PR #621)
