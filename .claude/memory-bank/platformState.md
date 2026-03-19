@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.235
+**Version**: 2026.03.236
 **Last Updated**: 2026-03-19
 
 ## Quick Stats
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.236 | 2026-03-19 | Audit followup — 13 remaining findings: shared auth, domain exceptions, schema extraction, Lua rate limiter, classification enforcement, 6 new tests (#627, PR #628) |
 | 2026.03.235 | 2026-03-19 | Audit remediation — 107 findings (6 CRITICAL, 34 HIGH, 37 MEDIUM, 30 LOW), 108 files, security/architecture/performance/compliance (#624, PR #625) |
 | 2026.03.234 | 2026-03-19 | Fix BPMN viewer top clipping — 30px viewbox padding after fit-viewport (PR #623) |
 | 2026.03.233 | 2026-03-19 | Ingestion pipeline optimization — chunking, nomic embeddings, graph expansion fix, reranking/MMR, 3 new entity types, layout parser, domain config (PR #622) |

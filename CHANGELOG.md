@@ -3,6 +3,20 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.236] - 2026-03-19
+### Fixed
+- Replace `_check_engagement_member` with shared `verify_engagement_member` in permissions.py (#627)
+- Domain exceptions (`EvidenceValidationError`) instead of HTTPException in evidence pipeline (#627)
+- Extract 5 copilot Pydantic schemas to `src/api/schemas/copilot.py` (#627)
+- TYPE_CHECKING guard for `KnowledgeGraphService` in retention.py (#627)
+- Fix misleading WebSocket auth log message (#627)
+- Deduplicate 3 monitoring hooks via shared `useMonitoringFetch` helper (#627)
+- Atomic Redis rate limiter via Lua script replacing separate INCR+EXPIRE (#627)
+- Fix AuditLog docstring falsely claiming PostgreSQL trigger (#627)
+- Enable `retention_cleanup_enabled` by default (#627)
+- Add `require_classification_access` — log CONFIDENTIAL/RESTRICTED, block CLIENT_VIEWER from RESTRICTED (#627)
+- Add legacy salt decryption test, bridge failure test, GDPR erasure worker tests (#627)
+
 ## [2026.03.235] - 2026-03-19
 ### Security
 - Fix XXE regression in financial regulatory parser — add safe XMLParser (#624)
