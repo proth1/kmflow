@@ -11,8 +11,8 @@ from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi import HTTPException
 
+from src.evidence.exceptions import EvidenceValidationError
 from src.evidence.pipeline import validate_file_type
 
 
@@ -33,14 +33,14 @@ class TestValidateFileType:
         assert result == "application/pdf"
 
     def test_blocked_mime_type_raises_415(self) -> None:
-        """A non-allowlisted MIME type should raise HTTPException 415."""
+        """A non-allowlisted MIME type should raise EvidenceValidationError with status_hint 415."""
         with (
             patch.dict("sys.modules", {"magic": _make_magic_module("application/x-executable")}),
-            pytest.raises(HTTPException) as exc_info,
+            pytest.raises(EvidenceValidationError) as exc_info,
         ):
             validate_file_type(b"\x7fELF", "malware.exe", mime_type="application/x-executable")
-        assert exc_info.value.status_code == 415
-        assert "application/x-executable" in str(exc_info.value.detail)
+        assert exc_info.value.status_hint == 415
+        assert "application/x-executable" in str(exc_info.value)
 
     def test_octet_stream_accepted(self) -> None:
         """application/octet-stream is allowlisted (used by .bpmn files)."""
@@ -79,10 +79,10 @@ class TestValidateFileType:
         """application/octet-stream with an unknown extension should be rejected."""
         with (
             patch.dict("sys.modules", {"magic": _make_magic_module("application/octet-stream")}),
-            pytest.raises(HTTPException) as exc_info,
+            pytest.raises(EvidenceValidationError) as exc_info,
         ):
             validate_file_type(b"binary data", "file.bin", mime_type=None)
-        assert exc_info.value.status_code == 415
+        assert exc_info.value.status_hint == 415
 
     def test_office_document_types_accepted(self) -> None:
         """Microsoft Office MIME types should be accepted."""
@@ -113,10 +113,10 @@ class TestValidateFileType:
         """Error detail should name the rejected MIME type."""
         with (
             patch.dict("sys.modules", {"magic": _make_magic_module("application/x-shellscript")}),
-            pytest.raises(HTTPException) as exc_info,
+            pytest.raises(EvidenceValidationError) as exc_info,
         ):
             validate_file_type(b"data", "script.sh", mime_type="application/x-shellscript")
-        assert "application/x-shellscript" in exc_info.value.detail
+        assert "application/x-shellscript" in str(exc_info.value)
 
     def test_magic_unavailable_falls_back_to_client_mime(self) -> None:
         """When python-magic is not installed, should fall back to client-provided MIME type."""

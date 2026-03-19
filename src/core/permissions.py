@@ -12,9 +12,11 @@ from uuid import UUID
 
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.auth import get_current_user
-from src.core.models import EngagementMember, User, UserRole
+from src.core.models import DataClassification, EngagementMember, User, UserRole
+from src.core.rls import set_engagement_context
 
 logger = logging.getLogger(__name__)
 
@@ -237,3 +239,68 @@ async def require_engagement_access(
             detail="You do not have access to this engagement",
         )
     return user
+
+
+async def verify_engagement_member(
+    session: AsyncSession,
+    user: User,
+    engagement_id: UUID,
+) -> None:
+    """Verify user is a member of the engagement and set RLS context.
+
+    Sets the RLS session variable so subsequent queries on engagement-scoped
+    tables are properly filtered. Platform admins bypass the membership check
+    but still need the RLS context.
+
+    Use this in routes where ``engagement_id`` is not a direct request
+    parameter (e.g. derived from a looked-up entity).
+
+    Args:
+        session: The route's database session.
+        user: The authenticated user.
+        engagement_id: The engagement to verify access for.
+
+    Raises:
+        HTTPException 403: If the user is not a member of the engagement.
+    """
+    await set_engagement_context(session, engagement_id)
+    if user.role == UserRole.PLATFORM_ADMIN:
+        return
+    result = await session.execute(
+        select(EngagementMember).where(
+            EngagementMember.engagement_id == engagement_id,
+            EngagementMember.user_id == user.id,
+        )
+    )
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this engagement",
+        )
+
+
+def require_classification_access(classification: DataClassification, user: User) -> None:
+    """Enforce data classification access rules.
+
+    Logs access to CONFIDENTIAL and RESTRICTED data. Blocks CLIENT_VIEWER
+    role from accessing RESTRICTED data entirely.
+
+    Args:
+        classification: The data classification level of the resource.
+        user: The authenticated user requesting access.
+
+    Raises:
+        HTTPException 403: If a CLIENT_VIEWER attempts to access RESTRICTED data.
+    """
+    if classification in (DataClassification.CONFIDENTIAL, DataClassification.RESTRICTED):
+        logger.info(
+            "Classification access: user=%s role=%s classification=%s",
+            user.id,
+            user.role.value,
+            classification.value,
+        )
+    if classification == DataClassification.RESTRICTED and user.role == UserRole.CLIENT_VIEWER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: RESTRICTED data requires elevated permissions",
+        )

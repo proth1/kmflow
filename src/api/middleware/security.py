@@ -83,12 +83,25 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 # ---------------------------------------------------------------------------
 
 
+_RATE_LIMIT_SCRIPT = """
+local key = KEYS[1]
+local window = tonumber(ARGV[1])
+local count = redis.call('INCR', key)
+if count == 1 then
+    redis.call('EXPIRE', key, window)
+end
+local ttl = redis.call('TTL', key)
+return {count, ttl}
+"""
+
+
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Redis-backed per-IP rate limiter (multi-worker safe).
 
-    Uses Redis INCR + EXPIRE for atomic fixed-window counting. Each client IP
-    gets a Redis key ``ratelimit:{ip}`` with a TTL equal to the window. The
-    counter is shared across all uvicorn workers via the same Redis instance.
+    Uses an atomic Lua script (INCR + EXPIRE) for fixed-window counting.
+    Each client IP gets a Redis key ``ratelimit:{ip}`` with a TTL equal
+    to the window. The counter is shared across all uvicorn workers via
+    the same Redis instance.
 
     Falls back to allowing the request if Redis is unavailable (fail-open for
     availability — rate limiting is a best-effort defence, not an auth gate).
@@ -119,29 +132,24 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         redis_client = getattr(request.app.state, "redis_client", None)
 
         count = 0
+        ttl = self.window_seconds
         if redis_client is not None:
             try:
                 key = f"ratelimit:{client_ip}"
-                raw_count = await redis_client.incr(key)
-                count = int(raw_count) if isinstance(raw_count, int | float | str) else 0
-                if count == 1:
-                    # First request in window — set TTL
-                    await redis_client.expire(key, self.window_seconds)
+                result = await redis_client.eval(_RATE_LIMIT_SCRIPT, 1, key, self.window_seconds)
+                count = int(result[0])
+                ttl = max(int(result[1]), 1)
             except Exception:
                 # Redis unavailable — fail open (allow request)
                 logger.debug("Rate limiter Redis unavailable, allowing request")
                 count = 0
 
         if count > self.max_requests:
-            try:
-                ttl = int(await redis_client.ttl(f"ratelimit:{client_ip}")) if redis_client else self.window_seconds
-            except Exception:
-                ttl = self.window_seconds
             return Response(
                 content='{"detail":"Rate limit exceeded"}',
                 status_code=429,
                 media_type="application/json",
-                headers={"Retry-After": str(max(ttl, 1))},
+                headers={"Retry-After": str(ttl)},
             )
 
         response = await call_next(request)

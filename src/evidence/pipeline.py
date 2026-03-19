@@ -16,7 +16,6 @@ from pathlib import Path
 from typing import Any
 
 import aiofiles
-from fastapi import HTTPException
 from neo4j import AsyncDriver
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,6 +28,7 @@ from src.core.models import (
     EvidenceItem,
 )
 from src.evidence.chunking import chunk_fragments
+from src.evidence.exceptions import EvidenceValidationError
 from src.evidence.parsers.base import ParseResult
 from src.evidence.parsers.factory import classify_by_extension, detect_format, parse_file
 from src.quality.instrumentation import pipeline_stage
@@ -100,7 +100,7 @@ def validate_file_type(file_content: bytes, file_name: str, mime_type: str | Non
         The detected MIME type.
 
     Raises:
-        HTTPException 415: If the file type is not in the allowlist.
+        EvidenceValidationError: If the file type is not in the allowlist.
     """
     detected_type = mime_type or "application/octet-stream"
 
@@ -120,16 +120,16 @@ def validate_file_type(file_content: bytes, file_name: str, mime_type: str | Non
 
         ext = Path(file_name).suffix.lower()
         if ext not in _OCTET_STREAM_ALLOWED_EXTENSIONS:
-            raise HTTPException(
-                status_code=415,
-                detail="File type 'application/octet-stream' is not allowed for this extension. Upload a supported document, image, or data file.",
+            raise EvidenceValidationError(
+                "File type 'application/octet-stream' is not allowed for this extension. Upload a supported document, image, or data file.",
+                status_hint=415,
             )
         return detected_type
 
     if detected_type not in ALLOWED_MIME_TYPES:
-        raise HTTPException(
-            status_code=415,
-            detail=f"File type '{detected_type}' is not allowed. Upload a supported document, image, or data file.",
+        raise EvidenceValidationError(
+            f"File type '{detected_type}' is not allowed. Upload a supported document, image, or data file.",
+            status_hint=415,
         )
 
     return detected_type
@@ -735,9 +735,9 @@ async def ingest_evidence(
     """
     # Step 0: Validate file size
     if len(file_content) > MAX_UPLOAD_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail=f"File size {len(file_content)} exceeds maximum allowed size of {MAX_UPLOAD_SIZE} bytes",
+        raise EvidenceValidationError(
+            f"File size {len(file_content)} exceeds maximum allowed size of {MAX_UPLOAD_SIZE} bytes",
+            status_hint=413,
         )
 
     # Step 0b: Validate file type (content-based detection)

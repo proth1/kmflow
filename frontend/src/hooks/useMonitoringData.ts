@@ -5,7 +5,7 @@
  * deviations, and stats from the backend API.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiGet } from "@/lib/api";
 
 export interface MonitoringJob {
@@ -44,25 +44,32 @@ export interface MonitoringStats {
   critical_alerts: number;
 }
 
-export function useMonitoringStats(engagementId: string) {
-  const [stats, setStats] = useState<MonitoringStats | null>(null);
+function useMonitoringFetch<T>(
+  url: string,
+  engagementId: string,
+  extract: (data: T) => T extends { items: infer U } ? U : T,
+  initialValue: T extends { items: infer U } ? U : T,
+) {
+  type V = T extends { items: infer U } ? U : T;
+  const [data, setData] = useState<V>(initialValue);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const controllerRef = useRef<AbortController | null>(null);
 
   const refresh = useCallback(async () => {
+    controllerRef.current?.abort();
     const controller = new AbortController();
+    controllerRef.current = controller;
     setLoading(true);
     setError(null);
     try {
-      const data = await apiGet<MonitoringStats>(
-        `/api/v1/monitoring/stats/${engagementId}`,
-      );
+      const result = await apiGet<T>(url);
       if (!controller.signal.aborted) {
-        setStats(data);
+        setData(extract(result));
       }
     } catch (err) {
       if (!controller.signal.aborted) {
-        setStats(null);
+        setData(initialValue);
         setError(err instanceof Error ? err.message : "Failed to load data");
       }
     } finally {
@@ -70,139 +77,51 @@ export function useMonitoringStats(engagementId: string) {
         setLoading(false);
       }
     }
-    return () => controller.abort();
-  }, [engagementId]);
+  }, [url, extract, initialValue]);
 
   useEffect(() => {
-    const controller = new AbortController();
-    setLoading(true);
-    setError(null);
-    apiGet<MonitoringStats>(`/api/v1/monitoring/stats/${engagementId}`)
-      .then((data) => {
-        if (!controller.signal.aborted) {
-          setStats(data);
-          setLoading(false);
-        }
-      })
-      .catch((err) => {
-        if (!controller.signal.aborted) {
-          setStats(null);
-          setError(err instanceof Error ? err.message : "Failed to load data");
-          setLoading(false);
-        }
-      });
-    return () => controller.abort();
-  }, [engagementId]);
+    refresh();
+    return () => controllerRef.current?.abort();
+  }, [refresh]);
 
+  return { data, loading, error, refresh };
+}
+
+const extractIdentity = <T,>(d: T) => d;
+const extractItems = <T,>(d: { items: T }) => d.items;
+
+export function useMonitoringStats(engagementId: string) {
+  const { data: stats, loading, error, refresh } = useMonitoringFetch<MonitoringStats>(
+    `/api/v1/monitoring/stats/${engagementId}`,
+    engagementId,
+    extractIdentity as (data: MonitoringStats) => MonitoringStats,
+    null as unknown as MonitoringStats,
+  );
   return { stats, loading, error, refresh };
 }
 
 export function useMonitoringJobs(engagementId: string) {
-  const [jobs, setJobs] = useState<MonitoringJob[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const refresh = useCallback(async () => {
-    const controller = new AbortController();
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await apiGet<{ items: MonitoringJob[]; total: number }>(
-        `/api/v1/monitoring/jobs?engagement_id=${engagementId}`,
-      );
-      if (!controller.signal.aborted) {
-        setJobs(data.items);
-      }
-    } catch (err) {
-      if (!controller.signal.aborted) {
-        setJobs([]);
-        setError(err instanceof Error ? err.message : "Failed to load data");
-      }
-    } finally {
-      if (!controller.signal.aborted) {
-        setLoading(false);
-      }
-    }
-    return () => controller.abort();
-  }, [engagementId]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    setLoading(true);
-    setError(null);
-    apiGet<{ items: MonitoringJob[]; total: number }>(
-      `/api/v1/monitoring/jobs?engagement_id=${engagementId}`,
-    )
-      .then((data) => {
-        if (!controller.signal.aborted) {
-          setJobs(data.items);
-          setLoading(false);
-        }
-      })
-      .catch((err) => {
-        if (!controller.signal.aborted) {
-          setJobs([]);
-          setError(err instanceof Error ? err.message : "Failed to load data");
-          setLoading(false);
-        }
-      });
-    return () => controller.abort();
-  }, [engagementId]);
-
+  const { data: jobs, loading, error, refresh } = useMonitoringFetch<{
+    items: MonitoringJob[];
+    total: number;
+  }>(
+    `/api/v1/monitoring/jobs?engagement_id=${engagementId}`,
+    engagementId,
+    extractItems as (data: { items: MonitoringJob[]; total: number }) => MonitoringJob[],
+    [] as MonitoringJob[],
+  );
   return { jobs, loading, error, refresh };
 }
 
 export function useMonitoringAlerts(engagementId: string) {
-  const [alerts, setAlerts] = useState<MonitoringAlert[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const refresh = useCallback(async () => {
-    const controller = new AbortController();
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await apiGet<{ items: MonitoringAlert[]; total: number }>(
-        `/api/v1/monitoring/alerts?engagement_id=${engagementId}`,
-      );
-      if (!controller.signal.aborted) {
-        setAlerts(data.items);
-      }
-    } catch (err) {
-      if (!controller.signal.aborted) {
-        setAlerts([]);
-        setError(err instanceof Error ? err.message : "Failed to load data");
-      }
-    } finally {
-      if (!controller.signal.aborted) {
-        setLoading(false);
-      }
-    }
-    return () => controller.abort();
-  }, [engagementId]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    setLoading(true);
-    setError(null);
-    apiGet<{ items: MonitoringAlert[]; total: number }>(
-      `/api/v1/monitoring/alerts?engagement_id=${engagementId}`,
-    )
-      .then((data) => {
-        if (!controller.signal.aborted) {
-          setAlerts(data.items);
-          setLoading(false);
-        }
-      })
-      .catch((err) => {
-        if (!controller.signal.aborted) {
-          setAlerts([]);
-          setError(err instanceof Error ? err.message : "Failed to load data");
-          setLoading(false);
-        }
-      });
-    return () => controller.abort();
-  }, [engagementId]);
-
+  const { data: alerts, loading, error, refresh } = useMonitoringFetch<{
+    items: MonitoringAlert[];
+    total: number;
+  }>(
+    `/api/v1/monitoring/alerts?engagement_id=${engagementId}`,
+    engagementId,
+    extractItems as (data: { items: MonitoringAlert[]; total: number }) => MonitoringAlert[],
+    [] as MonitoringAlert[],
+  );
   return { alerts, loading, error, refresh };
 }

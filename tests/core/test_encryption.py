@@ -57,3 +57,23 @@ class TestEncryption:
 
         ct = encrypt_value("")
         assert decrypt_value(ct) == ""
+
+    def test_decrypt_legacy_salt_ciphertext(self) -> None:
+        """Verify decrypt_value handles data encrypted with the legacy fixed salt."""
+        from src.core.encryption import _derive_fernet_key, decrypt_value
+
+        # Use a non-Fernet passphrase so _derive_fernet_key uses PBKDF2
+        # (a valid Fernet key bypasses derivation, making legacy_salt irrelevant)
+        passphrase = "my-passphrase-not-a-fernet-key"
+
+        from unittest.mock import patch as _patch
+
+        from src.core.config import Settings
+
+        mock_settings = Settings(encryption_key=passphrase)
+        with _patch("src.core.encryption.get_settings", return_value=mock_settings):
+            legacy_fernet = Fernet(_derive_fernet_key(passphrase, legacy_salt=True))
+            plaintext = "legacy-encrypted-secret"
+            legacy_ciphertext = legacy_fernet.encrypt(plaintext.encode()).decode()
+
+            assert decrypt_value(legacy_ciphertext) == plaintext

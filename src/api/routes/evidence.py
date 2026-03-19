@@ -28,7 +28,8 @@ from src.core.models import (
     User,
     ValidationStatus,
 )
-from src.core.permissions import require_engagement_access, require_permission
+from src.core.permissions import require_classification_access, require_engagement_access, require_permission
+from src.evidence.exceptions import EvidenceValidationError
 from src.evidence.pipeline import ingest_evidence
 from src.evidence.quality import score_evidence
 
@@ -198,16 +199,19 @@ async def upload_evidence(
 
     # Run the ingestion pipeline (with intelligence activation)
     neo4j_driver = getattr(request.app.state, "neo4j_driver", None)
-    evidence_item, fragments, duplicate_of_id = await ingest_evidence(
-        session=session,
-        engagement_id=engagement_id,
-        file_content=file_content,
-        file_name=file_name,
-        category=category,
-        metadata=metadata_dict,
-        mime_type=file.content_type,
-        neo4j_driver=neo4j_driver,
-    )
+    try:
+        evidence_item, fragments, duplicate_of_id = await ingest_evidence(
+            session=session,
+            engagement_id=engagement_id,
+            file_content=file_content,
+            file_name=file_name,
+            category=category,
+            metadata=metadata_dict,
+            mime_type=file.content_type,
+            neo4j_driver=neo4j_driver,
+        )
+    except EvidenceValidationError as exc:
+        raise HTTPException(status_code=exc.status_hint, detail=str(exc)) from exc
 
     # Score quality
     quality_scores = await score_evidence(session, evidence_item)
@@ -316,6 +320,8 @@ async def get_evidence(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Evidence item {evidence_id} not found",
         )
+
+    require_classification_access(evidence.classification, user)
 
     # Count fragments
     frag_count_result = await session.execute(

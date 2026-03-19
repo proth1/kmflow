@@ -13,7 +13,7 @@
 
 ## Current Focus
 
-Pick up next Jira backlog item from KMFLOW board.
+**Issue #627**: Audit followup — 13 remaining findings from PR #625 review (branch: `feature/627-audit-followup`)
 
 ## Recently Completed
 
