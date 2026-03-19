@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.232] - 2026-03-18
+### Added
+- ADR: Dependency version pinning strategy — documents decision to stay on current majors with patch-only security fixes and 7 trigger conditions to revisit (PR #621)
+
 ## [2026.03.231] - 2026-03-18
 ### Security
 - Upgrade Next.js 15.5.10 → 15.5.13 to fix CVE-2026-29057 — HTTP request smuggling in rewrites (PR #619)
