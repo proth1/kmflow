@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.234
+**Version**: 2026.03.235
 **Last Updated**: 2026-03-19
 
 ## Quick Stats
@@ -9,9 +9,9 @@
 |--------|-------|
 | SQLAlchemy Models | 101 |
 | API Routers | 76 |
-| Test Count | 5,572+ backend + 635 frontend (6,207+ total) |
+| Test Count | 5,998+ backend + 635 frontend (6,633+ total) |
 | Total LOC | ~117,000 (440+ Python / 120 TypeScript / 39 Swift / 63 C#/C) |
-| Database Migrations | 86 |
+| Database Migrations | 88 |
 | BPMN Process Models | 44 |
 | Coverage | >80% |
 | Python Version | 3.12+ |
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.235 | 2026-03-19 | Audit remediation — 107 findings (6 CRITICAL, 34 HIGH, 37 MEDIUM, 30 LOW), 108 files, security/architecture/performance/compliance (#624, PR #625) |
 | 2026.03.234 | 2026-03-19 | Fix BPMN viewer top clipping — 30px viewbox padding after fit-viewport (PR #623) |
 | 2026.03.233 | 2026-03-19 | Ingestion pipeline optimization — chunking, nomic embeddings, graph expansion fix, reranking/MMR, 3 new entity types, layout parser, domain config (PR #622) |
 | 2026.03.232 | 2026-03-18 | ADR: Dependency version pinning strategy — patch-only policy, 7 revisit triggers (#620, PR #621) |

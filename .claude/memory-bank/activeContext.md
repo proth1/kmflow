@@ -6,7 +6,7 @@
 
 **MVP COMPLETE + WGI ALIGNED** — Platform MVP done. Windows Task Mining Agent fully implemented. WGI Platform Alignment complete.
 
-- **Current version**: 2026.03.234
+- **Current version**: 2026.03.235
 - **Open issues**: 0
 - **PM tool**: Jira (KMFLOW project at agentic-sdlc.atlassian.net)
 - **Presentations**: kmflow.agentic-innovations.com + state-street-apex.agentic-innovations.com
@@ -17,6 +17,7 @@ Pick up next Jira backlog item from KMFLOW board.
 
 ## Recently Completed
 
+- **PR #625**: Audit remediation — 107 findings (6 CRITICAL, 34 HIGH, 37 MEDIUM, 30 LOW) across security, architecture, quality, performance, compliance, and dependency domains. 108 files changed. (#624, merged 2026-03-19)
 - **PR #623**: Fix BPMN viewer top clipping — add 30px viewbox padding after fit-viewport so pool headers and confidence badges aren't cut off (merged 2026-03-19)
 - **PR #622**: Ingestion pipeline optimization — token-aware chunking, nomic-embed-text-v1.5 upgrade, graph expansion fix, cross-encoder reranking, MMR diversity, DataObject/Event/Gateway entity extraction, layout-aware PDF parser, domain config bundles, 49 new tests (merged 2026-03-19)
 - **PR #621**: ADR: Dependency version pinning strategy — patch-only policy, 7 revisit triggers (#620, merged 2026-03-18)

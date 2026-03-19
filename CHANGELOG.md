@@ -3,6 +3,32 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.235] - 2026-03-19
+### Security
+- Fix XXE regression in financial regulatory parser — add safe XMLParser (#624)
+- Add authentication to 5 conflict resolution routes (#624)
+- Add engagement-level authorization to MCP tool handlers (#624)
+- Migrate 5 config secrets to SecretStr with production validator (#624)
+- Replace in-memory rate limiter with Redis-backed INCR+EXPIRE (#624)
+- Sanitize LLM conversation history before forwarding to model (#624)
+- Replace PII (user.email) with user.id in INFO-level logs (#624)
+
+### Fixed
+- Fix search_similar() querying non-existent fragment_embeddings table (#624)
+- Wire batch embedding API to eliminate N+1 UPDATE pattern (#624)
+- Fix gap_probes endpoint returning 201 for ephemeral data — now 200 (#624)
+- Raise coverage fail_under from 70% to 80% (#624)
+- Fix HttpAuditEvent to persist IP, user agent, resource type (#624)
+- Add backward-compatible decryption fallback for legacy encryption salt (#624)
+
+### Changed
+- Extract 86 Pydantic schemas from tom.py/pov.py to src/api/schemas/ (#624)
+- Batch graph writes in all 4 semantic bridges — up to 5000x fewer Neo4j transactions (#624)
+- Cap AlertEngine memory with deque(maxlen=10000) (#624)
+- Add pagination to list_engagement_members and cost_modeling endpoints (#624)
+- Add audit logging to cost_modeling, validation, raci, copilot streaming (#624)
+- Use requirements.lock in Dockerfile for deterministic builds (#624)
+
 ## [2026.03.234] - 2026-03-19
 ### Fixed
 - Fix BPMN viewer top clipping — add 30px viewbox padding after fit-viewport so pool headers and confidence badges aren't cut off (#623)
