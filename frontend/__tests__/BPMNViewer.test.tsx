@@ -31,7 +31,11 @@ function MockBpmnJS() {
     importXML: mockImportXML,
     destroy: mockDestroy,
     get(service: string) {
-      if (service === "canvas") return { zoom: mockZoom };
+      if (service === "canvas")
+        return {
+          zoom: mockZoom,
+          viewbox: jest.fn().mockReturnValue({ x: 0, y: 0, width: 1000, height: 600 }),
+        };
       if (service === "overlays") return { add: mockOverlaysAdd };
       if (service === "elementRegistry") return { forEach: mockForEach };
       if (service === "eventBus") return { on: mockEventBusOn };
