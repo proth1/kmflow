@@ -10,7 +10,7 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -180,7 +180,7 @@ async def build_graph(
 @router.get("/traverse/{node_id}", response_model=list[NodeResponse])
 async def traverse_graph(
     node_id: str,
-    depth: int = 2,
+    depth: int = Query(default=2, ge=1, le=5),
     relationship_types: str | None = None,
     graph_service: KnowledgeGraphService = Depends(get_graph_service),
     user: User = Depends(require_permission("engagement:read")),
@@ -191,12 +191,6 @@ async def traverse_graph(
     - depth: Maximum traversal depth (1-5, default 2)
     - relationship_types: Comma-separated list of relationship types to follow
     """
-    if depth < 1 or depth > 5:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Depth must be between 1 and 5",
-        )
-
     rel_types = None
     if relationship_types:
         rel_types = [rt.strip() for rt in relationship_types.split(",")]
@@ -342,7 +336,7 @@ async def export_cytoscape(
             "id": node.id,
             "label": node.properties.get("name", node.label),
             "type": node.label,
-            **{k: v for k, v in node.properties.items() if isinstance(v, (str, int, float, bool))},
+            **{k: v for k, v in node.properties.items() if isinstance(v, str | int | float | bool)},
         }
         nodes.append({"data": node_data})
 
@@ -353,7 +347,7 @@ async def export_cytoscape(
             "source": rel.from_id,
             "target": rel.to_id,
             "label": rel.relationship_type,
-            **{k: v for k, v in rel.properties.items() if isinstance(v, (str, int, float, bool))},
+            **{k: v for k, v in rel.properties.items() if isinstance(v, str | int | float | bool)},
         }
         edges.append({"data": edge_data})
 

@@ -129,13 +129,14 @@ class TestGenerateFragmentEmbeddings:
             mock_rag.return_value = mock_rag_instance
 
             mock_sem_instance = MagicMock()
+            mock_sem_instance.store_embeddings_batch = AsyncMock(return_value=1)
             mock_sem_instance.store_embedding = AsyncMock()
             mock_semantic.return_value = mock_sem_instance
 
             result = await generate_fragment_embeddings(session, [frag])
 
         assert result == 1
-        mock_sem_instance.store_embedding.assert_called_once()
+        mock_sem_instance.store_embeddings_batch.assert_called_once()
 
 
 class TestRunSemanticBridges:

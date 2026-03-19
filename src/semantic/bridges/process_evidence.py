@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
 from neo4j.exceptions import Neo4jError
@@ -92,6 +92,7 @@ class ProcessEvidenceBridge:
                 logger.warning("Embedding failed, falling back to word-overlap: %s", e)
                 use_embeddings = False
 
+        rels: list[dict[str, Any]] = []
         for p_idx, proc in enumerate(all_process_nodes):
             proc_name = proc_names[p_idx].lower()
             for e_idx, ev in enumerate(evidence_nodes):
@@ -106,19 +107,23 @@ class ProcessEvidenceBridge:
                     confidence = 0.7
 
                 if is_match:
-                    try:
-                        await self._graph.create_relationship(
-                            from_id=proc.id,
-                            to_id=ev.id,
-                            relationship_type="SUPPORTED_BY",
-                            properties={
+                    rels.append(
+                        {
+                            "from_id": proc.id,
+                            "to_id": ev.id,
+                            "properties": {
                                 "source": "process_evidence_bridge",
                                 "confidence": confidence,
                             },
-                        )
-                        result.relationships_created += 1
-                    except Neo4jError as e:
-                        result.errors.append(str(e))
+                        }
+                    )
+
+        if rels:
+            try:
+                await self._graph.batch_create_relationships("SUPPORTED_BY", rels)
+                result.relationships_created = len(rels)
+            except Neo4jError as e:
+                result.errors.append(str(e))
 
         return result
 

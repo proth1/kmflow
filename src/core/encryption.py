@@ -20,16 +20,27 @@ logger = logging.getLogger(__name__)
 
 
 def _derive_fernet_key(secret: str) -> bytes:
-    """Derive a valid Fernet key from an arbitrary secret string."""
+    """Derive a valid Fernet key from an arbitrary secret string.
+
+    The salt is derived from the secret itself using a single SHA-256 pass so
+    that each deployment's key material produces a unique salt without
+    requiring a separately-stored value.  This eliminates the previous fixed
+    application-level salt (b"kmflow-fernet-key-derivation-v1") which was
+    identical across all deployments and offered no protection if the PBKDF2
+    output for the default dev key was ever pre-computed.
+    """
     try:
         Fernet(secret.encode())
         return secret.encode()
     except (ValueError, Exception):
-        # Use PBKDF2 with a fixed application salt for proper key derivation
+        # Derive a per-deployment salt from the secret itself: SHA-256(secret)
+        # truncated to 16 bytes.  This ensures the salt differs across deployments
+        # without needing external storage.
+        per_deployment_salt = hashlib.sha256(secret.encode()).digest()[:16]
         derived = hashlib.pbkdf2_hmac(
             "sha256",
             secret.encode(),
-            b"kmflow-fernet-key-derivation-v1",  # Fixed application-level salt
+            per_deployment_salt,
             iterations=600_000,
         )
         return base64.urlsafe_b64encode(derived)
@@ -38,7 +49,7 @@ def _derive_fernet_key(secret: str) -> bytes:
 def _get_fernet() -> Fernet:
     """Get a Fernet instance using the current encryption key."""
     settings = get_settings()
-    key = settings.encryption_key
+    key = settings.encryption_key.get_secret_value()
     if not key:
         raise RuntimeError("ENCRYPTION_KEY not configured. Set it in environment or .env file.")
     return Fernet(_derive_fernet_key(key))
@@ -50,6 +61,7 @@ def _get_fernet_previous() -> Fernet | None:
     prev_key = settings.encryption_key_previous
     if not prev_key:
         return None
+    # encryption_key_previous is a plain str (rotation key supplied at runtime)
     return Fernet(_derive_fernet_key(prev_key))
 
 

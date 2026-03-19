@@ -61,7 +61,7 @@ export default function ConformanceDashboard() {
     return () => {
       abortRef.current?.abort();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- intentional mount-only effect; loadReferenceModels uses only stable refs
 
   const loadReferenceModels = async () => {
     abortRef.current?.abort();

@@ -31,6 +31,7 @@ from src.core.models import (
 from src.evidence.chunking import chunk_fragments
 from src.evidence.parsers.base import ParseResult
 from src.evidence.parsers.factory import classify_by_extension, detect_format, parse_file
+from src.quality.instrumentation import pipeline_stage
 
 logger = logging.getLogger(__name__)
 
@@ -226,6 +227,7 @@ async def store_file(
     return str(file_path), {}
 
 
+@pipeline_stage("parse")
 async def process_evidence(
     session: AsyncSession,
     evidence_item: EvidenceItem,
@@ -274,6 +276,7 @@ async def process_evidence(
 # ---------------------------------------------------------------------------
 
 
+@pipeline_stage("extract", engagement_id_param="engagement_id")
 async def extract_fragment_entities(
     fragments: list[EvidenceFragment],
     engagement_id: str,
@@ -351,6 +354,7 @@ async def extract_fragment_entities(
     return all_results
 
 
+@pipeline_stage("graph_build", engagement_id_param="engagement_id")
 async def build_fragment_graph(
     fragments: list[EvidenceFragment],
     engagement_id: str,
@@ -493,6 +497,7 @@ async def build_fragment_graph(
     return {"node_count": node_count, "relationship_count": relationship_count, "errors": errors}
 
 
+@pipeline_stage("embed")
 async def generate_fragment_embeddings(
     session: AsyncSession,
     fragments: list[EvidenceFragment],
@@ -529,14 +534,19 @@ async def generate_fragment_embeddings(
     # Generate embeddings in batches
     embeddings = await rag_service.generate_embeddings_async(texts, batch_size=32)
 
-    # Store embeddings
-    stored = 0
-    for frag, embedding in zip(valid_fragments, embeddings, strict=True):
-        try:
-            await semantic_service.store_embedding(session, str(frag.id), embedding)
-            stored += 1
-        except (ValueError, ConnectionError, RuntimeError) as e:
-            logger.warning("Failed to store embedding for fragment %s: %s", frag.id, e)
+    # Store embeddings in batch (single DB round-trip instead of N)
+    batch_items = [(str(frag.id), embedding) for frag, embedding in zip(valid_fragments, embeddings, strict=True)]
+    try:
+        stored = await semantic_service.store_embeddings_batch(session, batch_items)
+    except (ValueError, ConnectionError, RuntimeError) as e:
+        logger.warning("Batch embedding store failed, falling back to individual: %s", e)
+        stored = 0
+        for frag_id, embedding in batch_items:
+            try:
+                await semantic_service.store_embedding(session, frag_id, embedding)
+                stored += 1
+            except (ValueError, ConnectionError, RuntimeError) as e2:
+                logger.warning("Failed to store embedding for fragment %s: %s", frag_id, e2)
 
     logger.info("Generated and stored %d/%d embeddings", stored, len(texts))
     return stored

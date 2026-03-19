@@ -127,7 +127,7 @@ class TestJwtVerificationKeys:
         settings = Settings(
             _env_file=None,  # type: ignore[call-arg]
         )
-        assert settings.jwt_verification_keys == [settings.jwt_secret_key]
+        assert settings.jwt_verification_keys == [settings.jwt_secret_key.get_secret_value()]
 
     def test_only_whitespace_keys_filtered(self) -> None:
         """Comma-separated empty/whitespace values should be filtered out."""

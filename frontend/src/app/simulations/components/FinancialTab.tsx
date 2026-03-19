@@ -116,6 +116,7 @@ export default function FinancialTab({
               <input
                 type="text"
                 placeholder="Name"
+                aria-label="Assumption name"
                 value={newAssumption.name}
                 onChange={(e) =>
                   onNewAssumptionChange({ ...newAssumption, name: e.target.value })
@@ -123,6 +124,7 @@ export default function FinancialTab({
                 className="border rounded px-3 py-1.5 text-sm"
               />
               <select
+                aria-label="Assumption type"
                 value={newAssumption.assumption_type}
                 onChange={(e) =>
                   onNewAssumptionChange({
@@ -140,6 +142,7 @@ export default function FinancialTab({
               <input
                 type="number"
                 placeholder="Value"
+                aria-label="Assumption value"
                 value={newAssumption.value || ""}
                 onChange={(e) =>
                   onNewAssumptionChange({
@@ -154,6 +157,7 @@ export default function FinancialTab({
               <input
                 type="text"
                 placeholder="Unit (e.g. USD/month)"
+                aria-label="Assumption unit"
                 value={newAssumption.unit}
                 onChange={(e) =>
                   onNewAssumptionChange({ ...newAssumption, unit: e.target.value })
@@ -161,8 +165,9 @@ export default function FinancialTab({
                 className="border rounded px-3 py-1.5 text-sm"
               />
               <div className="flex items-center gap-2">
-                <label className="text-sm">Confidence:</label>
+                <label htmlFor="assumption-confidence" className="text-sm">Confidence:</label>
                 <input
+                  id="assumption-confidence"
                   type="range"
                   min="0"
                   max="1"
@@ -229,6 +234,7 @@ export default function FinancialTab({
                         size="sm"
                         variant="ghost"
                         onClick={() => onDeleteAssumption(a.id)}
+                        aria-label={`Delete assumption ${a.name}`}
                       >
                         <Trash2 className="h-3 w-3 text-muted-foreground" />
                       </Button>

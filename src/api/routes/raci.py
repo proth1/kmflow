@@ -23,8 +23,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
+from src.core.audit import log_audit
 from src.core.auth import get_current_user
-from src.core.models import User
+from src.core.models import AuditAction, User
 from src.core.models.raci import RACICell, RACIStatus
 from src.core.permissions import require_engagement_access
 from src.pov.raci_service import RACIDerivationService
@@ -190,6 +191,13 @@ async def derive_raci_matrix(
             session.add(cell)
             cells_created += 1
 
+    await log_audit(
+        session,
+        engagement_id,
+        AuditAction.DATA_MODIFIED,
+        f"RACI matrix derived: {cells_created} created, {cells_updated} updated",
+        actor=str(current_user.id),
+    )
     await session.commit()
 
     return {
@@ -234,6 +242,13 @@ async def validate_raci_cell(
     cell.status = RACIStatus.VALIDATED
     cell.validator_id = current_user.id
     cell.validated_at = func.now()
+    await log_audit(
+        session,
+        cell.engagement_id,
+        AuditAction.DATA_MODIFIED,
+        f"RACI cell validated: activity={cell.activity_name}, role={cell.role_name}, assignment={cell.assignment}",
+        actor=str(current_user.id),
+    )
     await session.commit()
     await session.refresh(cell)
 

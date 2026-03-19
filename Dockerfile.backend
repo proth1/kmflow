@@ -9,13 +9,14 @@ RUN apt-get update && \
 
 # Copy project files needed for install
 COPY pyproject.toml ./
+COPY requirements.lock ./
 COPY src/ ./src/
 COPY scripts/ ./scripts/
 COPY alembic/ ./alembic/
 COPY alembic.ini ./
 
 # Install Python dependencies into a prefix so we can copy them cleanly
-RUN pip install --no-cache-dir --prefix=/install "."
+RUN pip install --no-cache-dir --prefix=/install -r requirements.lock
 
 # ── Runtime stage ─────────────────────────────────────────────
 FROM python:3.12-slim AS runtime

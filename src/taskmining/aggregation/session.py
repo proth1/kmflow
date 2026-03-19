@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from src.core.models.taskmining import DesktopEventType
+from src.core.utils.datetime_utils import parse_iso_timestamp
 
 logger = logging.getLogger(__name__)
 
@@ -188,10 +189,8 @@ class SessionAggregator:
 
 
 def _parse_timestamp(ts: str | datetime) -> datetime:
-    """Parse an ISO 8601 timestamp string or return a datetime as-is."""
-    if isinstance(ts, datetime):
-        return ts
-    # Handle Z suffix
-    if ts.endswith("Z"):
-        ts = ts[:-1] + "+00:00"
-    return datetime.fromisoformat(ts)
+    """Parse an ISO 8601 timestamp string or return a datetime as-is.
+
+    Delegates to :func:`~src.core.utils.datetime_utils.parse_iso_timestamp`.
+    """
+    return parse_iso_timestamp(ts)

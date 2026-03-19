@@ -79,7 +79,7 @@ def create_access_token(
     to_encode = data.copy()
     expire = datetime.now(UTC) + (expires_delta or timedelta(minutes=settings.jwt_access_token_expire_minutes))
     to_encode.update({"exp": expire, "type": "access"})
-    return jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    return jwt.encode(to_encode, settings.jwt_secret_key.get_secret_value(), algorithm=settings.jwt_algorithm)
 
 
 def create_refresh_token(
@@ -103,7 +103,7 @@ def create_refresh_token(
     to_encode = data.copy()
     expire = datetime.now(UTC) + (expires_delta or timedelta(minutes=settings.jwt_refresh_token_expire_minutes))
     to_encode.update({"exp": expire, "type": "refresh"})
-    return jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    return jwt.encode(to_encode, settings.jwt_secret_key.get_secret_value(), algorithm=settings.jwt_algorithm)
 
 
 def decode_token(token: str, settings: Settings | None = None) -> dict[str, Any]:
@@ -429,6 +429,7 @@ async def get_websocket_user(
         if await is_token_blacklisted(websocket, jwt_token):
             return None
     except Exception:
+        logger.warning("Token blacklist check failed, treating as non-blacklisted")
         return None
 
     user_id_str = payload.get("sub")

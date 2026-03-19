@@ -147,7 +147,7 @@ services:
 
   # ── MinIO bucket initialization ───────────────────────────────
   minio-init:
-    image: minio/mc
+    image: minio/mc:RELEASE.2025-01-20T17-06-52Z
     container_name: kmflow-minio-init
     security_opt:
       - no-new-privileges:true
@@ -220,10 +220,10 @@ services:
     ports:
       - "${BACKEND_PORT:-8002}:8000"
     volumes:
-      - ./src:/app/src
-      - ./scripts:/app/scripts
-      - ./alembic:/app/alembic
-      - ./alembic.ini:/app/alembic.ini
+      - ./src:/app/src:ro
+      - ./scripts:/app/scripts:ro
+      - ./alembic:/app/alembic:ro
+      - ./alembic.ini:/app/alembic.ini:ro
     depends_on:
       postgres:
         condition: service_healthy

@@ -47,74 +47,162 @@ export interface MonitoringStats {
 export function useMonitoringStats(engagementId: string) {
   const [stats, setStats] = useState<MonitoringStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
+    const controller = new AbortController();
     setLoading(true);
+    setError(null);
     try {
       const data = await apiGet<MonitoringStats>(
         `/api/v1/monitoring/stats/${engagementId}`,
       );
-      setStats(data);
-    } catch {
-      setStats(null);
+      if (!controller.signal.aborted) {
+        setStats(data);
+      }
+    } catch (err) {
+      if (!controller.signal.aborted) {
+        setStats(null);
+        setError(err instanceof Error ? err.message : "Failed to load data");
+      }
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
+    return () => controller.abort();
   }, [engagementId]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+    apiGet<MonitoringStats>(`/api/v1/monitoring/stats/${engagementId}`)
+      .then((data) => {
+        if (!controller.signal.aborted) {
+          setStats(data);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!controller.signal.aborted) {
+          setStats(null);
+          setError(err instanceof Error ? err.message : "Failed to load data");
+          setLoading(false);
+        }
+      });
+    return () => controller.abort();
+  }, [engagementId]);
 
-  return { stats, loading, refresh };
+  return { stats, loading, error, refresh };
 }
 
 export function useMonitoringJobs(engagementId: string) {
   const [jobs, setJobs] = useState<MonitoringJob[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
+    const controller = new AbortController();
     setLoading(true);
+    setError(null);
     try {
       const data = await apiGet<{ items: MonitoringJob[]; total: number }>(
         `/api/v1/monitoring/jobs?engagement_id=${engagementId}`,
       );
-      setJobs(data.items);
-    } catch {
-      setJobs([]);
+      if (!controller.signal.aborted) {
+        setJobs(data.items);
+      }
+    } catch (err) {
+      if (!controller.signal.aborted) {
+        setJobs([]);
+        setError(err instanceof Error ? err.message : "Failed to load data");
+      }
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
+    return () => controller.abort();
   }, [engagementId]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+    apiGet<{ items: MonitoringJob[]; total: number }>(
+      `/api/v1/monitoring/jobs?engagement_id=${engagementId}`,
+    )
+      .then((data) => {
+        if (!controller.signal.aborted) {
+          setJobs(data.items);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!controller.signal.aborted) {
+          setJobs([]);
+          setError(err instanceof Error ? err.message : "Failed to load data");
+          setLoading(false);
+        }
+      });
+    return () => controller.abort();
+  }, [engagementId]);
 
-  return { jobs, loading, refresh };
+  return { jobs, loading, error, refresh };
 }
 
 export function useMonitoringAlerts(engagementId: string) {
   const [alerts, setAlerts] = useState<MonitoringAlert[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
+    const controller = new AbortController();
     setLoading(true);
+    setError(null);
     try {
       const data = await apiGet<{ items: MonitoringAlert[]; total: number }>(
         `/api/v1/monitoring/alerts?engagement_id=${engagementId}`,
       );
-      setAlerts(data.items);
-    } catch {
-      setAlerts([]);
+      if (!controller.signal.aborted) {
+        setAlerts(data.items);
+      }
+    } catch (err) {
+      if (!controller.signal.aborted) {
+        setAlerts([]);
+        setError(err instanceof Error ? err.message : "Failed to load data");
+      }
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
+    return () => controller.abort();
   }, [engagementId]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+    apiGet<{ items: MonitoringAlert[]; total: number }>(
+      `/api/v1/monitoring/alerts?engagement_id=${engagementId}`,
+    )
+      .then((data) => {
+        if (!controller.signal.aborted) {
+          setAlerts(data.items);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!controller.signal.aborted) {
+          setAlerts([]);
+          setError(err instanceof Error ? err.message : "Failed to load data");
+          setLoading(false);
+        }
+      });
+    return () => controller.abort();
+  }, [engagementId]);
 
-  return { alerts, loading, refresh };
+  return { alerts, loading, error, refresh };
 }

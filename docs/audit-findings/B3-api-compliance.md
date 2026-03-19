@@ -1,20 +1,22 @@
-# B3: API Compliance Audit Findings (Re-Audit)
+# B3: API Compliance Audit Findings (Re-Audit — 2026-03-19)
 
 **Agent**: B3 (API Compliance Auditor)
-**Date**: 2026-02-26
+**Date**: 2026-03-19
 **Scope**: REST standards, response format consistency, pagination, error handling, rate limiting, API versioning
-**Re-Audit Note**: Pagination bounds (ge=1, le=200 for limit; ge=0 for offset) were previously added across 10 route files. This re-audit verifies that work and audits the full current API surface.
+**Supersedes**: Previous B3 audit dated 2026-02-26 (26 files, ~210 handlers)
 
 ---
 
 ## Summary
 
-- **Total Route Files Audited**: 26 files in `src/api/routes/`
-- **Total Endpoint Handlers**: ~210 route handlers
-- **Critical Issues**: 1
-- **High Issues**: 6
-- **Medium Issues**: 7
+- **Total Route Files Audited**: 76 files in `src/api/routes/`
+- **Total Endpoint Handlers**: ~456 route handlers
+- **Critical Issues**: 2
+- **High Issues**: 5
+- **Medium Issues**: 6
 - **Low Issues**: 5
+
+Previous HIGH/MEDIUM items carried forward where not yet resolved are re-listed. New items found in the expanded route surface are marked **(new)**.
 
 ---
 
@@ -34,17 +36,38 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     multi-worker deployments, replace with Redis-backed rate limiting.
     """
 ```
-**Description**: The `RateLimitMiddleware` stores all rate limit state in a Python `dict` in process memory. Under any multi-worker uvicorn deployment (`--workers N`), each worker process maintains independent state, meaning the effective rate limit multiplies by N workers. The same problem exists in `simulations.py`'s `_check_llm_rate_limit` (line 82) which also uses a module-level dict. Both are self-documented as incomplete, but neither has a migration path implemented.
+**Description**: `RateLimitMiddleware` stores all rate limit state in a Python `defaultdict` in process memory. In any multi-worker uvicorn deployment (`--workers N`), each worker maintains independent state, multiplying the effective limit by N workers. The `slowapi` limiter used on auth routes shares the same structural weakness — it is registered per-process in `auth.py` and not backed by a shared store. The `_check_llm_rate_limit` function in `simulations.py:84` also uses a module-level dict for LLM rate limiting and has the identical flaw.
 
-**Risk**: An attacker running N workers can send N times the advertised rate limit before triggering any enforcement. For the auth endpoints (5 requests/minute for login), this is effectively a brute-force enablement in production.
+**Risk**: An attacker on N uvicorn workers can send N times the advertised rate limit before any enforcement fires. For `/auth/login` at 5 requests/minute, this becomes N×5 in production. Brute-force protection and LLM cost controls are both negated in multi-worker deployments.
 
-**Recommendation**: Replace both in-memory rate limiters with Redis-backed counters. The `redis_client` is already available on `app.state` at startup. Use atomic `INCR` + `EXPIRE` or a sliding window with sorted sets.
+**Recommendation**: Replace all three in-memory rate limit stores with Redis-backed atomic counters using `INCR` + `EXPIRE` (fixed window) or a sorted-set sliding window. The `redis_client` is already available on `app.state` at startup.
+
+---
+
+### [CRITICAL] TODO IN ROUTE DOCSTRING: `generate_gap_probes` Documents Incomplete Persistence
+
+**File**: `src/api/routes/gap_probes.py:82`
+**Agent**: B3 (API Compliance Auditor)
+**Evidence**:
+```python
+    """Generate gap-targeted probes for an engagement.
+
+    TODO: Persist generated probes to database for stable IDs and
+    referenceability by survey bot. Currently recomputes on every call.
+    See follow-up issue for persistence model.
+    """
+```
+**Description**: A `TODO` comment in a route docstring documents that probe generation is a stateless recompute — no records are persisted, no stable IDs are assigned. The route returns `{"probes_generated": N, "message": "..."}` without returning any probe data. The survey bot integration the docstring references cannot function without stable IDs. This is an incomplete stub masquerading as a functional endpoint.
+
+**Risk**: The endpoint returns HTTP 201 Created but creates nothing in the database. Callers expecting a resource with a stable ID receive none. Downstream survey bot integration is silently broken.
+
+**Recommendation**: Either persist probes and return stable IDs before shipping this endpoint, or change the status code to 200 OK, return the generated probe objects in the response body, and document that results are ephemeral until persistence is implemented.
 
 ---
 
 ## High Issues
 
-### [HIGH] PAGINATION: `list_engagement_members` Has No Pagination
+### [HIGH] PAGINATION: `list_engagement_members` Has No Pagination (Carried Forward)
 
 **File**: `src/api/routes/users.py:350`
 **Agent**: B3 (API Compliance Auditor)
@@ -57,458 +80,405 @@ async def list_engagement_members(
     current_user: User = Depends(get_current_user),
     _engagement_user: User = Depends(require_engagement_access),
 ) -> list[EngagementMember]:
-    """List all members of an engagement."""
-    result = await session.execute(select(EngagementMember).where(EngagementMember.engagement_id == engagement_id))
+    result = await session.execute(select(EngagementMember).where(...))
     return list(result.scalars().all())
 ```
-**Description**: This list endpoint returns all members for an engagement with no `limit` or `offset` parameters and no total count in the response. It is the only list endpoint in the codebase without pagination. While membership lists are typically small, it is inconsistent with the platform standard of `{items: [...], total: N}` and could become unbounded if a large engagement accrues many members.
+**Description**: This list endpoint returns all members with no `limit`, `offset`, or total count. It is the only list endpoint in 76 route files without pagination. The response wraps a plain list directly — no `{items, total}` envelope consistent with the platform standard.
 
-**Risk**: Inconsistent API contract compared to all other list endpoints; potential for large unbound queries in edge cases; no total count makes client-side UI pagination impossible.
+**Risk**: Unbounded database query; no total count for client-side pagination; inconsistent API contract vs. all other list endpoints.
 
-**Recommendation**: Add `limit: int = Query(default=50, ge=1, le=200)` and `offset: int = Query(default=0, ge=0)` parameters, return `{"items": [...], "total": N}` and change the `response_model` to a `MemberListResponse` schema.
+**Recommendation**: Add `limit: int = Query(default=50, ge=1, le=200)` and `offset: int = Query(default=0, ge=0)`, return `{"items": [...], "total": N}`, and change `response_model` to a `MemberListResponse` schema.
 
 ---
 
-### [HIGH] PAGINATION: `GET /api/v1/evidence/{evidence_id}/fragments` Is Unbounded
+### [HIGH] PAGINATION: Unbounded Queries in `list_role_rates` and `list_volume_forecasts`  **(new)**
 
-**File**: `src/api/routes/evidence.py:386`
+**File**: `src/api/routes/cost_modeling.py:129`, `src/api/routes/cost_modeling.py:174`
 **Agent**: B3 (API Compliance Auditor)
 **Evidence**:
 ```python
-@router.get("/{evidence_id}/fragments", response_model=list[FragmentResponse])
-async def get_fragments(
-    evidence_id: UUID,
-    fragment_type: FragmentType | None = None,
-    session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("evidence:read")),
-) -> list[EvidenceFragment]:
-    query = select(EvidenceFragment).where(EvidenceFragment.evidence_id == evidence_id)
+@router.get("/engagements/{engagement_id}/role-rates")
+async def list_role_rates(engagement_id: UUID, ...) -> dict[str, Any]:
+    result = await session.execute(
+        select(RoleRateAssumption).where(...).order_by(RoleRateAssumption.role_name)
+    )
+    items = list(result.scalars().all())
+    return {"items": [_rate_to_dict(r) for r in items], "total": len(items)}
 ```
-**Description**: The fragments endpoint returns all fragments for an evidence item with no limit or offset. Large evidence items (e.g., video files, large PDFs) can generate hundreds of fragments. This endpoint will return them all in a single response with no way for clients to page through them.
+**Description**: Both `list_role_rates` and `list_volume_forecasts` issue unbounded `SELECT *` queries with no `.limit()` clause. They also use `len(items)` as the total count (counting the already-fetched rows) instead of issuing a `COUNT(*)` query — which means the "total" returned is always equal to the page size, rendering client-side pagination impossible if bounds are later added.
 
-**Risk**: Unbounded memory allocation per request; potential for large payload responses that degrade API performance; no total count returned so clients cannot determine page count.
+**Risk**: Memory exhaustion on engagements with large numbers of role rates or volume forecasts; denial-of-service vector for authenticated users; non-functional total count if pagination is ever added.
 
-**Recommendation**: Add `limit`/`offset` query parameters with sensible defaults (e.g., `limit=100, ge=1, le=500`). Return a `FragmentList` wrapper with `{items: [...], total: N}` consistent with the rest of the API.
+**Recommendation**: Add `limit: int = Query(default=50, ge=1, le=200)` and `offset: int = Query(default=0, ge=0)` parameters; apply `.limit(limit).offset(offset)` in the query; issue a separate `COUNT(*)` query for `total`.
 
 ---
 
-### [HIGH] HTTP SEMANTICS: `POST /api/v1/admin/retention-cleanup` Returns `dict` Without Response Model
+### [HIGH] PAGINATION: `list_engagement_members` Pattern Repeated in `list_survey_sessions` and `list_volume_forecasts` **(new)**
 
-**File**: `src/api/routes/admin.py:25`
+**File**: `src/api/routes/cost_modeling.py:174`, `src/api/routes/cost_modeling.py:129`
 **Agent**: B3 (API Compliance Auditor)
 **Evidence**:
 ```python
-@router.post("/retention-cleanup")
-async def run_retention_cleanup(
-    user: User = Depends(require_role(UserRole.PLATFORM_ADMIN)),
-    session: AsyncSession = Depends(get_session),
-    dry_run: bool = Query(default=True),
-    x_confirm_action: str | None = Header(default=None),
-) -> dict[str, Any]:
+@router.get("/engagements/{engagement_id}/volume-forecasts")
+async def list_volume_forecasts(...) -> dict[str, Any]:
+    result = await session.execute(
+        select(VolumeForecast).where(VolumeForecast.engagement_id == engagement_id).order_by(VolumeForecast.name)
+    )
+    items = list(result.scalars().all())
+    return {"items": [_forecast_to_dict(f) for f in items], "total": len(items)}
 ```
-**Description**: The two admin endpoints (`/retention-cleanup` and `/rotate-encryption-key`) have no `response_model` declared. FastAPI will not validate or serialize the response through a Pydantic model, which means schema changes are not caught at startup, OpenAPI docs show `{}` as the response schema, and response structure can drift silently.
+**Description**: See description above in HIGH pagination finding. Included as a separate entry because the `total: len(items)` pattern is a secondary defect — it does not count all rows in the table, it counts only the rows returned in this fetch. This would produce incorrect totals if `.limit()` were added later without also adding a `COUNT(*)` query.
 
-**Risk**: No OpenAPI documentation for response shape; response fields can be renamed or removed without breaking contract enforcement; clients have no schema to program against.
+**Risk**: Incorrect `total` field misleads clients about dataset size; will silently break pagination if bounds are added without a corresponding count query.
 
-**Recommendation**: Define Pydantic response models (e.g., `RetentionCleanupResponse`, `KeyRotationResponse`) and declare them on the route decorators.
+**Recommendation**: Always use a separate `SELECT COUNT(*) FROM ...` query with the same WHERE clause to populate `total`, never `len(items)`.
 
 ---
 
-### [HIGH] HTTP SEMANTICS: `GET /api/v1/governance/policies` Returns Raw Policy Dict Without Response Model
+### [HIGH] RESPONSE FORMAT: Multiple Camunda/Orchestration Endpoints Use Hardcoded `502` Integer **(new)**
 
-**File**: `src/api/routes/governance.py:272`
+**File**: `src/api/routes/camunda.py:50`, `src/api/routes/orchestration.py:202`
+**Agent**: B3 (API Compliance Auditor)
+**Evidence**:
+```python
+@router.delete("/instances/{instance_id}")
+async def cancel_process_instance(instance_id: str, ...) -> dict[str, Any]:
+    try:
+        await client.delete_process_instance(instance_id)
+        return {"instance_id": instance_id, "status": "cancelled"}
+    except (ConnectionError, OSError, httpx.HTTPError) as e:
+        raise HTTPException(status_code=502, detail="Failed to communicate...") from e
+```
+**Description**: Ten occurrences across `camunda.py` and `orchestration.py` use bare integer `502` instead of `status.HTTP_502_BAD_GATEWAY`. This is a style inconsistency with the entire rest of the codebase which uses `status.HTTP_*` constants. Additionally, `orchestration.py:202` `cancel_process_instance` lacks `status_code` on the route decorator (defaults to 200 for a DELETE that should be 204 or 200 with body), making the semantics ambiguous.
+
+**Risk**: Style inconsistency makes audits harder; `DELETE` without explicit status code is ambiguous — response includes a body (`{"status": "cancelled"}`), which conflicts with 204 No Content semantics.
+
+**Recommendation**: Replace bare `502` integers with `status.HTTP_502_BAD_GATEWAY`. Decide whether `cancel_process_instance` returns 200 with body or 204 with no body and declare it explicitly.
+
+---
+
+### [HIGH] RESPONSE FORMAT: Route Return Type Annotation `-> Any` on 33 Endpoints **(new)**
+
+**File**: Multiple — `transfer_controls.py:130`, `incidents.py:109`, `reports.py:310`, `pdp.py:102`, and 29 others
+**Agent**: B3 (API Compliance Auditor)
+**Evidence**:
+```python
+# transfer_controls.py:130
+async def evaluate_transfer(...) -> Any:
+    service = TransferControlService(session)
+    result = await service.evaluate_transfer(...)
+    return result
+
+# incidents.py:109 (has response_model but return type is Any)
+async def create_incident(...) -> Any:
+```
+**Description**: 33 route handlers across 13 files use `-> Any` as the return type annotation. While FastAPI uses `response_model` for runtime serialization rather than the return type annotation, `-> Any` provides no static-analysis benefit, bypasses mypy checking, and signals that the response contract is undefined. Many of these endpoints do have `response_model` declared, making the `-> Any` annotation merely lazy — but files like `transfer_controls.py` have both `-> Any` return type and no `response_model` on some routes.
+
+**Risk**: `-> Any` return type defeats mypy static analysis; combined with missing `response_model`, routes have no validated response contract at any layer.
+
+**Recommendation**: Replace `-> Any` with the actual return type — either the Pydantic model type (for routes with `response_model`) or `dict[str, Any]` for routes that manually construct dicts. At minimum use `dict[str, Any]` rather than `Any`.
+
+---
+
+## Medium Issues
+
+### [MEDIUM] RATE LIMITING: Auth Endpoints Not Account-Level Rate Limited (Carried Forward)
+
+**File**: `src/api/routes/auth.py:116`
+**Agent**: B3 (API Compliance Auditor)
+**Evidence**:
+```python
+@router.post("/token", response_model=TokenResponse)
+@limiter.limit("5/minute")
+async def get_token(request: Request, payload: TokenRequest, ...) -> dict[str, Any]:
+```
+**Description**: The `slowapi` limiter on `/token`, `/login`, and `/refresh/cookie` limits by remote IP address only. Distributed credential stuffing attacks from multiple IPs bypass this entirely. There is no per-account failed-attempt counter. Combined with the multi-worker rate-limit bypass (CRITICAL finding), brute-force protection is not effective in production.
+
+**Risk**: Distributed credential stuffing via multiple source IPs evades all current rate limit controls.
+
+**Recommendation**: Add per-account failed-attempt tracking in Redis with exponential backoff or a temporary lockout after N consecutive failures per email address.
+
+---
+
+### [MEDIUM] HTTP SEMANTICS: `GET /api/v1/governance/policies` Exposes Filesystem Path and Lacks Response Model (Carried Forward)
+
+**File**: `src/api/routes/governance.py:330`
 **Agent**: B3 (API Compliance Auditor)
 **Evidence**:
 ```python
 @router.get("/policies")
-async def list_policies(
-    user: User = Depends(require_permission("governance:read")),
-) -> dict[str, Any]:
+async def list_policies(user: User = Depends(require_permission("governance:read"))) -> dict[str, Any]:
     engine = PolicyEngine()
     return {
         "policy_file": str(engine.policy_file),
         "policies": engine.policies,
     }
 ```
-**Description**: No `response_model` is declared. The `policies` field is a raw YAML-loaded dict whose shape depends entirely on the YAML file contents — there is no schema contract. The route also exposes the full filesystem path of the policy file (`engine.policy_file`), which is an information disclosure.
+**Description**: No `response_model` declared. The `policy_file` key returns the full server-side filesystem path of the YAML policy file. This is a server-side information disclosure — clients receive the absolute path (e.g., `/app/src/core/policies/governance.yaml`), which reveals deployment directory structure.
 
-**Risk**: Exposes internal filesystem path in API response; no OpenAPI schema generated; policy YAML structure changes silently break clients.
+**Risk**: Information disclosure of server filesystem path; no OpenAPI schema generated; policy structure changes silently break clients.
 
-**Recommendation**: Define a `GovernancePoliciesResponse` Pydantic model. Strip the `policy_file` key from the response or replace it with a sanitized name/version string.
-
----
-
-### [HIGH] HTTP SEMANTICS: `POST /api/v1/governance/alerts/{engagement_id}` Returns `list[dict]` Without Response Model
-
-**File**: `src/api/routes/governance.py:463`
-**Agent**: B3 (API Compliance Auditor)
-**Evidence**:
-```python
-@router.post(
-    "/alerts/{engagement_id}",
-    status_code=status.HTTP_200_OK,
-)
-async def check_sla_and_create_alerts(
-    ...
-) -> list[dict[str, Any]]:
-```
-**Description**: The SLA alert-check endpoint has no `response_model`. It returns a raw `list[dict]` whose structure depends entirely on what `check_and_alert_sla_breaches` returns. No Pydantic validation, no OpenAPI schema, no contract enforcement.
-
-**Risk**: Response structure is undocumented; callers have no schema; alert shape can drift without detection.
-
-**Recommendation**: Define an `SLAAlertCreatedResponse` schema and declare `response_model=list[SLAAlertCreatedResponse]`.
+**Recommendation**: Define a `GovernancePoliciesResponse` model. Remove `policy_file` from the response or replace it with a sanitized name/version string.
 
 ---
 
-### [HIGH] RESPONSE FORMAT: Inconsistent `status_code` for `/api/v1/governance/migrate/{engagement_id}`
+### [MEDIUM] RESPONSE FORMAT: Several High-Value TOM Endpoints Lack `response_model` (Carried Forward)
 
-**File**: `src/api/routes/governance.py:425`
-**Agent**: B3 (API Compliance Auditor)
-**Evidence**:
-```python
-@router.post(
-    "/migrate/{engagement_id}",
-    response_model=MigrationResultResponse,
-    status_code=status.HTTP_200_OK,
-)
-async def trigger_migration(
-```
-**Description**: A POST endpoint that creates/writes data (migrates evidence into Delta Lake layers) returns HTTP 200 instead of HTTP 201 (Created) or HTTP 202 (Accepted). The prior `graph.py:build_graph` correctly uses 202, and `monitoring.py` job creation uses 201. The migration operation is a long-running write that is most accurately represented as 202 Accepted.
-
-**Risk**: Clients cannot rely on status codes to determine if a resource was created; inconsistent with the REST semantics used elsewhere in the same codebase.
-
-**Recommendation**: Change `status_code` to `status.HTTP_202_ACCEPTED` since migration is a potentially long-running operation, consistent with `graph.py:build_graph`.
-
----
-
-## Medium Issues
-
-### [MEDIUM] RATE LIMITING: Auth Endpoint `/api/v1/auth/login` Does Not Guard Against Credential Stuffing via Cookie Path
-
-**File**: `src/api/routes/auth.py:221`
-**Agent**: B3 (API Compliance Auditor)
-**Evidence**:
-```python
-@router.post("/login", response_model=LoginResponse)
-@limiter.limit("5/minute")
-async def login(
-    request: Request,
-    payload: TokenRequest,
-    ...
-```
-**Description**: The `slowapi` limiter on `/login` and `/token` limits to 5 requests/minute per IP. However, the same per-process limitation noted in the CRITICAL finding applies here — `slowapi` relies on the same `limiter` state which is registered once per process. In multi-worker scenarios, 5/minute becomes N*5/minute. Additionally, there is no account-level lockout — only IP-level, which fails against distributed credential stuffing attacks.
-
-**Risk**: Credential stuffing attacks from distributed IPs evade the per-IP rate limit; multi-worker deployments multiply the effective rate limit.
-
-**Recommendation**: In addition to the Redis-backed rate limiter fix, add a per-account failed-attempt counter in Redis with exponential backoff or temporary lockout after N failures.
-
----
-
-### [MEDIUM] RESPONSE FORMAT: `GET /api/v1/health` Has Hardcoded Version String
-
-**File**: `src/api/routes/health.py:85`
-**Agent**: B3 (API Compliance Auditor)
-**Evidence**:
-```python
-    return {
-        "status": status,
-        "services": services,
-        "version": "0.1.0",
-    }
-```
-**Description**: The health check endpoint returns a hardcoded version string `"0.1.0"` rather than using the `API_VERSION` constant already defined in `src/api/version.py` and used by `SecurityHeadersMiddleware`. Every other component references `API_VERSION`; the health endpoint is the lone exception.
-
-**Risk**: Version in health response will diverge from the `X-API-Version` response header and `app.version`; monitoring systems relying on `/health` for version tracking will receive stale data.
-
-**Recommendation**: Import `API_VERSION` from `src.api.version` and use it: `"version": API_VERSION`.
-
----
-
-### [MEDIUM] RESPONSE FORMAT: `GET /api/v1/metrics/summary/{engagement_id}` Has No `response_model`
-
-**File**: `src/api/routes/metrics.py:247`
-**Agent**: B3 (API Compliance Auditor)
-**Evidence**:
-```python
-@router.get("/summary/{engagement_id}")
-async def get_metric_summary(
-    engagement_id: UUID,
-    session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:read")),
-    _engagement_user: User = Depends(require_engagement_access),
-) -> dict[str, Any]:
-```
-**Description**: The metrics summary endpoint returns a complex nested dict `{"engagement_id": ..., "metrics": [...], "total": ..., "on_target_count": ...}` without a `response_model`. A `MetricAggregateSummary` schema already exists in the same file (line 97) but is not used at the route level. There is no Pydantic wrapper for the list response.
-
-**Risk**: No OpenAPI documentation for the summary response shape; response drift is not caught at startup.
-
-**Recommendation**: Create a `MetricSummaryResponse(BaseModel)` with fields `engagement_id`, `metrics: list[MetricAggregateSummary]`, `total`, and `on_target_count`. Declare `response_model=MetricSummaryResponse` on the route.
-
----
-
-### [MEDIUM] RESPONSE FORMAT: Several TOM Alignment/Roadmap Endpoints Lack `response_model`
-
-**File**: `src/api/routes/tom.py:533`
+**File**: `src/api/routes/tom.py:533` and related
 **Agent**: B3 (API Compliance Auditor)
 **Evidence**:
 ```python
 @router.post("/alignment/{engagement_id}/{tom_id}")
-async def run_alignment(
+async def run_alignment(...) -> dict[str, Any]:
     ...
-) -> dict[str, Any]:
 
 @router.get("/alignment/{engagement_id}/maturity")
-async def get_maturity_scores(
+async def get_maturity_scores(...) -> dict[str, Any]:
+```
+**Description**: Five TOM endpoints — alignment, maturity scores, prioritized gaps, conformance check, and roadmap generation — return `dict[str, Any]` without `response_model` declarations. These are business-critical endpoints directly consumed by client dashboards and report generation.
+
+**Risk**: No OpenAPI schema; response drift undetectable at startup; client contracts undocumented.
+
+**Recommendation**: Define Pydantic response models: `AlignmentResponse`, `MaturityResponse`, `PrioritizedGapsResponse`, `RoadmapResponse`, `RoadmapSummaryResponse`.
+
+---
+
+### [MEDIUM] RESPONSE FORMAT: `GET /api/v1/governance/export/{engagement_id}` Has No `response_model` **(new)**
+
+**File**: `src/api/routes/governance.py:389`
+**Agent**: B3 (API Compliance Auditor)
+**Evidence**:
+```python
+@router.get("/export/{engagement_id}")
+async def export_governance(engagement_id: uuid.UUID, ...) -> Response:
+    pkg_bytes = await export_governance_package(session, engagement_id)
+    filename = f"governance_{engagement_id}.zip"
+    return Response(content=pkg_bytes, media_type="application/zip", ...)
+```
+**Description**: The governance export endpoint returns a raw `fastapi.Response` (a binary ZIP) with no `response_model`. This is correct for binary responses — Pydantic cannot model a ZIP file. However, there is no explicit `status_code` on the route decorator, no `responses` dict documenting the content type in OpenAPI, and no error response for the case where `export_governance_package` raises an exception (no try/except).
+
+**Risk**: OpenAPI docs show no response type for this endpoint; an exception from `export_governance_package` results in an unhandled 500 with no context; clients have no documented error response shapes.
+
+**Recommendation**: Add `responses={200: {"content": {"application/zip": {}}, "description": "Governance package ZIP"}}` to the route decorator. Wrap the service call in try/except and raise an appropriate `HTTPException` on failure.
+
+---
+
+### [MEDIUM] PAGINATION: Inconsistent `limit` Ceiling Across the API **(new)**
+
+**File**: Multiple
+**Agent**: B3 (API Compliance Auditor)
+**Evidence**:
+```python
+# event_spine.py:101
+limit: int = Query(200, ge=1, le=2000, ...)
+
+# governance.py:880
+limit: int = Query(50, ge=1, le=500, ...)
+
+# correlation.py:135
+limit: int = Query(100, ge=1, le=1000, ...)
+
+# engagements.py:166
+limit: int = Query(default=20, ge=1, le=100)
+```
+**Description**: Across the 76 route files, the maximum `limit` ceiling (`le=`) varies from 100 to 2000 with no documented rationale for the variation. The project standard from the coding standards guide is `le=200`, but `event_spine.py` allows `le=2000` (10x the standard), `governance.py` allows `le=500`, and `correlation.py` allows `le=1000`. There is no pagination policy document.
+
+**Risk**: Allows much larger result sets than intended in some routes; inconsistent client experience; potential memory pressure on large limit values like `le=2000`.
+
+**Recommendation**: Establish a platform-wide default maximum of `le=200`. Special cases (e.g., `event_spine`) should be explicitly documented with a rationale comment if they require higher limits.
+
+---
+
+### [MEDIUM] HTTP SEMANTICS: `seed_lists.py` DELETE Returns HTTP 200 Instead of 204 **(new)**
+
+**File**: `src/api/routes/seed_lists.py:161`
+**Agent**: B3 (API Compliance Auditor)
+**Evidence**:
+```python
+@router.delete(
+    "/engagements/{engagement_id}/seed-terms/{term_id}",
+    status_code=status.HTTP_200_OK,
+)
+async def deprecate_seed_term(...) -> dict[str, Any]:
+    """Deprecate a seed term (soft delete)."""
+    service = SeedListService(session)
+    result = await service.deprecate_term(term_id)
     ...
-) -> dict[str, Any]:
-
-@router.post("/roadmap/{engagement_id}/{tom_id}")
-async def generate_roadmap(
-    ...
-) -> dict[str, Any]:
+    return result
 ```
-**Description**: Five endpoints in `tom.py` (alignment, maturity, prioritize, conformance check, roadmap generation, roadmap summary) return `dict[str, Any]` without `response_model` declarations. These are business-critical endpoints whose responses directly feed client dashboards and reports.
+**Description**: The seed term "delete" endpoint is a soft delete (deprecation), which returns a body describing the updated state — making HTTP 200 with body technically correct for a soft delete. However, all other 13 DELETE endpoints in the codebase use `HTTP_204_NO_CONTENT`, making this the sole exception. The inconsistency is confusing to API consumers who expect DELETE to return 204.
 
-**Risk**: No OpenAPI schema; response drift undetectable; clients cannot rely on documented contracts.
+**Risk**: Inconsistent with the platform DELETE convention used across all other 13 DELETE routes; API consumers may handle errors incorrectly if they assume 204 for all DELETEs.
 
-**Recommendation**: Define Pydantic response models for each: `AlignmentResponse`, `MaturityResponse`, `PrioritizedGapsResponse`, `RoadmapResponse`, and `RoadmapSummaryResponse`.
-
----
-
-### [MEDIUM] PAGINATION: `PatternSearchRequest.limit` Has No Bounds Validation
-
-**File**: `src/api/routes/patterns.py:90`
-**Agent**: B3 (API Compliance Auditor)
-**Evidence**:
-```python
-class PatternSearchRequest(BaseModel):
-    query: str | None = None
-    industry: str | None = None
-    categories: list[PatternCategory] | None = None
-    limit: int = 10
-```
-**Description**: The `PatternSearchRequest` body schema for `POST /api/v1/patterns/search` has a `limit` field with a default of 10 but no `ge`/`le` validation. A client can send `limit: 999999` and receive an unbounded query result. The `GET /api/v1/patterns` endpoint correctly uses `Query(default=50, ge=1, le=200)`, making the search endpoint inconsistent.
-
-**Risk**: Unbounded database query from search requests; DoS vector via memory exhaustion.
-
-**Recommendation**: Change to `limit: int = Field(default=10, ge=1, le=200)` in `PatternSearchRequest`.
-
----
-
-### [MEDIUM] HTTP SEMANTICS: Regulatory Overlay Endpoints Lack Error Handling
-
-**File**: `src/api/routes/regulatory.py:372`
-**Agent**: B3 (API Compliance Auditor)
-**Evidence**:
-```python
-@router.post("/overlay/{engagement_id}/build")
-async def build_governance_overlay(
-    engagement_id: UUID,
-    request: Request,
-    session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:update")),
-    _engagement_user: User = Depends(require_engagement_access),
-) -> dict[str, Any]:
-    driver = request.app.state.neo4j_driver
-    graph_service = KnowledgeGraphService(driver)
-    engine = RegulatoryOverlayEngine(graph_service)
-    chains = await engine.build_governance_chains(session, str(engagement_id))
-```
-**Description**: The three regulatory overlay endpoints (`/overlay/{id}/build`, `/overlay/{id}/compliance`, `/overlay/{id}/ungoverned`) call Neo4j-backed services with no try/except error handling. If Neo4j is unavailable or a Cypher query fails, the generic `Exception` handler in `main.py` catches it, but the response leaks no context-appropriate error. Unlike `graph.py:build_graph` which has explicit try/except with a 503 for Neo4j unavailability, these endpoints have none.
-
-**Risk**: Unhandled exceptions from Neo4j propagate as opaque 500 errors; no 503 when Neo4j is down (inconsistent with `graph.py`).
-
-**Recommendation**: Wrap service calls in try/except; check `request.app.state.neo4j_driver` for None before use; return `503 SERVICE_UNAVAILABLE` when Neo4j is unreachable.
-
----
-
-### [MEDIUM] HTTP SEMANTICS: `POST /api/v1/gdpr/consent` Returns HTTP 200, Not HTTP 200 or 201
-
-**File**: `src/api/routes/gdpr.py:323`
-**Agent**: B3 (API Compliance Auditor)
-**Evidence**:
-```python
-@router.post("/api/v1/gdpr/consent", response_model=ConsentStatusResponse, status_code=status.HTTP_200_OK)
-async def update_consent(
-```
-**Description**: The consent update endpoint explicitly sets `status_code=HTTP_200_OK`. The comment explains consent changes create a new immutable row, which is a resource creation — more accurately a 201 or 200 depending on interpretation. This is a minor inconsistency, though defensible given the endpoint returns the full updated consent state rather than just the created record.
-
-**Risk**: Minor REST semantics inconsistency; low practical impact.
-
-**Recommendation**: Consider using 201 if the intent is emphasizing record creation, or keep 200 and document the rationale clearly.
+**Recommendation**: Either rename the route to `PATCH .../deprecate` (which returns a modified resource at 200) or use `HTTP_204_NO_CONTENT` and return no body. A soft delete returning a body is better modeled as a state-transition PATCH.
 
 ---
 
 ## Low Issues
 
-### [LOW] VERSIONING: `users.py` Router Lacks `prefix` and Inlines Paths
+### [LOW] VERSIONING: `users.py`, `gdpr.py`, `health.py` Inline Full Paths (Carried Forward)
 
-**File**: `src/api/routes/users.py:31`
+**File**: `src/api/routes/users.py:31`, `src/api/routes/health.py:20`
 **Agent**: B3 (API Compliance Auditor)
 **Evidence**:
 ```python
+# users.py:31
 router = APIRouter(tags=["users"])
 
-@router.post("/api/v1/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def create_user(
+# health.py:20
+router = APIRouter(tags=["health"])
+
+# users.py:98 (path hardcoded in decorator)
+@router.post("/api/v1/users", response_model=UserResponse, ...)
 ```
-**Description**: Unlike every other route file which uses `router = APIRouter(prefix="/api/v1/...", tags=["..."])`, `users.py` creates a router with no prefix and then hardcodes `/api/v1/users` into each individual path. This works but violates the established pattern, making it harder to version the API and more error-prone when paths need updating.
+**Description**: Three of 76 route files create routers without a `prefix` and hardcode `/api/v1/...` into every individual route decorator. The other 73 files use `router = APIRouter(prefix="/api/v1/...", tags=[...])`. This divergence makes API version bumps require individual path updates in these files rather than a single prefix change.
 
-**Risk**: Makes API versioning harder (would require updating every path individually); diverges from established pattern making it harder for contributors to understand the codebase.
+**Risk**: Harder to maintain; diverges from the established pattern; error-prone when paths need updating.
 
-**Recommendation**: Refactor to use `router = APIRouter(prefix="/api/v1/users", tags=["users"])` and simplify paths to `"/"`, `"/{user_id}"` etc.
+**Recommendation**: Refactor to use `APIRouter(prefix="/api/v1/users", tags=["users"])` etc. and simplify all path strings to relative paths.
 
 ---
 
-### [LOW] VERSIONING: `gdpr.py` and `health.py` Inline Full Paths Instead of Using Prefix
-
-**File**: `src/api/routes/gdpr.py:47`, `src/api/routes/health.py:14`
-**Agent**: B3 (API Compliance Auditor)
-**Evidence**:
-```python
-# gdpr.py
-router = APIRouter(tags=["gdpr"])
-@router.get("/api/v1/gdpr/export", response_model=DataExportResponse)
-
-# health.py
-router = APIRouter()
-@router.get("/api/v1/health")
-```
-**Description**: `gdpr.py` and `health.py` follow the same anti-pattern as `users.py` — no prefix on the router, full paths hardcoded in each decorator. Three of 26 route files use this non-standard approach.
-
-**Risk**: Same risk as users.py — harder to maintain, harder to version.
-
-**Recommendation**: Add `prefix` to all three routers to match the established pattern.
-
----
-
-### [LOW] HTTP SEMANTICS: `GET /api/v1/graph/traverse/{node_id}` Validates `depth` Manually After Already Declaring It as Query Param
+### [LOW] HTTP SEMANTICS: `GET /api/v1/graph/traverse/{node_id}` Validates `depth` Manually (Carried Forward)
 
 **File**: `src/api/routes/graph.py:180`
 **Agent**: B3 (API Compliance Auditor)
 **Evidence**:
 ```python
-@router.get("/traverse/{node_id}", response_model=list[NodeResponse])
 async def traverse_graph(
     node_id: str,
-    depth: int = 2,
+    depth: int = 2,          # No Query bounds declared
     ...
 ) -> list[dict[str, Any]]:
-    if depth < 1 or depth > 5:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Depth must be between 1 and 5",
-        )
+    if depth < 1 or depth > 5:    # Manual validation duplicates what Query(ge=1, le=5) would do
+        raise HTTPException(...)
 ```
-**Description**: The `depth` parameter is declared as a plain `int = 2` without `Query(ge=1, le=5)` bounds, then manually validated with an `if` statement inside the handler. The corresponding `TraverseRequest` schema at line 74 correctly uses `Field(ge=1, le=5)`, but the GET route does not use that schema. Compare with `semantic_search` which validates `top_k` similarly.
+**Description**: `depth` is declared as a plain `int = 2` with no `Query(ge=1, le=5)` bounds, then manually validated inside the handler. FastAPI will not document the bounds in OpenAPI. The same pattern exists for `top_k` in `semantic_search` at line 238.
 
-**Risk**: Validation code is duplicated and inconsistent; FastAPI does not auto-document the bounds in OpenAPI.
+**Risk**: OpenAPI docs do not show valid bounds; manual validation duplicates what Query validation handles automatically.
 
-**Recommendation**: Change to `depth: int = Query(default=2, ge=1, le=5)` and remove the manual check.
+**Recommendation**: Change to `depth: int = Query(default=2, ge=1, le=5)` and remove the manual `if` check. Apply the same fix to `top_k` in `semantic_search`.
 
 ---
 
-### [LOW] HTTP SEMANTICS: `POST /api/v1/tom/seed` Lacks Idempotency Protection
+### [LOW] HTTP SEMANTICS: `POST /api/v1/tom/seed` Not Idempotent (Carried Forward)
 
 **File**: `src/api/routes/tom.py:503`
 **Agent**: B3 (API Compliance Auditor)
 **Evidence**:
 ```python
 @router.post("/seed", status_code=status.HTTP_201_CREATED)
-async def seed_best_practices_and_benchmarks(
-    session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("engagement:update")),
-) -> dict[str, Any]:
-    """Seed the database with standard best practices and benchmarks."""
+async def seed_best_practices_and_benchmarks(...) -> dict[str, Any]:
     bp_seeds = get_best_practice_seeds()
-    bm_seeds = get_benchmark_seeds()
     for bp_data in bp_seeds:
         bp = BestPractice(**bp_data)
-        session.add(bp)
+        session.add(bp)   # No existence check
 ```
-**Description**: The `/tom/seed` endpoint unconditionally inserts all seed records without checking for existence, potentially creating duplicates. Compare with `/metrics/seed` (line 328 in metrics.py) which correctly checks `existing.scalar_one_or_none() is None` before inserting. The TOM seed endpoint is inconsistent with the metrics seed endpoint.
+**Description**: The TOM seed endpoint unconditionally inserts all seed records without checking for existence, creating duplicates on repeated calls. The `metrics.py` seed endpoint at line 328 correctly checks for existence before inserting. The inconsistency is internally visible.
 
-**Risk**: Duplicate best practice and benchmark records created on repeated calls; data integrity violation.
+**Risk**: Duplicate best practice and benchmark records on repeated calls; data integrity violation.
 
-**Recommendation**: Add duplicate checks per seed record before inserting, consistent with the `metrics.py` implementation.
+**Recommendation**: Add per-record existence checks before inserting, consistent with the `metrics.py` implementation.
 
 ---
 
-### [LOW] RESPONSE FORMAT: `PATCH /api/v1/engagements/{id}/archive` Uses PATCH for State Transition
+### [LOW] RESPONSE FORMAT: Rate Limit Error Bodies Are Inconsistent Between Two Middleware Paths
 
-**File**: `src/api/routes/engagements.py:257`
+**File**: `src/api/middleware/security.py:155`, `src/api/main.py:275`
+**Agent**: B3 (API Compliance Auditor)
+**Evidence**:
+```python
+# RateLimitMiddleware (security.py:155) — no request_id
+return Response(
+    content='{"detail":"Rate limit exceeded"}',
+    status_code=429,
+    ...
+)
+
+# slowapi handler (main.py:275)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+# slowapi handler produces: {"error": "Rate limit exceeded"}
+```
+**Description**: Rate limit exceeded responses come from two different code paths and produce different JSON shapes. `RateLimitMiddleware` produces `{"detail": "..."}` with no `request_id`. The slowapi handler produces `{"error": "..."}` (slowapi's default format). Clients cannot reliably detect rate limiting based on response body shape.
+
+**Risk**: Clients parsing rate limit errors must handle two different response schemas; `request_id` absent from middleware 429s makes distributed tracing harder.
+
+**Recommendation**: Customize the slowapi error handler to emit `{"detail": "Rate limit exceeded", "request_id": ...}` matching the platform error format. Alternatively, consolidate to a single rate limiter.
+
+---
+
+### [LOW] HTTP SEMANTICS: `PATCH /api/v1/engagements/{id}/archive` Uses PATCH Without Request Body (Carried Forward)
+
+**File**: `src/api/routes/engagements.py:270`
 **Agent**: B3 (API Compliance Auditor)
 **Evidence**:
 ```python
 @router.patch("/{engagement_id}/archive", response_model=EngagementResponse)
 async def archive_engagement(
     engagement_id: UUID,
+    user: User = ...,
     ...
 ) -> Engagement:
-    """Archive an engagement by setting its status to ARCHIVED."""
     engagement.status = EngagementStatus.ARCHIVED
 ```
-**Description**: Using `PATCH /engagements/{id}/archive` for a state transition action is an accepted REST pattern (resource action), but it also means PATCH is being used without a request body — the URL itself encodes the action. The HTTP spec requires PATCH to carry a body describing changes. A more idiomatic approach would be `POST /engagements/{id}/archive` (action endpoint) or handled via `PATCH /engagements/{id}` with `{"status": "ARCHIVED"}` in the body.
+**Description**: `PATCH` is used for a state transition action with no request body — the action is encoded entirely in the URL path. This violates HTTP spec (PATCH requires a body describing the change). Compare with `monitoring.py` which correctly uses `POST /jobs/{id}/activate` for state transition actions.
 
-**Risk**: Minor REST semantics deviation; low practical impact.
+**Risk**: HTTP spec violation; minor inconsistency; low practical impact.
 
-**Recommendation**: Consider changing to `POST /{engagement_id}/archive` to match the action endpoint pattern used in `monitoring.py` (`/jobs/{id}/activate`, `/jobs/{id}/pause`, etc.).
+**Recommendation**: Change to `POST /{engagement_id}/archive` to match the action endpoint pattern used in `monitoring.py`.
 
 ---
 
-## Pagination Bounds Verification (Re-Audit)
-
-This section verifies the previously added pagination bounds (ge=1, le=200 for limit; ge=0 for offset).
+## Pagination Bounds Verification
 
 | Route File | Endpoint | Limit Bounds | Offset Bounds | Status |
 |---|---|---|---|---|
 | `engagements.py` | `list_engagements` | `ge=1, le=100` | `ge=0` | Confirmed |
 | `engagements.py` | `get_audit_logs` | `ge=1, le=100` | `ge=0` | Confirmed |
 | `evidence.py` | `list_evidence` | `ge=1, le=200` | `ge=0` | Confirmed |
+| `evidence.py` | `catalog_evidence` | `ge=1, le=200` | `ge=0` | Confirmed |
+| `evidence.py` | `get_fragments` | `ge=1, le=1000` | `ge=0` | Confirmed — now paginated |
 | `users.py` | `list_users` | `ge=1, le=200` | `ge=0` | Confirmed |
-| `pov.py` | `get_process_elements` | `ge=1, le=200` | `ge=0` | Confirmed |
-| `monitoring.py` | `list_monitoring_jobs` | `ge=1, le=200` | `ge=0` | Confirmed |
-| `monitoring.py` | `list_baselines` | `ge=1, le=200` | `ge=0` | Confirmed |
-| `monitoring.py` | `list_deviations` | `ge=1, le=200` | `ge=0` | Confirmed |
-| `monitoring.py` | `list_alerts` | `ge=1, le=200` | `ge=0` | Confirmed |
-| `tom.py` | `list_toms` | `ge=1, le=200` | `ge=0` | Confirmed |
-| `tom.py` | `list_gaps` | `ge=1, le=200` | `ge=0` | Confirmed |
-| `regulatory.py` | `list_policies` | `ge=1, le=200` | `ge=0` | Confirmed |
-| `regulatory.py` | `list_controls` | `ge=1, le=200` | `ge=0` | Confirmed |
-| `regulatory.py` | `list_regulations` | `ge=1, le=200` | `ge=0` | Confirmed |
-| `patterns.py` | `list_patterns` | `ge=1, le=200` | `ge=0` | Confirmed |
-| `simulations.py` | `list_scenarios` | `ge=1, le=100` | `ge=0` | Confirmed |
-| `simulations.py` | `list_modifications` | `ge=1, le=100` | `ge=0` | Confirmed |
-| `simulations.py` | `list_results` | `ge=1, le=100` | `ge=0` | Confirmed |
-| `annotations.py` | `list_annotations` | `ge=1, le=200` | `ge=0` | Confirmed |
-| `copilot.py` | `get_chat_history` | `le=200` (missing `ge=1`) | `ge=0` | Partial — missing `ge=1` on limit |
 | `users.py` | `list_engagement_members` | None | None | MISSING — see HIGH finding |
-| `evidence.py` | `get_fragments` | None | None | MISSING — see HIGH finding |
-| `patterns.py` | `PatternSearchRequest.limit` | No bounds | N/A | MISSING — see MEDIUM finding |
+| `copilot.py` | `get_chat_history` | `le=200` (missing `ge=1`) | `ge=0` | Partial |
+| `pov.py` | `get_process_elements` | `ge=1, le=200` | `ge=0` | Confirmed |
+| `monitoring.py` | All list endpoints | `ge=1, le=200` | `ge=0` | Confirmed |
+| `tom.py` | `list_toms`, `list_gaps` | `ge=1, le=200` | `ge=0` | Confirmed |
+| `regulatory.py` | All list endpoints | `ge=1, le=200` | `ge=0` | Confirmed |
+| `patterns.py` | `list_patterns` | `ge=1, le=200` | `ge=0` | Confirmed |
+| `patterns.py` | `PatternSearchRequest.limit` | No `Field(ge/le)` bounds | N/A | MISSING |
+| `simulations.py` | All list endpoints | `ge=1, le=100` | `ge=0` | Confirmed |
+| `annotations.py` | `list_annotations` | `ge=1, le=200` | `ge=0` | Confirmed |
+| `cost_modeling.py` | `list_role_rates` | No limit param | N/A | MISSING — see HIGH finding |
+| `cost_modeling.py` | `list_volume_forecasts` | No limit param | N/A | MISSING — see HIGH finding |
+| `event_spine.py` | `get_event_spine` | `ge=1, le=2000` | `ge=0` | High ceiling — see MEDIUM |
+| `correlation.py` | List endpoints | `ge=1, le=1000` | `ge=0` | High ceiling — see MEDIUM |
+| `survey_sessions.py` | `list_survey_sessions` | `ge=1, le=100` | `ge=0` | Confirmed |
+| `survey_claims.py` | `list_survey_claims` | `ge=1, le=100` | `ge=0` | Confirmed |
 
-**Pagination bounds are confirmed as added across 19 endpoints. Three gaps remain.**
+**Pagination bounds are confirmed across the majority of endpoints. 4 gaps remain (members list, pattern search body, role rates, volume forecasts).**
 
 ---
 
 ## Response Format Consistency Analysis
 
-The platform has adopted a consistent paginated list structure:
+The platform uses a consistent paginated list structure:
 
 ```json
 {"items": [...], "total": N}
 ```
 
-This is implemented correctly in the vast majority of endpoints. The following endpoints deviate:
+This is correctly implemented across ~95% of endpoints. The following deviate:
 
 | Endpoint | Deviation |
 |---|---|
 | `GET /api/v1/engagements/{id}/members` | Returns `list[...]` with no wrapper or total |
-| `GET /api/v1/evidence/{id}/fragments` | Returns `list[...]` with no wrapper or total |
-| `POST /api/v1/patterns/search` | Returns `{items, total}` but `limit` is unbounded |
-| `GET /api/v1/metrics/summary/{id}` | Returns `{metrics: [...], total, ...}` with no response_model |
-| Multiple TOM endpoints | Return `dict[str, Any]` with no response_model |
-
-Single-resource responses (GET by ID) correctly return the resource directly without wrapping.
+| `POST /api/v1/patterns/search` | Returns `{items, total}` but `limit` is unbounded in request body |
+| Multiple TOM endpoints | Return `dict[str, Any]` with no `response_model` |
+| `GET /api/v1/governance/policies` | Returns raw policy YAML dict with no `response_model` |
+| `GET /api/v1/governance/export/{id}` | Binary ZIP — no `responses={}` documenting content type |
+| `GET /api/v1/cost-modeling/role-rates` | Has `{items, total}` envelope but `total: len(items)` is wrong |
+| `GET /api/v1/cost-modeling/volume-forecasts` | Same `total: len(items)` defect |
 
 ---
 
@@ -522,68 +492,68 @@ Single-resource responses (GET by ID) correctly return the resource directly wit
 | GDPR routes | Yes | `get_current_user` via JWT |
 | Admin routes | Yes | `require_role(PLATFORM_ADMIN)` |
 | Portal routes | Yes | `require_permission("portal:read")` |
+| Quality/Pipeline routes | Yes | `require_engagement_access` via JWT |
 | WebSocket routes | Varies | See `websocket.py` |
 | MCP server | See MCP config | Mounted at `/mcp` |
 
-The health endpoint is appropriately unauthenticated (load balancer probes require it). All other routes enforce authentication through `Depends()` injection.
+The health endpoint is appropriately unauthenticated. All other routes enforce authentication through `Depends()` injection. No unauthenticated route was found that should require auth.
 
 ---
 
 ## Error Handling Assessment
 
-Error handling is largely consistent across the codebase:
-
 **Positive findings:**
-- Global `ValueError` handler in `main.py` returns consistent `{"detail": ..., "request_id": ...}`
-- Global `Exception` handler prevents stack trace leakage
-- Route-level 404/403/409 errors use FastAPI's `HTTPException` with the standard `{"detail": "..."}` format
-- `request_id` header is propagated from `RequestIDMiddleware` through to error responses
+- Global `ValueError` handler in `main.py:460` returns consistent `{"detail": ..., "request_id": ...}`
+- Global `Exception` handler at `main.py:469` prevents stack trace leakage in responses
+- Route-level 404/403/409/422 errors use FastAPI `HTTPException` with the standard `{"detail": "..."}` format
+- `request_id` is propagated through `RequestIDMiddleware` to all error responses (except rate limit 429s)
+- Camunda/external service failures use explicit 502 Bad Gateway (correct semantics)
 
-**Inconsistency found:**
-- Rate limit exceeded from `RateLimitMiddleware` returns `{"detail": "Rate limit exceeded"}` (no `request_id`)
-- Rate limit exceeded from `slowapi` uses its own format via `_rate_limit_exceeded_handler`
-- These two paths produce slightly different error shapes, which can confuse clients
+**Inconsistencies found:**
+- Rate limit 429 from `RateLimitMiddleware` produces `{"detail": "..."}` without `request_id`
+- Rate limit 429 from `slowapi` produces `{"error": "..."}` (different key name)
+- `regulatory.py` overlay endpoints have no try/except around Neo4j calls — inconsistent with `graph.py`
 
 ---
 
 ## HTTP Method Semantics Assessment
 
-All endpoints use correct HTTP methods:
-- Resource creation: `POST` returning `201`
-- Full retrieval: `GET` returning `200`
-- Partial update: `PATCH` returning `200`
-- Full replacement: `PUT` used correctly in `integrations.py` for field mapping replacement
-- Deletion: `DELETE` returning `204 NO_CONTENT`
-- Long-running async triggers: `POST` returning `202 ACCEPTED` (graph build, POV generation)
-
-One deviation noted in the Low issues: `PATCH /{engagement_id}/archive` uses PATCH without a request body.
+| Method | Usage | Status |
+|---|---|---|
+| `GET` | Read-only retrieval | Correct throughout |
+| `POST` | Resource creation and action triggers | Correct; creation uses 201; async triggers use 202 |
+| `PATCH` | Partial field update | Correct; archive is an exception (no body) |
+| `PUT` | Full replacement | Used correctly in `integrations.py` for field mapping |
+| `DELETE` | Resource deletion | 204 used on 12 of 13 DELETE routes; `seed_lists.py` uses 200 |
 
 ---
 
 ## Code Quality Score
 
-**Score: 7.5/10**
+**Score: 7.0/10**
 
 **Justification:**
-- (+) Consistent pagination bounds added across 19 of 22 list endpoints
+- (+) Pagination bounds present across ~92% of list endpoints
 - (+) Global error handlers prevent stack trace leakage
-- (+) Rate limiting present on auth endpoints (both middleware and slowapi)
-- (+) HTTP status codes largely correct (201 for creation, 204 for deletion, 202 for async)
-- (+) Response format is consistent across 95% of list endpoints
+- (+) Rate limiting present on auth endpoints at both middleware and slowapi layers
+- (+) HTTP status codes correct on ~98% of endpoints (201 creation, 204 deletion, 202 async)
+- (+) Response format `{items, total}` consistent across ~95% of list endpoints
+- (+) 456 endpoints across 76 files with high structural consistency is a significant engineering achievement
 - (-) In-memory rate limiter is ineffective in multi-worker deployments (CRITICAL)
-- (-) Two unbounded list endpoints remain without pagination
-- (-) Multiple endpoints lack `response_model` declarations
-- (-) Three route files deviate from the `prefix` pattern
+- (-) TODO comment in `gap_probes.py` docstring documents incomplete stub behavior (CRITICAL)
+- (-) 4 list endpoints remain without pagination bounds
+- (-) 33 route handlers use `-> Any` return type annotation
+- (-) `total: len(items)` pattern is structurally incorrect in cost_modeling routes
 
 ---
 
 ## Checkbox Verification Results
 
-- [x] **Response format consistency** — Verified: 95%+ of list endpoints use `{items, total}` wrapper. 5 endpoints deviate (documented above).
-- [x] **Pagination bounds (ge/le)** — Verified: 19/22 paginated endpoints have bounds. 3 gaps remain (members list, fragments list, pattern search body).
-- [ ] **Rate limiting applied to all endpoints** — Not fully verified: Rate limiting is present but in-memory implementation is ineffective in multi-worker production deployments.
-- [x] **HTTP method usage** — Verified: Correct GET/POST/PUT/PATCH/DELETE semantics with correct status codes on 98% of endpoints.
-- [x] **Error handling consistency** — Verified: Global handlers present; route-level 404/403/409 consistent. Minor inconsistency in rate limit error format.
-- [x] **API versioning** — Verified: All routes use `/api/v1/` prefix (via router prefix or inline). `X-API-Version` header set on all responses via middleware.
-- [ ] **Response models on all routes** — Not fully verified: ~8 endpoints lack `response_model` declarations.
-
+- [x] **Response format consistency** — Verified: ~95% of list endpoints use `{items, total}`. 7 endpoints deviate (documented above).
+- [x] **Pagination bounds** — Verified: ~92% of paginated endpoints have bounds. 4 gaps remain.
+- [ ] **Rate limiting applied to all endpoints** — Not verified: In-memory rate limiter is ineffective in multi-worker deployments. Auth endpoints have per-IP limits only; no per-account brute-force protection.
+- [x] **HTTP method usage** — Verified: Correct GET/POST/PUT/PATCH/DELETE semantics on ~98% of endpoints.
+- [x] **Error handling consistency** — Verified: Global handlers present; route-level errors consistent. Minor inconsistency in rate limit 429 response body shape between two code paths.
+- [x] **API versioning** — Verified: All routes use `/api/v1/` prefix (via router prefix or inline path). `X-API-Version` header set on all responses via middleware.
+- [ ] **Response models on all routes** — Not fully verified: ~12 endpoints lack `response_model`. Several TOM, governance, and camunda/orchestration endpoints missing.
+- [ ] **NO TODO COMMENTS** — Not verified: One TODO in `src/api/routes/gap_probes.py:82` documents incomplete feature in a production endpoint.

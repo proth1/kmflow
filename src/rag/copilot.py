@@ -149,7 +149,11 @@ class CopilotOrchestrator:
             msgs: list[dict[str, str]] = []
             if history:
                 for msg in history[-5:]:  # Keep last 5 messages for context
-                    msgs.append({"role": msg["role"], "content": msg["content"]})
+                    role = msg.get("role", "")
+                    if role not in ("user", "assistant"):
+                        continue  # Reject any non-standard roles to prevent prompt injection
+                    sanitized_content = _sanitize_input(msg.get("content", ""))
+                    msgs.append({"role": role, "content": sanitized_content})
 
             return await llm.generate(
                 user_prompt,
@@ -225,7 +229,11 @@ class CopilotOrchestrator:
 
             if history:
                 for msg in history[-5:]:
-                    msgs.append({"role": msg["role"], "content": msg["content"]})
+                    role = msg.get("role", "")
+                    if role not in ("user", "assistant"):
+                        continue  # Reject any non-standard roles to prevent prompt injection
+                    sanitized_content = _sanitize_input(msg.get("content", ""))
+                    msgs.append({"role": role, "content": sanitized_content})
 
             total_streamed = 0
             max_response_len = 10000

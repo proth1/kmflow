@@ -158,8 +158,8 @@ async def get_extraction_targets(
 # ── Term Management ───────────────────────────────────────────────────
 
 
-@router.delete(
-    "/engagements/{engagement_id}/seed-terms/{term_id}",
+@router.patch(
+    "/engagements/{engagement_id}/seed-terms/{term_id}/deprecate",
     status_code=status.HTTP_200_OK,
 )
 async def deprecate_seed_term(

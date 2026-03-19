@@ -10,19 +10,20 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field, model_validator
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
+from src.core.audit import log_audit
 from src.core.financial.cost_modeler import (
     compute_fte_savings,
     compute_quarterly_projections,
     compute_staffing_cost,
     compute_volume_cost,
 )
-from src.core.models import RoleRateAssumption, User, VolumeForecast
+from src.core.models import AuditAction, RoleRateAssumption, User, VolumeForecast
 from src.core.permissions import require_engagement_access, require_permission
 
 logger = logging.getLogger(__name__)
@@ -121,6 +122,13 @@ async def create_role_rate(
         rate_variance_pct=payload.rate_variance_pct,
     )
     session.add(rate)
+    await log_audit(
+        session,
+        engagement_id,
+        AuditAction.DATA_MODIFIED,
+        f"Role rate created: {payload.role_name}",
+        actor=str(_user.id),
+    )
     await session.commit()
     await session.refresh(rate)
     return _rate_to_dict(rate)
@@ -129,18 +137,27 @@ async def create_role_rate(
 @router.get("/engagements/{engagement_id}/role-rates")
 async def list_role_rates(
     engagement_id: UUID,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     _user: User = Depends(require_permission("engagement:read")),
     _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """List role rate assumptions for an engagement."""
+    count_result = await session.execute(
+        select(func.count()).select_from(RoleRateAssumption).where(RoleRateAssumption.engagement_id == engagement_id)
+    )
+    total = count_result.scalar() or 0
+
     result = await session.execute(
         select(RoleRateAssumption)
         .where(RoleRateAssumption.engagement_id == engagement_id)
         .order_by(RoleRateAssumption.role_name)
+        .limit(limit)
+        .offset(offset)
     )
     items = list(result.scalars().all())
-    return {"items": [_rate_to_dict(r) for r in items], "total": len(items)}
+    return {"items": [_rate_to_dict(r) for r in items], "total": total}
 
 
 # ── Volume Forecast Routes ───────────────────────────────────────────
@@ -166,6 +183,13 @@ async def create_volume_forecast(
         seasonal_factors=payload.seasonal_factors,
     )
     session.add(forecast)
+    await log_audit(
+        session,
+        engagement_id,
+        AuditAction.DATA_MODIFIED,
+        f"Volume forecast created: {payload.name}",
+        actor=str(_user.id),
+    )
     await session.commit()
     await session.refresh(forecast)
     return _forecast_to_dict(forecast)
@@ -174,16 +198,27 @@ async def create_volume_forecast(
 @router.get("/engagements/{engagement_id}/volume-forecasts")
 async def list_volume_forecasts(
     engagement_id: UUID,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     _user: User = Depends(require_permission("engagement:read")),
     _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """List volume forecasts for an engagement."""
+    count_result = await session.execute(
+        select(func.count()).select_from(VolumeForecast).where(VolumeForecast.engagement_id == engagement_id)
+    )
+    total = count_result.scalar() or 0
+
     result = await session.execute(
-        select(VolumeForecast).where(VolumeForecast.engagement_id == engagement_id).order_by(VolumeForecast.name)
+        select(VolumeForecast)
+        .where(VolumeForecast.engagement_id == engagement_id)
+        .order_by(VolumeForecast.name)
+        .limit(limit)
+        .offset(offset)
     )
     items = list(result.scalars().all())
-    return {"items": [_forecast_to_dict(f) for f in items], "total": len(items)}
+    return {"items": [_forecast_to_dict(f) for f in items], "total": total}
 
 
 # ── Cost Computation Routes ──────────────────────────────────────────

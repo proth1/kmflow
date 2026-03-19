@@ -57,17 +57,20 @@ async def test_process_evidence_creates_relationships(process_evidence_bridge, m
             [evidence_node],  # Evidence nodes
         ]
     )
-    mock_graph.create_relationship = AsyncMock()
+    mock_graph.batch_create_relationships = AsyncMock()
 
     result = await process_evidence_bridge.run(engagement_id)
 
     assert result.relationships_created == 1
-    call_kwargs = mock_graph.create_relationship.call_args[1]
-    assert call_kwargs["from_id"] == "proc-1"
-    assert call_kwargs["to_id"] == "ev-1"
-    assert call_kwargs["relationship_type"] == "SUPPORTED_BY"
-    assert call_kwargs["properties"]["source"] == "process_evidence_bridge"
-    assert call_kwargs["properties"]["confidence"] == 0.7
+    call_args = mock_graph.batch_create_relationships.call_args
+    rel_type = call_args[0][0]
+    rels = call_args[0][1]
+    assert rel_type == "SUPPORTED_BY"
+    assert len(rels) == 1
+    assert rels[0]["from_id"] == "proc-1"
+    assert rels[0]["to_id"] == "ev-1"
+    assert rels[0]["properties"]["source"] == "process_evidence_bridge"
+    assert rels[0]["properties"]["confidence"] == 0.7
 
 
 @pytest.mark.asyncio
@@ -90,12 +93,12 @@ async def test_process_evidence_no_overlap(process_evidence_bridge, mock_graph):
             [evidence_node],
         ]
     )
-    mock_graph.create_relationship = AsyncMock()
+    mock_graph.batch_create_relationships = AsyncMock()
 
     result = await process_evidence_bridge.run(engagement_id)
 
     assert result.relationships_created == 0
-    mock_graph.create_relationship.assert_not_called()
+    mock_graph.batch_create_relationships.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -120,24 +123,24 @@ async def test_process_evidence_includes_activities(process_evidence_bridge, moc
             [evidence_node],  # Evidence nodes
         ]
     )
-    mock_graph.create_relationship = AsyncMock()
+    mock_graph.batch_create_relationships = AsyncMock()
 
     result = await process_evidence_bridge.run(engagement_id)
 
     assert result.relationships_created == 1
-    mock_graph.create_relationship.assert_called_once()
+    mock_graph.batch_create_relationships.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_process_evidence_empty_nodes(process_evidence_bridge, mock_graph):
     """No relationships created when nodes are empty."""
     mock_graph.find_nodes = AsyncMock(side_effect=[[], [], []])
-    mock_graph.create_relationship = AsyncMock()
+    mock_graph.batch_create_relationships = AsyncMock()
 
     result = await process_evidence_bridge.run("eng-1")
 
     assert result.relationships_created == 0
-    mock_graph.create_relationship.assert_not_called()
+    mock_graph.batch_create_relationships.assert_not_called()
 
 
 # =============================================================================
@@ -173,13 +176,13 @@ async def test_process_evidence_with_embedding_above_threshold(mock_graph):
     )
 
     mock_graph.find_nodes = AsyncMock(side_effect=[[process_node], [], [evidence_node]])
-    mock_graph.create_relationship = AsyncMock()
+    mock_graph.batch_create_relationships = AsyncMock()
 
     result = await bridge.run("eng-1")
 
     assert result.relationships_created == 1
-    props = mock_graph.create_relationship.call_args[1]["properties"]
-    assert props["confidence"] == pytest.approx(0.8, abs=0.01)
+    rels = mock_graph.batch_create_relationships.call_args[0][1]
+    assert rels[0]["properties"]["confidence"] == pytest.approx(0.8, abs=0.01)
 
 
 @pytest.mark.asyncio
@@ -196,7 +199,7 @@ async def test_process_evidence_with_embedding_below_threshold(mock_graph):
     )
 
     mock_graph.find_nodes = AsyncMock(side_effect=[[process_node], [], [evidence_node]])
-    mock_graph.create_relationship = AsyncMock()
+    mock_graph.batch_create_relationships = AsyncMock()
 
     result = await bridge.run("eng-1")
 
@@ -235,16 +238,18 @@ async def test_evidence_policy_creates_governed_by(evidence_policy_bridge, mock_
             [policy_node],
         ]
     )
-    mock_graph.create_relationship = AsyncMock()
+    mock_graph.batch_create_relationships = AsyncMock()
 
     result = await evidence_policy_bridge.run(engagement_id)
 
     assert result.relationships_created == 1
-    call_kwargs = mock_graph.create_relationship.call_args[1]
-    assert call_kwargs["from_id"] == "ev-1"
-    assert call_kwargs["to_id"] == "policy-1"
-    assert call_kwargs["relationship_type"] == "GOVERNED_BY"
-    assert call_kwargs["properties"]["source"] == "evidence_policy_bridge"
+    call_args = mock_graph.batch_create_relationships.call_args
+    rel_type = call_args[0][0]
+    rels = call_args[0][1]
+    assert rel_type == "GOVERNED_BY"
+    assert rels[0]["from_id"] == "ev-1"
+    assert rels[0]["to_id"] == "policy-1"
+    assert rels[0]["properties"]["source"] == "evidence_policy_bridge"
 
 
 @pytest.mark.asyncio
@@ -266,19 +271,19 @@ async def test_evidence_policy_no_match(evidence_policy_bridge, mock_graph):
             [policy_node],
         ]
     )
-    mock_graph.create_relationship = AsyncMock()
+    mock_graph.batch_create_relationships = AsyncMock()
 
     result = await evidence_policy_bridge.run(engagement_id)
 
     assert result.relationships_created == 0
-    mock_graph.create_relationship.assert_not_called()
+    mock_graph.batch_create_relationships.assert_not_called()
 
 
 @pytest.mark.asyncio
 async def test_evidence_policy_empty_nodes(evidence_policy_bridge, mock_graph):
     """No relationships created when evidence or policy nodes are empty."""
     mock_graph.find_nodes = AsyncMock(side_effect=[[], []])
-    mock_graph.create_relationship = AsyncMock()
+    mock_graph.batch_create_relationships = AsyncMock()
 
     result = await evidence_policy_bridge.run("eng-1")
 
@@ -297,14 +302,14 @@ async def test_evidence_policy_with_embedding_above_threshold(mock_graph):
     )
 
     mock_graph.find_nodes = AsyncMock(side_effect=[[ev_node], [policy_node]])
-    mock_graph.create_relationship = AsyncMock()
+    mock_graph.batch_create_relationships = AsyncMock()
 
     result = await bridge.run("eng-1")
 
     assert result.relationships_created == 1
-    props = mock_graph.create_relationship.call_args[1]["properties"]
-    assert "similarity_score" in props
-    assert props["similarity_score"] == pytest.approx(0.75, abs=0.01)
+    rels = mock_graph.batch_create_relationships.call_args[0][1]
+    assert "similarity_score" in rels[0]["properties"]
+    assert rels[0]["properties"]["similarity_score"] == pytest.approx(0.75, abs=0.01)
 
 
 # =============================================================================
@@ -338,15 +343,15 @@ async def test_process_tom_classifies_dimensions(process_tom_bridge, mock_graph)
             [tom_node],
         ]
     )
-    mock_graph.create_relationship = AsyncMock()
+    mock_graph.batch_create_relationships = AsyncMock()
 
     result = await process_tom_bridge.run(engagement_id)
 
     assert result.relationships_created >= 1
-    mock_graph.create_relationship.assert_called()
+    mock_graph.batch_create_relationships.assert_called()
 
-    call_args = mock_graph.create_relationship.call_args
-    assert call_args[1]["properties"]["dimension"] == "process_architecture"
+    rels = mock_graph.batch_create_relationships.call_args[0][1]
+    assert rels[0]["properties"]["dimension"] == "process_architecture"
 
 
 @pytest.mark.asyncio
@@ -371,14 +376,15 @@ async def test_process_tom_risk_keywords(process_tom_bridge, mock_graph):
             [tom_node],
         ]
     )
-    mock_graph.create_relationship = AsyncMock()
+    mock_graph.batch_create_relationships = AsyncMock()
 
     result = await process_tom_bridge.run(engagement_id)
 
     assert result.relationships_created >= 1
 
-    call_args_list = [call[1]["properties"]["dimension"] for call in mock_graph.create_relationship.call_args_list]
-    assert "risk_and_compliance" in call_args_list
+    rels = mock_graph.batch_create_relationships.call_args[0][1]
+    dimensions = [r["properties"]["dimension"] for r in rels]
+    assert "risk_and_compliance" in dimensions
 
 
 @pytest.mark.asyncio
@@ -401,12 +407,12 @@ async def test_process_tom_no_match(process_tom_bridge, mock_graph):
             [tom_node],
         ]
     )
-    mock_graph.create_relationship = AsyncMock()
+    mock_graph.batch_create_relationships = AsyncMock()
 
     result = await process_tom_bridge.run(engagement_id)
 
     assert result.relationships_created == 0
-    mock_graph.create_relationship.assert_not_called()
+    mock_graph.batch_create_relationships.assert_not_called()
 
 
 # =============================================================================
@@ -442,17 +448,17 @@ async def test_deviation_detected(communication_deviation_bridge, mock_graph):
             [],  # Activity nodes
         ]
     )
-    mock_graph.create_relationship = AsyncMock()
+    mock_graph.batch_create_relationships = AsyncMock()
 
     result = await communication_deviation_bridge.run(engagement_id)
 
     assert result.relationships_created == 1
-    mock_graph.create_relationship.assert_called_once_with(
-        from_id="ev-1",
-        to_id="proc-1",
-        relationship_type="DEVIATES_FROM",
-        properties={"source": "communication_deviation_bridge"},
-    )
+    mock_graph.batch_create_relationships.assert_called_once()
+    rel_type, rels = mock_graph.batch_create_relationships.call_args[0]
+    assert rel_type == "DEVIATES_FROM"
+    assert rels[0]["from_id"] == "ev-1"
+    assert rels[0]["to_id"] == "proc-1"
+    assert rels[0]["properties"]["source"] == "communication_deviation_bridge"
 
 
 @pytest.mark.asyncio
@@ -477,12 +483,12 @@ async def test_no_deviation_keywords(communication_deviation_bridge, mock_graph)
             [],
         ]
     )
-    mock_graph.create_relationship = AsyncMock()
+    mock_graph.batch_create_relationships = AsyncMock()
 
     result = await communication_deviation_bridge.run(engagement_id)
 
     assert result.relationships_created == 0
-    mock_graph.create_relationship.assert_not_called()
+    mock_graph.batch_create_relationships.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -507,9 +513,9 @@ async def test_deviation_multiple_keywords(communication_deviation_bridge, mock_
             [],
         ]
     )
-    mock_graph.create_relationship = AsyncMock()
+    mock_graph.batch_create_relationships = AsyncMock()
 
     result = await communication_deviation_bridge.run(engagement_id)
 
     assert result.relationships_created == 1
-    mock_graph.create_relationship.assert_called_once()
+    mock_graph.batch_create_relationships.assert_called_once()

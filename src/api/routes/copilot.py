@@ -218,6 +218,15 @@ async def copilot_chat_stream(
     neo4j_driver = getattr(request.app.state, "neo4j_driver", None)
     orchestrator = CopilotOrchestrator(neo4j_driver=neo4j_driver)
 
+    await log_audit(
+        session,
+        payload.engagement_id,
+        AuditAction.DATA_ACCESS,
+        f"Copilot streaming query: {payload.query_type}",
+        actor=str(user.id),
+    )
+    await session.commit()
+
     async def event_generator() -> AsyncGenerator[str, None]:
         try:
             async for chunk in orchestrator.chat_streaming(
@@ -242,3 +251,114 @@ async def copilot_chat_stream(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+# -- Feedback Schemas ---------------------------------------------------------
+
+
+class FeedbackRequest(BaseModel):
+    """Request to submit feedback on a copilot message."""
+
+    copilot_message_id: UUID
+    engagement_id: UUID
+    rating: int = Field(..., ge=1, le=5)
+    correction_text: str | None = None
+    correction_sources: list[str] | None = None
+    is_hallucination: bool = False
+
+
+class FeedbackSummaryResponse(BaseModel):
+    """Aggregated copilot feedback statistics for an engagement."""
+
+    total_feedback: int
+    avg_rating: float
+    thumbs_up: int
+    thumbs_down: int
+    hallucination_count: int
+    correction_count: int
+
+
+# -- Feedback Routes ----------------------------------------------------------
+
+
+@router.post("/feedback", status_code=201)
+async def submit_feedback(
+    payload: FeedbackRequest,
+    user: User = Depends(copilot_rate_limit),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    """Submit feedback on a copilot message.
+
+    Records a rating (1-5), optional correction text, optional correction
+    sources, and whether the response was a hallucination. Returns the
+    created feedback record ID.
+    """
+    from src.core.models.pipeline_quality import CopilotFeedback
+
+    feedback = CopilotFeedback(
+        copilot_message_id=payload.copilot_message_id,
+        engagement_id=payload.engagement_id,
+        user_id=user.id,
+        rating=payload.rating,
+        correction_text=payload.correction_text,
+        correction_sources=payload.correction_sources,
+        is_hallucination=payload.is_hallucination,
+    )
+    session.add(feedback)
+    await session.commit()
+    await session.refresh(feedback)
+
+    return {"id": str(feedback.id), "created_at": feedback.created_at.isoformat()}
+
+
+@router.get("/feedback/summary/{engagement_id}", response_model=FeedbackSummaryResponse)
+async def get_feedback_summary(
+    engagement_id: UUID,
+    user: User = Depends(require_permission("copilot:query")),
+    _engagement_user: User = Depends(require_engagement_access),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    """Get aggregated copilot feedback statistics for an engagement."""
+    from src.core.models.pipeline_quality import CopilotFeedback
+
+    result = await session.execute(
+        select(
+            func.count(CopilotFeedback.id).label("total_feedback"),
+            func.avg(CopilotFeedback.rating).label("avg_rating"),
+            func.sum(func.cast(CopilotFeedback.rating >= 4, type_=func.count(CopilotFeedback.id).type)).label(
+                "thumbs_up"
+            ),
+            func.sum(func.cast(CopilotFeedback.rating <= 2, type_=func.count(CopilotFeedback.id).type)).label(
+                "thumbs_down"
+            ),
+            func.sum(func.cast(CopilotFeedback.is_hallucination, type_=func.count(CopilotFeedback.id).type)).label(
+                "hallucination_count"
+            ),
+            func.sum(
+                func.cast(
+                    CopilotFeedback.correction_text.isnot(None),
+                    type_=func.count(CopilotFeedback.id).type,
+                )
+            ).label("correction_count"),
+        ).where(CopilotFeedback.engagement_id == engagement_id)
+    )
+    row = result.first()
+
+    if row is None or row.total_feedback == 0:
+        return {
+            "total_feedback": 0,
+            "avg_rating": 0.0,
+            "thumbs_up": 0,
+            "thumbs_down": 0,
+            "hallucination_count": 0,
+            "correction_count": 0,
+        }
+
+    return {
+        "total_feedback": row.total_feedback or 0,
+        "avg_rating": round(row.avg_rating or 0.0, 2),
+        "thumbs_up": int(row.thumbs_up or 0),
+        "thumbs_down": int(row.thumbs_down or 0),
+        "hallucination_count": int(row.hallucination_count or 0),
+        "correction_count": int(row.correction_count or 0),
+    }

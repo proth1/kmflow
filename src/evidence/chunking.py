@@ -19,6 +19,7 @@ from dataclasses import dataclass
 
 from src.core.models import FragmentType
 from src.evidence.parsers.base import ParsedFragment
+from src.quality.instrumentation import pipeline_stage
 
 logger = logging.getLogger(__name__)
 
@@ -264,6 +265,7 @@ def _hard_split(
     return chunks
 
 
+@pipeline_stage("chunk")
 def chunk_fragments(
     fragments: list[ParsedFragment],
     config: ChunkingConfig | None = None,

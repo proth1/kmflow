@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     postgres_port: int = 5432
     postgres_db: str = "kmflow"
     postgres_user: str = "kmflow"
-    postgres_password: str = "kmflow_dev_password"
+    postgres_password: SecretStr = SecretStr("kmflow_dev_password")
     database_url: str | None = None
     db_pool_size: int = 20
     db_max_overflow: int = 10
@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     # ── Neo4j ────────────────────────────────────────────────────
     neo4j_uri: str = "bolt://localhost:7687"
     neo4j_user: str = "neo4j"
-    neo4j_password: str = "neo4j_dev_password"
+    neo4j_password: SecretStr = SecretStr("neo4j_dev_password")
 
     # ── Redis ────────────────────────────────────────────────────
     redis_host: str = "localhost"
@@ -60,14 +60,14 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:3000"]
 
     # ── Security / Auth ───────────────────────────────────────────
-    jwt_secret_key: str = "dev-secret-key-change-in-production"
+    jwt_secret_key: SecretStr = SecretStr("dev-secret-key-change-in-production")
     jwt_secret_keys: str = ""  # Comma-separated list for key rotation
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
     jwt_refresh_token_expire_minutes: int = 10080  # 7 days
     auth_dev_mode: bool = False  # Allow local dev tokens
-    encryption_key: str = "dev-encryption-key-change-in-production"
-    watermark_signing_key: str = "dev-watermark-key-change-in-production"
+    encryption_key: SecretStr = SecretStr("dev-encryption-key-change-in-production")
+    watermark_signing_key: SecretStr = SecretStr("dev-watermark-key-change-in-production")
 
     # ── Cookie Auth (Issue #156) ──────────────────────────────────
     # cookie_domain: Set to the shared domain (e.g. ".example.com") for
@@ -188,7 +188,7 @@ class Settings(BaseSettings):
             keys = [k.strip() for k in self.jwt_secret_keys.split(",") if k.strip()]
             if keys:
                 return keys
-        return [self.jwt_secret_key]
+        return [self.jwt_secret_key.get_secret_value()]
 
     @field_validator("cors_origins", mode="before")
     @classmethod
@@ -210,7 +210,7 @@ class Settings(BaseSettings):
         """Build database_url and redis_url from components if not set."""
         if not self.database_url:
             self.database_url = (
-                f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
+                f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password.get_secret_value()}"
                 f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
             )
         if not self.redis_url:
@@ -222,10 +222,11 @@ class Settings(BaseSettings):
         """Block startup when default development secrets are present outside development."""
         if self.app_env == "development":
             return self
-        has_default_jwt = "dev-secret-key" in self.jwt_secret_key
-        has_default_enc = "dev-encryption-key" in self.encryption_key
-        has_default_pg = self.postgres_password == "kmflow_dev_password"
-        has_default_neo4j = self.neo4j_password == "neo4j_dev_password"
+        has_default_jwt = "dev-secret-key" in self.jwt_secret_key.get_secret_value()
+        has_default_enc = "dev-encryption-key" in self.encryption_key.get_secret_value()
+        has_default_pg = self.postgres_password.get_secret_value() == "kmflow_dev_password"
+        has_default_neo4j = self.neo4j_password.get_secret_value() == "neo4j_dev_password"
+        has_default_watermark = "dev-watermark-key" in self.watermark_signing_key.get_secret_value()
         problems: list[str] = []
         if has_default_jwt:
             problems.append("JWT_SECRET_KEY")
@@ -235,6 +236,8 @@ class Settings(BaseSettings):
             problems.append("POSTGRES_PASSWORD")
         if has_default_neo4j:
             problems.append("NEO4J_PASSWORD")
+        if has_default_watermark:
+            problems.append("WATERMARK_SIGNING_KEY")
         if self.auth_dev_mode:
             problems.append("AUTH_DEV_MODE=false")
         if self.debug:

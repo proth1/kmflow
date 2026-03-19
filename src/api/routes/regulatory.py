@@ -72,8 +72,8 @@ class PolicyResponse(BaseModel):
     source_evidence_id: UUID | None
     clauses: dict[str, Any] | None
     description: str | None
-    created_at: Any
-    updated_at: Any
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 
 class PolicyList(BaseModel):
@@ -116,8 +116,8 @@ class ControlResponse(BaseModel):
     effectiveness: ControlEffectiveness
     effectiveness_score: float
     linked_policy_ids: list[str] | None
-    created_at: Any
-    updated_at: Any
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 
 class ControlList(BaseModel):
@@ -157,8 +157,8 @@ class RegulationResponse(BaseModel):
     framework: str | None
     jurisdiction: str | None
     obligations: dict[str, Any] | None
-    created_at: Any
-    updated_at: Any
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 
 class RegulationList(BaseModel):

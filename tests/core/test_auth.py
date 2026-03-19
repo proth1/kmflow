@@ -89,7 +89,7 @@ class TestCreateAccessToken:
         """Token should contain the provided claims."""
         claims = {"sub": "user-123", "email": "test@example.com", "role": "process_analyst"}
         token = create_access_token(claims, settings)
-        decoded = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+        decoded = jwt.decode(token, settings.jwt_secret_key.get_secret_value(), algorithms=[settings.jwt_algorithm])
 
         assert decoded["sub"] == "user-123"
         assert decoded["email"] == "test@example.com"
@@ -99,7 +99,7 @@ class TestCreateAccessToken:
     def test_create_access_token_has_expiry(self, settings: Settings) -> None:
         """Token should have an exp claim in the future."""
         token = create_access_token({"sub": "user-123"}, settings)
-        decoded = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+        decoded = jwt.decode(token, settings.jwt_secret_key.get_secret_value(), algorithms=[settings.jwt_algorithm])
 
         exp = datetime.fromtimestamp(decoded["exp"], tz=UTC)
         assert exp > datetime.now(UTC)
@@ -111,7 +111,7 @@ class TestCreateAccessToken:
             settings,
             expires_delta=timedelta(minutes=5),
         )
-        decoded = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+        decoded = jwt.decode(token, settings.jwt_secret_key.get_secret_value(), algorithms=[settings.jwt_algorithm])
 
         exp = datetime.fromtimestamp(decoded["exp"], tz=UTC)
         # Should expire in ~5 minutes, not 30
@@ -125,7 +125,7 @@ class TestCreateRefreshToken:
     def test_create_refresh_token_type(self, settings: Settings) -> None:
         """Refresh token should have type='refresh'."""
         token = create_refresh_token({"sub": "user-123"}, settings)
-        decoded = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+        decoded = jwt.decode(token, settings.jwt_secret_key.get_secret_value(), algorithms=[settings.jwt_algorithm])
         assert decoded["type"] == "refresh"
 
     def test_refresh_token_longer_expiry(self, settings: Settings) -> None:
@@ -133,8 +133,12 @@ class TestCreateRefreshToken:
         access = create_access_token({"sub": "user-123"}, settings)
         refresh = create_refresh_token({"sub": "user-123"}, settings)
 
-        access_decoded = jwt.decode(access, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
-        refresh_decoded = jwt.decode(refresh, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+        access_decoded = jwt.decode(
+            access, settings.jwt_secret_key.get_secret_value(), algorithms=[settings.jwt_algorithm]
+        )
+        refresh_decoded = jwt.decode(
+            refresh, settings.jwt_secret_key.get_secret_value(), algorithms=[settings.jwt_algorithm]
+        )
 
         assert refresh_decoded["exp"] > access_decoded["exp"]
 
@@ -399,7 +403,9 @@ class TestMissingSubjectClaim:
         """A token without 'sub' claim should be rejected."""
         # Create a token without 'sub' — manually encode
         payload = {"type": "access", "exp": datetime.now(UTC) + timedelta(minutes=30)}
-        token = jwt.encode(payload, auth_settings.jwt_secret_key, algorithm=auth_settings.jwt_algorithm)
+        token = jwt.encode(
+            payload, auth_settings.jwt_secret_key.get_secret_value(), algorithm=auth_settings.jwt_algorithm
+        )
 
         request = MagicMock()
         request.cookies = {}

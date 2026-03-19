@@ -18,6 +18,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from src.core.utils.datetime_utils import parse_iso_timestamp
+
 logger = logging.getLogger(__name__)
 
 # Bottleneck threshold: queue depth > multiplier * average queue depth
@@ -132,18 +134,6 @@ class AggregateReplayResult:
         }
 
 
-def _parse_timestamp(ts: Any) -> datetime:
-    """Parse a timestamp to datetime, handling strings and datetime objects."""
-    if isinstance(ts, datetime):
-        return ts
-    if isinstance(ts, str):
-        # Handle ISO format with various timezone suffixes
-        ts_clean = ts.replace("Z", "+00:00")
-        return datetime.fromisoformat(ts_clean)
-    msg = f"Cannot parse timestamp: {ts}"
-    raise ValueError(msg)
-
-
 def _get_interval_key(dt: datetime, granularity: str) -> str:
     """Compute the interval key for a timestamp.
 
@@ -185,7 +175,7 @@ def compute_activity_flow(
     buckets: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
 
     for event in events:
-        ts = _parse_timestamp(event.get("timestamp_utc", ""))
+        ts = parse_iso_timestamp(event.get("timestamp_utc", ""))
         interval_key = _get_interval_key(ts, granularity)
         activity = event.get("activity_name", "")
         buckets[(activity, interval_key)].append(event)

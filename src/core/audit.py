@@ -67,6 +67,9 @@ async def log_audit_event_async(
             status_code=status_code,
             engagement_id=engagement_id,
             duration_ms=duration_ms,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            resource_type=resource_type,
         )
         session.add(event)
         await session.commit()

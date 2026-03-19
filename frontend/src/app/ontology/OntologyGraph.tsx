@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import cytoscape from "cytoscape";
+import type { ElementDefinition } from "cytoscape";
 import type { OntologyClass, OntologyProperty } from "@/lib/api/ontology";
 
 interface OntologyGraphProps {
@@ -15,7 +15,7 @@ export default function OntologyGraph({ classes, properties }: OntologyGraphProp
   useEffect(() => {
     if (!containerRef.current || classes.length === 0) return;
 
-    const elements: cytoscape.ElementDefinition[] = [];
+    const elements: ElementDefinition[] = [];
 
     // Add class nodes
     for (const cls of classes) {
@@ -51,46 +51,54 @@ export default function OntologyGraph({ classes, properties }: OntologyGraphProp
       }
     }
 
-    const cy = cytoscape({
-      container: containerRef.current,
-      elements,
-      style: [
-        {
-          selector: "node",
-          style: {
-            label: "data(label)",
-            "background-color": "#4F46E5",
-            color: "#1F2937",
-            "text-valign": "bottom",
-            "text-margin-y": 8,
-            "font-size": "12px",
-            width: "mapData(instances, 0, 50, 30, 80)",
-            height: "mapData(instances, 0, 50, 30, 80)",
+    let destroyed = false;
+    let cy: { destroy(): void } | null = null;
+
+    import("cytoscape").then(({ default: cytoscape }) => {
+      if (destroyed || !containerRef.current) return;
+
+      cy = cytoscape({
+        container: containerRef.current,
+        elements,
+        style: [
+          {
+            selector: "node",
+            style: {
+              label: "data(label)",
+              "background-color": "#4F46E5",
+              color: "#1F2937",
+              "text-valign": "bottom",
+              "text-margin-y": 8,
+              "font-size": "12px",
+              width: "mapData(instances, 0, 50, 30, 80)",
+              height: "mapData(instances, 0, 50, 30, 80)",
+            },
           },
-        },
-        {
-          selector: "edge",
-          style: {
-            label: "data(label)",
-            "curve-style": "bezier",
-            "target-arrow-shape": "triangle",
-            "line-color": "#94A3B8",
-            "target-arrow-color": "#94A3B8",
-            "font-size": "10px",
-            color: "#64748B",
-            width: 2,
+          {
+            selector: "edge",
+            style: {
+              label: "data(label)",
+              "curve-style": "bezier",
+              "target-arrow-shape": "triangle",
+              "line-color": "#94A3B8",
+              "target-arrow-color": "#94A3B8",
+              "font-size": "10px",
+              color: "#64748B",
+              width: 2,
+            },
           },
+        ],
+        layout: {
+          name: "cose",
+          animate: false,
+          nodeDimensionsIncludeLabels: true,
         },
-      ],
-      layout: {
-        name: "cose",
-        animate: false,
-        nodeDimensionsIncludeLabels: true,
-      },
+      });
     });
 
     return () => {
-      cy.destroy();
+      destroyed = true;
+      cy?.destroy();
     };
   }, [classes, properties]);
 

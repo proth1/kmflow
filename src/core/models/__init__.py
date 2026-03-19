@@ -119,6 +119,14 @@ from src.core.models.pdp import (
     PDPDecisionType,
     PDPPolicy,
 )
+from src.core.models.pipeline_quality import (
+    CopilotFeedback,
+    EntityAnnotation,
+    GoldenEvalQuery,
+    GoldenEvalResult,
+    GraphHealthSnapshot,
+    PipelineStageMetric,
+)
 from src.core.models.pov import (
     BrightnessClassification,
     Contradiction,
@@ -343,6 +351,13 @@ __all__ = [
     "ReportStatus",
     # role_activity_mapping
     "RoleActivityMapping",
+    # pipeline_quality
+    "CopilotFeedback",
+    "EntityAnnotation",
+    "GoldenEvalQuery",
+    "GoldenEvalResult",
+    "GraphHealthSnapshot",
+    "PipelineStageMetric",
     # pattern
     "PatternAccessRule",
     "PatternCategory",

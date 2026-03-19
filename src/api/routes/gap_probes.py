@@ -65,7 +65,7 @@ class GenerateProbesResponse(BaseModel):
 @router.post(
     "/{engagement_id}/gap-probes/generate",
     response_model=GenerateProbesResponse,
-    status_code=status.HTTP_201_CREATED,
+    status_code=status.HTTP_200_OK,
 )
 async def generate_gap_probes(
     engagement_id: UUID,
@@ -77,11 +77,8 @@ async def generate_gap_probes(
     """Generate gap-targeted probes for an engagement.
 
     Analyzes knowledge form coverage gaps for Dim and Dark activities
-    and generates prioritized survey probes.
-
-    TODO: Persist generated probes to database for stable IDs and
-    referenceability by survey bot. Currently recomputes on every call.
-    See follow-up issue for persistence model.
+    and generates prioritized survey probes. Results are ephemeral
+    (recomputed on every call) — no stable IDs are assigned.
     """
     eng_result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
     if not eng_result.scalar_one_or_none():
@@ -95,7 +92,9 @@ async def generate_gap_probes(
     return {
         "engagement_id": engagement_id,
         "probes_generated": len(probes),
-        "message": f"Generated {len(probes)} gap-targeted probes",
+        "probes": probes,
+        "ephemeral": True,
+        "message": f"Generated {len(probes)} gap-targeted probes (ephemeral — not persisted)",
     }
 
 

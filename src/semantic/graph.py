@@ -585,11 +585,13 @@ class KnowledgeGraphService:
             # Query pgvector for similar embeddings
             embedding_str = "[" + ",".join(str(v) for v in embedding) + "]"
             pgvector_query = text(
-                "SELECT id, entity_id, entity_type, "
-                "1 - (embedding <=> :embedding::vector) AS similarity "
-                "FROM fragment_embeddings "
-                "WHERE (:engagement_id IS NULL OR engagement_id = :engagement_id::uuid) "
-                "ORDER BY embedding <=> :embedding::vector "
+                "SELECT ef.id, ef.evidence_id, ef.fragment_type, "
+                "1 - (ef.embedding <=> :embedding::vector) AS similarity "
+                "FROM evidence_fragments ef "
+                "JOIN evidence_items ei ON ef.evidence_id = ei.id "
+                "WHERE ef.embedding IS NOT NULL "
+                "AND (:engagement_id IS NULL OR ei.engagement_id = :engagement_id::uuid) "
+                "ORDER BY ef.embedding <=> :embedding::vector "
                 "LIMIT :top_k"
             )
             result = await db_session.execute(
@@ -608,12 +610,12 @@ class KnowledgeGraphService:
             # Map fragment IDs to Neo4j nodes for graph context
             results: list[dict[str, Any]] = []
             for row in rows:
-                entity_id = str(row.entity_id)
+                entity_id = str(row.evidence_id)
                 node = await self.get_node(entity_id)
 
                 result_entry: dict[str, Any] = {
                     "entity_id": entity_id,
-                    "entity_type": row.entity_type,
+                    "entity_type": row.fragment_type,
                     "similarity": round(float(row.similarity), 4),
                 }
 
@@ -773,9 +775,9 @@ class KnowledgeGraphService:
             nodes_by_label[label] = count
             total_nodes += count
 
-        # Count relationships by type
+        # Count relationships by type — scope both ends to engagement to prevent cross-engagement counting
         rel_query = """
-        MATCH (a {engagement_id: $engagement_id})-[r]->(b)
+        MATCH (a {engagement_id: $engagement_id})-[r]->(b {engagement_id: $engagement_id})
         RETURN type(r) AS rel_type, count(r) AS count
         """
         rel_records = await self._run_query(rel_query, {"engagement_id": engagement_id})

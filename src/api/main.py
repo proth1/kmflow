@@ -77,6 +77,7 @@ from src.api.routes import (
     orchestration,
     patterns,
     pdp,
+    pipeline_quality,
     portal,
     pov,
     raci,
@@ -330,6 +331,7 @@ def create_app() -> FastAPI:
     # -- Phase 4 Routes ---
     app.include_router(copilot.router)
     app.include_router(conformance.router)
+    app.include_router(pipeline_quality.router)
 
     # -- Phase 8 Routes ---
     app.include_router(metrics.router)

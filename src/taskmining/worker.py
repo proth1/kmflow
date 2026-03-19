@@ -40,18 +40,19 @@ async def process_task(task_data: dict[str, Any]) -> dict[str, Any]:
     task_type = task_data.get("task_type", "unknown")
     logger.debug("Processing task mining task: type=%s", task_type)
 
-    # TODO: Wire up aggregation engine (src/taskmining/aggregation/) here.
+    # TODO(Epic #206, Stories #207/#208/#209): Wire up aggregation engine.
     # SessionAggregator -> ActionClassifier -> EvidenceMaterializer
-    # See Epic #206 stories #207, #208, #209. Stubs below are Phase 1 placeholders.
+    # Stubs below are Phase 1 placeholders — they accept messages without
+    # performing actual work so the worker loop doesn't reject them.
     if task_type == "aggregate":
         return {
-            "status": "aggregated",
+            "status": "not_implemented",
             "event_type": task_data.get("event_type"),
             "session_id": task_data.get("session_id"),
             "application_name": task_data.get("application_name"),
         }
     elif task_type == "materialize":
-        return {"status": "materialized"}
+        return {"status": "not_implemented"}
     elif task_type == "assemble_switching":
         return await _handle_assemble_switching(task_data)
     else:

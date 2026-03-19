@@ -14,6 +14,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+from src.core.utils.datetime_utils import parse_iso_timestamp
+
 logger = logging.getLogger(__name__)
 
 
@@ -137,15 +139,17 @@ class VariantComparisonResult:
 
 
 def _parse_timestamp(ts: Any) -> datetime | None:
-    """Parse a timestamp value to datetime, returning None on failure."""
-    if isinstance(ts, datetime):
-        return ts
-    if isinstance(ts, str) and ts:
-        try:
-            return datetime.fromisoformat(ts)
-        except ValueError:
-            return None
-    return None
+    """Parse a timestamp value to datetime, returning None on failure.
+
+    Wraps :func:`~src.core.utils.datetime_utils.parse_iso_timestamp` with
+    a None-safe guard so cycle-time computation can skip unparseable values.
+    """
+    if ts is None or (isinstance(ts, str) and not ts):
+        return None
+    try:
+        return parse_iso_timestamp(ts)
+    except (ValueError, TypeError):
+        return None
 
 
 def _compute_cycle_times(events: list[dict[str, Any]]) -> list[int]:

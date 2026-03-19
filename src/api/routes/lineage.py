@@ -8,6 +8,7 @@ answer: "Where did this come from? How was it processed?"
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -56,8 +57,8 @@ class LineageResponse(BaseModel):
     version_hash: str | None
     parent_version_id: UUID | None
     refresh_schedule: str | None
-    last_refreshed_at: Any | None
-    created_at: Any
+    last_refreshed_at: datetime | None
+    created_at: datetime
 
 
 class LineageChainResponse(BaseModel):

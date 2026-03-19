@@ -94,11 +94,17 @@ class ConsentService:
         await self._session.flush()
 
         # TODO(#382): Wire to actual task queue (Redis stream or Celery).
-        # Currently returns a tracking ID without dispatching. The actual
-        # deletion across PostgreSQL, Neo4j, pgvector, and Redis will be
-        # implemented when the desktop pipeline integration is complete.
+        # Currently records the withdrawal without dispatching a deletion task.
+        # The actual deletion across PostgreSQL, Neo4j, pgvector, and Redis will
+        # be implemented when the desktop pipeline integration is complete.
         deletion_task_id = uuid.uuid4()
 
+        logger.warning(
+            "Consent withdrawal recorded for id=%s participant=%s but deletion task NOT dispatched "
+            "(pending Story #382 implementation)",
+            consent_id,
+            record.participant_id,
+        )
         logger.info(
             "Consent withdrawn: id=%s, participant=%s, deletion_task=%s",
             consent_id,
@@ -112,6 +118,7 @@ class ConsentService:
             "withdrawn_at": now.isoformat(),
             "deletion_task_id": str(deletion_task_id),
             "deletion_targets": ["postgresql", "neo4j", "pgvector", "redis"],
+            "status": "withdrawal_recorded_pending_implementation",
         }
 
     async def get_consent(self, consent_id: uuid.UUID) -> EndpointConsentRecord | None:

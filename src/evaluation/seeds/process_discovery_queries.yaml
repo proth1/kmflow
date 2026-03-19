@@ -1,0 +1,154 @@
+# Golden evaluation queries — process_discovery query type
+# These are engagement-agnostic templates. In practice, expected_source_ids
+# will be populated per engagement with actual evidence_item UUIDs.
+
+queries:
+  - query: "What is the end-to-end flow for the primary process identified in the evidence?"
+    expected_answer: >
+      The end-to-end flow begins with a triggering event (typically a client request
+      or system-initiated action), progresses through intake validation, processing,
+      review and approval stages, and concludes with fulfilment and notification.
+      Each step is mapped to a responsible role and associated system. The flow is
+      reconstructed from process maps, procedure documents, and interview transcripts
+      using the evidence pipeline's BPMN extraction capability.
+    query_type: process_discovery
+    difficulty: easy
+    tags: ["flow", "end-to-end", "bpmn"]
+    expected_source_ids: []
+    source: manual
+
+  - query: "Where do handoffs occur between teams or systems in the identified processes?"
+    expected_answer: >
+      Handoff points are detected where evidence shows a change of responsible actor
+      (role, team, or system) between consecutive process steps. Common handoff
+      patterns include: submission of a work item from an operational team to a
+      compliance reviewer; system-to-human handoffs where automated validation
+      fails and escalates; and cross-departmental transfers at defined SLA checkpoints.
+      Each handoff is captured as a directed edge in the knowledge graph with
+      associated wait-time metadata where available.
+    query_type: process_discovery
+    difficulty: easy
+    tags: ["handoffs", "teams", "transitions"]
+    expected_source_ids: []
+    source: manual
+
+  - query: "Which steps in the process are manual versus automated?"
+    expected_answer: >
+      Manual steps are identified by role-assigned tasks with no associated system
+      actor. Automated steps reference a system or application as the executing
+      entity and typically appear in system documentation, event logs, or RPA
+      artefacts. The process map distinguishes these using task type annotations
+      (user task vs. service task in BPMN terms). The ratio of manual to automated
+      steps is a key input to the automation opportunity assessment.
+    query_type: process_discovery
+    difficulty: easy
+    tags: ["automation", "manual", "tasks"]
+    expected_source_ids: []
+    source: manual
+
+  - query: "What are the main bottlenecks or delays observed in the process evidence?"
+    expected_answer: >
+      Bottlenecks are surfaced through three evidence signals: explicit mentions in
+      interview transcripts (e.g., "we wait three days for approval"), wait-time
+      fields in event logs or spreadsheet extracts, and exception-handling loops
+      that route work back to earlier steps. The consensus algorithm aggregates
+      these signals and ranks bottlenecks by frequency and severity. The most
+      commonly identified bottlenecks are approval queues, data-quality rework
+      loops, and cross-system reconciliation steps.
+    query_type: process_discovery
+    difficulty: medium
+    tags: ["bottlenecks", "delays", "performance"]
+    expected_source_ids: []
+    source: manual
+
+  - query: "Are there any exception paths or workarounds documented in the evidence?"
+    expected_answer: >
+      Exception paths are identified from process maps (alternative flows, error
+      boundaries), procedure documents (exception-handling sections), and interview
+      transcripts where staff describe informal workarounds. Workarounds not captured
+      in formal documentation but surfaced in interviews are flagged as undocumented
+      process variants. The knowledge graph records these as parallel paths with a
+      lower confidence score than the primary flow.
+    query_type: process_discovery
+    difficulty: medium
+    tags: ["exceptions", "workarounds", "variants"]
+    expected_source_ids: []
+    source: manual
+
+  - query: "How many process variants exist for the core process, and what triggers each?"
+    expected_answer: >
+      Process variants are detected by clustering evidence around divergent
+      decision points (XOR gateways in extracted BPMN, conditional logic in
+      procedure documents, or branching logic described in interviews). Each variant
+      is associated with one or more trigger conditions (e.g., transaction value
+      threshold, client tier, product type). Variant count and trigger conditions
+      are stored as structured metadata on the corresponding knowledge graph node.
+    query_type: process_discovery
+    difficulty: medium
+    tags: ["variants", "decision-points", "triggers"]
+    expected_source_ids: []
+    source: manual
+
+  - query: "Which systems or applications are involved in executing the identified processes?"
+    expected_answer: >
+      Systems are extracted from process documentation (swim lane labels, tool
+      references), interview mentions, and system-generated evidence such as
+      export files or event logs. Each system is modelled as a node in the
+      knowledge graph with edges to the process steps it supports. Integration
+      points between systems — particularly where data is manually re-keyed —
+      are highlighted as automation candidates.
+    query_type: process_discovery
+    difficulty: easy
+    tags: ["systems", "applications", "technology"]
+    expected_source_ids: []
+    source: manual
+
+  - query: "What is the average cycle time for the end-to-end process based on available data?"
+    expected_answer: >
+      Cycle time is estimated from quantitative evidence sources: event logs with
+      timestamps, SLA documentation, and interview statements citing typical
+      durations. Where exact timestamps are unavailable, the system uses range
+      estimates from procedure documents and normalises them. Cycle time is
+      decomposed by stage so that the contribution of each step to total elapsed
+      time is visible. Confidence in the estimate is proportional to the volume
+      and precision of timing data in the evidence.
+    query_type: process_discovery
+    difficulty: hard
+    tags: ["cycle-time", "performance", "quantitative"]
+    expected_source_ids: []
+    source: manual
+
+  - query: >
+      Are there any process steps that appear in interviews but are absent from
+      formal process documentation?
+    expected_answer: >
+      Steps present in interview transcripts but absent from process maps or
+      procedure documents are classified as undocumented process steps. These
+      are surfaced by the triangulation engine when an entity or activity cluster
+      has support from interview evidence only (triangulation score < 0.4).
+      Common examples include informal pre-validation checks, verbal approval
+      shortcuts, and shadow reconciliation spreadsheets. Each undocumented step
+      is flagged for documentation and process governance review.
+    query_type: process_discovery
+    difficulty: hard
+    tags: ["undocumented", "interviews", "shadow-processes"]
+    expected_source_ids: []
+    source: manual
+
+  - query: >
+      Which process steps have the highest rework rate based on evidence, and
+      what are the root causes?
+    expected_answer: >
+      Rework is identified through loop-back patterns in process maps, explicit
+      rework mentions in interviews, and repetitive event sequences in log data.
+      Steps with the highest rework rate are typically those involving data
+      quality validation, compliance checks, or manual data entry. Root causes
+      are inferred from co-occurring evidence: upstream data quality issues,
+      unclear acceptance criteria, or system integration failures. Root causes
+      are ranked by frequency across evidence sources using the consensus
+      algorithm before being surfaced in the gap analysis.
+    query_type: process_discovery
+    difficulty: hard
+    tags: ["rework", "root-cause", "quality"]
+    expected_source_ids: []
+    source: manual

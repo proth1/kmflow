@@ -210,7 +210,9 @@ class FinancialRegulatoryParser(BaseParser):
             content = fh.read()
 
         try:
-            root = etree.fromstring(content.encode())
+            # Disable XXE: no external entity resolution, no network access, no DTD validation
+            parser = etree.XMLParser(resolve_entities=False, no_network=True, dtd_validation=False)
+            root = etree.fromstring(content.encode(), parser)
             text = " ".join(str(t) for t in root.itertext())
         except etree.XMLSyntaxError:
             # Fall back to regex-based tag stripping
