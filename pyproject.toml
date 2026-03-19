@@ -56,7 +56,6 @@ dependencies = [
     # Transitive dep floors (CVE remediation — force minimum safe versions)
     "pyopenssl>=26.0.0",
     "pyasn1>=0.6.3",
-    "pypdf>=6.9.1",
 ]
 
 [project.optional-dependencies]
