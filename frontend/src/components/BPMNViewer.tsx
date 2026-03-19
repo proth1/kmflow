@@ -44,8 +44,32 @@ export default function BPMNViewerComponent({
   showEvidenceOverlay = false,
   onElementClick,
 }: BPMNViewerProps) {
+interface BpmnCanvas {
+  zoom(value: string): void;
+  viewbox(): { x: number; y: number; width: number; height: number };
+  viewbox(vb: { x: number; y: number; width: number; height: number }): void;
+}
+interface BpmnOverlays {
+  add(elementId: string, type: string, overlay: object): void;
+  remove(options: { type: string }): void;
+}
+interface BpmnElementRegistry {
+  forEach(fn: (element: { id: string; type: string; businessObject?: { name?: string } }) => void): void;
+}
+interface BpmnEventBus {
+  on(event: string, handler: (event: { element: { id: string; businessObject?: { name?: string } } }) => void): void;
+}
+interface BpmnViewer {
+  importXML(xml: string): Promise<void>;
+  get(service: "canvas"): BpmnCanvas;
+  get(service: "overlays"): BpmnOverlays;
+  get(service: "elementRegistry"): BpmnElementRegistry;
+  get(service: "eventBus"): BpmnEventBus;
+  destroy(): void;
+}
+
   const containerRef = useRef<HTMLDivElement>(null);
-  const viewerRef = useRef<any>(null);
+  const viewerRef = useRef<BpmnViewer | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -68,12 +92,12 @@ export default function BPMNViewerComponent({
         container: containerRef.current,
       });
 
-      viewerRef.current = viewer;
+      viewerRef.current = viewer as unknown as BpmnViewer;
 
-      await viewer.importXML(bpmnXml);
+      await (viewer as unknown as BpmnViewer).importXML(bpmnXml);
 
       // Fit the diagram to the container
-      const canvas = viewer.get("canvas") as any;
+      const canvas = (viewer as unknown as BpmnViewer).get("canvas");
       canvas.zoom("fit-viewport");
 
       // Add padding so overlays and pool headers aren't clipped
@@ -88,10 +112,10 @@ export default function BPMNViewerComponent({
 
       // Apply overlays
       if (showConfidenceOverlay || showEvidenceOverlay) {
-        const overlays = viewer.get("overlays") as any;
-        const elementRegistry = viewer.get("elementRegistry") as any;
+        const overlays = (viewer as unknown as BpmnViewer).get("overlays");
+        const elementRegistry = (viewer as unknown as BpmnViewer).get("elementRegistry");
 
-        elementRegistry.forEach((element: any) => {
+        elementRegistry.forEach((element) => {
           if (!element.businessObject) return;
           const name = element.businessObject.name;
           if (!name) return;
@@ -151,8 +175,8 @@ export default function BPMNViewerComponent({
 
       // Element click handler
       if (onElementClick) {
-        const eventBus = viewer.get("eventBus") as any;
-        eventBus.on("element.click", (event: any) => {
+        const eventBus = (viewer as unknown as BpmnViewer).get("eventBus");
+        eventBus.on("element.click", (event) => {
           const element = event.element;
           if (element.businessObject?.name) {
             onElementClick(element.id, element.businessObject.name);

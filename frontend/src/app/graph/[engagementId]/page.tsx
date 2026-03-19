@@ -87,11 +87,11 @@ export default function GraphExplorerPage() {
         <p className="mb-4 text-sm text-gray-500">
           Engagement: {engagementId} | Nodes: {data?.nodes.length ?? 0} | Edges: {data?.edges.length ?? 0}
         </p>
-        <div style={{ height: "calc(100vh - 250px)" }}>
+        <div className="h-[calc(100vh-250px)]">
           <ComponentErrorBoundary componentName="GraphExplorer">
             <GraphExplorer
-              nodes={(data?.nodes ?? []) as any}
-              edges={(data?.edges ?? []) as any}
+              nodes={(data?.nodes ?? []) as Parameters<typeof GraphExplorer>[0]["nodes"]}
+              edges={(data?.edges ?? []) as Parameters<typeof GraphExplorer>[0]["edges"]}
             />
           </ComponentErrorBoundary>
         </div>

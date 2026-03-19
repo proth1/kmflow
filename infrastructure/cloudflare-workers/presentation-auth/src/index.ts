@@ -72,14 +72,14 @@ export default {
     }
 
     // Validate JWT
-    let validation = sessionToken ? await validateDescopeJWT(sessionToken) : { valid: false, reason: 'No session token' };
+    let validation = sessionToken ? await validateDescopeJWT(sessionToken, env) : { valid: false, reason: 'No session token' };
 
     // If session expired but we have refresh token, try server-side refresh
     if (!validation.valid && refreshToken) {
       const refreshResult = await refreshSessionServerSide(refreshToken, env);
 
       if (refreshResult.success && refreshResult.sessionJwt) {
-        validation = await validateDescopeJWT(refreshResult.sessionJwt);
+        validation = await validateDescopeJWT(refreshResult.sessionJwt, env);
 
         if (validation.valid) {
           const email = validation.payload?.email as string | undefined;
@@ -295,18 +295,23 @@ function redirectToLogin(originalUrl: URL): Response {
   return Response.redirect(loginUrl.toString(), 302);
 }
 
-// JWKS endpoint for Descope JWT signature verification
-const DESCOPE_JWKS_URL = 'https://api.descope.com/P39ERvEl6A8ec0DKtrKBvzM4Ue5V/.well-known/jwks.json';
-const JWKS = createRemoteJWKSet(new URL(DESCOPE_JWKS_URL));
+// JWKS endpoint is derived at request time from env.DESCOPE_PROJECT_ID
+// so that the worker does not hardcode the project ID.
+function getJWKS(projectId: string) {
+  const jwksUrl = `https://api.descope.com/${projectId}/.well-known/jwks.json`;
+  return createRemoteJWKSet(new URL(jwksUrl));
+}
 
 async function validateDescopeJWT(
-  token: string
+  token: string,
+  env: Env
 ): Promise<{ valid: boolean; reason?: string; payload?: Record<string, unknown> }> {
   try {
     // jose v6 requires string | string[] for issuer (no callback)
     // Descope issuer format: https://api.descope.com/v1/apps/<projectId>
-    const { payload } = await jwtVerify(token, JWKS, {
-      issuer: 'https://api.descope.com/v1/apps/P39ERvEl6A8ec0DKtrKBvzM4Ue5V',
+    const jwks = getJWKS(env.DESCOPE_PROJECT_ID);
+    const { payload } = await jwtVerify(token, jwks, {
+      issuer: `https://api.descope.com/v1/apps/${env.DESCOPE_PROJECT_ID}`,
     });
 
     return { valid: true, payload: payload as unknown as Record<string, unknown> };

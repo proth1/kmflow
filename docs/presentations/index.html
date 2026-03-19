@@ -1500,6 +1500,632 @@
       font-size: 0.78rem;
       font-weight: 600;
     }
+
+    /* ── Executive Slides ──────────────────────────────────────────── */
+    .exec-slide {
+      min-height: 100vh;
+      height: 100vh;
+      max-height: 100vh;
+      overflow: hidden;
+      scroll-snap-align: start;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      box-sizing: border-box;
+      padding: 80px 6rem 4rem;
+    }
+
+    .exec-slide h1 {
+      font-size: 4.5rem;
+      letter-spacing: -1px;
+    }
+
+    .exec-slide h2 {
+      font-size: 3.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .exec-slide .exec-subtitle {
+      font-size: 1.6rem;
+      line-height: 1.5;
+      max-width: 800px;
+      opacity: 0.92;
+    }
+
+    /* Hero exec */
+    .exec-hero {
+      background: linear-gradient(135deg, var(--kmflow-dark-navy) 0%, var(--kmflow-blue) 40%, var(--kmflow-medium-blue) 100%);
+      color: white;
+      text-align: center;
+      align-items: center;
+    }
+
+    .exec-hero h1 { color: white; }
+    .exec-hero .exec-subtitle { margin: 0 auto 2.5rem; color: rgba(255,255,255,0.9); }
+
+    .exec-hero .tagline {
+      font-size: 1rem;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+      color: rgba(255,255,255,0.7);
+    }
+
+    .exec-cta-group {
+      display: flex;
+      gap: 1.5rem;
+      margin-top: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .exec-hero .exec-cta-group { justify-content: center; }
+
+    .exec-cta {
+      display: inline-block;
+      padding: 1rem 2.5rem;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      text-decoration: none;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+
+    .exec-cta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+
+    .exec-cta-primary {
+      background: white;
+      color: var(--kmflow-blue);
+    }
+
+    .exec-cta-secondary {
+      background: transparent;
+      color: white;
+      border: 2px solid rgba(255,255,255,0.5);
+    }
+
+    .exec-cta-secondary:hover {
+      border-color: white;
+    }
+
+    /* Dark exec slide */
+    .exec-dark {
+      background: linear-gradient(160deg, #0a0f1a 0%, var(--kmflow-dark-navy) 50%, #0d1f3c 100%);
+      color: white;
+    }
+
+    .exec-dark h2 { color: white; }
+
+    /* Light exec slide */
+    .exec-light {
+      background: white;
+    }
+
+    /* Gray exec slide */
+    .exec-gray {
+      background: var(--kmflow-light-gray);
+    }
+
+    /* Gradient exec slide */
+    .exec-gradient {
+      background: linear-gradient(135deg, var(--kmflow-blue) 0%, var(--kmflow-medium-blue) 70%, var(--kmflow-light-blue) 100%);
+      color: white;
+    }
+
+    .exec-gradient h2 { color: white; }
+
+    /* Pain points grid */
+    .exec-pain-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2.5rem;
+      margin-top: 2.5rem;
+      max-width: 1100px;
+    }
+
+    .exec-pain-card {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .exec-pain-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+    }
+
+    .exec-pain-card h3 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: white;
+      margin: 0;
+    }
+
+    .exec-pain-card p {
+      font-size: 1.05rem;
+      line-height: 1.5;
+      opacity: 0.85;
+      margin: 0;
+    }
+
+    /* 4-step flow */
+    .exec-flow {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      margin-top: 2.5rem;
+      max-width: 1100px;
+      position: relative;
+    }
+
+    .exec-flow::before {
+      content: '';
+      position: absolute;
+      top: 48px;
+      left: 10%;
+      right: 10%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--kmflow-light-blue), var(--kmflow-blue));
+      z-index: 0;
+    }
+
+    .exec-flow-step {
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .exec-flow-num {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--kmflow-blue);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-heading);
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 0 auto 1rem;
+      box-shadow: 0 4px 16px rgba(0,51,141,0.3);
+    }
+
+    .exec-flow-step h3 {
+      color: var(--kmflow-blue);
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .exec-flow-step p {
+      font-size: 0.95rem;
+      color: var(--kmflow-medium-gray);
+      line-height: 1.4;
+    }
+
+    /* Impact numbers */
+    .exec-impact-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2rem;
+      margin: 2.5rem 0;
+      max-width: 1100px;
+    }
+
+    .exec-impact-card {
+      text-align: center;
+      padding: 2rem 1.5rem;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,51,141,0.08);
+    }
+
+    .exec-impact-value {
+      font-family: var(--font-heading);
+      font-size: 3rem;
+      font-weight: 700;
+      color: var(--kmflow-blue);
+      line-height: 1;
+    }
+
+    .exec-impact-label {
+      font-size: 0.95rem;
+      color: var(--kmflow-medium-gray);
+      margin-top: 0.5rem;
+    }
+
+    .exec-impact-quote {
+      font-size: 1.15rem;
+      font-style: italic;
+      color: var(--kmflow-medium-gray);
+      max-width: 900px;
+      margin-top: 1.5rem;
+      line-height: 1.5;
+    }
+
+    /* Differentiator cards */
+    .exec-diff-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+      margin-top: 2.5rem;
+      max-width: 1100px;
+    }
+
+    .exec-diff-card {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      padding: 2rem;
+      backdrop-filter: blur(10px);
+    }
+
+    .exec-diff-card h3 {
+      color: var(--kmflow-light-blue);
+      font-size: 1.2rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .exec-diff-card p {
+      font-size: 1rem;
+      opacity: 0.85;
+      line-height: 1.5;
+    }
+
+    .exec-diff-contrast {
+      margin-top: 2rem;
+      padding: 1.25rem 2rem;
+      background: rgba(255,255,255,0.05);
+      border-left: 3px solid var(--kmflow-light-blue);
+      border-radius: 0 8px 8px 0;
+      font-size: 1rem;
+      opacity: 0.8;
+      max-width: 1100px;
+      line-height: 1.5;
+    }
+
+    /* Persona cards (exec) */
+    .exec-persona-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      margin-top: 2.5rem;
+      max-width: 1100px;
+    }
+
+    .exec-persona-card {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem 1.5rem;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0,51,141,0.08);
+    }
+
+    .exec-persona-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--kmflow-blue);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1rem;
+      font-size: 1.5rem;
+    }
+
+    .exec-persona-card h3 {
+      color: var(--kmflow-blue);
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .exec-persona-card p {
+      font-size: 0.9rem;
+      color: var(--kmflow-medium-gray);
+      line-height: 1.4;
+    }
+
+    /* Platform-at-glance pipeline */
+    .exec-pipeline {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin: 2.5rem auto;
+      max-width: 1100px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .exec-pipeline-step {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 1.25rem 1.5rem;
+      border-radius: 8px;
+      text-align: center;
+      flex: 1;
+      min-width: 140px;
+    }
+
+    .exec-pipeline-step h4 {
+      color: white;
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .exec-pipeline-arrow {
+      font-size: 1.5rem;
+      color: rgba(255,255,255,0.5);
+      padding: 0 0.25rem;
+    }
+
+    .exec-callout {
+      margin-top: 1.5rem;
+      font-size: 0.95rem;
+      opacity: 0.75;
+      text-align: center;
+    }
+
+    /* CTA exec slide */
+    .exec-cta-slide {
+      text-align: center;
+      align-items: center;
+    }
+
+    .exec-cta-slide h2 { color: white; }
+
+    .exec-cta-paths {
+      display: flex;
+      gap: 2rem;
+      margin-top: 2.5rem;
+      justify-content: center;
+    }
+
+    .exec-cta-big {
+      padding: 1.25rem 3rem;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 1.2rem;
+      text-decoration: none;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+
+    .exec-cta-big:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+
+    .exec-cta-big.primary { background: white; color: var(--kmflow-blue); }
+    .exec-cta-big.secondary { background: transparent; color: white; border: 2px solid rgba(255,255,255,0.5); }
+    .exec-cta-big.secondary:hover { border-color: white; }
+
+    .exec-proof {
+      margin-top: 2rem;
+      font-size: 1rem;
+      opacity: 0.75;
+    }
+
+    /* ── Bridge / Appendix TOC Slide ────────────────────────────────── */
+    .bridge-slide {
+      min-height: 100vh;
+      scroll-snap-align: start;
+      padding: 80px 6rem 4rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: linear-gradient(180deg, var(--kmflow-light-gray) 0%, white 100%);
+      position: relative;
+      box-sizing: border-box;
+    }
+
+    .bridge-slide h2 {
+      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .bridge-subtitle {
+      text-align: center;
+      color: var(--kmflow-medium-gray);
+      font-size: 1.1rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .bridge-toc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .bridge-toc-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.25rem 1.5rem;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0,51,141,0.08);
+      text-decoration: none;
+      color: var(--kmflow-dark-gray);
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+
+    .bridge-toc-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,51,141,0.12);
+    }
+
+    .bridge-toc-letter {
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+      border-radius: 10px;
+      background: var(--kmflow-blue);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-heading);
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .bridge-toc-text h4 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--kmflow-dark-gray);
+      margin: 0 0 0.15rem;
+    }
+
+    .bridge-toc-text p {
+      font-size: 0.82rem;
+      color: var(--kmflow-medium-gray);
+      margin: 0;
+      line-height: 1.3;
+    }
+
+    /* ── Appendix Section Dividers ──────────────────────────────────── */
+    .appendix-section-divider {
+      min-height: 50vh;
+      scroll-snap-align: start;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 80px 4rem 4rem;
+      background: linear-gradient(135deg, var(--kmflow-blue) 0%, var(--kmflow-medium-blue) 100%);
+      color: white;
+      position: relative;
+      box-sizing: border-box;
+    }
+
+    .appendix-section-divider .section-letter {
+      font-family: var(--font-heading);
+      font-size: 5rem;
+      font-weight: 700;
+      opacity: 0.3;
+      line-height: 1;
+    }
+
+    .appendix-section-divider h2 {
+      color: white;
+      font-size: 2.75rem;
+      margin: 0.5rem 0;
+    }
+
+    .appendix-section-divider .section-desc {
+      font-size: 1.15rem;
+      opacity: 0.8;
+      max-width: 600px;
+    }
+
+    /* ── Back to Exec Button ───────────────────────────────────────── */
+    .back-to-exec {
+      position: fixed;
+      bottom: 2rem;
+      left: 2rem;
+      padding: 0.6rem 1.25rem;
+      background: var(--kmflow-blue);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      z-index: 999;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.3s, transform 0.3s;
+      text-decoration: none;
+      display: none;
+    }
+
+    .back-to-exec.visible {
+      opacity: 1;
+      transform: translateY(0);
+      display: block;
+    }
+
+    .back-to-exec:hover {
+      background: var(--kmflow-medium-blue);
+    }
+
+    /* ── Nav Two-Tier ──────────────────────────────────────────────── */
+    .nav-section-toggle {
+      display: flex;
+      gap: 0.25rem;
+      background: rgba(255,255,255,0.1);
+      border-radius: 6px;
+      padding: 0.2rem;
+    }
+
+    .nav-section-btn {
+      padding: 0.35rem 0.9rem;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: transparent;
+      color: rgba(255,255,255,0.7);
+    }
+
+    .nav-section-btn.active {
+      background: white;
+      color: var(--kmflow-blue);
+    }
+
+    .nav-section-btn:hover:not(.active) {
+      color: white;
+    }
+
+    /* ── Slide Dot Section Gaps ─────────────────────────────────────── */
+    .slide-dot.exec-dot {
+      background: rgba(0, 145, 218, 0.4);
+    }
+
+    .slide-dot.exec-dot.active {
+      background: var(--kmflow-light-blue);
+    }
+
+    .dot-section-gap {
+      height: 6px;
+    }
+
+    /* ── Responsive adjustments for exec slides ─────────────────────── */
+    @media (max-width: 1024px) {
+      .exec-slide { padding: 80px 3rem 3rem; }
+      .exec-pain-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+      .exec-flow { grid-template-columns: repeat(2, 1fr); }
+      .exec-flow::before { display: none; }
+      .exec-impact-grid { grid-template-columns: repeat(2, 1fr); }
+      .exec-diff-grid { grid-template-columns: 1fr; }
+      .exec-persona-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 768px) {
+      .exec-slide h1 { font-size: 3rem; }
+      .exec-slide h2 { font-size: 2.25rem; }
+      .exec-flow { grid-template-columns: 1fr; }
+      .exec-impact-grid { grid-template-columns: 1fr; }
+      .exec-persona-grid { grid-template-columns: 1fr; }
+      .bridge-toc-grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -1508,23 +2134,262 @@
       <svg viewBox="0 0 40 32" fill="white" xmlns="http://www.w3.org/2000/svg"><text x="0" y="24" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="white">KM</text></svg>
       <span class="nav-title">KMFlow Platform</span>
     </div>
-    <div class="nav-links">
-      <a href="#slide-1">Home</a>
-      <a href="#slide-3">Challenge</a>
-      <a href="#slide-7">Engagement</a>
-      <a href="#slide-14">Case Study</a>
-      <a href="#slide-25">Application</a>
-      <a href="#slide-37">Architecture</a>
-      <a href="#slide-45">Workflows</a>
-      <a href="#slide-51">Roadmap</a>
+    <div class="nav-section-toggle" id="navSectionToggle">
+      <button class="nav-section-btn active" data-section="exec" onclick="scrollToSection('exec')">Executive Summary</button>
+      <button class="nav-section-btn" data-section="appendix" onclick="scrollToSection('appendix')">Deep Dive</button>
     </div>
-    <div class="nav-version">v2026.02.199 &mdash; WGI Platform Alignment</div>
+    <div class="nav-links" id="navExecLinks">
+      <a href="#exec-1">Home</a>
+      <a href="#exec-2">Problem</a>
+      <a href="#exec-3">Solution</a>
+      <a href="#exec-4">Impact</a>
+      <a href="#exec-5">Differentiators</a>
+      <a href="#exec-8">Next Steps</a>
+    </div>
+    <div class="nav-links" id="navAppendixLinks" style="display:none;">
+      <a href="#appendix-a">Market</a>
+      <a href="#appendix-b">Engagement</a>
+      <a href="#appendix-c">Case Study</a>
+      <a href="#appendix-d">Platform UX</a>
+      <a href="#appendix-e">Architecture</a>
+      <a href="#appendix-h">SDLC</a>
+      <a href="#appendix-i">Roadmap</a>
+    </div>
+    <div class="nav-version">v2026.03.233</div>
   </nav>
 
   <div class="slide-indicator" id="slideIndicator"></div>
 
+  <a href="#exec-1" class="back-to-exec" id="backToExec">&#8593; Executive Summary</a>
+
   <main class="slides-container" id="slidesContainer">
-    <!-- Slide 1: Hero -->
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         EXECUTIVE SUMMARY (8 slides + bridge)
+         ═══════════════════════════════════════════════════════════════ -->
+
+    <!-- Exec 1: Hero / Title -->
+    <section id="exec-1" class="exec-slide exec-hero">
+      <div class="tagline">AI-Powered Process Intelligence</div>
+      <h1>KMFlow Platform</h1>
+      <p class="exec-subtitle">Turn fragmented client evidence into confident process recommendations — in days, not months.</p>
+      <div class="exec-cta-group">
+        <a href="#exec-3" class="exec-cta exec-cta-primary">See How It Works</a>
+        <a href="#exec-bridge" class="exec-cta exec-cta-secondary">Explore the Deep Dive &#8594;</a>
+      </div>
+    </section>
+
+    <!-- Exec 2: The Problem -->
+    <section id="exec-2" class="exec-slide exec-dark">
+      <h2>The $47B Problem</h2>
+      <div class="exec-pain-grid">
+        <div class="exec-pain-card">
+          <div class="exec-pain-icon">&#128483;</div>
+          <h3>Knowledge Is Trapped</h3>
+          <p>Process knowledge lives in people's heads, spreadsheets, and tribal lore. When a key person leaves, the knowledge walks out the door.</p>
+        </div>
+        <div class="exec-pain-card">
+          <div class="exec-pain-icon">&#9200;</div>
+          <h3>Time Drain</h3>
+          <p>Consultants spend 60-70% of engagement time just gathering and reconciling evidence before any real analysis begins.</p>
+        </div>
+        <div class="exec-pain-card">
+          <div class="exec-pain-icon">&#10067;</div>
+          <h3>Confidence Gap</h3>
+          <p>Recommendations lack evidence-backed confidence scores. Clients push back because they can't trace insights to source material.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Exec 3: The Solution -->
+    <section id="exec-3" class="exec-slide exec-light">
+      <h2>Evidence In &rarr; Confidence Out</h2>
+      <div class="exec-flow">
+        <div class="exec-flow-step">
+          <div class="exec-flow-num">1</div>
+          <h3>Collect</h3>
+          <p>12 evidence types: interviews, documents, system logs, process models, and more</p>
+        </div>
+        <div class="exec-flow-step">
+          <div class="exec-flow-num">2</div>
+          <h3>Analyze</h3>
+          <p>AI builds a knowledge graph, extracts entities, and scores evidence quality</p>
+        </div>
+        <div class="exec-flow-step">
+          <div class="exec-flow-num">3</div>
+          <h3>Discover</h3>
+          <p>Consensus algorithm triangulates process truth from multiple sources</p>
+        </div>
+        <div class="exec-flow-step">
+          <div class="exec-flow-num">4</div>
+          <h3>Recommend</h3>
+          <p>Confidence-scored gaps, TOM alignment, and transformation options</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Exec 4: Case Study Impact -->
+    <section id="exec-4" class="exec-slide exec-gray">
+      <h2>Meridian National Bank: 4 Weeks &rarr; 4 Days</h2>
+      <div class="exec-impact-grid">
+        <div class="exec-impact-card">
+          <div class="exec-impact-value">41</div>
+          <div class="exec-impact-label">Evidence items ingested automatically</div>
+        </div>
+        <div class="exec-impact-card">
+          <div class="exec-impact-value">87%</div>
+          <div class="exec-impact-label">Confidence process model from triangulated sources</div>
+        </div>
+        <div class="exec-impact-card">
+          <div class="exec-impact-value">6</div>
+          <div class="exec-impact-label">Critical gaps identified with regulatory context</div>
+        </div>
+        <div class="exec-impact-card">
+          <div class="exec-impact-value">3</div>
+          <div class="exec-impact-label">Transformation options with cost/risk/timeline</div>
+        </div>
+      </div>
+      <p class="exec-impact-quote">"What took a team of 6 consultants four weeks, KMFlow delivered in four days with higher confidence."</p>
+      <div style="margin-top: 1rem;"><a href="#slide-14" style="color: var(--kmflow-blue); font-weight: 600; text-decoration: none;">See Full Case Study &#8594;</a></div>
+    </section>
+
+    <!-- Exec 5: What Makes This Different -->
+    <section id="exec-5" class="exec-slide exec-dark">
+      <h2>Not Another Dashboard</h2>
+      <div class="exec-diff-grid">
+        <div class="exec-diff-card">
+          <h3>Evidence-First</h3>
+          <p>Every insight traced back to source material. No black boxes. Full provenance from evidence to recommendation.</p>
+        </div>
+        <div class="exec-diff-card">
+          <h3>Confidence Scoring</h3>
+          <p>Know what you know AND what you don't. Quantified uncertainty across every process claim and gap assessment.</p>
+        </div>
+        <div class="exec-diff-card">
+          <h3>Regulatory Context</h3>
+          <p>Gaps automatically mapped to compliance frameworks — SOX, Basel, GDPR, TRID. Built-in regulatory intelligence.</p>
+        </div>
+      </div>
+      <div class="exec-diff-contrast">Traditional process mining requires clean event logs. KMFlow works with the messy reality consultants actually face.</div>
+    </section>
+
+    <!-- Exec 6: Who Uses It -->
+    <section id="exec-6" class="exec-slide exec-light">
+      <h2>Built for How Consulting Actually Works</h2>
+      <div class="exec-persona-grid">
+        <div class="exec-persona-card">
+          <div class="exec-persona-icon" style="color: white;">&#128188;</div>
+          <h3>Engagement Lead</h3>
+          <p>Dashboard, confidence scores, client-ready outputs, scenario modeling</p>
+        </div>
+        <div class="exec-persona-card">
+          <div class="exec-persona-icon" style="color: white;">&#128269;</div>
+          <h3>Process Analyst</h3>
+          <p>Evidence collection, knowledge graph exploration, gap analysis</p>
+        </div>
+        <div class="exec-persona-card">
+          <div class="exec-persona-icon" style="color: white;">&#128100;</div>
+          <h3>Client Stakeholder</h3>
+          <p>Portal view, validation queue, progress tracking, evidence status</p>
+        </div>
+        <div class="exec-persona-card">
+          <div class="exec-persona-icon" style="color: white;">&#128202;</div>
+          <h3>Practice Lead</h3>
+          <p>Cross-engagement patterns, reusable process templates, analytics</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Exec 7: Platform at a Glance -->
+    <section id="exec-7" class="exec-slide exec-gradient">
+      <h2 style="text-align:center;">One Platform, End to End</h2>
+      <div class="exec-pipeline">
+        <div class="exec-pipeline-step"><h4>Evidence Ingestion</h4></div>
+        <div class="exec-pipeline-arrow">&#8594;</div>
+        <div class="exec-pipeline-step"><h4>Knowledge Graph</h4></div>
+        <div class="exec-pipeline-arrow">&#8594;</div>
+        <div class="exec-pipeline-step"><h4>Process Discovery</h4></div>
+        <div class="exec-pipeline-arrow">&#8594;</div>
+        <div class="exec-pipeline-step"><h4>Gap Analysis</h4></div>
+        <div class="exec-pipeline-arrow">&#8594;</div>
+        <div class="exec-pipeline-step"><h4>TOM Alignment</h4></div>
+        <div class="exec-pipeline-arrow">&#8594;</div>
+        <div class="exec-pipeline-step"><h4>Client Deliverables</h4></div>
+      </div>
+      <div class="exec-callout">15+ parsers &middot; 96 data models &middot; AI copilot &middot; Real-time monitoring</div>
+      <div style="text-align:center; margin-top: 1rem;"><a href="#exec-bridge" style="color: white; font-weight: 600; text-decoration: none;">Explore the Platform &#8594;</a></div>
+    </section>
+
+    <!-- Exec 8: Call to Action -->
+    <section id="exec-8" class="exec-slide exec-hero exec-cta-slide">
+      <h2>Ready to See It in Action?</h2>
+      <div class="exec-cta-paths">
+        <a href="mailto:contact@kmflow.ai" class="exec-cta-big primary">Schedule a Demo</a>
+        <a href="#exec-bridge" class="exec-cta-big secondary">Explore the Deep Dive &#8595;</a>
+      </div>
+      <p class="exec-proof">KMFlow is live. Built with the Blaze SDLC. 6,000+ tests. Ready for your next engagement.</p>
+    </section>
+
+    <!-- Bridge: Appendix Table of Contents -->
+    <section id="exec-bridge" class="bridge-slide">
+      <h2>Deep Dive: Platform Details</h2>
+      <p class="bridge-subtitle">Explore any section below for the full technical and strategic story</p>
+      <div class="bridge-toc-grid">
+        <a href="#appendix-a" class="bridge-toc-item">
+          <div class="bridge-toc-letter">A</div>
+          <div class="bridge-toc-text"><h4>Market &amp; Strategy</h4><p>Challenge, opportunity, positioning, timing</p></div>
+        </a>
+        <a href="#appendix-b" class="bridge-toc-item">
+          <div class="bridge-toc-letter">B</div>
+          <div class="bridge-toc-text"><h4>Engagement Workflow</h4><p>Evidence collection, parsers, quality, copilot</p></div>
+        </a>
+        <a href="#appendix-c" class="bridge-toc-item">
+          <div class="bridge-toc-letter">C</div>
+          <div class="bridge-toc-text"><h4>Case Study: Meridian</h4><p>Full deep dive into loan origination engagement</p></div>
+        </a>
+        <a href="#appendix-d" class="bridge-toc-item">
+          <div class="bridge-toc-letter">D</div>
+          <div class="bridge-toc-text"><h4>Platform UX</h4><p>Personas, feature screens, scenario engine</p></div>
+        </a>
+        <a href="#appendix-e" class="bridge-toc-item">
+          <div class="bridge-toc-letter">E</div>
+          <div class="bridge-toc-text"><h4>Architecture &amp; Tech</h4><p>System design, APIs, integrations, data governance</p></div>
+        </a>
+        <a href="#appendix-f" class="bridge-toc-item">
+          <div class="bridge-toc-letter">F</div>
+          <div class="bridge-toc-text"><h4>Desktop Task Mining</h4><p>macOS + Windows agents, capture, ML pipeline</p></div>
+        </a>
+        <a href="#appendix-g" class="bridge-toc-item">
+          <div class="bridge-toc-letter">G</div>
+          <div class="bridge-toc-text"><h4>Security &amp; Compliance</h4><p>Data isolation, compliance posture, encryption</p></div>
+        </a>
+        <a href="#appendix-h" class="bridge-toc-item">
+          <div class="bridge-toc-letter">H</div>
+          <div class="bridge-toc-text"><h4>Blaze SDLC</h4><p>How KMFlow is built: CDD, 9-agent PR review</p></div>
+        </a>
+        <a href="#appendix-i" class="bridge-toc-item">
+          <div class="bridge-toc-letter">I</div>
+          <div class="bridge-toc-text"><h4>Roadmap</h4><p>Foundation &rarr; Decision Intelligence &rarr; Scale</p></div>
+        </a>
+        <a href="#appendix-j" class="bridge-toc-item">
+          <div class="bridge-toc-letter">J</div>
+          <div class="bridge-toc-text"><h4>Entity Reference &amp; Stats</h4><p>Feature cards, project metrics, changelog</p></div>
+        </a>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         APPENDIX: Deep Dive Sections
+         ═══════════════════════════════════════════════════════════════ -->
+
+    <!-- ── Section A: Market & Strategy ─────────────────────────────── -->
+    <div id="appendix-a" class="appendix-section-divider">
+      <div class="section-letter">A</div>
+      <h2>Market &amp; Strategy</h2>
+      <p class="section-desc">The challenge, market opportunity, strategic positioning, and why now</p>
+    </div>
+
+    <!-- Slide 1: Hero (original) -->
     <section id="slide-1" class="slide slide-hero">
       <span class="tagline">Let insights reveal new opportunity</span>
       <h1>KMFlow Platform</h1>
@@ -1808,6 +2673,13 @@
         <span>Slide 6</span>
       </div>
     </section>
+
+    <!-- ── Section B: Engagement Workflow ───────────────────────────── -->
+    <div id="appendix-b" class="appendix-section-divider">
+      <div class="section-letter">B</div>
+      <h2>Engagement Workflow</h2>
+      <p class="section-desc">How it works: evidence collection, parser architecture, quality scoring, and AI copilot</p>
+    </div>
 
     <!-- Slide 7: How a KMFlow Engagement Works -->
     <section id="slide-7" class="slide slide-gradient">
@@ -2139,6 +3011,13 @@
         <span>Slide 13</span>
       </div>
     </section>
+
+    <!-- ── Section C: Case Study ──────────────────────────────────── -->
+    <div id="appendix-c" class="appendix-section-divider">
+      <div class="section-letter">C</div>
+      <h2>Case Study: Meridian National Bank</h2>
+      <p class="section-desc">Full deep dive into the loan origination engagement</p>
+    </div>
 
     <!-- Slide 14: Synthetic Evidence Portfolio -->
     <section id="slide-14" class="slide slide-light">
@@ -2768,6 +3647,13 @@ confidence = (
       </div>
     </section>
 
+    <!-- ── Section D: Platform UX ─────────────────────────────────── -->
+    <div id="appendix-d" class="appendix-section-divider">
+      <div class="section-letter">D</div>
+      <h2>Platform UX</h2>
+      <p class="section-desc">Personas, feature screens, new modules, and scenario engine</p>
+    </div>
+
     <!-- Slide 25: Personas and Access Model -->
     <section id="slide-25" class="slide slide-dark">
       <div class="section-header">
@@ -2882,24 +3768,28 @@ confidence = (
         <span class="badge badge-blue">Application: Graph</span>
         <h2>Knowledge Graph Explorer</h2>
       </div>
-      <div class="two-col">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start;">
+        <div>
+          <img src="screenshots/knowledge-graph.png" alt="Knowledge Graph Explorer — 32 nodes, 56 edges, force-directed layout with Process, Activity, Role, System, Evidence, Application, and UserAction node types" style="width: 100%; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,51,141,0.12); border: 1px solid #e0e0e0;">
+        </div>
         <div>
           <h3>Interactive Graph (Cytoscape.js)</h3>
           <ul class="feature-list">
             <li>Layout selector: force-directed, hierarchical, circular, grid</li>
-            <li>Node type filter toggles with color coding</li>
-            <li>Search bar with highlight</li>
-            <li>Click-to-inspect node properties</li>
+            <li>7 node-type filter toggles with color coding</li>
+            <li>Search bar with node highlighting</li>
+            <li>Click-to-inspect node properties and relationships</li>
+            <li>32 nodes, 56 edges in Meridian engagement graph</li>
           </ul>
-        </div>
-        <div>
-          <h3>Node Types</h3>
+          <h3 style="margin-top: 1.5rem;">Node Types</h3>
           <ul class="feature-list">
-            <li style="color: var(--kmflow-blue);"><strong>Process</strong> &mdash; Core processes and sub-processes</li>
-            <li style="color: #7AB800;"><strong>Evidence</strong> &mdash; All ingested evidence items</li>
-            <li style="color: #BC204B;"><strong>Governance</strong> &mdash; Policies, controls, regulations</li>
-            <li style="color: #F7A800;"><strong>TOM &amp; Gaps</strong> &mdash; Target model and deviations</li>
-            <li style="color: #00A3A1;"><strong>Entity</strong> &mdash; People, organizations, roles, systems</li>
+            <li style="color: #22c55e;"><strong>Process</strong> &mdash; Core processes (Loan Origination, Income Verification)</li>
+            <li style="color: #22c55e;"><strong>Activity</strong> &mdash; Process steps (Credit Check, Receive Application)</li>
+            <li style="color: var(--kmflow-blue);"><strong>Role</strong> &mdash; People (Loan Officer, Senior Underwriter)</li>
+            <li style="color: var(--kmflow-medium-gray);"><strong>System</strong> &mdash; Applications (Temenos T24, Microsoft Excel)</li>
+            <li style="color: #f59e0b;"><strong>Evidence</strong> &mdash; Source documents and data (Interviews, Policy Docs)</li>
+            <li style="color: var(--kmflow-medium-gray);"><strong>Application</strong> &mdash; External systems (Google Chrome, Outlook)</li>
+            <li style="color: var(--kmflow-medium-gray);"><strong>UserAction</strong> &mdash; Captured desktop actions</li>
           </ul>
         </div>
       </div>
@@ -3155,7 +4045,7 @@ confidence = (
     </section>
 
     <!-- Slide 35b: Operating Model Scenario Engine (Deep Dive) -->
-    <section id="slide-35b" class="slide slide-light">
+    <section id="slide-36" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Application: Scenario Engine</span>
         <h2>Operating Model Scenario Engine</h2>
@@ -3198,12 +4088,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 35b</span>
+        <span>Slide 36</span>
       </div>
     </section>
 
     <!-- Slide 36: Evidence Lineage & Provenance -->
-    <section id="slide-36" class="slide slide-light">
+    <section id="slide-37" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Application: Lineage</span>
         <h2>Evidence Lineage &amp; Provenance</h2>
@@ -3237,12 +4127,19 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 36</span>
+        <span>Slide 37</span>
       </div>
     </section>
 
+    <!-- ── Section E: Architecture & Tech ─────────────────────────── -->
+    <div id="appendix-e" class="appendix-section-divider">
+      <div class="section-letter">E</div>
+      <h2>Architecture &amp; Tech</h2>
+      <p class="section-desc">System design, tech stack, APIs, integrations, and data governance</p>
+    </div>
+
     <!-- Slide 37: System Architecture -->
-    <section id="slide-37" class="slide slide-gray">
+    <section id="slide-38" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Architecture</span>
         <h2>System Architecture</h2>
@@ -3272,12 +4169,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 37</span>
+        <span>Slide 38</span>
       </div>
     </section>
 
     <!-- Slide 38: Tech Stack -->
-    <section id="slide-38" class="slide slide-light">
+    <section id="slide-39" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Technology</span>
         <h2>Tech Stack</h2>
@@ -3348,12 +4245,19 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 38</span>
+        <span>Slide 39</span>
       </div>
     </section>
 
+    <!-- ── Section F: Desktop Task Mining ──────────────────────────── -->
+    <div id="appendix-f" class="appendix-section-divider">
+      <div class="section-letter">F</div>
+      <h2>Desktop Task Mining</h2>
+      <p class="section-desc">macOS + Windows agents: capture, classification, ML pipeline, privacy</p>
+    </div>
+
     <!-- Slide 38a: Desktop Task Mining — The Evidence Gap -->
-    <section id="slide-38a" class="slide slide-dark">
+    <section id="slide-40" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-blue">Agent Technology</span>
         <h2>Desktop Task Mining: The Evidence Gap</h2>
@@ -3394,12 +4298,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 38a</span>
+        <span>Slide 40</span>
       </div>
     </section>
 
     <!-- Slide 38b: Our Solution — Cross-Platform Desktop Agents -->
-    <section id="slide-38b" class="slide slide-light">
+    <section id="slide-41" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Agent Technology</span>
         <h2>Our Solution: Cross-Platform Desktop Agents</h2>
@@ -3439,12 +4343,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 38b</span>
+        <span>Slide 41</span>
       </div>
     </section>
 
     <!-- Slide 38c: Agent Architecture -->
-    <section id="slide-38c" class="slide slide-gray">
+    <section id="slide-42" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Agent Technology</span>
         <h2>Agent Architecture</h2>
@@ -3494,12 +4398,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 38c</span>
+        <span>Slide 42</span>
       </div>
     </section>
 
     <!-- Slide 38d: Event Taxonomy -->
-    <section id="slide-38d" class="slide slide-light">
+    <section id="slide-43" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Agent Technology</span>
         <h2>Event Taxonomy</h2>
@@ -3551,12 +4455,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 38d</span>
+        <span>Slide 43</span>
       </div>
     </section>
 
     <!-- Slide 38e: PII Defense in Depth -->
-    <section id="slide-38e" class="slide slide-dark">
+    <section id="slide-44" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-blue">Agent Technology</span>
         <h2>PII Defense in Depth</h2>
@@ -3594,12 +4498,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 38e</span>
+        <span>Slide 44</span>
       </div>
     </section>
 
     <!-- Slide 38f: Keystroke Capture Modes -->
-    <section id="slide-38f" class="slide slide-light">
+    <section id="slide-45" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Agent Technology</span>
         <h2>Keystroke Capture Modes</h2>
@@ -3643,12 +4547,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 38f</span>
+        <span>Slide 45</span>
       </div>
     </section>
 
     <!-- Slide 38g: Desktop-to-Evidence Data Flow -->
-    <section id="slide-38g" class="slide slide-gray">
+    <section id="slide-46" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Agent Technology</span>
         <h2>Desktop-to-Evidence Data Flow</h2>
@@ -3718,12 +4622,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 38g</span>
+        <span>Slide 46</span>
       </div>
     </section>
 
     <!-- Slide 38h: Deployment Models -->
-    <section id="slide-38h" class="slide slide-light">
+    <section id="slide-47" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Agent Technology</span>
         <h2>Deployment Models</h2>
@@ -3770,12 +4674,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 38h</span>
+        <span>Slide 47</span>
       </div>
     </section>
 
     <!-- Slide 38i: Knowledge Graph Extensions -->
-    <section id="slide-38i" class="slide slide-gray">
+    <section id="slide-48" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Agent Technology</span>
         <h2>Knowledge Graph Extensions</h2>
@@ -3826,12 +4730,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 38i</span>
+        <span>Slide 48</span>
       </div>
     </section>
 
     <!-- Slide 38j: Admin — Agent Management -->
-    <section id="slide-38j" class="slide slide-light">
+    <section id="slide-49" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Agent Technology</span>
         <h2>Admin: Agent Management</h2>
@@ -3860,12 +4764,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 38j</span>
+        <span>Slide 49</span>
       </div>
     </section>
 
     <!-- Slide 38k: Admin — Capture Policy & PII Quarantine -->
-    <section id="slide-38k" class="slide slide-gray">
+    <section id="slide-50" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Agent Technology</span>
         <h2>Admin: Capture Policy &amp; PII Quarantine</h2>
@@ -3906,12 +4810,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 38k</span>
+        <span>Slide 50</span>
       </div>
     </section>
 
     <!-- Slide 38l: Competitive Differentiation -->
-    <section id="slide-38l" class="slide slide-dark">
+    <section id="slide-51" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-blue">Agent Technology</span>
         <h2>Competitive Differentiation</h2>
@@ -3960,12 +4864,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 38l</span>
+        <span>Slide 51</span>
       </div>
     </section>
 
     <!-- Slide 38m: Phased Delivery Roadmap -->
-    <section id="slide-38m" class="slide slide-light">
+    <section id="slide-52" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Agent Technology</span>
         <h2>Phased Delivery Roadmap</h2>
@@ -4034,12 +4938,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 38m</span>
+        <span>Slide 52</span>
       </div>
     </section>
 
     <!-- Slide 39: Knowledge Graph Schema -->
-    <section id="slide-39" class="slide slide-dark">
+    <section id="slide-53" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-light">Data Model</span>
         <h2>Knowledge Graph Visualization</h2>
@@ -4061,12 +4965,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 39</span>
+        <span>Slide 53</span>
       </div>
     </section>
 
     <!-- Slide 40: Case Study - Loan Origination -->
-    <section id="slide-40" class="slide slide-dark">
+    <section id="slide-54" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-light">Case Study</span>
         <h2>Loan Origination — Process Intelligence in Action</h2>
@@ -4097,12 +5001,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 40</span>
+        <span>Slide 54</span>
       </div>
     </section>
 
     <!-- Slide 41: Data Model -->
-    <section id="slide-41" class="slide slide-gray">
+    <section id="slide-55" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Data Model</span>
         <h2>Core Entities (PostgreSQL)</h2>
@@ -4158,12 +5062,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 41</span>
+        <span>Slide 55</span>
       </div>
     </section>
 
     <!-- Slide 42: Data Governance Framework -->
-    <section id="slide-42" class="slide slide-gray">
+    <section id="slide-56" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Enterprise Readiness</span>
         <h2>Data Governance Framework</h2>
@@ -4199,12 +5103,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 42</span>
+        <span>Slide 56</span>
       </div>
     </section>
 
     <!-- Slide 43: API Surface + MCP Server -->
-    <section id="slide-43" class="slide slide-light">
+    <section id="slide-57" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">API &amp; Integration</span>
         <h2>API Surface + MCP Server</h2>
@@ -4242,12 +5146,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 43</span>
+        <span>Slide 57</span>
       </div>
     </section>
 
     <!-- Slide 44: Integration Framework -->
-    <section id="slide-44" class="slide slide-dark">
+    <section id="slide-58" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-light">Capability 6</span>
         <h2>Integration Framework</h2>
@@ -4303,12 +5207,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 44</span>
+        <span>Slide 58</span>
       </div>
     </section>
 
     <!-- Slide 45: Flow 1 - Engagement Setup -->
-    <section id="slide-45" class="slide slide-gray">
+    <section id="slide-59" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">User Flow 1</span>
         <h2>Engagement Setup & Evidence Collection</h2>
@@ -4329,12 +5233,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 45</span>
+        <span>Slide 59</span>
       </div>
     </section>
 
     <!-- Slide 46: Flow 2 - POV Generation -->
-    <section id="slide-46" class="slide slide-light">
+    <section id="slide-60" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">User Flow 2</span>
         <h2>Process Point of View Generation</h2>
@@ -4353,12 +5257,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 46</span>
+        <span>Slide 60</span>
       </div>
     </section>
 
     <!-- Slide 47: Flow 3 - TOM Alignment -->
-    <section id="slide-47" class="slide slide-gray">
+    <section id="slide-61" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">User Flow 3</span>
         <h2>TOM Alignment & Gap Analysis</h2>
@@ -4380,12 +5284,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 47</span>
+        <span>Slide 61</span>
       </div>
     </section>
 
     <!-- Slide 48: Evidence Parser Template -->
-    <section id="slide-48" class="slide slide-light">
+    <section id="slide-62" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Workflow</span>
         <h2>Evidence Parser Template</h2>
@@ -4400,12 +5304,19 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 48</span>
+        <span>Slide 62</span>
       </div>
     </section>
 
+    <!-- ── Section G: Security & Compliance ─────────────────────────── -->
+    <div id="appendix-g" class="appendix-section-divider">
+      <div class="section-letter">G</div>
+      <h2>Security &amp; Compliance</h2>
+      <p class="section-desc">Data isolation, encryption, compliance posture, and audit history</p>
+    </div>
+
     <!-- Slide 49: Security & Data Isolation -->
-    <section id="slide-49" class="slide slide-light">
+    <section id="slide-63" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Security & Compliance</span>
         <h2>Security & Data Isolation</h2>
@@ -4439,12 +5350,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 49</span>
+        <span>Slide 63</span>
       </div>
     </section>
 
     <!-- Slide 50: Compliance -->
-    <section id="slide-50" class="slide slide-dark">
+    <section id="slide-64" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-light">Compliance</span>
         <h2>Compliance Posture</h2>
@@ -4488,15 +5399,22 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 50</span>
+        <span>Slide 64</span>
       </div>
     </section>
 
-    <!-- Slide 50a: Agentic SDLC — How We Build -->
-    <section id="slide-50a" class="slide slide-dark">
+    <!-- ── Section H: Blaze SDLC ─────────────────────────────────── -->
+    <div id="appendix-h" class="appendix-section-divider">
+      <div class="section-letter">H</div>
+      <h2>Blaze SDLC</h2>
+      <p class="section-desc">How KMFlow is built: CDD methodology, 9-agent PR review, hook enforcement</p>
+    </div>
+
+    <!-- Slide 65: Blaze SDLC — How We Build -->
+    <section id="slide-65" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-light">Development Methodology</span>
-        <h2>Agentic SDLC: How We Build</h2>
+        <h2>Blaze SDLC: How We Build</h2>
         <p>A 4-phase development lifecycle with enforced quality gates at every stage</p>
       </div>
       <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; margin-bottom: 1.5rem;">
@@ -4570,12 +5488,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 50a</span>
+        <span>Slide 65</span>
       </div>
     </section>
 
     <!-- Slide 50b: 7-Phase Development Workflow -->
-    <section id="slide-50b" class="slide slide-light">
+    <section id="slide-66" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Development Methodology</span>
         <h2>7-Phase Development Workflow</h2>
@@ -4636,12 +5554,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 50b</span>
+        <span>Slide 66</span>
       </div>
     </section>
 
     <!-- Slide 50c: 9-Agent PR Review -->
-    <section id="slide-50c" class="slide slide-gradient">
+    <section id="slide-67" class="slide slide-gradient">
       <div class="section-header">
         <span class="badge badge-light">Development Methodology</span>
         <h2>9-Agent PR Review</h2>
@@ -4703,12 +5621,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 50c</span>
+        <span>Slide 67</span>
       </div>
     </section>
 
     <!-- Slide 50d: Pipeline Enforcement & Evidence Lifecycle -->
-    <section id="slide-50d" class="slide slide-light">
+    <section id="slide-68" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Development Methodology</span>
         <h2>Pipeline Enforcement &amp; Evidence Lifecycle</h2>
@@ -4797,12 +5715,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 50d</span>
+        <span>Slide 68</span>
       </div>
     </section>
 
     <!-- Slide 50e: Hook Enforcement System -->
-    <section id="slide-50e" class="slide slide-gray">
+    <section id="slide-69" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Development Methodology</span>
         <h2>Hook Enforcement System</h2>
@@ -4863,12 +5781,19 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 50e</span>
+        <span>Slide 69</span>
       </div>
     </section>
 
+    <!-- ── Section I: Roadmap ──────────────────────────────────────── -->
+    <div id="appendix-i" class="appendix-section-divider">
+      <div class="section-letter">I</div>
+      <h2>Roadmap</h2>
+      <p class="section-desc">Foundation delivered, Decision Intelligence next, then Scale</p>
+    </div>
+
     <!-- Slide 51: Foundation MVP — Delivered -->
-    <section id="slide-51" class="slide slide-light">
+    <section id="slide-70" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Roadmap</span>
         <h2>Foundation (MVP) &mdash; Delivered</h2>
@@ -4934,12 +5859,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 51</span>
+        <span>Slide 70</span>
       </div>
     </section>
 
     <!-- Slide 52: What's New — Decision Intelligence -->
-    <section id="slide-52" class="slide slide-light">
+    <section id="slide-71" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Changelog</span>
         <h2>What&rsquo;s New &mdash; Decision Intelligence</h2>
@@ -4987,12 +5912,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 52</span>
+        <span>Slide 71</span>
       </div>
     </section>
 
     <!-- Slide 53: Phase 2 Intelligence + Data Platform -->
-    <section id="slide-53" class="slide slide-gray">
+    <section id="slide-72" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Roadmap: Phase 2</span>
         <h2>Intelligence + Data Platform</h2>
@@ -5036,12 +5961,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 53</span>
+        <span>Slide 72</span>
       </div>
     </section>
 
     <!-- Slide 54: Phase 3 - Scale & Autonomy -->
-    <section id="slide-54" class="slide slide-dark">
+    <section id="slide-73" class="slide slide-dark">
       <div class="section-header">
         <span class="badge badge-light">Phase 3</span>
         <h2>Scale & Autonomy</h2>
@@ -5072,12 +5997,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 54</span>
+        <span>Slide 73</span>
       </div>
     </section>
 
     <!-- Slide 55: Success Metrics -->
-    <section id="slide-55" class="slide slide-light">
+    <section id="slide-74" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Success Metrics</span>
         <h2>Measuring Success</h2>
@@ -5134,12 +6059,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 55</span>
+        <span>Slide 74</span>
       </div>
     </section>
 
     <!-- Slide 56: Next Steps -->
-    <section id="slide-56" class="slide slide-gradient">
+    <section id="slide-75" class="slide slide-gradient">
       <div class="section-header">
         <span class="badge badge-light">Next Steps</span>
         <h2>Launch Plan</h2>
@@ -5173,7 +6098,7 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 56</span>
+        <span>Slide 75</span>
       </div>
     </section>
 
@@ -5184,9 +6109,16 @@ confidence = (
     
 
     
+    <!-- ── Section J: Entity Reference & Stats ─────────────────────── -->
+    <div id="appendix-j" class="appendix-section-divider">
+      <div class="section-letter">J</div>
+      <h2>Entity Reference &amp; Stats</h2>
+      <p class="section-desc">Feature cards, entity walkthroughs, project metrics, and changelog</p>
+    </div>
+
     <!-- WALKTHROUGH-APPENDIX-START hero=57 -->
 
-    <section id="slide-57" class="slide slide-gradient">
+    <section id="slide-76" class="slide slide-gradient">
       <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;">
         <div style="margin-bottom: 1.5rem;">
           <span style="display: inline-block; background: rgba(255,255,255,0.2); color: #fff; font-family: var(--font-body); font-size: 0.85rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.4rem 1.2rem; border-radius: 2rem; border: 1px solid rgba(255,255,255,0.35);">Appendix</span>
@@ -5207,11 +6139,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 57</span>
+        <span>Slide 76</span>
       </div>
     </section>
 
-    <section id="slide-58" class="slide slide-dark">
+    <section id="slide-77" class="slide slide-dark">
       <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;">
         <div style="width: 72px; height: 72px; border-radius: 50%; background: var(--kmflow-light-blue); display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; font-size: 2rem; box-shadow: 0 4px 16px rgba(0,145,218,0.4);">
           <span>&#9881;</span>
@@ -5235,11 +6167,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 58</span>
+        <span>Slide 77</span>
       </div>
     </section>
 
-    <section id="slide-59" class="slide slide-light">
+    <section id="slide-78" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Home Dashboard</h3>
@@ -5256,11 +6188,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 59</span>
+        <span>Slide 78</span>
       </div>
     </section>
 
-    <section id="slide-60" class="slide slide-light">
+    <section id="slide-79" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Engagement Dashboard</h3>
@@ -5277,11 +6209,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 60</span>
+        <span>Slide 79</span>
       </div>
     </section>
 
-    <section id="slide-61" class="slide slide-light">
+    <section id="slide-80" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Evidence Upload</h3>
@@ -5298,11 +6230,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 61</span>
+        <span>Slide 80</span>
       </div>
     </section>
 
-    <section id="slide-62" class="slide slide-light">
+    <section id="slide-81" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Knowledge Graph</h3>
@@ -5319,11 +6251,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 62</span>
+        <span>Slide 81</span>
       </div>
     </section>
 
-    <section id="slide-63" class="slide slide-light">
+    <section id="slide-82" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Data Lineage</h3>
@@ -5340,11 +6272,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 63</span>
+        <span>Slide 82</span>
       </div>
     </section>
 
-    <section id="slide-64" class="slide slide-light">
+    <section id="slide-83" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">TOM Alignment</h3>
@@ -5361,11 +6293,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 64</span>
+        <span>Slide 83</span>
       </div>
     </section>
 
-    <section id="slide-65" class="slide slide-light">
+    <section id="slide-84" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Conformance Checking</h3>
@@ -5382,11 +6314,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 65</span>
+        <span>Slide 84</span>
       </div>
     </section>
 
-    <section id="slide-66" class="slide slide-light">
+    <section id="slide-85" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Process Library</h3>
@@ -5403,11 +6335,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 66</span>
+        <span>Slide 85</span>
       </div>
     </section>
 
-    <section id="slide-67" class="slide slide-light">
+    <section id="slide-86" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Monitoring Dashboard</h3>
@@ -5424,11 +6356,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 67</span>
+        <span>Slide 86</span>
       </div>
     </section>
 
-    <section id="slide-68" class="slide slide-light">
+    <section id="slide-87" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Engagement Roadmap</h3>
@@ -5445,11 +6377,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 68</span>
+        <span>Slide 87</span>
       </div>
     </section>
 
-    <section id="slide-69" class="slide slide-light">
+    <section id="slide-88" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Simulations</h3>
@@ -5466,11 +6398,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 69</span>
+        <span>Slide 88</span>
       </div>
     </section>
 
-    <section id="slide-70" class="slide slide-light">
+    <section id="slide-89" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Governance</h3>
@@ -5487,11 +6419,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 70</span>
+        <span>Slide 89</span>
       </div>
     </section>
 
-    <section id="slide-71" class="slide slide-light">
+    <section id="slide-90" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Reports</h3>
@@ -5508,11 +6440,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 71</span>
+        <span>Slide 90</span>
       </div>
     </section>
 
-    <section id="slide-72" class="slide slide-light">
+    <section id="slide-91" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Analytics</h3>
@@ -5529,11 +6461,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 72</span>
+        <span>Slide 91</span>
       </div>
     </section>
 
-    <section id="slide-73" class="slide slide-light">
+    <section id="slide-92" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Connectors</h3>
@@ -5550,11 +6482,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 73</span>
+        <span>Slide 92</span>
       </div>
     </section>
 
-    <section id="slide-74" class="slide slide-light">
+    <section id="slide-93" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Shelf Requests</h3>
@@ -5571,11 +6503,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 74</span>
+        <span>Slide 93</span>
       </div>
     </section>
 
-    <section id="slide-75" class="slide slide-light">
+    <section id="slide-94" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Pattern Library</h3>
@@ -5592,11 +6524,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 75</span>
+        <span>Slide 94</span>
       </div>
     </section>
 
-    <section id="slide-76" class="slide slide-light">
+    <section id="slide-95" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">AI Copilot</h3>
@@ -5613,11 +6545,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 76</span>
+        <span>Slide 95</span>
       </div>
     </section>
 
-    <section id="slide-77" class="slide slide-light">
+    <section id="slide-96" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Admin Panel</h3>
@@ -5634,11 +6566,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 77</span>
+        <span>Slide 96</span>
       </div>
     </section>
 
-    <section id="slide-78" class="slide slide-light">
+    <section id="slide-97" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Task Mining Agents</h3>
@@ -5655,11 +6587,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 78</span>
+        <span>Slide 97</span>
       </div>
     </section>
 
-    <section id="slide-79" class="slide slide-light">
+    <section id="slide-98" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Task Mining Policy</h3>
@@ -5676,11 +6608,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 79</span>
+        <span>Slide 98</span>
       </div>
     </section>
 
-    <section id="slide-80" class="slide slide-light">
+    <section id="slide-99" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Task Mining Dashboard</h3>
@@ -5697,11 +6629,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 80</span>
+        <span>Slide 99</span>
       </div>
     </section>
 
-    <section id="slide-81" class="slide slide-light">
+    <section id="slide-100" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Task Mining Quarantine</h3>
@@ -5718,11 +6650,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 81</span>
+        <span>Slide 100</span>
       </div>
     </section>
 
-    <section id="slide-82" class="slide slide-dark">
+    <section id="slide-101" class="slide slide-dark">
       <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;">
         <div style="width: 72px; height: 72px; border-radius: 50%; background: var(--kmflow-light-blue); display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; font-size: 2rem; box-shadow: 0 4px 16px rgba(0,145,218,0.4);">
           <span>&#128197;</span>
@@ -5746,11 +6678,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 82</span>
+        <span>Slide 101</span>
       </div>
     </section>
 
-    <section id="slide-83" class="slide slide-light">
+    <section id="slide-102" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Home Dashboard</h3>
@@ -5767,11 +6699,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 83</span>
+        <span>Slide 102</span>
       </div>
     </section>
 
-    <section id="slide-84" class="slide slide-light">
+    <section id="slide-103" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Engagement Dashboard</h3>
@@ -5788,11 +6720,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 84</span>
+        <span>Slide 103</span>
       </div>
     </section>
 
-    <section id="slide-85" class="slide slide-light">
+    <section id="slide-104" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Evidence Upload</h3>
@@ -5809,11 +6741,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 85</span>
+        <span>Slide 104</span>
       </div>
     </section>
 
-    <section id="slide-86" class="slide slide-light">
+    <section id="slide-105" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Knowledge Graph</h3>
@@ -5830,11 +6762,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 86</span>
+        <span>Slide 105</span>
       </div>
     </section>
 
-    <section id="slide-87" class="slide slide-light">
+    <section id="slide-106" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Data Lineage</h3>
@@ -5851,11 +6783,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 87</span>
+        <span>Slide 106</span>
       </div>
     </section>
 
-    <section id="slide-88" class="slide slide-light">
+    <section id="slide-107" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">TOM Alignment</h3>
@@ -5872,11 +6804,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 88</span>
+        <span>Slide 107</span>
       </div>
     </section>
 
-    <section id="slide-89" class="slide slide-light">
+    <section id="slide-108" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Conformance Checking</h3>
@@ -5893,11 +6825,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 89</span>
+        <span>Slide 108</span>
       </div>
     </section>
 
-    <section id="slide-90" class="slide slide-light">
+    <section id="slide-109" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Process Library</h3>
@@ -5914,11 +6846,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 90</span>
+        <span>Slide 109</span>
       </div>
     </section>
 
-    <section id="slide-91" class="slide slide-light">
+    <section id="slide-110" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Monitoring Dashboard</h3>
@@ -5935,11 +6867,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 91</span>
+        <span>Slide 110</span>
       </div>
     </section>
 
-    <section id="slide-92" class="slide slide-light">
+    <section id="slide-111" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Engagement Roadmap</h3>
@@ -5956,11 +6888,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 92</span>
+        <span>Slide 111</span>
       </div>
     </section>
 
-    <section id="slide-93" class="slide slide-light">
+    <section id="slide-112" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Simulations</h3>
@@ -5977,11 +6909,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 93</span>
+        <span>Slide 112</span>
       </div>
     </section>
 
-    <section id="slide-94" class="slide slide-light">
+    <section id="slide-113" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Governance</h3>
@@ -5998,11 +6930,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 94</span>
+        <span>Slide 113</span>
       </div>
     </section>
 
-    <section id="slide-95" class="slide slide-light">
+    <section id="slide-114" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Reports</h3>
@@ -6019,11 +6951,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 95</span>
+        <span>Slide 114</span>
       </div>
     </section>
 
-    <section id="slide-96" class="slide slide-light">
+    <section id="slide-115" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Analytics</h3>
@@ -6040,11 +6972,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 96</span>
+        <span>Slide 115</span>
       </div>
     </section>
 
-    <section id="slide-97" class="slide slide-light">
+    <section id="slide-116" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Shelf Requests</h3>
@@ -6061,11 +6993,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 97</span>
+        <span>Slide 116</span>
       </div>
     </section>
 
-    <section id="slide-98" class="slide slide-light">
+    <section id="slide-117" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">AI Copilot</h3>
@@ -6082,11 +7014,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 98</span>
+        <span>Slide 117</span>
       </div>
     </section>
 
-    <section id="slide-99" class="slide slide-dark">
+    <section id="slide-118" class="slide slide-dark">
       <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;">
         <div style="width: 72px; height: 72px; border-radius: 50%; background: var(--kmflow-light-blue); display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; font-size: 2rem; box-shadow: 0 4px 16px rgba(0,145,218,0.4);">
           <span>&#128200;</span>
@@ -6110,11 +7042,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 99</span>
+        <span>Slide 118</span>
       </div>
     </section>
 
-    <section id="slide-100" class="slide slide-light">
+    <section id="slide-119" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Home Dashboard</h3>
@@ -6131,11 +7063,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 100</span>
+        <span>Slide 119</span>
       </div>
     </section>
 
-    <section id="slide-101" class="slide slide-light">
+    <section id="slide-120" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Engagement Dashboard</h3>
@@ -6152,11 +7084,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 101</span>
+        <span>Slide 120</span>
       </div>
     </section>
 
-    <section id="slide-102" class="slide slide-light">
+    <section id="slide-121" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Evidence Upload</h3>
@@ -6173,11 +7105,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 102</span>
+        <span>Slide 121</span>
       </div>
     </section>
 
-    <section id="slide-103" class="slide slide-light">
+    <section id="slide-122" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Knowledge Graph</h3>
@@ -6194,11 +7126,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 103</span>
+        <span>Slide 122</span>
       </div>
     </section>
 
-    <section id="slide-104" class="slide slide-light">
+    <section id="slide-123" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Data Lineage</h3>
@@ -6215,11 +7147,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 104</span>
+        <span>Slide 123</span>
       </div>
     </section>
 
-    <section id="slide-105" class="slide slide-light">
+    <section id="slide-124" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">TOM Alignment</h3>
@@ -6236,11 +7168,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 105</span>
+        <span>Slide 124</span>
       </div>
     </section>
 
-    <section id="slide-106" class="slide slide-light">
+    <section id="slide-125" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Conformance Checking</h3>
@@ -6257,11 +7189,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 106</span>
+        <span>Slide 125</span>
       </div>
     </section>
 
-    <section id="slide-107" class="slide slide-light">
+    <section id="slide-126" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Process Library</h3>
@@ -6278,11 +7210,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 107</span>
+        <span>Slide 126</span>
       </div>
     </section>
 
-    <section id="slide-108" class="slide slide-light">
+    <section id="slide-127" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Monitoring Dashboard</h3>
@@ -6299,11 +7231,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 108</span>
+        <span>Slide 127</span>
       </div>
     </section>
 
-    <section id="slide-109" class="slide slide-light">
+    <section id="slide-128" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Simulations</h3>
@@ -6320,11 +7252,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 109</span>
+        <span>Slide 128</span>
       </div>
     </section>
 
-    <section id="slide-110" class="slide slide-light">
+    <section id="slide-129" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Pattern Library</h3>
@@ -6341,11 +7273,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 110</span>
+        <span>Slide 129</span>
       </div>
     </section>
 
-    <section id="slide-111" class="slide slide-light">
+    <section id="slide-130" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">AI Copilot</h3>
@@ -6362,11 +7294,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 111</span>
+        <span>Slide 130</span>
       </div>
     </section>
 
-    <section id="slide-112" class="slide slide-dark">
+    <section id="slide-131" class="slide slide-dark">
       <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;">
         <div style="width: 72px; height: 72px; border-radius: 50%; background: var(--kmflow-light-blue); display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; font-size: 2rem; box-shadow: 0 4px 16px rgba(0,145,218,0.4);">
           <span>&#128065;</span>
@@ -6390,11 +7322,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 112</span>
+        <span>Slide 131</span>
       </div>
     </section>
 
-    <section id="slide-113" class="slide slide-light">
+    <section id="slide-132" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Home Dashboard</h3>
@@ -6411,11 +7343,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 113</span>
+        <span>Slide 132</span>
       </div>
     </section>
 
-    <section id="slide-114" class="slide slide-light">
+    <section id="slide-133" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Engagement Dashboard (Restricted)</h3>
@@ -6432,11 +7364,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 114</span>
+        <span>Slide 133</span>
       </div>
     </section>
 
-    <section id="slide-115" class="slide slide-light">
+    <section id="slide-134" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Client Portal Home</h3>
@@ -6453,11 +7385,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 115</span>
+        <span>Slide 134</span>
       </div>
     </section>
 
-    <section id="slide-116" class="slide slide-light">
+    <section id="slide-135" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Client Portal Overview</h3>
@@ -6474,11 +7406,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 116</span>
+        <span>Slide 135</span>
       </div>
     </section>
 
-    <section id="slide-117" class="slide slide-light">
+    <section id="slide-136" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Evidence Status</h3>
@@ -6495,11 +7427,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 117</span>
+        <span>Slide 136</span>
       </div>
     </section>
 
-    <section id="slide-118" class="slide slide-light">
+    <section id="slide-137" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Findings</h3>
@@ -6516,11 +7448,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 118</span>
+        <span>Slide 137</span>
       </div>
     </section>
 
-    <section id="slide-119" class="slide slide-light">
+    <section id="slide-138" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Process Models</h3>
@@ -6537,11 +7469,11 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 119</span>
+        <span>Slide 138</span>
       </div>
     </section>
 
-    <section id="slide-120" class="slide slide-light">
+    <section id="slide-139" class="slide slide-light">
       <div style="display: flex; flex-direction: column; align-items: center; height: 100%; padding-top: 0.5rem;">
         <div style="width: 100%; margin-bottom: 1rem; text-align: center;">
           <h3 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; color: var(--kmflow-dark-navy); text-transform: uppercase; letter-spacing: 0.01em; margin: 0 0 0.25rem;">Client Evidence Upload</h3>
@@ -6558,13 +7490,13 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 120</span>
+        <span>Slide 139</span>
       </div>
     </section>
     <!-- WALKTHROUGH-APPENDIX-END -->
 
     <!-- Slide 124: KM4ProcessBot — Entity Extraction -->
-    <section id="slide-124" class="slide slide-light">
+    <section id="slide-140" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Decision Intelligence</span>
         <h2>KM4ProcessBot &mdash; Entity Extraction</h2>
@@ -6605,12 +7537,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 124</span>
+        <span>Slide 140</span>
       </div>
     </section>
 
     <!-- Slide 125: KM4DecisionBot — Decision Intelligence -->
-    <section id="slide-125" class="slide slide-gradient">
+    <section id="slide-141" class="slide slide-gradient">
       <div class="section-header">
         <span class="badge badge-blue" style="background: rgba(255,255,255,0.2); color: white;">Decision Intelligence</span>
         <h2 style="color: white;">KM4DecisionBot &mdash; Decision Tables</h2>
@@ -6653,12 +7585,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 125</span>
+        <span>Slide 141</span>
       </div>
     </section>
 
     <!-- Slide 126: Decision Intelligence UI -->
-    <section id="slide-126" class="slide slide-light">
+    <section id="slide-142" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Decision Intelligence</span>
         <h2>Decision Intelligence UI</h2>
@@ -6704,12 +7636,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 126</span>
+        <span>Slide 142</span>
       </div>
     </section>
 
         <!-- Slide 122: Project Stats Dashboard -->
-    <section id="slide-122" class="slide slide-gray">
+    <section id="slide-143" class="slide slide-gray">
       <div class="section-header">
         <span class="badge badge-blue">Appendix</span>
         <h2>Project Stats Dashboard</h2>
@@ -6815,12 +7747,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 122</span>
+        <span>Slide 143</span>
       </div>
     </section>
 
     <!-- Slide 123: Presentation Changelog -->
-    <section id="slide-123" class="slide slide-light">
+    <section id="slide-144" class="slide slide-light">
       <div class="section-header">
         <span class="badge badge-blue">Appendix</span>
         <h2>Presentation Changelog</h2>
@@ -6848,7 +7780,7 @@ confidence = (
           <tr style="border-bottom: 1px solid var(--kmflow-border);">
             <td style="padding: 0.75rem;">2026-02-28</td>
             <td style="padding: 0.75rem;">v5.0</td>
-            <td style="padding: 0.75rem;">CDD Methodology &amp; Compliance &mdash; 5 new slides covering Agentic SDLC 4-phase lifecycle, 7-phase development workflow, 9-agent PR review system, pipeline enforcement with evidence lifecycle, and hook enforcement system with 8 trigger points</td>
+            <td style="padding: 0.75rem;">CDD Methodology &amp; Compliance &mdash; 5 new slides covering Blaze SDLC 4-phase lifecycle, 7-phase development workflow, 9-agent PR review system, pipeline enforcement with evidence lifecycle, and hook enforcement system with 8 trigger points</td>
           </tr>
           <tr style="border-bottom: 1px solid var(--kmflow-border);">
             <td style="padding: 0.75rem;">2026-02-28</td>
@@ -6885,12 +7817,12 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 123</span>
+        <span>Slide 144</span>
       </div>
     </section>
 
     <!-- Slide 121: Final Hero -->
-    <section id="slide-121" class="slide slide-hero">
+    <section id="slide-145" class="slide slide-hero">
       <span class="tagline">Let insights reveal new opportunity</span>
       <h1>KMFlow Platform</h1>
       <p class="subtitle">Transforming Process Intelligence Through Evidence-First Analysis</p>
@@ -6901,7 +7833,7 @@ confidence = (
       <div class="slide-footer">
         <span>Confidential</span>
         <span>KMFlow Platform</span>
-        <span>Slide 121</span>
+        <span>Slide 145</span>
       </div>
     </section>
   </main>
@@ -7082,39 +8014,109 @@ confidence = (
   <script>
     // Slide indicator functionality
     const slidesContainer = document.getElementById('slidesContainer');
-    const slides = document.querySelectorAll('.slide');
+    const allScrollable = document.querySelectorAll('.exec-slide, .bridge-slide, .appendix-section-divider, .slide');
     const slideIndicator = document.getElementById('slideIndicator');
+    const backToExecBtn = document.getElementById('backToExec');
 
-    // Create dots
-    slides.forEach((slide, index) => {
+    // Identify exec vs appendix boundaries
+    const execSlides = document.querySelectorAll('.exec-slide');
+    const bridgeSlide = document.querySelector('.bridge-slide');
+    const execCount = execSlides.length + 1; // +1 for bridge
+
+    // Create dots with section grouping
+    let dotIndex = 0;
+    allScrollable.forEach((el, index) => {
+      // Add gap between exec and appendix sections
+      if (el === bridgeSlide) {
+        const gap = document.createElement('div');
+        gap.className = 'dot-section-gap';
+        slideIndicator.appendChild(gap);
+      }
+
+      // Skip section dividers from dot nav (they're half-height transitions)
+      if (el.classList.contains('appendix-section-divider')) return;
+
       const dot = document.createElement('div');
       dot.className = 'slide-dot';
+      if (el.classList.contains('exec-slide') || el.classList.contains('bridge-slide')) {
+        dot.classList.add('exec-dot');
+      }
       dot.addEventListener('click', () => {
-        slide.scrollIntoView({ behavior: 'smooth' });
+        el.scrollIntoView({ behavior: 'smooth' });
       });
+      // Tooltip with slide title
+      const h = el.querySelector('h1, h2');
+      if (h) dot.title = h.textContent.trim().substring(0, 50);
       slideIndicator.appendChild(dot);
     });
 
-    // Update active dot on scroll
+    // Update active dot on scroll + nav toggle + back-to-exec button
     const updateActiveDot = () => {
       const scrollPosition = slidesContainer.scrollTop;
       const windowHeight = window.innerHeight;
 
       let activeIndex = 0;
-      slides.forEach((slide, index) => {
-        const slideTop = slide.offsetTop;
-        if (scrollPosition >= slideTop - windowHeight / 2) {
-          activeIndex = index;
+      let inAppendix = false;
+      const dotsArray = document.querySelectorAll('.slide-dot');
+
+      // Find active slide among scrollable elements (skip dividers for dot matching)
+      let dotIdx = 0;
+      allScrollable.forEach((el) => {
+        if (el.classList.contains('appendix-section-divider')) {
+          // Check if scrolled past this divider
+          if (scrollPosition >= el.offsetTop - windowHeight / 2) {
+            inAppendix = true;
+          }
+          return;
         }
+        const slideTop = el.offsetTop;
+        if (scrollPosition >= slideTop - windowHeight / 2) {
+          activeIndex = dotIdx;
+          if (!el.classList.contains('exec-slide') && !el.classList.contains('bridge-slide')) {
+            inAppendix = true;
+          }
+        }
+        dotIdx++;
       });
 
-      document.querySelectorAll('.slide-dot').forEach((dot, index) => {
-        dot.classList.toggle('active', index === activeIndex);
+      dotsArray.forEach((dot, i) => {
+        dot.classList.toggle('active', i === activeIndex);
       });
+
+      // Toggle nav links based on section
+      const execLinks = document.getElementById('navExecLinks');
+      const appendixLinks = document.getElementById('navAppendixLinks');
+      const toggleBtns = document.querySelectorAll('.nav-section-btn');
+
+      if (inAppendix) {
+        execLinks.style.display = 'none';
+        appendixLinks.style.display = 'flex';
+        toggleBtns.forEach(b => b.classList.toggle('active', b.dataset.section === 'appendix'));
+      } else {
+        execLinks.style.display = 'flex';
+        appendixLinks.style.display = 'none';
+        toggleBtns.forEach(b => b.classList.toggle('active', b.dataset.section === 'exec'));
+      }
+
+      // Show/hide back-to-exec button
+      if (inAppendix) {
+        backToExecBtn.classList.add('visible');
+      } else {
+        backToExecBtn.classList.remove('visible');
+      }
     };
 
     slidesContainer.addEventListener('scroll', updateActiveDot);
     updateActiveDot();
+
+    // Nav section toggle
+    function scrollToSection(section) {
+      if (section === 'exec') {
+        document.getElementById('exec-1').scrollIntoView({ behavior: 'smooth' });
+      } else {
+        document.getElementById('exec-bridge').scrollIntoView({ behavior: 'smooth' });
+      }
+    }
 
     // Keyboard navigation
     document.addEventListener('keydown', (e) => {
@@ -7750,13 +8752,13 @@ confidence = (
           { name: "Pattern Library", id: "slide-33" },
           { name: "Annotations", id: "slide-34" },
           { name: "New Modules", id: "slide-35" },
-          { name: "Scenario Engine", id: "slide-36" }
+          { name: "Scenario Engine", id: "slide-37" }
         ]
       },
       {
         num: "5",
         title: "Architecture",
-        link: "#slide-37",
+        link: "#slide-38",
         description: "The technical blueprint of KMFlow: a multi-service Python/FastAPI backend, Next.js frontend, Neo4j knowledge graph, PostgreSQL with pgvector for semantic search, Redis for caching, an MCP server for AI agent tooling, and a comprehensive integration framework for external connectors.",
         highlights: [
           "FastAPI services: Evidence, Semantic, Consensus, TOM, Gap, RAG — each independently deployable",
@@ -7767,21 +8769,21 @@ confidence = (
           "Data governance framework: OPA policy engine, AES-256 encryption, RBAC, audit trail"
         ],
         slides: [
-          { name: "System Architecture", id: "slide-37" },
-          { name: "Tech Stack", id: "slide-38" },
-          { name: "Desktop Agents (macOS + Windows)", id: "slide-38a" },
-          { name: "Knowledge Graph", id: "slide-39" },
-          { name: "Loan Origination Graph Demo", id: "slide-40" },
-          { name: "Core Entities (PostgreSQL)", id: "slide-41" },
-          { name: "Data Governance", id: "slide-42" },
-          { name: "API Surface + MCP Server", id: "slide-43" },
-          { name: "Integration Framework", id: "slide-44" }
+          { name: "System Architecture", id: "slide-38" },
+          { name: "Tech Stack", id: "slide-39" },
+          { name: "Desktop Agents (macOS + Windows)", id: "slide-40" },
+          { name: "Knowledge Graph", id: "slide-53" },
+          { name: "Loan Origination Graph Demo", id: "slide-54" },
+          { name: "Core Entities (PostgreSQL)", id: "slide-55" },
+          { name: "Data Governance", id: "slide-56" },
+          { name: "API Surface + MCP Server", id: "slide-57" },
+          { name: "Integration Framework", id: "slide-58" }
         ]
       },
       {
         num: "6",
         title: "Platform Workflows",
-        link: "#slide-45",
+        link: "#slide-59",
         description: "Four executable BPMN process models that govern how KMFlow itself operates — covering the full evidence lifecycle from collection through parsing, the POV generation pipeline, TOM alignment and gap analysis, and the reusable evidence parser template for new document types.",
         highlights: [
           "Evidence Collection workflow: shelf data requests, multi-category ingestion, quality gating",
@@ -7791,16 +8793,16 @@ confidence = (
           "All workflows modelled in BPMN 2.0 with Camunda-compatible service tasks and DMN rules"
         ],
         slides: [
-          { name: "Evidence Collection", id: "slide-45" },
-          { name: "POV Generation", id: "slide-46" },
-          { name: "TOM Alignment", id: "slide-47" },
-          { name: "Evidence Parser Template", id: "slide-48" }
+          { name: "Evidence Collection", id: "slide-59" },
+          { name: "POV Generation", id: "slide-60" },
+          { name: "TOM Alignment", id: "slide-61" },
+          { name: "Evidence Parser Template", id: "slide-62" }
         ]
       },
       {
         num: "7",
         title: "Enterprise Readiness",
-        link: "#slide-49",
+        link: "#slide-63",
         description: "KMFlow's security model, data isolation architecture, compliance posture, and the Compliance-Driven Development (CDD) methodology — from engagement-level data isolation to the 9-agent PR review system that enforces quality at every stage of development.",
         highlights: [
           "Engagement-scoped data isolation: each client's data is logically and physically separated",
@@ -7810,19 +8812,19 @@ confidence = (
           "Hook enforcement system: 8 trigger points including 2 merge-blocking guards for pipeline and evidence validation"
         ],
         slides: [
-          { name: "Security & Data Isolation", id: "slide-49" },
-          { name: "Compliance Posture", id: "slide-50" },
-          { name: "Agentic SDLC: How We Build", id: "slide-50a" },
-          { name: "7-Phase Development Workflow", id: "slide-50b" },
-          { name: "9-Agent PR Review", id: "slide-50c" },
-          { name: "Pipeline Enforcement & Evidence", id: "slide-50d" },
-          { name: "Hook Enforcement System", id: "slide-50e" }
+          { name: "Security & Data Isolation", id: "slide-63" },
+          { name: "Compliance Posture", id: "slide-64" },
+          { name: "Blaze SDLC: How We Build", id: "slide-65" },
+          { name: "7-Phase Development Workflow", id: "slide-66" },
+          { name: "9-Agent PR Review", id: "slide-67" },
+          { name: "Pipeline Enforcement & Evidence", id: "slide-68" },
+          { name: "Hook Enforcement System", id: "slide-69" }
         ]
       },
       {
         num: "8",
         title: "Roadmap",
-        link: "#slide-51",
+        link: "#slide-70",
         description: "Where KMFlow has been and where it's going — the full MVP is delivered with 113K+ LOC, 5,797+ tests, and all 26 epics complete including the Windows Agent and WGI alignment. Next: intelligence enhancements, autonomous agents, and multi-tenant SaaS.",
         highlights: [
           "MVP Complete: 106 platform stories (18 epics) + 45 Windows Agent stories (8 epics) — 366 issues closed, 188 PRs merged",
@@ -7832,22 +8834,22 @@ confidence = (
           "Cross-platform desktop agents: macOS (Swift) + Windows (C# .NET 8 NativeAOT) with shared Python layer"
         ],
         slides: [
-          { name: "MVP Delivered", id: "slide-51" },
-          { name: "What's New", id: "slide-52" },
-          { name: "KM4ProcessBot", id: "slide-124" },
-          { name: "KM4DecisionBot", id: "slide-125" },
-          { name: "Decision Intelligence UI", id: "slide-126" },
-          { name: "Phase 2: Intelligence", id: "slide-53" },
-          { name: "Phase 3: Scale", id: "slide-54" },
-          { name: "Measuring Success", id: "slide-55" },
-          { name: "Launch Plan", id: "slide-56" }
+          { name: "MVP Delivered", id: "slide-70" },
+          { name: "What's New", id: "slide-71" },
+          { name: "KM4ProcessBot", id: "slide-140" },
+          { name: "KM4DecisionBot", id: "slide-141" },
+          { name: "Decision Intelligence UI", id: "slide-142" },
+          { name: "Phase 2: Intelligence", id: "slide-72" },
+          { name: "Phase 3: Scale", id: "slide-73" },
+          { name: "Measuring Success", id: "slide-74" },
+          { name: "Launch Plan", id: "slide-75" }
         ]
       }
       ,
       {
         num: "9",
         title: "Appendix",
-        link: "#slide-122",
+        link: "#slide-143",
         description: "Project-level metrics, codebase statistics, and a changelog of this presentation itself — documenting what was built and how the story evolved.",
         highlights: [
           "115,000+ lines of code across Python, TypeScript, Swift, and C#",
@@ -7857,8 +8859,8 @@ confidence = (
           "Presentation changelog tracking 9 major versions from v1.0 to v7.0"
         ],
         slides: [
-          { name: "Project Stats Dashboard", id: "slide-122" },
-          { name: "Presentation Changelog", id: "slide-123" }
+          { name: "Project Stats Dashboard", id: "slide-143" },
+          { name: "Presentation Changelog", id: "slide-144" }
         ]
       }
     ];

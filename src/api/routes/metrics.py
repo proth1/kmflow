@@ -7,6 +7,7 @@ recording metric readings, and retrieving aggregate summaries.
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -55,7 +56,7 @@ class SuccessMetricResponse(BaseModel):
     target_value: float
     category: MetricCategory
     description: str | None
-    created_at: Any
+    created_at: datetime
 
 
 class SuccessMetricList(BaseModel):
@@ -83,7 +84,7 @@ class MetricReadingResponse(BaseModel):
     metric_id: UUID
     engagement_id: UUID
     value: float
-    recorded_at: Any
+    recorded_at: datetime
     notes: str | None
 
 

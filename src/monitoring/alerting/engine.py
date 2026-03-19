@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from collections import deque
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -26,6 +27,9 @@ class AlertType:
     EVIDENCE_QUALITY_DROP = "EVIDENCE_QUALITY_DROP"
     EVIDENCE_CONTRADICTION = "EVIDENCE_CONTRADICTION"
     SLA_BREACH = "SLA_BREACH"
+    RETRIEVAL_QUALITY_DROP = "RETRIEVAL_QUALITY_DROP"
+    ENTITY_EXTRACTION_REGRESSION = "ENTITY_EXTRACTION_REGRESSION"
+    GRAPH_HEALTH_DEGRADATION = "GRAPH_HEALTH_DEGRADATION"
 
 
 class Severity:
@@ -442,10 +446,11 @@ class AlertEngine:
     ) -> None:
         self.rules: list[AlertRule] = rules or []
         self.channels: list[NotificationChannel] = channels or []
-        self.alerts: list[Alert] = []
+        self.alerts: deque[Alert] = deque(maxlen=10000)
         self.deduplicator = AlertDeduplicator(dedup_window_minutes)
         self.rule_evaluator = RuleEvaluator()
-        self._notification_log: list[dict[str, Any]] = []
+        self._notification_log: deque[dict[str, Any]] = deque(maxlen=1000)
+        self._event_count: int = 0
 
     def process_event(self, event: AlertEvent) -> list[Alert]:
         """Process an incoming alert event through the full pipeline.
@@ -462,6 +467,11 @@ class AlertEngine:
             List of new (non-deduplicated) alerts that were created.
         """
         new_alerts: list[Alert] = []
+
+        # Periodic deduplicator cleanup every 100 events
+        self._event_count += 1
+        if self._event_count % 100 == 0:
+            self.deduplicator.clear_expired()
 
         # Direct alert from event
         direct_alert = Alert(
@@ -572,7 +582,7 @@ class AlertEngine:
         Returns:
             Dict with alerts list, total count, and pagination info.
         """
-        filtered = self.alerts
+        filtered: list[Alert] = list(self.alerts)
 
         if engagement_id is not None:
             filtered = [a for a in filtered if a.engagement_id == engagement_id]

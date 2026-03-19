@@ -179,12 +179,12 @@ class TestTraverseGraph:
 
     @pytest.mark.asyncio
     async def test_traverse_invalid_depth(self, client: AsyncClient) -> None:
-        """Should reject depth outside 1-5 range."""
+        """Should reject depth outside 1-5 range (422 from Query validation)."""
         response = await client.get("/api/v1/graph/traverse/n1?depth=0")
-        assert response.status_code == 400
+        assert response.status_code == 422
 
         response = await client.get("/api/v1/graph/traverse/n1?depth=10")
-        assert response.status_code == 400
+        assert response.status_code == 422
 
     @pytest.mark.asyncio
     @patch("src.api.routes.graph.KnowledgeGraphService")

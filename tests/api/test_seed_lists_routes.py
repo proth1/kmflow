@@ -187,7 +187,7 @@ class TestDeprecateSeedTerm:
         mock_session.execute = AsyncMock(return_value=result_mock)
 
         client = _make_app(mock_session)
-        resp = client.delete(f"/api/v1/engagements/{ENGAGEMENT_ID}/seed-terms/{TERM_ID}")
+        resp = client.patch(f"/api/v1/engagements/{ENGAGEMENT_ID}/seed-terms/{TERM_ID}/deprecate")
         assert resp.status_code == 200
         assert resp.json()["status"] == "deprecated"
 

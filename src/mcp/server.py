@@ -76,7 +76,7 @@ async def call_tool(
         }
 
     try:
-        result = await _execute_tool(tool_name, args, request)
+        result = await _execute_tool(tool_name, args, request, user_id=client["user_id"])
         return {
             "request_id": payload.request_id,
             "tool_name": tool_name,
@@ -105,7 +105,7 @@ async def call_tool_stream(
         yield f"data: {json.dumps({'type': 'start', 'tool_name': payload.tool_name})}\n\n"
 
         try:
-            result = await _execute_tool(payload.tool_name, payload.arguments, request)
+            result = await _execute_tool(payload.tool_name, payload.arguments, request, user_id=client["user_id"])
             yield f"data: {json.dumps({'type': 'result', 'data': result})}\n\n"
         except Exception as e:  # Intentionally broad: SSE generator must catch all errors to send done event
             yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
@@ -127,40 +127,52 @@ async def _execute_tool(
     tool_name: str,
     args: dict[str, Any],
     request: Request,
+    *,
+    user_id: str,
 ) -> Any:
     """Execute an MCP tool by dispatching to the appropriate handler."""
     # Get database session
     session_factory = request.app.state.db_session_factory
 
     if tool_name == "get_engagement":
-        return await _tool_get_engagement(session_factory, args)
+        return await _tool_get_engagement(session_factory, args, user_id=user_id)
     elif tool_name == "list_evidence":
-        return await _tool_list_evidence(session_factory, args)
+        return await _tool_list_evidence(session_factory, args, user_id=user_id)
     elif tool_name == "get_process_model":
-        return await _tool_get_process_model(session_factory, args)
+        return await _tool_get_process_model(session_factory, args, user_id=user_id)
     elif tool_name == "get_gaps":
-        return await _tool_get_gaps(session_factory, args)
+        return await _tool_get_gaps(session_factory, args, user_id=user_id)
     elif tool_name == "get_monitoring_status":
-        return await _tool_get_monitoring_status(session_factory, args)
+        return await _tool_get_monitoring_status(session_factory, args, user_id=user_id)
     elif tool_name == "get_deviations":
-        return await _tool_get_deviations(session_factory, args)
+        return await _tool_get_deviations(session_factory, args, user_id=user_id)
     elif tool_name == "search_patterns":
-        return await _tool_search_patterns(session_factory, args)
+        return await _tool_search_patterns(session_factory, args, user_id=user_id)
     elif tool_name == "run_simulation":
-        return await _tool_run_simulation(session_factory, args)
+        return await _tool_run_simulation(session_factory, args, user_id=user_id)
     else:
         raise ValueError(f"Unhandled tool: {tool_name}")
 
 
-async def _tool_get_engagement(session_factory: Any, args: dict[str, Any]) -> dict[str, Any]:
+async def _tool_get_engagement(session_factory: Any, args: dict[str, Any], *, user_id: str) -> dict[str, Any]:
     from uuid import UUID
 
     from sqlalchemy import func, select
 
-    from src.core.models import Engagement, EvidenceItem
+    from src.core.models import Engagement, EngagementMember, EvidenceItem
 
     eid = UUID(args["engagement_id"])
     async with session_factory() as session:
+        # Verify engagement membership before returning data
+        member_result = await session.execute(
+            select(EngagementMember).where(
+                EngagementMember.engagement_id == eid,
+                EngagementMember.user_id == UUID(user_id),
+            )
+        )
+        if member_result.scalar_one_or_none() is None:
+            raise ValueError("Access denied: not a member of this engagement")
+
         result = await session.execute(select(Engagement).where(Engagement.id == eid))
         eng = result.scalar_one_or_none()
         if not eng:
@@ -179,16 +191,26 @@ async def _tool_get_engagement(session_factory: Any, args: dict[str, Any]) -> di
         }
 
 
-async def _tool_list_evidence(session_factory: Any, args: dict[str, Any]) -> dict[str, Any]:
+async def _tool_list_evidence(session_factory: Any, args: dict[str, Any], *, user_id: str) -> dict[str, Any]:
     from uuid import UUID
 
     from sqlalchemy import select
 
-    from src.core.models import EvidenceItem
+    from src.core.models import EngagementMember, EvidenceItem
 
     eid = UUID(args["engagement_id"])
     limit = args.get("limit", 20)
     async with session_factory() as session:
+        # Verify engagement membership before returning data
+        member_result = await session.execute(
+            select(EngagementMember).where(
+                EngagementMember.engagement_id == eid,
+                EngagementMember.user_id == UUID(user_id),
+            )
+        )
+        if member_result.scalar_one_or_none() is None:
+            raise ValueError("Access denied: not a member of this engagement")
+
         query = select(EvidenceItem).where(EvidenceItem.engagement_id == eid).limit(limit)
         result = await session.execute(query)
         items = [
@@ -202,15 +224,25 @@ async def _tool_list_evidence(session_factory: Any, args: dict[str, Any]) -> dic
         return {"items": items, "total": len(items)}
 
 
-async def _tool_get_process_model(session_factory: Any, args: dict[str, Any]) -> dict[str, Any]:
+async def _tool_get_process_model(session_factory: Any, args: dict[str, Any], *, user_id: str) -> dict[str, Any]:
     from uuid import UUID
 
     from sqlalchemy import select
 
-    from src.core.models import ProcessModel
+    from src.core.models import EngagementMember, ProcessModel
 
     eid = UUID(args["engagement_id"])
     async with session_factory() as session:
+        # Verify engagement membership before returning data
+        member_result = await session.execute(
+            select(EngagementMember).where(
+                EngagementMember.engagement_id == eid,
+                EngagementMember.user_id == UUID(user_id),
+            )
+        )
+        if member_result.scalar_one_or_none() is None:
+            raise ValueError("Access denied: not a member of this engagement")
+
         result = await session.execute(
             select(ProcessModel)
             .where(ProcessModel.engagement_id == eid)
@@ -228,15 +260,25 @@ async def _tool_get_process_model(session_factory: Any, args: dict[str, Any]) ->
         }
 
 
-async def _tool_get_gaps(session_factory: Any, args: dict[str, Any]) -> dict[str, Any]:
+async def _tool_get_gaps(session_factory: Any, args: dict[str, Any], *, user_id: str) -> dict[str, Any]:
     from uuid import UUID
 
     from sqlalchemy import select
 
-    from src.core.models import GapAnalysisResult
+    from src.core.models import EngagementMember, GapAnalysisResult
 
     eid = UUID(args["engagement_id"])
     async with session_factory() as session:
+        # Verify engagement membership before returning data
+        member_result = await session.execute(
+            select(EngagementMember).where(
+                EngagementMember.engagement_id == eid,
+                EngagementMember.user_id == UUID(user_id),
+            )
+        )
+        if member_result.scalar_one_or_none() is None:
+            raise ValueError("Access denied: not a member of this engagement")
+
         result = await session.execute(select(GapAnalysisResult).where(GapAnalysisResult.engagement_id == eid))
         gaps = [
             {
@@ -250,15 +292,25 @@ async def _tool_get_gaps(session_factory: Any, args: dict[str, Any]) -> dict[str
         return {"gaps": gaps, "total": len(gaps)}
 
 
-async def _tool_get_monitoring_status(session_factory: Any, args: dict[str, Any]) -> dict[str, Any]:
+async def _tool_get_monitoring_status(session_factory: Any, args: dict[str, Any], *, user_id: str) -> dict[str, Any]:
     from uuid import UUID
 
     from sqlalchemy import func, select
 
-    from src.core.models import AlertStatus, MonitoringAlert, MonitoringJob, MonitoringStatus
+    from src.core.models import AlertStatus, EngagementMember, MonitoringAlert, MonitoringJob, MonitoringStatus
 
     eid = UUID(args["engagement_id"])
     async with session_factory() as session:
+        # Verify engagement membership before returning data
+        member_result = await session.execute(
+            select(EngagementMember).where(
+                EngagementMember.engagement_id == eid,
+                EngagementMember.user_id == UUID(user_id),
+            )
+        )
+        if member_result.scalar_one_or_none() is None:
+            raise ValueError("Access denied: not a member of this engagement")
+
         active = (
             await session.execute(
                 select(func.count(MonitoringJob.id)).where(
@@ -277,16 +329,26 @@ async def _tool_get_monitoring_status(session_factory: Any, args: dict[str, Any]
         return {"active_jobs": active, "open_alerts": open_alerts}
 
 
-async def _tool_get_deviations(session_factory: Any, args: dict[str, Any]) -> dict[str, Any]:
+async def _tool_get_deviations(session_factory: Any, args: dict[str, Any], *, user_id: str) -> dict[str, Any]:
     from uuid import UUID
 
     from sqlalchemy import select
 
-    from src.core.models import ProcessDeviation
+    from src.core.models import EngagementMember, ProcessDeviation
 
     eid = UUID(args["engagement_id"])
     limit = args.get("limit", 20)
     async with session_factory() as session:
+        # Verify engagement membership before returning data
+        member_result = await session.execute(
+            select(EngagementMember).where(
+                EngagementMember.engagement_id == eid,
+                EngagementMember.user_id == UUID(user_id),
+            )
+        )
+        if member_result.scalar_one_or_none() is None:
+            raise ValueError("Access denied: not a member of this engagement")
+
         result = await session.execute(
             select(ProcessDeviation).where(ProcessDeviation.engagement_id == eid).limit(limit)
         )
@@ -302,7 +364,9 @@ async def _tool_get_deviations(session_factory: Any, args: dict[str, Any]) -> di
         return {"deviations": devs, "total": len(devs)}
 
 
-async def _tool_search_patterns(session_factory: Any, args: dict[str, Any]) -> dict[str, Any]:
+async def _tool_search_patterns(session_factory: Any, args: dict[str, Any], *, user_id: str) -> dict[str, Any]:
+    # Pattern search is not engagement-scoped but user_id is accepted for API consistency
+    _ = user_id  # Reserved for future per-user pattern filtering
     from sqlalchemy import select
 
     from src.core.models import PatternLibraryEntry
@@ -321,7 +385,9 @@ async def _tool_search_patterns(session_factory: Any, args: dict[str, Any]) -> d
         return {"patterns": patterns, "total": len(patterns)}
 
 
-async def _tool_run_simulation(session_factory: Any, args: dict[str, Any]) -> dict[str, Any]:
+async def _tool_run_simulation(session_factory: Any, args: dict[str, Any], *, user_id: str) -> dict[str, Any]:
+    # user_id is accepted for API consistency; simulation scoping added here when queue is wired
+    _ = user_id
     return {
         "status": "simulation_queued",
         "scenario_name": args.get("scenario_name", ""),

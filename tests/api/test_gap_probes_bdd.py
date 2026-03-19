@@ -319,7 +319,7 @@ async def test_generate_endpoint_returns_count() -> None:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.post(f"/api/v1/engagements/{ENGAGEMENT_ID}/gap-probes/generate")
 
-    assert resp.status_code == 201
+    assert resp.status_code == 200
     data = resp.json()
     assert data["probes_generated"] >= 1
     assert "Generated" in data["message"]

@@ -7,6 +7,7 @@ linking discovered processes to target operating model specifications.
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from neo4j.exceptions import Neo4jError
 
@@ -55,22 +56,27 @@ class ProcessTOMBridge:
 
         all_nodes = process_nodes + activity_nodes
 
+        rels: list[dict[str, Any]] = []
         for node in all_nodes:
             name = node.properties.get("name", "").lower()
             dimensions = self._classify_dimensions(name)
 
             for dim in dimensions:
                 for tom in tom_nodes:
-                    try:
-                        await self._graph.create_relationship(
-                            from_id=node.id,
-                            to_id=tom.id,
-                            relationship_type="IMPLEMENTS",
-                            properties={"dimension": dim, "source": "process_tom_bridge"},
-                        )
-                        result.relationships_created += 1
-                    except Neo4jError as e:
-                        result.errors.append(str(e))
+                    rels.append(
+                        {
+                            "from_id": node.id,
+                            "to_id": tom.id,
+                            "properties": {"dimension": dim, "source": "process_tom_bridge"},
+                        }
+                    )
+
+        if rels:
+            try:
+                await self._graph.batch_create_relationships("IMPLEMENTS", rels)
+                result.relationships_created = len(rels)
+            except Neo4jError as e:
+                result.errors.append(str(e))
 
         return result
 

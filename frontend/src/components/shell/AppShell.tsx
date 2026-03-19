@@ -61,23 +61,23 @@ const navSections: NavSection[] = [
     title: "Evidence",
     items: [
       { label: "Evidence Upload", href: "/evidence", icon: Upload },
-      { label: "Knowledge Graph", href: "/graph/1db9aa11-c73b-5867-82a3-864dd695cf23", icon: Network },
+      { label: "Knowledge Graph", href: "/graph", icon: Network },
       { label: "Data Lineage", href: "/lineage", icon: GitBranch },
     ],
   },
   {
     title: "Analysis",
     items: [
-      { label: "TOM Alignment", href: "/tom/1db9aa11-c73b-5867-82a3-864dd695cf23", icon: Target },
+      { label: "TOM Alignment", href: "/tom", icon: Target },
       { label: "Conformance", href: "/conformance", icon: CheckSquare },
-      { label: "Visualize", href: "/visualize/1db9aa11-c73b-5867-82a3-864dd695cf23", icon: Eye },
+      { label: "Visualize", href: "/visualize", icon: Eye },
     ],
   },
   {
     title: "Operations",
     items: [
       { label: "Monitoring", href: "/monitoring", icon: Activity },
-      { label: "Roadmap", href: "/roadmap/1db9aa11-c73b-5867-82a3-864dd695cf23", icon: Map },
+      { label: "Roadmap", href: "/roadmap", icon: Map },
       { label: "Processes", href: "/processes", icon: Workflow },
       { label: "Simulations", href: "/simulations", icon: FlaskConical },
     ],
@@ -256,6 +256,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             onClick={() => setSidebarCollapsed((v) => !v)}
             className="rounded-md p-1.5 hover:bg-white/10 transition-colors"
             aria-label="Toggle sidebar"
+            aria-expanded={!sidebarCollapsed}
           >
             {sidebarCollapsed ? (
               <ChevronRight className="h-4 w-4" />

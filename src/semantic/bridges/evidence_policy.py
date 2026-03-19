@@ -7,6 +7,7 @@ when evidence content references policy-related terms.
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 import numpy as np
 from neo4j.exceptions import Neo4jError
@@ -68,6 +69,7 @@ class EvidencePolicyBridge:
                 logger.warning("Embedding failed, falling back to word-overlap: %s", e)
                 use_embeddings = False
 
+        rels: list[dict[str, Any]] = []
         for e_idx, ev in enumerate(evidence_nodes):
             ev_name = ev_names[e_idx].lower()
             for p_idx, policy in enumerate(policy_nodes):
@@ -82,19 +84,23 @@ class EvidencePolicyBridge:
                     sim_score = 0.7
 
                 if is_match:
-                    try:
-                        await self._graph.create_relationship(
-                            from_id=ev.id,
-                            to_id=policy.id,
-                            relationship_type="GOVERNED_BY",
-                            properties={
+                    rels.append(
+                        {
+                            "from_id": ev.id,
+                            "to_id": policy.id,
+                            "properties": {
                                 "source": "evidence_policy_bridge",
                                 "similarity_score": sim_score,
                             },
-                        )
-                        result.relationships_created += 1
-                    except Neo4jError as e:
-                        result.errors.append(str(e))
+                        }
+                    )
+
+        if rels:
+            try:
+                await self._graph.batch_create_relationships("GOVERNED_BY", rels)
+                result.relationships_created = len(rels)
+            except Neo4jError as e:
+                result.errors.append(str(e))
 
         return result
 

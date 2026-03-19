@@ -7,6 +7,7 @@ communication patterns, creating DEVIATES_FROM relationships.
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from neo4j.exceptions import Neo4jError
 
@@ -63,6 +64,7 @@ class CommunicationDeviationBridge:
 
         all_processes = process_nodes + activity_nodes
 
+        rels: list[dict[str, Any]] = []
         for ev in evidence_nodes:
             ev_name = ev.properties.get("name", "").lower()
             if not self._indicates_deviation(ev_name):
@@ -72,16 +74,20 @@ class CommunicationDeviationBridge:
             for proc in all_processes:
                 proc_name = proc.properties.get("name", "").lower()
                 if self._is_related_to_process(ev_name, proc_name):
-                    try:
-                        await self._graph.create_relationship(
-                            from_id=ev.id,
-                            to_id=proc.id,
-                            relationship_type="DEVIATES_FROM",
-                            properties={"source": "communication_deviation_bridge"},
-                        )
-                        result.relationships_created += 1
-                    except Neo4jError as e:
-                        result.errors.append(str(e))
+                    rels.append(
+                        {
+                            "from_id": ev.id,
+                            "to_id": proc.id,
+                            "properties": {"source": "communication_deviation_bridge"},
+                        }
+                    )
+
+        if rels:
+            try:
+                await self._graph.batch_create_relationships("DEVIATES_FROM", rels)
+                result.relationships_created = len(rels)
+            except Neo4jError as e:
+                result.errors.append(str(e))
 
         return result
 

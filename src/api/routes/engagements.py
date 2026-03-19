@@ -8,10 +8,11 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -95,7 +96,7 @@ class AuditLogResponse(BaseModel):
     action: AuditAction
     actor: str
     details: str | None
-    created_at: Any
+    created_at: datetime | None = None
 
 
 class AuditLogList(BaseModel):
@@ -270,12 +271,36 @@ async def update_engagement(
 @router.patch("/{engagement_id}/archive", response_model=EngagementResponse)
 async def archive_engagement(
     engagement_id: UUID,
+    request: Request,
     user: User = Depends(require_permission("engagement:delete")),
     _engagement_user: User = Depends(require_engagement_access),
     session: AsyncSession = Depends(get_session),
 ) -> Engagement:
-    """Archive an engagement by setting its status to ARCHIVED."""
+    """Archive an engagement by setting its status to ARCHIVED.
+
+    In addition to setting the engagement status, this also removes the
+    engagement's knowledge graph subgraph from Neo4j to free graph resources.
+    """
+    from src.semantic.graph import KnowledgeGraphService
+
     engagement = await _get_engagement_or_404(session, engagement_id)
+
+    # Remove knowledge graph subgraph before archiving
+    try:
+        neo4j_driver = getattr(request.app.state, "neo4j_driver", None)
+        if neo4j_driver is not None:
+            graph_service = KnowledgeGraphService(neo4j_driver)
+            deleted_nodes = await graph_service.delete_engagement_subgraph(str(engagement_id))
+            logger.info(
+                "Archive engagement %s: deleted %d graph nodes",
+                engagement_id,
+                deleted_nodes,
+            )
+    except Exception:
+        logger.exception(
+            "Archive engagement %s: graph cleanup failed, continuing with archive",
+            engagement_id,
+        )
 
     previous_status = engagement.status
     engagement.status = EngagementStatus.ARCHIVED

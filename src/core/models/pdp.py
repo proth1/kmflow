@@ -162,7 +162,7 @@ class PDPAuditEntry(Base):
     )
     obligations_json: Mapped[list | None] = mapped_column(JSON, nullable=True)
     reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    policy_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    policy_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
     request_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 

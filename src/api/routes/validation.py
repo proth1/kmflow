@@ -23,7 +23,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
+from src.core.audit import log_audit
 from src.core.models import (
+    AuditAction,
     BrightnessClassification,
     DarkRoomSnapshot,
     ProcessElement,
@@ -176,6 +178,15 @@ async def generate_review_packs(
     _background_tasks.add(task)
     task.add_done_callback(_background_tasks.discard)
 
+    await log_audit(
+        session,
+        body.engagement_id,
+        AuditAction.DATA_MODIFIED,
+        f"Review pack generation started: pov_version={body.pov_version_id}",
+        actor=str(current_user.id),
+    )
+    await session.commit()
+
     return {
         "task_id": task_id,
         "status": "pending",
@@ -303,6 +314,13 @@ async def submit_decision(
         action=body.action,
         reviewer_id=current_user.id,
         payload=body.payload,
+    )
+    await log_audit(
+        session,
+        pack.engagement_id,
+        AuditAction.DATA_MODIFIED,
+        f"Reviewer decision submitted: action={body.action}, element={body.element_id}",
+        actor=str(current_user.id),
     )
     await session.commit()
 
@@ -450,6 +468,13 @@ async def route_review_packs(
             }
         )
 
+    await log_audit(
+        session,
+        body.engagement_id,
+        AuditAction.DATA_MODIFIED,
+        f"Review packs routed: {len(routed)} packs processed",
+        actor=str(current_user.id),
+    )
     await session.commit()
 
     return routed
@@ -583,6 +608,13 @@ async def republish_pov(
         )
         session.add(new_el)
 
+    await log_audit(
+        session,
+        body.engagement_id,
+        AuditAction.DATA_MODIFIED,
+        f"POV republished: new_version={new_version}, elements={len(new_snapshots)}",
+        actor=str(current_user.id),
+    )
     await session.commit()
 
     return {

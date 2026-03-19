@@ -6,13 +6,14 @@ including evidence coverage, confidence distribution, and recent activity.
 
 from __future__ import annotations
 
+import json
 import logging
-import time
 from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import redis.asyncio as aioredis
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,28 +49,31 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/dashboard", tags=["dashboard"])
 
-# Simple in-memory TTL cache for dashboard queries.
+# Redis-backed TTL cache for dashboard queries.
 # Dashboard data is aggregated and relatively expensive to recompute;
 # 30-second staleness is acceptable for monitoring use cases.
 _DASHBOARD_CACHE_TTL = 30  # seconds
-_dashboard_cache: dict[str, tuple[float, Any]] = {}
 
 
-def _cache_get(key: str) -> Any | None:
-    """Return cached value if present and not expired, else None."""
-    entry = _dashboard_cache.get(key)
-    if entry is None:
-        return None
-    ts, value = entry
-    if time.monotonic() - ts > _DASHBOARD_CACHE_TTL:
-        del _dashboard_cache[key]
-        return None
-    return value
+async def _cache_get(request: Request, key: str) -> Any | None:
+    """Return cached value from Redis if present and not expired, else None."""
+    try:
+        redis_client = request.app.state.redis_client
+        raw = await redis_client.get(f"dashboard:{key}")
+        if raw is not None:
+            return json.loads(raw)
+    except aioredis.RedisError:
+        logger.warning("Redis unavailable for dashboard cache get, key=%s", key)
+    return None
 
 
-def _cache_set(key: str, value: Any) -> None:
-    """Store value in cache with current timestamp."""
-    _dashboard_cache[key] = (time.monotonic(), value)
+async def _cache_set(request: Request, key: str, value: Any) -> None:
+    """Store value in Redis with the configured TTL."""
+    try:
+        redis_client = request.app.state.redis_client
+        await redis_client.setex(f"dashboard:{key}", _DASHBOARD_CACHE_TTL, json.dumps(value, default=str))
+    except aioredis.RedisError:
+        logger.warning("Redis unavailable for dashboard cache set, key=%s", key)
 
 
 # -- Response Schemas ----------------------------------------------------------
@@ -182,6 +186,7 @@ def _classify_confidence(score: float) -> str:
 @router.get("/{engagement_id}", response_model=DashboardResponse)
 async def get_dashboard(
     engagement_id: UUID,
+    request: Request,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
     _engagement_user: User = Depends(require_engagement_access),
@@ -193,8 +198,8 @@ async def get_dashboard(
     """
     eng_uuid = engagement_id
 
-    cache_key = f"dashboard:{eng_uuid}"
-    cached = _cache_get(cache_key)
+    cache_key = str(eng_uuid)
+    cached = await _cache_get(request, cache_key)
     if cached is not None:
         return cached
 
@@ -293,7 +298,7 @@ async def get_dashboard(
         "process_model_count": process_model_count,
         "recent_activity": recent_activity,
     }
-    _cache_set(cache_key, result)
+    await _cache_set(request, cache_key, result)
     return result
 
 
@@ -303,6 +308,7 @@ async def get_dashboard(
 )
 async def get_evidence_coverage(
     engagement_id: UUID,
+    request: Request,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
     _engagement_user: User = Depends(require_engagement_access),
@@ -315,7 +321,7 @@ async def get_evidence_coverage(
     eng_uuid = engagement_id
 
     cache_key = f"evidence_coverage:{eng_uuid}"
-    cached = _cache_get(cache_key)
+    cached = await _cache_get(request, cache_key)
     if cached is not None:
         return cached
 
@@ -365,7 +371,7 @@ async def get_evidence_coverage(
         "overall_coverage_pct": overall,
         "categories": categories,
     }
-    _cache_set(cache_key, result)
+    await _cache_set(request, cache_key, result)
     return result
 
 
@@ -375,6 +381,7 @@ async def get_evidence_coverage(
 )
 async def get_confidence_distribution(
     engagement_id: UUID,
+    request: Request,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
     _engagement_user: User = Depends(require_engagement_access),
@@ -387,7 +394,7 @@ async def get_confidence_distribution(
     eng_uuid = engagement_id
 
     cache_key = f"confidence_distribution:{eng_uuid}"
-    cached = _cache_get(cache_key)
+    cached = await _cache_get(request, cache_key)
     if cached is not None:
         return cached
 
@@ -422,7 +429,7 @@ async def get_confidence_distribution(
             ],
             "weakest_elements": [],
         }
-        _cache_set(cache_key, empty_result)
+        await _cache_set(request, cache_key, empty_result)
         return empty_result
 
     # Get all elements for this model
@@ -459,7 +466,7 @@ async def get_confidence_distribution(
         "distribution": distribution,
         "weakest_elements": weakest,
     }
-    _cache_set(cache_key, result)
+    await _cache_set(request, cache_key, result)
     return result
 
 

@@ -84,11 +84,15 @@ class TestRoleRateRoutes:
     def test_list_role_rates(self) -> None:
         rate = _mock_rate()
         session = AsyncMock()
-        result_mock = AsyncMock()
+        # First call: COUNT query → returns scalar 1
+        count_result = MagicMock()
+        count_result.scalar = MagicMock(return_value=1)
+        # Second call: data query → returns list of rates
+        data_result = MagicMock()
         mock_scalars = MagicMock()
         mock_scalars.all = MagicMock(return_value=[rate])
-        result_mock.scalars = MagicMock(return_value=mock_scalars)
-        session.execute = AsyncMock(return_value=result_mock)
+        data_result.scalars = MagicMock(return_value=mock_scalars)
+        session.execute = AsyncMock(side_effect=[count_result, data_result])
 
         client = _make_client(session)
         resp = client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/role-rates")
@@ -122,11 +126,13 @@ class TestVolumeForecastRoutes:
     def test_list_volume_forecasts(self) -> None:
         forecast = _mock_forecast()
         session = AsyncMock()
-        result_mock = AsyncMock()
+        count_result = MagicMock()
+        count_result.scalar = MagicMock(return_value=1)
+        data_result = MagicMock()
         mock_scalars = MagicMock()
         mock_scalars.all = MagicMock(return_value=[forecast])
-        result_mock.scalars = MagicMock(return_value=mock_scalars)
-        session.execute = AsyncMock(return_value=result_mock)
+        data_result.scalars = MagicMock(return_value=mock_scalars)
+        session.execute = AsyncMock(side_effect=[count_result, data_result])
 
         client = _make_client(session)
         resp = client.get(f"/api/v1/engagements/{ENGAGEMENT_ID}/volume-forecasts")

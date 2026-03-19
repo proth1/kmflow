@@ -17,7 +17,10 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from src.api.routes.conflicts import ESCALATION_THRESHOLD_HOURS, router
+from src.core.auth import get_current_user
+from src.core.models import User, UserRole
 from src.core.models.conflict import ConflictObject, MismatchType, ResolutionStatus, ResolutionType
+from src.core.permissions import require_engagement_access
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -60,9 +63,20 @@ def _make_conflict(
     return obj
 
 
+def _mock_user() -> MagicMock:
+    user = MagicMock(spec=User)
+    user.id = uuid.uuid4()
+    user.email = "test@test.com"
+    user.role = UserRole.ENGAGEMENT_LEAD
+    return user
+
+
 def _make_app() -> FastAPI:
     app = FastAPI()
     app.include_router(router)
+    mock_user = _mock_user()
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+    app.dependency_overrides[require_engagement_access] = lambda: mock_user
     return app
 
 

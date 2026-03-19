@@ -314,7 +314,7 @@ async def taskmining_events_websocket(
         return
 
     await websocket.accept()
-    logger.info("Task mining WS connected for user %s", user.email)
+    logger.info("Task mining WS connected for user %s", user.id)
 
     try:
         redis_client = websocket.app.state.redis_client
@@ -339,13 +339,13 @@ async def taskmining_events_websocket(
             except TimeoutError:
                 pass
     except WebSocketDisconnect:
-        logger.debug("Task mining WS client disconnected (user %s)", user.email)
+        logger.debug("Task mining WS client disconnected (user %s)", user.id)
     except Exception:  # Intentionally broad: WebSocket event loop must not crash
         logger.exception("Task mining WS error")
     finally:
         await pubsub.unsubscribe(CHANNEL_TASK_MINING)
         await pubsub.close()
-        logger.info("Task mining WS cleaned up for user %s", user.email)
+        logger.info("Task mining WS cleaned up for user %s", user.id)
 
 
 @router.websocket("/ws/tasks/{task_id}")
@@ -370,7 +370,7 @@ async def task_progress_websocket(
         return
 
     await websocket.accept()
-    logger.info("Task progress WS connected: task=%s user=%s", task_id, user.email)
+    logger.info("Task progress WS connected: task=%s user=%s", task_id, user.id)
 
     try:
         redis_client = websocket.app.state.redis_client

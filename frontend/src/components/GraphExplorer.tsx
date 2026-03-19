@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import type { Core, NodeSingular, EventObject } from "cytoscape";
 
 interface CytoscapeNodeData {
   data: {
@@ -41,7 +42,7 @@ type LayoutName = "cose" | "breadthfirst" | "circle" | "grid";
 
 export default function GraphExplorer({ nodes, edges }: GraphExplorerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const cyRef = useRef<any>(null);
+  const cyRef = useRef<Core | null>(null);
   const [layout, setLayout] = useState<LayoutName>("cose");
   const [search, setSearch] = useState("");
   const [selectedNode, setSelectedNode] = useState<Record<string, unknown> | null>(null);
@@ -92,9 +93,9 @@ export default function GraphExplorer({ nodes, edges }: GraphExplorerProps) {
             "text-max-width": "100px",
             width: 50,
             height: 50,
-            "background-color": (ele: any) => NODE_COLORS[ele.data("type")] ?? "#9ca3af",
+            "background-color": (ele: NodeSingular) => NODE_COLORS[ele.data("type") as string] ?? "#9ca3af",
             "border-width": 2,
-            "border-color": (ele: any) => {
+            "border-color": (ele: NodeSingular) => {
               const base = NODE_COLORS[ele.data("type")] ?? "#9ca3af";
               return base;
             },
@@ -199,38 +200,38 @@ export default function GraphExplorer({ nodes, edges }: GraphExplorerProps) {
       },
     });
 
-    cy.on("tap", "node", (event: any) => {
-      const data = event.target.data();
-      setSelectedNode(data);
+    cy.on("tap", "node", (event: EventObject) => {
+      const data = (event.target as NodeSingular).data();
+      setSelectedNode(data as Record<string, unknown>);
     });
 
-    cy.on("tap", (event: any) => {
+    cy.on("tap", (event: EventObject) => {
       if (event.target === cy) {
         setSelectedNode(null);
       }
     });
 
     // Hover: highlight connected edges + show their labels
-    cy.on("mouseover", "node", (event: any) => {
-      const node = event.target;
+    cy.on("mouseover", "node", (event: EventObject) => {
+      const node = event.target as NodeSingular;
       node.addClass("highlight");
       node.connectedEdges().addClass("highlight");
       node.neighborhood("node").addClass("highlight");
     });
 
-    cy.on("mouseout", "node", (event: any) => {
-      const node = event.target;
+    cy.on("mouseout", "node", (event: EventObject) => {
+      const node = event.target as NodeSingular;
       node.removeClass("highlight");
       node.connectedEdges().removeClass("highlight");
       node.neighborhood("node").removeClass("highlight");
     });
 
-    cy.on("mouseover", "edge", (event: any) => {
-      event.target.addClass("hover");
+    cy.on("mouseover", "edge", (event: EventObject) => {
+      (event.target as NodeSingular).addClass("hover");
     });
 
-    cy.on("mouseout", "edge", (event: any) => {
-      event.target.removeClass("hover");
+    cy.on("mouseout", "edge", (event: EventObject) => {
+      (event.target as NodeSingular).removeClass("hover");
     });
 
     cyRef.current = cy;
@@ -256,8 +257,8 @@ export default function GraphExplorer({ nodes, edges }: GraphExplorerProps) {
     const cy = cyRef.current;
     const lower = search.toLowerCase();
     cy.elements().addClass("faded");
-    cy.nodes().filter((n: any) => {
-      const label = (n.data("label") || "").toLowerCase();
+    cy.nodes().filter((n: NodeSingular) => {
+      const label = ((n.data("label") as string) || "").toLowerCase();
       return label.includes(lower);
     }).removeClass("faded").connectedEdges().removeClass("faded");
   }, [search]);

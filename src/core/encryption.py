@@ -19,17 +19,26 @@ from src.core.config import get_settings
 logger = logging.getLogger(__name__)
 
 
-def _derive_fernet_key(secret: str) -> bytes:
-    """Derive a valid Fernet key from an arbitrary secret string."""
+_LEGACY_FIXED_SALT = b"kmflow-fernet-key-derivation-v1"
+
+
+def _derive_fernet_key(secret: str, *, legacy_salt: bool = False) -> bytes:
+    """Derive a valid Fernet key from an arbitrary secret string.
+
+    Args:
+        secret: The raw encryption key string.
+        legacy_salt: If True, use the old fixed salt for backward compatibility
+            when decrypting data encrypted before the per-deployment salt migration.
+    """
     try:
         Fernet(secret.encode())
         return secret.encode()
     except (ValueError, Exception):
-        # Use PBKDF2 with a fixed application salt for proper key derivation
+        salt = _LEGACY_FIXED_SALT if legacy_salt else hashlib.sha256(secret.encode()).digest()[:16]
         derived = hashlib.pbkdf2_hmac(
             "sha256",
             secret.encode(),
-            b"kmflow-fernet-key-derivation-v1",  # Fixed application-level salt
+            salt,
             iterations=600_000,
         )
         return base64.urlsafe_b64encode(derived)
@@ -38,7 +47,7 @@ def _derive_fernet_key(secret: str) -> bytes:
 def _get_fernet() -> Fernet:
     """Get a Fernet instance using the current encryption key."""
     settings = get_settings()
-    key = settings.encryption_key
+    key = settings.encryption_key.get_secret_value()
     if not key:
         raise RuntimeError("ENCRYPTION_KEY not configured. Set it in environment or .env file.")
     return Fernet(_derive_fernet_key(key))
@@ -50,6 +59,7 @@ def _get_fernet_previous() -> Fernet | None:
     prev_key = settings.encryption_key_previous
     if not prev_key:
         return None
+    # encryption_key_previous is a plain str (rotation key supplied at runtime)
     return Fernet(_derive_fernet_key(prev_key))
 
 
@@ -69,15 +79,28 @@ def decrypt_value(ciphertext: str) -> str:
     try:
         return f.decrypt(ciphertext.encode()).decode()
     except InvalidToken:
-        # Try previous key for rotation support
-        prev = _get_fernet_previous()
-        if prev:
-            try:
-                return prev.decrypt(ciphertext.encode()).decode()
-            except InvalidToken:
-                pass
-        logger.error("Failed to decrypt value — invalid token or wrong key")
-        raise
+        pass
+
+    # Try legacy fixed salt (data encrypted before per-deployment salt migration)
+    settings = get_settings()
+    key = settings.encryption_key.get_secret_value()
+    try:
+        legacy_f = Fernet(_derive_fernet_key(key, legacy_salt=True))
+        plaintext = legacy_f.decrypt(ciphertext.encode()).decode()
+        logger.info("Decrypted value using legacy salt — consider re-encrypting")
+        return plaintext
+    except InvalidToken:
+        pass
+
+    # Try previous key for rotation support
+    prev = _get_fernet_previous()
+    if prev:
+        try:
+            return prev.decrypt(ciphertext.encode()).decode()
+        except InvalidToken:
+            pass
+    logger.error("Failed to decrypt value — invalid token or wrong key")
+    raise InvalidToken
 
 
 def encrypt_dict(data: dict) -> str:

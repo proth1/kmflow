@@ -112,7 +112,7 @@ where = ["."]
 include = ["src*"]
 
 [tool.coverage.report]
-fail_under = 70
+fail_under = 80
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

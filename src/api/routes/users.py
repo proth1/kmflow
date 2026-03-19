@@ -347,13 +347,22 @@ async def remove_engagement_member(
     await session.commit()
 
 
-@router.get("/api/v1/engagements/{engagement_id}/members", response_model=list[MemberResponse])
+class MemberListResponse(BaseModel):
+    """Paginated engagement member list response."""
+
+    items: list[MemberResponse]
+    total: int
+
+
+@router.get("/api/v1/engagements/{engagement_id}/members", response_model=MemberListResponse)
 async def list_engagement_members(
     engagement_id: UUID,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
     _engagement_user: User = Depends(require_engagement_access),
-) -> list[EngagementMember]:
+) -> dict[str, Any]:
     """List all members of an engagement."""
     # Verify engagement exists
     eng_result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
@@ -363,5 +372,13 @@ async def list_engagement_members(
             detail=f"Engagement {engagement_id} not found",
         )
 
-    result = await session.execute(select(EngagementMember).where(EngagementMember.engagement_id == engagement_id))
-    return list(result.scalars().all())
+    count_result = await session.execute(
+        select(func.count()).select_from(EngagementMember).where(EngagementMember.engagement_id == engagement_id)
+    )
+    total = count_result.scalar() or 0
+
+    result = await session.execute(
+        select(EngagementMember).where(EngagementMember.engagement_id == engagement_id).limit(limit).offset(offset)
+    )
+    items = list(result.scalars().all())
+    return {"items": items, "total": total}

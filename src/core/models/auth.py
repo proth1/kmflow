@@ -171,6 +171,7 @@ class CopilotMessage(Base):
     query_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     citations: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     context_tokens_used: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    quality_signals: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     def __repr__(self) -> str:

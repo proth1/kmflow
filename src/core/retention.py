@@ -8,12 +8,13 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.models import (
-    AuditLog,
+    AlternativeSuggestion,
     CopilotMessage,
     Engagement,
     EngagementStatus,
@@ -53,14 +54,23 @@ async def find_expired_engagements(session: AsyncSession) -> list[Engagement]:
     return expired
 
 
-async def cleanup_expired_engagements(session: AsyncSession) -> int:
+async def cleanup_expired_engagements(
+    session: AsyncSession,
+    graph_service: Any | None = None,
+) -> int:
     """Delete evidence data for expired engagements and archive the engagement record.
 
     For each expired engagement:
-    1. Delete evidence fragments (FK child of evidence_items).
-    2. Delete evidence items.
-    3. Delete engagement-scoped audit logs.
-    4. Mark engagement as ARCHIVED (engagement record kept for reference).
+    1. Delete knowledge graph subgraph (Neo4j nodes/relationships).
+    2. Delete evidence fragments (FK child of evidence_items).
+    3. Delete evidence items.
+    4. Delete alternative suggestions for this engagement.
+    5. Mark engagement as ARCHIVED (engagement record kept for reference).
+
+    Args:
+        session: Async SQLAlchemy session.
+        graph_service: Optional KnowledgeGraphService instance. When provided,
+            the engagement's Neo4j subgraph is deleted before PostgreSQL data.
 
     Returns the number of engagements cleaned up.
     """
@@ -70,7 +80,22 @@ async def cleanup_expired_engagements(session: AsyncSession) -> int:
     for eng in expired:
         logger.info("Retention cleanup: processing engagement %s (%s)", eng.id, eng.name)
 
-        # 1. Delete evidence fragments (children of evidence_items via CASCADE,
+        # 1. Delete knowledge graph subgraph (Neo4j) before PostgreSQL data.
+        if graph_service is not None:
+            try:
+                deleted_nodes = await graph_service.delete_engagement_subgraph(str(eng.id))
+                logger.info(
+                    "Retention cleanup: deleted %d graph nodes for engagement %s",
+                    deleted_nodes,
+                    eng.id,
+                )
+            except Exception:
+                logger.exception(
+                    "Retention cleanup: graph deletion failed for engagement %s, continuing with DB cleanup",
+                    eng.id,
+                )
+
+        # 2. Delete evidence fragments (children of evidence_items via CASCADE,
         #    but we do it explicitly to control ordering).
         evidence_ids_result = await session.execute(select(EvidenceItem.id).where(EvidenceItem.engagement_id == eng.id))
         evidence_ids = [row[0] for row in evidence_ids_result]
@@ -83,13 +108,16 @@ async def cleanup_expired_engagements(session: AsyncSession) -> int:
                 eng.id,
             )
 
-        # 2. Delete evidence items.
+        # 3. Delete evidence items.
         await session.execute(delete(EvidenceItem).where(EvidenceItem.engagement_id == eng.id))
 
-        # 3. Delete engagement-scoped audit logs.
-        await session.execute(delete(AuditLog).where(AuditLog.engagement_id == eng.id))
+        # 4. Delete alternative suggestions for this engagement.
+        await session.execute(delete(AlternativeSuggestion).where(AlternativeSuggestion.engagement_id == eng.id))
 
-        # 4. Archive the engagement record (data cleaned but record preserved).
+        # 5. Archive the engagement record (data cleaned but record preserved).
+        # NOTE: Audit logs (AuditLog) are intentionally NOT deleted — they are
+        # compliance records that must be retained for the configured audit
+        # retention period, independent of engagement retention policy.
         eng.status = EngagementStatus.ARCHIVED
         count += 1
 

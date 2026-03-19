@@ -432,9 +432,12 @@ class TestListEngagementMembers:
             role_in_engagement="lead",
         )
 
+        count_result = MagicMock()
+        count_result.scalar = MagicMock(return_value=1)
         mock_db_session.execute.side_effect = [
             _mock_scalar_result(admin),  # get_current_user
             _mock_scalar_result(engagement),  # engagement exists
+            count_result,  # COUNT query
             _mock_scalars_result([member]),  # members
         ]
 
@@ -444,8 +447,8 @@ class TestListEngagementMembers:
         )
         assert response.status_code == 200
         data = response.json()
-        assert len(data) == 1
-        assert data[0]["role_in_engagement"] == "lead"
+        assert data["total"] == 1
+        assert data["items"][0]["role_in_engagement"] == "lead"
 
     @pytest.mark.asyncio
     async def test_list_members_engagement_not_found(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:

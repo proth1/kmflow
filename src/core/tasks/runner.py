@@ -29,7 +29,7 @@ from typing import Any
 import redis.asyncio as aioredis
 
 from src.core.redis import CHANNEL_TASKS, publish_event
-from src.core.tasks.queue import TaskQueue
+from src.core.tasks.queue import TaskProgress, TaskQueue
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +115,7 @@ async def run_task_worker(
 
 async def _publish_task_progress(
     redis_client: aioredis.Redis,
-    progress: Any,
+    progress: TaskProgress,
 ) -> None:
     """Publish task progress to Pub/Sub for WebSocket relay.
 
