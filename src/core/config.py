@@ -101,7 +101,7 @@ class Settings(BaseSettings):
     # TODO(DPA): GDPR Article 28 requires Data Processing Agreements between the
     # platform operator and each client. Retention periods below must align with
     # agreed DPA terms. See docs/audit-findings/D2-compliance.md for full context.
-    retention_cleanup_enabled: bool = False
+    retention_cleanup_enabled: bool = True
     evidence_retention_days: int = 365  # Default: 1 year; override per DPA terms
     audit_retention_days: int = 730  # Default: 2 years; regulatory minimum may vary
 

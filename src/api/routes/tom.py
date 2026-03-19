@@ -79,8 +79,7 @@ from src.core.models import (
     TOMVersion,
     User,
 )
-from src.core.permissions import require_engagement_access, require_permission
-from src.core.rls import set_engagement_context
+from src.core.permissions import require_engagement_access, require_permission, verify_engagement_member
 from src.tom.benchmarking import match_gaps_to_practices
 from src.tom.benchmarking import rank_client as _rank_client
 from src.tom.maturity_scorer import MaturityScoringService
@@ -91,31 +90,6 @@ router = APIRouter(prefix="/api/v1/tom", tags=["tom"])
 
 # Background task references to prevent GC from cancelling them
 _background_tasks: set[asyncio.Task[None]] = set()
-
-
-async def _check_engagement_member(session: AsyncSession, user: User, engagement_id: UUID) -> None:
-    """Verify user is a member of the engagement and set RLS context.
-
-    Sets the RLS session variable so subsequent queries on engagement-scoped
-    tables (with Row-Level Security policies) are properly filtered.
-    Platform admins bypass the membership check but still need the RLS context.
-    """
-    from src.core.models import EngagementMember, UserRole
-
-    await set_engagement_context(session, engagement_id)
-    if user.role == UserRole.PLATFORM_ADMIN:
-        return
-    result = await session.execute(
-        select(EngagementMember).where(
-            EngagementMember.engagement_id == engagement_id,
-            EngagementMember.user_id == user.id,
-        )
-    )
-    if result.scalar_one_or_none() is None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have access to this engagement",
-        )
 
 
 # -- TOM Routes ---------------------------------------------------------------
@@ -168,7 +142,7 @@ async def create_tom(
     user: User = Depends(require_permission("engagement:update")),
 ) -> dict[str, Any]:
     """Create a new target operating model."""
-    await _check_engagement_member(session, user, payload.engagement_id)
+    await verify_engagement_member(session, user, payload.engagement_id)
     eng_result = await session.execute(select(Engagement).where(Engagement.id == payload.engagement_id))
     if not eng_result.scalar_one_or_none():
         raise HTTPException(
@@ -218,7 +192,7 @@ async def list_toms(
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """List target operating models for an engagement."""
-    await _check_engagement_member(session, user, engagement_id)
+    await verify_engagement_member(session, user, engagement_id)
 
     query = (
         select(TargetOperatingModel)
@@ -254,7 +228,7 @@ async def get_tom(
     tom = result.scalar_one_or_none()
     if not tom:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"TOM {tom_id} not found")
-    await _check_engagement_member(session, user, tom.engagement_id)
+    await verify_engagement_member(session, user, tom.engagement_id)
     return _tom_to_response(tom)
 
 
@@ -275,7 +249,7 @@ async def update_tom(
     tom = result.scalar_one_or_none()
     if not tom:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"TOM {tom_id} not found")
-    await _check_engagement_member(session, user, tom.engagement_id)
+    await verify_engagement_member(session, user, tom.engagement_id)
 
     # Snapshot current state before changes
     snapshot = _snapshot_dimensions(tom)
@@ -332,7 +306,7 @@ async def get_tom_versions(
     tom = result.scalar_one_or_none()
     if not tom:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"TOM {tom_id} not found")
-    await _check_engagement_member(session, user, tom.engagement_id)
+    await verify_engagement_member(session, user, tom.engagement_id)
 
     versions_result = await session.execute(
         select(TOMVersion).where(TOMVersion.tom_id == tom_id).order_by(TOMVersion.version_number.asc())
@@ -373,7 +347,7 @@ async def export_tom(
     tom = result.scalar_one_or_none()
     if not tom:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"TOM {tom_id} not found")
-    await _check_engagement_member(session, user, tom.engagement_id)
+    await verify_engagement_member(session, user, tom.engagement_id)
 
     return {
         "name": tom.name,
@@ -399,7 +373,7 @@ async def import_tom(
     user: User = Depends(require_permission("engagement:update")),
 ) -> dict[str, Any]:
     """Import a TOM from a portable JSON document."""
-    await _check_engagement_member(session, user, payload.engagement_id)
+    await verify_engagement_member(session, user, payload.engagement_id)
     eng_result = await session.execute(select(Engagement).where(Engagement.id == payload.engagement_id))
     if not eng_result.scalar_one_or_none():
         raise HTTPException(
@@ -455,7 +429,7 @@ async def create_gap(
     user: User = Depends(require_permission("engagement:update")),
 ) -> GapAnalysisResult:
     """Create a gap analysis result."""
-    await _check_engagement_member(session, user, payload.engagement_id)
+    await verify_engagement_member(session, user, payload.engagement_id)
     eng_result = await session.execute(select(Engagement).where(Engagement.id == payload.engagement_id))
     if not eng_result.scalar_one_or_none():
         raise HTTPException(
@@ -503,7 +477,7 @@ async def list_gaps(
 
     Use sort=priority to order by composite_score descending.
     """
-    await _check_engagement_member(session, user, engagement_id)
+    await verify_engagement_member(session, user, engagement_id)
     query = select(GapAnalysisResult).where(GapAnalysisResult.engagement_id == engagement_id)
     count_query = (
         select(func.count()).select_from(GapAnalysisResult).where(GapAnalysisResult.engagement_id == engagement_id)
@@ -552,7 +526,7 @@ async def generate_gap_rationale(
     if not gap:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Gap {gap_id} not found")
 
-    await _check_engagement_member(session, user, gap.engagement_id)
+    await verify_engagement_member(session, user, gap.engagement_id)
 
     # Get TOM specification for context
     tom_spec = None
@@ -1065,7 +1039,7 @@ async def get_gap_analysis_dashboard(
     Args:
         engagement_id: The engagement UUID.
     """
-    await _check_engagement_member(session, user, engagement_id)
+    await verify_engagement_member(session, user, engagement_id)
 
     # Get all gaps for the engagement
     gap_result = await session.execute(
@@ -1342,7 +1316,7 @@ async def get_prioritized_roadmap(
             detail=f"Roadmap {roadmap_id} not found",
         )
 
-    await _check_engagement_member(session, user, roadmap.engagement_id)
+    await verify_engagement_member(session, user, roadmap.engagement_id)
 
     return {
         "id": roadmap.id,
@@ -1378,7 +1352,7 @@ async def export_roadmap(
             detail=f"Roadmap {roadmap_id} not found",
         )
 
-    await _check_engagement_member(session, user, roadmap.engagement_id)
+    await verify_engagement_member(session, user, roadmap.engagement_id)
 
     # Fetch engagement name
     eng_result = await session.execute(select(Engagement).where(Engagement.id == roadmap.engagement_id))
@@ -1698,7 +1672,7 @@ async def get_alignment_run_results(
     if not run:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Alignment run {run_id} not found")
 
-    await _check_engagement_member(session, user, run.engagement_id)
+    await verify_engagement_member(session, user, run.engagement_id)
 
     # Count total results
     count_result = await session.execute(

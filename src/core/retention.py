@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,9 +54,13 @@ async def find_expired_engagements(session: AsyncSession) -> list[Engagement]:
     return expired
 
 
+if TYPE_CHECKING:
+    from src.semantic.graph import KnowledgeGraphService
+
+
 async def cleanup_expired_engagements(
     session: AsyncSession,
-    graph_service: Any | None = None,
+    graph_service: KnowledgeGraphService | None = None,
 ) -> int:
     """Delete evidence data for expired engagements and archive the engagement record.
 

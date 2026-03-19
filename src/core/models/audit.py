@@ -105,7 +105,8 @@ class AuditAction(enum.StrEnum):
 class AuditLog(Base):
     """Audit log for tracking engagement mutation operations.
 
-    Append-only: a PostgreSQL trigger prevents UPDATE and DELETE on this table.
+    Append-only by convention: application code should never UPDATE or DELETE
+    rows in this table.
     """
 
     __tablename__ = "audit_logs"

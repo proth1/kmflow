@@ -429,7 +429,7 @@ async def get_websocket_user(
         if await is_token_blacklisted(websocket, jwt_token):
             return None
     except Exception:
-        logger.warning("Token blacklist check failed, treating as non-blacklisted")
+        logger.warning("Token blacklist check failed, denying WebSocket access as a precaution")
         return None
 
     user_id_str = payload.get("sub")

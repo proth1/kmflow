@@ -492,6 +492,41 @@ async def test_no_deviation_keywords(communication_deviation_bridge, mock_graph)
 
 
 @pytest.mark.asyncio
+async def test_process_evidence_neo4j_failure(process_evidence_bridge, mock_graph):
+    """Verify graceful handling when batch_create_relationships raises Neo4jError."""
+    from neo4j.exceptions import Neo4jError
+
+    engagement_id = "eng-1"
+
+    process_node = GraphNode(
+        id="proc-1",
+        label="Process",
+        properties={"name": "Customer Onboarding Workflow", "engagement_id": engagement_id},
+    )
+    evidence_node = GraphNode(
+        id="ev-1",
+        label="Evidence",
+        properties={"name": "Customer Onboarding Guide Document", "engagement_id": engagement_id},
+    )
+
+    mock_graph.find_nodes = AsyncMock(
+        side_effect=[
+            [process_node],
+            [],
+            [evidence_node],
+        ]
+    )
+    mock_graph.batch_create_relationships = AsyncMock(side_effect=Neo4jError("Connection lost"))
+
+    result = await process_evidence_bridge.run(engagement_id)
+
+    # Bridge catches Neo4jError and records it in result.errors
+    assert result.relationships_created == 0
+    assert len(result.errors) == 1
+    assert "Connection lost" in result.errors[0]
+
+
+@pytest.mark.asyncio
 async def test_deviation_multiple_keywords(communication_deviation_bridge, mock_graph):
     """Test that bypass keyword also triggers deviation detection."""
     engagement_id = "eng-1"
