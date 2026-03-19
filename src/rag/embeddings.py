@@ -57,6 +57,10 @@ class EmbeddingService:
             try:
                 from sentence_transformers import SentenceTransformer
 
+                # trust_remote_code is required for nomic-embed-text-v1.5 which uses
+                # a custom rotary embedding architecture (nomic-bert-2048). The model is
+                # a well-known, widely-used embedding model from Nomic AI. If supply chain
+                # risk is a concern, pin to a specific commit hash in the model_name.
                 self._model = SentenceTransformer(self.model_name, trust_remote_code=True)
             except ImportError:
                 logger.warning("sentence-transformers not installed, using random embeddings")
