@@ -51,6 +51,8 @@ from src.core.models.evidence import (
 from src.core.models.export_log import ExportLog
 from src.core.models.gdpr import (
     DataProcessingActivity,
+    DataProcessingAgreement,
+    DpaStatus,
     LawfulBasis,
     RetentionAction,
     RetentionPolicy,
@@ -291,6 +293,8 @@ __all__ = [
     "ExportLog",
     # gdpr
     "DataProcessingActivity",
+    "DataProcessingAgreement",
+    "DpaStatus",
     "LawfulBasis",
     "RetentionAction",
     "RetentionPolicy",

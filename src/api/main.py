@@ -113,6 +113,7 @@ from src.api.routes import (
 from src.api.routes import (
     correlation as correlation_routes,
 )
+from src.api.routes import dpa as dpa_routes
 from src.api.routes.auth import limiter
 from src.api.version import API_VERSION
 from src.core.config import get_settings
@@ -356,6 +357,9 @@ def create_app() -> FastAPI:
 
     # -- GDPR Routes (Issue #165) ---
     app.include_router(gdpr.router)
+
+    # -- DPA Tracking Routes (GDPR Article 28) ---
+    app.include_router(dpa_routes.router)
 
     # -- Task Mining Routes ---
     app.include_router(taskmining.router)

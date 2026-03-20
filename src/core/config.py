@@ -98,9 +98,8 @@ class Settings(BaseSettings):
     copilot_rate_limit_window: int = 60  # seconds
 
     # ── Data Retention (Phase 5) ──────────────────────────────
-    # TODO(DPA): GDPR Article 28 requires Data Processing Agreements between the
-    # platform operator and each client. Retention periods below must align with
-    # agreed DPA terms. See docs/audit-findings/D2-compliance.md for full context.
+    # DPA tracking is implemented via the data_processing_agreements table.
+    # Per-engagement DPA retention overrides take precedence over these defaults.
     retention_cleanup_enabled: bool = True
     evidence_retention_days: int = 365  # Default: 1 year; override per DPA terms
     audit_retention_days: int = 730  # Default: 2 years; regulatory minimum may vary

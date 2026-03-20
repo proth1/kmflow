@@ -101,6 +101,10 @@ class AuditAction(enum.StrEnum):
     CONFLICT_ESCALATED = "conflict_escalated"
     # -- Cohort suppression (Story #391) -------------------------------------------
     EXPORT_BLOCKED = "export_blocked"
+    # -- DPA tracking (GDPR Article 28) --------------------------------------------
+    DPA_CREATED = "dpa_created"
+    DPA_UPDATED = "dpa_updated"
+    DPA_ACTIVATED = "dpa_activated"
 
 
 class AuditLog(Base):
