@@ -224,13 +224,12 @@ class TestElementEvidenceEndpoint:
         )
 
         session = AsyncMock()
-        elem_result = MagicMock()
-        elem_result.scalar_one_or_none.return_value = elem
-        model_result = MagicMock()
-        model_result.scalar_one_or_none.return_value = model
+        # JOIN query returns (element, model) tuple via one_or_none()
+        join_result = MagicMock()
+        join_result.one_or_none.return_value = (elem, model)
         ev_result = MagicMock()
         ev_result.scalars.return_value.all.return_value = [ev1, ev2]
-        session.execute = AsyncMock(side_effect=[elem_result, model_result, ev_result])
+        session.execute = AsyncMock(side_effect=[join_result, ev_result])
         user = _make_mock_user()
 
         result = await get_element_evidence(str(elem.id), session, user)
@@ -247,11 +246,10 @@ class TestElementEvidenceEndpoint:
         elem = _make_mock_element(model_id=model.id, name="Unknown Step", evidence_ids=[], evidence_count=0)
 
         session = AsyncMock()
-        elem_result = MagicMock()
-        elem_result.scalar_one_or_none.return_value = elem
-        model_result = MagicMock()
-        model_result.scalar_one_or_none.return_value = model
-        session.execute = AsyncMock(side_effect=[elem_result, model_result])
+        # JOIN query returns (element, model) tuple via one_or_none()
+        join_result = MagicMock()
+        join_result.one_or_none.return_value = (elem, model)
+        session.execute = AsyncMock(return_value=join_result)
         user = _make_mock_user()
 
         result = await get_element_evidence(str(elem.id), session, user)
@@ -265,9 +263,10 @@ class TestElementEvidenceEndpoint:
         from fastapi import HTTPException
 
         session = AsyncMock()
-        elem_result = MagicMock()
-        elem_result.scalar_one_or_none.return_value = None
-        session.execute = AsyncMock(return_value=elem_result)
+        # JOIN query returns None via one_or_none() for missing element
+        join_result = MagicMock()
+        join_result.one_or_none.return_value = None
+        session.execute = AsyncMock(return_value=join_result)
         user = _make_mock_user()
 
         with pytest.raises(HTTPException) as exc_info:
@@ -297,14 +296,13 @@ class TestElementEvidenceEndpoint:
         elem = _make_mock_element(model_id=model.id, evidence_ids=[], evidence_count=0)
 
         session = AsyncMock()
-        elem_result = MagicMock()
-        elem_result.scalar_one_or_none.return_value = elem
-        model_result = MagicMock()
-        model_result.scalar_one_or_none.return_value = model
+        # JOIN query returns (element, model) tuple
+        join_result = MagicMock()
+        join_result.one_or_none.return_value = (elem, model)
         # Membership check returns None (not a member)
         member_result = MagicMock()
         member_result.scalar_one_or_none.return_value = None
-        session.execute = AsyncMock(side_effect=[elem_result, model_result, member_result])
+        session.execute = AsyncMock(side_effect=[join_result, member_result])
         user = _make_mock_user(role=UserRole.ENGAGEMENT_LEAD)
 
         with pytest.raises(HTTPException) as exc_info:
@@ -320,13 +318,12 @@ class TestElementEvidenceEndpoint:
         elem = _make_mock_element(model_id=model.id, evidence_ids=[str(ev.id)], evidence_count=1)
 
         session = AsyncMock()
-        elem_result = MagicMock()
-        elem_result.scalar_one_or_none.return_value = elem
-        model_result = MagicMock()
-        model_result.scalar_one_or_none.return_value = model
+        # JOIN query returns (element, model) tuple
+        join_result = MagicMock()
+        join_result.one_or_none.return_value = (elem, model)
         ev_result = MagicMock()
         ev_result.scalars.return_value.all.return_value = [ev]
-        session.execute = AsyncMock(side_effect=[elem_result, model_result, ev_result])
+        session.execute = AsyncMock(side_effect=[join_result, ev_result])
         user = _make_mock_user()
 
         result = await get_element_evidence(str(elem.id), session, user)

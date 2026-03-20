@@ -441,6 +441,7 @@ class KnowledgeGraphService:
         node_id: str,
         direction: str = "both",
         relationship_type: str | None = None,
+        limit: int = 500,
     ) -> list[GraphRelationship]:
         """Get relationships connected to a node.
 
@@ -448,6 +449,8 @@ class KnowledgeGraphService:
             node_id: The node to get relationships for.
             direction: "outgoing", "incoming", or "both".
             relationship_type: Optional filter by relationship type.
+            limit: Maximum number of relationships to return (default 500).
+                Guards against unbounded scans on highly-connected nodes.
 
         Returns:
             List of GraphRelationships.
@@ -463,20 +466,23 @@ class KnowledgeGraphService:
             query = f"""
             MATCH (a {{id: $node_id}})-[r{rel_filter}]->(b)
             RETURN r, a.id AS from_id, b.id AS to_id, type(r) AS rel_type
+            LIMIT $limit
             """
         elif direction == "incoming":
             query = f"""
             MATCH (a)-[r{rel_filter}]->(b {{id: $node_id}})
             RETURN r, a.id AS from_id, b.id AS to_id, type(r) AS rel_type
+            LIMIT $limit
             """
         else:
             query = f"""
             MATCH (a)-[r{rel_filter}]-(b)
             WHERE a.id = $node_id
             RETURN r, a.id AS from_id, b.id AS to_id, type(r) AS rel_type
+            LIMIT $limit
             """
 
-        records = await self._run_query(query, {"node_id": node_id})
+        records = await self._run_query(query, {"node_id": node_id, "limit": limit})
 
         results = []
         for record in records:

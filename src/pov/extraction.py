@@ -7,6 +7,7 @@ a mapping from entities to their source evidence items.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
 
@@ -73,12 +74,18 @@ async def extract_from_evidence(
     entity_to_evidence: dict[str, list[str]] = {}
     entity_to_fragments: dict[str, list[str]] = {}
 
-    for fragment in fragments:
+    _sem = asyncio.Semaphore(10)
+
+    async def _bounded_extract(fragment: EvidenceFragment) -> tuple[str, str, ExtractionResult]:
         frag_id = str(fragment.id)
         evidence_id = fragment_to_evidence.get(frag_id, str(fragment.evidence_id))
+        async with _sem:
+            result = await extract_entities(fragment.content, fragment_id=frag_id, seed_terms=seed_terms)
+        return frag_id, evidence_id, result
 
-        result: ExtractionResult = await extract_entities(fragment.content, fragment_id=frag_id, seed_terms=seed_terms)
+    extraction_results = await asyncio.gather(*[_bounded_extract(frag) for frag in fragments])
 
+    for frag_id, evidence_id, result in extraction_results:
         for entity in result.entities:
             all_entities.append(entity)
 

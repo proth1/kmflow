@@ -71,7 +71,7 @@ class ClaimWriteBackService:
         # 1. Create SurveyClaim node in Neo4j
         await self._graph.run_write_query(
             """
-            MERGE (c:Claim {id: $claim_id})
+            MERGE (c:SurveyClaim {id: $claim_id})
             SET c.claim_text = $claim_text,
                 c.probe_type = $probe_type,
                 c.certainty_tier = $certainty_tier,
@@ -112,7 +112,7 @@ class ClaimWriteBackService:
                     f.authority_scope = $authority_scope,
                     f.engagement_id = $engagement_id
                 WITH f
-                MATCH (c:Claim {id: $claim_id})
+                MATCH (c:SurveyClaim {id: $claim_id})
                 MERGE (c)-[:HAS_FRAME]->(f)
                 """,
                 {
@@ -137,7 +137,7 @@ class ClaimWriteBackService:
 
             await self._graph.run_write_query(
                 f"""
-                MATCH (c:Claim {{id: $claim_id}})
+                MATCH (c:SurveyClaim {{id: $claim_id}})
                 MATCH (a {{id: $activity_id, engagement_id: $engagement_id}})
                 MERGE (c)-[r:{edge_type}]->(a)
                 SET r.weight = $weight,
@@ -185,7 +185,7 @@ class ClaimWriteBackService:
         """
         result = await self._graph.run_query(
             """
-            MATCH (c:Claim)-[r]->(a {id: $activity_id, engagement_id: $engagement_id})
+            MATCH (c:SurveyClaim)-[r]->(a {id: $activity_id, engagement_id: $engagement_id})
             WHERE type(r) IN ['SUPPORTS', 'CONTRADICTS']
               AND c.engagement_id = $engagement_id
             RETURN count(c) AS claim_count,
@@ -313,7 +313,7 @@ class ClaimWriteBackService:
                 created_at: datetime()
             })
             WITH co
-            MATCH (c:Claim {id: $claim_id})
+            MATCH (c:SurveyClaim {id: $claim_id})
             MATCH (a {id: $activity_id, engagement_id: $engagement_id})
             MERGE (co)-[:INVOLVES]->(c)
             MERGE (co)-[:INVOLVES]->(a)
@@ -329,3 +329,14 @@ class ClaimWriteBackService:
         )
 
         return conflict
+
+
+async def setup_neo4j_constraints(graph: KnowledgeGraphService) -> None:
+    """Create Neo4j uniqueness constraint for the :SurveyClaim label.
+
+    Should be called once during application startup to ensure
+    that SurveyClaim nodes cannot be duplicated by claim ID.
+    """
+    await graph.run_write_query(
+        "CREATE CONSTRAINT surveyclaim_id_unique IF NOT EXISTS FOR (c:SurveyClaim) REQUIRE c.id IS UNIQUE"
+    )

@@ -393,7 +393,8 @@ class DeltaLakeBackend:
 
             self._ensure_table()
             dt = DeltaTable(self._table_path)
-            dt.delete(f"file_path = '{path}'")
+            safe_path = str(path).replace("'", "''")
+            dt.delete(f"file_path = '{safe_path}'")
         except Exception:  # Intentionally broad: deltalake library has no specific public base exception
             logger.warning("Failed to remove Delta table row for %s", path)
 

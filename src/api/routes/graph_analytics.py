@@ -6,6 +6,7 @@ results for knowledge graph introspection.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 from uuid import UUID
@@ -160,16 +161,24 @@ async def get_triangulation_results(
     all_entities = []
     entity_to_evidence: dict[str, list[str]] = {}
 
-    for item in evidence_items:
+    _sem = asyncio.Semaphore(10)
+
+    async def _bounded_extract(item: EvidenceItem) -> tuple[str, list]:
         content = getattr(item, "raw_content", "") or getattr(item, "content", "") or ""
         if not content:
-            continue
-        result = await extract_entities(str(content))
-        for entity in result.entities:
+            return str(item.id), []
+        async with _sem:
+            result = await extract_entities(str(content))
+        return str(item.id), result.entities
+
+    extraction_results = await asyncio.gather(*[_bounded_extract(item) for item in evidence_items])
+
+    for item_id, entities in extraction_results:
+        for entity in entities:
             all_entities.append(entity)
             if entity.id not in entity_to_evidence:
                 entity_to_evidence[entity.id] = []
-            entity_to_evidence[entity.id].append(str(item.id))
+            entity_to_evidence[entity.id].append(item_id)
 
     # Run triangulation
     triangulated = triangulate_elements(all_entities, entity_to_evidence, evidence_items)

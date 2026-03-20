@@ -99,10 +99,12 @@ class TestGetEvidence:
     async def test_get_evidence_found(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Should return evidence with fragment count."""
         ev = _make_evidence()
+        # Combined JOIN query returns (evidence, fragment_count) via one_or_none()
+        combined_result = MagicMock()
+        combined_result.one_or_none.return_value = (ev, 5)
         mock_db_session.execute.side_effect = [
-            _mock_scalar_result(ev),
+            combined_result,
             MagicMock(),  # set_engagement_context RLS call
-            _mock_count_result(5),
         ]
 
         response = await client.get(f"/api/v1/evidence/{ev.id}")
@@ -114,7 +116,9 @@ class TestGetEvidence:
     @pytest.mark.asyncio
     async def test_get_evidence_not_found(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Should return 404 for non-existent evidence."""
-        mock_db_session.execute.return_value = _mock_scalar_result(None)
+        not_found_result = MagicMock()
+        not_found_result.one_or_none.return_value = None
+        mock_db_session.execute.return_value = not_found_result
 
         fake_id = uuid.uuid4()
         response = await client.get(f"/api/v1/evidence/{fake_id}")

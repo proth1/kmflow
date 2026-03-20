@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import re
+from datetime import datetime
 from typing import Any
 
 import httpx
@@ -168,6 +169,10 @@ class SalesforceConnector(BaseConnector):
     async def sync_incremental(self, engagement_id: str, since: str | None = None, **kwargs: Any) -> dict[str, Any]:
         """Incremental sync using LastModifiedDate filter."""
         if since:
+            try:
+                datetime.fromisoformat(since)
+            except ValueError as exc:
+                raise ValueError(f"'since' must be ISO 8601 format, got: {since!r}") from exc
             object_type = _validate_sobject_name(kwargs.get("object_type", "Case"))
             fields = [
                 _validate_field_name(f)

@@ -8,6 +8,7 @@ and semantic bridge execution.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
@@ -106,10 +107,13 @@ def validate_file_type(file_content: bytes, file_name: str, mime_type: str | Non
 
     try:
         import magic
+    except ImportError as exc:
+        raise ImportError(
+            "python-magic is required for file type validation. Install it with: pip install python-magic"
+        ) from exc
 
+    try:
         detected_type = magic.from_buffer(file_content[:8192], mime=True)
-    except ImportError:
-        logger.debug("python-magic not available, using client-provided MIME type")
     except (ValueError, OSError):
         logger.debug("Magic detection failed, using client-provided MIME type")
 
@@ -752,8 +756,8 @@ async def ingest_evidence(
     if mime_type is None:
         mime_type = detected_mime
 
-    # Step 1: Compute content hash
-    content_hash = compute_content_hash(file_content)
+    # Step 1: Compute content hash (offload CPU-bound SHA-256 to thread pool)
+    content_hash = await asyncio.to_thread(compute_content_hash, file_content)
 
     # Step 2: Check for duplicates
     duplicate_of_id = await check_duplicate(session, content_hash, engagement_id)

@@ -7,6 +7,7 @@ workflows, change management processes, and service catalog data.
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 import httpx
@@ -15,6 +16,8 @@ from src.integrations.base import BaseConnector, ConnectionConfig
 from src.integrations.utils import DEFAULT_TIMEOUT, paginate_offset, retry_request
 
 logger = logging.getLogger(__name__)
+
+_VALID_TABLE_NAME = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 
 class ServiceNowConnector(BaseConnector):
@@ -83,6 +86,10 @@ class ServiceNowConnector(BaseConnector):
             return {"records_synced": 0, "errors": ["ServiceNow not configured"]}
 
         table_name = kwargs.get("table_name", "incident")
+        if not _VALID_TABLE_NAME.match(table_name):
+            raise ValueError(
+                f"Invalid table name: {table_name!r}. Only alphanumeric characters and underscores are allowed."
+            )
         query_filter = kwargs.get("query_filter", "")
         fields = kwargs.get("fields", "")
         records_synced = 0

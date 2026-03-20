@@ -60,7 +60,7 @@ class EvidenceResponse(BaseModel):
     category: EvidenceCategory
     format: str
     content_hash: str | None = None
-    file_path: str | None = None
+    download_url: str | None = None
     size_bytes: int | None = None
     mime_type: str | None = None
     metadata_json: dict | None = None
@@ -336,22 +336,23 @@ async def get_evidence(
     user: User = Depends(require_permission("evidence:read")),
 ) -> dict[str, Any]:
     """Get evidence item details including fragment count."""
-    result = await session.execute(select(EvidenceItem).where(EvidenceItem.id == evidence_id))
-    evidence = result.scalar_one_or_none()
-    if not evidence:
+    # Fetch evidence item and fragment count in a single query
+    combined_result = await session.execute(
+        select(EvidenceItem, func.count(EvidenceFragment.id).label("fragment_count"))
+        .outerjoin(EvidenceFragment, EvidenceFragment.evidence_id == EvidenceItem.id)
+        .where(EvidenceItem.id == evidence_id)
+        .group_by(EvidenceItem.id)
+    )
+    row = combined_result.one_or_none()
+    if row is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Evidence item {evidence_id} not found",
         )
 
+    evidence, fragment_count = row
     await verify_engagement_member(session, user, evidence.engagement_id)
     require_classification_access(evidence.classification, user)
-
-    # Count fragments
-    frag_count_result = await session.execute(
-        select(func.count()).select_from(EvidenceFragment).where(EvidenceFragment.evidence_id == evidence_id)
-    )
-    fragment_count = frag_count_result.scalar() or 0
 
     return {
         **{
@@ -361,7 +362,7 @@ async def get_evidence(
             "category": evidence.category,
             "format": evidence.format,
             "content_hash": evidence.content_hash,
-            "file_path": evidence.file_path,
+            "download_url": f"/api/v1/evidence/{evidence.id}/download" if evidence.file_path else None,
             "size_bytes": evidence.size_bytes,
             "mime_type": evidence.mime_type,
             "metadata_json": evidence.metadata_json,
