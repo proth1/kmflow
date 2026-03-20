@@ -132,7 +132,7 @@ class EvidenceBatchWorker(TaskWorker):
             raise ValueError(f"Evidence item {item_id} not found in engagement {engagement_id}")
 
         # Mark as processing
-        item.status = "processing"
+        item.validation_status = "processing"  # type: ignore[assignment]
         await session.flush()
 
         # Load fragments for this evidence item
@@ -144,7 +144,7 @@ class EvidenceBatchWorker(TaskWorker):
 
         intel_result = await run_intelligence_pipeline(session, fragments, engagement_id)
 
-        item.status = "completed"
+        item.validation_status = "completed"  # type: ignore[assignment]
         await session.flush()
 
         return {

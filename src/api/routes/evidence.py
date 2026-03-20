@@ -579,6 +579,7 @@ async def download_evidence(
     evidence_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("evidence:read")),
+    settings: Settings = Depends(get_settings),
 ) -> Response:
     """Download the raw file for an evidence item.
 
@@ -602,7 +603,14 @@ async def download_evidence(
             detail="No file available for this evidence item",
         )
 
-    file_path = Path(evidence.file_path)
+    file_path = Path(evidence.file_path).resolve()
+    evidence_root = Path(settings.evidence_store_path).resolve()
+    if not file_path.is_relative_to(evidence_root):
+        logger.warning("Path traversal attempt blocked: %s", evidence.file_path)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid file path",
+        )
     if not file_path.exists():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
