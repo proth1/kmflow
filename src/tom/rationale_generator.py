@@ -162,6 +162,7 @@ class RationaleGeneratorService:
         tom_specification: str | None = None,
         activity_description: str | None = None,
         session: AsyncSession | None = None,
+        user_id: str | None = None,
     ) -> dict[str, str]:
         """Generate rationale for a single gap.
 
@@ -171,6 +172,8 @@ class RationaleGeneratorService:
             activity_description: Description of the current-state activity.
                 Falls back to gap.activity_name or gap_type if not provided.
             session: Optional database session for LLM audit logging.
+            user_id: Optional ID of the user who triggered this generation,
+                for LLM audit trail attribution.
 
         Returns:
             Dict with 'rationale' and 'recommendation' keys.
@@ -201,7 +204,7 @@ class RationaleGeneratorService:
             try:
                 audit_entry = LLMAuditLog(
                     scenario_id=None,
-                    user_id=None,
+                    user_id=user_id,
                     prompt_text=prompt[:10000],
                     response_text=(response_text or "")[:10000],
                     evidence_ids=None,

@@ -59,7 +59,8 @@ from src.api.schemas.taskmining import (
     VCEResponse,
     VCETriggerSummaryResponse,
 )
-from src.core.models import User
+from src.core.audit import log_audit
+from src.core.models import AuditAction, User
 from src.core.models.auth import UserRole
 from src.core.models.taskmining import (
     AgentStatus,
@@ -214,6 +215,14 @@ async def register_agent(
     await session.commit()
     await session.refresh(agent)
 
+    await log_audit(
+        session,
+        agent.engagement_id,
+        AuditAction.DATA_MODIFIED,
+        f"Registered task mining agent: {agent.id} (hostname={agent.hostname})",
+        actor=str(current_user.id),
+    )
+    await session.commit()
     logger.info("Agent registered: %s (hostname=%s)", agent.id, agent.hostname)
     return _agent_to_response(agent)
 
@@ -257,6 +266,14 @@ async def approve_agent(
     await session.commit()
     await session.refresh(agent)
 
+    await log_audit(
+        session,
+        agent.engagement_id,
+        AuditAction.DATA_MODIFIED,
+        f"Agent {agent_id} status changed to {payload.status}",
+        actor=str(current_user.id),
+    )
+    await session.commit()
     logger.info("Agent %s status changed to %s", agent_id, payload.status)
     return _agent_to_response(agent)
 
@@ -622,6 +639,14 @@ async def quarantine_action(
     await session.commit()
     await session.refresh(item)
 
+    await log_audit(
+        session,
+        item.engagement_id,
+        AuditAction.DATA_MODIFIED,
+        f"Quarantine item {quarantine_id} action: {payload.action}",
+        actor=str(current_user.id),
+    )
+    await session.commit()
     logger.info("Quarantine item %s action: %s", quarantine_id, payload.action)
     return _quarantine_to_response(item)
 

@@ -45,18 +45,15 @@ async def process_task(task_data: dict[str, Any]) -> dict[str, Any]:
     # Stubs below are Phase 1 placeholders — they accept messages without
     # performing actual work so the worker loop doesn't reject them.
     if task_type == "aggregate":
-        return {
-            "status": "not_implemented",
-            "event_type": task_data.get("event_type"),
-            "session_id": task_data.get("session_id"),
-            "application_name": task_data.get("application_name"),
-        }
+        # TODO(Epic #206, Stories #207/#208): Wire up SessionAggregator -> ActionClassifier
+        raise NotImplementedError("Task type 'aggregate' is not yet implemented (see Epic #206, Story #207)")
     elif task_type == "materialize":
-        return {"status": "not_implemented"}
+        # TODO(Epic #206, Story #209): Wire up EvidenceMaterializer
+        raise NotImplementedError("Task type 'materialize' is not yet implemented (see Epic #206, Story #209)")
     elif task_type == "assemble_switching":
         return await _handle_assemble_switching(task_data)
     else:
-        return {"status": "unknown_task_type", "task_type": task_type}
+        raise NotImplementedError(f"Unknown task type: {task_type!r}")
 
 
 async def run_worker(
