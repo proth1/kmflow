@@ -98,6 +98,17 @@ class TaskQueue:
         """Return the set of registered task type names."""
         return set(self._workers.keys())
 
+    def has_worker(self, task_type: str) -> bool:
+        """Return True if a worker is registered for the given task type.
+
+        Args:
+            task_type: The task type name to check.
+
+        Returns:
+            True if a worker handles this task type, False otherwise.
+        """
+        return task_type in self._workers
+
     # -- Enqueue ---------------------------------------------------------------
 
     async def enqueue(

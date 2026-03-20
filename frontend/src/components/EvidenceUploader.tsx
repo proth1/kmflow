@@ -99,24 +99,24 @@ export default function EvidenceUploader({ engagementId, onUploadComplete }: Evi
     const formData = new FormData();
     formData.append("file", file);
 
-    try {
-      // Simulate progress while the request is in-flight
-      const progressInterval = setInterval(() => {
-        setUploads((prev) =>
-          prev.map((u, i) =>
-            i === index && u.status === "uploading"
-              ? { ...u, progress: Math.min(u.progress + 15, 90) }
-              : u,
-          ),
-        );
-      }, 300);
+    // Simulate progress while the request is in-flight.
+    // The interval is cleared in the finally block so it is always
+    // cancelled — even if the component unmounts while fetch is awaiting.
+    const progressInterval = setInterval(() => {
+      setUploads((prev) =>
+        prev.map((u, i) =>
+          i === index && u.status === "uploading"
+            ? { ...u, progress: Math.min(u.progress + 15, 90) }
+            : u,
+        ),
+      );
+    }, 300);
 
+    try {
       const response = await fetch(
         `${API_BASE_URL}/api/v1/portal/${eid}/upload`,
         { method: "POST", credentials: "include", body: formData },
       );
-
-      clearInterval(progressInterval);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ detail: "Upload failed" }));
@@ -133,6 +133,8 @@ export default function EvidenceUploader({ engagementId, onUploadComplete }: Evi
       setUploads((prev) =>
         prev.map((u, i) => (i === index ? { ...u, status: "error", error: message } : u)),
       );
+    } finally {
+      clearInterval(progressInterval);
     }
   };
 

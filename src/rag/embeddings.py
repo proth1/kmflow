@@ -8,6 +8,7 @@ Both RAG retrieval and semantic search delegate to this service.
 from __future__ import annotations
 
 import asyncio
+import functools
 import logging
 from typing import Any
 
@@ -18,25 +19,18 @@ logger = logging.getLogger(__name__)
 # Default embedding dimension (matches pgvector column on EvidenceFragment)
 EMBEDDING_DIMENSION = 768
 
-# Module-level singleton instances keyed by (model_name, dimension).
-# Avoids reloading the SentenceTransformer model for each call site that
-# constructs EmbeddingService() independently.
-_instances: dict[tuple[str, int], EmbeddingService] = {}
 
-
+@functools.lru_cache(maxsize=16)
 def get_embedding_service(
     model_name: str = "nomic-ai/nomic-embed-text-v1.5",
     dimension: int = EMBEDDING_DIMENSION,
 ) -> EmbeddingService:
     """Return a cached EmbeddingService singleton for the given config.
 
-    Call sites that previously did ``EmbeddingService()`` should use this
-    factory instead so the underlying SentenceTransformer is loaded only once.
+    Uses lru_cache so the underlying SentenceTransformer is loaded only once
+    per (model_name, dimension) combination across all call sites.
     """
-    key = (model_name, dimension)
-    if key not in _instances:
-        _instances[key] = EmbeddingService(model_name=model_name, dimension=dimension)
-    return _instances[key]
+    return EmbeddingService(model_name=model_name, dimension=dimension)
 
 
 class EmbeddingService:

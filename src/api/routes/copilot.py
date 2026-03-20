@@ -60,6 +60,7 @@ async def copilot_chat(
             session=session,
             query_type=payload.query_type,
             history=payload.history,
+            user_id=str(user.id),
         )
     except (ValueError, RuntimeError) as e:
         logger.exception("Copilot chat failed")
@@ -191,6 +192,7 @@ async def copilot_chat_stream(
                 session=session,
                 query_type=payload.query_type,
                 history=payload.history,
+                user_id=str(user.id),
             ):
                 yield chunk
         except Exception as e:  # Intentionally broad: SSE generator must catch all errors to send DONE event

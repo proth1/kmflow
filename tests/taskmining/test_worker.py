@@ -18,40 +18,13 @@ from src.taskmining.worker import process_task
 
 
 class TestProcessTaskAggregate:
-    """aggregate task type returns not_implemented status with passthrough fields."""
+    """aggregate task type raises NotImplementedError (stub pending Epic #206)."""
 
     @pytest.mark.asyncio
-    async def test_aggregate_returns_not_implemented(self) -> None:
+    async def test_aggregate_raises_not_implemented(self) -> None:
         task = {"task_type": "aggregate"}
-        result = await process_task(task)
-        assert result["status"] == "not_implemented"
-
-    @pytest.mark.asyncio
-    async def test_aggregate_passthrough_event_type(self) -> None:
-        task = {"task_type": "aggregate", "event_type": "click"}
-        result = await process_task(task)
-        assert result["event_type"] == "click"
-
-    @pytest.mark.asyncio
-    async def test_aggregate_passthrough_session_id(self) -> None:
-        session_id = str(uuid.uuid4())
-        task = {"task_type": "aggregate", "session_id": session_id}
-        result = await process_task(task)
-        assert result["session_id"] == session_id
-
-    @pytest.mark.asyncio
-    async def test_aggregate_passthrough_application_name(self) -> None:
-        task = {"task_type": "aggregate", "application_name": "Excel"}
-        result = await process_task(task)
-        assert result["application_name"] == "Excel"
-
-    @pytest.mark.asyncio
-    async def test_aggregate_missing_optional_fields_are_none(self) -> None:
-        task = {"task_type": "aggregate"}
-        result = await process_task(task)
-        assert result["event_type"] is None
-        assert result["session_id"] is None
-        assert result["application_name"] is None
+        with pytest.raises(NotImplementedError, match="aggregate"):
+            await process_task(task)
 
 
 # ---------------------------------------------------------------------------
@@ -60,25 +33,13 @@ class TestProcessTaskAggregate:
 
 
 class TestProcessTaskMaterialize:
-    """materialize task type returns not_implemented status."""
+    """materialize task type raises NotImplementedError."""
 
     @pytest.mark.asyncio
-    async def test_materialize_returns_not_implemented(self) -> None:
+    async def test_materialize_raises_not_implemented(self) -> None:
         task = {"task_type": "materialize"}
-        result = await process_task(task)
-        assert result["status"] == "not_implemented"
-
-    @pytest.mark.asyncio
-    async def test_materialize_extra_fields_ignored(self) -> None:
-        task = {"task_type": "materialize", "some_extra_field": "value"}
-        result = await process_task(task)
-        assert result["status"] == "not_implemented"
-
-    @pytest.mark.asyncio
-    async def test_materialize_result_has_no_unexpected_error_key(self) -> None:
-        task = {"task_type": "materialize"}
-        result = await process_task(task)
-        assert "error" not in result
+        with pytest.raises(NotImplementedError, match="materialize"):
+            await process_task(task)
 
 
 # ---------------------------------------------------------------------------
@@ -87,32 +48,25 @@ class TestProcessTaskMaterialize:
 
 
 class TestProcessTaskUnknown:
-    """Unknown task types return unknown_task_type status."""
+    """Unknown task types raise NotImplementedError."""
 
     @pytest.mark.asyncio
-    async def test_unknown_type_returns_unknown_status(self) -> None:
+    async def test_unknown_type_raises_not_implemented(self) -> None:
         task = {"task_type": "nonexistent_type"}
-        result = await process_task(task)
-        assert result["status"] == "unknown_task_type"
+        with pytest.raises(NotImplementedError, match="nonexistent_type"):
+            await process_task(task)
 
     @pytest.mark.asyncio
-    async def test_unknown_type_echoes_task_type(self) -> None:
-        task = {"task_type": "some_future_task"}
-        result = await process_task(task)
-        assert result["task_type"] == "some_future_task"
-
-    @pytest.mark.asyncio
-    async def test_missing_task_type_treated_as_unknown(self) -> None:
-        # No task_type key → defaults to "unknown"
+    async def test_missing_task_type_raises_not_implemented(self) -> None:
         task: dict = {}
-        result = await process_task(task)
-        assert result["status"] == "unknown_task_type"
+        with pytest.raises(NotImplementedError):
+            await process_task(task)
 
     @pytest.mark.asyncio
-    async def test_empty_string_task_type_is_unknown(self) -> None:
+    async def test_empty_string_task_type_raises_not_implemented(self) -> None:
         task = {"task_type": ""}
-        result = await process_task(task)
-        assert result["status"] == "unknown_task_type"
+        with pytest.raises(NotImplementedError):
+            await process_task(task)
 
 
 # ---------------------------------------------------------------------------
