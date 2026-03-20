@@ -798,24 +798,21 @@ async def get_element_evidence(
             detail="Invalid element ID format",
         ) from None
 
-    # Fetch element
-    elem_result = await session.execute(select(ProcessElement).where(ProcessElement.id == elem_uuid))
-    element = elem_result.scalar_one_or_none()
+    # Fetch element and its parent model in a single JOIN query
+    join_result = await session.execute(
+        select(ProcessElement, ProcessModel)
+        .join(ProcessModel, ProcessElement.model_id == ProcessModel.id)
+        .where(ProcessElement.id == elem_uuid)
+    )
+    row = join_result.one_or_none()
 
-    if not element:
+    if row is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Process element {element_id} not found",
         )
 
-    # Verify engagement access via the element's parent model
-    model_result = await session.execute(select(ProcessModel).where(ProcessModel.id == element.model_id))
-    model = model_result.scalar_one_or_none()
-    if not model:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Associated process model not found",
-        )
+    element, model = row
     await _check_engagement_member(session, user, model.engagement_id)
 
     # Fetch evidence items referenced by this element

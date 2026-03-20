@@ -122,6 +122,7 @@ class KnowledgeGraphBuilder:
                     ]
                 )
             )
+            .limit(10000)
         )
 
         if only_new:

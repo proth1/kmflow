@@ -6,6 +6,7 @@ semantic search, and engagement subgraph retrieval.
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 from uuid import UUID
@@ -250,6 +251,7 @@ async def semantic_search(
 @router.get("/{engagement_id}/stats", response_model=StatsResponse)
 async def get_graph_stats(
     engagement_id: UUID,
+    request: Request,
     graph_service: KnowledgeGraphService = Depends(get_graph_service),
     user: User = Depends(require_permission("engagement:read")),
     _engagement_user: User = Depends(require_engagement_access),
@@ -257,14 +259,34 @@ async def get_graph_stats(
     """Get statistics for an engagement's knowledge graph.
 
     Returns node and relationship counts broken down by type.
+    Results are cached in Redis for 60 seconds to reduce Neo4j load.
     """
+    cache_key = f"graph:stats:{engagement_id}"
+    redis_client = getattr(request.app.state, "redis_client", None)
+
+    if redis_client is not None:
+        try:
+            cached = await redis_client.get(cache_key)
+            if cached:
+                return json.loads(cached)
+        except Exception:
+            logger.debug("Redis cache read failed for %s, falling through", cache_key)
+
     stats = await graph_service.get_stats(str(engagement_id))
-    return {
+    result = {
         "node_count": stats.node_count,
         "relationship_count": stats.relationship_count,
         "nodes_by_label": stats.nodes_by_label,
         "relationships_by_type": stats.relationships_by_type,
     }
+
+    if redis_client is not None:
+        try:
+            await redis_client.setex(cache_key, 60, json.dumps(result))
+        except Exception:
+            logger.debug("Redis cache write failed for %s", cache_key)
+
+    return result
 
 
 @router.get("/{engagement_id}/subgraph", response_model=SubgraphResponse)

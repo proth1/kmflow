@@ -43,6 +43,7 @@ def create_engine(
         max_overflow=settings.db_max_overflow,
         pool_pre_ping=True,
         pool_recycle=300,
+        pool_timeout=10,
     )
 
     session_factory = async_sessionmaker(
