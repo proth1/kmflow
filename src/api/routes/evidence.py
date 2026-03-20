@@ -407,13 +407,11 @@ async def list_evidence(
     result = await session.execute(query)
     items = list(result.scalars().all())
 
-    # Post-query filter: silently exclude items whose classification exceeds the user's clearance.
-    # CLIENT_VIEWER role cannot see RESTRICTED data; all other roles can see all levels.
-    items = [
-        item
-        for item in items
-        if not (item.classification == DataClassification.RESTRICTED and user.role == UserRole.CLIENT_VIEWER)
-    ]
+    # Classification filter: CLIENT_VIEWER role cannot see RESTRICTED data.
+    # Applied to both query and count to avoid leaking the count of restricted items.
+    if user.role == UserRole.CLIENT_VIEWER:
+        items = [item for item in items if item.classification != DataClassification.RESTRICTED]
+        count_query = count_query.where(EvidenceItem.classification != DataClassification.RESTRICTED)
 
     count_result = await session.execute(count_query)
     total = count_result.scalar() or 0
