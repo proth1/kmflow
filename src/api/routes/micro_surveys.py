@@ -10,13 +10,13 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
 from src.core.models import MicroSurveyStatus, ProbeType, User
-from src.core.permissions import require_permission
+from src.core.permissions import check_engagement_access, require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -165,6 +165,7 @@ async def submit_survey_response(
 
 @router.get("", response_model=list[MicroSurveyResponse])
 async def list_micro_surveys(
+    request: Request,
     engagement_id: UUID = Query(..., description="Filter by engagement"),
     status_filter: MicroSurveyStatus | None = Query(None, alias="status", description="Filter by status"),
     limit: int = Query(20, ge=1, le=100),
@@ -173,6 +174,8 @@ async def list_micro_surveys(
     user: User = Depends(require_permission("survey:read")),
 ) -> Any:
     """List micro-surveys for an engagement with optional status filter."""
+    await check_engagement_access(engagement_id, request, user)
+
     from sqlalchemy import select
 
     from src.core.models import MicroSurvey

@@ -11,7 +11,7 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,7 +31,7 @@ from src.core.models import (
     ShelfRequestStatus,
     User,
 )
-from src.core.permissions import require_permission
+from src.core.permissions import check_engagement_access, require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -213,6 +213,7 @@ async def create_shelf_request(
 
 @router.get("/", response_model=ShelfRequestList)
 async def list_shelf_requests(
+    request: Request,
     engagement_id: UUID | None = None,
     status_filter: ShelfRequestStatus | None = None,
     source: ShelfRequestItemSource | None = None,
@@ -230,6 +231,9 @@ async def list_shelf_requests(
     - limit: Maximum results (default 20)
     - offset: Number of results to skip (default 0)
     """
+    if engagement_id:
+        await check_engagement_access(engagement_id, request, user)
+
     from sqlalchemy import func
 
     query = select(ShelfDataRequest).options(selectinload(ShelfDataRequest.items))
@@ -277,6 +281,7 @@ class FollowThroughRateResponse(BaseModel):
 
 @router.get("/follow-through-rate", response_model=FollowThroughRateResponse)
 async def get_follow_through_rate(
+    request: Request,
     engagement_id: UUID = Query(...),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
@@ -286,6 +291,8 @@ async def get_follow_through_rate(
     Follow-through rate = shelf items linked to epistemic actions /
     total epistemic actions. Target: >50%.
     """
+    await check_engagement_access(engagement_id, request, user)
+
     from src.api.services.shelf_integration import ShelfIntegrationService
 
     service = ShelfIntegrationService(session)

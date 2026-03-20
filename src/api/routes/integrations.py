@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,7 +20,7 @@ from src.api.deps import get_session
 from src.core.audit import log_audit
 from src.core.encryption import decrypt_dict, encrypt_dict
 from src.core.models import AuditAction, IntegrationConnection, User
-from src.core.permissions import require_permission
+from src.core.permissions import check_engagement_access, require_permission
 from src.integrations.base import ConnectionConfig, ConnectorRegistry
 from src.integrations.field_mapping import get_default_mapping
 
@@ -183,6 +183,7 @@ async def create_connection(
 
 @router.get("/connections", response_model=ConnectionList)
 async def list_connections(
+    request: Request,
     engagement_id: UUID | None = None,
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
@@ -190,6 +191,9 @@ async def list_connections(
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
     """List all connections, optionally filtered by engagement."""
+    if engagement_id:
+        await check_engagement_access(engagement_id, request, user)
+
     query = select(IntegrationConnection)
     count_query = select(func.count(IntegrationConnection.id))
     if engagement_id:

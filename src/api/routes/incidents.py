@@ -11,13 +11,13 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
 from src.core.models import IncidentClassification, IncidentStatus, User
-from src.core.permissions import require_permission
+from src.core.permissions import check_engagement_access, require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -222,6 +222,7 @@ async def get_incident_timeline(
 
 @router.get("", response_model=list[IncidentResponse])
 async def list_incidents(
+    request: Request,
     engagement_id: UUID = Query(..., description="Filter by engagement"),
     status_filter: IncidentStatus | None = Query(None, alias="status"),
     classification: IncidentClassification | None = Query(None),
@@ -231,6 +232,8 @@ async def list_incidents(
     user: User = Depends(require_permission("incident:read")),
 ) -> Any:
     """List incidents for an engagement with optional filters."""
+    await check_engagement_access(engagement_id, request, user)
+
     from sqlalchemy import select
 
     from src.core.models import Incident
