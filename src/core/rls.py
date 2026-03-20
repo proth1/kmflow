@@ -55,6 +55,7 @@ ENGAGEMENT_SCOPED_TABLES: list[str] = [
     "dark_room_snapshots",
     "data_catalog_entries",
     "data_processing_activities",
+    "data_processing_agreements",
     "data_transfer_log",
     "epistemic_frames",
     "evidence_items",

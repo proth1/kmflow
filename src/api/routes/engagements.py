@@ -31,6 +31,7 @@ from src.core.models import (
     UserRole,
 )
 from src.core.permissions import require_engagement_access, require_permission
+from src.core.services.gdpr_service import GdprComplianceService
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,16 @@ class EngagementUpdate(BaseModel):
     data_residency_restriction: str | None = Field(None, pattern="^(none|eu_only|uk_only|custom)$")
 
 
+class DpaComplianceSummary(BaseModel):
+    """Summary of DPA compliance for engagement responses."""
+
+    status: str
+    reference_number: str | None = None
+    effective_date: Any | None = None
+    expiry_date: Any | None = None
+    dpa_id: UUID | None = None
+
+
 class EngagementResponse(BaseModel):
     """Schema for engagement responses."""
 
@@ -77,6 +88,7 @@ class EngagementResponse(BaseModel):
     status: EngagementStatus
     team: list[str] | None = None
     data_residency_restriction: str | None = "none"
+    dpa_compliance: DpaComplianceSummary | None = None
 
 
 class EngagementList(BaseModel):
@@ -221,9 +233,31 @@ async def get_engagement(
     user: User = Depends(require_permission("engagement:read")),
     _engagement_user: User = Depends(require_engagement_access),
     session: AsyncSession = Depends(get_session),
-) -> Engagement:
-    """Get a specific engagement by ID."""
-    return await _get_engagement_or_404(session, engagement_id)
+) -> dict[str, Any]:
+    """Get a specific engagement by ID, including DPA compliance summary."""
+    engagement = await _get_engagement_or_404(session, engagement_id)
+
+    # Fetch DPA compliance summary — gracefully degrade if unavailable
+    dpa_summary = None
+    try:
+        service = GdprComplianceService(session)
+        dpa_summary = await service.get_dpa_compliance_summary(engagement_id)
+    except Exception:
+        logger.warning("Failed to fetch DPA compliance for engagement %s", engagement_id, exc_info=True)
+
+    # Build response dict from ORM object
+    resp = {
+        "id": engagement.id,
+        "name": engagement.name,
+        "client": engagement.client,
+        "business_area": engagement.business_area,
+        "description": engagement.description,
+        "status": engagement.status,
+        "team": engagement.team,
+        "data_residency_restriction": getattr(engagement, "data_residency_restriction", "none"),
+        "dpa_compliance": dpa_summary,
+    }
+    return resp
 
 
 @router.patch("/{engagement_id}", response_model=EngagementResponse)

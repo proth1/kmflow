@@ -1,18 +1,19 @@
 """GDPR compliance models (Story #317).
 
 Data classification access control, lawful basis tracking for processing
-activities, and per-engagement retention policies. Supports GDPR Articles
-6, 15, 17, 20 and Article 30 Records of Processing Activities (ROPA).
+activities, per-engagement retention policies, and Data Processing Agreement
+(DPA) tracking per GDPR Article 28. Supports GDPR Articles 6, 15, 17, 20,
+28, and Article 30 Records of Processing Activities (ROPA).
 """
 
 from __future__ import annotations
 
 import enum
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, String, Text, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Date, DateTime, Enum, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.core.database import Base
@@ -96,3 +97,58 @@ class RetentionPolicy(Base):
 
     def __repr__(self) -> str:
         return f"<RetentionPolicy(engagement={self.engagement_id}, days={self.retention_days}, action={self.action})>"
+
+
+class DpaStatus(enum.StrEnum):
+    """Lifecycle status of a Data Processing Agreement."""
+
+    DRAFT = "draft"
+    ACTIVE = "active"
+    SUPERSEDED = "superseded"
+    EXPIRED = "expired"
+
+
+class DataProcessingAgreement(Base):
+    """GDPR Article 28 Data Processing Agreement tracking.
+
+    Records the existence, terms, and lifecycle of DPAs between the
+    consulting firm (processor) and client (controller) for each engagement.
+    Append-only with status lifecycle: draft → active → superseded/expired.
+    """
+
+    __tablename__ = "data_processing_agreements"
+    __table_args__ = (
+        Index("ix_data_processing_agreements_engagement_id", "engagement_id"),
+        Index("ix_data_processing_agreements_engagement_status", "engagement_id", "status"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("engagements.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    reference_number: Mapped[str] = mapped_column(String(128), nullable=False)
+    version: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[DpaStatus] = mapped_column(Enum(DpaStatus), nullable=False, default=DpaStatus.DRAFT)
+    effective_date: Mapped[date] = mapped_column(Date, nullable=False)
+    expiry_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    controller_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    processor_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    data_categories: Mapped[list] = mapped_column(JSONB, nullable=False)
+    sub_processors: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    retention_days_override: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    lawful_basis: Mapped[LawfulBasis] = mapped_column(Enum(LawfulBasis), nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return f"<DataProcessingAgreement(id={self.id}, ref={self.reference_number}, status={self.status})>"

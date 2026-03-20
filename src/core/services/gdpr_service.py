@@ -19,6 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.models.evidence import DataClassification, EvidenceItem, ValidationStatus
 from src.core.models.gdpr import (
     DataProcessingActivity,
+    DataProcessingAgreement,
+    DpaStatus,
     LawfulBasis,
     RetentionAction,
     RetentionPolicy,
@@ -212,6 +214,190 @@ class GdprComplianceService:
             "limit": limit,
             "offset": offset,
         }
+
+    # ── Data Processing Agreements (GDPR Article 28) ─────────────
+
+    async def create_dpa(
+        self,
+        *,
+        engagement_id: uuid.UUID,
+        reference_number: str,
+        version: str,
+        effective_date: Any,
+        controller_name: str,
+        processor_name: str,
+        data_categories: list[str],
+        lawful_basis: LawfulBasis,
+        created_by: uuid.UUID,
+        expiry_date: Any | None = None,
+        sub_processors: list[dict[str, Any]] | None = None,
+        retention_days_override: int | None = None,
+        notes: str | None = None,
+    ) -> DataProcessingAgreement:
+        """Create a new DPA in DRAFT status."""
+        dpa = DataProcessingAgreement(
+            engagement_id=engagement_id,
+            reference_number=reference_number,
+            version=version,
+            status=DpaStatus.DRAFT,
+            effective_date=effective_date,
+            expiry_date=expiry_date,
+            controller_name=controller_name,
+            processor_name=processor_name,
+            data_categories=data_categories,
+            sub_processors=sub_processors,
+            retention_days_override=retention_days_override,
+            lawful_basis=lawful_basis,
+            notes=notes,
+            created_by=created_by,
+        )
+        self._session.add(dpa)
+        await self._session.flush()
+        logger.info(
+            "DPA created: ref=%s, engagement=%s",
+            reference_number,
+            engagement_id,
+        )
+        return dpa
+
+    async def activate_dpa(
+        self,
+        engagement_id: uuid.UUID,
+        dpa_id: uuid.UUID,
+    ) -> DataProcessingAgreement:
+        """Activate a DPA, superseding any previously active DPA."""
+        # Fetch the target DPA
+        stmt = select(DataProcessingAgreement).where(
+            DataProcessingAgreement.id == dpa_id,
+            DataProcessingAgreement.engagement_id == engagement_id,
+        )
+        result = await self._session.execute(stmt)
+        dpa = result.scalar_one_or_none()
+        if dpa is None:
+            msg = f"DPA {dpa_id} not found for engagement {engagement_id}"
+            raise ValueError(msg)
+
+        if dpa.status not in (DpaStatus.DRAFT, DpaStatus.ACTIVE):
+            msg = f"Cannot activate DPA in status {dpa.status}"
+            raise ValueError(msg)
+
+        # Supersede any currently active DPA
+        active_stmt = select(DataProcessingAgreement).where(
+            DataProcessingAgreement.engagement_id == engagement_id,
+            DataProcessingAgreement.status == DpaStatus.ACTIVE,
+            DataProcessingAgreement.id != dpa_id,
+        )
+        active_result = await self._session.execute(active_stmt)
+        for prev in active_result.scalars().all():
+            prev.status = DpaStatus.SUPERSEDED
+
+        dpa.status = DpaStatus.ACTIVE
+        await self._session.flush()
+        logger.info("DPA activated: ref=%s, engagement=%s", dpa.reference_number, engagement_id)
+        return dpa
+
+    async def get_active_dpa(
+        self,
+        engagement_id: uuid.UUID,
+    ) -> DataProcessingAgreement | None:
+        """Get the active DPA for an engagement."""
+        stmt = select(DataProcessingAgreement).where(
+            DataProcessingAgreement.engagement_id == engagement_id,
+            DataProcessingAgreement.status == DpaStatus.ACTIVE,
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def list_dpas(
+        self,
+        engagement_id: uuid.UUID,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """List all DPA versions for an engagement."""
+        count_stmt = (
+            select(sa_func.count())
+            .select_from(DataProcessingAgreement)
+            .where(DataProcessingAgreement.engagement_id == engagement_id)
+        )
+        count_result = await self._session.execute(count_stmt)
+        total = count_result.scalar() or 0
+
+        query = (
+            select(DataProcessingAgreement)
+            .where(DataProcessingAgreement.engagement_id == engagement_id)
+            .order_by(DataProcessingAgreement.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self._session.execute(query)
+        items = list(result.scalars().all())
+
+        return {"items": items, "total": total}
+
+    async def update_dpa(
+        self,
+        engagement_id: uuid.UUID,
+        dpa_id: uuid.UUID,
+        updates: dict[str, Any],
+    ) -> DataProcessingAgreement:
+        """Update a DPA (only draft or active)."""
+        stmt = select(DataProcessingAgreement).where(
+            DataProcessingAgreement.id == dpa_id,
+            DataProcessingAgreement.engagement_id == engagement_id,
+        )
+        result = await self._session.execute(stmt)
+        dpa = result.scalar_one_or_none()
+        if dpa is None:
+            msg = f"DPA {dpa_id} not found for engagement {engagement_id}"
+            raise ValueError(msg)
+
+        if dpa.status not in (DpaStatus.DRAFT, DpaStatus.ACTIVE):
+            msg = f"Cannot update DPA in status {dpa.status}"
+            raise ValueError(msg)
+
+        for field_name, value in updates.items():
+            setattr(dpa, field_name, value)
+
+        await self._session.flush()
+        return dpa
+
+    async def get_dpa_compliance_summary(
+        self,
+        engagement_id: uuid.UUID,
+    ) -> dict[str, Any]:
+        """Get DPA compliance summary for an engagement response."""
+        dpa = await self.get_active_dpa(engagement_id)
+        if dpa is None:
+            return {
+                "status": "missing",
+                "reference_number": None,
+                "effective_date": None,
+                "expiry_date": None,
+                "dpa_id": None,
+            }
+        return {
+            "status": dpa.status.value,
+            "reference_number": dpa.reference_number,
+            "effective_date": dpa.effective_date,
+            "expiry_date": dpa.expiry_date,
+            "dpa_id": dpa.id,
+        }
+
+    async def get_effective_retention_days(
+        self,
+        engagement_id: uuid.UUID,
+    ) -> int:
+        """Return effective retention days: DPA override if active, else RetentionPolicy, else default 365."""
+        dpa = await self.get_active_dpa(engagement_id)
+        if dpa and dpa.retention_days_override:
+            return dpa.retention_days_override
+
+        policy = await self.get_retention_policy(engagement_id)
+        if policy:
+            return policy.retention_days
+
+        return 365  # default
 
     async def get_compliance_report(self, engagement_id: uuid.UUID) -> dict[str, Any]:
         """Generate a GDPR compliance report for an engagement.

@@ -35,6 +35,7 @@ from src.core.permissions import (
     require_permission,
     verify_engagement_member,
 )
+from src.core.services.gdpr_service import GdprComplianceService
 from src.evidence.exceptions import EvidenceValidationError
 from src.evidence.pipeline import ingest_evidence
 from src.evidence.quality import score_evidence
@@ -156,6 +157,7 @@ class UploadResponse(BaseModel):
     fragment_count: int
     duplicate_of_id: UUID | None = None
     quality_scores: dict[str, float] | None = None
+    warnings: list[str] = Field(default_factory=list)
 
 
 # -- Routes -------------------------------------------------------------------
@@ -222,6 +224,19 @@ async def upload_evidence(
     # Score quality
     quality_scores = await score_evidence(session, evidence_item)
 
+    # Check for active DPA — soft warning if missing
+    warnings: list[str] = []
+    try:
+        gdpr_service = GdprComplianceService(session)
+        active_dpa = await gdpr_service.get_active_dpa(engagement_id)
+        if active_dpa is None:
+            warnings.append(
+                "dpa_warning: No active Data Processing Agreement exists for this engagement. "
+                "GDPR Article 28 requires a DPA before processing client data."
+            )
+    except Exception:
+        logger.warning("Failed to check DPA status for engagement %s", engagement_id, exc_info=True)
+
     await session.commit()
     await session.refresh(evidence_item)
 
@@ -230,6 +245,7 @@ async def upload_evidence(
         "fragment_count": len(fragments),
         "duplicate_of_id": duplicate_of_id,
         "quality_scores": quality_scores,
+        "warnings": warnings,
     }
 
 
