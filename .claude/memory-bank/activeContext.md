@@ -6,17 +6,18 @@
 
 **MVP COMPLETE + WGI ALIGNED** — Platform MVP done. Windows Task Mining Agent fully implemented. WGI Platform Alignment complete.
 
-- **Current version**: 2026.03.238
+- **Current version**: 2026.03.239
 - **Open issues**: 0
 - **PM tool**: Jira (KMFLOW project at agentic-sdlc.atlassian.net)
 - **Presentations**: kmflow.agentic-innovations.com + state-street-apex.agentic-innovations.com
 
 ## Current Focus
 
-Audit remediation complete for all CRITICAL/HIGH findings. Remaining: ~60 MEDIUM/LOW findings (informational, product decisions, or minor refactors).
+Audit remediation complete. All 3 CRITICAL, 29 HIGH, and majority of MEDIUM findings resolved across 4 PRs. Remaining ~43 findings are informational LOW items, accepted risks, or require product-level decisions.
 
 ## Recently Completed
 
+- **PR #634**: Audit remediation #4 — response_model (27 endpoints), GDPR agent tests (23), flaky tests hardened, seeds YAML, HNSW index, exception comments, dependency pinning (#633, merged 2026-03-19)
 - **PR #632**: Audit remediation #3 — schema extraction (104 schemas → 6 files), 106 new tests, classification enforcement, BPMNViewer cast fix, rate limit alignment (#631, merged 2026-03-19)
 - **PR #630**: Audit remediation #2 — 20 CRITICAL/HIGH findings: 2 IDOR fixes (10 routes), RLS 34 tables, N+1 elimination (search_similar, governance, pipeline), LLM audit logging, supply chain hashes, per-email auth lockout (#629, merged 2026-03-19)
 - **PR #628**: Audit followup — 13 remaining findings: shared auth, domain exceptions, schema extraction, Lua rate limiter, classification enforcement, 6 new tests (#627, merged 2026-03-19)

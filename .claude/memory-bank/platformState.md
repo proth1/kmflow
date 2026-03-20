@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.238
+**Version**: 2026.03.239
 **Last Updated**: 2026-03-19
 
 ## Quick Stats
@@ -9,9 +9,9 @@
 |--------|-------|
 | SQLAlchemy Models | 101 |
 | API Routers | 76 |
-| Test Count | 6,110+ backend + 635 frontend (6,745+ total) |
+| Test Count | 6,132+ backend + 635 frontend (6,767+ total) |
 | Total LOC | ~120,000 (440+ Python / 120 TypeScript / 39 Swift / 63 C#/C) |
-| Database Migrations | 89 |
+| Database Migrations | 90 |
 | BPMN Process Models | 44 |
 | Coverage | >83% |
 | Python Version | 3.12+ |
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.239 | 2026-03-19 | Audit remediation #4 — response_model (27 endpoints), GDPR agent tests (23), flaky tests hardened, seeds YAML, HNSW index (#633, PR #634) |
 | 2026.03.238 | 2026-03-19 | Audit remediation #3 — schema extraction (104 schemas), 106 new tests, classification enforcement, BPMNViewer cast fix (#631, PR #632) |
 | 2026.03.237 | 2026-03-19 | Audit remediation #2 — 20 CRITICAL/HIGH findings: IDOR fixes, RLS 34 tables, N+1 elimination, LLM audit, supply chain hashes (#629, PR #630) |
 | 2026.03.236 | 2026-03-19 | Audit followup — 13 remaining findings: shared auth, domain exceptions, schema extraction, Lua rate limiter, classification enforcement, 6 new tests (#627, PR #628) |

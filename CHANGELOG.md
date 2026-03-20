@@ -3,6 +3,26 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.239] - 2026-03-19
+### Changed
+- Decompose get_best_practice_seeds 224-line literal to YAML file (#633)
+- Consolidate background task GC pattern to shared track_background_task() helper (#633)
+- Add response_model to ~27 endpoints (governance, consent, data_classification, orchestration, camunda) (#633)
+- Add MagicMock(spec=) to POV tests for type-safe mocking (#633)
+- Harden 20 flaky timing-dependent tests with generous CI buffers (#633)
+### Security
+- Remove governance /policies filesystem path exposure (#633)
+- Rate limiter fail-open logging: DEBUG → WARNING (#633)
+- Pin jose exact version in 3 worker package.json files (#633)
+- Remove default password in validate_neo4j (#633)
+### Added
+- 23 new agent GDPR tests (purge manager + audit logger) (#633)
+- Migration 090: HNSW index on pattern_library_entries.embedding (#633)
+- Justification comments on 17 broad exception catches (#633)
+### Fixed
+- TOM seed endpoint idempotency (check existence before insert) (#633)
+- Cap aiofiles dependency with upper bound <26.0 (#633)
+
 ## [2026.03.238] - 2026-03-19
 ### Changed
 - Extract 104 inline Pydantic schemas from 6 route files to `src/api/schemas/` (#631)
