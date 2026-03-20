@@ -210,7 +210,7 @@ async def trigger_pov_generation(
         return {
             "job_id": task_id,
             "status": "queued",
-            "message": "POV generation queued. Poll GET /api/v1/tasks/" + task_id,
+            "message": "POV generation queued. Poll GET /tasks/" + task_id,
         }
 
     # Fallback: synchronous execution (degraded mode / task queue unavailable)

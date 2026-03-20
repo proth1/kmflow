@@ -132,7 +132,7 @@ export default function CopilotChat() {
 
             {messages.map((message, index) => (
               <div
-                key={index}
+                key={`${message.role}-${index}`}
                 className={`mb-4 ${
                   message.role === "user" ? "text-right" : "text-left"
                 }`}

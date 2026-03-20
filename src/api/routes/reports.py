@@ -241,7 +241,7 @@ async def trigger_report_generation(
             },
         )
 
-    status_url = f"/api/v1/reports/engagements/{engagement_id}/status/{report_id}"
+    status_url = f"/reports/engagements/{engagement_id}/status/{report_id}"
     return {
         "report_id": report_id,
         "engagement_id": str(engagement_id),
@@ -284,9 +284,7 @@ async def get_report_status(
 
     download_url = None
     if job.get("status") == ReportStatus.COMPLETE:
-        download_url = (
-            f"/api/v1/reports/engagements/{engagement_id}/download/{report_id}?format={job.get('format', 'html')}"
-        )
+        download_url = f"/reports/engagements/{engagement_id}/download/{report_id}?format={job.get('format', 'html')}"
 
     return {
         "report_id": report_id,

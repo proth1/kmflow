@@ -27,23 +27,6 @@ function getConfidenceColor(score: number): string {
   return CONFIDENCE_COLORS.VERY_LOW;
 }
 
-interface BPMNViewerProps {
-  bpmnXml: string;
-  elementConfidences?: Record<string, number>;
-  evidenceCounts?: Record<string, number>;
-  showConfidenceOverlay?: boolean;
-  showEvidenceOverlay?: boolean;
-  onElementClick?: (elementId: string, elementName: string) => void;
-}
-
-export default function BPMNViewerComponent({
-  bpmnXml,
-  elementConfidences = {},
-  evidenceCounts = {},
-  showConfidenceOverlay = false,
-  showEvidenceOverlay = false,
-  onElementClick,
-}: BPMNViewerProps) {
 interface BpmnCanvas {
   zoom(value: string): void;
   viewbox(): { x: number; y: number; width: number; height: number };
@@ -68,6 +51,23 @@ interface BpmnViewer {
   destroy(): void;
 }
 
+interface BPMNViewerProps {
+  bpmnXml: string;
+  elementConfidences?: Record<string, number>;
+  evidenceCounts?: Record<string, number>;
+  showConfidenceOverlay?: boolean;
+  showEvidenceOverlay?: boolean;
+  onElementClick?: (elementId: string, elementName: string) => void;
+}
+
+export default function BPMNViewerComponent({
+  bpmnXml,
+  elementConfidences = {},
+  evidenceCounts = {},
+  showConfidenceOverlay = false,
+  showEvidenceOverlay = false,
+  onElementClick,
+}: BPMNViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<BpmnViewer | null>(null);
   const [error, setError] = useState<string | null>(null);

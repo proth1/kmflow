@@ -570,3 +570,55 @@ async def get_fragments(
 
     result = await session.execute(query)
     return list(result.scalars().all())
+
+
+@router.get("/{evidence_id}/download")
+async def download_evidence(
+    evidence_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("evidence:read")),
+) -> Response:
+    """Download the raw file for an evidence item.
+
+    SVG files are served with Content-Disposition: attachment to prevent
+    browser rendering (XSS risk from untrusted SVG content).
+    """
+    result = await session.execute(select(EvidenceItem).where(EvidenceItem.id == evidence_id))
+    evidence = result.scalar_one_or_none()
+    if not evidence:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Evidence item {evidence_id} not found",
+        )
+
+    await verify_engagement_member(session, user, evidence.engagement_id)
+    require_classification_access(evidence.classification, user)
+
+    if not evidence.file_path:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No file available for this evidence item",
+        )
+
+    file_path = evidence.file_path
+    if not os.path.exists(file_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Evidence file not found on storage",
+        )
+
+    with open(file_path, "rb") as f:
+        content = f.read()
+
+    mime_type = evidence.mime_type or "application/octet-stream"
+    filename = os.path.basename(file_path)
+
+    headers: dict[str, str] = {}
+    # Force attachment download for SVG to prevent browser rendering of potentially
+    # untrusted SVG content (SVG can contain executable JavaScript).
+    if mime_type == "image/svg+xml" or filename.lower().endswith(".svg"):
+        headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+    else:
+        headers["Content-Disposition"] = f'inline; filename="{filename}"'
+
+    return Response(content=content, media_type=mime_type, headers=headers)

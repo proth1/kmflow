@@ -233,7 +233,7 @@ async def get_triangulation_results(
     }
 
 
-@router.get("/relationships/{node_id}")
+@router.get("/relationships/{node_id}", response_model=RelationshipAnalysisResponse)
 async def get_node_relationships(
     request: Request,
     node_id: str,

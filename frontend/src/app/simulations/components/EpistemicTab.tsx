@@ -119,8 +119,8 @@ export default function EpistemicTab({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {epistemicPlan.actions.map((a, i) => (
-                  <TableRow key={i}>
+                {epistemicPlan.actions.map((a) => (
+                  <TableRow key={`${a.target_element_name}-${a.evidence_gap_description}`}>
                     <TableCell className="font-medium text-sm">
                       {a.target_element_name}
                     </TableCell>

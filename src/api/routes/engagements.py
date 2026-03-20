@@ -110,6 +110,12 @@ class AuditLogList(BaseModel):
     total: int
 
 
+class ArchiveRequest(BaseModel):
+    """Optional request body for archiving an engagement."""
+
+    reason: str | None = None
+
+
 class DashboardResponse(BaseModel):
     """Schema for engagement dashboard summary."""
 
@@ -168,7 +174,7 @@ async def create_engagement(
 
 @router.get("/", response_model=EngagementList)
 async def list_engagements(
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     status_filter: EngagementStatus | None = None,
     client: str | None = None,
@@ -298,6 +304,7 @@ async def update_engagement(
 async def archive_engagement(
     engagement_id: UUID,
     request: Request,
+    body: ArchiveRequest | None = None,
     user: User = Depends(require_permission("engagement:delete")),
     _engagement_user: User = Depends(require_engagement_access),
     session: AsyncSession = Depends(get_session),
@@ -390,7 +397,7 @@ async def get_engagement_dashboard(
 @router.get("/{engagement_id}/audit-logs", response_model=AuditLogList)
 async def get_audit_logs(
     engagement_id: UUID,
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     user: User = Depends(require_permission("engagement:read")),
     _engagement_user: User = Depends(require_engagement_access),

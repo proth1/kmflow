@@ -225,6 +225,13 @@ class FeedbackRequest(BaseModel):
     is_hallucination: bool = False
 
 
+class FeedbackCreateResponse(BaseModel):
+    """Response after submitting copilot feedback."""
+
+    id: str
+    created_at: str
+
+
 class FeedbackSummaryResponse(BaseModel):
     """Aggregated copilot feedback statistics for an engagement."""
 
@@ -239,7 +246,7 @@ class FeedbackSummaryResponse(BaseModel):
 # -- Feedback Routes ----------------------------------------------------------
 
 
-@router.post("/feedback", status_code=201)
+@router.post("/feedback", response_model=FeedbackCreateResponse, status_code=status.HTTP_201_CREATED)
 async def submit_feedback(
     payload: FeedbackRequest,
     user: User = Depends(copilot_rate_limit),

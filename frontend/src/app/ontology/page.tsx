@@ -48,6 +48,8 @@ export default function OntologyPage() {
   const [engagementId, setEngagementId] = useState("");
   const [deriving, setDeriving] = useState(false);
   const [deriveError, setDeriveError] = useState<string | null>(null);
+  const [validateError, setValidateError] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [validation, setValidation] = useState<ValidationReport | null>(null);
 
   const fetchData = useCallback(
@@ -79,16 +81,18 @@ export default function OntologyPage() {
 
   const handleValidate = async () => {
     if (!engagementId) return;
+    setValidateError(null);
     try {
       const report = await validateOntology(engagementId);
       setValidation(report);
-    } catch {
-      // Validation errors handled in UI
+    } catch (e) {
+      setValidateError(e instanceof Error ? e.message : "Validation failed");
     }
   };
 
   const handleExport = async (format: "owl" | "yaml") => {
     if (!engagementId) return;
+    setExportError(null);
     try {
       const result = await exportOntology(engagementId, format);
       const blob = new Blob([result.content], { type: "text/plain" });
@@ -98,8 +102,8 @@ export default function OntologyPage() {
       a.download = `ontology-v${result.version}.${format === "owl" ? "owl.xml" : "yaml"}`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch {
-      // Export errors handled silently
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : "Export failed");
     }
   };
 
@@ -170,6 +174,8 @@ export default function OntologyPage() {
               <Button variant="outline" onClick={() => handleExport("yaml")}>Export YAML</Button>
               <Button variant="outline" onClick={() => handleExport("owl")}>Export OWL</Button>
             </div>
+            {validateError && <p className="text-red-600 text-sm">{validateError}</p>}
+            {exportError && <p className="text-red-600 text-sm">{exportError}</p>}
 
             {/* Validation report */}
             {validation && (
@@ -192,8 +198,8 @@ export default function OntologyPage() {
                     <div>
                       <p className="font-medium text-sm mb-1">Recommendations</p>
                       <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
-                        {validation.recommendations.map((r, i) => (
-                          <li key={i}>{r}</li>
+                        {validation.recommendations.map((r) => (
+                          <li key={r}>{r}</li>
                         ))}
                       </ul>
                     </div>

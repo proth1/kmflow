@@ -103,7 +103,7 @@ async def get_replay_status(
 @router.get("/{task_id}/frames")
 async def get_replay_frames(
     task_id: str,
-    limit: int = Query(default=10, ge=1, le=100),
+    limit: int = Query(default=10, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:

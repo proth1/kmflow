@@ -15,6 +15,7 @@ from uuid import UUID
 
 import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from pydantic import BaseModel as _PydanticBaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -40,6 +41,7 @@ from src.api.schemas.simulations import (
     SuggestionCreate,
     SuggestionDispositionUpdate,
     SuggestionListResponse,
+    SuggestionResponse,
 )
 from src.core.audit import log_audit
 from src.core.models import (
@@ -66,6 +68,24 @@ from src.simulation.service import (
     suggestion_to_response,
 )
 from src.simulation.suggestion_review import review_suggestion
+
+
+class _LLMAuditEntry(_PydanticBaseModel):
+    id: str
+    scenario_id: str
+    user_id: str | None = None
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+    model_name: str | None = None
+    error_message: str | None = None
+    evidence_ids: list[str] | None = None
+    created_at: str
+
+
+class _LLMAuditListResponse(_PydanticBaseModel):
+    items: list[_LLMAuditEntry]
+    total: int
+
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +173,7 @@ async def create_scenario(
 async def list_scenarios(
     engagement_id: UUID | None = None,
     simulation_type: SimulationType | None = None,
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
@@ -299,7 +319,7 @@ async def add_modification(
 @router.get("/scenarios/{scenario_id}/modifications", response_model=ModificationList)
 async def list_modifications(
     scenario_id: UUID,
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
@@ -563,7 +583,7 @@ async def compare_scenarios(
 @router.get("/results", response_model=SimulationResultList)
 async def list_results(
     scenario_id: UUID | None = None,
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
@@ -603,7 +623,7 @@ async def get_result(
 async def generate_epistemic_plan(
     scenario_id: UUID,
     request: Request,
-    limit: int = Query(default=10, ge=1, le=100),
+    limit: int = Query(default=10, ge=1, le=1000),
     create_shelf_request: bool = Query(default=False),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:create")),
@@ -814,7 +834,7 @@ async def create_financial_assumption(
 )
 async def list_financial_assumptions(
     scenario_id: UUID,
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
@@ -932,7 +952,7 @@ async def request_suggestions(
 @router.get("/scenarios/{scenario_id}/suggestions", response_model=SuggestionListResponse)
 async def list_suggestions(
     scenario_id: UUID,
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
@@ -951,6 +971,7 @@ async def list_suggestions(
 
 @router.patch(
     "/scenarios/{scenario_id}/suggestions/{suggestion_id}",
+    response_model=SuggestionResponse,
 )
 async def update_suggestion_disposition(
     scenario_id: UUID,
@@ -1015,10 +1036,10 @@ async def update_suggestion_disposition(
 # -- LLM Audit Route ----------------------------------------------------------
 
 
-@router.get("/scenarios/{scenario_id}/llm-audit")
+@router.get("/scenarios/{scenario_id}/llm-audit", response_model=_LLMAuditListResponse)
 async def get_llm_audit(
     scenario_id: UUID,
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
