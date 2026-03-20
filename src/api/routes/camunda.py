@@ -10,7 +10,7 @@ import logging
 from typing import Any  # noqa: F401 — used in inline Pydantic schemas
 
 import httpx
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from pydantic import BaseModel
 
 from src.core.models import User
@@ -95,12 +95,14 @@ def _get_camunda_client(request: Request):
 @router.get("/deployments", response_model=list[DeploymentResponse])
 async def list_deployments(
     request: Request,
+    limit: int = Query(default=20, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     user: User = Depends(require_permission("engagement:read")),
 ) -> list[dict[str, Any]]:
     """List all BPMN process deployments."""
     client = _get_camunda_client(request)
     try:
-        return await client.list_deployments()
+        return await client.list_deployments(max_results=limit, first_result=offset)
     except (ConnectionError, OSError, httpx.HTTPError) as e:
         logger.error("Failed to list deployments: %s", e)
         raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine") from e
@@ -130,12 +132,14 @@ async def deploy_process(
 @router.get("/process-definitions", response_model=list[ProcessDefinitionResponse])
 async def list_process_definitions(
     request: Request,
+    limit: int = Query(default=20, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     user: User = Depends(require_permission("engagement:read")),
 ) -> list[dict[str, Any]]:
     """List all deployed process definitions (latest versions)."""
     client = _get_camunda_client(request)
     try:
-        return await client.list_process_definitions()
+        return await client.list_process_definitions(max_results=limit, first_result=offset)
     except (ConnectionError, OSError, httpx.HTTPError) as e:
         logger.error("Failed to list process definitions: %s", e)
         raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine") from e
@@ -161,12 +165,14 @@ async def start_process(
 async def get_process_instances(
     request: Request,
     active: bool = True,
+    limit: int = Query(default=20, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     user: User = Depends(require_permission("engagement:read")),
 ) -> list[dict[str, Any]]:
     """Get process instances."""
     client = _get_camunda_client(request)
     try:
-        return await client.get_process_instances(active=active)
+        return await client.get_process_instances(active=active, max_results=limit, first_result=offset)
     except (ConnectionError, OSError, httpx.HTTPError) as e:
         logger.error("Failed to get process instances: %s", e)
         raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine") from e
@@ -176,12 +182,14 @@ async def get_process_instances(
 async def get_tasks(
     request: Request,
     assignee: str | None = None,
+    limit: int = Query(default=20, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     user: User = Depends(require_permission("engagement:read")),
 ) -> list[dict[str, Any]]:
     """Get user tasks."""
     client = _get_camunda_client(request)
     try:
-        return await client.get_tasks(assignee=assignee)
+        return await client.get_tasks(assignee=assignee, max_results=limit, first_result=offset)
     except (ConnectionError, OSError, httpx.HTTPError) as e:
         logger.error("Failed to get tasks: %s", e)
         raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine") from e

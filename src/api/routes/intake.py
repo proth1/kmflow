@@ -11,13 +11,14 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.api.deps import get_session
+from src.api.routes.auth import limiter
 from src.core.models import (
     ShelfDataRequest,
     ShelfDataRequestToken,
@@ -170,16 +171,25 @@ async def _get_valid_token(
             detail=error,
         )
 
-    assert token_record is not None  # validate_intake_token guarantees this
+    if token_record is None:
+        # validate_intake_token guarantees a non-None record when error is None,
+        # but guard explicitly to satisfy type checkers and avoid silent failures.
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Intake token not found",
+        )
     return token_record
 
 
 @router.post(
     "/api/v1/intake/{token}",
     response_model=IntakeUploadResponse,
+    status_code=status.HTTP_201_CREATED,
 )
+@limiter.limit("20/hour")
 async def submit_intake_files(
     token: UUID,
+    request: Request,
     filenames: list[str] = Query(..., description="List of filenames being uploaded"),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:

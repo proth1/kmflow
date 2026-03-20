@@ -203,7 +203,14 @@ async def record_scc(
     return scc
 
 
-@router.get("/log", response_model=list[TransferLogResponse])
+class TransferLogListResponse(BaseModel):
+    """Envelope response for transfer log list."""
+
+    items: list[TransferLogResponse]
+    total: int
+
+
+@router.get("/log", response_model=TransferLogListResponse)
 async def list_transfer_logs(
     request: Request,
     engagement_id: UUID = Query(..., description="Filter by engagement"),
@@ -216,9 +223,15 @@ async def list_transfer_logs(
     """List transfer log entries for an engagement."""
     await check_engagement_access(engagement_id, request, user)
 
-    from sqlalchemy import select
+    from sqlalchemy import func, select
 
     from src.core.models import DataTransferLog
+
+    count_query = select(func.count(DataTransferLog.id)).where(DataTransferLog.engagement_id == engagement_id)
+    if connector_id is not None:
+        count_query = count_query.where(DataTransferLog.connector_id == connector_id)
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
 
     query = select(DataTransferLog).where(DataTransferLog.engagement_id == engagement_id)
     if connector_id is not None:
@@ -226,4 +239,4 @@ async def list_transfer_logs(
     query = query.order_by(DataTransferLog.created_at.desc()).offset(offset).limit(limit)
 
     result = await session.execute(query)
-    return result.scalars().all()
+    return {"items": list(result.scalars().all()), "total": total}

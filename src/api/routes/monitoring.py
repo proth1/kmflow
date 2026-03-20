@@ -142,11 +142,11 @@ async def create_monitoring_job(
 ) -> dict[str, Any]:
     """Create a new monitoring job."""
     if not validate_cron_expression(payload.schedule_cron):
-        raise HTTPException(status_code=400, detail="Invalid cron expression")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid cron expression")
 
     config_errors = validate_monitoring_config(payload.source_type, payload.config)
     if config_errors:
-        raise HTTPException(status_code=400, detail="; ".join(config_errors))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="; ".join(config_errors))
 
     job = MonitoringJob(
         engagement_id=payload.engagement_id,
@@ -209,7 +209,7 @@ async def get_monitoring_job(
     result = await session.execute(select(MonitoringJob).where(MonitoringJob.id == job_id))
     job = result.scalar_one_or_none()
     if not job:
-        raise HTTPException(status_code=404, detail=f"Monitoring job {job_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Monitoring job {job_id} not found")
     return _job_to_response(job)
 
 
@@ -224,13 +224,13 @@ async def update_monitoring_job(
     result = await session.execute(select(MonitoringJob).where(MonitoringJob.id == job_id))
     job = result.scalar_one_or_none()
     if not job:
-        raise HTTPException(status_code=404, detail=f"Monitoring job {job_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Monitoring job {job_id} not found")
 
     if payload.name is not None:
         job.name = payload.name
     if payload.schedule_cron is not None:
         if not validate_cron_expression(payload.schedule_cron):
-            raise HTTPException(status_code=400, detail="Invalid cron expression")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid cron expression")
         job.schedule_cron = payload.schedule_cron
     if payload.config is not None:
         job.config_json = payload.config
@@ -252,7 +252,7 @@ async def activate_monitoring_job(
     result = await session.execute(select(MonitoringJob).where(MonitoringJob.id == job_id))
     job = result.scalar_one_or_none()
     if not job:
-        raise HTTPException(status_code=404, detail=f"Monitoring job {job_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Monitoring job {job_id} not found")
 
     job.status = MonitoringStatus.ACTIVE
 
@@ -279,7 +279,7 @@ async def pause_monitoring_job(
     result = await session.execute(select(MonitoringJob).where(MonitoringJob.id == job_id))
     job = result.scalar_one_or_none()
     if not job:
-        raise HTTPException(status_code=404, detail=f"Monitoring job {job_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Monitoring job {job_id} not found")
 
     job.status = MonitoringStatus.PAUSED
     await session.commit()
@@ -297,7 +297,7 @@ async def stop_monitoring_job(
     result = await session.execute(select(MonitoringJob).where(MonitoringJob.id == job_id))
     job = result.scalar_one_or_none()
     if not job:
-        raise HTTPException(status_code=404, detail=f"Monitoring job {job_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Monitoring job {job_id} not found")
 
     job.status = MonitoringStatus.STOPPED
 
@@ -387,7 +387,7 @@ async def get_baseline(
     result = await session.execute(select(ProcessBaseline).where(ProcessBaseline.id == baseline_id))
     baseline = result.scalar_one_or_none()
     if not baseline:
-        raise HTTPException(status_code=404, detail=f"Baseline {baseline_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Baseline {baseline_id} not found")
     return _baseline_to_response(baseline)
 
 
@@ -436,7 +436,7 @@ async def get_deviation(
     result = await session.execute(select(ProcessDeviation).where(ProcessDeviation.id == deviation_id))
     dev = result.scalar_one_or_none()
     if not dev:
-        raise HTTPException(status_code=404, detail=f"Deviation {deviation_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Deviation {deviation_id} not found")
     return _deviation_to_response(dev)
 
 
@@ -487,7 +487,7 @@ async def get_alert(
     result = await session.execute(select(MonitoringAlert).where(MonitoringAlert.id == alert_id))
     alert = result.scalar_one_or_none()
     if not alert:
-        raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Alert {alert_id} not found")
     return _alert_to_response(alert)
 
 
@@ -502,7 +502,7 @@ async def alert_action(
     result = await session.execute(select(MonitoringAlert).where(MonitoringAlert.id == alert_id))
     alert = result.scalar_one_or_none()
     if not alert:
-        raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Alert {alert_id} not found")
 
     now = datetime.now(UTC)
     if payload.action == "acknowledge":

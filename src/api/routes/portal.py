@@ -10,7 +10,7 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -86,7 +86,7 @@ async def portal_overview(
     result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
     engagement = result.scalar_one_or_none()
     if not engagement:
-        raise HTTPException(status_code=404, detail=f"Engagement {engagement_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {engagement_id} not found")
 
     evidence_count = (
         await session.execute(select(func.count(EvidenceItem.id)).where(EvidenceItem.engagement_id == engagement_id))
@@ -260,18 +260,18 @@ async def portal_upload(
     result = await session.execute(select(Engagement).where(Engagement.id == engagement_id))
     engagement = result.scalar_one_or_none()
     if not engagement:
-        raise HTTPException(status_code=404, detail=f"Engagement {engagement_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Engagement {engagement_id} not found")
 
     # Validate file extension
     if not file.filename:
-        raise HTTPException(status_code=400, detail="Filename is required")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Filename is required")
 
     from pathlib import Path
 
     ext = Path(file.filename).suffix.lower()
     if ext not in _ALLOWED_EXTENSIONS:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"File type '{ext}' not allowed. Accepted: {', '.join(sorted(_ALLOWED_EXTENSIONS))}",
         )
 
@@ -279,7 +279,7 @@ async def portal_upload(
     content = await file.read()
     if len(content) > _MAX_UPLOAD_SIZE:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"File too large. Maximum size: {_MAX_UPLOAD_SIZE // (1024 * 1024)}MB",
         )
 
@@ -333,7 +333,7 @@ async def portal_upload(
         }
     except (ValueError, RuntimeError, OSError) as e:
         logger.exception("Portal upload failed for %s", file.filename)
-        raise HTTPException(status_code=500, detail="Upload processing failed") from e
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Upload processing failed") from e
     finally:
         import os
 
