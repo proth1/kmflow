@@ -28,16 +28,15 @@ class DocumentParser(BaseParser):
         try:
             if ext == ".pdf":
                 return await self._parse_pdf(file_path)
-            elif ext in (".docx", ".doc"):
+            if ext in (".docx", ".doc"):
                 return await self._parse_docx(file_path)
-            elif ext == ".pptx":
+            if ext == ".pptx":
                 return await self._parse_pptx(file_path)
-            elif ext in (".html", ".htm"):
+            if ext in (".html", ".htm"):
                 return await self._parse_html(file_path)
-            elif ext == ".txt":
+            if ext == ".txt":
                 return await self._parse_text(file_path)
-            else:
-                return ParseResult(error=f"Unsupported document format: {ext}")
+            return ParseResult(error=f"Unsupported document format: {ext}")
         except Exception as e:  # Intentionally broad: parser library exceptions vary by format
             logger.exception("Failed to parse document: %s", file_name)
             return ParseResult(error=f"Parse error: {e}")

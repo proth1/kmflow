@@ -24,7 +24,7 @@ from src.monitoring.deviation.types import (
 
 logger = logging.getLogger(__name__)
 
-# TODO(#350-followup): Add service layer to persist DeviationRecord -> ProcessDeviation ORM objects.
+# FUTURE(#350-followup): Add service layer to persist DeviationRecord -> ProcessDeviation ORM objects.
 # Currently the engine produces in-memory DeviationRecords; a persistence service is needed
 # to bridge engine output to the database for the API endpoint to query.
 

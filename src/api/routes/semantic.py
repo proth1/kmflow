@@ -120,6 +120,26 @@ class SemanticSearchResponse(BaseModel):
     total_results: int
 
 
+class EntityItem(BaseModel):
+    """A single entity from the knowledge graph."""
+
+    id: str
+    label: str
+    name: str
+    confidence: float
+    properties: dict[str, Any] = {}
+
+
+class EngagementEntitiesResponse(BaseModel):
+    """Response listing entities for an engagement."""
+
+    entities: list[EntityItem]
+    engagement_id: str
+    total: int
+    limit: int
+    offset: int
+
+
 # -- Endpoints ---------------------------------------------------------------
 
 
@@ -288,7 +308,7 @@ async def semantic_search_endpoint(
     }
 
 
-@router.get("/entities/{engagement_id}")
+@router.get("/entities/{engagement_id}", response_model=EngagementEntitiesResponse)
 async def list_engagement_entities(
     engagement_id: UUID,
     request: Request,

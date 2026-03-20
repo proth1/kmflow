@@ -134,7 +134,7 @@ async def generate_intake_link(
     await session.commit()
     await session.refresh(token_record)
 
-    intake_url = f"/api/v1/intake/{token_record.token}"
+    intake_url = f"/intake/{token_record.token}"
 
     return {
         "token": token_record.token,

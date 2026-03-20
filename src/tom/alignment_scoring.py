@@ -34,6 +34,8 @@ from src.core.models import (
     TOMDimension,
     TOMGapType,
 )
+from src.semantic.bridges.process_evidence import EmbeddingServiceProtocol
+from src.semantic.graph import KnowledgeGraphService
 
 logger = logging.getLogger(__name__)
 
@@ -72,10 +74,9 @@ def classify_similarity(similarity: float) -> tuple[TOMGapType, float]:
     """
     if similarity >= THRESHOLD_NO_GAP:
         return TOMGapType.NO_GAP, 0.0
-    elif similarity >= THRESHOLD_PARTIAL_GAP:
+    if similarity >= THRESHOLD_PARTIAL_GAP:
         return TOMGapType.PARTIAL_GAP, round(1.0 - similarity, 4)
-    else:
-        return TOMGapType.FULL_GAP, 1.0
+    return TOMGapType.FULL_GAP, 1.0
 
 
 class AlignmentScoringService:
@@ -87,8 +88,8 @@ class AlignmentScoringService:
 
     def __init__(
         self,
-        graph_service: Any,
-        embedding_service: Any | None = None,
+        graph_service: KnowledgeGraphService,
+        embedding_service: EmbeddingServiceProtocol | None = None,
     ) -> None:
         self._graph = graph_service
         self._embedding = embedding_service

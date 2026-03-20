@@ -77,3 +77,42 @@ class TestEncryption:
             legacy_ciphertext = legacy_fernet.encrypt(plaintext.encode()).decode()
 
             assert decrypt_value(legacy_ciphertext) == plaintext
+
+    def test_re_encrypt_with_same_key(self) -> None:
+        """Re-encrypting with the same key produces valid ciphertext."""
+        from src.core.encryption import decrypt_value, encrypt_value, re_encrypt_value
+
+        original = "rotate-me"
+        ct1 = encrypt_value(original)
+        ct2 = re_encrypt_value(ct1)
+        assert ct2 != ct1  # Different ciphertext (Fernet uses random IV)
+        assert decrypt_value(ct2) == original
+
+    def test_re_encrypt_with_rotated_key(self) -> None:
+        """Re-encrypting after key rotation migrates to new key."""
+        old_key = Fernet.generate_key().decode()
+        new_key = Fernet.generate_key().decode()
+
+        # Encrypt with old key
+        old_fernet = Fernet(old_key.encode())
+        original = "secret-data"
+        old_ct = old_fernet.encrypt(original.encode()).decode()
+
+        # Re-encrypt: new key as primary, old key as previous
+        mock_settings = Settings(encryption_key=new_key, encryption_key_previous=old_key)
+        with patch("src.core.encryption.get_settings", return_value=mock_settings):
+            from src.core.encryption import re_encrypt_value
+
+            new_ct = re_encrypt_value(old_ct)
+            # Verify new ciphertext decrypts with new key alone
+            new_fernet = Fernet(new_key.encode())
+            assert new_fernet.decrypt(new_ct.encode()).decode() == original
+
+    def test_re_encrypt_invalid_ciphertext_raises(self) -> None:
+        """re_encrypt_value raises on invalid ciphertext."""
+        from cryptography.fernet import InvalidToken
+
+        from src.core.encryption import re_encrypt_value
+
+        with pytest.raises(InvalidToken):
+            re_encrypt_value("not-valid-ciphertext")

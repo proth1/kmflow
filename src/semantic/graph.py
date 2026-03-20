@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from neo4j import AsyncDriver
+from neo4j.exceptions import Neo4jError
 
 from src.semantic.ontology.loader import (
     get_valid_node_labels as _get_valid_node_labels,
@@ -656,7 +657,7 @@ class KnowledgeGraphService:
 
             return results
 
-        except Exception:
+        except Neo4jError:
             logger.exception("Semantic search failed")
             return []
 

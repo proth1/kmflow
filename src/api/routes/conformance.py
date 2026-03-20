@@ -168,7 +168,7 @@ async def create_reference_model(
 @router.get("/reference-models", response_model=ReferenceModelList)
 async def list_reference_models(
     industry: str | None = None,
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     user: User = Depends(require_permission("conformance:check")),
     session: AsyncSession = Depends(get_session),
@@ -328,7 +328,7 @@ async def get_conformance_result(
 async def list_conformance_results(
     request: Request,
     engagement_id: UUID | None = None,
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     user: User = Depends(require_permission("conformance:check")),
     session: AsyncSession = Depends(get_session),

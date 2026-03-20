@@ -3,6 +3,14 @@ version: "3.9"
 # Production overrides for KMFlow.
 # Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
+networks:
+  frontend-net:
+    driver: bridge
+  backend-net:
+    driver: bridge
+  data-net:
+    driver: bridge
+
 services:
   postgres:
     environment:
@@ -14,9 +22,8 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - data-net
     deploy:
       resources:
         limits:
@@ -39,6 +46,8 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    networks:
+      - data-net
     deploy:
       resources:
         limits:
@@ -60,6 +69,8 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    networks:
+      - data-net
     deploy:
       resources:
         limits:
@@ -80,10 +91,18 @@ services:
       DEBUG: "false"
       AUTH_DEV_MODE: "false"
       LOG_LEVEL: WARNING
+      COOKIE_SECURE: "true"
+      ENABLE_HSTS: "true"
+      DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?ssl=require"
+      NEO4J_URI: "bolt+s://neo4j:7687"
+      REDIS_URL: "rediss://:${REDIS_PASSWORD}@redis:6379/0"
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    networks:
+      - backend-net
+      - data-net
     deploy:
       resources:
         limits:
@@ -106,6 +125,9 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    networks:
+      - frontend-net
+      - backend-net
     deploy:
       resources:
         limits:
@@ -127,6 +149,8 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    networks:
+      - backend-net
 
   minio:
     environment:
@@ -137,6 +161,8 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    networks:
+      - data-net
 
   mailpit:
     ports: []  # No host port exposure in production

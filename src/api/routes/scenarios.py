@@ -145,7 +145,7 @@ async def create_scenario(
 @router.get("", response_model=ScenarioListResponse)
 async def list_scenarios(
     engagement_id: UUID,
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
@@ -268,7 +268,7 @@ async def add_modification(
 @router.get("/{scenario_id}/modifications", response_model=ModificationListResponse)
 async def list_modifications(
     scenario_id: UUID,
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),

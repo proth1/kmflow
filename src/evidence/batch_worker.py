@@ -17,6 +17,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.core.tasks.base import TaskWorker
 
 logger = logging.getLogger(__name__)
@@ -68,7 +70,7 @@ class EvidenceBatchWorker(TaskWorker):
                     result = await self._process_item(session, engagement_id, item_id)
                     results.append({"item_id": item_id, "status": "completed", **result})
                     processed += 1
-                except Exception as exc:
+                except Exception as exc:  # Intentionally broad: top-level error boundary for per-item isolation
                     logger.warning(
                         "Evidence batch: item %s failed: %s",
                         item_id,
@@ -98,7 +100,7 @@ class EvidenceBatchWorker(TaskWorker):
 
     async def _process_item(
         self,
-        session: Any,
+        session: AsyncSession,
         engagement_id: str,
         item_id: str,
     ) -> dict[str, Any]:
@@ -130,7 +132,7 @@ class EvidenceBatchWorker(TaskWorker):
             raise ValueError(f"Evidence item {item_id} not found in engagement {engagement_id}")
 
         # Mark as processing
-        item.status = "processing"
+        item.validation_status = "processing"  # type: ignore[assignment]
         await session.flush()
 
         # Load fragments for this evidence item
@@ -142,7 +144,7 @@ class EvidenceBatchWorker(TaskWorker):
 
         intel_result = await run_intelligence_pipeline(session, fragments, engagement_id)
 
-        item.status = "completed"
+        item.validation_status = "completed"  # type: ignore[assignment]
         await session.flush()
 
         return {

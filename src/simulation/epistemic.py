@@ -12,7 +12,10 @@ from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.pov.constants import DEFAULT_EVIDENCE_WEIGHT, EVIDENCE_TYPE_WEIGHTS
+from src.semantic.graph import KnowledgeGraphService
 
 logger = logging.getLogger(__name__)
 
@@ -141,14 +144,14 @@ def _classify_priority(info_gain: float, current_confidence: float) -> str:
 class EpistemicPlannerService:
     """Generates epistemic action plans for targeted evidence collection."""
 
-    def __init__(self, graph_service: Any) -> None:
+    def __init__(self, graph_service: KnowledgeGraphService) -> None:
         self._graph = graph_service
 
     async def generate_epistemic_plan(
         self,
         scenario_id: UUID,
         engagement_id: UUID,
-        session: Any,
+        session: AsyncSession,
         process_graph: dict[str, Any] | None = None,
     ) -> EpistemicPlanResult:
         """Generate an epistemic action plan for a scenario.

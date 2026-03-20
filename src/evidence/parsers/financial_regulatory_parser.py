@@ -156,12 +156,11 @@ class FinancialRegulatoryParser(BaseParser):
         try:
             if ext == ".pdf":
                 return await self._parse_pdf(file_path, file_name)
-            elif ext in (".html", ".htm"):
+            if ext in (".html", ".htm"):
                 return await self._parse_html(file_path, file_name)
-            elif ext == ".xml":
+            if ext == ".xml":
                 return await self._parse_xml(file_path, file_name)
-            else:
-                return await self._parse_text(file_path, file_name)
+            return await self._parse_text(file_path, file_name)
         except Exception as e:  # Intentionally broad: parser library exceptions vary by format
             logger.exception("Failed to parse financial regulatory document: %s", file_name)
             return ParseResult(error=f"Parse error: {e}")

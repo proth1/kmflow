@@ -60,7 +60,7 @@ async def list_survey_claims(
     _engagement_user: User = Depends(require_engagement_access),
     certainty_tier: CertaintyTier | None = Query(None),
     probe_type: ProbeType | None = Query(None),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=1000),
     offset: int = Query(0, ge=0),
 ) -> dict[str, Any]:
     """List survey claims with optional filters and pagination."""

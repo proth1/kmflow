@@ -105,6 +105,10 @@ class AuditAction(enum.StrEnum):
     DPA_CREATED = "dpa_created"
     DPA_UPDATED = "dpa_updated"
     DPA_ACTIVATED = "dpa_activated"
+    # -- GDPR data subject rights (Art. 17, Art. 7) --------------------------------
+    ERASURE_REQUESTED = "erasure_requested"
+    CONSENT_UPDATED = "consent_updated"
+    USER_ANONYMIZED = "user_anonymized"
 
 
 class AuditLog(Base):

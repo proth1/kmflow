@@ -36,12 +36,11 @@ def classify_effectiveness(execution_rate: Decimal) -> ControlEffectiveness:
     """
     if execution_rate >= THRESHOLD_HIGHLY_EFFECTIVE:
         return ControlEffectiveness.HIGHLY_EFFECTIVE
-    elif execution_rate >= THRESHOLD_EFFECTIVE:
+    if execution_rate >= THRESHOLD_EFFECTIVE:
         return ControlEffectiveness.EFFECTIVE
-    elif execution_rate >= THRESHOLD_MODERATELY_EFFECTIVE:
+    if execution_rate >= THRESHOLD_MODERATELY_EFFECTIVE:
         return ControlEffectiveness.MODERATELY_EFFECTIVE
-    else:
-        return ControlEffectiveness.INEFFECTIVE
+    return ControlEffectiveness.INEFFECTIVE
 
 
 def generate_recommendation(
@@ -55,24 +54,23 @@ def generate_recommendation(
     """
     if effectiveness == ControlEffectiveness.HIGHLY_EFFECTIVE:
         return None
-    elif effectiveness == ControlEffectiveness.INEFFECTIVE:
+    if effectiveness == ControlEffectiveness.INEFFECTIVE:
         return (
             f"Control '{control_name}' has an execution rate of {execution_rate}%, "
             f"which is below the 50% threshold. Recommend obtaining additional "
             f"execution evidence through targeted evidence collection and creating "
             f"a shelf data request for missing execution logs."
         )
-    elif effectiveness == ControlEffectiveness.MODERATELY_EFFECTIVE:
+    if effectiveness == ControlEffectiveness.MODERATELY_EFFECTIVE:
         return (
             f"Control '{control_name}' has an execution rate of {execution_rate}%, "
             f"which indicates moderate effectiveness. Consider strengthening monitoring "
             f"and evidence collection processes to improve coverage."
         )
-    else:
-        return (
-            f"Control '{control_name}' has an execution rate of {execution_rate}%. "
-            f"Effectiveness could be improved by addressing gaps in execution coverage."
-        )
+    return (
+        f"Control '{control_name}' has an execution rate of {execution_rate}%. "
+        f"Effectiveness could be improved by addressing gaps in execution coverage."
+    )
 
 
 class ControlEffectivenessScoringService:

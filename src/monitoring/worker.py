@@ -17,6 +17,7 @@ from src.core.redis import MONITORING_STREAM, ensure_consumer_group, stream_add
 logger = logging.getLogger(__name__)
 
 CONSUMER_GROUP = "monitoring_workers"
+WORKER_ERROR_RETRY_DELAY_SECONDS = 5  # Backoff delay before retrying after a worker loop error
 
 
 async def submit_monitoring_task(
@@ -63,12 +64,11 @@ async def process_task(task_data: dict[str, Any]) -> dict[str, Any]:
             incremental=task_data.get("incremental", False),
             since=task_data.get("since"),
         )
-    elif task_type == "detect":
+    if task_type == "detect":
         return {"status": "detection_completed", "deviations_found": 0}
-    elif task_type == "alert":
+    if task_type == "alert":
         return {"status": "alert_processed"}
-    else:
-        return {"status": "unknown_task_type", "task_type": task_type}
+    return {"status": "unknown_task_type", "task_type": task_type}
 
 
 async def run_worker(
@@ -112,7 +112,7 @@ async def run_worker(
         except asyncio.CancelledError:
             break
         except Exception:  # Intentionally broad: worker loop
-            logger.exception("Worker error, retrying in 5s")
-            await asyncio.sleep(5)
+            logger.exception("Worker error, retrying in %ds", WORKER_ERROR_RETRY_DELAY_SECONDS)
+            await asyncio.sleep(WORKER_ERROR_RETRY_DELAY_SECONDS)
 
     logger.info("Monitoring worker %s stopped", worker_id)

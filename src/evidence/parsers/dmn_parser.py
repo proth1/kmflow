@@ -42,7 +42,7 @@ class DmnParser(BaseParser):
 
         try:
             return await self._parse_dmn(file_path)
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: parser library exceptions vary by format
             logger.exception("Failed to parse DMN: %s", file_name)
             return ParseResult(error=f"Parse error: {e}")
 

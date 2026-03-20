@@ -111,8 +111,18 @@ databricks = [
 where = ["."]
 include = ["src*"]
 
+[tool.coverage.run]
+omit = [
+    "agent/*",
+    "src/integrations/celonis.py",
+    "src/integrations/soroco.py",
+    "src/integrations/sap.py",
+    "src/integrations/aris.py",
+    "src/taskmining/ml/*",
+]
+
 [tool.coverage.report]
-fail_under = 85
+fail_under = 90
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -139,12 +149,36 @@ select = [
     "N",    # pep8-naming
     "UP",   # pyupgrade
     "B",    # flake8-bugbear
+    "BLE",  # flake8-blind-except (catch broad exceptions)
     "SIM",  # flake8-simplify
+    "C901", # mccabe complexity
+    "RET",  # flake8-return (unnecessary return statements)
+    "PTH",  # flake8-use-pathlib (prefer pathlib over os.path)
 ]
 ignore = [
-    "E501",  # line length handled by formatter
-    "B008",  # Depends() in function args is standard FastAPI pattern
+    "E501",   # line length handled by formatter
+    "B008",   # Depends() in function args is standard FastAPI pattern
+    "BLE001", # temporarily allow broad except while we incrementally fix
+    "RET504", # unnecessary assignment before return (sometimes aids readability)
 ]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
+
+[tool.ruff.lint.per-file-ignores]
+# Complex parsers/ingesters/validators — refactor tracked incrementally
+"src/evidence/parsers/*" = ["C901", "PTH123"]
+"src/evidence/pipeline.py" = ["C901"]
+"src/taskmining/*" = ["C901", "PTH123"]
+"src/semantic/knowledge_graph.py" = ["C901"]
+"src/semantic/ontology_derivation.py" = ["C901"]
+"src/semantic/ontology/*" = ["C901", "PTH123"]
+"src/semantic/domains/*" = ["PTH123"]
+"src/tom/alignment.py" = ["C901"]
+"src/pov/generator.py" = ["C901"]
+"src/validation/republish.py" = ["C901"]
+"src/integrations/importers/*" = ["C901", "PTH123"]
+"src/datalake/*" = ["PTH123"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["src"]

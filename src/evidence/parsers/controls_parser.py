@@ -61,12 +61,11 @@ class ControlsParser(BaseParser):
         try:
             if ext == ".ctrl":
                 return await self._parse_control_matrix(path, file_name)
-            elif ext == ".audit":
+            if ext == ".audit":
                 return await self._parse_audit_trail(path, file_name)
-            elif ext == ".monitor":
+            if ext == ".monitor":
                 return await self._parse_monitoring_output(path, file_name)
-            else:
-                return ParseResult(error=f"Unsupported controls format: {ext}")
+            return ParseResult(error=f"Unsupported controls format: {ext}")
         except Exception as e:  # Intentionally broad: parser library exceptions vary by format
             logger.exception("Failed to parse controls file: %s", file_name)
             return ParseResult(error=f"Controls parse error: {e}")

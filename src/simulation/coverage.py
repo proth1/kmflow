@@ -12,6 +12,7 @@ from typing import Any
 from uuid import UUID
 
 from src.core.models import ModificationType
+from src.semantic.graph import KnowledgeGraphService
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +79,7 @@ def classify_element(
 class EvidenceCoverageService:
     """Computes evidence coverage for simulation scenarios."""
 
-    def __init__(self, graph_service: Any) -> None:
+    def __init__(self, graph_service: KnowledgeGraphService) -> None:
         self._graph = graph_service
 
     async def compute_coverage(

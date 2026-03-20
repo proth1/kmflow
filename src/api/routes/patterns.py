@@ -156,7 +156,7 @@ async def create_pattern(
 async def list_patterns(
     category: PatternCategory | None = None,
     industry: str | None = None,
-    limit: int = Query(default=50, ge=1, le=200),
+    limit: int = Query(default=50, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("patterns:read")),

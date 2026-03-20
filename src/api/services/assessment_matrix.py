@@ -48,12 +48,11 @@ def classify_quadrant(value: float, ability: float) -> Quadrant:
     """Classify a point into one of four quadrants."""
     if value >= QUADRANT_VALUE_THRESHOLD and ability >= QUADRANT_ABILITY_THRESHOLD:
         return Quadrant.TRANSFORM
-    elif value >= QUADRANT_VALUE_THRESHOLD and ability < QUADRANT_ABILITY_THRESHOLD:
+    if value >= QUADRANT_VALUE_THRESHOLD and ability < QUADRANT_ABILITY_THRESHOLD:
         return Quadrant.INVEST
-    elif value < QUADRANT_VALUE_THRESHOLD and ability >= QUADRANT_ABILITY_THRESHOLD:
+    if value < QUADRANT_VALUE_THRESHOLD and ability >= QUADRANT_ABILITY_THRESHOLD:
         return Quadrant.MAINTAIN
-    else:
-        return Quadrant.DEPRIORITIZE
+    return Quadrant.DEPRIORITIZE
 
 
 class AssessmentMatrixService:

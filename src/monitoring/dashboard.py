@@ -108,7 +108,7 @@ def compute_trend_direction(scores: list[float], window: int = 7) -> str:
 
     if diff > threshold:
         return "up"
-    elif diff < -threshold:
+    if diff < -threshold:
         return "down"
     return "flat"
 

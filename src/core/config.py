@@ -70,6 +70,9 @@ class Settings(BaseSettings):
     encryption_key: SecretStr = SecretStr("CHANGE_ME")
     watermark_signing_key: SecretStr = SecretStr("CHANGE_ME")
 
+    # ── Security Headers ──────────────────────────────────────────
+    enable_hsts: bool = False  # Enable HSTS header (requires HTTPS)
+
     # ── Cookie Auth (Issue #156) ──────────────────────────────────
     # cookie_domain: Set to the shared domain (e.g. ".example.com") for
     # multi-subdomain deployments, or leave empty to default to the
@@ -78,6 +81,10 @@ class Settings(BaseSettings):
     # cookie_secure: Must be True in production (HTTPS required for
     # Secure cookies). Defaults to True; set False only in local dev.
     cookie_secure: bool = True
+
+    # ── Camunda / CIB7 ───────────────────────────────────────────
+    camunda_user: str | None = None
+    camunda_password: SecretStr | None = None
 
     # ── RAG Copilot (Phase 4) ─────────────────────────────────────
     copilot_model: str = "claude-sonnet-4-5-20250929"
@@ -139,6 +146,9 @@ class Settings(BaseSettings):
     # ── Embeddings ───────────────────────────────────────────────
     embedding_model: str = "all-mpnet-base-v2"
     embedding_dimension: int = 768
+
+    # ── Evidence Upload ───────────────────────────────────────────
+    max_upload_size_mb: int = 100
 
     # ── Task Queue (KMFLOW-58) ────────────────────────────────────
     task_worker_count: int = 2

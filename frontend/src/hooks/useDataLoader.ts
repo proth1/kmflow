@@ -46,7 +46,8 @@ export function useDataLoader<T>(
           setData(result);
         }
       } catch (err) {
-        if (!controller.signal.aborted && !silent) {
+        if (!controller.signal.aborted) {
+          // Always propagate errors — "silent" only suppresses loading state, not errors
           setError(err instanceof Error ? err.message : errorMessage);
         }
       } finally {

@@ -208,8 +208,7 @@ class BaseMonitoringAgent(ABC):
                     # Circuit breaker: stop polling after max failures
                     self._running = False
                     break
-                else:
-                    self._emit_health(AgentHealth.DEGRADED, str(exc))
+                self._emit_health(AgentHealth.DEGRADED, str(exc))
 
                 backoff = self._compute_backoff()
                 try:

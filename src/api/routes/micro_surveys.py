@@ -168,7 +168,7 @@ async def list_micro_surveys(
     request: Request,
     engagement_id: UUID = Query(..., description="Filter by engagement"),
     status_filter: MicroSurveyStatus | None = Query(None, alias="status", description="Filter by status"),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("survey:read")),

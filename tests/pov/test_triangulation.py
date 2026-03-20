@@ -6,6 +6,7 @@ import uuid
 from unittest.mock import MagicMock
 
 from src.core.models import CorroborationLevel
+from src.core.models.evidence import EvidenceItem
 from src.pov.triangulation import (
     _compute_triangulation_score,
     _determine_corroboration,
@@ -26,7 +27,7 @@ def _make_entity(name: str = "Test Entity", entity_type: str = EntityType.ACTIVI
 
 def _make_evidence_item(evidence_id: str | None = None):
     """Create a mock evidence item."""
-    item = MagicMock()
+    item = MagicMock(spec=EvidenceItem)
     item.id = uuid.UUID(evidence_id) if evidence_id else uuid.uuid4()
     item.category = "documents"
     return item

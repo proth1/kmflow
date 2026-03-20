@@ -194,12 +194,11 @@ class EvidenceMaterializer:
 
         if age_days <= 0:
             return 1.0
-        elif age_days <= 30:
+        if age_days <= 30:
             return 1.0 - (age_days / 30) * 0.5
-        elif age_days <= 365:
+        if age_days <= 365:
             return 0.5 - ((age_days - 30) / 335) * 0.5
-        else:
-            return 0.0
+        return 0.0
 
 
 def _format_ts(dt: datetime) -> str:

@@ -50,10 +50,10 @@ def classify_deviation_impact(deviation: Deviation) -> str:
     """Classify the business impact of a deviation."""
     if deviation.deviation_type == "missing_activity":
         return "compliance_risk"
-    elif deviation.deviation_type == "extra_activity":
+    if deviation.deviation_type == "extra_activity":
         return "efficiency_concern"
-    elif deviation.deviation_type == "sequence_mismatch":
+    if deviation.deviation_type == "sequence_mismatch":
         return "process_variant"
-    elif deviation.deviation_type == "different_path":
+    if deviation.deviation_type == "different_path":
         return "control_gap"
     return "informational"

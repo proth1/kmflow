@@ -327,6 +327,23 @@ Every individual finding MUST use this format:
 
 Severity levels: CRITICAL, HIGH, MEDIUM, LOW
 
+## Lessons Learned Checklist (MANDATORY)
+
+Every audit agent MUST verify these items, which are drawn from `docs/audit-lessons-learned.md`. These represent the most frequently recurring finding categories:
+
+1. **Response model presence** — Grep all route decorators for missing `response_model=`
+2. **Engagement access on ID routes** — Every `/{id}` route must call `verify_engagement_member` or `require_engagement_access`
+3. **Broad except without justification** — `except Exception` must have `# Intentionally broad:` comment
+4. **`: Any` in non-decorator positions** — Flag `: Any` without `# type: Any because:` justification
+5. **Unbounded queries** — `select()` without `.limit()` in route handlers
+6. **Route file size** — Flag route files > 500 lines
+7. **Test file coverage** — Every `src/api/routes/foo.py` must have a corresponding `tests/api/test_foo.py`
+8. **Stubs returning fake success** — Return values like `{"status": "success"}` in unimplemented functions
+9. **Bare MagicMock()** — Mocks without `spec=` parameter
+10. **asyncio.sleep in tests** — Sleep-based assertions instead of event-based synchronization
+
+Agents should report the COUNT of each violation category as a summary metric.
+
 ## Pre-identified Findings
 
 These findings have already been confirmed via grep. Your agents MUST find and report these (plus any additional findings). If an agent doesn't report a known finding in its scope, that's a gap.

@@ -13,6 +13,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
+from neo4j.exceptions import Neo4jError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.models.conflict import (
@@ -20,6 +21,7 @@ from src.core.models.conflict import (
     MismatchType,
     ResolutionStatus,
 )
+from src.core.models.dual_write_failure import DualWriteFailure
 from src.core.models.survey import CertaintyTier, SurveyClaim
 from src.semantic.graph import KnowledgeGraphService
 
@@ -68,31 +70,6 @@ class ClaimWriteBackService:
         claim_node_id = str(claim.id).replace("-", "")[:16]
         weight = CERTAINTY_WEIGHTS.get(claim.certainty_tier, 0.3)
 
-        # 1. Create SurveyClaim node in Neo4j
-        await self._graph.run_write_query(
-            """
-            MERGE (c:SurveyClaim {id: $claim_id})
-            SET c.claim_text = $claim_text,
-                c.probe_type = $probe_type,
-                c.certainty_tier = $certainty_tier,
-                c.respondent_role = $respondent_role,
-                c.engagement_id = $engagement_id,
-                c.session_id = $session_id,
-                c.weight = $weight,
-                c.ingested_at = datetime()
-            """,
-            {
-                "claim_id": claim_node_id,
-                "claim_text": claim.claim_text,
-                "probe_type": claim.probe_type.value,
-                "certainty_tier": claim.certainty_tier.value,
-                "respondent_role": claim.respondent_role,
-                "engagement_id": str(claim.engagement_id),
-                "session_id": str(claim.session_id),
-                "weight": weight,
-            },
-        )
-
         result: dict[str, Any] = {
             "claim_node_id": claim_node_id,
             "edge_type": None,
@@ -100,66 +77,107 @@ class ClaimWriteBackService:
             "weight": weight,
         }
 
-        # 2. Create EpistemicFrame node if claim has one
-        if claim.epistemic_frame is not None:
-            frame = claim.epistemic_frame
-            frame_node_id = str(frame.id).replace("-", "")[:16]
+        try:
+            # 1. Create SurveyClaim node in Neo4j
             await self._graph.run_write_query(
                 """
-                MERGE (f:EpistemicFrame {session_id: $session_id, respondent_role: $respondent_role})
-                SET f.id = $frame_id,
-                    f.frame_kind = $frame_kind,
-                    f.authority_scope = $authority_scope,
-                    f.engagement_id = $engagement_id
-                WITH f
-                MATCH (c:SurveyClaim {id: $claim_id})
-                MERGE (c)-[:HAS_FRAME]->(f)
-                """,
-                {
-                    "frame_id": frame_node_id,
-                    "session_id": str(claim.session_id),
-                    "respondent_role": claim.respondent_role,
-                    "frame_kind": frame.frame_kind.value,
-                    "authority_scope": frame.authority_scope,
-                    "engagement_id": str(claim.engagement_id),
-                    "claim_id": claim_node_id,
-                },
-            )
-
-        # 3. Link claim to target activity
-        if target_activity_id is not None:
-            edge_type = "CONTRADICTS" if claim.certainty_tier == CertaintyTier.CONTRADICTED else "SUPPORTS"
-
-            # Validate edge_type to prevent Cypher injection
-            if edge_type not in ("SUPPORTS", "CONTRADICTS"):
-                msg = f"Invalid edge_type: {edge_type}"
-                raise ValueError(msg)
-
-            await self._graph.run_write_query(
-                f"""
-                MATCH (c:SurveyClaim {{id: $claim_id}})
-                MATCH (a {{id: $activity_id, engagement_id: $engagement_id}})
-                MERGE (c)-[r:{edge_type}]->(a)
-                SET r.weight = $weight,
-                    r.probe_type = $probe_type,
-                    r.claim_id = $claim_uuid,
-                    r.ingested_at = datetime()
+                MERGE (c:SurveyClaim {id: $claim_id})
+                SET c.claim_text = $claim_text,
+                    c.probe_type = $probe_type,
+                    c.certainty_tier = $certainty_tier,
+                    c.respondent_role = $respondent_role,
+                    c.engagement_id = $engagement_id,
+                    c.session_id = $session_id,
+                    c.weight = $weight,
+                    c.ingested_at = datetime()
                 """,
                 {
                     "claim_id": claim_node_id,
-                    "activity_id": target_activity_id,
-                    "engagement_id": str(claim.engagement_id),
-                    "weight": weight,
+                    "claim_text": claim.claim_text,
                     "probe_type": claim.probe_type.value,
-                    "claim_uuid": str(claim.id),
+                    "certainty_tier": claim.certainty_tier.value,
+                    "respondent_role": claim.respondent_role,
+                    "engagement_id": str(claim.engagement_id),
+                    "session_id": str(claim.session_id),
+                    "weight": weight,
                 },
             )
-            result["edge_type"] = edge_type
 
-            # 4. Auto-create ConflictObject for contradicted claims
-            if claim.certainty_tier == CertaintyTier.CONTRADICTED:
-                conflict = await self._create_conflict_object(claim, target_activity_id)
-                result["conflict_id"] = str(conflict.id)
+            # 2. Create EpistemicFrame node if claim has one
+            if claim.epistemic_frame is not None:
+                frame = claim.epistemic_frame
+                frame_node_id = str(frame.id).replace("-", "")[:16]
+                await self._graph.run_write_query(
+                    """
+                    MERGE (f:EpistemicFrame {session_id: $session_id, respondent_role: $respondent_role})
+                    SET f.id = $frame_id,
+                        f.frame_kind = $frame_kind,
+                        f.authority_scope = $authority_scope,
+                        f.engagement_id = $engagement_id
+                    WITH f
+                    MATCH (c:SurveyClaim {id: $claim_id})
+                    MERGE (c)-[:HAS_FRAME]->(f)
+                    """,
+                    {
+                        "frame_id": frame_node_id,
+                        "session_id": str(claim.session_id),
+                        "respondent_role": claim.respondent_role,
+                        "frame_kind": frame.frame_kind.value,
+                        "authority_scope": frame.authority_scope,
+                        "engagement_id": str(claim.engagement_id),
+                        "claim_id": claim_node_id,
+                    },
+                )
+
+            # 3. Link claim to target activity
+            if target_activity_id is not None:
+                edge_type = "CONTRADICTS" if claim.certainty_tier == CertaintyTier.CONTRADICTED else "SUPPORTS"
+
+                # Validate edge_type to prevent Cypher injection
+                if edge_type not in ("SUPPORTS", "CONTRADICTS"):
+                    msg = f"Invalid edge_type: {edge_type}"
+                    raise ValueError(msg)
+
+                await self._graph.run_write_query(
+                    f"""
+                    MATCH (c:SurveyClaim {{id: $claim_id}})
+                    MATCH (a {{id: $activity_id, engagement_id: $engagement_id}})
+                    MERGE (c)-[r:{edge_type}]->(a)
+                    SET r.weight = $weight,
+                        r.probe_type = $probe_type,
+                        r.claim_id = $claim_uuid,
+                        r.ingested_at = datetime()
+                    """,
+                    {
+                        "claim_id": claim_node_id,
+                        "activity_id": target_activity_id,
+                        "engagement_id": str(claim.engagement_id),
+                        "weight": weight,
+                        "probe_type": claim.probe_type.value,
+                        "claim_uuid": str(claim.id),
+                    },
+                )
+                result["edge_type"] = edge_type
+
+                # 4. Auto-create ConflictObject for contradicted claims
+                if claim.certainty_tier == CertaintyTier.CONTRADICTED:
+                    conflict = await self._create_conflict_object(claim, target_activity_id)
+                    result["conflict_id"] = str(conflict.id)
+
+        except Neo4jError as exc:
+            logger.error(
+                "Dual-write to Neo4j failed for claim %s: %s",
+                claim_node_id,
+                exc,
+                exc_info=True,
+            )
+            failure = DualWriteFailure(
+                source_table="survey_claims",
+                source_id=str(claim.id),
+                target="neo4j",
+                error_message=str(exc)[:500],
+            )
+            self._session.add(failure)
 
         logger.info(
             "Claim ingested: claim=%s, edge=%s, conflict=%s",
@@ -303,30 +321,45 @@ class ClaimWriteBackService:
 
         # Also create ConflictObject node in Neo4j
         conflict_node_id = str(conflict.id).replace("-", "")[:16]
-        await self._graph.run_write_query(
-            """
-            CREATE (co:ConflictObject {
-                id: $conflict_id,
-                mismatch_type: $mismatch_type,
-                severity: $severity,
-                engagement_id: $engagement_id,
-                created_at: datetime()
-            })
-            WITH co
-            MATCH (c:SurveyClaim {id: $claim_id})
-            MATCH (a {id: $activity_id, engagement_id: $engagement_id})
-            MERGE (co)-[:INVOLVES]->(c)
-            MERGE (co)-[:INVOLVES]->(a)
-            """,
-            {
-                "conflict_id": conflict_node_id,
-                "mismatch_type": MismatchType.EXISTENCE_MISMATCH.value,
-                "severity": 0.7,
-                "engagement_id": str(claim.engagement_id),
-                "claim_id": str(claim.id).replace("-", "")[:16],
-                "activity_id": target_activity_id,
-            },
-        )
+        try:
+            await self._graph.run_write_query(
+                """
+                CREATE (co:ConflictObject {
+                    id: $conflict_id,
+                    mismatch_type: $mismatch_type,
+                    severity: $severity,
+                    engagement_id: $engagement_id,
+                    created_at: datetime()
+                })
+                WITH co
+                MATCH (c:SurveyClaim {id: $claim_id})
+                MATCH (a {id: $activity_id, engagement_id: $engagement_id})
+                MERGE (co)-[:INVOLVES]->(c)
+                MERGE (co)-[:INVOLVES]->(a)
+                """,
+                {
+                    "conflict_id": conflict_node_id,
+                    "mismatch_type": MismatchType.EXISTENCE_MISMATCH.value,
+                    "severity": 0.7,
+                    "engagement_id": str(claim.engagement_id),
+                    "claim_id": str(claim.id).replace("-", "")[:16],
+                    "activity_id": target_activity_id,
+                },
+            )
+        except Neo4jError as exc:
+            logger.error(
+                "Dual-write to Neo4j failed for conflict %s: %s",
+                conflict_node_id,
+                exc,
+                exc_info=True,
+            )
+            failure = DualWriteFailure(
+                source_table="conflict_objects",
+                source_id=str(conflict.id),
+                target="neo4j",
+                error_message=str(exc)[:500],
+            )
+            self._session.add(failure)
 
         return conflict
 

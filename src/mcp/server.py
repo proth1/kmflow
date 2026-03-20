@@ -139,22 +139,21 @@ async def _execute_tool(
 
     if tool_name == "get_engagement":
         return await _tool_get_engagement(session_factory, args, user_id=user_id)
-    elif tool_name == "list_evidence":
+    if tool_name == "list_evidence":
         return await _tool_list_evidence(session_factory, args, user_id=user_id)
-    elif tool_name == "get_process_model":
+    if tool_name == "get_process_model":
         return await _tool_get_process_model(session_factory, args, user_id=user_id)
-    elif tool_name == "get_gaps":
+    if tool_name == "get_gaps":
         return await _tool_get_gaps(session_factory, args, user_id=user_id)
-    elif tool_name == "get_monitoring_status":
+    if tool_name == "get_monitoring_status":
         return await _tool_get_monitoring_status(session_factory, args, user_id=user_id)
-    elif tool_name == "get_deviations":
+    if tool_name == "get_deviations":
         return await _tool_get_deviations(session_factory, args, user_id=user_id)
-    elif tool_name == "search_patterns":
+    if tool_name == "search_patterns":
         return await _tool_search_patterns(session_factory, args, user_id=user_id)
-    elif tool_name == "run_simulation":
+    if tool_name == "run_simulation":
         return await _tool_run_simulation(session_factory, args, user_id=user_id)
-    else:
-        raise ValueError(f"Unhandled tool: {tool_name}")
+    raise ValueError(f"Unhandled tool: {tool_name}")
 
 
 async def _tool_get_engagement(

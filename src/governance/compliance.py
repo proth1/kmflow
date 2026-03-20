@@ -42,10 +42,9 @@ def compute_compliance_state(
 
     if coverage >= Decimal("100.00"):
         return ComplianceLevel.FULLY_COMPLIANT, Decimal("100.00")
-    elif coverage > Decimal("0.00"):
+    if coverage > Decimal("0.00"):
         return ComplianceLevel.PARTIALLY_COMPLIANT, coverage
-    else:
-        return ComplianceLevel.NON_COMPLIANT, Decimal("0.00")
+    return ComplianceLevel.NON_COMPLIANT, Decimal("0.00")
 
 
 class ComplianceAssessmentService:

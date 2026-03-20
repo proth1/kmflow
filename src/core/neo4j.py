@@ -79,6 +79,15 @@ async def setup_neo4j_constraints(driver: AsyncDriver) -> None:
         "CREATE CONSTRAINT IF NOT EXISTS FOR (d:Document) REQUIRE d.id IS UNIQUE",
         "CREATE CONSTRAINT IF NOT EXISTS FOR (sp:Subprocess) REQUIRE sp.id IS UNIQUE",
         "CREATE CONSTRAINT IF NOT EXISTS FOR (dec:Decision) REQUIRE dec.id IS UNIQUE",
+        # Labels that previously had engagement_id indexes but no id uniqueness constraint
+        "CREATE CONSTRAINT IF NOT EXISTS FOR (u:UserAction) REQUIRE u.id IS UNIQUE",
+        "CREATE CONSTRAINT IF NOT EXISTS FOR (app:Application) REQUIRE app.id IS UNIQUE",
+        # SurveyClaim nodes written by claim_write_back service
+        "CREATE CONSTRAINT IF NOT EXISTS FOR (sc:SurveyClaim) REQUIRE sc.id IS UNIQUE",
+        # ConflictObject nodes written by claim_write_back service
+        "CREATE CONSTRAINT IF NOT EXISTS FOR (co:ConflictObject) REQUIRE co.id IS UNIQUE",
+        # EpistemicFrame nodes written by claim_write_back service
+        "CREATE CONSTRAINT IF NOT EXISTS FOR (ef:EpistemicFrame) REQUIRE ef.id IS UNIQUE",
     ]
 
     indexes = [
@@ -97,6 +106,9 @@ async def setup_neo4j_constraints(driver: AsyncDriver) -> None:
         "CREATE INDEX IF NOT EXISTS FOR (d:Decision) ON (d.engagement_id)",
         "CREATE INDEX IF NOT EXISTS FOR (u:UserAction) ON (u.engagement_id)",
         "CREATE INDEX IF NOT EXISTS FOR (a:Application) ON (a.engagement_id)",
+        # Engagement-scoped indexes for labels added above
+        "CREATE INDEX IF NOT EXISTS FOR (sc:SurveyClaim) ON (sc.engagement_id)",
+        "CREATE INDEX IF NOT EXISTS FOR (co:ConflictObject) ON (co.engagement_id)",
     ]
 
     async with driver.session() as session:

@@ -1,4 +1,5 @@
-FROM node:20-alpine AS base
+# Pin to specific Node release for reproducible builds
+FROM node:20.19-alpine AS base
 
 WORKDIR /app
 

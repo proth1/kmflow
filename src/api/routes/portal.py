@@ -126,7 +126,7 @@ async def portal_overview(
 @router.get("/{engagement_id}/findings", response_model=PortalFindingsList)
 async def portal_findings(
     engagement_id: UUID,
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("portal:read")),
@@ -335,6 +335,4 @@ async def portal_upload(
         logger.exception("Portal upload failed for %s", file.filename)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Upload processing failed") from e
     finally:
-        import os
-
-        os.unlink(tmp_path)
+        Path(tmp_path).unlink(missing_ok=True)

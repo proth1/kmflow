@@ -8,16 +8,19 @@ from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
+from src.core.config import Settings, get_settings
 from src.core.models import (
     AuditAction,
     AuditLog,
@@ -173,6 +176,7 @@ async def upload_evidence(
     metadata: str | None = Form(None),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("evidence:create")),
+    settings: Settings = Depends(get_settings),
 ) -> dict[str, Any]:
     """Upload a file as evidence for an engagement.
 
@@ -185,6 +189,14 @@ async def upload_evidence(
     - category: Evidence category (auto-detected if not provided)
     - metadata: Optional JSON string with additional metadata
     """
+    # Early Content-Length check to reject oversized uploads before buffering
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > settings.max_upload_size_mb * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File too large. Maximum size is {settings.max_upload_size_mb}MB.",
+        )
+
     # Read file content
     file_content = await file.read()
     if not file_content:
@@ -362,7 +374,7 @@ async def get_evidence(
             "category": evidence.category,
             "format": evidence.format,
             "content_hash": evidence.content_hash,
-            "download_url": f"/api/v1/evidence/{evidence.id}/download" if evidence.file_path else None,
+            "download_url": f"/evidence/{evidence.id}/download" if evidence.file_path else None,
             "size_bytes": evidence.size_bytes,
             "mime_type": evidence.mime_type,
             "metadata_json": evidence.metadata_json,
@@ -560,3 +572,62 @@ async def get_fragments(
 
     result = await session.execute(query)
     return list(result.scalars().all())
+
+
+@router.get("/{evidence_id}/download")
+async def download_evidence(
+    evidence_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_permission("evidence:read")),
+    settings: Settings = Depends(get_settings),
+) -> Response:
+    """Download the raw file for an evidence item.
+
+    SVG files are served with Content-Disposition: attachment to prevent
+    browser rendering (XSS risk from untrusted SVG content).
+    """
+    result = await session.execute(select(EvidenceItem).where(EvidenceItem.id == evidence_id))
+    evidence = result.scalar_one_or_none()
+    if not evidence:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Evidence item {evidence_id} not found",
+        )
+
+    await verify_engagement_member(session, user, evidence.engagement_id)
+    require_classification_access(evidence.classification, user)
+
+    if not evidence.file_path:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No file available for this evidence item",
+        )
+
+    file_path = Path(evidence.file_path).resolve()
+    evidence_root = Path(settings.evidence_store_path).resolve()
+    if not file_path.is_relative_to(evidence_root):
+        logger.warning("Path traversal attempt blocked: %s", evidence.file_path)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid file path",
+        )
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Evidence file not found on storage",
+        )
+
+    content = file_path.read_bytes()
+
+    mime_type = evidence.mime_type or "application/octet-stream"
+    filename = file_path.name
+
+    headers: dict[str, str] = {}
+    # Force attachment download for SVG to prevent browser rendering of potentially
+    # untrusted SVG content (SVG can contain executable JavaScript).
+    if mime_type == "image/svg+xml" or filename.lower().endswith(".svg"):
+        headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+    else:
+        headers["Content-Disposition"] = f'inline; filename="{filename}"'
+
+    return Response(content=content, media_type=mime_type, headers=headers)

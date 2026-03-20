@@ -6,6 +6,7 @@ import uuid
 from unittest.mock import MagicMock
 
 from src.core.models import CorroborationLevel
+from src.core.models.evidence import EvidenceItem
 from src.pov.consensus import ConsensusElement, ConsensusResult, build_consensus
 from src.pov.triangulation import TriangulatedElement
 from src.semantic.entity_extraction import EntityType, ExtractedEntity
@@ -25,7 +26,7 @@ def _make_evidence_item(
     category: str = "documents",
     source_date: object = None,
 ):
-    item = MagicMock()
+    item = MagicMock(spec=EvidenceItem)
     item.id = uuid.UUID(evidence_id) if evidence_id else uuid.uuid4()
     item.category = category
     item.source_date = source_date

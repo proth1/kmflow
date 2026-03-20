@@ -39,9 +39,19 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
+from src.core.audit import log_security_event
 from src.core.auth import get_current_user
 from src.core.config import get_settings
-from src.core.models import Annotation, AuditLog, CopilotMessage, EngagementMember, User, UserConsent, UserRole
+from src.core.models import (
+    Annotation,
+    AuditAction,
+    AuditLog,
+    CopilotMessage,
+    EngagementMember,
+    User,
+    UserConsent,
+    UserRole,
+)
 from src.core.permissions import has_role_level
 
 logger = logging.getLogger(__name__)
@@ -300,6 +310,13 @@ async def request_erasure(
     await session.commit()
     await session.refresh(user)
 
+    await log_security_event(
+        session=session,
+        action=AuditAction.ERASURE_REQUESTED,
+        actor=str(current_user.id),
+        details={"scheduled_at": scheduled_at.isoformat()},
+    )
+
     logger.info(
         "GDPR erasure request recorded for user %s; scheduled for %s",
         current_user.id,
@@ -395,6 +412,16 @@ async def update_consent(
     session.add(consent)
     await session.commit()
 
+    await log_security_event(
+        session=session,
+        action=AuditAction.CONSENT_UPDATED,
+        actor=str(current_user.id),
+        details={
+            "consent_type": payload.consent_type,
+            "granted": payload.granted,
+        },
+    )
+
     logger.info(
         "GDPR consent %s for type '%s' recorded for user %s (ip=%s)",
         "granted" if payload.granted else "revoked",
@@ -478,6 +505,13 @@ async def admin_anonymize_user(
 
     now = datetime.now(UTC)
     await session.commit()
+
+    await log_security_event(
+        session=session,
+        action=AuditAction.USER_ANONYMIZED,
+        actor=str(current_user.id),
+        details={"performed_by": str(current_user.id)},
+    )
 
     logger.info(
         "GDPR immediate anonymisation performed on user %s by admin %s",

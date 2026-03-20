@@ -6,7 +6,7 @@ activates: entity extraction, knowledge graph building, embedding generation,
 and semantic bridge execution.
 """
 
-# TODO(audit-B1-003): Extract storage.py + intelligence.py; keep pipeline as thin orchestrator
+# FUTURE(audit-B1-003): Extract storage.py + intelligence.py; keep pipeline as thin orchestrator
 
 from __future__ import annotations
 
@@ -30,6 +30,7 @@ from src.core.models import (
     EvidenceFragment,
     EvidenceItem,
 )
+from src.datalake.backend import StorageBackend
 from src.evidence.chunking import chunk_fragments
 from src.evidence.exceptions import EvidenceValidationError
 from src.evidence.parsers.base import ParseResult
@@ -179,7 +180,7 @@ async def store_file(
     file_name: str,
     engagement_id: uuid.UUID,
     evidence_store: str = DEFAULT_EVIDENCE_STORE,
-    storage_backend: Any | None = None,
+    storage_backend: StorageBackend | None = None,
 ) -> tuple[str, dict[str, Any]]:
     """Store an uploaded file using the configured storage backend.
 
@@ -198,8 +199,6 @@ async def store_file(
         Tuple of (file_path, storage_metadata_dict).
     """
     if storage_backend is not None:
-        from src.datalake.backend import StorageBackend
-
         if isinstance(storage_backend, StorageBackend):
             result = await storage_backend.write(
                 engagement_id=str(engagement_id),
@@ -722,7 +721,7 @@ async def ingest_evidence(
     mime_type: str | None = None,
     evidence_store: str = DEFAULT_EVIDENCE_STORE,
     neo4j_driver: AsyncDriver | None = None,
-    storage_backend: Any | None = None,
+    storage_backend: StorageBackend | None = None,
 ) -> tuple[EvidenceItem, list[EvidenceFragment], uuid.UUID | None]:
     """Full evidence ingestion pipeline: upload -> classify -> parse -> store -> intelligence.
 

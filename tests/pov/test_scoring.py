@@ -5,6 +5,8 @@ from __future__ import annotations
 import uuid
 from unittest.mock import MagicMock, PropertyMock
 
+from src.core.models.evidence import EvidenceItem
+
 from src.core.models import CorroborationLevel
 from src.pov.consensus import ConsensusElement
 from src.pov.scoring import (
@@ -36,7 +38,7 @@ def _make_evidence_item(
     reliability_score: float = 0.75,
     freshness_score: float = 0.8,
 ):
-    item = MagicMock()
+    item = MagicMock(spec=EvidenceItem)
     item.id = uuid.UUID(evidence_id) if evidence_id else uuid.uuid4()
     item.category = "documents"
     type(item).quality_score = PropertyMock(return_value=quality_score)

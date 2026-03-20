@@ -12,6 +12,7 @@ import logging
 import uuid
 
 from fastapi import Request, Response
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.types import ASGIApp
 
@@ -69,7 +70,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             ),
             "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
         }
-        if not settings.debug:
+        if settings.enable_hsts:
             self._static_headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
@@ -145,10 +146,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 count = 0
 
         if count > self.max_requests:
-            return Response(
-                content='{"detail":"Rate limit exceeded"}',
+            request_id = getattr(request.state, "request_id", None)
+            return JSONResponse(
                 status_code=429,
-                media_type="application/json",
+                content={
+                    "detail": "Rate limit exceeded",
+                    "request_id": request_id,
+                },
                 headers={"Retry-After": str(ttl)},
             )
 

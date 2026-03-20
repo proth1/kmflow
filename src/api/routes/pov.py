@@ -4,7 +4,7 @@ Provides endpoints for generating, retrieving, and inspecting
 process models created by the consensus algorithm.
 """
 
-# TODO(audit-B1-002): Split into pov/ sub-package: core, elements, evidence_map, triangulation
+# FUTURE(audit-B1-002): Split into pov/ sub-package: core, elements, evidence_map, triangulation
 
 from __future__ import annotations
 
@@ -210,7 +210,7 @@ async def trigger_pov_generation(
         return {
             "job_id": task_id,
             "status": "queued",
-            "message": "POV generation queued. Poll GET /api/v1/tasks/" + task_id,
+            "message": "POV generation queued. Poll GET /tasks/" + task_id,
         }
 
     # Fallback: synchronous execution (degraded mode / task queue unavailable)

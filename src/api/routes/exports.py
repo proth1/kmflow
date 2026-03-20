@@ -34,7 +34,7 @@ class WatermarkExtractPayload(BaseModel):
 @router.get("")
 async def list_exports(
     engagement_id: UUID = Query(..., description="Engagement to query exports for"),
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("export:read")),

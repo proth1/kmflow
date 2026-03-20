@@ -111,6 +111,21 @@ class MetricAggregateSummary(BaseModel):
     on_target: bool
 
 
+class MetricSummaryResponse(BaseModel):
+    """Aggregate metrics summary response."""
+
+    engagement_id: str
+    metrics: list[MetricAggregateSummary]
+    total: int
+    on_target_count: int
+
+
+class MetricSeedResponse(BaseModel):
+    """Response for seeding metric definitions."""
+
+    metrics_seeded: int
+
+
 # -- Metric Definition Routes -------------------------------------------------
 
 
@@ -145,7 +160,7 @@ async def create_metric(
 @router.get("/definitions", response_model=SuccessMetricList)
 async def list_metrics(
     category: MetricCategory | None = None,
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
@@ -220,7 +235,7 @@ async def record_reading(
 async def list_readings(
     engagement_id: UUID,
     metric_id: UUID | None = None,
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
@@ -245,7 +260,7 @@ async def list_readings(
 # -- Aggregate Summary --------------------------------------------------------
 
 
-@router.get("/summary/{engagement_id}")
+@router.get("/summary/{engagement_id}", response_model=MetricSummaryResponse)
 async def get_metric_summary(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -326,7 +341,7 @@ async def get_metric_summary(
     }
 
 
-@router.post("/seed", status_code=status.HTTP_201_CREATED)
+@router.post("/seed", response_model=MetricSeedResponse, status_code=status.HTTP_201_CREATED)
 async def seed_metrics(
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:update")),

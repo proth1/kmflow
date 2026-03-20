@@ -20,7 +20,7 @@ from src.core.models import (
     TOMDimension,
     TOMGapType,
 )
-from src.semantic.graph import KnowledgeGraphService
+from src.semantic.graph import GraphStats, KnowledgeGraphService
 
 logger = logging.getLogger(__name__)
 
@@ -178,7 +178,7 @@ class TOMAlignmentEngine:
     def assess_dimension_maturity(
         self,
         dimension: str,
-        stats: Any,
+        stats: GraphStats,
     ) -> float:
         """Assess current maturity for a TOM dimension based on graph evidence.
 
@@ -196,7 +196,7 @@ class TOMAlignmentEngine:
         # Base score from evidence density
         if node_count == 0:
             return 1.0
-        elif node_count < 10:
+        if node_count < 10:
             base = 1.5
         elif node_count < 50:
             base = 2.5
@@ -226,12 +226,11 @@ class TOMAlignmentEngine:
         diff = target - current
         if diff <= 0:
             return TOMGapType.NO_GAP
-        elif diff < 1.0:
+        if diff < 1.0:
             return TOMGapType.DEVIATION
-        elif diff < 2.0:
+        if diff < 2.0:
             return TOMGapType.PARTIAL_GAP
-        else:
-            return TOMGapType.FULL_GAP
+        return TOMGapType.FULL_GAP
 
     def _calculate_severity(self, current: float, target: float) -> float:
         """Calculate gap severity as normalized difference."""
@@ -268,6 +267,6 @@ class TOMAlignmentEngine:
         base = recommendations.get(TOMDimension(dimension), "Conduct detailed assessment")
         if gap_type == TOMGapType.FULL_GAP:
             return f"CRITICAL: {base}"
-        elif gap_type == TOMGapType.PARTIAL_GAP:
+        if gap_type == TOMGapType.PARTIAL_GAP:
             return f"HIGH: {base}"
         return base

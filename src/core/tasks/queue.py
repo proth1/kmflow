@@ -21,6 +21,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+import redis.asyncio as aioredis
+
 from src.core.tasks.base import TaskStatus, TaskWorker
 
 logger = logging.getLogger(__name__)
@@ -73,7 +75,7 @@ class TaskQueue:
         redis: An async Redis client (``redis.asyncio.Redis``).
     """
 
-    def __init__(self, redis: Any) -> None:
+    def __init__(self, redis: aioredis.Redis) -> None:
         self._redis = redis
         self._workers: dict[str, TaskWorker] = {}
 

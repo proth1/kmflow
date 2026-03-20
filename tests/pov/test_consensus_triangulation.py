@@ -11,6 +11,7 @@ import uuid
 from unittest.mock import MagicMock
 
 from src.core.models import CorroborationLevel
+from src.core.models.evidence import EvidenceItem
 from src.pov.constants import CROSS_PLANE_BONUS
 from src.pov.triangulation import (
     compute_evidence_agreement,
@@ -43,7 +44,7 @@ def _make_evidence_item(
     evidence_id: str | None = None,
     category: str = "documents",
 ) -> MagicMock:
-    item = MagicMock()
+    item = MagicMock(spec=EvidenceItem)
     item.id = uuid.UUID(evidence_id) if evidence_id else uuid.uuid4()
     item.category = category
     return item

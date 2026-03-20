@@ -177,7 +177,7 @@ async def create_monitoring_job(
 async def list_monitoring_jobs(
     engagement_id: UUID | None = None,
     status_filter: MonitoringStatus | None = None,
-    limit: int = Query(default=50, ge=1, le=200),
+    limit: int = Query(default=50, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("monitoring:read")),
@@ -358,7 +358,7 @@ async def create_baseline(
 @router.get("/baselines", response_model=BaselineList)
 async def list_baselines(
     engagement_id: UUID | None = None,
-    limit: int = Query(default=50, ge=1, le=200),
+    limit: int = Query(default=50, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("monitoring:read")),
@@ -399,7 +399,7 @@ async def list_deviations(
     engagement_id: UUID | None = None,
     job_id: UUID | None = None,
     category: DeviationCategory | None = None,
-    limit: int = Query(default=50, ge=1, le=200),
+    limit: int = Query(default=50, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("monitoring:read")),
@@ -448,7 +448,7 @@ async def list_alerts(
     engagement_id: UUID | None = None,
     status_filter: AlertStatus | None = None,
     severity: AlertSeverity | None = None,
-    limit: int = Query(default=50, ge=1, le=200),
+    limit: int = Query(default=50, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("monitoring:read")),

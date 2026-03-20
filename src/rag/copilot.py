@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+from neo4j import AsyncDriver
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import get_settings
@@ -60,7 +61,7 @@ class CopilotOrchestrator:
         self,
         retriever: HybridRetriever | None = None,
         embedding_service: EmbeddingService | None = None,
-        neo4j_driver: Any = None,
+        neo4j_driver: AsyncDriver | None = None,
     ):
         self.embedding_service = embedding_service or EmbeddingService()
         self.retriever = retriever or HybridRetriever(

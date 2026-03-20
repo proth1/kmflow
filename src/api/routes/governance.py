@@ -87,7 +87,7 @@ router = APIRouter(
 @router.get("/catalog", response_model=CatalogEntryList)
 async def list_catalog_entries(
     engagement_id: uuid.UUID | None = None,
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("governance:read")),

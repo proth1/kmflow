@@ -32,8 +32,17 @@ class GovernanceCheckRequest(BaseModel):
     regulated_elements: dict[str, list[str]] | None = None
 
 
+class GovernanceCheckResponse(BaseModel):
+    """Response from governance flag detection."""
+
+    suggestion_id: str
+    governance_flags: list[dict[str, Any]]
+    flag_count: int
+
+
 @router.post(
     "/engagements/{engagement_id}/scenarios/{scenario_id}/suggestions/{suggestion_id}/governance-check",
+    response_model=GovernanceCheckResponse,
 )
 async def check_governance_flags(
     engagement_id: UUID,

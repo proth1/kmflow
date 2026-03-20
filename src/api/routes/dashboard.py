@@ -109,11 +109,11 @@ def _classify_confidence(score: float) -> str:
     """Classify a confidence score into a named level."""
     if score >= 0.90:
         return "VERY_HIGH"
-    elif score >= 0.75:
+    if score >= 0.75:
         return "HIGH"
-    elif score >= 0.50:
+    if score >= 0.50:
         return "MEDIUM"
-    elif score >= 0.25:
+    if score >= 0.25:
         return "LOW"
     return "VERY_LOW"
 

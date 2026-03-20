@@ -11,6 +11,7 @@ import base64
 import hashlib
 import json
 import logging
+import os
 
 from cryptography.fernet import Fernet, InvalidToken
 
@@ -22,6 +23,11 @@ logger = logging.getLogger(__name__)
 _LEGACY_FIXED_SALT = b"kmflow-fernet-key-derivation-v1"
 
 
+def _generate_random_salt() -> bytes:
+    """Generate a cryptographically random salt for new key derivation."""
+    return os.urandom(16)
+
+
 def _derive_fernet_key(secret: str, *, legacy_salt: bool = False) -> bytes:
     """Derive a valid Fernet key from an arbitrary secret string.
 
@@ -29,6 +35,13 @@ def _derive_fernet_key(secret: str, *, legacy_salt: bool = False) -> bytes:
         secret: The raw encryption key string.
         legacy_salt: If True, use the old fixed salt for backward compatibility
             when decrypting data encrypted before the per-deployment salt migration.
+
+    Note: For existing deployments, the salt is derived from the key itself
+    (reduced entropy). New deployments should use os.urandom(16) for the salt
+    via _generate_random_salt(). Changing the salt derivation would break
+    decryption of existing data — the salt must be stored alongside ciphertext
+    to allow random salts in future iterations.
+    See: docs/audit-lessons-learned.md
     """
     try:
         Fernet(secret.encode())

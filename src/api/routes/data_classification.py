@@ -195,7 +195,7 @@ async def create_processing_activity(
 @router.get("/processing-activities/{engagement_id}", response_model=ProcessingActivityListResponse)
 async def list_processing_activities(
     engagement_id: UUID,
-    limit: int = Query(default=20, ge=1, le=100),
+    limit: int = Query(default=20, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),

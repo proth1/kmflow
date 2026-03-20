@@ -47,17 +47,28 @@ router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 bearer_scheme = HTTPBearer(auto_error=False)
 
 # Use Redis-backed storage for multi-worker safety when REDIS_URL is available.
+# In production, missing Redis is fatal — in-memory storage is not safe across workers.
+_settings_obj = None
 _redis_url: str | None = None
 try:
-    _settings = Settings()
-    _redis_url = _settings.redis_url
+    _settings_obj = Settings()
+    _redis_url = _settings_obj.redis_url
 except Exception:
-    logger.warning("Settings load failed for rate limiter Redis URL, using in-memory storage")
+    logger.warning("Settings load failed for rate limiter Redis URL")
+
+if not _redis_url and _settings_obj and _settings_obj.app_env != "development":
+    raise RuntimeError(
+        "REDIS_URL is required for rate limiting in non-development environments. "
+        "Set REDIS_URL or configure redis_host/redis_port in settings."
+    )
+
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["100/minute"],
     storage_uri=_redis_url or "memory://",
 )
+if not _redis_url:
+    logger.warning("Rate limiter using in-memory storage (development only)")
 
 # Per-email lockout constants
 _LOGIN_LOCKOUT_MAX_ATTEMPTS = 10
@@ -288,6 +299,9 @@ async def refresh_token(
             detail="User not found or disabled",
         )
 
+    # Rotate: blacklist the old refresh token to prevent reuse
+    await blacklist_token(request, payload.refresh_token, expires_in=settings.jwt_refresh_token_expire_minutes * 60)
+
     claims = {
         "sub": str(user.id),
         "email": user.email,
@@ -418,6 +432,9 @@ async def refresh_token_cookie(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or disabled",
         )
+
+    # Rotate: blacklist the old refresh token to prevent reuse
+    await blacklist_token(request, refresh_token_value, expires_in=settings.jwt_refresh_token_expire_minutes * 60)
 
     claims = {
         "sub": str(user.id),

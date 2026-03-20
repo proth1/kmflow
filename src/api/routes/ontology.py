@@ -11,6 +11,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,6 +26,81 @@ from src.core.models.ontology import (
 from src.core.permissions import require_engagement_access, require_permission
 from src.semantic.ontology_derivation import OntologyDerivationService, OntologyValidationService
 from src.semantic.ontology_export import OntologyExportService
+
+# -- Schemas ------------------------------------------------------------------
+
+
+class OntologyDeriveResponse(BaseModel):
+    """Response for ontology derivation trigger."""
+
+    ontology_id: str
+    version: int
+    status: str
+    class_count: int
+    property_count: int
+    axiom_count: int
+
+
+class OntologyClassItem(BaseModel):
+    id: str
+    name: str
+    description: str | None = None
+    parent: str | None = None
+    instance_count: int
+    confidence: float
+    source_seed_terms: list[str] | None = None
+
+
+class OntologyPropertyItem(BaseModel):
+    id: str
+    name: str
+    source_edge_type: str | None = None
+    domain: str | None = None
+    range: str | None = None
+    usage_count: int
+    confidence: float
+
+
+class OntologyAxiomItem(BaseModel):
+    id: str
+    expression: str
+    type: str
+    confidence: float
+    source_pattern: str | None = None
+
+
+class OntologyGetResponse(BaseModel):
+    """Response for getting the latest ontology."""
+
+    ontology_id: str
+    engagement_id: str
+    version: int
+    status: str
+    completeness_score: float
+    derived_at: str | None = None
+    classes: list[OntologyClassItem]
+    properties: list[OntologyPropertyItem]
+    axioms: list[OntologyAxiomItem]
+
+
+class OntologyExportResponse(BaseModel):
+    """Response for ontology export."""
+
+    ontology_id: str
+    format: str
+    content: str
+    sha256: str
+
+
+class OntologyValidationResponse(BaseModel):
+    """Response for ontology validation."""
+
+    ontology_id: str
+    completeness_score: float
+    orphan_classes: list[str] = []
+    disconnected_subgraphs: int = 0
+    recommendations: list[str] = []
+
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +121,7 @@ async def _get_latest_ontology(session: AsyncSession, engagement_id: UUID) -> On
     return ontology
 
 
-@router.post("/{engagement_id}/ontology/derive")
+@router.post("/{engagement_id}/ontology/derive", response_model=OntologyDeriveResponse, status_code=201)
 async def derive_ontology(
     engagement_id: UUID,
     request: Request,
@@ -68,7 +144,7 @@ async def derive_ontology(
     return result
 
 
-@router.get("/{engagement_id}/ontology")
+@router.get("/{engagement_id}/ontology", response_model=OntologyGetResponse)
 async def get_ontology(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -137,7 +213,7 @@ async def get_ontology(
     }
 
 
-@router.get("/{engagement_id}/ontology/export")
+@router.get("/{engagement_id}/ontology/export", response_model=OntologyExportResponse)
 async def export_ontology(
     engagement_id: UUID,
     fmt: str = Query(default="yaml", pattern="^(owl|yaml)$"),
@@ -157,7 +233,7 @@ async def export_ontology(
     return export_result
 
 
-@router.get("/{engagement_id}/ontology/validation")
+@router.get("/{engagement_id}/ontology/validation", response_model=OntologyValidationResponse)
 async def validate_ontology(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
