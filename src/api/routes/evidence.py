@@ -26,6 +26,7 @@ from src.core.models import (
     EvidenceItem,
     FragmentType,
     User,
+    UserRole,
     ValidationStatus,
 )
 from src.core.permissions import (
@@ -406,6 +407,12 @@ async def list_evidence(
     result = await session.execute(query)
     items = list(result.scalars().all())
 
+    # Classification filter: CLIENT_VIEWER role cannot see RESTRICTED data.
+    # Applied to both query and count to avoid leaking the count of restricted items.
+    if user.role == UserRole.CLIENT_VIEWER:
+        items = [item for item in items if item.classification != DataClassification.RESTRICTED]
+        count_query = count_query.where(EvidenceItem.classification != DataClassification.RESTRICTED)
+
     count_result = await session.execute(count_query)
     total = count_result.scalar() or 0
 
@@ -525,6 +532,7 @@ async def get_fragments(
             detail=f"Evidence item {evidence_id} not found",
         )
     await verify_engagement_member(session, user, evidence.engagement_id)
+    require_classification_access(evidence.classification, user)
 
     query = select(EvidenceFragment).where(EvidenceFragment.evidence_id == evidence_id)
     if fragment_type is not None:

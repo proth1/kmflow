@@ -108,8 +108,8 @@ class RegulatoryOverlayEngine:
             try:
                 await self._graph.run_write_query(
                     """
-                    MERGE (n {id: $id})
-                    ON CREATE SET n:Policy, n.name = $name,
+                    MERGE (n:Policy {id: $id})
+                    ON CREATE SET n.name = $name,
                                   n.engagement_id = $engagement_id,
                                   n.policy_type = $policy_type
                     ON MATCH SET  n.name = $name,
@@ -131,8 +131,8 @@ class RegulatoryOverlayEngine:
             try:
                 await self._graph.run_write_query(
                     """
-                    MERGE (n {id: $id})
-                    ON CREATE SET n:Control, n.name = $name,
+                    MERGE (n:Control {id: $id})
+                    ON CREATE SET n.name = $name,
                                   n.engagement_id = $engagement_id,
                                   n.effectiveness = $effectiveness
                     ON MATCH SET  n.name = $name,
@@ -167,8 +167,8 @@ class RegulatoryOverlayEngine:
             try:
                 await self._graph.run_write_query(
                     """
-                    MERGE (n {id: $id})
-                    ON CREATE SET n:Regulation, n.name = $name,
+                    MERGE (n:Regulation {id: $id})
+                    ON CREATE SET n.name = $name,
                                   n.engagement_id = $engagement_id,
                                   n.framework = $framework
                     ON MATCH SET  n.name = $name,
