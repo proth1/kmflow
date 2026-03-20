@@ -121,6 +121,8 @@ async def get_triangulation_results(
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_engagement_access),
     min_planes: int = Query(0, ge=0, le=3, description="Minimum evidence planes"),
+    limit: int = Query(default=100, ge=1, le=1000, description="Maximum number of activities to return"),
+    offset: int = Query(default=0, ge=0, description="Number of activities to skip"),
 ) -> dict[str, Any]:
     """Get evidence triangulation results for an engagement.
 
@@ -219,9 +221,11 @@ async def get_triangulation_results(
             }
         )
 
+    paginated_activities = activities[offset : offset + limit]
+
     return {
         "engagement_id": str(engagement_id),
-        "activities": activities,
+        "activities": paginated_activities,
         "total_activities": len(activities),
         "fully_triangulated_count": fully,
         "partially_triangulated_count": partially,

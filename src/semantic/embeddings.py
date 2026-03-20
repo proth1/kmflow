@@ -120,9 +120,12 @@ class EmbeddingService:
             fragment_id: UUID of the evidence fragment.
             embedding: Embedding vector to store.
         """
-        # Convert to pgvector format string: [0.1, 0.2, ...]
+        # Uses pgvector text format "[x,y,z,...]" with an explicit ::vector cast so
+        # pgvector parses on the server side. True binary transport (register_vector
+        # on the asyncpg connection) would avoid the server-side text parse, but
+        # requires asyncpg-specific setup outside this service layer.
         vector_str = "[" + ",".join(str(v) for v in embedding) + "]"
-        query = text("UPDATE evidence_fragments SET embedding = :embedding WHERE id = :fragment_id")
+        query = text("UPDATE evidence_fragments SET embedding = :embedding::vector WHERE id = :fragment_id")
         await session.execute(
             query,
             {"embedding": vector_str, "fragment_id": fragment_id},
@@ -149,7 +152,7 @@ class EmbeddingService:
         if not items:
             return 0
 
-        query = text("UPDATE evidence_fragments SET embedding = :embedding WHERE id = :fragment_id")
+        query = text("UPDATE evidence_fragments SET embedding = :embedding::vector WHERE id = :fragment_id")
         params = [
             {"embedding": "[" + ",".join(str(v) for v in embedding) + "]", "fragment_id": fragment_id}
             for fragment_id, embedding in items

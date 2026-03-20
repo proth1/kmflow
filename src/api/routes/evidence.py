@@ -18,6 +18,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
+from src.core.config import Settings, get_settings
 from src.core.models import (
     AuditAction,
     AuditLog,
@@ -173,6 +174,7 @@ async def upload_evidence(
     metadata: str | None = Form(None),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("evidence:create")),
+    settings: Settings = Depends(get_settings),
 ) -> dict[str, Any]:
     """Upload a file as evidence for an engagement.
 
@@ -185,6 +187,14 @@ async def upload_evidence(
     - category: Evidence category (auto-detected if not provided)
     - metadata: Optional JSON string with additional metadata
     """
+    # Early Content-Length check to reject oversized uploads before buffering
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > settings.max_upload_size_mb * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File too large. Maximum size is {settings.max_upload_size_mb}MB.",
+        )
+
     # Read file content
     file_content = await file.read()
     if not file_content:
@@ -362,7 +372,7 @@ async def get_evidence(
             "category": evidence.category,
             "format": evidence.format,
             "content_hash": evidence.content_hash,
-            "download_url": f"/api/v1/evidence/{evidence.id}/download" if evidence.file_path else None,
+            "download_url": f"/evidence/{evidence.id}/download" if evidence.file_path else None,
             "size_bytes": evidence.size_bytes,
             "mime_type": evidence.mime_type,
             "metadata_json": evidence.metadata_json,

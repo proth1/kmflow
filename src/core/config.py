@@ -144,6 +144,9 @@ class Settings(BaseSettings):
     embedding_model: str = "all-mpnet-base-v2"
     embedding_dimension: int = 768
 
+    # ── Evidence Upload ───────────────────────────────────────────
+    max_upload_size_mb: int = 100
+
     # ── Task Queue (KMFLOW-58) ────────────────────────────────────
     task_worker_count: int = 2
     task_worker_block_ms: int = 2000

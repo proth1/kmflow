@@ -59,21 +59,26 @@ async def run_correlation(
     if not eng_result.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Engagement not found")
 
-    # Fetch events for the engagement (capped to prevent memory exhaustion)
-    max_correlation_events = 10000
+    # Count events before fetching to enforce hard limit
+    total_count_result = await session.execute(
+        select(func.count())
+        .select_from(CanonicalActivityEvent)
+        .where(CanonicalActivityEvent.engagement_id == engagement_id)
+    )
+    total_count = total_count_result.scalar() or 0
+    if total_count > 10_000:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Result set too large ({total_count} events). Add filters to reduce below 10,000.",
+        )
+
+    # Fetch events for the engagement
     events_result = await session.execute(
         select(CanonicalActivityEvent)
         .where(CanonicalActivityEvent.engagement_id == engagement_id)
         .order_by(CanonicalActivityEvent.created_at)
-        .limit(max_correlation_events)
     )
     all_events = list(events_result.scalars().all())
-    if len(all_events) >= max_correlation_events:
-        logger.warning(
-            "Correlation run capped at %d events for engagement %s; consider using batch processing",
-            max_correlation_events,
-            engagement_id,
-        )
 
     if not all_events:
         return {

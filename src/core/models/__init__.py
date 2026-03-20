@@ -24,6 +24,7 @@ from src.core.models.conflict import (
 from src.core.models.conformance import ConformanceResult, ReferenceProcessModel
 from src.core.models.cost_volume import RoleRateAssumption, VolumeForecast
 from src.core.models.dark_room import DarkRoomSnapshot
+from src.core.models.dual_write_failure import DualWriteFailure
 from src.core.models.engagement import (
     Engagement,
     EngagementStatus,
@@ -267,6 +268,8 @@ __all__ = [
     "VolumeForecast",
     # dark_room
     "DarkRoomSnapshot",
+    # dual_write_failure
+    "DualWriteFailure",
     # engagement
     "Engagement",
     "EngagementStatus",
