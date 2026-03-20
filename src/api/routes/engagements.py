@@ -15,9 +15,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
+from src.api.schemas.dpa import DpaComplianceSummary
 from src.core.audit import log_audit
 from src.core.models import (
     AuditAction,
@@ -63,16 +65,6 @@ class EngagementUpdate(BaseModel):
     status: EngagementStatus | None = None
     team: list[str] | None = None
     data_residency_restriction: str | None = Field(None, pattern="^(none|eu_only|uk_only|custom)$")
-
-
-class DpaComplianceSummary(BaseModel):
-    """Summary of DPA compliance for engagement responses."""
-
-    status: str
-    reference_number: str | None = None
-    effective_date: Any | None = None
-    expiry_date: Any | None = None
-    dpa_id: UUID | None = None
 
 
 class EngagementResponse(BaseModel):
@@ -242,7 +234,7 @@ async def get_engagement(
     try:
         service = GdprComplianceService(session)
         dpa_summary = await service.get_dpa_compliance_summary(engagement_id)
-    except Exception:
+    except (SQLAlchemyError, ValueError, AttributeError):
         logger.warning("Failed to fetch DPA compliance for engagement %s", engagement_id, exc_info=True)
 
     # Build response dict from ORM object

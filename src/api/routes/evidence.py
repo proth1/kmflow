@@ -14,6 +14,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
@@ -234,7 +235,7 @@ async def upload_evidence(
                 "dpa_warning: No active Data Processing Agreement exists for this engagement. "
                 "GDPR Article 28 requires a DPA before processing client data."
             )
-    except Exception:
+    except (SQLAlchemyError, ValueError):
         logger.warning("Failed to check DPA status for engagement %s", engagement_id, exc_info=True)
 
     await session.commit()

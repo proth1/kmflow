@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func as sa_func
@@ -27,6 +27,25 @@ from src.core.models.gdpr import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Fields that can be updated on a DPA via the update_dpa service method.
+# Protected columns (id, engagement_id, created_by, status, created_at, updated_at)
+# are excluded to prevent privilege escalation from internal callers.
+_DPA_UPDATABLE_FIELDS: frozenset[str] = frozenset(
+    {
+        "reference_number",
+        "version",
+        "effective_date",
+        "expiry_date",
+        "controller_name",
+        "processor_name",
+        "data_categories",
+        "sub_processors",
+        "retention_days_override",
+        "lawful_basis",
+        "notes",
+    }
+)
 
 # Classification hierarchy for access control: higher index = more restricted
 CLASSIFICATION_HIERARCHY = {
@@ -223,13 +242,13 @@ class GdprComplianceService:
         engagement_id: uuid.UUID,
         reference_number: str,
         version: str,
-        effective_date: Any,
+        effective_date: date,
         controller_name: str,
         processor_name: str,
         data_categories: list[str],
         lawful_basis: LawfulBasis,
         created_by: uuid.UUID,
-        expiry_date: Any | None = None,
+        expiry_date: date | None = None,
         sub_processors: list[dict[str, Any]] | None = None,
         retention_days_override: int | None = None,
         notes: str | None = None,
@@ -357,6 +376,9 @@ class GdprComplianceService:
             raise ValueError(msg)
 
         for field_name, value in updates.items():
+            if field_name not in _DPA_UPDATABLE_FIELDS:
+                msg = f"Field '{field_name}' is not updatable"
+                raise ValueError(msg)
             setattr(dpa, field_name, value)
 
         await self._session.flush()

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -63,8 +63,8 @@ class DpaResponse(BaseModel):
     lawful_basis: LawfulBasis
     notes: str | None = None
     created_by: UUID
-    created_at: Any = None
-    updated_at: Any = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 
 class DpaListResponse(BaseModel):
