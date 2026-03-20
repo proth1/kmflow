@@ -70,6 +70,9 @@ class Settings(BaseSettings):
     encryption_key: SecretStr = SecretStr("CHANGE_ME")
     watermark_signing_key: SecretStr = SecretStr("CHANGE_ME")
 
+    # ── Security Headers ──────────────────────────────────────────
+    enable_hsts: bool = False  # Enable HSTS header (requires HTTPS)
+
     # ── Cookie Auth (Issue #156) ──────────────────────────────────
     # cookie_domain: Set to the shared domain (e.g. ".example.com") for
     # multi-subdomain deployments, or leave empty to default to the

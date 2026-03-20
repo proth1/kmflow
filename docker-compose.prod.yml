@@ -3,6 +3,14 @@ version: "3.9"
 # Production overrides for KMFlow.
 # Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
+networks:
+  frontend-net:
+    driver: bridge
+  backend-net:
+    driver: bridge
+  data-net:
+    driver: bridge
+
 services:
   postgres:
     environment:
@@ -10,13 +18,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
     ports: []  # No host port exposure in production
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - data-net
     deploy:
       resources:
         limits:
@@ -35,10 +38,8 @@ services:
     environment:
       NEO4J_AUTH: ${NEO4J_USER:?Set NEO4J_USER}/${NEO4J_PASSWORD:?Set NEO4J_PASSWORD}
     ports: []  # No host port exposure in production
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
+    networks:
+      - data-net
     deploy:
       resources:
         limits:
@@ -56,10 +57,8 @@ services:
   redis:
     command: redis-server --requirepass ${REDIS_PASSWORD:?Set REDIS_PASSWORD} --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports: []  # No host port exposure in production
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
+    networks:
+      - data-net
     deploy:
       resources:
         limits:
@@ -81,10 +80,13 @@ services:
       AUTH_DEV_MODE: "false"
       LOG_LEVEL: WARNING
       COOKIE_SECURE: "true"
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
+      ENABLE_HSTS: "true"
+      DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?ssl=require"
+      NEO4J_URI: "bolt+s://neo4j:7687"
+      REDIS_URL: "rediss://:${REDIS_PASSWORD}@redis:6379/0"
+    networks:
+      - backend-net
+      - data-net
     deploy:
       resources:
         limits:
@@ -103,10 +105,9 @@ services:
   frontend:
     environment:
       NODE_ENV: production
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
+    networks:
+      - frontend-net
+      - backend-net
     deploy:
       resources:
         limits:
@@ -124,20 +125,16 @@ services:
 
   cib7:
     ports: []  # No host port exposure in production
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
+    networks:
+      - backend-net
 
   minio:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD}
     ports: []  # No host port exposure in production
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
+    networks:
+      - data-net
 
   mailpit:
     ports: []  # No host port exposure in production
