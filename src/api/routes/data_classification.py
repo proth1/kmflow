@@ -44,10 +44,58 @@ class CreateProcessingActivityPayload(BaseModel):
     article_6_basis: str = Field(default="Art. 6(1)(f)", max_length=50)
 
 
+class RetentionPolicyResponse(BaseModel):
+    """Response schema for a retention policy."""
+
+    id: str
+    engagement_id: str
+    retention_days: int
+    action: str
+
+
+class RetentionEnforcementResponse(BaseModel):
+    """Response schema for a retention enforcement run."""
+
+    engagement_id: str
+    action: str
+    retention_days: int
+    affected_count: int
+    affected_item_ids: list[str]
+
+
+class ProcessingActivityResponse(BaseModel):
+    """Response schema for a single processing activity."""
+
+    id: str
+    engagement_id: str
+    name: str
+    lawful_basis: str
+    article_6_basis: str
+
+
+class ProcessingActivityListResponse(BaseModel):
+    """Response schema for listing processing activities."""
+
+    items: list[dict[str, Any]]
+    total: int
+    limit: int
+    offset: int
+
+
+class ComplianceReportResponse(BaseModel):
+    """Response schema for a GDPR compliance report."""
+
+    engagement_id: str
+    total_processing_activities: int
+    activities_by_lawful_basis: dict[str, int]
+    evidence_by_classification: dict[str, int]
+    compliant: bool
+
+
 # ── Retention Policy ──────────────────────────────────────────────────
 
 
-@router.put("/retention/{engagement_id}")
+@router.put("/retention/{engagement_id}", response_model=RetentionPolicyResponse)
 async def set_retention_policy(
     engagement_id: UUID,
     payload: SetRetentionPayload,
@@ -71,7 +119,7 @@ async def set_retention_policy(
     }
 
 
-@router.get("/retention/{engagement_id}")
+@router.get("/retention/{engagement_id}", response_model=RetentionPolicyResponse)
 async def get_retention_policy(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -94,7 +142,7 @@ async def get_retention_policy(
     }
 
 
-@router.post("/retention/{engagement_id}/enforce")
+@router.post("/retention/{engagement_id}/enforce", response_model=RetentionEnforcementResponse)
 async def enforce_retention(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -115,6 +163,7 @@ async def enforce_retention(
 
 @router.post(
     "/processing-activities/{engagement_id}",
+    response_model=ProcessingActivityResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_processing_activity(
@@ -143,7 +192,7 @@ async def create_processing_activity(
     }
 
 
-@router.get("/processing-activities/{engagement_id}")
+@router.get("/processing-activities/{engagement_id}", response_model=ProcessingActivityListResponse)
 async def list_processing_activities(
     engagement_id: UUID,
     limit: int = Query(default=20, ge=1, le=100),
@@ -164,7 +213,7 @@ async def list_processing_activities(
 # ── Compliance Report ─────────────────────────────────────────────────
 
 
-@router.get("/compliance/{engagement_id}")
+@router.get("/compliance/{engagement_id}", response_model=ComplianceReportResponse)
 async def get_compliance_report(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),

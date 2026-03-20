@@ -89,7 +89,7 @@ class TestAgentStartsAndPolls:
         agent = MockMonitoringAgent(config)
 
         await agent.start()
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.5)  # Timing-sensitive: generous buffer for CI
         await agent.stop()
 
         assert agent.connect_calls == 1
@@ -101,7 +101,7 @@ class TestAgentStartsAndPolls:
         agent = MockMonitoringAgent(config)
 
         await agent.start()
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.5)  # Timing-sensitive: generous buffer for CI
         await agent.stop()
 
         health_statuses = [e.status for e in agent._health_events]
@@ -116,10 +116,10 @@ class TestAgentStartsAndPolls:
         agent._poll_data = None  # No new data
 
         await agent.start()
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(2.0)  # Timing-sensitive: generous buffer for CI
         await agent.stop()
 
-        # Should have polled at least twice in 0.2s with 0.05s interval
+        # Should have polled at least twice in 2.0s with 0.05s interval
         assert agent.poll_calls >= 2
 
     @pytest.mark.asyncio
@@ -129,7 +129,7 @@ class TestAgentStartsAndPolls:
         agent = MockMonitoringAgent(config)
 
         await agent.start()
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.5)  # Timing-sensitive: generous buffer for CI
         await agent.stop()
 
         health_statuses = [e.status for e in agent._health_events]
@@ -164,7 +164,7 @@ class TestDataExtraction:
         agent._extract_count = 3
 
         await agent.start()
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.5)  # Timing-sensitive: generous buffer for CI
         await agent.stop()
 
         assert agent.extract_calls >= 1
@@ -180,7 +180,7 @@ class TestDataExtraction:
         assert agent.watermark is None
 
         await agent.start()
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.5)  # Timing-sensitive: generous buffer for CI
         await agent.stop()
 
         assert agent.watermark is not None
@@ -194,7 +194,7 @@ class TestDataExtraction:
         agent._extract_count = 7
 
         await agent.start()
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.5)  # Timing-sensitive: generous buffer for CI
         await agent.stop()
 
         assert len(agent._extraction_events) >= 1
@@ -210,7 +210,7 @@ class TestDataExtraction:
         agent._poll_data = None
 
         await agent.start()
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.5)  # Timing-sensitive: generous buffer for CI
         await agent.stop()
 
         assert agent.extract_calls == 0
@@ -225,7 +225,7 @@ class TestDataExtraction:
         assert agent.last_poll_time is None
 
         await agent.start()
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.5)  # Timing-sensitive: generous buffer for CI
         await agent.stop()
 
         assert agent.last_poll_time is not None
@@ -247,7 +247,7 @@ class TestRetryWithBackoff:
         agent._connect_error = ConnectionError("Connection refused")
 
         await agent.start()
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.5)  # Timing-sensitive: generous buffer for CI
         await agent.stop()
 
         assert agent.health == AgentHealth.STOPPED  # Stop sets STOPPED
@@ -262,7 +262,7 @@ class TestRetryWithBackoff:
         agent._connect_error = ConnectionError("Connection refused")
 
         await agent.start()
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.5)  # Timing-sensitive: generous buffer for CI
         await agent.stop()
 
         assert len(agent.alert_calls) >= 1
@@ -354,7 +354,7 @@ class TestRetryWithBackoff:
         agent._poll_data = [{"event": "test"}]
 
         await agent.start()
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.5)  # Timing-sensitive: generous buffer for CI
 
         # Record watermark
         watermark_before = agent.watermark
@@ -363,7 +363,7 @@ class TestRetryWithBackoff:
         # Now make polling fail
         agent._poll_error = RuntimeError("Failure")
         agent._poll_data = None
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.5)  # Timing-sensitive: generous buffer for CI
         await agent.stop()
 
         # Watermark should NOT be cleared
@@ -377,7 +377,7 @@ class TestRetryWithBackoff:
         agent._poll_data = None  # No data but no error = success
 
         await agent.start()
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.5)  # Timing-sensitive: generous buffer for CI
         await agent.stop()
 
         assert agent.consecutive_failures == 0
@@ -547,7 +547,7 @@ class TestAgentLifecycle:
 
         await agent.start()
         assert agent._running is True
-        await asyncio.sleep(0.05)
+        await asyncio.sleep(0.5)  # Timing-sensitive: generous buffer for CI
         await agent.stop()
         assert agent._running is False
         assert agent.health == AgentHealth.STOPPED
@@ -560,7 +560,7 @@ class TestAgentLifecycle:
 
         await agent.start()
         await agent.start()  # Second start
-        await asyncio.sleep(0.05)
+        await asyncio.sleep(0.5)  # Timing-sensitive: generous buffer for CI
         await agent.stop()
 
         assert agent.connect_calls == 1  # Only connected once

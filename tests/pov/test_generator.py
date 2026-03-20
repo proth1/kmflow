@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 import pytest
 
 from src.core.models import ProcessModelStatus
+from src.core.models.evidence import EvidenceFragment, EvidenceItem
 from src.pov.generator import GenerationResult, generate_pov
 
 
@@ -19,7 +20,7 @@ def _make_evidence_item(
     freshness_score: float = 0.8,
     reliability_score: float = 0.75,
 ):
-    item = MagicMock()
+    item = MagicMock(spec=EvidenceItem)
     item.id = uuid.uuid4()
     item.engagement_id = uuid.UUID(engagement_id)
     item.category = category
@@ -37,7 +38,7 @@ def _make_evidence_item(
 
 
 def _make_fragment(evidence_id=None, content="The Finance Manager must Submit Request for approval."):
-    frag = MagicMock()
+    frag = MagicMock(spec=EvidenceFragment)
     frag.id = uuid.uuid4()
     frag.evidence_id = evidence_id or uuid.uuid4()
     frag.content = content

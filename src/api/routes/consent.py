@@ -40,7 +40,64 @@ class UpdateOrgScopePayload(BaseModel):
     new_scope: str = Field(..., max_length=512)
 
 
-@router.post("/engagement/{engagement_id}", status_code=status.HTTP_201_CREATED)
+class ConsentRecordResponse(BaseModel):
+    """Response schema for a recorded consent."""
+
+    id: str
+    participant_id: str
+    engagement_id: str
+    consent_type: str
+    scope: str
+    status: str
+    recorded_at: str | None
+
+
+class ConsentWithdrawalResponse(BaseModel):
+    """Response schema for a consent withdrawal."""
+
+    consent_id: str
+    participant_id: str
+    engagement_id: str
+    withdrawn_at: str
+    deletion_task_id: str
+    deletion_targets: list[str]
+    status: str
+
+
+class ConsentItemResponse(BaseModel):
+    """Response schema for a single consent record in a list."""
+
+    id: str
+    participant_id: str
+    engagement_id: str
+    consent_type: str
+    scope: str
+    policy_bundle_id: str
+    status: str
+    recorded_by: str
+    recorded_at: str
+    withdrawn_at: str | None
+
+
+class ConsentListResponse(BaseModel):
+    """Response schema for querying consent records."""
+
+    items: list[ConsentItemResponse]
+    total: int
+    limit: int
+    offset: int
+
+
+class OrgScopeUpdateResponse(BaseModel):
+    """Response schema for updating org consent scope."""
+
+    engagement_id: str
+    new_scope: str
+    affected_participant_ids: list[str]
+    notification_required: bool
+
+
+@router.post("/engagement/{engagement_id}", response_model=ConsentRecordResponse, status_code=status.HTTP_201_CREATED)
 async def record_consent(
     engagement_id: UUID,
     payload: RecordConsentPayload,
@@ -73,7 +130,7 @@ async def record_consent(
     }
 
 
-@router.post("/{consent_id}/withdraw")
+@router.post("/{consent_id}/withdraw", response_model=ConsentWithdrawalResponse)
 async def withdraw_consent(
     consent_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -94,7 +151,7 @@ async def withdraw_consent(
     return result
 
 
-@router.get("")
+@router.get("", response_model=ConsentListResponse)
 async def query_consent(
     participant_id: UUID | None = Query(default=None),
     engagement_id: UUID | None = Query(default=None),
@@ -113,7 +170,7 @@ async def query_consent(
     )
 
 
-@router.patch("/org/{engagement_id}")
+@router.patch("/org/{engagement_id}", response_model=OrgScopeUpdateResponse)
 async def update_org_scope(
     engagement_id: UUID,
     payload: UpdateOrgScopePayload,

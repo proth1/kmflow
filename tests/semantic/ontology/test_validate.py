@@ -125,7 +125,7 @@ class TestValidateNeo4j:
         try:
             # Reload so the import inside validate_neo4j fails
             importlib.reload(validate_mod)
-            warnings = await validate_mod.validate_neo4j("bolt://localhost:7687")
+            warnings = await validate_mod.validate_neo4j("bolt://localhost:7687", "neo4j", "password")
             assert any("not installed" in w for w in warnings)
         finally:
             if original is not None:

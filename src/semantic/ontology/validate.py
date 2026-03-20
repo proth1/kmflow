@@ -92,7 +92,7 @@ def validate_schema() -> list[str]:
     return errors
 
 
-async def validate_neo4j(uri: str, user: str = "neo4j", password: str = "password") -> list[str]:
+async def validate_neo4j(uri: str, user: str, password: str) -> list[str]:
     """Check that a live Neo4j database conforms to the ontology.
 
     Args:

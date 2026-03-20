@@ -1,14 +1,15 @@
 {
-  "name": "presentation-auth",
+  "name": "state-street-apex-auth",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "Auth worker for State Street APEX presentation",
   "devDependencies": {
     "wrangler": "^4.65.0"
   },

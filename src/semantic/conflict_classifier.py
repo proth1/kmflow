@@ -243,7 +243,7 @@ class ThreeWayDistinctionClassifier:
                 },
             )
             return [r["name"] for r in records if r.get("name")]
-        except Exception:
+        except Exception:  # Intentionally broad: Neo4j driver errors vary by version and connection state
             logger.exception("Failed to get conflicting names for %s", conflict.id)
             return []
 
@@ -286,7 +286,7 @@ class ThreeWayDistinctionClassifier:
             if records:
                 # They're already linked as variants — default to name_a as canonical
                 return name_a
-        except Exception:
+        except Exception:  # Intentionally broad: Neo4j driver errors vary by version and connection state
             logger.exception("Failed to check variant relationship for %s", engagement_id)
 
         return None
@@ -334,7 +334,7 @@ class ThreeWayDistinctionClassifier:
                 },
             )
             return {"status": "merged", "canonical": canonical, "removed": non_canonical}
-        except Exception:
+        except Exception:  # Intentionally broad: Neo4j write errors include constraint violations and driver failures
             logger.exception("Failed to merge graph nodes %s into %s", non_canonical, canonical)
             return {"status": "merge_failed", "canonical": canonical, "removed": non_canonical}
 
@@ -366,7 +366,7 @@ class ThreeWayDistinctionClassifier:
             b_dates = dates.get(str(source_b_id), (None, None))
 
             return (a_dates[0], a_dates[1], b_dates[0], b_dates[1])
-        except Exception:
+        except Exception:  # Intentionally broad: Neo4j driver errors vary by version and connection state
             logger.exception("Failed to get effective dates for sources")
             return None
 
@@ -406,7 +406,7 @@ class ThreeWayDistinctionClassifier:
                     "to_b": to_b.isoformat() if to_b else None,
                 },
             )
-        except Exception:
+        except Exception:  # Intentionally broad: Neo4j write errors include constraint violations and driver failures
             logger.exception("Failed to set bitemporal validity for conflict %s", conflict.id)
 
     async def _get_epistemic_frames(self, conflict: ConflictObject) -> list[dict[str, Any]]:
@@ -435,7 +435,7 @@ class ThreeWayDistinctionClassifier:
                 }
                 for r in records
             ]
-        except Exception:
+        except Exception:  # Intentionally broad: Neo4j driver errors vary by version and connection state
             logger.exception("Failed to get epistemic frames for conflict %s", conflict.id)
             return [
                 {"source_id": str(conflict.source_a_id), "frame": "unknown", "evidence_type": "unknown"},

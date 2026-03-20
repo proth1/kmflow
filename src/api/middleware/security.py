@@ -141,7 +141,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 ttl = max(int(result[1]), 1)
             except Exception:
                 # Redis unavailable — fail open (allow request)
-                logger.debug("Rate limiter Redis unavailable, allowing request")
+                logger.warning("Rate limiter Redis unavailable, allowing request")
                 count = 0
 
         if count > self.max_requests:

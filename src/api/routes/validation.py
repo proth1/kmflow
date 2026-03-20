@@ -20,6 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.background import track_background_task
 from src.api.deps import get_session
 from src.api.schemas.validation import (
     DarkRoomDashboardResponse,
@@ -75,9 +76,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/validation", tags=["validation"])
 
-# Background task references to prevent GC from cancelling them
-_background_tasks: set[asyncio.Task[None]] = set()
-
 
 # ---------------------------------------------------------------------------
 # Endpoints
@@ -120,8 +118,7 @@ async def generate_review_packs(
             session_factory=request.app.state.db_session_factory,
         )
     )
-    _background_tasks.add(task)
-    task.add_done_callback(_background_tasks.discard)
+    track_background_task(task)
 
     await log_audit(
         session,

@@ -15,10 +15,11 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.api.background import track_background_task
 from src.api.deps import get_session
 from src.api.schemas.tom import (
     AlignmentResponse,
@@ -87,9 +88,6 @@ from src.tom.maturity_scorer import MaturityScoringService
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/tom", tags=["tom"])
-
-# Background task references to prevent GC from cancelling them
-_background_tasks: set[asyncio.Task[None]] = set()
 
 
 # -- TOM Routes ---------------------------------------------------------------
@@ -749,15 +747,27 @@ async def seed_best_practices_and_benchmarks(
 
     bp_count = 0
     for bp_data in bp_seeds:
-        bp = BestPractice(**bp_data)
-        session.add(bp)
-        bp_count += 1
+        existing_bp = await session.execute(
+            select(BestPractice).where(
+                and_(
+                    BestPractice.domain == bp_data["domain"],
+                    BestPractice.industry == bp_data["industry"],
+                    BestPractice.tom_dimension == bp_data["tom_dimension"],
+                )
+            )
+        )
+        if existing_bp.scalar_one_or_none() is None:
+            bp = BestPractice(**bp_data)
+            session.add(bp)
+            bp_count += 1
 
     bm_count = 0
     for bm_data in bm_seeds:
-        bm = Benchmark(**bm_data)
-        session.add(bm)
-        bm_count += 1
+        existing_bm = await session.execute(select(Benchmark).where(Benchmark.metric_name == bm_data["metric_name"]))
+        if existing_bm.scalar_one_or_none() is None:
+            bm = Benchmark(**bm_data)
+            session.add(bm)
+            bm_count += 1
 
     await session.commit()
     return {"best_practices_seeded": bp_count, "benchmarks_seeded": bm_count}
@@ -1644,8 +1654,7 @@ async def trigger_alignment_scoring(
             neo4j_driver=request.app.state.neo4j_driver,
         )
     )
-    _background_tasks.add(task)
-    task.add_done_callback(_background_tasks.discard)
+    track_background_task(task)
 
     return {
         "run_id": run_id,

@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from src.core.models.evidence import EvidenceFragment, EvidenceItem
 from src.pov.aggregation import AggregatedEvidence, aggregate_evidence
 
 
@@ -25,7 +26,7 @@ def _make_evidence_item(
     fragments: list | None = None,
 ):
     """Create a mock evidence item."""
-    item = MagicMock()
+    item = MagicMock(spec=EvidenceItem)
     item.id = uuid.uuid4()
     item.engagement_id = uuid.UUID(engagement_id)
     item.category = category
@@ -43,7 +44,7 @@ def _make_evidence_item(
 
 def _make_fragment(evidence_id: str | None = None, content: str = "Test content"):
     """Create a mock evidence fragment."""
-    frag = MagicMock()
+    frag = MagicMock(spec=EvidenceFragment)
     frag.id = uuid.uuid4()
     frag.evidence_id = uuid.UUID(evidence_id) if evidence_id else uuid.uuid4()
     frag.content = content

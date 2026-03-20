@@ -7,7 +7,7 @@ starting process instances, and querying user tasks.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any  # noqa: F401 — used in inline Pydantic schemas
 
 import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
@@ -15,6 +15,62 @@ from pydantic import BaseModel
 
 from src.core.models import User
 from src.core.permissions import require_permission
+
+# ---------------------------------------------------------------------------
+# Response schemas
+# ---------------------------------------------------------------------------
+
+
+class _CamundaBase(BaseModel):
+    """Base model for Camunda passthrough responses.
+
+    ``extra="allow"`` preserves all camelCase fields returned by the
+    Camunda REST API without requiring each one to be declared explicitly.
+    """
+
+    model_config = {"extra": "allow"}
+
+    id: str | None = None
+    name: str | None = None
+
+
+class DeploymentResponse(_CamundaBase):
+    """Response schema for a single Camunda deployment."""
+
+    source: str | None = None
+
+
+class ProcessDefinitionResponse(_CamundaBase):
+    """Response schema for a Camunda process definition."""
+
+    key: str | None = None
+    version: int | None = None
+
+
+class ProcessInstanceResponse(_CamundaBase):
+    """Response schema for a Camunda process instance."""
+
+    suspended: bool | None = None
+
+
+class UserTaskResponse(_CamundaBase):
+    """Response schema for a Camunda user task."""
+
+    assignee: str | None = None
+    created: str | None = None
+    due: str | None = None
+    priority: int | None = None
+
+
+class StartProcessResponse(_CamundaBase):
+    """Response schema for starting a process instance."""
+
+    suspended: bool | None = None
+
+
+class DeployProcessResponse(_CamundaBase):
+    """Response schema for deploying a single BPMN file."""
+
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +92,7 @@ def _get_camunda_client(request: Request):
     return client
 
 
-@router.get("/deployments")
+@router.get("/deployments", response_model=list[DeploymentResponse])
 async def list_deployments(
     request: Request,
     user: User = Depends(require_permission("engagement:read")),
@@ -50,7 +106,7 @@ async def list_deployments(
         raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine") from e
 
 
-@router.post("/deploy")
+@router.post("/deploy", response_model=DeployProcessResponse)
 async def deploy_process(
     request: Request,
     file: UploadFile = File(...),
@@ -71,7 +127,7 @@ async def deploy_process(
         raise HTTPException(status_code=502, detail="Failed to deploy process to Camunda engine") from e
 
 
-@router.get("/process-definitions")
+@router.get("/process-definitions", response_model=list[ProcessDefinitionResponse])
 async def list_process_definitions(
     request: Request,
     user: User = Depends(require_permission("engagement:read")),
@@ -85,7 +141,7 @@ async def list_process_definitions(
         raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine") from e
 
 
-@router.post("/process/{key}/start")
+@router.post("/process/{key}/start", response_model=StartProcessResponse)
 async def start_process(
     key: str,
     body: StartProcessRequest,
@@ -101,7 +157,7 @@ async def start_process(
         raise HTTPException(status_code=502, detail=f"Failed to start process '{key}'") from e
 
 
-@router.get("/process-instances")
+@router.get("/process-instances", response_model=list[ProcessInstanceResponse])
 async def get_process_instances(
     request: Request,
     active: bool = True,
@@ -116,7 +172,7 @@ async def get_process_instances(
         raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine") from e
 
 
-@router.get("/tasks")
+@router.get("/tasks", response_model=list[UserTaskResponse])
 async def get_tasks(
     request: Request,
     assignee: str | None = None,
