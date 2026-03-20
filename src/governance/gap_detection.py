@@ -42,10 +42,9 @@ def derive_severity(regulation_obligations: dict[str, Any] | None) -> Governance
 
     if is_regulatory and has_penalty:
         return GovernanceGapSeverity.CRITICAL
-    elif is_regulatory:
+    if is_regulatory:
         return GovernanceGapSeverity.HIGH
-    else:
-        return GovernanceGapSeverity.MEDIUM
+    return GovernanceGapSeverity.MEDIUM
 
 
 class GovernanceGapDetectionService:

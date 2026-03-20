@@ -62,9 +62,9 @@ def _deep_copy_and_anonymize(obj: Any) -> Any:
     """Recursively copy and anonymize data."""
     if isinstance(obj, dict):
         return {k: _deep_copy_and_anonymize(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
+    if isinstance(obj, list):
         return [_deep_copy_and_anonymize(item) for item in obj]
-    elif isinstance(obj, str):
+    if isinstance(obj, str):
         return anonymize_text(obj)
     return obj
 
@@ -73,9 +73,9 @@ def _replace_in_dict(obj: Any, old: str, new: str) -> Any:
     """Recursively replace a string value throughout a data structure."""
     if isinstance(obj, dict):
         return {k: _replace_in_dict(v, old, new) for k, v in obj.items()}
-    elif isinstance(obj, list):
+    if isinstance(obj, list):
         return [_replace_in_dict(item, old, new) for item in obj]
-    elif isinstance(obj, str):
+    if isinstance(obj, str):
         return obj.replace(old, new)
     return obj
 

@@ -54,24 +54,32 @@ If this fails, report the errors and stop.
 
 ### Step 4: Backend Tests
 ```bash
-python -m pytest tests/ -v --cov=src --cov-report=term-missing --cov-fail-under=80
+python -m pytest tests/ -v --cov=src --cov-report=term-missing --cov-fail-under=90
 ```
 Report pass/fail count and coverage percentage.
 
-### Step 5: Frontend Tests
+### Step 5: Route Compliance Check
+```bash
+# Check for route decorators missing response_model
+cd /Users/proth/repos/kmflow
+grep -rn '@router\.\(get\|post\|put\|patch\|delete\)(' src/api/routes/ | grep -v 'response_model' | grep -v '#.*noqa' | head -20
+```
+If any routes are found without `response_model`, report them as warnings. This is not blocking but should be tracked.
+
+### Step 6: Frontend Tests
 ```bash
 cd /Users/proth/repos/kmflow/frontend && npx jest --passWithNoTests
 ```
 Report pass/fail count.
 
-### Step 6: Security Scan
+### Step 7: Security Scan
 ```bash
 cd /Users/proth/repos/kmflow
 pip freeze | grep -v '^\-e' | grep -iv '^kmflow' > /tmp/audit-reqs.txt && pip-audit --strict --desc -r /tmp/audit-reqs.txt 2>&1 || echo "pip-audit found issues"
 cd frontend && npm audit --audit-level=high 2>&1 || echo "npm audit found issues"
 ```
 
-### Step 7: Report Summary and CDD Evidence
+### Step 8: Report Summary and CDD Evidence
 Output a consolidated status table:
 
 ```
@@ -85,6 +93,7 @@ Backend Lint            PASS/FAIL
 Backend Format          PASS/FAIL
 Backend Type Check      PASS/FAIL
 Backend Tests           PASS (N passed)
+Route Compliance        PASS/WARN
 Frontend Tests          PASS (N passed)
 Security Scan           PASS/WARN
 
@@ -92,7 +101,7 @@ Overall: PASS / FAIL
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-### Step 8: CDD Pipeline Marker
+### Step 9: CDD Pipeline Marker
 After generating the report, write the results for CDD evidence tracking:
 
 1. **Write pipeline report** to `.pipeline-report.md` with the summary table above

@@ -47,13 +47,12 @@ async def process_task(task_data: dict[str, Any]) -> dict[str, Any]:
     if task_type == "aggregate":
         # TODO(Epic #206, Stories #207/#208): Wire up SessionAggregator -> ActionClassifier
         raise NotImplementedError("Task type 'aggregate' is not yet implemented (see Epic #206, Story #207)")
-    elif task_type == "materialize":
+    if task_type == "materialize":
         # TODO(Epic #206, Story #209): Wire up EvidenceMaterializer
         raise NotImplementedError("Task type 'materialize' is not yet implemented (see Epic #206, Story #209)")
-    elif task_type == "assemble_switching":
+    if task_type == "assemble_switching":
         return await _handle_assemble_switching(task_data)
-    else:
-        raise NotImplementedError(f"Unknown task type: {task_type!r}")
+    raise NotImplementedError(f"Unknown task type: {task_type!r}")
 
 
 async def run_worker(

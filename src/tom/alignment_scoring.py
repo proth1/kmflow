@@ -74,10 +74,9 @@ def classify_similarity(similarity: float) -> tuple[TOMGapType, float]:
     """
     if similarity >= THRESHOLD_NO_GAP:
         return TOMGapType.NO_GAP, 0.0
-    elif similarity >= THRESHOLD_PARTIAL_GAP:
+    if similarity >= THRESHOLD_PARTIAL_GAP:
         return TOMGapType.PARTIAL_GAP, round(1.0 - similarity, 4)
-    else:
-        return TOMGapType.FULL_GAP, 1.0
+    return TOMGapType.FULL_GAP, 1.0
 
 
 class AlignmentScoringService:

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
-import os
+from pathlib import Path
 from typing import Any
 from uuid import UUID
 
@@ -602,18 +602,17 @@ async def download_evidence(
             detail="No file available for this evidence item",
         )
 
-    file_path = evidence.file_path
-    if not os.path.exists(file_path):
+    file_path = Path(evidence.file_path)
+    if not file_path.exists():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Evidence file not found on storage",
         )
 
-    with open(file_path, "rb") as f:
-        content = f.read()
+    content = file_path.read_bytes()
 
     mime_type = evidence.mime_type or "application/octet-stream"
-    filename = os.path.basename(file_path)
+    filename = file_path.name
 
     headers: dict[str, str] = {}
     # Force attachment download for SVG to prevent browser rendering of potentially

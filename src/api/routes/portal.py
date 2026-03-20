@@ -335,6 +335,4 @@ async def portal_upload(
         logger.exception("Portal upload failed for %s", file.filename)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Upload processing failed") from e
     finally:
-        import os
-
-        os.unlink(tmp_path)
+        Path(tmp_path).unlink(missing_ok=True)

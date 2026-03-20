@@ -168,7 +168,7 @@ class RoadmapGenerator:
         for gap in gaps:
             if gap.gap_type == TOMGapType.NO_GAP:
                 continue
-            elif gap.gap_type == TOMGapType.DEVIATION:
+            if gap.gap_type == TOMGapType.DEVIATION:
                 phase_1.append(gap)
             elif gap.gap_type == TOMGapType.PARTIAL_GAP:
                 if gap.priority_score > 0.5:

@@ -78,25 +78,24 @@ def _check_condition(
     """Check a single condition against session features."""
     if condition == "file_operation_count_min":
         return session.file_operation_count >= threshold
-    elif condition == "file_operation_ratio_min":
+    if condition == "file_operation_ratio_min":
         return (session.file_operation_count / total) >= threshold if total else False
-    elif condition == "keyboard_event_count_min":
+    if condition == "keyboard_event_count_min":
         return session.keyboard_event_count >= threshold
-    elif condition == "keyboard_ratio_min":
+    if condition == "keyboard_ratio_min":
         return (session.keyboard_event_count / total) >= threshold if total else False
-    elif condition == "url_navigation_count_min":
+    if condition == "url_navigation_count_min":
         return session.url_navigation_count >= threshold
-    elif condition == "scroll_count_min":
+    if condition == "scroll_count_min":
         return session.scroll_count >= threshold
-    elif condition == "keyboard_event_count_max":
+    if condition == "keyboard_event_count_max":
         return session.keyboard_event_count <= threshold
-    elif condition == "copy_paste_count_min":
+    if condition == "copy_paste_count_min":
         return session.copy_paste_count >= threshold
-    elif condition == "app_in_communication_list":
+    if condition == "app_in_communication_list":
         return session.app_bundle_id in _COMMUNICATION_APPS
-    else:
-        logger.error("Unknown classification condition: %s — rule will not match", condition)
-        return False
+    logger.error("Unknown classification condition: %s — rule will not match", condition)
+    return False
 
 
 # Default rules when no YAML config is provided
@@ -227,13 +226,12 @@ def _build_description(session: AggregatedSession, category: ActionCategory) -> 
 
     if category == ActionCategory.FILE_OPERATION:
         return f"File operations in {app} ({session.file_operation_count} ops, {duration_s:.0f}s)"
-    elif category == ActionCategory.DATA_ENTRY:
+    if category == ActionCategory.DATA_ENTRY:
         return f"Data entry in {app} ({session.keyboard_event_count} keystrokes, {duration_s:.0f}s)"
-    elif category == ActionCategory.NAVIGATION:
+    if category == ActionCategory.NAVIGATION:
         return f"Navigation in {app} ({session.url_navigation_count} URLs, {session.scroll_count} scrolls, {duration_s:.0f}s)"
-    elif category == ActionCategory.COMMUNICATION:
+    if category == ActionCategory.COMMUNICATION:
         return f"Communication via {app} ({duration_s:.0f}s)"
-    elif category == ActionCategory.REVIEW:
+    if category == ActionCategory.REVIEW:
         return f"Document review in {app} ({session.scroll_count} scrolls, {session.copy_paste_count} copies, {duration_s:.0f}s)"
-    else:
-        return f"Activity in {app} ({session.total_event_count} events, {duration_s:.0f}s)"
+    return f"Activity in {app} ({session.total_event_count} events, {duration_s:.0f}s)"

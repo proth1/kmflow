@@ -80,7 +80,7 @@ def _parse_pdf_date(value: str | None) -> str | None:
                 tzinfo=UTC,
             )
             return dt.isoformat()
-        elif len(date_str) >= 8:
+        if len(date_str) >= 8:
             dt = datetime(
                 year=int(date_str[0:4]),
                 month=int(date_str[4:6]),

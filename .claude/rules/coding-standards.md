@@ -11,12 +11,16 @@
 - Prefer `pathlib.Path` over `os.path`
 
 ### FastAPI
-- Thin route handlers: business logic belongs in service modules
+- Thin route handlers: business logic belongs in service modules (max 20 lines of logic)
 - Use `Depends()` for dependency injection (db sessions, auth, settings)
 - Pydantic models for all request/response schemas (in `src/api/schemas/`)
+- Every route decorator MUST declare `response_model=`
+- Every POST MUST declare explicit `status_code` (201/200/202)
 - Return `dict[str, Any]` from routes, not raw model instances
 - Error responses: `HTTPException(status_code=N, detail="message")`
-- Pagination: `?limit=N&offset=M` pattern with `PaginatedResponse` wrapper
+- Pagination: `?limit=N&offset=M` with `le=1000` ceiling on limit
+- Route files MUST NOT exceed 500 lines — split into sub-packages
+- See `.claude/rules/fastapi-routes.md` for full guardrails
 
 ### SQLAlchemy
 - UUID primary keys with `default=uuid.uuid4`
@@ -31,8 +35,10 @@
 - `@pytest.mark.asyncio` on all async test methods
 - Mock database sessions via `conftest.py` fixtures
 - Test files mirror source structure: `tests/{module}/test_{file}.py`
-- Minimum 80% code coverage
-- Use `MagicMock(spec=ModelClass)` for type-safe mocks
+- Minimum 90% code coverage (`fail_under = 90` in pyproject.toml)
+- All mocks MUST use `MagicMock(spec=ConcreteClass)` — bare `MagicMock()` is prohibited
+- No `asyncio.sleep(N)` in test assertions — use event-based synchronization
+- Every route file in `src/api/routes/` MUST have a corresponding test file in `tests/api/`
 
 ### Formatting & Linting
 - `ruff` for linting and formatting (replaces black + isort + flake8)

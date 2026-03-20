@@ -45,9 +45,9 @@ def severity_label(score: float) -> str:
     """Map a severity score to a human-readable label."""
     if score >= SEVERITY_CRITICAL:
         return "critical"
-    elif score >= SEVERITY_HIGH:
+    if score >= SEVERITY_HIGH:
         return "high"
-    elif score >= SEVERITY_MEDIUM:
+    if score >= SEVERITY_MEDIUM:
         return "medium"
     return "low"
 

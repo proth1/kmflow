@@ -64,12 +64,11 @@ async def process_task(task_data: dict[str, Any]) -> dict[str, Any]:
             incremental=task_data.get("incremental", False),
             since=task_data.get("since"),
         )
-    elif task_type == "detect":
+    if task_type == "detect":
         return {"status": "detection_completed", "deviations_found": 0}
-    elif task_type == "alert":
+    if task_type == "alert":
         return {"status": "alert_processed"}
-    else:
-        return {"status": "unknown_task_type", "task_type": task_type}
+    return {"status": "unknown_task_type", "task_type": task_type}
 
 
 async def run_worker(

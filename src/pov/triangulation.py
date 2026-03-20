@@ -106,10 +106,9 @@ def _determine_corroboration(score: float) -> CorroborationLevel:
     """
     if score >= TRIANGULATION_THRESHOLDS["strongly"]:
         return CorroborationLevel.STRONGLY
-    elif score >= TRIANGULATION_THRESHOLDS["moderately"]:
+    if score >= TRIANGULATION_THRESHOLDS["moderately"]:
         return CorroborationLevel.MODERATELY
-    else:
-        return CorroborationLevel.WEAKLY
+    return CorroborationLevel.WEAKLY
 
 
 def get_evidence_plane(category: str) -> str:

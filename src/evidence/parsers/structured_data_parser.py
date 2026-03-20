@@ -31,12 +31,11 @@ class StructuredDataParser(BaseParser):
         try:
             if ext in (".xlsx", ".xls"):
                 return await self._parse_excel(file_path)
-            elif ext == ".csv":
+            if ext == ".csv":
                 return await self._parse_csv(file_path)
-            elif ext == ".json":
+            if ext == ".json":
                 return await self._parse_json(file_path)
-            else:
-                return ParseResult(error=f"Unsupported structured data format: {ext}")
+            return ParseResult(error=f"Unsupported structured data format: {ext}")
         except Exception as e:  # Intentionally broad: parser library exceptions vary by format
             logger.exception("Failed to parse structured data: %s", file_name)
             return ParseResult(error=f"Parse error: {e}")

@@ -444,11 +444,10 @@ def get_storage_backend(
     """
     if backend_type == "local":
         return LocalFilesystemBackend(base_path=base_path or "evidence_store")
-    elif backend_type == "delta":
+    if backend_type == "delta":
         return DeltaLakeBackend(base_path=base_path or "datalake")
-    elif backend_type == "databricks":
+    if backend_type == "databricks":
         from src.datalake.databricks_backend import DatabricksBackend
 
         return DatabricksBackend(**kwargs)
-    else:
-        raise ValueError(f"Unknown storage backend: {backend_type}. Must be one of: local, delta, databricks")
+    raise ValueError(f"Unknown storage backend: {backend_type}. Must be one of: local, delta, databricks")
