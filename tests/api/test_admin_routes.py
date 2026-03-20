@@ -35,6 +35,7 @@ def _test_settings() -> Settings:
         jwt_algorithm="HS256",
         jwt_access_token_expire_minutes=30,
         auth_dev_mode=True,
+        debug=True,
         monitoring_worker_count=0,
     )
 

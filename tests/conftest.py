@@ -195,6 +195,7 @@ async def test_app(
         shelf_requests,
         simulations,
         taskmining,
+        tasks,
         tom,
         users,
         websocket,
@@ -264,6 +265,9 @@ async def test_app(
     app.include_router(taskmining.router)
     app.include_router(correlation.router)
 
+    # Task queue routes
+    app.include_router(tasks.router)
+
     # Override get_settings so auth uses the same JWT secret as tests
     test_settings_instance = Settings(
         jwt_secret_key="test-secret-key-for-tests",
@@ -271,6 +275,7 @@ async def test_app(
         jwt_access_token_expire_minutes=30,
         jwt_refresh_token_expire_minutes=10080,
         auth_dev_mode=True,
+        debug=True,
         monitoring_worker_count=0,
     )
     app.dependency_overrides[get_settings] = lambda: test_settings_instance

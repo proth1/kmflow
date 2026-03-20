@@ -9,6 +9,7 @@ import hashlib
 import hmac
 import logging
 import secrets
+import time
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -20,6 +21,12 @@ from src.core.models import MCPAPIKey
 from src.mcp.pii import mask_pii
 
 logger = logging.getLogger(__name__)
+
+# Per-key-id rate limiting for failed validation attempts.
+# key_id -> (fail_count, window_start_epoch)
+_FAILED_ATTEMPTS: dict[str, tuple[int, float]] = {}
+_MAX_FAILED_ATTEMPTS = 5
+_LOCKOUT_WINDOW_SECONDS = 300  # 5 minutes
 
 
 async def generate_api_key(
@@ -72,6 +79,17 @@ async def validate_api_key(db: AsyncSession, api_key: str) -> dict[str, Any] | N
 
     key_id, raw_key = api_key.split(".", 1)
 
+    # Per-key-id rate limiting for failed attempts
+    now = time.monotonic()
+    if key_id in _FAILED_ATTEMPTS:
+        fail_count, window_start = _FAILED_ATTEMPTS[key_id]
+        if now - window_start > _LOCKOUT_WINDOW_SECONDS:
+            # Window expired — reset
+            del _FAILED_ATTEMPTS[key_id]
+        elif fail_count >= _MAX_FAILED_ATTEMPTS:
+            logger.warning("API key %s locked out after %d failed attempts", key_id, fail_count)
+            return None
+
     # Query the database for this key_id
     stmt = select(MCPAPIKey).where(
         MCPAPIKey.key_id == key_id,
@@ -82,13 +100,18 @@ async def validate_api_key(db: AsyncSession, api_key: str) -> dict[str, Any] | N
 
     if not key_record:
         logger.warning("API key %s not found or inactive", key_id)
+        _record_failed_attempt(key_id, now)
         return None
 
     # Hash the incoming key and compare with stored hash
     incoming_hash = hashlib.sha256(raw_key.encode()).hexdigest()
     if not hmac.compare_digest(incoming_hash, key_record.key_hash):
         logger.warning("API key %s hash mismatch", key_id)
+        _record_failed_attempt(key_id, now)
         return None
+
+    # Successful validation — clear any failure record
+    _FAILED_ATTEMPTS.pop(key_id, None)
 
     # Update last_used_at timestamp
     key_record.last_used_at = datetime.now(UTC)
@@ -100,6 +123,15 @@ async def validate_api_key(db: AsyncSession, api_key: str) -> dict[str, Any] | N
         "client_name": key_record.client_name,
         "user_id": str(key_record.user_id),
     }
+
+
+def _record_failed_attempt(key_id: str, now: float) -> None:
+    """Record a failed validation attempt for rate limiting."""
+    if key_id in _FAILED_ATTEMPTS:
+        count, start = _FAILED_ATTEMPTS[key_id]
+        _FAILED_ATTEMPTS[key_id] = (count + 1, start)
+    else:
+        _FAILED_ATTEMPTS[key_id] = (1, now)
 
 
 async def revoke_api_key(db: AsyncSession, key_id: str) -> bool:

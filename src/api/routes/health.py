@@ -1,7 +1,8 @@
-"""Health check endpoint.
+"""Health check endpoints.
 
-Returns overall system health and individual service statuses
-for PostgreSQL, Neo4j, and Redis.
+Provides:
+- GET /api/v1/health        — Minimal liveness probe (unauthenticated)
+- GET /api/v1/health/detail  — Full service health (authenticated)
 """
 
 from __future__ import annotations
@@ -11,32 +12,39 @@ from datetime import UTC, datetime
 from typing import Any
 
 import redis.asyncio as aioredis
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from neo4j.exceptions import Neo4jError
 from sqlalchemy.exc import SQLAlchemyError
 
 from src.api.version import API_VERSION
+from src.core.auth import get_current_user
+from src.core.models import User
 
 router = APIRouter(tags=["health"])
 logger = logging.getLogger(__name__)
 
 
 @router.get("/api/v1/health")
-async def health_check(request: Request) -> dict[str, Any]:
-    """Check the health of all platform services.
+async def health_check() -> dict[str, Any]:
+    """Minimal liveness probe for load balancers and orchestrators.
+
+    Does not expose service details or version information.
+    """
+    return {
+        "status": "ok",
+        "timestamp": datetime.now(UTC).isoformat(),
+    }
+
+
+@router.get("/api/v1/health/detail")
+async def health_check_detail(
+    request: Request,
+    _current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Detailed health check with per-service status (authenticated).
 
     Returns:
-        JSON object with overall status and per-service health:
-        {
-            "status": "healthy" | "degraded" | "unhealthy",
-            "services": {
-                "postgres": "up" | "down",
-                "neo4j": "up" | "down",
-                "redis": "up" | "down"
-            },
-            "version": API_VERSION,
-            "timestamp": "<ISO 8601 UTC>"
-        }
+        JSON object with overall status and per-service health.
     """
     services: dict[str, str] = {}
 
@@ -83,14 +91,14 @@ async def health_check(request: Request) -> dict[str, Any]:
     # Determine overall status
     down_count = sum(1 for s in services.values() if s == "down")
     if down_count == 0:
-        status = "healthy"
+        overall_status = "healthy"
     elif down_count < len(services):
-        status = "degraded"
+        overall_status = "degraded"
     else:
-        status = "unhealthy"
+        overall_status = "unhealthy"
 
     return {
-        "status": status,
+        "status": overall_status,
         "services": services,
         "version": API_VERSION,
         "timestamp": datetime.now(UTC).isoformat(),

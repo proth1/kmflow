@@ -62,6 +62,7 @@ def _test_settings() -> Settings:
         jwt_access_token_expire_minutes=30,
         jwt_refresh_token_expire_minutes=10080,
         auth_dev_mode=True,
+        debug=True,
     )
 
 
@@ -253,3 +254,114 @@ class TestLogout:
         """Should return 401 without authorization header."""
         response = await client.post("/api/v1/auth/logout")
         assert response.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# Refresh token blacklist check (Audit Batch 1)
+# ---------------------------------------------------------------------------
+
+
+class TestRefreshBlacklist:
+    """Verify blacklisted refresh tokens are rejected."""
+
+    @pytest.mark.asyncio
+    async def test_refresh_blacklisted_token_rejected(self, client: AsyncClient, mock_redis_client: AsyncMock) -> None:
+        """Should return 401 when refresh token has been blacklisted."""
+        settings = _test_settings()
+        refresh = create_refresh_token({"sub": str(uuid.uuid4())}, settings)
+
+        # Simulate token being blacklisted in Redis
+        mock_redis_client.get = AsyncMock(return_value=b"1")
+
+        response = await client.post(
+            "/api/v1/auth/refresh",
+            json={"refresh_token": refresh},
+        )
+        assert response.status_code == 401
+        assert "revoked" in response.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# CSRF double-submit (Audit Batch 1)
+# ---------------------------------------------------------------------------
+
+
+class TestCSRFProtection:
+    """Verify CSRF double-submit cookie validation."""
+
+    @pytest.mark.asyncio
+    async def test_csrf_missing_header_with_cookie_rejected(self, client: AsyncClient) -> None:
+        """Mutation with CSRF cookie but no X-CSRF-Token header → 403."""
+        from fastapi import Request
+
+        from src.core.auth import verify_csrf_token
+
+        # Simulate a request with a CSRF cookie but no header
+        mock_request = MagicMock(spec=Request)
+        mock_request.headers = {"content-type": "application/json"}
+        mock_request.cookies = {"kmflow_csrf": "valid-csrf-token"}
+
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException) as exc_info:
+            await verify_csrf_token(mock_request)
+        assert exc_info.value.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_csrf_valid_header_passes(self) -> None:
+        """Mutation with matching CSRF cookie and header → passes."""
+        from fastapi import Request
+
+        from src.core.auth import verify_csrf_token
+
+        csrf_value = "test-csrf-token-123"
+        mock_request = MagicMock(spec=Request)
+        mock_request.headers = {
+            "content-type": "application/json",
+            "x-csrf-token": csrf_value,
+        }
+        mock_request.cookies = {"kmflow_csrf": csrf_value}
+
+        # Should not raise
+        await verify_csrf_token(mock_request)
+
+    @pytest.mark.asyncio
+    async def test_csrf_skipped_for_bearer_auth(self) -> None:
+        """Bearer token requests bypass CSRF check."""
+        from fastapi import Request
+
+        from src.core.auth import verify_csrf_token
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.headers = {"authorization": "Bearer some-jwt-token"}
+        mock_request.cookies = {"kmflow_csrf": "some-token"}
+
+        # Should not raise even without X-CSRF-Token header
+        await verify_csrf_token(mock_request)
+
+
+# ---------------------------------------------------------------------------
+# Dev mode requires debug (Audit Batch 1)
+# ---------------------------------------------------------------------------
+
+
+class TestDevModeRequiresDebug:
+    """Verify auth_dev_mode requires debug=True."""
+
+    def test_dev_mode_without_debug_raises(self) -> None:
+        """Setting auth_dev_mode=True with debug=False should fail validation."""
+        with pytest.raises(ValueError, match="AUTH_DEV_MODE requires DEBUG"):
+            Settings(
+                auth_dev_mode=True,
+                debug=False,
+                jwt_secret_key="test-key",
+            )
+
+    def test_dev_mode_with_debug_passes(self) -> None:
+        """Setting auth_dev_mode=True with debug=True should succeed."""
+        settings = Settings(
+            auth_dev_mode=True,
+            debug=True,
+            jwt_secret_key="test-key",
+        )
+        assert settings.auth_dev_mode is True

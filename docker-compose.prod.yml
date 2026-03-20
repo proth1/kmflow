@@ -78,6 +78,7 @@ services:
     environment:
       APP_ENV: production
       DEBUG: "false"
+      AUTH_DEV_MODE: "false"
       LOG_LEVEL: WARNING
     security_opt:
       - no-new-privileges:true
@@ -128,6 +129,9 @@ services:
       - ALL
 
   minio:
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD}
     ports: []  # No host port exposure in production
     security_opt:
       - no-new-privileges:true

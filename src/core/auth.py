@@ -11,6 +11,7 @@ Supports:
 from __future__ import annotations
 
 import logging
+import secrets
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -191,6 +192,13 @@ REFRESH_COOKIE_NAME = "kmflow_refresh"
 #: Path restriction for the refresh cookie.
 REFRESH_COOKIE_PATH = "/api/v1/auth/refresh"
 
+#: Name of the non-HttpOnly CSRF cookie (readable by JavaScript for
+#: double-submit pattern).
+CSRF_COOKIE_NAME = "kmflow_csrf"
+
+#: Name of the header that must carry the CSRF token on mutation requests.
+CSRF_HEADER_NAME = "x-csrf-token"
+
 
 def set_auth_cookies(
     response: Response,
@@ -240,6 +248,20 @@ def set_auth_cookies(
         max_age=settings.jwt_refresh_token_expire_minutes * 60,
     )
 
+    # Double-submit CSRF cookie — NOT HttpOnly so JavaScript can read it
+    # and send it back via the X-CSRF-Token header on mutation requests.
+    csrf_token = secrets.token_urlsafe(32)
+    response.set_cookie(
+        key=CSRF_COOKIE_NAME,
+        value=csrf_token,
+        httponly=False,
+        secure=secure,
+        samesite="lax",
+        path="/",
+        domain=domain,
+        max_age=settings.jwt_access_token_expire_minutes * 60,
+    )
+
 
 def clear_auth_cookies(response: Response, settings: Settings | None = None) -> None:
     """Delete both auth cookies from the browser.
@@ -273,6 +295,44 @@ def clear_auth_cookies(response: Response, settings: Settings | None = None) -> 
         secure=secure,
         samesite="strict",
     )
+    response.delete_cookie(
+        key=CSRF_COOKIE_NAME,
+        path="/",
+        domain=domain,
+        httponly=False,
+        secure=secure,
+        samesite="lax",
+    )
+
+
+# ---------------------------------------------------------------------------
+# CSRF verification
+# ---------------------------------------------------------------------------
+
+
+async def verify_csrf_token(request: Request) -> None:
+    """FastAPI dependency for double-submit CSRF protection.
+
+    Compares the ``kmflow_csrf`` cookie value against the ``X-CSRF-Token``
+    header.  Skips verification for bearer-token requests (API clients)
+    since CSRF only applies to cookie-based browser sessions.
+    """
+    # Bearer-token requests are not vulnerable to CSRF — skip check
+    auth_header = request.headers.get("authorization", "")
+    if auth_header.lower().startswith("bearer "):
+        return
+
+    # No CSRF cookie means the client isn't using cookie auth
+    csrf_cookie = request.cookies.get(CSRF_COOKIE_NAME)
+    if not csrf_cookie:
+        return
+
+    csrf_header = request.headers.get(CSRF_HEADER_NAME)
+    if not csrf_header or not secrets.compare_digest(csrf_cookie, csrf_header):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="CSRF token missing or invalid",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -318,7 +378,7 @@ async def get_current_user(
                 )
                 dev_user = result.scalar_one_or_none()
             if dev_user is not None:
-                logger.debug("Auth dev mode: auto-authenticated as %s", dev_user.email)
+                logger.debug("Auth dev mode: auto-authenticated as user %s", dev_user.id)
                 return dev_user
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -413,7 +473,7 @@ async def get_websocket_user(
                 )
                 dev_user = result.scalar_one_or_none()
             if dev_user is not None:
-                logger.debug("WS auth dev mode: auto-authenticated as %s", dev_user.email)
+                logger.debug("WS auth dev mode: auto-authenticated as user %s", dev_user.id)
                 return dev_user
         return None
 

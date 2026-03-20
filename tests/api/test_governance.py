@@ -114,6 +114,7 @@ async def governance_app(
     test_settings_instance = Settings(
         jwt_secret_key="test-secret-key",
         auth_dev_mode=True,
+        debug=True,
         monitoring_worker_count=0,
     )
     app.dependency_overrides[get_settings] = lambda: test_settings_instance

@@ -111,7 +111,7 @@ class ControlEffectivenessScoringService:
                 "evidence_ids": evidence_ids,
             }
         except Exception:
-            logger.warning("Failed to query SUPPORTED_BY edges for control %s", control_id)
+            logger.warning("Failed to query SUPPORTED_BY edges for control %s", control_id, exc_info=True)
             return {"total_required": 0, "evidenced_count": 0, "evidence_ids": []}
 
     async def score_control(

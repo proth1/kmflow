@@ -214,13 +214,19 @@ async def update_user(
         )
 
     update_data = payload.model_dump(exclude_unset=True)
-    for field_name, value in update_data.items():
-        setattr(user, field_name, value)
+
+    # Capture old values for audit trail before applying changes
+    changes: list[str] = []
+    for field_name, new_value in update_data.items():
+        old_value = getattr(user, field_name, None)
+        if old_value != new_value:
+            changes.append(f"{field_name}: {old_value!r} → {new_value!r}")
+        setattr(user, field_name, new_value)
 
     audit = AuditLog(
         action=AuditAction.USER_UPDATED,
         actor=str(current_user.id),
-        details=f"Updated user {user_id}: {list(update_data.keys())}",
+        details=f"Updated user {user_id}: {'; '.join(changes) if changes else 'no changes'}",
     )
     session.add(audit)
 
