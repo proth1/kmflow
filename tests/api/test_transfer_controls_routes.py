@@ -220,4 +220,6 @@ async def test_list_transfer_logs() -> None:
         )
 
     assert resp.status_code == 200
-    assert resp.json() == []
+    data = resp.json()
+    assert data["items"] == []
+    assert "total" in data

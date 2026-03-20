@@ -216,8 +216,9 @@ async def test_list_rules_returns_policies() -> None:
 
     assert resp.status_code == 200
     data = resp.json()
-    assert len(data) == 1
-    assert data[0]["name"] == "test_policy"
+    assert data["total"] == 1
+    assert len(data["items"]) == 1
+    assert data["items"][0]["name"] == "test_policy"
 
 
 # ---------------------------------------------------------------------------

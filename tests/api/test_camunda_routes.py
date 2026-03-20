@@ -138,13 +138,13 @@ class TestProcessInstances:
     async def test_get_instances_active(self, client, app_with_camunda, mock_camunda_client):
         response = await client.get("/api/v1/camunda/process-instances?active=true")
         assert response.status_code == 200
-        mock_camunda_client.get_process_instances.assert_awaited_once_with(active=True)
+        mock_camunda_client.get_process_instances.assert_awaited_once_with(active=True, max_results=20, first_result=0)
 
     @pytest.mark.asyncio
     async def test_get_instances_all(self, client, app_with_camunda, mock_camunda_client):
         response = await client.get("/api/v1/camunda/process-instances?active=false")
         assert response.status_code == 200
-        mock_camunda_client.get_process_instances.assert_awaited_once_with(active=False)
+        mock_camunda_client.get_process_instances.assert_awaited_once_with(active=False, max_results=20, first_result=0)
 
     @pytest.mark.asyncio
     async def test_get_instances_error(self, client, app_with_camunda, mock_camunda_client):
@@ -163,13 +163,13 @@ class TestGetTasks:
         data = response.json()
         assert len(data) == 1
         assert data[0]["name"] == "Review"
-        mock_camunda_client.get_tasks.assert_awaited_once_with(assignee=None)
+        mock_camunda_client.get_tasks.assert_awaited_once_with(assignee=None, max_results=20, first_result=0)
 
     @pytest.mark.asyncio
     async def test_get_tasks_with_assignee(self, client, app_with_camunda, mock_camunda_client):
         response = await client.get("/api/v1/camunda/tasks?assignee=user1")
         assert response.status_code == 200
-        mock_camunda_client.get_tasks.assert_awaited_once_with(assignee="user1")
+        mock_camunda_client.get_tasks.assert_awaited_once_with(assignee="user1", max_results=20, first_result=0)
 
     @pytest.mark.asyncio
     async def test_get_tasks_error(self, client, app_with_camunda, mock_camunda_client):

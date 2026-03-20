@@ -523,7 +523,13 @@ async def get_evidence_map(
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("pov:read")),
 ) -> list[dict[str, Any]]:
-    """Get evidence-to-element mappings for a process model."""
+    """Get evidence-to-element mappings for a process model.
+
+    **Performance note**: This endpoint loads up to `limit` process elements
+    and builds a reverse evidence-to-element index in memory. For models with
+    many elements (limit up to 1000), response times may be significant.
+    Consider using a smaller `limit` or caching the result client-side.
+    """
     try:
         model_uuid = uuid.UUID(model_id)
     except ValueError:

@@ -112,7 +112,7 @@ async def _check_llm_rate_limit(request: Request, user_id: str) -> None:
         request_count = results[1]
         if request_count >= _LLM_RATE_LIMIT:
             raise HTTPException(
-                status_code=429,
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=f"Rate limit exceeded: max {_LLM_RATE_LIMIT} LLM requests per {_LLM_RATE_WINDOW}s",
                 headers={"Retry-After": str(_LLM_RATE_WINDOW)},
             )
@@ -271,7 +271,7 @@ async def add_modification(
 
     if payload.template_key and payload.template_key not in VALID_TEMPLATE_KEYS:
         raise HTTPException(
-            status_code=422,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Invalid template_key '{payload.template_key}'. Must be one of: {sorted(VALID_TEMPLATE_KEYS)}",
         )
 
@@ -337,7 +337,7 @@ async def delete_modification(
     mod = result.scalar_one_or_none()
     if not mod:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Modification {modification_id} not found for scenario {scenario_id}",
         )
     await session.delete(mod)
@@ -369,7 +369,7 @@ async def get_evidence_coverage(
     )
     scenario = result.scalar_one_or_none()
     if not scenario:
-        raise HTTPException(status_code=404, detail=f"Scenario {scenario_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Scenario {scenario_id} not found")
 
     from src.semantic.graph import KnowledgeGraphService
     from src.simulation.coverage import EvidenceCoverageService
@@ -431,13 +431,19 @@ async def compare_scenarios(
     try:
         compare_ids = [UUID(uid.strip()) for uid in ids.split(",") if uid.strip()]
     except ValueError as err:
-        raise HTTPException(status_code=422, detail="ids must be comma-separated valid UUIDs") from err
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="ids must be comma-separated valid UUIDs"
+        ) from err
 
     if not compare_ids:
-        raise HTTPException(status_code=422, detail="At least one comparison scenario ID is required")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="At least one comparison scenario ID is required"
+        )
 
     if len(compare_ids) > 10:
-        raise HTTPException(status_code=422, detail="Maximum 10 comparison scenarios allowed")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Maximum 10 comparison scenarios allowed"
+        )
 
     # Batch-fetch baseline result + all comparison scenarios and results
     all_ids = compare_ids
@@ -586,7 +592,7 @@ async def get_result(
     result = await session.execute(select(SimulationResult).where(SimulationResult.id == result_id))
     sim_result = result.scalar_one_or_none()
     if not sim_result:
-        raise HTTPException(status_code=404, detail=f"Result {result_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Result {result_id} not found")
     return result_to_response(sim_result)
 
 
@@ -775,7 +781,7 @@ async def create_financial_assumption(
     # Prevent cross-engagement assignment
     if payload.engagement_id != scenario.engagement_id:
         raise HTTPException(
-            status_code=422,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="engagement_id must match the scenario's engagement",
         )
 
@@ -842,7 +848,7 @@ async def delete_financial_assumption(
     result = await session.execute(select(FinancialAssumption).where(FinancialAssumption.id == assumption_id))
     assumption = result.scalar_one_or_none()
     if not assumption:
-        raise HTTPException(status_code=404, detail=f"Assumption {assumption_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Assumption {assumption_id} not found")
     await session.delete(assumption)
     await log_audit(
         session,
@@ -879,7 +885,7 @@ async def request_suggestions(
     )
     scenario = result.scalar_one_or_none()
     if not scenario:
-        raise HTTPException(status_code=404, detail=f"Scenario {scenario_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Scenario {scenario_id} not found")
 
     from src.simulation.suggester import AlternativeSuggesterService
 
@@ -1117,7 +1123,7 @@ async def rank_scenarios(
     weight_sum = w_evidence + w_simulation + w_financial + w_governance
     if abs(weight_sum - 1.0) > 0.01:
         raise HTTPException(
-            status_code=422,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Weights must sum to 1.0 (got {weight_sum:.4f})",
         )
 

@@ -96,6 +96,20 @@ class TimelineEventResponse(BaseModel):
     details: dict[str, Any] | None = None
 
 
+class IncidentListResponse(BaseModel):
+    """Envelope response for incident list."""
+
+    items: list[IncidentResponse]
+    total: int
+
+
+class TimelineListResponse(BaseModel):
+    """Envelope response for incident timeline."""
+
+    items: list[TimelineEventResponse]
+    total: int
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -178,7 +192,7 @@ async def close_incident(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=msg) from exc
 
 
-@router.get("/{incident_id}/timeline", response_model=list[TimelineEventResponse])
+@router.get("/{incident_id}/timeline", response_model=TimelineListResponse)
 async def get_incident_timeline(
     incident_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -198,7 +212,8 @@ async def get_incident_timeline(
         )
 
     if incident.timeline_json:
-        return incident.timeline_json
+        items = incident.timeline_json
+        return {"items": items, "total": len(items)}
 
     # If no pre-generated timeline (incident not yet closed), build live
     from src.core.models import IncidentEvent
@@ -208,7 +223,7 @@ async def get_incident_timeline(
     )
     events = event_result.scalars().all()
 
-    return [
+    items = [
         {
             "event_type": e.event_type.value,
             "actor": e.actor,
@@ -218,9 +233,10 @@ async def get_incident_timeline(
         }
         for e in events
     ]
+    return {"items": items, "total": len(items)}
 
 
-@router.get("", response_model=list[IncidentResponse])
+@router.get("", response_model=IncidentListResponse)
 async def list_incidents(
     request: Request,
     engagement_id: UUID = Query(..., description="Filter by engagement"),
@@ -234,9 +250,17 @@ async def list_incidents(
     """List incidents for an engagement with optional filters."""
     await check_engagement_access(engagement_id, request, user)
 
-    from sqlalchemy import select
+    from sqlalchemy import func, select
 
     from src.core.models import Incident
+
+    count_query = select(func.count(Incident.id)).where(Incident.engagement_id == engagement_id)
+    if status_filter is not None:
+        count_query = count_query.where(Incident.status == status_filter)
+    if classification is not None:
+        count_query = count_query.where(Incident.classification == classification)
+    count_result = await session.execute(count_query)
+    total = count_result.scalar() or 0
 
     query = select(Incident).where(Incident.engagement_id == engagement_id)
     if status_filter is not None:
@@ -246,4 +270,4 @@ async def list_incidents(
     query = query.order_by(Incident.created_at.desc()).offset(offset).limit(limit)
 
     result = await session.execute(query)
-    return result.scalars().all()
+    return {"items": list(result.scalars().all()), "total": total}
