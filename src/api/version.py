@@ -5,4 +5,4 @@ middleware needs the version but importing from ``main.py`` would
 pull in the full application factory.
 """
 
-API_VERSION = "0.8.0"
+API_VERSION = "2026.03.240"

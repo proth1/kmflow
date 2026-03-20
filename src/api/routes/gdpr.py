@@ -33,6 +33,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -44,7 +46,13 @@ from src.core.permissions import has_role_level
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["gdpr"])
+router = APIRouter(prefix="/api/v1/gdpr", tags=["gdpr"])
+
+# Rate limiter for expensive export endpoint
+limiter = Limiter(key_func=get_remote_address)
+
+# Maximum rows returned per GDPR data export sub-query
+_EXPORT_ROW_LIMIT = 10000
 
 # ---------------------------------------------------------------------------
 # Valid consent types
@@ -177,8 +185,10 @@ def _get_client_ip(request: Request) -> str | None:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/v1/gdpr/export", response_model=DataExportResponse)
+@router.get("/export", response_model=DataExportResponse)
+@limiter.limit("5/hour")
 async def export_user_data(
+    request: Request,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> DataExportResponse:
@@ -189,23 +199,31 @@ async def export_user_data(
     - engagement_members table (memberships)
     - audit_logs table (entries where actor = user id string)
     - annotations table (entries where author_id = user id string)
+
+    Rate limited to 1 request per hour per IP address due to query cost.
     """
     user_id_str = str(current_user.id)
 
     # Membership records
-    member_result = await session.execute(select(EngagementMember).where(EngagementMember.user_id == current_user.id))
+    member_result = await session.execute(
+        select(EngagementMember).where(EngagementMember.user_id == current_user.id).limit(_EXPORT_ROW_LIMIT)
+    )
     memberships = [_member_to_dict(m) for m in member_result.scalars().all()]
 
     # Audit log entries attributed to this user
-    audit_result = await session.execute(select(AuditLog).where(AuditLog.actor == user_id_str))
+    audit_result = await session.execute(select(AuditLog).where(AuditLog.actor == user_id_str).limit(_EXPORT_ROW_LIMIT))
     audit_entries = [_audit_to_dict(e) for e in audit_result.scalars().all()]
 
     # Annotations authored by this user
-    annotation_result = await session.execute(select(Annotation).where(Annotation.author_id == user_id_str))
+    annotation_result = await session.execute(
+        select(Annotation).where(Annotation.author_id == user_id_str).limit(_EXPORT_ROW_LIMIT)
+    )
     annotations = [_annotation_to_dict(a) for a in annotation_result.scalars().all()]
 
     # User consent records
-    consent_result = await session.execute(select(UserConsent).where(UserConsent.user_id == current_user.id))
+    consent_result = await session.execute(
+        select(UserConsent).where(UserConsent.user_id == current_user.id).limit(_EXPORT_ROW_LIMIT)
+    )
     user_consents = [
         {
             "id": str(c.id),
@@ -219,7 +237,9 @@ async def export_user_data(
     ]
 
     # Copilot chat messages for the user
-    copilot_result = await session.execute(select(CopilotMessage).where(CopilotMessage.user_id == current_user.id))
+    copilot_result = await session.execute(
+        select(CopilotMessage).where(CopilotMessage.user_id == current_user.id).limit(_EXPORT_ROW_LIMIT)
+    )
     copilot_messages = [
         {
             "id": str(m.id),
@@ -247,7 +267,7 @@ async def export_user_data(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/api/v1/gdpr/erasure-request", response_model=ErasureRequestResponse)
+@router.post("/erasure-request", response_model=ErasureRequestResponse)
 async def request_erasure(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
@@ -302,7 +322,7 @@ async def request_erasure(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/v1/gdpr/consent", response_model=ConsentStatusResponse)
+@router.get("/consent", response_model=ConsentStatusResponse)
 async def get_consent_status(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
@@ -342,7 +362,7 @@ async def get_consent_status(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/api/v1/gdpr/consent", response_model=ConsentStatusResponse, status_code=status.HTTP_200_OK)
+@router.post("/consent", response_model=ConsentStatusResponse, status_code=status.HTTP_200_OK)
 async def update_consent(
     payload: ConsentUpdate,
     request: Request,
@@ -393,7 +413,7 @@ async def update_consent(
 
 
 @router.post(
-    "/api/v1/gdpr/admin/anonymize/{user_id}",
+    "/admin/anonymize/{user_id}",
     response_model=AnonymizeResponse,
     status_code=status.HTTP_200_OK,
 )

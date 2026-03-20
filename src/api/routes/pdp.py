@@ -85,6 +85,13 @@ class PolicyRuleResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PolicyRuleListResponse(BaseModel):
+    """Envelope response for policy rule list."""
+
+    items: list[PolicyRuleResponse]
+    total: int
+
+
 class HealthResponse(BaseModel):
     """PDP health check response."""
 
@@ -157,7 +164,7 @@ async def create_rule(
     return policy
 
 
-@router.get("/rules", response_model=list[PolicyRuleResponse])
+@router.get("/rules", response_model=PolicyRuleListResponse)
 async def list_rules(
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("pdp:admin")),
@@ -166,7 +173,8 @@ async def list_rules(
     from src.api.services.pdp import PDPService
 
     service = PDPService(session)
-    return await service.list_rules()
+    rules = await service.list_rules()
+    return {"items": rules, "total": len(rules)}
 
 
 @router.get("/health", response_model=HealthResponse)

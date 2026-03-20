@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 
 from src.core.models import User
@@ -273,7 +273,7 @@ async def retry_instance_incidents(
         raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine") from e
 
 
-@router.delete("/instances/{instance_id}", response_model=CancelInstanceResponse)
+@router.delete("/instances/{instance_id}", response_model=CancelInstanceResponse, status_code=status.HTTP_200_OK)
 async def cancel_process_instance(
     instance_id: str,
     request: Request,

@@ -189,7 +189,7 @@ async def get_pattern(
     result = await session.execute(select(PatternLibraryEntry).where(PatternLibraryEntry.id == pattern_id))
     pattern = result.scalar_one_or_none()
     if not pattern:
-        raise HTTPException(status_code=404, detail=f"Pattern {pattern_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Pattern {pattern_id} not found")
     return _pattern_to_response(pattern)
 
 
@@ -204,7 +204,7 @@ async def update_pattern(
     result = await session.execute(select(PatternLibraryEntry).where(PatternLibraryEntry.id == pattern_id))
     pattern = result.scalar_one_or_none()
     if not pattern:
-        raise HTTPException(status_code=404, detail=f"Pattern {pattern_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Pattern {pattern_id} not found")
 
     if payload.title is not None:
         pattern.title = payload.title
@@ -238,7 +238,7 @@ async def delete_pattern(
     result = await session.execute(select(PatternLibraryEntry).where(PatternLibraryEntry.id == pattern_id))
     pattern = result.scalar_one_or_none()
     if not pattern:
-        raise HTTPException(status_code=404, detail=f"Pattern {pattern_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Pattern {pattern_id} not found")
     audit = AuditLog(
         engagement_id=pattern.source_engagement_id,
         action=AuditAction.PATTERN_DELETED,
@@ -286,7 +286,7 @@ async def apply_pattern(
     result = await session.execute(select(PatternLibraryEntry).where(PatternLibraryEntry.id == pattern_id))
     pattern = result.scalar_one_or_none()
     if not pattern:
-        raise HTTPException(status_code=404, detail=f"Pattern {pattern_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Pattern {pattern_id} not found")
 
     pattern.usage_count += 1
     await session.commit()
