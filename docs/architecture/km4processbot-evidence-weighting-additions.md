@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines six additions to KM4ProcessBot v1 that make its interview methodology **machine-actionable** for the KMFlow consensus algorithm. The KM4ProcessBot document's philosophical framework is sound — the two-pathway architecture, eight probe types, epistemic frames, and evidence grading ladder are well-designed. These additions bridge the gap between the qualitative methodology and the quantitative weight computation that the consensus algorithm requires.
+This document defines seven additions to KM4ProcessBot v1 that make its interview methodology **machine-actionable** for the KMFlow consensus algorithm. The KM4ProcessBot document's philosophical framework is sound — the two-pathway architecture, eight probe types, epistemic frames, and evidence grading ladder are well-designed. These additions bridge the gap between the qualitative methodology and the quantitative weight computation that the consensus algorithm requires.
 
 Without these additions, all interview evidence receives a flat 0.40 weight in the consensus algorithm regardless of who is being interviewed, what they reveal, or how confident they are. With these additions, a process owner describing shadow work they perform daily is weighted fundamentally differently than a department head speculating about a process they don't perform.
 
@@ -424,7 +424,7 @@ Both come from the same person in the same interview, but the algorithm correctl
 
 ## Integration Summary
 
-### How These Six Additions Flow Through the Consensus Algorithm
+### How These Seven Additions Flow Through the Consensus Algorithm
 
 ```
 Interview Session Start
