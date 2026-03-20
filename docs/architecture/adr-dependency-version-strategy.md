@@ -113,6 +113,21 @@ This decision **must be revisited** when any of the following occur:
 
 - The two accepted advisories (GHSA-3x4c-7xq6-9pq8, GHSA-vpq2-c234-7xj6) are documented with exploitation analysis. Neither is exploitable in KMFlow's deployment topology.
 
+## Python Maintenance-Stale Dependencies (Accepted Risk)
+
+The following Python packages have not had releases in several years but are accepted as low-risk:
+
+| Package | Version | Last Release | Risk Assessment | Decision |
+|---------|---------|--------------|-----------------|----------|
+| **slowapi** | 0.1.9 | 2023 | No known CVEs; minimal attack surface; wraps `limits` library which is actively maintained | **Accept** — stable, widely used for FastAPI rate limiting. Pinned to 0.1.9. |
+| **langdetect** | 1.0.9 | 2019 | Pure Python; no native deps; no network calls; no known CVEs; functionally complete | **Accept** — battle-tested port of Google's language-detection library. Pinned to 1.0.9. |
+
+Migration paths if either is compromised:
+- **slowapi** → `fastapi-limiter` or custom Redis sliding-window middleware
+- **langdetect** → `lingua-py` (higher accuracy) or `fasttext` (faster, but native binary dep)
+
+Monitoring: both are covered by `pip-audit` in every pipeline execution.
+
 ## Related
 
 - PR #619: Next.js 15.5.10 → 15.5.13 (CVE-2026-29057 patch)
