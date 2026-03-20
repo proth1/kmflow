@@ -25,7 +25,7 @@ from src.api.schemas.conflict import (
     ConflictObjectRead,
     ConflictResolveRequest,
 )
-from src.core.models import AuditAction, AuditLog
+from src.core.models import AuditAction, AuditLog, User
 from src.core.models.conflict import ConflictObject, MismatchType, ResolutionStatus, ResolutionType
 from src.core.permissions import require_engagement_access, require_permission
 
@@ -105,7 +105,7 @@ async def _write_audit_entry(
 async def list_conflicts(
     engagement_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-    _user: Any = Depends(require_engagement_access),
+    _user: User = Depends(require_engagement_access),
     mismatch_type: str | None = Query(None, description="Filter by mismatch type"),
     resolution_status: str | None = Query(None, description="Filter by resolution status"),
     severity_min: float | None = Query(None, ge=0.0, le=1.0, description="Minimum severity"),
@@ -174,7 +174,7 @@ async def resolve_conflict(
     conflict_id: uuid.UUID,
     body: ConflictResolveRequest,
     session: AsyncSession = Depends(get_session),
-    _user: Any = Depends(require_permission("governance:write")),
+    _user: User = Depends(require_permission("governance:write")),
 ) -> dict[str, Any]:
     """Resolve a conflict with a resolution type, notes, and resolver ID.
 
@@ -238,7 +238,7 @@ async def assign_conflict(
     conflict_id: uuid.UUID,
     body: ConflictAssignRequest,
     session: AsyncSession = Depends(get_session),
-    _user: Any = Depends(require_permission("governance:write")),
+    _user: User = Depends(require_permission("governance:write")),
 ) -> dict[str, Any]:
     """Assign a conflict to an SME reviewer for resolution."""
     result = await session.execute(select(ConflictObject).where(ConflictObject.id == conflict_id))
@@ -282,7 +282,7 @@ async def escalate_conflict(
     conflict_id: uuid.UUID,
     body: ConflictEscalateRequest,
     session: AsyncSession = Depends(get_session),
-    _user: Any = Depends(require_permission("governance:write")),
+    _user: User = Depends(require_permission("governance:write")),
 ) -> dict[str, Any]:
     """Manually escalate a conflict to the engagement lead."""
     result = await session.execute(select(ConflictObject).where(ConflictObject.id == conflict_id))
@@ -326,7 +326,7 @@ async def escalate_conflict(
 async def run_escalation_check(
     session: AsyncSession = Depends(get_session),
     threshold_hours: int = Query(ESCALATION_THRESHOLD_HOURS, ge=1, description="Hours before escalation"),
-    _user: Any = Depends(require_permission("governance:write")),
+    _user: User = Depends(require_permission("governance:write")),
 ) -> dict[str, Any]:
     """Check for conflicts overdue beyond the threshold and escalate them.
 

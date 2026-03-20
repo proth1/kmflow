@@ -259,38 +259,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("All connections closed")
 
 
-def create_app() -> FastAPI:
-    """Create and configure the FastAPI application."""
-    settings = get_settings()
+def _register_middleware(app: FastAPI, settings: object) -> None:
+    """Register all middleware on the application.
 
-    app = FastAPI(
-        title=settings.app_name,
-        description="AI-powered Process Intelligence platform for consulting engagements",
-        version=API_VERSION,
-        docs_url="/docs" if settings.debug else None,
-        redoc_url="/redoc" if settings.debug else None,
-        lifespan=lifespan,
-    )
-
-    # -- Rate Limiter (slowapi) ---
-    # Register the limiter on app.state so SlowAPIMiddleware and the
-    # @limiter.limit decorators on individual routes can find it.
-    app.state.limiter = limiter
-
-    @app.exception_handler(RateLimitExceeded)
-    async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
-        request_id = getattr(request.state, "request_id", "unknown")
-        return JSONResponse(
-            status_code=429,
-            content={"detail": "Rate limit exceeded", "request_id": request_id},
-        )
-
-    # -- Security Middleware ---
-    # Note: middleware is applied in reverse order (last added = first executed).
-    # SlowAPIMiddleware is added last so it runs first in the request pipeline.
+    Note: middleware is applied in reverse order (last added = first executed).
+    SlowAPIMiddleware is added last so it runs first in the request pipeline.
+    """
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
+        allow_origins=settings.cors_origins,  # type: ignore[attr-defined]
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Accept"],
@@ -300,11 +277,14 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(
         RateLimitMiddleware,
-        max_requests=settings.rate_limit_requests,
-        window_seconds=settings.rate_limit_window_seconds,
+        max_requests=settings.rate_limit_requests,  # type: ignore[attr-defined]
+        window_seconds=settings.rate_limit_window_seconds,  # type: ignore[attr-defined]
     )
     app.add_middleware(SlowAPIMiddleware)
 
+
+def _register_routes(app: FastAPI) -> None:
+    """Register all API routers on the application."""
     # -- Phase 1-2 Routes ---
     app.include_router(health.router)
     app.include_router(engagements.router)
@@ -470,7 +450,10 @@ def create_app() -> FastAPI:
     # -- Task Queue Routes (KMFLOW-58) ---
     app.include_router(tasks.router)
 
-    # -- Error Handlers ---
+
+def _register_error_handlers(app: FastAPI) -> None:
+    """Register global exception handlers on the application."""
+
     @app.exception_handler(ValueError)
     async def value_error_handler(request: Request, exc: ValueError) -> JSONResponse:
         request_id = getattr(request.state, "request_id", "unknown")
@@ -488,6 +471,37 @@ def create_app() -> FastAPI:
             status_code=500,
             content={"detail": "Internal server error", "request_id": request_id},
         )
+
+
+def create_app() -> FastAPI:
+    """Create and configure the FastAPI application."""
+    settings = get_settings()
+
+    app = FastAPI(
+        title=settings.app_name,
+        description="AI-powered Process Intelligence platform for consulting engagements",
+        version=API_VERSION,
+        docs_url="/docs" if settings.debug else None,
+        redoc_url="/redoc" if settings.debug else None,
+        lifespan=lifespan,
+    )
+
+    # -- Rate Limiter (slowapi) ---
+    # Register the limiter on app.state so SlowAPIMiddleware and the
+    # @limiter.limit decorators on individual routes can find it.
+    app.state.limiter = limiter
+
+    @app.exception_handler(RateLimitExceeded)
+    async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+        request_id = getattr(request.state, "request_id", "unknown")
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Rate limit exceeded", "request_id": request_id},
+        )
+
+    _register_middleware(app, settings)
+    _register_routes(app)
+    _register_error_handlers(app)
 
     return app
 

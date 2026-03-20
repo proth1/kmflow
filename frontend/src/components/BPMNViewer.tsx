@@ -88,7 +88,7 @@ interface BpmnViewer {
         viewerRef.current.destroy();
       }
 
-      const viewer = new BpmnJS({ container: containerRef.current }) as unknown as BpmnViewer;
+      const viewer = new BpmnJS({ container: containerRef.current }) as BpmnViewer; // Safe: BpmnJS satisfies the BpmnViewer interface at runtime
 
       viewerRef.current = viewer;
 
@@ -235,6 +235,8 @@ interface BpmnViewer {
         ref={containerRef}
         className="w-full h-full min-h-[400px]"
         data-testid="bpmn-container"
+        role="img"
+        aria-label="BPMN process diagram"
       />
     </div>
   );

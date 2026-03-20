@@ -12,10 +12,12 @@ import logging
 from typing import Any
 from uuid import UUID
 
+from src.core.models.simulation import FinancialAssumption, SimulationResult, SimulationScenario
+
 logger = logging.getLogger(__name__)
 
 
-def _evidence_score(scenario: Any) -> float:
+def _evidence_score(scenario: SimulationScenario) -> float:
     """Compute evidence dimension score from scenario confidence."""
     conf = scenario.evidence_confidence_score
     if conf is not None:
@@ -23,7 +25,7 @@ def _evidence_score(scenario: Any) -> float:
     return 0.0
 
 
-def _simulation_score(result: Any | None) -> float:
+def _simulation_score(result: SimulationResult | None) -> float:
     """Compute simulation dimension score from result metrics."""
     if not result or not result.metrics:
         return 0.0
@@ -33,14 +35,14 @@ def _simulation_score(result: Any | None) -> float:
     if "efficiency_score" in metrics:
         return min(1.0, max(0.0, float(metrics["efficiency_score"])))
 
-    numeric_values = [float(v) for v in metrics.values() if isinstance(v, (int, float)) and 0 <= v <= 1]
+    numeric_values = [float(v) for v in metrics.values() if isinstance(v, int | float) and 0 <= v <= 1]
     if numeric_values:
         return sum(numeric_values) / len(numeric_values)
 
     return 0.0
 
 
-def _financial_score(assumptions: list[Any], result: Any | None = None) -> float:
+def _financial_score(assumptions: list[FinancialAssumption], result: SimulationResult | None = None) -> float:
     """Compute financial dimension score.
 
     Combines engagement-level assumption confidence with scenario-specific
@@ -60,18 +62,18 @@ def _financial_score(assumptions: list[Any], result: Any | None = None) -> float
     if result and result.metrics:
         cost_ratio = result.metrics.get("cost_ratio")
         cost_efficiency = result.metrics.get("cost_efficiency")
-        if isinstance(cost_ratio, (int, float)):
+        if isinstance(cost_ratio, int | float):
             # cost_ratio < 1.0 is good (under budget), > 1.0 is bad
             sim_financial = min(1.0, max(0.0, 1.0 - (cost_ratio - 1.0)))
             return (assumption_score + sim_financial) / 2.0 if assumptions else sim_financial
-        if isinstance(cost_efficiency, (int, float)):
+        if isinstance(cost_efficiency, int | float):
             sim_financial = min(1.0, max(0.0, float(cost_efficiency)))
             return (assumption_score + sim_financial) / 2.0 if assumptions else sim_financial
 
     return assumption_score
 
 
-def _governance_score(scenario: Any, result: Any | None) -> float:
+def _governance_score(scenario: SimulationScenario, result: SimulationResult | None) -> float:
     """Compute governance dimension score.
 
     Based on:
@@ -87,7 +89,7 @@ def _governance_score(scenario: Any, result: Any | None) -> float:
     # Lower risk score is better governance
     if result and result.metrics:
         risk = result.metrics.get("risk_score", 0.5)
-        if isinstance(risk, (int, float)):
+        if isinstance(risk, int | float):
             score += 0.5 * (1.0 - min(1.0, max(0.0, float(risk))))
     else:
         score += 0.25  # Default middle score
@@ -96,9 +98,9 @@ def _governance_score(scenario: Any, result: Any | None) -> float:
 
 
 def rank_scenarios(
-    scenarios: list[Any],
-    results_map: dict[UUID, Any],
-    assumptions: list[Any],
+    scenarios: list[SimulationScenario],
+    results_map: dict[UUID, SimulationResult],
+    assumptions: list[FinancialAssumption],
     weights: dict[str, float],
 ) -> list[dict[str, Any]]:
     """Rank scenarios by composite score.

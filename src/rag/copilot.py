@@ -76,6 +76,7 @@ class CopilotOrchestrator:
         session: AsyncSession,
         query_type: str = "general",
         history: list[dict[str, Any]] | None = None,
+        user_id: str | None = None,
     ) -> CopilotResponse:
         """Process a copilot query through the RAG pipeline."""
         # 1. Retrieve relevant context
@@ -119,7 +120,7 @@ class CopilotOrchestrator:
         try:
             audit_entry = LLMAuditLog(
                 scenario_id=None,
-                user_id=None,
+                user_id=user_id,
                 prompt_text=user_prompt[:10000],
                 response_text=answer[:10000],
                 evidence_ids=None,
@@ -195,6 +196,7 @@ class CopilotOrchestrator:
         session: AsyncSession,
         query_type: str = "general",
         history: list[dict[str, Any]] | None = None,
+        user_id: str | None = None,
     ) -> AsyncGenerator[str, None]:
         """Process a copilot query and stream the response token by token.
 
@@ -289,7 +291,7 @@ class CopilotOrchestrator:
         try:
             audit_entry = LLMAuditLog(
                 scenario_id=None,
-                user_id=None,
+                user_id=user_id,
                 prompt_text=user_prompt[:10000],
                 response_text=response_text[:10000],
                 evidence_ids=None,

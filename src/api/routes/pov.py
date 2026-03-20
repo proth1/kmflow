@@ -4,6 +4,8 @@ Provides endpoints for generating, retrieving, and inspecting
 process models created by the consensus algorithm.
 """
 
+# TODO(audit-B1-002): Split into pov/ sub-package: core, elements, evidence_map, triangulation
+
 from __future__ import annotations
 
 import csv

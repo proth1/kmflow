@@ -6,6 +6,8 @@ activates: entity extraction, knowledge graph building, embedding generation,
 and semantic bridge execution.
 """
 
+# TODO(audit-B1-003): Extract storage.py + intelligence.py; keep pipeline as thin orchestrator
+
 from __future__ import annotations
 
 import asyncio
