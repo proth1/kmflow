@@ -1,6 +1,6 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.240
+**Version**: 2026.03.246
 **Last Updated**: 2026-03-20
 
 ## Quick Stats
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.246 | 2026-03-20 | Comprehensive audit remediation — 6 batches, 92 findings (2 CRIT + 27 HIGH + 47 MED + 26 LOW): auth security, IDOR, performance, API compliance, architecture, supply chain (PRs #637-#651) |
 | 2026.03.240 | 2026-03-20 | GDPR Article 28 DPA tracking — model, 5 endpoints, engagement compliance summary, evidence upload warning, RLS, migration 091 (PR #635) |
 | 2026.03.239 | 2026-03-19 | Audit remediation #4 — response_model (27 endpoints), GDPR agent tests (23), flaky tests hardened, seeds YAML, HNSW index (#633, PR #634) |
 | 2026.03.238 | 2026-03-19 | Audit remediation #3 — schema extraction (104 schemas), 106 new tests, classification enforcement, BPMNViewer cast fix (#631, PR #632) |

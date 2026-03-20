@@ -3,6 +3,43 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.246] - 2026-03-20
+### Security
+- **CRITICAL**: Fix tasks router prefix from /tasks to /api/v1/tasks (#637)
+- **CRITICAL**: Add require_engagement_access to 13 route files preventing IDOR (#648)
+- Add refresh token blacklist checking in both refresh endpoints (#637)
+- Add double-submit CSRF cookie (kmflow_csrf) with verify_csrf_token dependency (#637)
+- Require debug=True for auth_dev_mode to prevent accidental enablement (#637)
+- Add exc_info=True to swallowed exceptions in governance services (#637)
+- Return RuntimeError on Redis GDPR purge failure (#637)
+- Replace default secrets with CHANGE_ME sentinels (#637)
+- Add regex validation for ServiceNow table_name (#649)
+- Escape single quotes in Delta Lake delete predicates (#649)
+- Add per-key-id rate limiting for failed MCP API key attempts (#637)
+### Changed
+- Replace sequential await loops with asyncio.gather+Semaphore(10) in extraction/graph_analytics (#649)
+- Add LIMIT to unbounded Neo4j queries in graph.py (#649)
+- Rename :Claim → :SurveyClaim in claim_write_back.py (#649)
+- Combine N+1 queries into JOINs in pov.py and evidence.py (#649)
+- Add limit/offset pagination to Camunda list endpoints (#650)
+- Add LIMIT + rate limiting to GDPR data export (#650)
+- Align API_VERSION with CalVer (2026.03.240) (#650)
+- Replace magic status code integers with status.HTTP_* constants (#650)
+- Wrap bare lists in {items, total} envelope responses (#650)
+- Extract _register_middleware/_register_routes/_register_error_handlers from main.py (#646)
+- Add user_id to LLM audit entries in copilot and rationale_generator (#646)
+- Replace dict singleton with @functools.lru_cache in embeddings.py (#646)
+- Raise NotImplementedError for unimplemented task types in worker.py (#646)
+- Split health into minimal /health + authenticated /health/detail (#637)
+- Add Redis cache (60s TTL) for graph stats endpoint (#649)
+- Update Neo4j to 5.27-community (#651)
+- Remove npm install fallback in frontend Dockerfile (#651)
+### Added
+- check_engagement_access() helper for query-param routes (#648)
+- analyst_user + analyst_client test fixtures for RBAC testing (#651)
+- ADR documenting slowapi/langdetect accepted risks (#651)
+- Parametrized IDOR test covering 12 engagement-scoped routes (#648)
+
 ## [2026.03.240] - 2026-03-20
 ### Added
 - GDPR Article 28 DPA tracking: DataProcessingAgreement model, 5 API endpoints, 7 service methods, engagement compliance summary, evidence upload warning, RLS, migration 091 (#635)
