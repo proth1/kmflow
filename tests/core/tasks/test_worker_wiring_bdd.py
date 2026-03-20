@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+
+from tests.helpers import wait_for_condition
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -401,8 +403,12 @@ class TestWorkerRunnerPubSub:
         shutdown = asyncio.Event()
 
         async def run_then_stop() -> None:
-            # Let the runner process one message, then stop
-            await asyncio.sleep(0.1)
+            # Wait until at least one Pub/Sub event is published, then stop
+            await wait_for_condition(
+                lambda: len(redis._published) >= 1,
+                timeout=2.0,
+                message="Worker did not publish progress",
+            )
             shutdown.set()
 
         await asyncio.gather(
@@ -441,7 +447,16 @@ class TestMultipleTaskTypes:
         shutdown = asyncio.Event()
 
         async def run_then_stop() -> None:
-            await asyncio.sleep(0.3)
+            # Wait until both task types have published results, then stop
+            def both_types_done() -> bool:
+                completed = {
+                    json.loads(data).get("task_type")
+                    for _, data in redis._published
+                    if json.loads(data).get("status") == "COMPLETED"
+                }
+                return "test_counting" in completed and "test_crash_recover" in completed
+
+            await wait_for_condition(both_types_done, timeout=3.0, message="Not all task types completed")
             shutdown.set()
 
         await asyncio.gather(

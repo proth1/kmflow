@@ -6,6 +6,7 @@ import uuid
 from unittest.mock import MagicMock
 
 from src.core.models import CorroborationLevel, GapSeverity, GapType
+from src.core.models.evidence import EvidenceItem
 from src.pov.consensus import ConsensusElement
 from src.pov.gaps import (
     _detect_missing_category_gaps,
@@ -48,7 +49,7 @@ def _make_consensus(
 
 
 def _make_evidence_item(category: str = "documents"):
-    item = MagicMock()
+    item = MagicMock(spec=EvidenceItem)
     item.id = uuid.uuid4()
     item.category = category
     return item

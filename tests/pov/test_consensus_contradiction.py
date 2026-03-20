@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 from src.core.models.conflict import MismatchType, ResolutionType
+from src.core.models.evidence import EvidenceItem
 from src.pov.consensus import ConflictStub
 from src.pov.contradiction import (
     _edit_distance,
@@ -33,7 +34,7 @@ def _make_evidence(
     source_date: datetime | None = None,
 ) -> MagicMock:
     """Create a mock EvidenceItem for testing."""
-    item = MagicMock()
+    item = MagicMock(spec=EvidenceItem)
     item.id = evidence_id or str(uuid.uuid4())
     item.category = category
     item.quality_score = quality_score
