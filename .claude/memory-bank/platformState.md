@@ -1,17 +1,17 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.239
-**Last Updated**: 2026-03-19
+**Version**: 2026.03.240
+**Last Updated**: 2026-03-20
 
 ## Quick Stats
 
 | Metric | Value |
 |--------|-------|
-| SQLAlchemy Models | 101 |
-| API Routers | 76 |
-| Test Count | 6,132+ backend + 635 frontend (6,767+ total) |
+| SQLAlchemy Models | 102 |
+| API Routers | 77 |
+| Test Count | 6,145+ backend + 635 frontend (6,780+ total) |
 | Total LOC | ~120,000 (440+ Python / 120 TypeScript / 39 Swift / 63 C#/C) |
-| Database Migrations | 90 |
+| Database Migrations | 91 |
 | BPMN Process Models | 44 |
 | Coverage | >83% |
 | Python Version | 3.12+ |
@@ -30,6 +30,7 @@
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 2026.03.240 | 2026-03-20 | GDPR Article 28 DPA tracking — model, 5 endpoints, engagement compliance summary, evidence upload warning, RLS, migration 091 (PR #635) |
 | 2026.03.239 | 2026-03-19 | Audit remediation #4 — response_model (27 endpoints), GDPR agent tests (23), flaky tests hardened, seeds YAML, HNSW index (#633, PR #634) |
 | 2026.03.238 | 2026-03-19 | Audit remediation #3 — schema extraction (104 schemas), 106 new tests, classification enforcement, BPMNViewer cast fix (#631, PR #632) |
 | 2026.03.237 | 2026-03-19 | Audit remediation #2 — 20 CRITICAL/HIGH findings: IDOR fixes, RLS 34 tables, N+1 elimination, LLM audit, supply chain hashes (#629, PR #630) |

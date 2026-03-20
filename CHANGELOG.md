@@ -3,6 +3,10 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.240] - 2026-03-20
+### Added
+- GDPR Article 28 DPA tracking: DataProcessingAgreement model, 5 API endpoints, 7 service methods, engagement compliance summary, evidence upload warning, RLS, migration 091 (#635)
+
 ## [2026.03.239] - 2026-03-19
 ### Changed
 - Decompose get_best_practice_seeds 224-line literal to YAML file (#633)
