@@ -76,7 +76,7 @@ class ComplianceAssessmentService:
                 if r.get("control_id")
             ]
         except Exception:
-            logger.warning("Failed to query ENFORCED_BY edges for activity %s", activity_id)
+            logger.warning("Failed to query ENFORCED_BY edges for activity %s", activity_id, exc_info=True)
             return []
 
     async def get_controls_with_evidence(self, control_ids: list[str], engagement_id: str) -> list[str]:
@@ -96,7 +96,7 @@ class ComplianceAssessmentService:
             records = await self._graph.run_query(query, {"control_ids": control_ids, "engagement_id": engagement_id})
             return [r["control_id"] for r in records if r.get("control_id")]
         except Exception:
-            logger.warning("Failed to query control evidence for engagement %s", engagement_id)
+            logger.warning("Failed to query control evidence for engagement %s", engagement_id, exc_info=True)
             return []
 
     async def assess_activity(

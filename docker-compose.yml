@@ -292,9 +292,9 @@ services:
     ports:
       - "3002:3000"
     volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/public:/app/public
-      - ./frontend/next.config.js:/app/next.config.js
+      - ./frontend/src:/app/src:ro
+      - ./frontend/public:/app/public:ro
+      - ./frontend/next.config.js:/app/next.config.js:ro
     depends_on:
       backend:
         condition: service_healthy

@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     # ── Redis ────────────────────────────────────────────────────
     redis_host: str = "localhost"
     redis_port: int = 6379
+    redis_password: SecretStr = SecretStr("")
     redis_url: str | None = None
 
     # ── Backend ──────────────────────────────────────────────────
@@ -60,14 +61,14 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:3000"]
 
     # ── Security / Auth ───────────────────────────────────────────
-    jwt_secret_key: SecretStr = SecretStr("dev-secret-key-change-in-production")
+    jwt_secret_key: SecretStr = SecretStr("CHANGE_ME")
     jwt_secret_keys: str = ""  # Comma-separated list for key rotation
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
     jwt_refresh_token_expire_minutes: int = 10080  # 7 days
     auth_dev_mode: bool = False  # Allow local dev tokens
-    encryption_key: SecretStr = SecretStr("dev-encryption-key-change-in-production")
-    watermark_signing_key: SecretStr = SecretStr("dev-watermark-key-change-in-production")
+    encryption_key: SecretStr = SecretStr("CHANGE_ME")
+    watermark_signing_key: SecretStr = SecretStr("CHANGE_ME")
 
     # ── Cookie Auth (Issue #156) ──────────────────────────────────
     # cookie_domain: Set to the shared domain (e.g. ".example.com") for
@@ -217,26 +218,37 @@ class Settings(BaseSettings):
         return self
 
     @model_validator(mode="after")
+    def validate_dev_mode_requires_debug(self) -> Settings:
+        """Require debug=True for auth_dev_mode to prevent accidental enablement."""
+        if self.auth_dev_mode and not self.debug:
+            raise ValueError("AUTH_DEV_MODE requires DEBUG=true. Set DEBUG=true or disable AUTH_DEV_MODE.")
+        return self
+
+    @model_validator(mode="after")
     def reject_default_secrets_in_production(self) -> Settings:
-        """Block startup when default development secrets are present outside development."""
+        """Block startup when default/sentinel secrets are present outside development."""
         if self.app_env == "development":
             return self
-        has_default_jwt = "dev-secret-key" in self.jwt_secret_key.get_secret_value()
-        has_default_enc = "dev-encryption-key" in self.encryption_key.get_secret_value()
-        has_default_pg = self.postgres_password.get_secret_value() == "kmflow_dev_password"
-        has_default_neo4j = self.neo4j_password.get_secret_value() == "neo4j_dev_password"
-        has_default_watermark = "dev-watermark-key" in self.watermark_signing_key.get_secret_value()
+
+        _sentinel = "CHANGE_ME"
         problems: list[str] = []
-        if has_default_jwt:
+
+        jwt_val = self.jwt_secret_key.get_secret_value()
+        if jwt_val == _sentinel or "dev-secret-key" in jwt_val:
             problems.append("JWT_SECRET_KEY")
-        if has_default_enc:
+
+        enc_val = self.encryption_key.get_secret_value()
+        if enc_val == _sentinel or "dev-encryption-key" in enc_val:
             problems.append("ENCRYPTION_KEY")
-        if has_default_pg:
-            problems.append("POSTGRES_PASSWORD")
-        if has_default_neo4j:
-            problems.append("NEO4J_PASSWORD")
-        if has_default_watermark:
+
+        wm_val = self.watermark_signing_key.get_secret_value()
+        if wm_val == _sentinel or "dev-watermark-key" in wm_val:
             problems.append("WATERMARK_SIGNING_KEY")
+
+        if self.postgres_password.get_secret_value() == "kmflow_dev_password":
+            problems.append("POSTGRES_PASSWORD")
+        if self.neo4j_password.get_secret_value() == "neo4j_dev_password":
+            problems.append("NEO4J_PASSWORD")
         if self.auth_dev_mode:
             problems.append("AUTH_DEV_MODE=false")
         if self.debug:

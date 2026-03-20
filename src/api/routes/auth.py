@@ -34,6 +34,7 @@ from src.core.auth import (
     create_refresh_token,
     decode_token,
     get_current_user,
+    is_token_blacklisted,
     set_auth_cookies,
     verify_password,
 )
@@ -51,7 +52,7 @@ try:
     _settings = Settings()
     _redis_url = _settings.redis_url
 except Exception:
-    pass
+    logger.warning("Settings load failed for rate limiter Redis URL, using in-memory storage")
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["100/minute"],
@@ -255,6 +256,13 @@ async def refresh_token(
     settings: Settings = Depends(get_settings),
 ) -> dict[str, Any]:
     """Refresh an access token using a valid refresh token."""
+    # Check if the refresh token has been blacklisted (e.g. after logout)
+    if await is_token_blacklisted(request, payload.refresh_token):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked",
+        )
+
     decoded = decode_token(payload.refresh_token, settings)
 
     if decoded.get("type") != "refresh":
@@ -380,6 +388,13 @@ async def refresh_token_cookie(
             detail="Refresh cookie missing",
         )
 
+    # Check if the refresh token has been blacklisted (e.g. after logout)
+    if await is_token_blacklisted(request, refresh_token_value):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked",
+        )
+
     decoded = decode_token(refresh_token_value, settings)
 
     if decoded.get("type") != "refresh":
@@ -451,7 +466,13 @@ async def logout(
             detail="Not authenticated",
         )
 
+    # Blacklist the access token
     await blacklist_token(request, token)
+
+    # Also blacklist the refresh token if present (prevents reuse after logout)
+    refresh_token_value = request.cookies.get(REFRESH_COOKIE_NAME)
+    if refresh_token_value:
+        await blacklist_token(request, refresh_token_value, expires_in=settings.jwt_refresh_token_expire_minutes * 60)
 
     response = JSONResponse(
         content={"message": "Logged out"},

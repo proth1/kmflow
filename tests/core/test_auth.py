@@ -37,6 +37,7 @@ def settings() -> Settings:
         jwt_access_token_expire_minutes=30,
         jwt_refresh_token_expire_minutes=10080,
         auth_dev_mode=True,
+        debug=True,
     )
 
 
@@ -204,6 +205,7 @@ class TestCookieAuth:
             jwt_access_token_expire_minutes=30,
             jwt_refresh_token_expire_minutes=10080,
             auth_dev_mode=True,
+            debug=True,
         )
 
     def _make_mock_user(self, user_id: uuid.UUID | None = None, is_active: bool = True) -> MagicMock:
@@ -298,6 +300,7 @@ class TestTokenBlacklist:
             jwt_secret_key="test-secret-key-for-tests",
             jwt_algorithm="HS256",
             auth_dev_mode=True,
+            debug=True,
         )
 
     @pytest.mark.asyncio
@@ -341,6 +344,7 @@ class TestInactiveUser:
             jwt_secret_key="test-secret-key-for-tests",
             jwt_algorithm="HS256",
             auth_dev_mode=True,
+            debug=True,
         )
 
     @pytest.mark.asyncio
@@ -396,6 +400,7 @@ class TestMissingSubjectClaim:
             jwt_secret_key="test-secret-key-for-tests",
             jwt_algorithm="HS256",
             auth_dev_mode=True,
+            debug=True,
         )
 
     @pytest.mark.asyncio
@@ -440,6 +445,7 @@ class TestExpiredTokenGetCurrentUser:
             jwt_secret_key="test-secret-key-for-tests",
             jwt_algorithm="HS256",
             auth_dev_mode=True,
+            debug=True,
         )
 
     @pytest.mark.asyncio

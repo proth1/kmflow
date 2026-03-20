@@ -28,7 +28,7 @@ TASK_TYPE_PERMISSIONS: dict[str, str] = {
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/tasks", tags=["tasks"])
+router = APIRouter(prefix="/api/v1/tasks", tags=["tasks"])
 
 
 # -- Schemas -------------------------------------------------------------------

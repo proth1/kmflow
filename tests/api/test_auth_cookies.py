@@ -50,6 +50,7 @@ def auth_test_settings() -> Settings:
         jwt_access_token_expire_minutes=30,
         jwt_refresh_token_expire_minutes=10080,
         auth_dev_mode=True,
+        debug=True,
         cookie_domain="",
         cookie_secure=False,  # Cookies work over plain HTTP in test/dev
         monitoring_worker_count=0,

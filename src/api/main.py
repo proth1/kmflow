@@ -144,6 +144,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # -- Dev mode: seed admin user if none exists ---
     if settings.auth_dev_mode:
+        logger.warning(
+            "AUTH_DEV_MODE is enabled — all unauthenticated requests will auto-authenticate "
+            "as platform_admin. This MUST NOT be used in production."
+        )
         from sqlalchemy import select as sa_select
 
         from src.core.models import User

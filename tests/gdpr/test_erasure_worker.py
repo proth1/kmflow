@@ -144,7 +144,7 @@ class TestGdprErasureWorker:
 
     @pytest.mark.asyncio
     async def test_redis_failure(self, worker) -> None:
-        """Should handle Redis failure gracefully (returns 0 for redis_purged)."""
+        """Should raise RuntimeError on Redis failure (data may remain in cache)."""
         user = _make_user()
 
         # Session for finding users
@@ -170,7 +170,6 @@ class TestGdprErasureWorker:
             patch.object(db_mod, "async_session_factory", mock_factory, create=True),
             patch.object(worker, "_purge_neo4j", new_callable=AsyncMock, return_value=0),
             patch("src.core.redis.create_redis_client", side_effect=ConnectionError("Redis down")),
+            pytest.raises(RuntimeError, match="Redis GDPR purge failed"),
         ):
-            result = await worker.execute({})
-
-        assert result["redis_purged"] == 0
+            await worker.execute({})

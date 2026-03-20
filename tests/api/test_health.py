@@ -1,4 +1,4 @@
-"""Tests for the health check endpoint."""
+"""Tests for the health check endpoints."""
 
 from __future__ import annotations
 
@@ -7,21 +7,40 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from httpx import AsyncClient
 
+# ---------------------------------------------------------------------------
+# Minimal health endpoint (unauthenticated)
+# ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
-async def test_health_all_services_up(client: AsyncClient, mock_db_session: AsyncMock) -> None:
-    """Health endpoint should return 'healthy' when all services are up."""
-    # Mock PostgreSQL query
+async def test_health_minimal_returns_ok(client: AsyncClient) -> None:
+    """Minimal health endpoint should return 'ok' status."""
+    response = await client.get("/api/v1/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert "timestamp" in data
+    # Minimal endpoint should NOT expose service details
+    assert "services" not in data
+    assert "version" not in data
+
+
+# ---------------------------------------------------------------------------
+# Detailed health endpoint (authenticated)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_health_detail_all_services_up(client: AsyncClient, mock_db_session: AsyncMock) -> None:
+    """Detailed health endpoint should return 'healthy' when all services are up."""
     mock_result = MagicMock()
     mock_result.scalar.return_value = 1
     mock_db_session.execute.return_value = mock_result
 
-    response = await client.get("/api/v1/health")
+    response = await client.get("/api/v1/health/detail")
     assert response.status_code == 200
 
     data = response.json()
-    # Camunda is optional and typically down in test environments,
-    # so status may be "degraded" rather than "healthy"
     assert data["status"] in ("healthy", "degraded")
     assert data["services"]["postgres"] == "up"
     assert data["services"]["neo4j"] == "up"
@@ -33,21 +52,19 @@ async def test_health_all_services_up(client: AsyncClient, mock_db_session: Asyn
 
 
 @pytest.mark.asyncio
-async def test_health_degraded_when_redis_down(
+async def test_health_detail_degraded_when_redis_down(
     client: AsyncClient,
     mock_db_session: AsyncMock,
     mock_redis_client: AsyncMock,
 ) -> None:
-    """Health endpoint should return 'degraded' when one service is down."""
-    # Mock PostgreSQL query
+    """Detailed health endpoint should return 'degraded' when one service is down."""
     mock_result = MagicMock()
     mock_result.scalar.return_value = 1
     mock_db_session.execute.return_value = mock_result
 
-    # Redis fails
     mock_redis_client.ping.side_effect = ConnectionError("Redis down")
 
-    response = await client.get("/api/v1/health")
+    response = await client.get("/api/v1/health/detail")
     assert response.status_code == 200
 
     data = response.json()
@@ -56,19 +73,18 @@ async def test_health_degraded_when_redis_down(
 
 
 @pytest.mark.asyncio
-async def test_health_unhealthy_when_all_down(
+async def test_health_detail_unhealthy_when_all_down(
     client: AsyncClient,
     mock_db_session: AsyncMock,
     mock_neo4j_driver: MagicMock,
     mock_redis_client: AsyncMock,
 ) -> None:
-    """Health endpoint should return 'unhealthy' when all services are down."""
-    # All services fail
+    """Detailed health endpoint should return 'unhealthy' when all services are down."""
     mock_db_session.execute.side_effect = ConnectionError("DB down")
     mock_neo4j_driver.verify_connectivity.side_effect = ConnectionError("Neo4j down")
     mock_redis_client.ping.side_effect = ConnectionError("Redis down")
 
-    response = await client.get("/api/v1/health")
+    response = await client.get("/api/v1/health/detail")
     assert response.status_code == 200
 
     data = response.json()
@@ -77,13 +93,13 @@ async def test_health_unhealthy_when_all_down(
 
 
 @pytest.mark.asyncio
-async def test_health_response_structure(client: AsyncClient, mock_db_session: AsyncMock) -> None:
-    """Health response should have the expected structure."""
+async def test_health_detail_response_structure(client: AsyncClient, mock_db_session: AsyncMock) -> None:
+    """Detailed health response should have the expected structure."""
     mock_result = MagicMock()
     mock_result.scalar.return_value = 1
     mock_db_session.execute.return_value = mock_result
 
-    response = await client.get("/api/v1/health")
+    response = await client.get("/api/v1/health/detail")
     data = response.json()
 
     assert "status" in data

@@ -41,68 +41,60 @@ class TestBDDScenario1HealthCheck:
 
     @pytest.mark.asyncio
     async def test_health_has_status_field(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
-        """Response contains a 'status' field."""
-        mock_result = MagicMock()
-        mock_result.scalar.return_value = 1
-        mock_db_session.execute.return_value = mock_result
-
+        """Minimal health endpoint returns 'ok' status."""
         data = (await client.get("/api/v1/health")).json()
         assert "status" in data
-        assert data["status"] in ("healthy", "degraded", "unhealthy")
-
-    @pytest.mark.asyncio
-    async def test_health_has_version_field(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
-        """Response contains a 'version' field matching API_VERSION."""
-        mock_result = MagicMock()
-        mock_result.scalar.return_value = 1
-        mock_db_session.execute.return_value = mock_result
-
-        data = (await client.get("/api/v1/health")).json()
-        assert "version" in data
-        assert data["version"] == API_VERSION
+        assert data["status"] == "ok"
 
     @pytest.mark.asyncio
     async def test_health_has_timestamp_field(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
         """Response contains a 'timestamp' field in ISO format."""
-        mock_result = MagicMock()
-        mock_result.scalar.return_value = 1
-        mock_db_session.execute.return_value = mock_result
-
         data = (await client.get("/api/v1/health")).json()
         assert "timestamp" in data
-        # Validate it parses as ISO datetime
         datetime.fromisoformat(data["timestamp"])
 
     @pytest.mark.asyncio
-    async def test_health_verifies_postgres(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
-        """Health check verifies PostgreSQL connectivity."""
+    async def test_health_detail_has_version_field(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
+        """Detailed health endpoint contains version and service statuses."""
         mock_result = MagicMock()
         mock_result.scalar.return_value = 1
         mock_db_session.execute.return_value = mock_result
 
-        data = (await client.get("/api/v1/health")).json()
+        data = (await client.get("/api/v1/health/detail")).json()
+        assert "version" in data
+        assert data["version"] == API_VERSION
+        assert data["status"] in ("healthy", "degraded", "unhealthy")
+
+    @pytest.mark.asyncio
+    async def test_health_detail_verifies_postgres(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
+        """Detailed health check verifies PostgreSQL connectivity."""
+        mock_result = MagicMock()
+        mock_result.scalar.return_value = 1
+        mock_db_session.execute.return_value = mock_result
+
+        data = (await client.get("/api/v1/health/detail")).json()
         assert "postgres" in data["services"]
         assert data["services"]["postgres"] == "up"
 
     @pytest.mark.asyncio
-    async def test_health_verifies_neo4j(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
-        """Health check verifies Neo4j connectivity."""
+    async def test_health_detail_verifies_neo4j(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
+        """Detailed health check verifies Neo4j connectivity."""
         mock_result = MagicMock()
         mock_result.scalar.return_value = 1
         mock_db_session.execute.return_value = mock_result
 
-        data = (await client.get("/api/v1/health")).json()
+        data = (await client.get("/api/v1/health/detail")).json()
         assert "neo4j" in data["services"]
         assert data["services"]["neo4j"] == "up"
 
     @pytest.mark.asyncio
-    async def test_health_verifies_redis(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
-        """Health check verifies Redis connectivity."""
+    async def test_health_detail_verifies_redis(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
+        """Detailed health check verifies Redis connectivity."""
         mock_result = MagicMock()
         mock_result.scalar.return_value = 1
         mock_db_session.execute.return_value = mock_result
 
-        data = (await client.get("/api/v1/health")).json()
+        data = (await client.get("/api/v1/health/detail")).json()
         assert "redis" in data["services"]
         assert data["services"]["redis"] == "up"
 
@@ -301,12 +293,12 @@ class TestBDDScenario5ServiceDependencies:
 
     @pytest.mark.asyncio
     async def test_health_uses_app_state_dependencies(self, client: AsyncClient, mock_db_session: AsyncMock) -> None:
-        """Health endpoint accesses db, neo4j, redis from app.state."""
+        """Detailed health endpoint accesses db, neo4j, redis from app.state."""
         mock_result = MagicMock()
         mock_result.scalar.return_value = 1
         mock_db_session.execute.return_value = mock_result
 
-        response = await client.get("/api/v1/health")
+        response = await client.get("/api/v1/health/detail")
         assert response.status_code == 200
         # The fact that it returns 200 with service statuses proves
         # dependencies (db_session_factory, neo4j_driver, redis_client) resolved
