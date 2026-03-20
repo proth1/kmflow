@@ -13,16 +13,30 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from datetime import datetime
 from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
+from src.api.schemas.validation import (
+    DarkRoomDashboardResponse,
+    DecisionRequest,
+    DecisionResponse,
+    GenerateRequest,
+    GenerateResponse,
+    GradingProgressionResponse,
+    PaginatedDecisionResponse,
+    PaginatedReviewPackResponse,
+    RepublishRequest,
+    RepublishResponse,
+    ReviewPackResponse,
+    RoutedPackResponse,
+    RoutePacksRequest,
+    VersionDiffResponse,
+)
 from src.core.audit import log_audit
 from src.core.models import (
     AuditAction,
@@ -63,75 +77,6 @@ router = APIRouter(prefix="/api/v1/validation", tags=["validation"])
 
 # Background task references to prevent GC from cancelling them
 _background_tasks: set[asyncio.Task[None]] = set()
-
-
-# ---------------------------------------------------------------------------
-# Schemas
-# ---------------------------------------------------------------------------
-
-
-class ReviewPackResponse(BaseModel):
-    """Response schema for a single review pack."""
-
-    id: uuid.UUID
-    engagement_id: uuid.UUID
-    pov_version_id: uuid.UUID
-    segment_index: int
-    segment_activities: list[dict[str, Any]]
-    activity_count: int
-    evidence_list: list[str] | None = None
-    confidence_scores: dict[str, float] | None = None
-    conflict_flags: list[str] | None = None
-    seed_terms: list[str] | None = None
-    assigned_sme_id: uuid.UUID | None = None
-    assigned_role: str | None = None
-    status: str
-    avg_confidence: float
-    created_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
-class PaginatedReviewPackResponse(BaseModel):
-    """Paginated response for review pack queries."""
-
-    items: list[ReviewPackResponse]
-    total: int
-    limit: int
-    offset: int
-
-
-class DecisionRequest(BaseModel):
-    """Request body for submitting a reviewer decision."""
-
-    element_id: str = Field(..., description="ID of the graph element being reviewed")
-    action: ReviewerAction = Field(..., description="Reviewer action: confirm/correct/reject/defer")
-    payload: dict[str, Any] | None = Field(None, description="Action-specific payload")
-
-
-class DecisionResponse(BaseModel):
-    """Response from submitting a reviewer decision."""
-
-    decision_id: str
-    action: str
-    element_id: str
-    graph_write_back: dict[str, Any]
-    decision_at: str
-
-
-class GenerateRequest(BaseModel):
-    """Request body for review pack generation."""
-
-    pov_version_id: uuid.UUID
-    engagement_id: uuid.UUID
-
-
-class GenerateResponse(BaseModel):
-    """Response from async review pack generation."""
-
-    task_id: str
-    status: str = "pending"
-    message: str = "Review pack generation started"
 
 
 # ---------------------------------------------------------------------------
@@ -332,31 +277,6 @@ async def submit_decision(
 # ---------------------------------------------------------------------------
 
 
-class DecisionListItem(BaseModel):
-    """Decision item for listing."""
-
-    id: uuid.UUID
-    engagement_id: uuid.UUID
-    review_pack_id: uuid.UUID
-    element_id: str
-    action: str
-    reviewer_id: uuid.UUID | None
-    payload: dict[str, Any] | None
-    graph_write_back_result: dict[str, Any] | None
-    decision_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
-class PaginatedDecisionResponse(BaseModel):
-    """Paginated response for decision queries."""
-
-    items: list[DecisionListItem]
-    total: int
-    limit: int
-    offset: int
-
-
 @router.get("/decisions", response_model=PaginatedDecisionResponse)
 async def list_decisions(
     engagement_id: uuid.UUID = Query(..., description="Engagement ID"),
@@ -409,21 +329,6 @@ async def list_decisions(
 # ---------------------------------------------------------------------------
 # Reviewer Routing (Story #365 — Scenario 3)
 # ---------------------------------------------------------------------------
-
-
-class RoutePacksRequest(BaseModel):
-    """Request body for routing review packs to reviewers."""
-
-    engagement_id: uuid.UUID
-
-
-class RoutedPackResponse(BaseModel):
-    """Response showing which packs were routed to which reviewer."""
-
-    pack_id: str
-    assigned_role: str | None
-    assigned_sme_id: str | None
-    status: str
 
 
 @router.post("/review-packs/route", response_model=list[RoutedPackResponse])
@@ -483,23 +388,6 @@ async def route_review_packs(
 # ---------------------------------------------------------------------------
 # Republish Cycle (Story #361 — Scenario 1)
 # ---------------------------------------------------------------------------
-
-
-class RepublishRequest(BaseModel):
-    """Request body to trigger POV republish."""
-
-    pov_version_id: uuid.UUID
-    engagement_id: uuid.UUID
-
-
-class RepublishResponse(BaseModel):
-    """Response from POV republish."""
-
-    new_version_id: str
-    new_version_number: int
-    total_elements: int
-    dark_shrink_rate: float | None
-    changes_summary: dict[str, int]
 
 
 @router.post("/republish", response_model=RepublishResponse, status_code=status.HTTP_201_CREATED)
@@ -634,30 +522,6 @@ async def republish_pov(
 # ---------------------------------------------------------------------------
 # Version Diff (Story #361 — Scenario 2 & 3)
 # ---------------------------------------------------------------------------
-
-
-class ElementChangeResponse(BaseModel):
-    """A single element change in the diff."""
-
-    element_id: str
-    element_name: str
-    change_type: str
-    changed_fields: list[str] = []
-    color: str = "none"
-    css_class: str = "unchanged"
-
-
-class VersionDiffResponse(BaseModel):
-    """Structured diff between two POV versions."""
-
-    v1_id: str
-    v2_id: str
-    added: list[ElementChangeResponse]
-    removed: list[ElementChangeResponse]
-    modified: list[ElementChangeResponse]
-    unchanged_count: int
-    dark_shrink_rate: float | None
-    total_changes: int
 
 
 @router.get("/diff", response_model=VersionDiffResponse)
@@ -842,52 +706,6 @@ async def _generate_packs_async(
 # ---------------------------------------------------------------------------
 
 
-class ShrinkRateAlertResponse(BaseModel):
-    """Alert included when shrink rate is below target."""
-
-    severity: str
-    message: str
-    version_number: int
-    actual_rate: float
-    target_rate: float
-    dark_segments: list[str]
-
-
-class VersionShrinkResponse(BaseModel):
-    """Per-version shrink rate data."""
-
-    version_number: int
-    pov_version_id: str
-    dark_count: int
-    dim_count: int
-    bright_count: int
-    total_elements: int
-    reduction_pct: float | None
-    snapshot_at: str
-
-
-class IlluminationEventResponse(BaseModel):
-    """Timeline event for a segment that was illuminated."""
-
-    element_name: str
-    element_id: str
-    from_classification: str
-    to_classification: str
-    illuminated_in_version: int
-    pov_version_id: str
-    evidence_ids: list[str]
-
-
-class DarkRoomDashboardResponse(BaseModel):
-    """Complete dark-room shrink rate dashboard data."""
-
-    engagement_id: str
-    shrink_rate_target: float
-    versions: list[VersionShrinkResponse]
-    alerts: list[ShrinkRateAlertResponse]
-    illumination_timeline: list[IlluminationEventResponse]
-
-
 @router.get("/dark-room-shrink", response_model=DarkRoomDashboardResponse)
 async def get_dark_room_shrink(
     engagement_id: UUID = Query(..., description="Engagement UUID"),
@@ -1019,25 +837,6 @@ async def get_dark_room_shrink(
 # ---------------------------------------------------------------------------
 # Grading Progression Dashboard (Story #357)
 # ---------------------------------------------------------------------------
-
-
-class VersionGradeResponse(BaseModel):
-    """Per-version grade distribution data."""
-
-    version_number: int
-    pov_version_id: str
-    grade_counts: dict[str, int]
-    total_elements: int
-    improvement_pct: float | None
-    snapshot_at: str
-
-
-class GradingProgressionResponse(BaseModel):
-    """Complete grading progression dashboard data."""
-
-    engagement_id: str
-    improvement_target: float
-    versions: list[VersionGradeResponse]
 
 
 @router.get("/grading-progression", response_model=GradingProgressionResponse)

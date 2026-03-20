@@ -21,7 +21,6 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from neo4j.exceptions import Neo4jError
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
@@ -272,7 +271,14 @@ def create_app() -> FastAPI:
     # Register the limiter on app.state so SlowAPIMiddleware and the
     # @limiter.limit decorators on individual routes can find it.
     app.state.limiter = limiter
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]  # slowapi handler signature differs from Starlette's ExceptionHandler
+
+    @app.exception_handler(RateLimitExceeded)
+    async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+        request_id = getattr(request.state, "request_id", "unknown")
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Rate limit exceeded", "request_id": request_id},
+        )
 
     # -- Security Middleware ---
     # Note: middleware is applied in reverse order (last added = first executed).

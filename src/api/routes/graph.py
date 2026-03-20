@@ -218,6 +218,7 @@ async def semantic_search(
     engagement_id: UUID | None = None,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
+    embedding_service: EmbeddingService = Depends(get_embedding_service),
 ) -> list[dict[str, Any]]:
     """Search the knowledge graph using semantic similarity.
 
@@ -235,7 +236,6 @@ async def semantic_search(
             detail="top_k must be between 1 and 100",
         )
 
-    embedding_service = EmbeddingService()
     eng_id = str(engagement_id) if engagement_id else None
 
     results = await embedding_service.search_by_text(

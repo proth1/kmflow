@@ -63,6 +63,12 @@ _LOGIN_LOCKOUT_MAX_ATTEMPTS = 10
 _LOGIN_LOCKOUT_WINDOW_SECONDS = 900  # 15 minutes
 
 
+def _get_redis_client(request: Request):  # type: ignore[return]
+    """Extract the Redis client from application state, or None if unavailable."""
+    state = getattr(getattr(request, "app", None), "state", None)
+    return getattr(state, "redis_client", None) if state else None
+
+
 async def _check_email_lockout(email: str, request: Request) -> None:
     """Check per-email failed login counter in Redis.
 
@@ -70,8 +76,7 @@ async def _check_email_lockout(email: str, request: Request) -> None:
     regardless of source IP. This defends against distributed
     credential stuffing attacks.
     """
-    redis_client = getattr(getattr(request, "app", None), "state", None)
-    redis_client = getattr(redis_client, "redis_client", None) if redis_client else None
+    redis_client = _get_redis_client(request)
     if redis_client is None:
         return
     key = f"login_lockout:{email}"
@@ -90,8 +95,7 @@ async def _check_email_lockout(email: str, request: Request) -> None:
 
 async def _record_failed_login(email: str, request: Request) -> None:
     """Increment per-email failed login counter in Redis."""
-    redis_client = getattr(getattr(request, "app", None), "state", None)
-    redis_client = getattr(redis_client, "redis_client", None) if redis_client else None
+    redis_client = _get_redis_client(request)
     if redis_client is None:
         return
     key = f"login_lockout:{email}"
@@ -106,8 +110,7 @@ async def _record_failed_login(email: str, request: Request) -> None:
 
 async def _clear_login_lockout(email: str, request: Request) -> None:
     """Clear per-email failed login counter on successful login."""
-    redis_client = getattr(getattr(request, "app", None), "state", None)
-    redis_client = getattr(redis_client, "redis_client", None) if redis_client else None
+    redis_client = _get_redis_client(request)
     if redis_client is None:
         return
     with contextlib.suppress(Exception):

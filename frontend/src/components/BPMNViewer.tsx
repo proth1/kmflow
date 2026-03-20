@@ -88,16 +88,14 @@ interface BpmnViewer {
         viewerRef.current.destroy();
       }
 
-      const viewer = new BpmnJS({
-        container: containerRef.current,
-      });
+      const viewer = new BpmnJS({ container: containerRef.current }) as unknown as BpmnViewer;
 
-      viewerRef.current = viewer as unknown as BpmnViewer;
+      viewerRef.current = viewer;
 
-      await (viewer as unknown as BpmnViewer).importXML(bpmnXml);
+      await viewer.importXML(bpmnXml);
 
       // Fit the diagram to the container
-      const canvas = (viewer as unknown as BpmnViewer).get("canvas");
+      const canvas = viewer.get("canvas");
       canvas.zoom("fit-viewport");
 
       // Add padding so overlays and pool headers aren't clipped
@@ -112,8 +110,8 @@ interface BpmnViewer {
 
       // Apply overlays
       if (showConfidenceOverlay || showEvidenceOverlay) {
-        const overlays = (viewer as unknown as BpmnViewer).get("overlays");
-        const elementRegistry = (viewer as unknown as BpmnViewer).get("elementRegistry");
+        const overlays = viewer.get("overlays");
+        const elementRegistry = viewer.get("elementRegistry");
 
         elementRegistry.forEach((element) => {
           if (!element.businessObject) return;
@@ -175,7 +173,7 @@ interface BpmnViewer {
 
       // Element click handler
       if (onElementClick) {
-        const eventBus = (viewer as unknown as BpmnViewer).get("eventBus");
+        const eventBus = viewer.get("eventBus");
         eventBus.on("element.click", (event) => {
           const element = event.element;
           if (element.businessObject?.name) {
