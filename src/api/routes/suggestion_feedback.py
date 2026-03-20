@@ -22,7 +22,7 @@ from src.core.models import (
     User,
     UserRole,
 )
-from src.core.permissions import require_permission
+from src.core.permissions import require_engagement_access, require_permission
 from src.core.services.suggestion_feedback import (
     build_exclusion_prompt,
     build_traceability_chain,
@@ -60,10 +60,9 @@ async def list_rejection_feedback(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """List all rejected suggestion patterns for an engagement."""
-    await _check_engagement_member(session, user, engagement_id)
-
     patterns = await get_rejection_patterns(session, engagement_id)
     return {
         "engagement_id": str(engagement_id),
@@ -77,14 +76,13 @@ async def get_exclusion_prompt(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Generate exclusion prompt text from rejected patterns.
 
     This text is injected into the LLM system prompt before generating
     new suggestions to avoid repeating previously rejected patterns.
     """
-    await _check_engagement_member(session, user, engagement_id)
-
     patterns = await get_rejection_patterns(session, engagement_id)
     prompt_text = build_exclusion_prompt(patterns)
     return {

@@ -34,6 +34,25 @@ def _make_app(mock_session: AsyncMock, user_role: UserRole = UserRole.ENGAGEMENT
     app.dependency_overrides[get_session] = lambda: mock_session
     app.dependency_overrides[get_current_user] = lambda: _mock_user(user_role)
     app.state.neo4j_driver = MagicMock()
+
+    # require_engagement_access needs db_session_factory on app.state.
+    # Return a mock member so the access check passes.
+    member_session = AsyncMock()
+    member_result = MagicMock()
+    member_result.scalar_one_or_none.return_value = MagicMock()  # Non-None = is a member
+    member_session.execute = AsyncMock(return_value=member_result)
+
+    class _MockFactory:
+        def __call__(self):  # noqa: ANN204
+            return self
+
+        async def __aenter__(self):  # noqa: ANN204
+            return member_session
+
+        async def __aexit__(self, *args):  # noqa: ANN002, ANN204
+            pass
+
+    app.state.db_session_factory = _MockFactory()
     return app
 
 

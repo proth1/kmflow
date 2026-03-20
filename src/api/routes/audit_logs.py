@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.deps import get_session
 from src.core.models import AuditAction, AuditLog, User
 from src.core.models.auth import UserRole
-from src.core.permissions import require_role
+from src.core.permissions import check_engagement_access, require_role
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +68,7 @@ class PaginatedAuditLogResponse(BaseModel):
     summary="Query audit logs with filtering and pagination",
 )
 async def list_audit_logs(
+    request: Request,
     user_id: UUID | None = Query(None, description="Filter by user_id"),
     engagement_id: UUID | None = Query(None, description="Filter by engagement_id"),
     action: AuditAction | None = Query(None, description="Filter by action type"),
@@ -84,6 +85,9 @@ async def list_audit_logs(
     Requires PLATFORM_ADMIN role. Returns paginated results ordered by
     created_at descending (newest first).
     """
+    if engagement_id:
+        await check_engagement_access(engagement_id, request, current_user)
+
     base_query = select(AuditLog)
     count_query = select(func.count(AuditLog.id))
 

@@ -178,7 +178,19 @@ class TestEngagementAccessControl:
 
         app = create_app()
         app.state.neo4j_driver = MagicMock()
-        app.state.db_session_factory = AsyncMock()
+
+        # require_engagement_access uses db_session_factory as async context manager
+        class _MockFactory:
+            def __call__(self) -> _MockFactory:
+                return self
+
+            async def __aenter__(self) -> AsyncMock:
+                return session
+
+            async def __aexit__(self, *args: Any) -> None:
+                pass
+
+        app.state.db_session_factory = _MockFactory()
         app.dependency_overrides[get_session] = lambda: session
         app.dependency_overrides[get_current_user] = lambda: non_admin
         client = TestClient(app)
@@ -213,7 +225,18 @@ class TestEngagementAccessControl:
 
         app = create_app()
         app.state.neo4j_driver = MagicMock()
-        app.state.db_session_factory = AsyncMock()
+
+        class _MockFactory2:
+            def __call__(self) -> _MockFactory2:
+                return self
+
+            async def __aenter__(self) -> AsyncMock:
+                return session
+
+            async def __aexit__(self, *args: Any) -> None:
+                pass
+
+        app.state.db_session_factory = _MockFactory2()
         app.dependency_overrides[get_session] = lambda: session
         app.dependency_overrides[get_current_user] = lambda: non_admin
         client = TestClient(app)

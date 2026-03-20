@@ -279,6 +279,41 @@ async def verify_engagement_member(
         )
 
 
+async def check_engagement_access(
+    engagement_id: UUID,
+    request: Request,
+    user: User,
+) -> None:
+    """Check engagement membership for non-path-param routes.
+
+    Unlike ``require_engagement_access`` (a FastAPI dependency that extracts
+    engagement_id from the path), this is a plain async function that can be
+    called from any handler with an engagement_id obtained from a query param
+    or request body.
+
+    Platform admins bypass the check.
+
+    Raises:
+        HTTPException 403: If the user is not a member.
+    """
+    if user.role == UserRole.PLATFORM_ADMIN:
+        return
+    session_factory = request.app.state.db_session_factory
+    async with session_factory() as session:
+        result = await session.execute(
+            select(EngagementMember).where(
+                EngagementMember.engagement_id == engagement_id,
+                EngagementMember.user_id == user.id,
+            )
+        )
+        member = result.scalar_one_or_none()
+    if member is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Not a member of engagement {engagement_id}",
+        )
+
+
 def require_classification_access(classification: DataClassification, user: User) -> None:
     """Enforce data classification access rules.
 

@@ -10,7 +10,7 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,7 +27,7 @@ from src.core.models import (
     ReferenceProcessModel,
     User,
 )
-from src.core.permissions import require_permission
+from src.core.permissions import check_engagement_access, require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -326,6 +326,7 @@ async def get_conformance_result(
 
 @router.get("/results", response_model=ConformanceResultList)
 async def list_conformance_results(
+    request: Request,
     engagement_id: UUID | None = None,
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
@@ -333,6 +334,9 @@ async def list_conformance_results(
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     """List conformance check results."""
+    if engagement_id:
+        await check_engagement_access(engagement_id, request, user)
+
     query = select(ConformanceResult)
     count_query = select(func.count(ConformanceResult.id))
     if engagement_id:
