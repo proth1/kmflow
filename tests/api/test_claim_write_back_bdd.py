@@ -71,7 +71,7 @@ class TestSupportsEdgeCreation:
         # First call creates the Claim node
         first_call = graph.run_write_query.call_args_list[0]
         cypher = first_call[0][0]
-        assert "MERGE (c:Claim" in cypher
+        assert "MERGE (c:SurveyClaim" in cypher
         assert "claim_text" in cypher
 
     @pytest.mark.asyncio

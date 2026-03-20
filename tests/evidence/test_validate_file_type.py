@@ -118,16 +118,7 @@ class TestValidateFileType:
             validate_file_type(b"data", "script.sh", mime_type="application/x-shellscript")
         assert "application/x-shellscript" in str(exc_info.value)
 
-    def test_magic_unavailable_falls_back_to_client_mime(self) -> None:
-        """When python-magic is not installed, should fall back to client-provided MIME type."""
-        with patch.dict("sys.modules", {"magic": None}):
-            result = validate_file_type(b"content", "file.pdf", mime_type="application/pdf")
-        assert result == "application/pdf"
-
-    def test_magic_unavailable_none_mime_falls_back_to_octet_stream(self) -> None:
-        """When python-magic is unavailable and mime_type is None, falls back to octet-stream.
-        Accepted only for known evidence extensions such as .bpmn.
-        """
-        with patch.dict("sys.modules", {"magic": None}):
-            result = validate_file_type(b"<bpmn>", "process.bpmn", mime_type=None)
-        assert result == "application/octet-stream"
+    def test_magic_unavailable_raises_import_error(self) -> None:
+        """When python-magic is not installed, should raise ImportError (hard dependency)."""
+        with patch.dict("sys.modules", {"magic": None}), pytest.raises(ImportError, match="python-magic is required"):
+            validate_file_type(b"content", "file.pdf", mime_type="application/pdf")
