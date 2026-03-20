@@ -400,7 +400,7 @@ async def task_progress_websocket(
                 pass
     except WebSocketDisconnect:
         logger.debug("Task progress WS disconnected: task=%s", task_id)
-    except Exception:
+    except Exception:  # Intentionally broad: WebSocket event loop must not crash
         logger.exception("Task progress WS error: task=%s", task_id)
     finally:
         await pubsub.unsubscribe(CHANNEL_TASKS)

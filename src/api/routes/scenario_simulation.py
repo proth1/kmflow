@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from src.api.background import track_background_task
 from src.api.deps import get_session
 from src.core.audit import log_audit
 from src.core.models import (
@@ -37,9 +38,6 @@ from src.core.services.scenario_simulation import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["scenario-simulation"])
-
-# Strong references to background tasks to prevent GC
-_background_tasks: set[asyncio.Task[None]] = set()
 
 
 @router.post(
@@ -80,8 +78,7 @@ async def trigger_simulation(
     # Launch simulation in background with session factory from app state
     session_factory = request.app.state.db_session_factory
     task = asyncio.create_task(_run_simulation_task(scenario_id, sim_result.id, session_factory))
-    _background_tasks.add(task)
-    task.add_done_callback(_background_tasks.discard)
+    track_background_task(task)
 
     return {
         "task_id": str(sim_result.id),

@@ -12,6 +12,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from src.core.models.evidence import EvidenceFragment, EvidenceItem
 from src.pov.extraction import extract_from_evidence
 from src.semantic.entity_extraction import (
     EntityType,
@@ -34,7 +35,7 @@ def _make_evidence_item(
     freshness_score: float = 0.8,
 ) -> MagicMock:
     """Create a mock EvidenceItem."""
-    item = MagicMock()
+    item = MagicMock(spec=EvidenceItem)
     item.id = uuid.UUID(evidence_id) if evidence_id else uuid.uuid4()
     item.category = category
     item.quality_score = quality_score
@@ -50,7 +51,7 @@ def _make_fragment(
     fragment_id: uuid.UUID | None = None,
 ) -> MagicMock:
     """Create a mock EvidenceFragment."""
-    frag = MagicMock()
+    frag = MagicMock(spec=EvidenceFragment)
     frag.id = fragment_id or uuid.uuid4()
     frag.evidence_id = evidence_id or uuid.uuid4()
     frag.content = content

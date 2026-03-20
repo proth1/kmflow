@@ -37,6 +37,8 @@ from src.api.schemas.governance import (
     MigrationResultResponse,
     PolicyEvaluateRequest,
     PolicyEvaluateResponse,
+    PolicyListResponse,
+    SLABreachAlertResponse,
     SLACheckResponse,
 )
 from src.core.audit import log_audit
@@ -233,7 +235,7 @@ async def delete_catalog_entry(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/policies")
+@router.get("/policies", response_model=PolicyListResponse)
 async def list_policies(
     user: User = Depends(require_permission("governance:read")),
 ) -> dict[str, Any]:
@@ -245,7 +247,6 @@ async def list_policies(
     """
     engine = PolicyEngine()
     return {
-        "policy_file": str(engine.policy_file),
         "policies": engine.policies,
     }
 
@@ -411,6 +412,7 @@ async def trigger_migration(
 
 @router.post(
     "/alerts/{engagement_id}",
+    response_model=list[SLABreachAlertResponse],
     status_code=status.HTTP_200_OK,
 )
 async def check_sla_and_create_alerts(

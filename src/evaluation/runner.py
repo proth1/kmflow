@@ -85,7 +85,7 @@ async def run_nightly_evaluation(
                 )
             else:
                 logger.info("No active golden queries for engagement %s — skipping retrieval eval", engagement_id)
-        except Exception:
+        except Exception:  # Intentionally broad: eval sub-steps must not abort the per-engagement loop
             logger.exception("Retrieval eval failed for engagement %s", engagement_id)
             engagement_result["errors"].append("retrieval_eval_failed")
 
@@ -116,7 +116,7 @@ async def run_nightly_evaluation(
                     "No entity annotations for engagement %s — skipping entity extraction eval",
                     engagement_id,
                 )
-        except Exception:
+        except Exception:  # Intentionally broad: eval sub-steps must not abort the per-engagement loop
             logger.exception("Entity extraction eval failed for engagement %s", engagement_id)
             engagement_result["errors"].append("entity_eval_failed")
 
@@ -133,7 +133,7 @@ async def run_nightly_evaluation(
                 engagement_id,
                 graph_health.get("orphan_node_count"),  # type: ignore[attr-defined]
             )
-        except Exception:
+        except Exception:  # Intentionally broad: eval sub-steps must not abort the per-engagement loop
             logger.exception("Graph health eval failed for engagement %s", engagement_id)
             engagement_result["errors"].append("graph_health_eval_failed")
 
@@ -152,7 +152,7 @@ async def run_nightly_evaluation(
                     len(regressions),
                     engagement_id,
                 )
-        except Exception:
+        except Exception:  # Intentionally broad: eval sub-steps must not abort the per-engagement loop
             logger.exception("Regression detection failed for engagement %s", engagement_id)
             engagement_result["errors"].append("regression_detection_failed")
 

@@ -241,7 +241,7 @@ class SequenceConflictDetector:
                 """,
                 {"engagement_id": engagement_id, "limit": 500},
             )
-        except Exception:
+        except Exception:  # Intentionally broad: Neo4j driver errors vary by version and connection state
             logger.exception("Failed to query sequence conflicts for %s", engagement_id)
             return conflicts
 
@@ -310,7 +310,7 @@ class RoleConflictDetector:
                 """,
                 {"engagement_id": engagement_id, "limit": 500},
             )
-        except Exception:
+        except Exception:  # Intentionally broad: Neo4j driver errors vary by version and connection state
             logger.exception("Failed to query role conflicts for %s", engagement_id)
             return conflicts
 
@@ -390,7 +390,7 @@ class RuleConflictDetector:
                 """,
                 {"engagement_id": engagement_id, "limit": 500},
             )
-        except Exception:
+        except Exception:  # Intentionally broad: Neo4j driver errors vary by version and connection state
             logger.exception("Failed to query rule conflicts for %s", engagement_id)
             return conflicts
 
@@ -496,7 +496,7 @@ class ExistenceConflictDetector:
                 """,
                 {"engagement_id": engagement_id, "limit": 500},
             )
-        except Exception:
+        except Exception:  # Intentionally broad: Neo4j driver errors vary by version and connection state
             logger.exception("Failed to query existence conflicts for %s", engagement_id)
             return conflicts
 
@@ -604,7 +604,7 @@ class IOMismatchDetector:
                 """,
                 {"engagement_id": engagement_id, "limit": 500},
             )
-        except Exception:
+        except Exception:  # Intentionally broad: Neo4j driver errors vary by version and connection state
             logger.exception("Failed to query I/O mismatches for %s", engagement_id)
             return conflicts
 
@@ -717,7 +717,7 @@ class ControlGapDetector:
                 """,
                 {"engagement_id": engagement_id, "limit": 500},
             )
-        except Exception:
+        except Exception:  # Intentionally broad: Neo4j driver errors vary by version and connection state
             logger.exception("Failed to query control gaps for %s", engagement_id)
             return conflicts
 

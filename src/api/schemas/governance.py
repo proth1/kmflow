@@ -16,6 +16,42 @@ from src.core.models import (
 )
 
 # ---------------------------------------------------------------------------
+# Policy List Schema
+# ---------------------------------------------------------------------------
+
+
+class PolicyListResponse(BaseModel):
+    """Response schema for listing active governance policies."""
+
+    policy_file: str | None = None
+    policies: dict[str, Any]
+
+
+# ---------------------------------------------------------------------------
+# Alert Schema
+# ---------------------------------------------------------------------------
+
+
+class SLABreachAlertResponse(BaseModel):
+    """Response schema for a single SLA breach alert created by the alerting service."""
+
+    id: str
+    engagement_id: str
+    monitoring_job_id: str
+    severity: str
+    status: str
+    title: str
+    description: str | None = None
+    dedup_key: str
+    catalog_entry_id: str
+    catalog_entry_name: str
+    violation_metric: str
+    violation_threshold: float
+    violation_actual: float
+    created_at: str
+
+
+# ---------------------------------------------------------------------------
 # Catalog Schemas
 # ---------------------------------------------------------------------------
 

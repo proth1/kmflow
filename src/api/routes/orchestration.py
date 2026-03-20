@@ -12,9 +12,83 @@ from typing import Any
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
 
 from src.core.models import User
 from src.core.permissions import require_permission
+
+# ---------------------------------------------------------------------------
+# Response schemas
+# ---------------------------------------------------------------------------
+
+
+class WorkflowDeployResult(BaseModel):
+    """Deployment result for a single BPMN file."""
+
+    file: str
+    deployment_id: str | None = None
+    name: str | None = None
+    deployed_definitions: list[str] = []
+
+
+class WorkflowDeployError(BaseModel):
+    """Deployment error for a single BPMN file."""
+
+    file: str
+    error: str
+
+
+class DeployAllResponse(BaseModel):
+    """Response schema for deploying all workflows."""
+
+    deployed: int
+    failed: int
+    total: int
+    results: list[WorkflowDeployResult]
+    errors: list[WorkflowDeployError]
+
+
+class ProcessInstanceSummary(BaseModel):
+    """Summary of a single process instance."""
+
+    id: str
+    business_key: str | None = None
+    process_definition_id: str | None = None
+    suspended: bool
+    incident_count: int
+
+
+class ProcessInstanceListResponse(BaseModel):
+    """Response schema for listing process instances."""
+
+    instances: list[ProcessInstanceSummary]
+    total: int
+
+
+class ProcessInstanceDetailResponse(BaseModel):
+    """Response schema for a single process instance detail."""
+
+    instance_id: str
+    activity_tree: dict[str, Any]
+    incidents: list[dict[str, Any]]
+    incident_count: int
+
+
+class RetryIncidentsResponse(BaseModel):
+    """Response schema for retrying process instance incidents."""
+
+    retried: int
+    total_incidents: int = 0
+    message: str | None = None
+    errors: list[str] = []
+
+
+class CancelInstanceResponse(BaseModel):
+    """Response schema for cancelling a process instance."""
+
+    instance_id: str
+    status: str
+
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +115,7 @@ def _get_camunda_client(request: Request):
     return client
 
 
-@router.post("/deploy")
+@router.post("/deploy", response_model=DeployAllResponse)
 async def deploy_all_workflows(
     request: Request,
     user: User = Depends(require_permission("engagement:update")),
@@ -91,7 +165,7 @@ async def deploy_all_workflows(
     }
 
 
-@router.get("/instances")
+@router.get("/instances", response_model=ProcessInstanceListResponse)
 async def list_process_instances(
     request: Request,
     active: bool = True,
@@ -137,7 +211,7 @@ async def list_process_instances(
         raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine") from e
 
 
-@router.get("/instances/{instance_id}")
+@router.get("/instances/{instance_id}", response_model=ProcessInstanceDetailResponse)
 async def get_process_instance_detail(
     instance_id: str,
     request: Request,
@@ -163,7 +237,7 @@ async def get_process_instance_detail(
         raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine") from e
 
 
-@router.post("/instances/{instance_id}/retry")
+@router.post("/instances/{instance_id}/retry", response_model=RetryIncidentsResponse)
 async def retry_instance_incidents(
     instance_id: str,
     request: Request,
@@ -199,7 +273,7 @@ async def retry_instance_incidents(
         raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine") from e
 
 
-@router.delete("/instances/{instance_id}")
+@router.delete("/instances/{instance_id}", response_model=CancelInstanceResponse)
 async def cancel_process_instance(
     instance_id: str,
     request: Request,
