@@ -3,6 +3,21 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.238] - 2026-03-19
+### Changed
+- Extract 104 inline Pydantic schemas from 6 route files to `src/api/schemas/` (#631)
+- BPMNViewer: consolidate 6 double casts to single typed cast at construction (#631)
+- EmbeddingService: use FastAPI dependency injection in graph.py (#631)
+### Security
+- Classification enforcement on `list_evidence` and `get_fragments` for CLIENT_VIEWER (#631)
+- Rate limit 429 response format aligned between middleware paths (#631)
+- Neo4j MERGE patterns now include labels for index usage (#631)
+### Fixed
+- Extract `_get_redis_client()` helper for DRY in auth lockout (#631)
+- Fix `list_evidence` pagination total count leak for RESTRICTED items (#631)
+### Added
+- 106 new tests: simulation engine (37), watermark extractor (20), worker dispatch (16), monitoring worker (17), auth lockout (16) (#631)
+
 ## [2026.03.237] - 2026-03-19
 ### Security
 - Add engagement membership checks to 6 POV model-ID routes and 4 evidence routes (IDOR fix) (#629)
