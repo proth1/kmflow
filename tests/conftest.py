@@ -301,6 +301,39 @@ async def test_app(
 
 
 @pytest.fixture
+async def analyst_user() -> MagicMock:
+    """Non-admin user fixture for RBAC testing."""
+    user = MagicMock(spec=User)
+    user.id = uuid.uuid4()
+    user.email = "analyst@kmflow.dev"
+    user.name = "Test Analyst"
+    user.role = UserRole.PROCESS_ANALYST
+    user.is_active = True
+    return user
+
+
+@pytest.fixture
+async def analyst_client(test_app: Any, analyst_user: MagicMock) -> AsyncGenerator[AsyncClient, None]:
+    """HTTP test client authenticated as a non-admin process analyst.
+
+    Use this fixture to verify that endpoints correctly enforce RBAC
+    and reject requests from users without admin/elevated permissions.
+    """
+    test_app.dependency_overrides[get_current_user] = lambda: analyst_user
+    transport = ASGITransport(app=test_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+    # Restore admin override after test completes
+    mock_user = MagicMock(spec=User)
+    mock_user.id = uuid.uuid4()
+    mock_user.email = "testuser@kmflow.dev"
+    mock_user.name = "Test User"
+    mock_user.role = UserRole.PLATFORM_ADMIN
+    mock_user.is_active = True
+    test_app.dependency_overrides[get_current_user] = lambda: mock_user
+
+
+@pytest.fixture
 async def client(test_app: Any) -> AsyncGenerator[AsyncClient, None]:
     """Create an async HTTP test client."""
     transport = ASGITransport(app=test_app)
