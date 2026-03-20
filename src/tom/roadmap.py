@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.models import GapAnalysisResult, TOMGapType
+from src.semantic.bridges.process_evidence import EmbeddingServiceProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +87,7 @@ class RoadmapGenerator:
         session: AsyncSession,
         engagement_id: str,
         tom_id: str,
-        embedding_service: Any | None = None,
+        embedding_service: EmbeddingServiceProtocol | None = None,
     ) -> TransformationRoadmap:
         """Generate a transformation roadmap from gap analysis results.
 

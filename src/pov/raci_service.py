@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from neo4j import AsyncDriver
+from neo4j.exceptions import Neo4jError
 
 from src.core.models.raci import RACIAssignment
 
@@ -158,7 +159,7 @@ class RACIDerivationService:
         try:
             async with self._driver.session() as session:
                 records = await session.execute_read(_tx)
-        except Exception:
+        except Neo4jError:
             logger.debug("Edge type %s not found or query failed for engagement %s", edge_type, engagement_id)
             return []
 

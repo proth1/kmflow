@@ -215,7 +215,7 @@ class PovGenerationWorker(TaskWorker):
                 )
                 state.completed_steps.append(result)
 
-            except Exception as exc:
+            except Exception as exc:  # Intentionally broad: top-level error boundary for pipeline step isolation
                 duration = int((time.monotonic() - step_start) * 1000)
                 state.failed_step = PovStepResult(
                     step_number=step_num,

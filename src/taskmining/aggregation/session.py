@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from src.core.models.taskmining import DesktopEventType
-from src.core.utils.datetime_utils import parse_iso_timestamp
+from src.core.timestamps import parse_timestamp as _parse_timestamp_shared
 
 logger = logging.getLogger(__name__)
 
@@ -191,6 +191,9 @@ class SessionAggregator:
 def _parse_timestamp(ts: str | datetime) -> datetime:
     """Parse an ISO 8601 timestamp string or return a datetime as-is.
 
-    Delegates to :func:`~src.core.utils.datetime_utils.parse_iso_timestamp`.
+    Delegates to :func:`~src.core.timestamps.parse_timestamp`.
     """
-    return parse_iso_timestamp(ts)
+    result = _parse_timestamp_shared(ts)
+    if result is None:
+        raise ValueError(f"Cannot parse timestamp: {ts!r}")
+    return result

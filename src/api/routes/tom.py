@@ -4,7 +4,7 @@ Provides CRUD operations for target operating models, gap analysis results,
 best practices, and benchmarks.
 """
 
-# TODO(audit-B1-001): Split into tom/ sub-package: core, gaps, benchmarks, roadmaps, maturity, alignment
+# FUTURE(audit-B1-001): Split into tom/ sub-package: core, gaps, benchmarks, roadmaps, maturity, alignment
 
 from __future__ import annotations
 

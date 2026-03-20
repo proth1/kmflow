@@ -20,7 +20,7 @@ from src.core.models import (
     TOMDimension,
     TOMGapType,
 )
-from src.semantic.graph import KnowledgeGraphService
+from src.semantic.graph import GraphStats, KnowledgeGraphService
 
 logger = logging.getLogger(__name__)
 
@@ -178,7 +178,7 @@ class TOMAlignmentEngine:
     def assess_dimension_maturity(
         self,
         dimension: str,
-        stats: Any,
+        stats: GraphStats,
     ) -> float:
         """Assess current maturity for a TOM dimension based on graph evidence.
 

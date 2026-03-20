@@ -117,8 +117,9 @@ async def log_security_event(
     # For events not tied to an engagement (e.g. LOGIN, PERMISSION_DENIED at
     # the auth layer), we emit a WARNING-level structured log record so the
     # event is never silently lost and SIEM tooling will capture it.
-    # TODO: Add a security_events table without an engagement FK so these
+    # FUTURE: Add a security_events table without an engagement FK so these
     # events can be persisted to the database instead of the log stream.
+    # Requires a new Alembic migration.
     if engagement_id is None:
         logger.warning(
             "SECURITY_EVENT action=%s actor=%s details=%s",

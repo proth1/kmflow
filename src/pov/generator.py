@@ -69,6 +69,109 @@ class GenerationResult:
     stats: dict[str, int] = field(default_factory=dict)
 
 
+def _persist_elements(
+    session: AsyncSession,
+    model: ProcessModel,
+    scored: list,
+) -> list[ProcessElement]:
+    """Persist scored process elements to the database session.
+
+    Args:
+        session: Async database session.
+        model: The parent ProcessModel.
+        scored: List of (ScoredElement, score, level) tuples from score_all_elements.
+
+    Returns:
+        List of persisted ProcessElement ORM objects (not yet flushed).
+    """
+    element_records: list[ProcessElement] = []
+    for elem, score, level in scored:
+        entity = elem.triangulated.entity
+        element_type = _ENTITY_TYPE_MAP.get(entity.entity_type, ProcessElementType.ACTIVITY)
+
+        pe = ProcessElement(
+            id=uuid.uuid4(),
+            model_id=model.id,
+            element_type=element_type,
+            name=entity.name,
+            confidence_score=round(score, 4),
+            triangulation_score=round(elem.triangulated.triangulation_score, 4),
+            corroboration_level=elem.triangulated.corroboration_level,
+            evidence_count=elem.triangulated.source_count,
+            evidence_ids=elem.triangulated.evidence_ids,
+            metadata_json={
+                "confidence_level": level,
+                "entity_type": str(entity.entity_type),
+                "weighted_vote_score": round(elem.weighted_vote_score, 4),
+            },
+        )
+        session.add(pe)
+        element_records.append(pe)
+    return element_records
+
+
+def _persist_contradictions(
+    session: AsyncSession,
+    model: ProcessModel,
+    contradictions: list,
+) -> list[Contradiction]:
+    """Persist detected contradictions to the database session.
+
+    Args:
+        session: Async database session.
+        model: The parent ProcessModel.
+        contradictions: List of DetectedContradiction objects.
+
+    Returns:
+        List of persisted Contradiction ORM objects (not yet flushed).
+    """
+    records: list[Contradiction] = []
+    for c in contradictions:
+        cr = Contradiction(
+            id=uuid.uuid4(),
+            model_id=model.id,
+            element_name=c.element_name,
+            field_name=c.field_name,
+            values=c.values,
+            resolution_value=c.resolution_value,
+            resolution_reason=c.resolution_reason,
+            evidence_ids=c.evidence_ids,
+        )
+        session.add(cr)
+        records.append(cr)
+    return records
+
+
+def _persist_gaps(
+    session: AsyncSession,
+    model: ProcessModel,
+    gaps: list,
+) -> list[EvidenceGap]:
+    """Persist evidence gaps to the database session.
+
+    Args:
+        session: Async database session.
+        model: The parent ProcessModel.
+        gaps: List of EvidenceGapSpec objects from detect_gaps.
+
+    Returns:
+        List of persisted EvidenceGap ORM objects (not yet flushed).
+    """
+    records: list[EvidenceGap] = []
+    for g in gaps:
+        gr = EvidenceGap(
+            id=uuid.uuid4(),
+            model_id=model.id,
+            gap_type=g.gap_type,
+            description=g.description,
+            severity=g.severity,
+            recommendation=g.recommendation,
+        )
+        session.add(gr)
+        records.append(gr)
+    return records
+
+
 async def generate_pov(
     session: AsyncSession,
     engagement_id: str,
@@ -136,90 +239,27 @@ async def generate_pov(
                 error="No entities could be extracted from the evidence",
             )
 
-        # Step 3: Triangulate across sources
+        # Steps 3-8: Run the consensus pipeline
         triangulated = triangulate_elements(
             extraction.entities,
             extraction.entity_to_evidence,
             aggregated.evidence_items,
         )
-
-        # Step 4: Build consensus
         consensus_result = build_consensus(triangulated, aggregated.evidence_items)
-        consensus = consensus_result.elements
-
-        # Step 5: Detect and resolve contradictions
         contradiction_result = resolve_contradictions(
             consensus_result.conflict_stubs,
             aggregated.evidence_items,
         )
         contradictions = flatten_to_detected_contradictions(contradiction_result)
-
-        # Step 6: Score confidence
-        scored = score_all_elements(consensus, aggregated.evidence_items)
-
-        # Step 7: Assemble BPMN
+        scored = score_all_elements(consensus_result.elements, aggregated.evidence_items)
         bpmn_xml = assemble_bpmn(scored, process_name=f"POV: {scope}")
+        gaps = detect_gaps(consensus_result.elements, scored, aggregated.evidence_items)
 
-        # Step 8: Detect gaps
-        gaps = detect_gaps(consensus, scored, aggregated.evidence_items)
-
-        # Calculate overall model confidence
+        # Persist all records
         overall_confidence = sum(s[1] for s in scored) / len(scored) if scored else 0.0
-
-        # Persist elements
-        element_records: list[ProcessElement] = []
-        for elem, score, level in scored:
-            entity = elem.triangulated.entity
-            element_type = _ENTITY_TYPE_MAP.get(entity.entity_type, ProcessElementType.ACTIVITY)
-
-            pe = ProcessElement(
-                id=uuid.uuid4(),
-                model_id=model.id,
-                element_type=element_type,
-                name=entity.name,
-                confidence_score=round(score, 4),
-                triangulation_score=round(elem.triangulated.triangulation_score, 4),
-                corroboration_level=elem.triangulated.corroboration_level,
-                evidence_count=elem.triangulated.source_count,
-                evidence_ids=elem.triangulated.evidence_ids,
-                metadata_json={
-                    "confidence_level": level,
-                    "entity_type": str(entity.entity_type),
-                    "weighted_vote_score": round(elem.weighted_vote_score, 4),
-                },
-            )
-            session.add(pe)
-            element_records.append(pe)
-
-        # Persist contradictions
-        contradiction_records: list[Contradiction] = []
-        for c in contradictions:
-            cr = Contradiction(
-                id=uuid.uuid4(),
-                model_id=model.id,
-                element_name=c.element_name,
-                field_name=c.field_name,
-                values=c.values,
-                resolution_value=c.resolution_value,
-                resolution_reason=c.resolution_reason,
-                evidence_ids=c.evidence_ids,
-            )
-            session.add(cr)
-            contradiction_records.append(cr)
-
-        # Persist gaps
-        gap_records: list[EvidenceGap] = []
-        for g in gaps:
-            gr = EvidenceGap(
-                id=uuid.uuid4(),
-                model_id=model.id,
-                gap_type=g.gap_type,
-                description=g.description,
-                severity=g.severity,
-                recommendation=g.recommendation,
-            )
-            session.add(gr)
-            gap_records.append(gr)
+        element_records = _persist_elements(session, model, scored)
+        contradiction_records = _persist_contradictions(session, model, contradictions)
+        gap_records = _persist_gaps(session, model, gaps)
 
         # Update the process model
         model.status = ProcessModelStatus.COMPLETED

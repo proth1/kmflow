@@ -68,7 +68,7 @@ class LayoutAwareDocumentParser(BaseParser):
         except ImportError:
             logger.info("Unstructured not installed, falling back to pdfplumber")
             return await self._fallback_parse(file_path)
-        except Exception as e:
+        except Exception as e:  # Intentionally broad: parser library exceptions vary by format
             logger.warning("Unstructured parse failed, falling back: %s", e)
             return await self._fallback_parse(file_path)
 

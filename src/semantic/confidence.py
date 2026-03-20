@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 
-# TODO(audit-B2-001): Move ConfidenceScore to src/core/models/confidence.py so it can be shared
+# FUTURE(audit-B2-001): Move ConfidenceScore to src/core/models/confidence.py so it can be shared
 # without importing from api/schemas in service-layer code.
 from src.api.schemas.confidence import ConfidenceScore
 from src.pov.constants import (

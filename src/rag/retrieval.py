@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
+from neo4j import AsyncDriver
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -130,7 +131,7 @@ class HybridRetriever:
     def __init__(
         self,
         embedding_service: EmbeddingService | None = None,
-        neo4j_driver: Any = None,
+        neo4j_driver: AsyncDriver | None = None,
     ):
         self.embedding_service = embedding_service or EmbeddingService()
         self.neo4j_driver = neo4j_driver

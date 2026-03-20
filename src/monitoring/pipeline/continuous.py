@@ -29,6 +29,7 @@ EVIDENCE_CONSUMER_GROUP = "evidence_pipeline_workers"
 # Quality warning window and defaults
 QUALITY_WINDOW_MINUTES = 10
 DEFAULT_QUALITY_THRESHOLD = 0.6
+CONSUMER_ERROR_RETRY_DELAY_SECONDS = 1  # Backoff delay before retrying after a consumer error
 
 
 class ContinuousEvidencePipeline:
@@ -118,7 +119,7 @@ class ContinuousEvidencePipeline:
                 if not shutdown_event.is_set():
                     import asyncio
 
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(CONSUMER_ERROR_RETRY_DELAY_SECONDS)
 
         logger.info("Evidence pipeline consumer %s stopped", consumer_name)
 

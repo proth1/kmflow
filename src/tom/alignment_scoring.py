@@ -34,6 +34,8 @@ from src.core.models import (
     TOMDimension,
     TOMGapType,
 )
+from src.semantic.bridges.process_evidence import EmbeddingServiceProtocol
+from src.semantic.graph import KnowledgeGraphService
 
 logger = logging.getLogger(__name__)
 
@@ -87,8 +89,8 @@ class AlignmentScoringService:
 
     def __init__(
         self,
-        graph_service: Any,
-        embedding_service: Any | None = None,
+        graph_service: KnowledgeGraphService,
+        embedding_service: EmbeddingServiceProtocol | None = None,
     ) -> None:
         self._graph = graph_service
         self._embedding = embedding_service
