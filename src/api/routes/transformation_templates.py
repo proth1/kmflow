@@ -64,10 +64,34 @@ class SuggestionDecisionRequest(BaseModel):
     action: Literal["accept", "reject"]
 
 
+class TemplateListResponse(BaseModel):
+    """Response from listing available templates."""
+
+    templates: list[dict[str, Any]]
+    count: int
+
+
+class ApplyTemplatesResponse(BaseModel):
+    """Response from applying templates to a scenario."""
+
+    scenario_id: str
+    suggestions: list[dict[str, Any]]
+    suggestion_count: int
+
+
+class SuggestionStatusResponse(BaseModel):
+    """Response from accepting or rejecting a suggestion."""
+
+    suggestion_id: str
+    scenario_id: str
+    status: str
+    action: str
+
+
 # -- Endpoints ---
 
 
-@router.get("/templates")
+@router.get("/templates", response_model=TemplateListResponse)
 async def list_templates(
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
@@ -79,7 +103,7 @@ async def list_templates(
     }
 
 
-@router.post("/scenarios/{scenario_id}/templates/apply")
+@router.post("/scenarios/{scenario_id}/templates/apply", response_model=ApplyTemplatesResponse)
 async def apply_templates_to_scenario(
     scenario_id: UUID,
     body: ApplyTemplatesRequest,
@@ -118,7 +142,7 @@ async def apply_templates_to_scenario(
     }
 
 
-@router.patch("/scenarios/{scenario_id}/suggestions/{suggestion_id}")
+@router.patch("/scenarios/{scenario_id}/suggestions/{suggestion_id}", response_model=SuggestionStatusResponse)
 async def update_suggestion_status(
     scenario_id: UUID,
     suggestion_id: str,

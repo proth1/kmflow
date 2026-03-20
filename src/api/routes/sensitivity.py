@@ -52,7 +52,7 @@ async def _load_assumptions(session: AsyncSession, engagement_id: UUID) -> list[
     ]
 
 
-@router.post("/engagements/{engagement_id}/financial-analysis/sensitivity")
+@router.post("/engagements/{engagement_id}/financial-analysis/sensitivity", response_model=dict)
 async def run_sensitivity_analysis(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -67,7 +67,7 @@ async def run_sensitivity_analysis(
     return compute_sensitivity(inputs)
 
 
-@router.get("/engagements/{engagement_id}/financial-analysis/tornado")
+@router.get("/engagements/{engagement_id}/financial-analysis/tornado", response_model=dict)
 async def get_tornado_chart(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -87,7 +87,7 @@ async def get_tornado_chart(
     }
 
 
-@router.post("/engagements/{engagement_id}/financial-analysis/percentiles")
+@router.post("/engagements/{engagement_id}/financial-analysis/percentiles", response_model=dict)
 async def compute_percentiles(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),

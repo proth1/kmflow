@@ -8,9 +8,9 @@ Provides:
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,13 +23,32 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 
 
-@router.post("/retention-cleanup")
+class RetentionPreviewItem(BaseModel):
+    id: str
+    name: str
+
+
+class RetentionCleanupResponse(BaseModel):
+    dry_run: bool
+    status: str
+    would_clean_up: int | None = None
+    engagements: list[RetentionPreviewItem] | None = None
+    cleaned_up: int | None = None
+
+
+class KeyRotationResponse(BaseModel):
+    rotated: int
+    total: int
+    status: str
+
+
+@router.post("/retention-cleanup", response_model=RetentionCleanupResponse)
 async def run_retention_cleanup(
     user: User = Depends(require_role(UserRole.PLATFORM_ADMIN)),
     session: AsyncSession = Depends(get_session),
     dry_run: bool = Query(default=True),
     x_confirm_action: str | None = Header(default=None),
-) -> dict[str, Any]:
+) -> RetentionCleanupResponse:
     """Trigger data retention cleanup for expired engagements.
 
     Finds engagements where created_at + retention_days < now
@@ -43,12 +62,12 @@ async def run_retention_cleanup(
 
     if dry_run:
         expired = await find_expired_engagements(session)
-        return {
-            "dry_run": True,
-            "would_clean_up": len(expired),
-            "engagements": [{"id": str(eng.id), "name": eng.name} for eng in expired],
-            "status": "preview",
-        }
+        return RetentionCleanupResponse(
+            dry_run=True,
+            would_clean_up=len(expired),
+            engagements=[RetentionPreviewItem(id=str(eng.id), name=eng.name) for eng in expired],
+            status="preview",
+        )
 
     if x_confirm_action != "retention-cleanup":
         raise HTTPException(
@@ -57,14 +76,14 @@ async def run_retention_cleanup(
         )
 
     count = await cleanup_expired_engagements(session)
-    return {"dry_run": False, "cleaned_up": count, "status": "completed"}
+    return RetentionCleanupResponse(dry_run=False, cleaned_up=count, status="completed")
 
 
-@router.post("/rotate-encryption-key")
+@router.post("/rotate-encryption-key", response_model=KeyRotationResponse)
 async def rotate_encryption_key(
     user: User = Depends(require_role(UserRole.PLATFORM_ADMIN)),
     session: AsyncSession = Depends(get_session),
-) -> dict[str, Any]:
+) -> KeyRotationResponse:
     """Re-encrypt all integration credentials with the current key.
 
     Requires ENCRYPTION_KEY_PREVIOUS to be set to the old key and
@@ -99,8 +118,4 @@ async def rotate_encryption_key(
             detail=f"Key rotation failed and was rolled back. {rotated} credentials were NOT persisted.",
         ) from e
 
-    return {
-        "rotated": rotated,
-        "total": len(connections),
-        "status": "completed",
-    }
+    return KeyRotationResponse(rotated=rotated, total=len(connections), status="completed")

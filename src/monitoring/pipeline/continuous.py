@@ -8,6 +8,7 @@ evidence quality drops below configured thresholds.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from collections import deque
@@ -72,7 +73,7 @@ class ContinuousEvidencePipeline:
         """Access the pipeline's metrics collector."""
         return self._metrics
 
-    async def start(self, consumer_name: str, shutdown_event: Any) -> None:
+    async def start(self, consumer_name: str, shutdown_event: asyncio.Event) -> None:
         """Start consuming evidence from the Redis stream.
 
         Args:

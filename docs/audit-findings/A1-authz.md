@@ -1,175 +1,309 @@
 # A1: Authorization & Authentication Audit
 
 **Agent**: A1 (AuthZ Auditor)
-**Date**: 2026-03-19
-**Scope**: JWT authentication, RBAC enforcement, multi-tenancy isolation, MCP authentication
-**Files Reviewed**: 78 route files, core auth/permissions/config/security modules, MCP auth
+**Date**: 2026-03-20
+**Scope**: JWT authentication, RBAC enforcement, multi-tenancy isolation, MCP authentication, CSRF protection
 
----
+## Summary
 
-## Executive Summary
+| Severity | Count |
+|----------|-------|
+| CRITICAL | 1 |
+| HIGH     | 3 |
+| MEDIUM   | 4 |
+| LOW      | 5 |
+| **Total** | **13** |
 
-The KMFlow authorization layer is **well-implemented** with strong fundamentals: JWT token blacklisting with fail-closed Redis behavior, proper token type separation, bcrypt password hashing, HMAC-safe API key comparison, HttpOnly/Secure/SameSite cookie attributes, production startup secret validation (covering JWT, encryption, Postgres, Neo4j, watermark, auth_dev_mode, and debug), and comprehensive engagement membership checks (`require_engagement_access`) across 44+ route files. MCP tool handlers correctly verify engagement membership per-tool.
+## Lessons Learned Counts
 
-However, the audit identified **5 findings** across severity levels. The most significant issue is a set of POV and evidence routes that check permission-level authorization (e.g., `pov:read`) but skip engagement-scoped membership checks when accessed by `model_id` or `evidence_id` rather than `engagement_id`, enabling cross-tenant data access for any authenticated user with the correct role permissions.
-
-**Security Score**: 8.0 / 10
+1. **Routes missing `response_model=`**: ~55 routes (across assumptions, survey_claims, survey_sessions, transformation_templates, replay, governance export, raci export, decisions, cost_modeling, sensitivity, regulatory overlay/compliance/ungoverned, assessment_matrix, reports, scenario_comparison, evidence_coverage, suggestion_feedback, scenario_simulation, admin, ws/status, tom export, copilot stream, evidence download, seed_lists, portal upload)
+2. **ID routes missing engagement access checks**: 0 significant gaps (most engagement-scoped routes use `require_engagement_access` or manual membership checks)
+3. **Broad `except Exception` without justification comment**: 28 total across route files; 23 have justification comments ("Intentionally broad" or contextual logging), 5 lack explicit justification (validation.py:680, validation.py:697, pipeline_quality.py:416/421/426/434/439, graph.py:272/286, engagements.py:332, auth.py:56/104/119, tom.py:1739/1750/1761, reports.py:229, semantic.py:367, regulatory.py:283, scenario_simulation.py:205, integrations.py:105, copilot.py:198)
 
 ---
 
 ## Findings
 
-### [HIGH] IDOR: POV Model-ID Routes Skip Engagement Membership Check
-**File**: `src/api/routes/pov.py:445-469`
+### [CRITICAL] AUTH-BYPASS: Dev mode auto-authenticates as platform_admin without token
+
+**File**: `src/core/auth.py:372-382`
 **Agent**: A1 (AuthZ Auditor)
 **Evidence**:
 ```python
-@router.get("/{model_id}", response_model=ProcessModelResponse)
-async def get_process_model(
-    model_id: str,
-    session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("pov:read")),
+# Dev mode: auto-authenticate as the first platform_admin user
+if settings.auth_dev_mode:
+    session_factory = request.app.state.db_session_factory
+    async with session_factory() as session:
+        result = await session.execute(
+            select(User).where(User.role == "platform_admin", User.is_active == True).limit(1)
+        )
+        dev_user = result.scalar_one_or_none()
+```
+**Description**: When `auth_dev_mode=True`, any request without a token is auto-authenticated as the first `platform_admin` user in the database. This grants full administrative access with zero authentication. While dev mode requires `DEBUG=true` and is blocked in non-development environments by the `reject_default_secrets_in_production` validator (`src/core/config.py:237`), a misconfigured deployment could expose the entire system.
+**Risk**: If `APP_ENV=development` and `DEBUG=true` leak into a staging/production deployment, all endpoints become unauthenticated with admin privileges.
+**Recommendation**: Add an additional safeguard: bind dev mode to an explicit allowlist of IP addresses (e.g., `127.0.0.1` only) or require a dev-mode header. Log a WARN-level message on every auto-auth invocation (currently DEBUG level at line 381).
+
+---
+
+### [HIGH] TOKEN-BLACKLIST-FAIL-OPEN: Logout does not verify blacklisting succeeded
+
+**File**: `src/api/routes/auth.py:486-492`
+**Agent**: A1 (AuthZ Auditor)
+**Evidence**:
+```python
+# Blacklist the access token
+await blacklist_token(request, token)
+
+# Also blacklist the refresh token if present (prevents reuse after logout)
+refresh_token_value = request.cookies.get(REFRESH_COOKIE_NAME)
+if refresh_token_value:
+    await blacklist_token(request, refresh_token_value, expires_in=settings.jwt_refresh_token_expire_minutes * 60)
+```
+And in `src/core/auth.py:166-178`:
+```python
+async def blacklist_token(request: Request, token: str, expires_in: int = 1800) -> None:
+    try:
+        redis_client = request.app.state.redis_client
+        await redis_client.setex(f"token:blacklist:{token}", expires_in, "1")
+    except (ConnectionError, OSError, _aioredis.RedisError):
+        logger.warning("Redis unavailable for token blacklisting")
+```
+**Description**: The `blacklist_token` function silently swallows Redis connection errors. When Redis is unavailable during logout, the user receives a success response ("Logged out") but the token remains valid. The `is_token_blacklisted` function correctly fails closed (returns `True` when Redis is down), but this creates an inconsistency: tokens blacklisted during a Redis outage will appear valid once Redis recovers.
+**Risk**: During Redis outage windows, logout operations silently fail. Tokens remain usable after the user believes they logged out. If Redis was briefly down and comes back, previously "logged-out" tokens are still valid.
+**Recommendation**: Either (a) return a warning to the client that logout may not have fully completed, or (b) raise an error prompting retry, or (c) keep a local fallback blacklist.
+
+---
+
+### [HIGH] CSRF-COOKIE-NOT-CRYPTOGRAPHICALLY-BOUND: CSRF token has no server-side binding
+
+**File**: `src/core/auth.py:252-253` and `src/api/middleware/csrf.py:58`
+**Agent**: A1 (AuthZ Auditor)
+**Evidence**:
+```python
+# In auth.py — cookie set on login
+csrf_token = secrets.token_urlsafe(32)
+response.set_cookie(key=CSRF_COOKIE_NAME, value=csrf_token, httponly=False, ...)
+
+# In csrf.py — validation
+if not hmac.compare_digest(csrf_cookie, csrf_header):
+    return Response(content='{"detail":"CSRF token mismatch"}', status_code=403, ...)
+```
+**Description**: The CSRF implementation uses the double-submit cookie pattern, where the same random value is placed in both a cookie and a header. The server only checks that the cookie value matches the header value. There is no server-side HMAC or session binding. An attacker who can set a cookie on the target domain (e.g., via a subdomain XSS or cookie injection) can set both the cookie and the header to matching values and bypass CSRF protection entirely.
+**Risk**: Cookie injection on the same domain or any subdomain of `cookie_domain` defeats CSRF protection for all mutation endpoints.
+**Recommendation**: Sign the CSRF cookie value with a server-side secret (e.g., HMAC with the session token or user ID). On validation, verify the HMAC signature rather than just comparing raw values. This prevents an attacker from forging a valid cookie+header pair.
+
+---
+
+### [HIGH] ADMIN-ROUTES-NO-RESPONSE-MODEL: Admin endpoints lack response_model filtering
+
+**File**: `src/api/routes/admin.py:26`, `src/api/routes/admin.py:63`
+**Agent**: A1 (AuthZ Auditor)
+**Evidence**:
+```python
+@router.post("/retention-cleanup")
+async def run_retention_cleanup(
+    user: User = Depends(require_role(UserRole.PLATFORM_ADMIN)),
+    ...
 ) -> dict[str, Any]:
-    result = await session.execute(select(ProcessModel).where(ProcessModel.id == model_uuid))
-    model = result.scalar_one_or_none()
-    return _model_to_response(model)
-```
-**Description**: Six POV endpoints that accept `model_id` as a path parameter (`get_process_model`, `get_process_elements`, `get_evidence_map`, `get_evidence_gaps`, `get_contradictions`, `get_bpmn_xml`) check only `require_permission("pov:read")` but do not call `_check_engagement_member()`. The POV module defines this helper and uses it on engagement-scoped routes (e.g., `/engagement/{engagement_id}/versions`), but model-ID-based routes skip it. Any authenticated user with `pov:read` (which includes `process_analyst`, `evidence_reviewer` via `engagement:read`, and `client_viewer`) can access process models from engagements they are not a member of by guessing or enumerating model UUIDs.
-**Risk**: Cross-tenant data leakage. A `process_analyst` on Engagement A can read process models, BPMN XML, evidence maps, gaps, and contradictions from Engagement B by supplying the model UUID.
-**Recommendation**: After fetching the model, call `await _check_engagement_member(session, user, model.engagement_id)` before returning data. This matches the pattern already used in `/engagement/{engagement_id}/latest-model` (line 703).
 
----
-
-### [HIGH] IDOR: Evidence Detail and Mutation Routes Skip Engagement Membership Check
-**File**: `src/api/routes/evidence.py:309-358,408-448,495-519`
-**Agent**: A1 (AuthZ Auditor)
-**Evidence**:
-```python
-@router.get("/{evidence_id}", response_model=EvidenceDetailResponse)
-async def get_evidence(
-    evidence_id: UUID,
-    session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_permission("evidence:read")),
+@router.post("/rotate-encryption-key")
+async def rotate_encryption_key(
+    user: User = Depends(require_role(UserRole.PLATFORM_ADMIN)),
+    ...
 ) -> dict[str, Any]:
-    result = await session.execute(select(EvidenceItem).where(EvidenceItem.id == evidence_id))
-    evidence = result.scalar_one_or_none()
 ```
-**Description**: Three evidence endpoints that look up by `evidence_id` (`get_evidence`, `update_validation_status`, `get_fragments`) check `require_permission` but do not verify engagement membership. The `catalog_evidence` endpoint correctly uses `Depends(require_engagement_access)`, but the ID-based routes skip this. Additionally, `list_evidence` accepts an optional `engagement_id` filter but does not verify membership for the provided engagement, allowing any authenticated user to enumerate all evidence across engagements by omitting the filter.
-**Risk**: Cross-tenant data access and data integrity violation. An authenticated user with `evidence:read` can read evidence details and fragments from any engagement. A user with `evidence:update` can modify validation status on evidence they should not have access to.
-**Recommendation**: After fetching the evidence item, call `await verify_engagement_member(session, user, evidence.engagement_id)` from `src/core/permissions.py` before returning or modifying data. For `list_evidence`, add engagement membership filtering via `get_accessible_engagement_ids()`.
+**Description**: Admin endpoints return `dict[str, Any]` without a `response_model`. While these are admin-only routes, they return engagement names and IDs in the retention cleanup response. Without `response_model` filtering, any internal fields accidentally added to the response dict will be serialized to the client, potentially leaking sensitive internal state.
+**Risk**: Data leakage through unfiltered response dictionaries on sensitive admin operations.
+**Recommendation**: Define Pydantic response models for both admin endpoints to enforce explicit field allowlisting.
 
 ---
 
-### [MEDIUM] AUTHZ_BYPASS: Dev Mode Auto-Authenticates as Platform Admin Without Logging
-**File**: `src/core/auth.py:311-322`
+### [MEDIUM] WEBSOCKET-TOKEN-IN-QUERY-PARAM: JWT exposed in URL for WebSocket connections
+
+**File**: `src/api/routes/websocket.py:153`
 **Agent**: A1 (AuthZ Auditor)
 **Evidence**:
 ```python
-if token is None:
-    # Dev mode: auto-authenticate as the first platform_admin user
-    if settings.auth_dev_mode:
-        session_factory = request.app.state.db_session_factory
-        async with session_factory() as session:
-            result = await session.execute(
-                select(User).where(User.role == "platform_admin", User.is_active == True).limit(1)
-            )
-            dev_user = result.scalar_one_or_none()
-        if dev_user is not None:
-            logger.debug("Auth dev mode: auto-authenticated as %s", dev_user.email)
-            return dev_user
+@router.websocket("/ws/monitoring/{engagement_id}")
+async def monitoring_websocket(
+    websocket: WebSocket,
+    engagement_id: str,
+    token: str | None = Query(default=None),
+) -> None:
 ```
-**Description**: When `auth_dev_mode` is enabled and no token is provided, the system auto-authenticates as the first active `platform_admin` user. This grants full `*` permissions (wildcard) and bypasses engagement membership checks. The authentication event is logged at `DEBUG` level only, which most production logging configs would suppress. While `auth_dev_mode` defaults to `False` and the production validator blocks it, the `app_env` check uses string comparison (`"development"`) and the `auth_dev_mode` flag is independent -- it could be set to `True` while `app_env` is set to a non-standard value like `"local"` or `"testing"` that would not trigger the production guard.
-**Risk**: If `auth_dev_mode` is accidentally enabled in a non-development environment (e.g., `APP_ENV=testing`), all unauthenticated requests get full platform admin access. The `DEBUG`-level logging means this would likely go unnoticed in standard log configs.
-**Recommendation**: (1) Log dev mode auto-authentication at `WARNING` level, not `DEBUG`. (2) Consider tying `auth_dev_mode` directly to `app_env == "development"` rather than allowing it as an independent flag. (3) Add an explicit deny-list: if `app_env` is in `{"staging", "production", "prod"}`, hard-reject `auth_dev_mode=True` regardless of other settings.
+**Description**: WebSocket endpoints accept JWT tokens as query parameters (`?token=<jwt>`). Query parameters are logged by web servers, proxies, and CDNs, and may appear in browser history. While the endpoint also supports cookie-based auth, the query parameter option creates a token exposure risk.
+**Risk**: JWT tokens in server access logs, proxy logs, and browser history. Token theft from log aggregation systems.
+**Recommendation**: Document that cookie-based auth is the preferred WebSocket authentication method. Consider deprecating the query parameter option, or at minimum ensure reverse proxies are configured to strip token parameters from access logs.
 
 ---
 
-### [MEDIUM] DEFAULT_CREDENTIALS: Hardcoded Default Credentials in Config with Env-Dependent Guard
-**File**: `src/core/config.py:42-69`
+### [MEDIUM] MCP-RATE-LIMIT-IN-MEMORY: MCP API key rate limiting uses process-local dict
+
+**File**: `src/mcp/auth.py:27-29`
 **Agent**: A1 (AuthZ Auditor)
 **Evidence**:
 ```python
-postgres_password: SecretStr = SecretStr("kmflow_dev_password")
-neo4j_password: SecretStr = SecretStr("neo4j_dev_password")
-jwt_secret_key: SecretStr = SecretStr("dev-secret-key-change-in-production")
-encryption_key: SecretStr = SecretStr("dev-encryption-key-change-in-production")
-watermark_signing_key: SecretStr = SecretStr("dev-watermark-key-change-in-production")
+# Per-key-id rate limiting for failed validation attempts.
+# key_id -> (fail_count, window_start_epoch)
+_FAILED_ATTEMPTS: dict[str, tuple[int, float]] = {}
+_MAX_FAILED_ATTEMPTS = 5
+_LOCKOUT_WINDOW_SECONDS = 300  # 5 minutes
 ```
-**Description**: Five sensitive credentials have hardcoded default values in source code. The `reject_default_secrets_in_production` validator blocks these in non-development environments, but the guard depends entirely on `app_env != "development"`. The `app_env` field itself defaults to `"development"` (line 33), meaning a deployment that fails to set `APP_ENV` will silently accept all default secrets. The credentials are visible in the public repository.
-**Risk**: A deployment that omits or misconfigures `APP_ENV` runs with known, public credentials for all databases and cryptographic operations. The defense-in-depth principle suggests secrets should never have defaults.
-**Recommendation**: Remove default values for all `SecretStr` fields and make them required (Pydantic will raise `ValidationError` if unset). Alternatively, use a sentinel like `SecretStr("")` and add a startup check that rejects empty secrets in all environments.
+**Description**: The MCP API key rate limiting uses a process-local Python dictionary. In a multi-worker deployment (multiple uvicorn workers behind a load balancer), each worker maintains its own counter. An attacker can distribute brute-force attempts across workers, effectively multiplying the attempt limit by the number of workers.
+**Risk**: Rate limiting bypass in multi-worker deployments. An attacker gets `N * 5` attempts per 5-minute window where N is the worker count.
+**Recommendation**: Move rate limiting to Redis (consistent with the auth route pattern in `src/api/routes/auth.py` which uses Redis-backed rate limiting via slowapi).
 
 ---
 
-### [LOW] HARDCODED_PASSWORD: Default Password Parameter in Neo4j Validation Utility
-**File**: `src/semantic/ontology/validate.py:95`
+### [MEDIUM] ROLE-CLAIM-NOT-REVALIDATED: JWT role claim not checked against DB on each request
+
+**File**: `src/core/auth.py:350-444`
 **Agent**: A1 (AuthZ Auditor)
 **Evidence**:
 ```python
-async def validate_neo4j(uri: str, user: str = "neo4j", password: str = "password") -> list[str]:
-    """Check that a live Neo4j database conforms to the ontology."""
+async def get_current_user(...) -> User:
+    # ...decode token, extract user_id...
+    session_factory = request.app.state.db_session_factory
+    async with session_factory() as session:
+        result = await session.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+    # User role is read from DB here, which is correct
 ```
-**Description**: The `validate_neo4j` utility function has a hardcoded default password parameter `"password"`. While this is a development/validation utility and not an API endpoint, it establishes a pattern where the default Neo4j password `"password"` could be accidentally used in non-development contexts if the function is called without explicit credentials.
-**Risk**: Low -- this is a utility function, not an API endpoint. However, it could mask a misconfiguration where the actual Neo4j password is not passed, resulting in authentication failures or accidental use of default credentials.
-**Recommendation**: Remove the default value for `password` to force explicit credential passing: `password: str` instead of `password: str = "password"`.
+**Description**: The `get_current_user` function fetches the user from the database on every request, which correctly reflects the current role. However, the JWT token itself contains a `role` claim (set at login time in `src/api/routes/auth.py:250-252`). If any downstream code reads the role from the JWT payload instead of the User object, a role change would not take effect until the token expires.
+**Risk**: Low in current implementation since `get_current_user` fetches from DB. However, JWT `role` claim could mislead future developers into using the stale claim.
+**Recommendation**: Either (a) remove the `role` claim from JWTs (since it's always re-fetched from DB), or (b) add a code comment clarifying that the JWT role is informational only and the DB role is authoritative.
 
 ---
 
-## Positive Findings (Controls Working Correctly)
+### [MEDIUM] REFRESH-COOKIE-PATH-MISMATCH: Refresh cookie path may not cover /refresh/cookie endpoint
 
-The following security controls were reviewed and found to be properly implemented:
-
-1. **MCP API Key Authentication** (`src/mcp/auth.py:59-102`): `validate_api_key()` performs a proper DB lookup by `key_id`, hashes the incoming raw key with SHA-256, and uses `hmac.compare_digest()` for timing-safe comparison. This is correctly implemented.
-
-2. **MCP Engagement Membership Checks** (`src/mcp/server.py:157-174`): All 8 MCP tool handlers verify engagement membership by querying `EngagementMember` before returning data. The `user_id` from the authenticated API key is correctly passed through `_execute_tool` to each handler.
-
-3. **Token Blacklisting** (`src/core/auth.py:151-162`): Redis-backed blacklist with fail-closed behavior (returns `True` / "blacklisted" when Redis is unavailable). This is a secure default.
-
-4. **Token Type Enforcement** (`src/core/auth.py:331-336`): Access token validation rejects refresh tokens and vice versa, preventing token confusion attacks.
-
-5. **JWT Key Rotation** (`src/core/config.py:180-191`): Supports comma-separated verification keys via `jwt_verification_keys` property, enabling zero-downtime key rotation.
-
-6. **Cookie Security** (`src/core/auth.py:195-275`): HttpOnly, Secure, SameSite=Lax (access) / Strict (refresh), path-restricted refresh cookie to `/api/v1/auth/refresh`. Well-implemented browser session security.
-
-7. **Production Secret Validation** (`src/core/config.py:220-250`): Startup validator blocks non-development environments from running with default secrets. Covers JWT, encryption, Postgres, Neo4j, watermark, auth_dev_mode, and debug flag.
-
-8. **Rate Limiting on Auth Endpoints** (`src/api/routes/auth.py`): Login limited to 5/min, refresh to 10/min via slowapi.
-
-9. **Engagement Access Control** (`src/core/permissions.py:200-241`): `require_engagement_access` is actively used across 44+ route files with proper DB-backed membership checks and platform admin bypass.
-
-10. **RBAC Permission Matrix** (`src/core/permissions.py:27-103`): Well-defined 5-tier role hierarchy (platform_admin, engagement_lead, process_analyst, evidence_reviewer, client_viewer) with granular permissions. Platform admin wildcard (`*`) is appropriate for the highest privilege level.
-
-11. **Conflict Resolution Routes** (`src/api/routes/conflicts.py:100-108`): Properly secured with `require_engagement_access` on read endpoints and `require_permission("governance:write")` on mutation endpoints.
-
-12. **Health Endpoint** (`src/api/routes/health.py`): Intentionally unauthenticated -- correct for load balancer and orchestrator health probes.
-
-13. **Deployment Capabilities** (`src/api/routes/deployment.py`): Unauthenticated but returns only feature flags (LLM availability, data residency mode), not sensitive data. Acceptable for frontend pre-auth feature detection.
+**File**: `src/core/auth.py:193`
+**Agent**: A1 (AuthZ Auditor)
+**Evidence**:
+```python
+REFRESH_COOKIE_PATH = "/api/v1/auth/refresh"
+```
+And the cookie-based refresh endpoint is at:
+```python
+# src/api/routes/auth.py:382
+@router.post("/refresh/cookie", response_model=RefreshCookieResponse)
+```
+Which resolves to `/api/v1/auth/refresh/cookie`.
+**Description**: The refresh cookie is path-restricted to `/api/v1/auth/refresh`. The cookie-based refresh endpoint is at `/api/v1/auth/refresh/cookie`. Since cookie path matching is prefix-based, `/api/v1/auth/refresh` does cover `/api/v1/auth/refresh/cookie`. This is correct but fragile — if the endpoint were moved to a sibling path (e.g., `/api/v1/auth/cookie-refresh`), the cookie would silently stop being sent.
+**Risk**: Low currently (path prefix matching works), but fragile to refactoring.
+**Recommendation**: Add a comment documenting the path prefix dependency, or use a more explicit path like `/api/v1/auth/refresh` with a query parameter to distinguish body vs cookie mode.
 
 ---
 
-## Security Checklist Results
+### [LOW] BROAD-EXCEPT-WITHOUT-JUSTIFICATION: Several except Exception blocks lack justification
 
-| Check | Status | Details |
-|-------|--------|---------|
-| No hardcoded production secrets | PASS (with caveat) | Defaults exist but blocked by production validator |
-| JWT expiration enforced | PASS | 30min access, 7-day refresh |
-| Token blacklisting | PASS | Redis-backed, fail-closed |
-| RBAC on all routes | PASS | All 78 route files have auth dependencies |
-| Engagement isolation (HTTP) | PARTIAL | Engagement-ID routes good; model-ID/evidence-ID routes skip check |
-| Engagement isolation (MCP) | PASS | All 8 tool handlers verify membership |
-| Auth dev mode guarded | PASS (with caveat) | Disabled by default, blocked in production; bypassed by non-standard env names |
-| Cookie security | PASS | HttpOnly, Secure, SameSite, path-restricted |
-| Rate limiting on auth | PASS | 5/min login, 10/min refresh |
-| Key rotation support | PASS | Multi-key verification |
-| Production startup validation | PASS | Covers all 5 secret keys + auth_dev_mode + debug |
+**File**: Multiple files (see list below)
+**Agent**: A1 (AuthZ Auditor)
+**Evidence**: The following `except Exception` blocks lack the "Intentionally broad" justification comment:
+- `src/api/routes/validation.py:680` — background task failure
+- `src/api/routes/validation.py:697` — sentinel write failure
+- `src/api/routes/pipeline_quality.py:416,421,426,434,439` — dashboard partial failures
+- `src/api/routes/graph.py:272,286` — Redis cache failures
+- `src/api/routes/engagements.py:332` — graph cleanup failure
+- `src/api/routes/auth.py:56,104,119` — settings/lockout failures
+- `src/api/routes/tom.py:1739,1750,1761` — background scoring failures
+- `src/api/routes/reports.py:229` — report generation failure
+- `src/api/routes/semantic.py:367` — label query failure
+- `src/api/routes/regulatory.py:283` — Neo4j cleanup failure
+- `src/api/routes/scenario_simulation.py:205` — simulation failure
+- `src/api/routes/integrations.py:105` — decryption fallback
+
+**Description**: While many broad exception handlers in WebSocket code have "Intentionally broad" comments (good practice), approximately 20 handlers in non-WebSocket code lack justification.
+**Risk**: Broad exception handling can mask bugs and security issues. Without justification, it's unclear whether these are intentional fail-safe patterns or oversight.
+**Recommendation**: Add a brief justification comment to each broad exception handler explaining why it's necessary (e.g., "fail-open for dashboard partial render" or "background task must not crash worker").
 
 ---
 
-## Risk Assessment
+### [LOW] ROUTES-MISSING-RESPONSE-MODEL: ~55 route handlers lack response_model
 
-| Severity | Count | Action Required |
-|----------|-------|-----------------|
-| CRITICAL | 0 | -- |
-| HIGH | 2 | Must fix before production deployment |
-| MEDIUM | 2 | Should fix; document rationale if deferred |
-| LOW | 1 | Informational; fix at convenience |
+**File**: Multiple (see Lessons Learned section above)
+**Agent**: A1 (AuthZ Auditor)
+**Description**: Approximately 55 route handlers across the codebase use `-> dict[str, Any]` returns without `response_model=` in the decorator. This means FastAPI will not strip unexpected fields from the response, potentially leaking internal data.
+**Risk**: Unintentional data exposure through unfiltered response dicts.
+**Recommendation**: Add Pydantic `response_model` to all route handlers, especially those handling sensitive data (governance export, evidence download, GDPR exports, admin endpoints).
+
+---
+
+### [LOW] ENGAGEMENT-ACCESS-REQUIRE-VS-CHECK: Two different engagement access patterns create inconsistency
+
+**File**: `src/core/permissions.py:202` and `src/core/permissions.py:282`
+**Agent**: A1 (AuthZ Auditor)
+**Evidence**:
+```python
+# Pattern 1: FastAPI dependency (path param)
+async def require_engagement_access(engagement_id: UUID, request: Request, user: User = Depends(get_current_user)) -> User:
+
+# Pattern 2: Plain async function (for non-path-param usage)
+async def check_engagement_access(engagement_id: UUID, request: Request, user: User) -> None:
+
+# Pattern 3: Session-based with RLS context setting
+async def verify_engagement_member(session: AsyncSession, user: User, engagement_id: UUID) -> None:
+```
+**Description**: Three different functions serve similar purposes with slightly different signatures and behaviors. `verify_engagement_member` also sets RLS context, while the other two do not. Routes that use `require_engagement_access` do not get RLS context set automatically.
+**Risk**: Developers may choose the wrong function, leading to inconsistent RLS enforcement.
+**Recommendation**: Consolidate to fewer patterns and document when each should be used. Consider having `require_engagement_access` also set RLS context.
+
+---
+
+### [LOW] WEBSOCKET-STATUS-EXPOSES-ENGAGEMENT-IDS: WebSocket status endpoint leaks engagement IDs
+
+**File**: `src/api/routes/websocket.py:410-418`
+**Agent**: A1 (AuthZ Auditor)
+**Evidence**:
+```python
+@router.get("/api/v1/ws/status")
+async def websocket_status(
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    return {
+        "active_connections": manager.active_connections,
+        "engagement_ids": manager.get_engagement_ids(),
+    }
+```
+**Description**: The WebSocket status endpoint returns all engagement IDs with active WebSocket connections. Any authenticated user can call this endpoint and discover which engagements are currently being actively monitored. There is no role check or engagement membership filtering.
+**Risk**: Information disclosure — any authenticated user can enumerate active engagement IDs, even if they are not a member of those engagements.
+**Recommendation**: Either restrict this endpoint to platform admins, or filter the returned engagement IDs to only those the requesting user has access to.
+
+---
+
+### [LOW] JWT-ALGORITHM-HARDCODED-HS256: HS256 symmetric algorithm used for JWT signing
+
+**File**: `src/core/config.py:66`
+**Agent**: A1 (AuthZ Auditor)
+**Evidence**:
+```python
+jwt_algorithm: str = "HS256"
+```
+**Description**: The platform uses HS256 (HMAC-SHA256) for JWT signing, which is a symmetric algorithm. All services that need to verify tokens must share the same secret key. In a microservices architecture, this means the signing key is distributed to every service, increasing the attack surface.
+**Risk**: Compromise of any service that holds the JWT secret allows token forgery for any user/role.
+**Recommendation**: For a multi-service deployment, consider migrating to RS256 (asymmetric) so that only the auth service holds the private key while other services verify with the public key. HS256 is acceptable for a monolithic deployment.
+
+---
+
+## Security Posture Assessment
+
+**Overall Score**: 7/10
+
+**Strengths**:
+- Comprehensive RBAC with 5 roles and fine-grained permission matrix
+- Token blacklisting with fail-closed behavior on Redis unavailability
+- Refresh token rotation on use (old token blacklisted)
+- Rate limiting on auth endpoints (IP-based + per-email lockout)
+- CSRF double-submit cookie pattern with SameSite=Lax baseline
+- Dev mode requires DEBUG=true and is blocked in non-development environments
+- IDOR prevention on user profile endpoints
+- Engagement membership checks on most engagement-scoped routes
+- MCP API key validation uses DB-backed hash comparison with HMAC timing-safe comparison and per-key rate limiting
+
+**Areas for Improvement**:
+- CSRF cookie should be cryptographically bound to the session
+- Dev mode auto-auth should have additional safeguards (IP restriction, WARN-level logging)
+- MCP rate limiting should use Redis for multi-worker consistency
+- Logout should handle Redis failures more explicitly
+- Response models should be added to all routes for data filtering
+- WebSocket token-in-URL pattern should be deprecated

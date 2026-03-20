@@ -10,6 +10,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
@@ -26,7 +27,14 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/scenarios", tags=["scenario-comparison"])
 
 
-@router.get("/compare")
+class ScenarioComparisonResponse(BaseModel):
+    """Response from scenario comparison."""
+
+    scenarios: list[dict[str, Any]]
+    count: int
+
+
+@router.get("/compare", response_model=ScenarioComparisonResponse)
 async def compare_scenarios(
     ids: str = Query(..., description="Comma-separated scenario IDs (2-5)"),
     engagement_id: UUID = Query(..., description="Engagement ID for access control"),

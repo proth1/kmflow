@@ -65,11 +65,59 @@ class AssumptionUpdate(BaseModel):
     name: str | None = Field(None, max_length=256)
 
 
+class AssumptionResponse(BaseModel):
+    """Response schema for a single financial assumption."""
+
+    id: str
+    engagement_id: str
+    assumption_type: str
+    name: str
+    value: float
+    unit: str
+    confidence: float
+    confidence_range: float | None = None
+    source_evidence_id: str | None = None
+    confidence_explanation: str | None = None
+    notes: str | None = None
+    created_at: str
+    updated_at: str | None = None
+
+
+class AssumptionListResponse(BaseModel):
+    """Paginated list of financial assumptions."""
+
+    items: list[AssumptionResponse]
+    total: int
+
+
+class AssumptionVersionEntry(BaseModel):
+    """A single version entry in assumption history."""
+
+    id: str
+    value: float
+    unit: str
+    confidence: float
+    confidence_range: float | None = None
+    source_evidence_id: str | None = None
+    confidence_explanation: str | None = None
+    notes: str | None = None
+    changed_by: str | None = None
+    changed_at: str
+
+
+class AssumptionHistoryResponse(BaseModel):
+    """Version history for a financial assumption."""
+
+    assumption_id: str
+    versions: list[AssumptionVersionEntry]
+
+
 # ── Routes ─────────────────────────────────────────────────────────────
 
 
 @router.post(
     "/engagements/{engagement_id}/assumptions",
+    response_model=AssumptionResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_engagement_assumption(
@@ -90,7 +138,7 @@ async def create_engagement_assumption(
     return _assumption_to_dict(assumption)
 
 
-@router.get("/engagements/{engagement_id}/assumptions")
+@router.get("/engagements/{engagement_id}/assumptions", response_model=AssumptionListResponse)
 async def list_engagement_assumptions(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -108,7 +156,7 @@ async def list_engagement_assumptions(
     }
 
 
-@router.patch("/engagements/{engagement_id}/assumptions/{assumption_id}")
+@router.patch("/engagements/{engagement_id}/assumptions/{assumption_id}", response_model=AssumptionResponse)
 async def update_engagement_assumption(
     engagement_id: UUID,
     assumption_id: UUID,
@@ -135,7 +183,9 @@ async def update_engagement_assumption(
     return _assumption_to_dict(assumption)
 
 
-@router.get("/engagements/{engagement_id}/assumptions/{assumption_id}/history")
+@router.get(
+    "/engagements/{engagement_id}/assumptions/{assumption_id}/history", response_model=AssumptionHistoryResponse
+)
 async def get_assumption_version_history(
     engagement_id: UUID,
     assumption_id: UUID,

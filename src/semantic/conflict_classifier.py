@@ -26,6 +26,7 @@ from src.core.models import (
     SeedTerm,
     TermStatus,
 )
+from src.semantic.graph import KnowledgeGraphService
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,7 @@ class ThreeWayDistinctionClassifier:
     the same inputs produces the same resolution_type.
     """
 
-    def __init__(self, graph_service: Any, session: AsyncSession) -> None:
+    def __init__(self, graph_service: KnowledgeGraphService, session: AsyncSession) -> None:
         self._graph = graph_service
         self._session = session
 
@@ -360,7 +361,8 @@ class ThreeWayDistinctionClassifier:
             dates: dict[str, tuple] = {}
             for r in records:
                 sid = r.get("source_id")
-                dates[sid] = (r.get("effective_from"), r.get("effective_to"))
+                if sid is not None:
+                    dates[str(sid)] = (r.get("effective_from"), r.get("effective_to"))
 
             a_dates = dates.get(str(source_a_id), (None, None))
             b_dates = dates.get(str(source_b_id), (None, None))

@@ -7,9 +7,9 @@ authentication. Bearer-token (API/MCP) requests are exempt.
 
 from __future__ import annotations
 
+import hashlib
 import hmac
 import logging
-import secrets
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -55,7 +55,9 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 media_type="application/json",
             )
 
-        if not hmac.compare_digest(csrf_cookie, csrf_header):
+        access_cookie = request.cookies.get(ACCESS_COOKIE_NAME, "")
+        expected_token = _generate_csrf_token(access_cookie)
+        if not hmac.compare_digest(expected_token, csrf_header):
             return Response(
                 content='{"detail":"CSRF token mismatch"}',
                 status_code=403,
@@ -66,9 +68,10 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         return response
 
     def _ensure_csrf_cookie(self, response: Response, request: Request) -> None:
-        """Set the CSRF cookie if not already present."""
+        """Set the CSRF cookie bound to the current session if not already present."""
         if not request.cookies.get(CSRF_COOKIE):
-            token = secrets.token_urlsafe(32)
+            access_cookie = request.cookies.get(ACCESS_COOKIE_NAME, "")
+            token = _generate_csrf_token(access_cookie)
             settings = get_settings()
             response.set_cookie(
                 key=CSRF_COOKIE,
@@ -78,3 +81,14 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 samesite="lax",
                 path="/",
             )
+
+
+def _generate_csrf_token(access_cookie_value: str) -> str:
+    """Generate CSRF token cryptographically bound to the current session."""
+    settings = get_settings()
+    secret = settings.jwt_secret_key.get_secret_value()
+    return hmac.new(
+        secret.encode(),
+        access_cookie_value.encode(),
+        hashlib.sha256,
+    ).hexdigest()

@@ -13,6 +13,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 
 from src.api.schemas.replay import (
     AggregateRequest,
@@ -32,7 +33,51 @@ from src.core.services.replay_service import (
 router = APIRouter(prefix="/api/v1/replay", tags=["replay"])
 
 
-@router.post("/single-case", status_code=status.HTTP_202_ACCEPTED)
+class ReplayTaskResponse(BaseModel):
+    """Response for a replay task creation."""
+
+    task_id: str
+    status: str
+    replay_type: str
+
+
+class ReplayStatusResponse(BaseModel):
+    """Response for replay task status."""
+
+    task_id: str
+    status: str
+    replay_type: str
+    progress: int | None = None
+    error: str | None = None
+
+
+class ReplayFramesResponse(BaseModel):
+    """Paginated frames for a replay task."""
+
+    task_id: str
+    frames: list[dict[str, Any]]
+    total: int
+    limit: int
+    offset: int
+
+
+class HeatmapResponse(BaseModel):
+    """Heatmap density data for an aggregate replay."""
+
+    task_id: str
+    densities: list[dict[str, Any]]
+
+
+class DrilldownResponse(BaseModel):
+    """Drilldown case details for an activity."""
+
+    task_id: str
+    activity_name: str
+    cases: list[dict[str, Any]]
+    total_cases: int
+
+
+@router.post("/single-case", response_model=ReplayTaskResponse, status_code=status.HTTP_202_ACCEPTED)
 async def create_single_case_replay(
     body: SingleCaseRequest,
     user: User = Depends(require_permission("engagement:read")),
@@ -49,7 +94,7 @@ async def create_single_case_replay(
     }
 
 
-@router.post("/aggregate", status_code=status.HTTP_202_ACCEPTED)
+@router.post("/aggregate", response_model=ReplayTaskResponse, status_code=status.HTTP_202_ACCEPTED)
 async def create_aggregate_replay(
     body: AggregateRequest,
     user: User = Depends(require_permission("engagement:read")),
@@ -68,7 +113,7 @@ async def create_aggregate_replay(
     }
 
 
-@router.post("/variant-comparison", status_code=status.HTTP_202_ACCEPTED)
+@router.post("/variant-comparison", response_model=ReplayTaskResponse, status_code=status.HTTP_202_ACCEPTED)
 async def create_variant_comparison_replay(
     body: VariantComparisonRequest,
     user: User = Depends(require_permission("engagement:read")),
@@ -85,7 +130,7 @@ async def create_variant_comparison_replay(
     }
 
 
-@router.get("/{task_id}/status")
+@router.get("/{task_id}/status", response_model=ReplayStatusResponse)
 async def get_replay_status(
     task_id: str,
     user: User = Depends(require_permission("engagement:read")),
@@ -100,7 +145,7 @@ async def get_replay_status(
     return task.to_status_dict()
 
 
-@router.get("/{task_id}/frames")
+@router.get("/{task_id}/frames", response_model=ReplayFramesResponse)
 async def get_replay_frames(
     task_id: str,
     limit: int = Query(default=10, ge=1, le=1000),
@@ -117,7 +162,7 @@ async def get_replay_frames(
     return result
 
 
-@router.get("/{task_id}/heatmap")
+@router.get("/{task_id}/heatmap", response_model=HeatmapResponse)
 async def get_replay_heatmap(
     task_id: str,
     user: User = Depends(require_permission("engagement:read")),
@@ -145,7 +190,7 @@ async def get_replay_heatmap(
     }
 
 
-@router.get("/{task_id}/drilldown/{activity_name}")
+@router.get("/{task_id}/drilldown/{activity_name}", response_model=DrilldownResponse)
 async def get_replay_drilldown(
     task_id: str,
     activity_name: str,

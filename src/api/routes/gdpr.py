@@ -52,6 +52,8 @@ from src.core.models import (
     UserConsent,
     UserRole,
 )
+from src.core.models.llm_audit import LLMAuditLog
+from src.core.models.pipeline_quality import CopilotFeedback
 from src.core.permissions import has_role_level
 
 logger = logging.getLogger(__name__)
@@ -84,6 +86,8 @@ class DataExportResponse(BaseModel):
     annotations: list[dict[str, Any]]
     user_consents: list[dict[str, Any]]
     copilot_messages: list[dict[str, Any]]
+    llm_audit_logs: list[dict[str, Any]]
+    copilot_feedback: list[dict[str, Any]]
 
 
 class ErasureRequestResponse(BaseModel):
@@ -262,6 +266,39 @@ async def export_user_data(
         for m in copilot_result.scalars().all()
     ]
 
+    # LLM audit logs attributed to this user
+    llm_audit_result = await session.execute(
+        select(LLMAuditLog).where(LLMAuditLog.user_id == current_user.id).limit(_EXPORT_ROW_LIMIT)
+    )
+    llm_audit_logs = [
+        {
+            "id": str(e.id),
+            "scenario_id": str(e.scenario_id) if e.scenario_id else None,
+            "prompt_tokens": e.prompt_tokens,
+            "completion_tokens": e.completion_tokens,
+            "model_name": e.model_name,
+            "hallucination_flagged": e.hallucination_flagged,
+            "created_at": e.created_at.isoformat() if e.created_at else None,
+        }
+        for e in llm_audit_result.scalars().all()
+    ]
+
+    # Copilot feedback submitted by this user
+    copilot_feedback_result = await session.execute(
+        select(CopilotFeedback).where(CopilotFeedback.user_id == current_user.id).limit(_EXPORT_ROW_LIMIT)
+    )
+    copilot_feedback = [
+        {
+            "id": str(f.id),
+            "engagement_id": str(f.engagement_id),
+            "copilot_message_id": str(f.copilot_message_id),
+            "rating": f.rating,
+            "is_hallucination": f.is_hallucination,
+            "created_at": f.created_at.isoformat() if f.created_at else None,
+        }
+        for f in copilot_feedback_result.scalars().all()
+    ]
+
     return DataExportResponse(
         user_profile=_user_to_dict(current_user),
         memberships=memberships,
@@ -269,6 +306,8 @@ async def export_user_data(
         annotations=annotations,
         user_consents=user_consents,
         copilot_messages=copilot_messages,
+        llm_audit_logs=llm_audit_logs,
+        copilot_feedback=copilot_feedback,
     )
 
 
@@ -500,6 +539,18 @@ async def admin_anonymize_user(
     # kept but hostname is anonymised.
     await session.execute(
         text("UPDATE task_mining_agents SET hostname = 'anonymized', approved_by = NULL WHERE approved_by = :uid"),
+        {"uid": user_id_str},
+    )
+
+    # Nullify user_id on LLM audit logs (column is nullable)
+    await session.execute(
+        text("UPDATE llm_audit_logs SET user_id = NULL WHERE user_id = :uid::uuid"),
+        {"uid": user_id_str},
+    )
+
+    # Delete copilot feedback rows (user_id is non-nullable; structural data not needed)
+    await session.execute(
+        text("DELETE FROM copilot_feedback WHERE user_id = :uid::uuid"),
         {"uid": user_id_str},
     )
 

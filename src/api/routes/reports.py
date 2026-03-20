@@ -359,7 +359,7 @@ async def download_report(
 # -- Existing synchronous report routes --------------------------------------
 
 
-@router.get("/{engagement_id}/summary")
+@router.get("/{engagement_id}/summary", response_model=None)
 async def get_engagement_summary(
     engagement_id: UUID,
     format: str = "json",
@@ -378,7 +378,7 @@ async def get_engagement_summary(
     return _render_format(engine, report, format, f"summary-{engagement_id}.pdf")
 
 
-@router.get("/{engagement_id}/gap-analysis")
+@router.get("/{engagement_id}/gap-analysis", response_model=None)
 async def get_gap_report(
     engagement_id: UUID,
     tom_id: UUID | None = None,
@@ -399,7 +399,7 @@ async def get_gap_report(
     return _render_format(engine, report, format, f"gap-analysis-{engagement_id}.pdf")
 
 
-@router.get("/{engagement_id}/governance")
+@router.get("/{engagement_id}/governance", response_model=None)
 async def get_governance_report(
     engagement_id: UUID,
     format: str = "json",
@@ -418,7 +418,7 @@ async def get_governance_report(
     return _render_format(engine, report, format, f"governance-{engagement_id}.pdf")
 
 
-@router.get("/{engagement_id}/executive-summary")
+@router.get("/{engagement_id}/executive-summary", response_model=None)
 async def get_executive_summary(
     engagement_id: UUID,
     tom_id: UUID | None = None,

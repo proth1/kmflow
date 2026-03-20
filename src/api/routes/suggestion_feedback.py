@@ -12,6 +12,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,7 +33,23 @@ from src.core.services.suggestion_feedback import (
 router = APIRouter(prefix="/api/v1", tags=["suggestion-feedback"])
 
 
-@router.get("/scenarios/{scenario_id}/modifications/{modification_id}/traceability")
+class RejectionFeedbackResponse(BaseModel):
+    """List of rejection feedback patterns for an engagement."""
+
+    engagement_id: str
+    rejection_count: int
+    patterns: list[dict[str, Any]]
+
+
+class ExclusionPromptResponse(BaseModel):
+    """Exclusion prompt generated from rejection patterns."""
+
+    engagement_id: str
+    pattern_count: int
+    exclusion_prompt: str
+
+
+@router.get("/scenarios/{scenario_id}/modifications/{modification_id}/traceability", response_model=dict)
 async def get_modification_traceability(
     scenario_id: UUID,
     modification_id: UUID,
@@ -55,7 +72,7 @@ async def get_modification_traceability(
     return chain
 
 
-@router.get("/engagements/{engagement_id}/rejection-feedback")
+@router.get("/engagements/{engagement_id}/rejection-feedback", response_model=RejectionFeedbackResponse)
 async def list_rejection_feedback(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -71,7 +88,7 @@ async def list_rejection_feedback(
     }
 
 
-@router.get("/engagements/{engagement_id}/rejection-feedback/exclusion-prompt")
+@router.get("/engagements/{engagement_id}/rejection-feedback/exclusion-prompt", response_model=ExclusionPromptResponse)
 async def get_exclusion_prompt(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),

@@ -42,6 +42,7 @@ router = APIRouter(prefix="/api/v1", tags=["scenario-simulation"])
 
 @router.post(
     "/scenarios/{scenario_id}/simulate",
+    response_model=dict,
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def trigger_simulation(
@@ -87,7 +88,7 @@ async def trigger_simulation(
     }
 
 
-@router.get("/scenarios/{scenario_id}/simulation-status")
+@router.get("/scenarios/{scenario_id}/simulation-status", response_model=dict)
 async def get_simulation_status(
     scenario_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -112,7 +113,7 @@ async def get_simulation_status(
     return _result_to_dict(sim_result)
 
 
-@router.get("/scenarios/{scenario_id}/simulation-results")
+@router.get("/scenarios/{scenario_id}/simulation-results", response_model=dict)
 async def get_simulation_results(
     scenario_id: UUID,
     session: AsyncSession = Depends(get_session),

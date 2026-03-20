@@ -120,7 +120,7 @@ class AlignmentScoringService:
             run.status = AlignmentRunStatus.COMPLETE
             run.completed_at = datetime.now(UTC)
             return results
-        except Exception as exc:
+        except Exception as exc:  # Intentionally broad: scoring sub-steps can raise DB, Neo4j, or LLM errors
             logger.exception("Alignment run %s failed", run.id)
             run.status = AlignmentRunStatus.FAILED
             run.completed_at = datetime.now(UTC)
@@ -286,6 +286,6 @@ class AlignmentScoringService:
             )
             records = await self._graph.run_query(query, {"engagement_id": engagement_id})
             return {(r["activity_id"], r["dimension"]) for r in records if r.get("activity_id") and r.get("dimension")}
-        except Exception:
+        except Exception:  # Intentionally broad: Neo4j driver errors vary by version and connection state
             logger.warning("Failed to query ALIGNS_TO edges for engagement %s", engagement_id)
             return set()

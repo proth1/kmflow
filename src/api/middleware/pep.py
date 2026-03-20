@@ -163,7 +163,7 @@ class PEPMiddleware(BaseHTTPMiddleware):
                 attributes=attributes,
                 request_id=request_id,
             )
-        except Exception as exc:
+        except Exception as exc:  # Intentionally broad: PDP can raise network, timeout, or serialization errors
             logger.warning("PEP: PDP call failed (fail_open=%s): %s", self._fail_open, exc)
             if not self._fail_open:
                 return JSONResponse(

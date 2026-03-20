@@ -144,6 +144,9 @@ services:
         max-file: "5"
 
   cib7:
+    environment:
+      CAMUNDA_USER: ${CAMUNDA_USER:?Set CAMUNDA_USER}
+      CAMUNDA_PASSWORD: ${CAMUNDA_PASSWORD:?Set CAMUNDA_PASSWORD}
     ports: []  # No host port exposure in production
     security_opt:
       - no-new-privileges:true

@@ -174,8 +174,8 @@ async def blacklist_token(request: Request, token: str, expires_in: int = 1800) 
     try:
         redis_client = request.app.state.redis_client
         await redis_client.setex(f"token:blacklist:{token}", expires_in, "1")
-    except (ConnectionError, OSError, _aioredis.RedisError):
-        logger.warning("Redis unavailable for token blacklisting")
+    except (ConnectionError, OSError, _aioredis.RedisError) as exc:
+        logger.warning("Token blacklist write failed — token may remain valid: %s", exc)
 
 
 # ---------------------------------------------------------------------------
@@ -371,6 +371,13 @@ async def get_current_user(
     if token is None:
         # Dev mode: auto-authenticate as the first platform_admin user
         if settings.auth_dev_mode:
+            if settings.app_env not in ("development", "testing"):
+                logger.critical(
+                    "AUTH_DEV_MODE is enabled in %s environment — refusing to auto-authenticate. "
+                    "This setting is only allowed in development/testing.",
+                    settings.app_env,
+                )
+                raise HTTPException(status_code=503, detail="Server misconfiguration")
             session_factory = request.app.state.db_session_factory
             async with session_factory() as session:
                 result = await session.execute(

@@ -53,7 +53,7 @@ _redis_url: str | None = None
 try:
     _settings_obj = Settings()
     _redis_url = _settings_obj.redis_url
-except Exception:
+except Exception:  # Intentionally broad: Settings() can raise pydantic, env-var, or validation errors at import time
     logger.warning("Settings load failed for rate limiter Redis URL")
 
 if not _redis_url and _settings_obj and _settings_obj.app_env != "development":
@@ -101,7 +101,7 @@ async def _check_email_lockout(email: str, request: Request) -> None:
             )
     except HTTPException:
         raise
-    except Exception:
+    except Exception:  # Intentionally broad: Redis client errors must not block login (fail-open for availability)
         logger.debug("Email lockout check failed, allowing request")
 
 
@@ -116,7 +116,7 @@ async def _record_failed_login(email: str, request: Request) -> None:
         pipe.incr(key)
         pipe.expire(key, _LOGIN_LOCKOUT_WINDOW_SECONDS)
         await pipe.execute()
-    except Exception:
+    except Exception:  # Intentionally broad: Redis client errors must not block login response
         logger.debug("Failed to record login failure for email lockout")
 
 

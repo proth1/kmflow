@@ -17,9 +17,10 @@ from __future__ import annotations
 import json
 import logging
 import uuid
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 import redis.asyncio as aioredis
 
@@ -254,7 +255,7 @@ class TaskQueue:
             updates["completed_at"] = completed_at
 
         if updates:
-            await self._redis.hset(progress_key, mapping=updates)
+            await self._redis.hset(progress_key, mapping=cast(Mapping[str | bytes, bytes | float | int | str], updates))
 
     # -- Worker execution (single task) ----------------------------------------
 
@@ -324,7 +325,7 @@ class TaskQueue:
                 )
                 return await self.get_status(task_id)
 
-            except Exception as exc:
+            except Exception as exc:  # Intentionally broad: task handler can raise any error; retry loop must catch all
                 last_error = str(exc)
                 logger.warning(
                     "Task %s attempt %d/%d failed: %s",
@@ -370,7 +371,7 @@ class TaskQueue:
                     id="0",
                     mkstream=True,
                 )
-            except Exception as e:
+            except Exception as e:  # Intentionally broad: redis-py raises ResponseError which is not exported
                 if "BUSYGROUP" not in str(e):
                     raise
 

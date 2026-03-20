@@ -47,11 +47,41 @@ class CreateClaimPayload(BaseModel):
     related_seed_terms: list[str] | None = None
 
 
+class SurveySessionResponse(BaseModel):
+    """Response schema for a single survey session."""
+
+    id: str
+    engagement_id: str
+    respondent_role: str
+    status: str
+    claims_count: int
+    summary: str | None = None
+    created_at: str
+    completed_at: str | None = None
+
+
+class SurveySessionListResponse(BaseModel):
+    """Paginated list of survey sessions."""
+
+    items: list[SurveySessionResponse]
+    total: int
+
+
+class ProbeGenerationResponse(BaseModel):
+    """Response from probe generation."""
+
+    session_id: str
+    terms_used: int
+    probes_generated: int
+    probes: list[dict[str, Any]]
+
+
 # ── Session Lifecycle ──────────────────────────────────────────────────
 
 
 @router.post(
     "/engagements/{engagement_id}/survey-sessions",
+    response_model=SurveySessionResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_survey_session(
@@ -69,7 +99,7 @@ async def create_survey_session(
     )
 
 
-@router.get("/engagements/{engagement_id}/survey-sessions")
+@router.get("/engagements/{engagement_id}/survey-sessions", response_model=SurveySessionListResponse)
 async def list_survey_sessions(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -89,7 +119,7 @@ async def list_survey_sessions(
     )
 
 
-@router.get("/engagements/{engagement_id}/survey-sessions/{session_id}")
+@router.get("/engagements/{engagement_id}/survey-sessions/{session_id}", response_model=SurveySessionResponse)
 async def get_survey_session(
     engagement_id: UUID,
     session_id: UUID,
@@ -117,7 +147,9 @@ async def get_survey_session(
     }
 
 
-@router.patch("/engagements/{engagement_id}/survey-sessions/{session_id}/complete")
+@router.patch(
+    "/engagements/{engagement_id}/survey-sessions/{session_id}/complete", response_model=SurveySessionResponse
+)
 async def complete_survey_session(
     engagement_id: UUID,
     session_id: UUID,
@@ -148,7 +180,9 @@ async def complete_survey_session(
 # ── Probe Generation ──────────────────────────────────────────────────
 
 
-@router.post("/engagements/{engagement_id}/survey-sessions/{session_id}/generate-probes")
+@router.post(
+    "/engagements/{engagement_id}/survey-sessions/{session_id}/generate-probes", response_model=ProbeGenerationResponse
+)
 async def generate_session_probes(
     engagement_id: UUID,
     session_id: UUID,
@@ -196,6 +230,7 @@ async def generate_session_probes(
 
 @router.post(
     "/engagements/{engagement_id}/survey-sessions/{session_id}/claims",
+    response_model=dict,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_session_claim(

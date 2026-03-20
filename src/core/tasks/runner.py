@@ -105,7 +105,7 @@ async def run_task_worker(
         except asyncio.CancelledError:
             logger.info("Task worker %s cancelled", worker_id)
             return
-        except Exception:
+        except Exception:  # Intentionally broad: worker loop must not crash on any handler error
             logger.exception("Task worker %s unexpected error", worker_id)
             if not shutdown_event.is_set():
                 await asyncio.sleep(_ERROR_BACKOFF)
@@ -135,6 +135,6 @@ async def _publish_task_progress(
             "error": progress.error,
         }
         await publish_event(redis_client, CHANNEL_TASKS, event)
-    except Exception:
+    except Exception:  # Intentionally broad: progress notification is best-effort; must not mask original errors
         # Non-fatal — progress notification is best-effort
         logger.warning("Failed to publish task progress for %s", progress.task_id)

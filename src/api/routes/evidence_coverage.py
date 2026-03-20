@@ -12,6 +12,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
@@ -26,9 +27,25 @@ router = APIRouter(prefix="/api/v1/scenarios", tags=["evidence-coverage"])
 MAX_COMPARE_SCENARIOS = 10
 
 
+class EvidenceCoverageCompareResponse(BaseModel):
+    """Response from comparing multiple scenarios by evidence coverage."""
+
+    scenarios: list[dict[str, Any]]
+
+
+class EvidenceCoverageResponse(BaseModel):
+    """Evidence coverage overlay for a single scenario."""
+
+    scenario_id: str
+    engagement_id: str
+    elements: list[dict[str, Any]]
+    summary: dict[str, Any]
+    risk_score: float
+
+
 # NOTE: /compare/evidence-coverage must be registered BEFORE /{scenario_id}/...
 # so that "compare" is not captured as a UUID path parameter.
-@router.get("/compare/evidence-coverage")
+@router.get("/compare/evidence-coverage", response_model=EvidenceCoverageCompareResponse)
 async def compare_evidence_coverage(
     scenario_ids: str = Query(
         ...,
@@ -72,7 +89,7 @@ async def compare_evidence_coverage(
     return {"scenarios": results}
 
 
-@router.get("/{scenario_id}/evidence-coverage")
+@router.get("/{scenario_id}/evidence-coverage", response_model=dict)
 async def get_evidence_coverage(
     scenario_id: UUID,
     engagement_id: UUID = Query(..., description="Engagement owning this scenario"),

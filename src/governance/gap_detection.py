@@ -21,6 +21,7 @@ from src.core.models import (
     GovernanceGapStatus,
     GovernanceGapType,
 )
+from src.semantic.graph import KnowledgeGraphService
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ class GovernanceGapDetectionService:
     controls (via regulation obligations) but lack ENFORCED_BY edges.
     """
 
-    def __init__(self, graph_service: Any) -> None:
+    def __init__(self, graph_service: KnowledgeGraphService) -> None:
         self._graph = graph_service
 
     async def get_regulated_activities(
@@ -84,7 +85,7 @@ class GovernanceGapDetectionService:
                 for r in records
                 if r.get("activity_id")
             ]
-        except Exception:
+        except Exception:  # Intentionally broad: Neo4j driver errors vary by version and connection state
             logger.warning(
                 "Failed to query regulated activities for engagement %s",
                 engagement_id,
@@ -139,7 +140,7 @@ class GovernanceGapDetectionService:
                     query, {"activity_ids": activity_ids, "engagement_id": engagement_id}
                 )
             return [r["activity_id"] for r in records if r.get("activity_id")]
-        except Exception:
+        except Exception:  # Intentionally broad: Neo4j driver errors vary by version and connection state
             logger.warning(
                 "Failed to check ENFORCED_BY edges for engagement %s",
                 engagement_id,

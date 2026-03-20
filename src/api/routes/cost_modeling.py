@@ -99,11 +99,50 @@ class FteSavingsRequest(BaseModel):
     to_be_tasks: list[TaskAssignment] = Field(..., max_length=1000)
 
 
+class RoleRateResponse(BaseModel):
+    """Response schema for a role rate assumption."""
+
+    id: str
+    engagement_id: str
+    role_name: str
+    hourly_rate: float
+    annual_rate: float | None = None
+    rate_variance_pct: float
+    created_at: str | None = None
+
+
+class RoleRateListResponse(BaseModel):
+    """Paginated list of role rate assumptions."""
+
+    items: list[RoleRateResponse]
+    total: int
+
+
+class VolumeForecastResponse(BaseModel):
+    """Response schema for a volume forecast."""
+
+    id: str
+    engagement_id: str
+    name: str
+    baseline_volume: int
+    variance_pct: float
+    seasonal_factors: dict[str, float] | None = None
+    created_at: str | None = None
+
+
+class VolumeForecastListResponse(BaseModel):
+    """Paginated list of volume forecasts."""
+
+    items: list[VolumeForecastResponse]
+    total: int
+
+
 # ── Role Rate Routes ──────────────────────────────────────────────────
 
 
 @router.post(
     "/engagements/{engagement_id}/role-rates",
+    response_model=RoleRateResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_role_rate(
@@ -134,7 +173,7 @@ async def create_role_rate(
     return _rate_to_dict(rate)
 
 
-@router.get("/engagements/{engagement_id}/role-rates")
+@router.get("/engagements/{engagement_id}/role-rates", response_model=RoleRateListResponse)
 async def list_role_rates(
     engagement_id: UUID,
     limit: int = Query(default=50, ge=1, le=200),
@@ -165,6 +204,7 @@ async def list_role_rates(
 
 @router.post(
     "/engagements/{engagement_id}/volume-forecasts",
+    response_model=VolumeForecastResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_volume_forecast(
@@ -195,7 +235,7 @@ async def create_volume_forecast(
     return _forecast_to_dict(forecast)
 
 
-@router.get("/engagements/{engagement_id}/volume-forecasts")
+@router.get("/engagements/{engagement_id}/volume-forecasts", response_model=VolumeForecastListResponse)
 async def list_volume_forecasts(
     engagement_id: UUID,
     limit: int = Query(default=50, ge=1, le=200),
@@ -224,7 +264,7 @@ async def list_volume_forecasts(
 # ── Cost Computation Routes ──────────────────────────────────────────
 
 
-@router.post("/engagements/{engagement_id}/cost-modeling/staffing")
+@router.post("/engagements/{engagement_id}/cost-modeling/staffing", response_model=dict)
 async def compute_staffing(
     engagement_id: UUID,
     payload: StaffingCostRequest,
@@ -245,7 +285,7 @@ async def compute_staffing(
     return compute_staffing_cost(role_rates, [t.model_dump() for t in payload.task_assignments])
 
 
-@router.post("/engagements/{engagement_id}/cost-modeling/volume")
+@router.post("/engagements/{engagement_id}/cost-modeling/volume", response_model=dict)
 async def compute_volume(
     engagement_id: UUID,
     payload: VolumeCostRequest,
@@ -258,7 +298,7 @@ async def compute_volume(
     return compute_volume_cost(forecast.baseline_volume, forecast.variance_pct, payload.per_transaction_cost)
 
 
-@router.post("/engagements/{engagement_id}/cost-modeling/quarterly")
+@router.post("/engagements/{engagement_id}/cost-modeling/quarterly", response_model=dict)
 async def compute_quarterly(
     engagement_id: UUID,
     payload: QuarterlyProjectionRequest,
@@ -278,7 +318,7 @@ async def compute_quarterly(
     )
 
 
-@router.post("/engagements/{engagement_id}/cost-modeling/fte-savings")
+@router.post("/engagements/{engagement_id}/cost-modeling/fte-savings", response_model=dict)
 async def compute_fte(
     engagement_id: UUID,
     payload: FteSavingsRequest,

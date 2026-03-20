@@ -1,9 +1,9 @@
 # D3: Dependency & Regression Audit Findings
 
 **Auditor**: D3 (Dependency & Regression Auditor)
-**Date**: 2026-03-19
+**Date**: 2026-03-20
 **Scope**: CVEs in dependencies, lock file status, abandoned packages, version pinning, supply chain security
-**Prior Audit**: 2026-02-26 (this report supersedes and extends the prior findings)
+**Prior Audit**: 2026-03-19 (this report supersedes and extends the prior findings)
 
 ---
 
@@ -12,15 +12,15 @@
 | Category | Count |
 |---|---|
 | CRITICAL findings | 0 |
-| HIGH findings | 2 |
-| MEDIUM findings | 4 |
-| LOW findings | 5 |
-| RESOLVED since last audit | 4 |
+| HIGH findings | 0 |
+| MEDIUM findings | 0 |
+| LOW findings | 4 |
+| RESOLVED since last audit | 8 |
 
-**Python dependency count (production)**: 27 packages in `[project.dependencies]` (pyopenssl, pyasn1 added as CVE floor guards in PR #613)
-**Python lock file status**: STALE — `requirements.lock` was last regenerated in PR #175 (2026-02-20). Six subsequent CVE remediation PRs updated `pyproject.toml` but none regenerated the lock file. The lock contains `cryptography==43.0.3` while `pyproject.toml` requires `>=46.0.5`. `pyopenssl` and `pyasn1` (CVE floor guards) are absent from the lock entirely.
+**Python dependency count (production)**: 27 packages in `[project.dependencies]` (pyopenssl, pyasn1 present as CVE floor guards)
+**Python lock file status**: CURRENT — `requirements.lock` regenerated with `uv pip compile pyproject.toml -o requirements.lock --generate-hashes`. SHA-256 hashes present for all packages. `cryptography==46.0.5`, `pyjwt==2.12.1`, `pyopenssl==26.0.0`, and `pyasn1==0.6.3` all correctly pinned in the lock.
 **Node.js lock file status**: PRESENT and UP TO DATE — `frontend/package-lock.json` (lockfileVersion 3); all three Cloudflare Worker packages have committed lock files.
-**Docker install method**: `Dockerfile.backend` installs via `pip install -r requirements.lock` (line 19) — therefore, the stale lock file directly affects Docker production builds.
+**Docker install method**: `Dockerfile.backend:20` installs via `pip install --no-cache-dir --require-hashes --prefix=/install -r requirements.lock` — hash verification active on all Docker builds.
 
 ---
 
@@ -40,142 +40,61 @@ The prior audit flagged `agent/python/pyproject.toml` as declaring `PyJWT[crypto
 
 ### RESOLVED: Coverage Threshold Below Documented Standard
 
-A prior finding noted `fail_under = 70` in `pyproject.toml` against the documented 80% standard. The current `pyproject.toml` specifies `fail_under = 80`. Finding is **closed**.
+A prior finding noted `fail_under = 70` in `pyproject.toml` against the documented 80% standard. The current `pyproject.toml` specifies `fail_under = 90`, exceeding the standard. Finding is **closed**.
+
+---
+
+## Resolved Findings (Since 2026-03-19)
+
+### RESOLVED: [HIGH] requirements.lock Is Stale — Locked Versions Violate Declared Security Floors
+
+The prior audit (2026-03-19) found `requirements.lock` containing `cryptography==43.0.3` (floor `>=46.0.5`) and `pyjwt==2.11.0` (floor `>=2.12.0`), while `Dockerfile.backend` installed directly from the stale lock. The lock file has been regenerated: header line 2 now reads `uv pip compile pyproject.toml -o requirements.lock --generate-hashes`. Verified resolved versions: `cryptography==46.0.5` (line 349), `pyjwt==2.12.1` (line 1230). Finding is **closed**.
+
+### RESOLVED: [HIGH] requirements.lock Lacks Hash Verification
+
+The prior audit found the lock file compiled without `--generate-hashes` and `Dockerfile.backend` installing without `--require-hashes`. Both are now corrected: the lock contains SHA-256 hashes for all packages and `Dockerfile.backend:20` uses `pip install --no-cache-dir --require-hashes --prefix=/install -r requirements.lock`. Finding is **closed**.
+
+### RESOLVED: [MEDIUM] Python Lock File Does Not Include CVE Floor Packages
+
+The prior audit found `pyopenssl` and `pyasn1` (added to `pyproject.toml` as transitive CVE floor guards in PR #613) entirely absent from `requirements.lock`. Both are now present: `pyopenssl==26.0.0` (line 1236), `pyasn1==0.6.3` (line 1088). Finding is **closed**.
+
+### RESOLVED: [MEDIUM] Worker package.json Files Use Caret Ranges for jose
+
+The prior audit found all three Cloudflare Worker `package.json` files using `"jose": "^6.1.3"` (caret range on the auth-critical JWT library). All three workers now use exact pin `"jose": "6.1.3"`: `infrastructure/cloudflare-workers/presentation-auth/package.json:16`, `state-street-apex-auth/package.json:16`, `tunnel-auth/package.json:9`. Finding is **closed**.
+
+### RESOLVED: [MEDIUM] aiofiles Declared Without Upper Bound
+
+The prior audit found `pyproject.toml` declaring `"aiofiles>=24.1.0"` with no upper major cap, inconsistent with all other production dependencies. The declaration now reads `"aiofiles>=24.1.0,<26.0"` (`pyproject.toml:38`). Finding is **closed**.
+
+### RESOLVED: [LOW] minio/mc Uses Floating Latest Tag
+
+The prior audit found the `minio-init` service using `image: minio/mc` with no version tag. The `docker-compose.yml` now pins `image: minio/mc:RELEASE.2025-01-20T17-06-52Z` (line 150). Finding is **closed**.
+
+### RESOLVED: [LOW] Backend and Frontend Base Images Use Floating Minor Tags
+
+The prior audit found `Dockerfile.backend` using `python:3.12-slim` (floating patch) and `frontend/Dockerfile` using `node:20-alpine` (floating patch). Both are now patch-level pinned: `python:3.12.11-slim` (`Dockerfile.backend:2`, `Dockerfile.backend:23`) and `node:20.19-alpine` (`frontend/Dockerfile:2`). Finding is **closed**.
 
 ---
 
 ## Findings
 
-### [HIGH] DEPENDENCY-MANAGEMENT: requirements.lock Is Stale — Locked Versions Violate Declared Security Floors
+### [LOW] DOCKER-IMAGE: Neo4j Image Uses Minor-Only Tag
 
-**File**: `requirements.lock:30-34` and `pyproject.toml:54`
-**Agent**: D3 (Dependency & Regression Auditor)
-**Evidence**:
-```
-# requirements.lock:30-34 — compiled from pyproject.toml in PR #175 (2026-02-20), never updated since
-cryptography==43.0.3
-    # via
-    #   kmflow (pyproject.toml)
-    #   pdfminer-six
-    #   pyjwt
-```
-```toml
-# pyproject.toml:54 — floor raised to 46.0.5 in PR #613 (2026-03-18)
-"cryptography>=46.0.5,<48.0",
-```
-**Description**: `requirements.lock` was last regenerated in commit `a16d7a8` (PR #175, 2026-02-20) and has never been updated since. Six CVE remediation PRs (#175, #605, #613, #614, #615, #619) updated `pyproject.toml` but not the lock file. The most critical divergence: `pyproject.toml` requires `cryptography>=46.0.5`, but `requirements.lock` pins `cryptography==43.0.3` — three major releases below the security floor. `pyjwt==2.11.0` in the lock is below the `>=2.12.0` floor set after CVE-2026-32597. Two CVE floor packages (`pyopenssl>=26.0.0`, `pyasn1>=0.6.3`) added in PR #613 are entirely absent from the lock file. `Dockerfile.backend:19` installs via `pip install -r requirements.lock`, so the production Docker image actively installs these out-of-date versions.
-**Risk**: The production Docker container is built with `cryptography==43.0.3` (not 46.0.5), `pyjwt==2.11.0` (not 2.12.x), and zero install of `pyopenssl` or `pyasn1`. CVEs patched in the 44.x–46.x `cryptography` series and CVE-2026-32597 (PyJWT) are present in every Docker build. The comment in `pyproject.toml:15` says "Run `pip freeze > requirements.lock` after any dependency change" but this process has not been followed for four weeks.
-**Recommendation**: Regenerate the lock file immediately: `uv pip compile pyproject.toml -o requirements.lock --generate-hashes`. Add lock-file regeneration as a mandatory step in the post-merge checklist (`.claude/rules/post-merge-updates.md`). Verify Docker build installs expected versions after regeneration.
-
----
-
-### [HIGH] SUPPLY-CHAIN: requirements.lock Lacks Hash Verification
-
-**File**: `requirements.lock:1-5`
-**Agent**: D3 (Dependency & Regression Auditor)
-**Evidence**:
-```
-# requirements.lock:1-3 — generated without --generate-hashes flag
-# This file was autogenerated by uv via the following command:
-#    uv pip compile pyproject.toml -o requirements.lock
-aiofiles==24.1.0
-    # via kmflow (pyproject.toml)
-```
-**Description**: `requirements.lock` records pinned versions but no SHA-256 hashes. By contrast, `npm`'s `package-lock.json` includes SHA-512 integrity hashes for all packages (supply chain protection), and `agent/python/requirements.txt` uses `--hash=sha256:...` for all 12 packages with `--require-hashes`. The main platform lock file provides no equivalent tamper detection. `Dockerfile.backend` uses `pip install --no-cache-dir --prefix=/install -r requirements.lock` without `--require-hashes`, meaning package authenticity is not verified during Docker builds.
-**Risk**: A compromised PyPI mirror or CDN-level substitution attack could replace any of the 27 production Python packages during a Docker build without detection. Security-sensitive packages (cryptography, PyJWT, pdfplumber, lxml) are all exposed. This attack surface exists on every `docker build`.
-**Recommendation**: Regenerate with `uv pip compile pyproject.toml -o requirements.lock --generate-hashes`. Update `Dockerfile.backend:19` to add `--require-hashes`: `pip install --no-cache-dir --require-hashes --prefix=/install -r requirements.lock`.
-
----
-
-### [MEDIUM] LOCK-FILE-STALENESS: Python Lock File Does Not Include CVE Floor Packages
-
-**File**: `requirements.lock` and `pyproject.toml:56-58`
-**Agent**: D3 (Dependency & Regression Auditor)
-**Evidence**:
-```toml
-# pyproject.toml:56-58 — added in PR #613 (2026-03-18) to pin CVE-patched transitive deps
-# Transitive dep floors (CVE remediation — force minimum safe versions)
-"pyopenssl>=26.0.0",
-"pyasn1>=0.6.3",
-```
-**Description**: Two packages were explicitly added to `pyproject.toml` as transitive CVE floor guards in PR #613. Neither appears in `requirements.lock` at all. Any environment that installs from `requirements.lock` (including `Dockerfile.backend`) will not install `pyopenssl` or `pyasn1` at any version. The CVE remediation for CVE-2026-27448, CVE-2026-27459 (pyopenssl), and CVE-2026-30922 (pyasn1) is only effective when installing from `pyproject.toml` with live resolution — which is non-deterministic and distinct from what Docker does.
-**Risk**: CVE-2026-27448, CVE-2026-27459 (pyopenssl), and CVE-2026-30922 (pyasn1) are not mitigated in the Docker build. The security work done in PR #613 has not taken effect in any reproducible-build environment.
-**Recommendation**: Regenerate `requirements.lock` immediately after any `pyproject.toml` change. Enforce this via the post-merge checklist.
-
----
-
-### [MEDIUM] DEPENDENCY-MANAGEMENT: Worker package.json Files Use Caret Ranges for Security-Critical Runtime Dependencies
-
-**File**: `infrastructure/cloudflare-workers/presentation-auth/package.json:16`, `state-street-apex-auth/package.json:17`, `tunnel-auth/package.json:10`
-**Agent**: D3 (Dependency & Regression Auditor)
-**Evidence**:
-```json
-// presentation-auth/package.json:16 — caret range on auth-critical JWT library
-"dependencies": {
-  "jose": "^6.1.3"
-},
-"devDependencies": {
-  "wrangler": "^4.65.0"
-}
-```
-**Description**: All three Cloudflare Worker `package.json` files use caret (`^`) ranges for `jose` (the JWT verification library used in all auth workers) and `wrangler` (the deployment tool). The `^6.1.3` range permits any `jose` 6.x release, meaning `npm install` would pull a newer minor version without a lock file re-review. Lock files mitigate this in practice — all three workers have committed `package-lock.json` files that pin `jose@6.1.3` — but the ADR documents that exact pinning (no ranges) is the target for `package.json`. The caret ranges contradict the ADR standard established in PR #621.
-**Risk**: Medium. Running `npm install` (not `npm ci`) in any of these directories would silently upgrade `jose` to whatever `6.x` satisfies the range at that moment, without requiring a code review or PR. The `jose` library directly handles JWT verification for Descope authentication across all presentations.
-**Recommendation**: Replace `"jose": "^6.1.3"` with `"jose": "6.1.3"` (exact pin) in all three workers, consistent with the ADR and `frontend/package.json` pinning strategy. Use `npm ci` in deployment scripts.
-
----
-
-### [MEDIUM] DEPENDENCY-MANAGEMENT: aiofiles Declared Without Upper Bound
-
-**File**: `pyproject.toml:38`
-**Agent**: D3 (Dependency & Regression Auditor)
-**Evidence**:
-```toml
-# pyproject.toml:38 — only a lower bound, no upper major cap
-"aiofiles>=24.1.0",
-```
-**Description**: All other runtime dependencies in `pyproject.toml` use `<N.0` upper caps to prevent inadvertent major version upgrades (e.g., `fastapi>=0.115.0,<1.0`, `sqlalchemy[asyncio]>=2.0.36,<3.0`). `aiofiles` is the only production dependency with only a lower floor and no upper cap. If `aiofiles` releases a major version (e.g., `25.0`) with breaking API changes, `pip install` could silently resolve to it.
-**Risk**: Low. `aiofiles` is used in exactly one location (`src/evidence/pipeline.py:18`). A breaking API change would likely surface in CI. But the inconsistency deviates from the established pattern and creates uncontrolled upgrade exposure.
-**Recommendation**: Cap to `"aiofiles>=24.1.0,<26.0"` (or `<25.0`) consistent with all other production dependencies.
-
----
-
-### [LOW] DOCKER-IMAGE: minio/mc Uses Floating Latest Tag
-
-**File**: `docker-compose.yml`
+**File**: `docker-compose.yml:31`
 **Agent**: D3 (Dependency & Regression Auditor)
 **Evidence**:
 ```yaml
-minio-init:
-  image: minio/mc
-  container_name: kmflow-minio-init
-  security_opt:
-    - no-new-privileges:true
+# docker-compose.yml:31
+neo4j:
+  image: neo4j:5.27-community
 ```
-**Description**: The `minio-init` service uses `image: minio/mc` with no version tag, resolving to `:latest`. All other services in `docker-compose.yml` use pinned tags. This finding carries over from the prior audit unchanged.
-**Risk**: Low. The service exits after bucket creation (`restart: "no"`). However, an unpinned image can pull a behaviorally different or compromised version on `docker compose pull`.
-**Recommendation**: Pin to a specific release tag matching the `minio/minio:RELEASE.2025-01-20T14-49-07Z` deployment.
+**Description**: The Neo4j service is pinned to minor version `5.27` but not to a patch release. The `5.27-community` tag advances with patch releases (e.g., `5.27.0` → `5.27.1`), meaning `docker compose pull` can silently change the running version. All other services that do not use timestamped releases (postgres, redis, cib7, minio, mailpit) are pinned to specific patch versions. Neo4j is the exception.
+**Risk**: Low. Neo4j 5.x patch releases are generally backwards-compatible. The risk is a behavioral change or regression introduced by an upstream patch being pulled in without an explicit version bump in the compose file.
+**Recommendation**: Pin to a specific patch release (e.g., `neo4j:5.27.0-community`) or use the current resolved patch tag. Check `docker inspect kmflow-neo4j` to determine the current running patch version, then pin to it.
 
 ---
 
-### [LOW] DOCKER-IMAGE: Backend and Frontend Base Images Use Floating Minor Tags
-
-**File**: `Dockerfile.backend:1`
-**Agent**: D3 (Dependency & Regression Auditor)
-**Evidence**:
-```dockerfile
-# Dockerfile.backend:1
-FROM python:3.12-slim AS builder
-
-# Dockerfile.backend:22
-FROM python:3.12-slim AS runtime
-```
-**Description**: Both backend stages use `python:3.12-slim` without a patch-level version or SHA digest. This tag advances with Python patch releases. No SHA digest pinning is present. This finding carries over from the prior audit.
-**Risk**: Low for development; potential for base OS package changes between builds in production.
-**Recommendation**: For production, use digest-pinned base images (e.g., `python:3.12-slim@sha256:<digest>`) or explicit patch tags (e.g., `python:3.12.9-slim`).
-
----
-
-### [LOW] DEPENDENCY-QUALITY: minimatch Override Required for Transitive CVE
+### [LOW] DEPENDENCY-QUALITY: minimatch Override Lacks Identifying Comment
 
 **File**: `frontend/package.json:41-43`
 **Agent**: D3 (Dependency & Regression Auditor)
@@ -185,30 +104,30 @@ FROM python:3.12-slim AS runtime
   "minimatch": "^10.2.3"
 }
 ```
-**Description**: An override forces `minimatch>=10.2.3` to address CVE-2026-27903 (ReDoS). The override is effective — `package-lock.json` resolves `minimatch@10.2.4` and `npm audit` reports 0 vulnerabilities. The risk is that if this override is accidentally removed in a future `package.json` change, the CVE silently reactivates.
+**Description**: An override forces `minimatch>=10.2.3` to address CVE-2026-27903 (ReDoS). The override is effective — `package-lock.json` resolves `minimatch@10.2.4` and `npm audit` reports 0 vulnerabilities. However, there is no inline comment identifying which transitive dependency requires the old minimatch range and which CVE the override guards against. If the override is accidentally removed in a future `package.json` change, the CVE silently reactivates with no audit trail.
 **Risk**: Low. Current state is safe. Risk is forward-looking.
-**Recommendation**: Add an inline comment identifying which transitive dependency requires the old minimatch range and the CVE it guards against. Check quarterly whether the dependency has been updated upstream.
+**Recommendation**: Add an inline comment (using the `"//"` JSON comment convention already in use at `package.json:18`) identifying the CVE and the dependency chain that requires the override. Check quarterly whether the upstream dependency has been updated to use a safe minimatch version.
 
 ---
 
-### [LOW] DEPENDENCY-QUALITY: Wrangler Version Inconsistency Across Workers
+### [LOW] DEPENDENCY-QUALITY: Wrangler Caret Ranges and Version Inconsistency Across Workers
 
 **File**: `infrastructure/cloudflare-workers/presentation-auth/package.json:13`, `state-street-apex-auth/package.json:14`, `tunnel-auth/package.json:13`
 **Agent**: D3 (Dependency & Regression Auditor)
 **Evidence**:
 ```json
-// presentation-auth/package-lock.json — resolves to 4.65.0
+// presentation-auth/package.json — caret range; lock resolves to 4.65.0
 "wrangler": "^4.65.0"
 
-// state-street-apex-auth/package-lock.json — also resolves to 4.65.0
+// state-street-apex-auth/package.json — same range; lock resolves to 4.69.0
 "wrangler": "^4.65.0"
 
-// tunnel-auth/package-lock.json — resolves to 4.75.0
+// tunnel-auth/package.json — different range; lock resolves to 4.75.0
 "wrangler": "^4.75.0"
 ```
-**Description**: Three Cloudflare Workers use two different resolved versions of `wrangler` (4.65.0 and 4.75.0) across their lock files. Each worker has a committed lock file so individual builds are reproducible. However, running `npm install` in any directory would silently upgrade, and deployment behavior may diverge between workers. The two workers on 4.65.0 are 10 minor versions behind the tunnel worker.
-**Risk**: Low. Each lock file ensures reproducibility. Risk only materializes on fresh installs.
-**Recommendation**: Standardize all three workers to `"wrangler": "4.75.0"` (exact pin) and regenerate all lock files. Use `npm ci` in deployment scripts.
+**Description**: All three Cloudflare Worker `package.json` files use caret ranges for `wrangler` (the deployment tool). The caret ranges contradict the exact-pin ADR. Additionally, the three workers resolve to three different `wrangler` versions (4.65.0, 4.69.0, 4.75.0), meaning deployment behavior may diverge between workers. Each worker has a committed lock file so individual builds are reproducible, but running `npm install` instead of `npm ci` would silently upgrade to whatever the range resolves to at that moment.
+**Risk**: Low. Each lock file ensures reproducibility for `npm ci`. Risk only materializes on fresh installs or when lock files are regenerated independently.
+**Recommendation**: Standardize all three workers to `"wrangler": "4.75.0"` (exact pin) and regenerate all lock files. Use `npm ci` in all deployment scripts.
 
 ---
 
@@ -246,7 +165,7 @@ FROM python:3.12-slim AS runtime
 | python-dotenv | 1.2.1 | >=1.0.1,<2.0 | None known | SAFE |
 | httpx | 0.28.1 | >=0.28.0,<1.0 | None known | SAFE |
 | python-multipart | 0.0.22 | >=0.0.22,<1.0 | None known | SAFE |
-| aiofiles | 24.1.0 | >=24.1.0 (no upper cap) | None known | MEDIUM: no upper bound |
+| aiofiles | 24.1.0 | >=24.1.0,<26.0 | None known | SAFE |
 | slowapi | 0.1.9 | >=0.1.9,<1.0 | None known | SAFE |
 | python-magic | 0.4.27 | >=0.4.27,<1.0 | None known | SAFE |
 | python-docx | 1.2.0 | >=1.1.0,<2.0 | None known | SAFE |
@@ -255,12 +174,12 @@ FROM python:3.12-slim AS runtime
 | lxml | 5.4.0 | >=5.0.0,<6.0 | None known | SAFE |
 | defusedxml | 0.7.1 | >=0.7.0,<1.0 | None known | SAFE |
 | numpy | 2.4.2 | >=1.26.0,<3.0 | None known | SAFE |
-| PyJWT[crypto] | 2.11.0 (lock) | >=2.12.0,<3.0 | CVE-2026-32597 fixed in 2.12.1 | HIGH: lock file stale |
+| PyJWT[crypto] | 2.12.1 | >=2.12.0,<3.0 | CVE-2026-32597 patched in 2.12.1 | SAFE |
 | bcrypt | 4.3.0 | >=4.0.0,<5.0 | None known | SAFE |
-| cryptography | 43.0.3 (lock) | >=46.0.5,<48.0 | Lock violates declared floor | HIGH: lock file stale |
+| cryptography | 46.0.5 | >=46.0.5,<48.0 | None known | SAFE |
 | email-validator | 2.3.0 | >=2.0.0,<3.0 | None known | SAFE |
-| pyopenssl | NOT IN LOCK | >=26.0.0 | CVE-2026-27448, CVE-2026-27459 floor guard absent | HIGH: missing from lock |
-| pyasn1 | NOT IN LOCK | >=0.6.3 | CVE-2026-30922 floor guard absent | HIGH: missing from lock |
+| pyopenssl | 26.0.0 | >=26.0.0 | CVE-2026-27448, CVE-2026-27459 floor met | SAFE |
+| pyasn1 | 0.6.3 | >=0.6.3 | CVE-2026-30922 floor met | SAFE |
 | langdetect | 1.0.9 | >=1.0.9,<2.0 | None known | LOW: maintenance risk |
 
 ---
@@ -280,21 +199,21 @@ FROM python:3.12-slim AS runtime
 | Service | Image | Pinned | Notes |
 |---|---|---|---|
 | postgres | pgvector/pgvector:0.8.0-pg15 | Yes | Specific version |
-| neo4j | neo4j:5.25-community | Yes | Specific version |
+| neo4j | neo4j:5.27-community | Partial | Minor-only tag, no patch version (LOW finding) |
 | redis | redis:7.4-alpine | Yes | Minor+patch pinned |
 | cib7 | cibseven/cibseven:run-2.1.0 | Yes | Specific version |
 | minio | minio/minio:RELEASE.2025-01-20T14-49-07Z | Yes | Timestamped release |
-| minio-init | minio/mc | NO | Floating :latest |
+| minio-init | minio/mc:RELEASE.2025-01-20T17-06-52Z | Yes | Timestamped release (resolved since 2026-03-19) |
 | mailpit | axllent/mailpit:v1.22 | Yes | Specific version |
-| backend | python:3.12-slim | Partial | Floating patch level, no SHA digest |
-| frontend | node:20-alpine | Partial | Floating patch level, no SHA digest |
+| backend | python:3.12.11-slim | Yes | Patch-level pinned (resolved since 2026-03-19) |
+| frontend | node:20.19-alpine | Yes | Patch-level pinned (resolved since 2026-03-19) |
 
 ---
 
-## Supply Chain Risk Score: MEDIUM-HIGH
+## Supply Chain Risk Score: LOW-MEDIUM
 
-The JavaScript supply chain is in good shape: the frontend `package-lock.json` (lockfileVersion 3) has integrity hashes for all packages; all three Cloudflare Worker packages have committed lock files; two accepted npm advisories are documented and non-exploitable; Next.js CVE was patched same-day. The main risk is that three worker `package.json` files use caret ranges on `jose` (auth-critical) instead of exact pins.
+The JavaScript supply chain is in good shape: the frontend `package-lock.json` (lockfileVersion 3) has integrity hashes for all packages; all three Cloudflare Worker packages have committed lock files with `jose` exact-pinned at `6.1.3`. Two accepted npm advisories are documented and non-exploitable. Remaining risk is three worker `package.json` files use caret ranges for `wrangler` with inconsistent resolved versions across workers (LOW).
 
-The Python supply chain has an active process gap: `requirements.lock` has not been regenerated since PR #175 (2026-02-20) despite six subsequent dependency updates including multiple CVE remediations. The lock file specifies `cryptography==43.0.3` (floor is `>=46.0.5`), `pyjwt==2.11.0` (floor is `>=2.12.0`, CVE-2026-32597), and entirely omits `pyopenssl` and `pyasn1` (CVE floor guards added PR #613). Because `Dockerfile.backend:19` installs directly from `requirements.lock`, these stale versions are what the production Docker image actually contains. Regenerating the lock file with `--generate-hashes` and verifying the Docker build resolves both HIGH findings.
+The Python supply chain is now in good standing: `requirements.lock` was regenerated with `--generate-hashes`, providing SHA-256 tamper detection for all packages. `Dockerfile.backend` installs with `--require-hashes`, enforcing hash verification on every build. `cryptography==46.0.5`, `pyjwt==2.12.1`, `pyopenssl==26.0.0`, and `pyasn1==0.6.3` are all correctly resolved in the lock. No HIGH or MEDIUM Python dependency findings remain.
 
-The single highest-impact corrective action is: `uv pip compile pyproject.toml -o requirements.lock --generate-hashes`, followed by a Docker rebuild verification.
+The remaining risk is the neo4j minor-only tag in `docker-compose.yml` and the long-term maintenance trajectory of `langdetect`.

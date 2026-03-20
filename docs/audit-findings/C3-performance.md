@@ -1,9 +1,9 @@
 # C3: Performance Audit Findings
 
 **Auditor**: C3 (Performance Auditor)
-**Date**: 2026-03-19
+**Date**: 2026-03-20
 **Scope**: N+1 queries, async anti-patterns, memory leaks, connection pooling, caching strategy
-**Files examined**: `src/api/routes/evidence.py`, `src/api/routes/engagements.py`, `src/api/routes/graph.py`, `src/api/middleware/security.py`, `src/evidence/pipeline.py`, `src/semantic/graph.py`, `src/semantic/embeddings.py`, `src/semantic/builder.py`, `src/semantic/bridges/process_evidence.py`, `src/taskmining/semantic_bridge.py`, `src/rag/embeddings.py`, `src/core/regulatory.py`, `src/core/database.py`, `src/core/neo4j.py`, `src/core/config.py`, `src/evaluation/graph_health.py`, `src/monitoring/pipeline/continuous.py`, `src/api/main.py`
+**Files examined**: `src/api/routes/evidence.py`, `src/api/routes/engagements.py`, `src/api/routes/graph.py`, `src/api/routes/pipeline_quality.py`, `src/api/middleware/security.py`, `src/evidence/pipeline.py`, `src/semantic/graph.py`, `src/semantic/embeddings.py`, `src/semantic/builder.py`, `src/semantic/bridges/process_evidence.py`, `src/taskmining/semantic_bridge.py`, `src/rag/embeddings.py`, `src/core/regulatory.py`, `src/core/database.py`, `src/core/neo4j.py`, `src/core/config.py`, `src/evaluation/graph_health.py`, `src/monitoring/pipeline/continuous.py`, `src/api/main.py`, `src/quality/metrics_collector.py`, `src/quality/instrumentation.py`, `agent/python/kmflow_agent/buffer/manager.py`, `agent/python/kmflow_agent/ipc/socket_server.py`, `agent/python/kmflow_agent/upload/batch_uploader.py`, `agent/python/kmflow_agent/gdpr/retention.py`, `agent/python/kmflow_agent/gdpr/audit_logger.py`, `src/integrations/apex_clearing.py`, `src/integrations/charles_river.py`
 
 ## Summary
 
@@ -11,9 +11,9 @@
 |----------|-------|
 | CRITICAL | 1     |
 | HIGH     | 4     |
-| MEDIUM   | 4     |
-| LOW      | 3     |
-| **Total** | **12** |
+| MEDIUM   | 6     |
+| LOW      | 5     |
+| **Total** | **16** |
 
 ---
 
@@ -300,3 +300,90 @@ The async and database infrastructure is sound — routes use `async def`, SQLAl
 3. **Computational inefficiency** (MEDIUM): The task mining semantic bridge uses a Python nested loop for O(N×M) cosine similarity when NumPy matrix multiplication can reduce this to a single BLAS operation.
 
 Several previously-reported issues have been resolved: `generate_fragment_embeddings` now uses `store_embeddings_batch` as the primary path (N+1 is only in the error fallback). `ProcessEvidenceBridge` correctly uses `batch_create_relationships`. `SecurityHeadersMiddleware` pre-builds all static headers in `__init__` — no per-request settings access.
+
+---
+
+## New Findings (2026-03-20 — Batch 7 additions)
+
+Files added in scope: `src/quality/metrics_collector.py`, `src/quality/instrumentation.py`, `src/api/routes/pipeline_quality.py`, `agent/python/kmflow_agent/buffer/manager.py`, `agent/python/kmflow_agent/buffer/encryption.py`, `agent/python/kmflow_agent/ipc/socket_server.py`, `agent/python/kmflow_agent/upload/batch_uploader.py`, `agent/python/kmflow_agent/gdpr/retention.py`, `agent/python/kmflow_agent/gdpr/purge.py`, `agent/python/kmflow_agent/gdpr/audit_logger.py`, `agent/python/kmflow_agent/pii/patterns.py`, `src/integrations/apex_clearing.py`, `src/integrations/charles_river.py`
+
+---
+
+### [MEDIUM] SEQUENTIAL DASHBOARD QUERIES: `get_dashboard` executes 5 independent DB queries sequentially
+
+**File**: `src/api/routes/pipeline_quality.py:396`
+**Agent**: C3 (Performance Auditor)
+**Evidence**:
+```python
+stages = await get_pipeline_stages(engagement_id, ...)
+retrieval = await get_retrieval_summary(engagement_id, ...)
+entities = await get_entity_summary(engagement_id, ...)
+graph_health = await get_graph_health(engagement_id, ...)
+satisfaction = await get_copilot_satisfaction(engagement_id, ...)
+```
+**Description**: The `get_dashboard` endpoint calls five separate route handler functions sequentially, each issuing one or more database queries against five different tables. Because these are independent queries (no cross-query dependencies), all five could run concurrently using `asyncio.gather`. As written, the total response time is the sum of all five query latencies rather than the maximum. At moderate data sizes, each query takes 5-20ms — the sequential sum adds 25-100ms of unnecessary latency to every dashboard load.
+
+**Risk**: MEDIUM. Under normal load this is a latency regression, not a resource concern. The queries share a single SQLAlchemy `AsyncSession`, which does support concurrent statement execution via the asyncpg driver. However, because each handler is called directly (not as a coroutine via `gather`), they run fully sequentially. As data grows, the retrieval summary (multi-step group-by with subquery) and entity summary (cross-join with evidence_items) will be the slowest sections.
+
+**Recommendation**: Wrap the five calls in `asyncio.gather` with `return_exceptions=True` to run them concurrently. Each sub-result should be handled individually for errors, replacing the five try/except blocks. Note: sharing a single `AsyncSession` across concurrent coroutines is safe with asyncpg but requires the session to not use the same underlying connection state simultaneously — consider whether `asyncio.gather` is appropriate here or whether separate sessions per call are safer. If session sharing is a concern, use `asyncio.TaskGroup` with explicit exception handling per task.
+
+---
+
+### [MEDIUM] SYNC BLOCKING IN ASYNC LOOP: `RetentionEnforcer.run` calls synchronous `enforce_now` directly in async task
+
+**File**: `agent/python/kmflow_agent/gdpr/retention.py:84`
+**Agent**: C3 (Performance Auditor)
+**Evidence**:
+```python
+async def run(self, shutdown_event: asyncio.Event) -> None:
+    while not shutdown_event.is_set():
+        self.enforce_now()   # synchronous SQLite I/O in async loop
+        try:
+            await asyncio.wait_for(...)
+```
+**Description**: `RetentionEnforcer.run` is an async method that calls `self.enforce_now()` synchronously. `enforce_now` performs blocking SQLite I/O — `sqlite3.connect`, `conn.execute("DELETE FROM events WHERE ...")`, and `conn.commit()` — directly on the asyncio event loop without offloading to a thread executor. Since the SQLite `DELETE` can scan a large events table, this blocks the event loop for the full duration of the database operation. The `BufferManager` class in the same module correctly uses `asyncio.to_thread` for all its SQLite operations, making `RetentionEnforcer.run`'s inline synchronous call inconsistent with the established pattern.
+
+**Risk**: If the local SQLite database contains tens of thousands of events (the 100 MB limit allows ~50,000-100,000 rows), a `DELETE WHERE timestamp < ?` without an index on `timestamp` may take 10-50ms. This blocks the event loop, pausing IPC message handling from the Swift capture layer. The socket server's `asyncio.sleep(0.5)` poll loop relies on a responsive event loop.
+
+**Recommendation**: Wrap the call in `asyncio.to_thread`: `await asyncio.to_thread(self.enforce_now)`. This matches the pattern used by `BufferManager._db_write_event` and `_db_read_pending`. Alternatively, consider whether `retention.py` should add an index on `timestamp` to the SQLite schema (currently only `ix_events_uploaded` is created).
+
+---
+
+### [LOW] REPEATED KEYCHAIN SUBPROCESS CALL: `BufferManager._default_key` spawns subprocess on every instantiation
+
+**File**: `agent/python/kmflow_agent/buffer/manager.py:57`
+**Agent**: C3 (Performance Auditor)
+**Evidence**:
+```python
+def _default_key(self) -> bytes:
+    result = subprocess.run(
+        ["security", "find-generic-password", "-s", ..., "-w"],
+        capture_output=True, text=True, timeout=5,
+    )
+    if result.returncode == 0 and result.stdout.strip():
+        return base64.b64decode(result.stdout.strip())[:32]
+```
+**Description**: Every time `BufferManager` is constructed, `_default_key` is called, which spawns a `security find-generic-password` subprocess to retrieve the AES-256-GCM key from the macOS Keychain. The subprocess fork+exec overhead for the `security` CLI is approximately 10-30ms. `BufferManager` is instantiated once at agent startup (the `SocketServer`, `BatchUploader`, and `RetentionEnforcer` all share a single instance), so this is a one-time cost — but if the `BufferManager` were ever reinstantiated (e.g., in tests or after a failure recovery), the Keychain call repeats unnecessarily.
+
+**Risk**: LOW — single instantiation at startup. The primary concern is test isolation: test code that creates multiple `BufferManager` instances (e.g., `test_batch_uploader.py`) spawns multiple `security` subprocesses, which can slow test execution and fails in CI environments where the macOS Keychain is unavailable. The fallback to env var (`KMFLOW_BUFFER_KEY`) mitigates this for CI, but the code path is not documented for test authors.
+
+**Recommendation**: Cache the retrieved key at the class level after first retrieval: `BufferManager._cached_key: bytes | None = None`. Add a docstring note that `KMFLOW_BUFFER_KEY` env var must be set in test environments. No structural change needed.
+
+---
+
+### [LOW] AUDIT LOG UNBOUNDED GROWTH: `AuditLogger` appends to a flat file with no rotation or size limit
+
+**File**: `agent/python/kmflow_agent/gdpr/audit_logger.py:28`
+**Agent**: C3 (Performance Auditor)
+**Evidence**:
+```python
+def _append(self, entry: dict[str, Any]) -> None:
+    with open(self._log_path, "a") as f:
+        f.write(json.dumps(entry, default=str) + "\n")
+```
+**Description**: `AuditLogger` appends to a single `audit.jsonl` file in `~/Library/Application Support/KMFlowAgent/` with no size limit, rotation, or TTL. Each open/write/close cycle incurs a system call round-trip. For high-frequency consent change events or purge cycles, this can accumulate a large file over time. The file is not compressed, and no cleanup mechanism exists alongside the `RetentionEnforcer` (which only cleans the `events` table in SQLite, not the audit log file). On a device used for months, the audit log could grow to tens of megabytes.
+
+**Risk**: LOW — file I/O is fast for append-only writes. The main concern is unbounded disk usage and the per-call open/write/close overhead compared to buffered logging. Unlike the SQLite buffer (which has the 100 MB prune logic), the audit log has no upper bound.
+
+**Recommendation**: Use Python's `logging.handlers.RotatingFileHandler` with `maxBytes=5MB` and `backupCount=3` to replace the manual open/write pattern. This provides automatic rotation, buffered writes, and a 15 MB total cap at zero implementation cost. The change is backward-compatible — existing `audit.jsonl` contents are preserved.
+

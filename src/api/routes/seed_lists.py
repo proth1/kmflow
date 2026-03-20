@@ -65,6 +65,7 @@ class AddDiscoveredTermsPayload(BaseModel):
 
 @router.post(
     "/engagements/{engagement_id}/seed-lists",
+    response_model=dict,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_seed_list(
@@ -83,7 +84,7 @@ async def create_seed_list(
     )
 
 
-@router.get("/engagements/{engagement_id}/seed-lists")
+@router.get("/engagements/{engagement_id}/seed-lists", response_model=dict)
 async def get_seed_list(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -108,7 +109,7 @@ async def get_seed_list(
 # ── Stage 2: NLP Refinement ───────────────────────────────────────────
 
 
-@router.post("/engagements/{engagement_id}/seed-lists/refine")
+@router.post("/engagements/{engagement_id}/seed-lists/refine", response_model=dict)
 async def refine_seed_list(
     engagement_id: UUID,
     payload: AddDiscoveredTermsPayload,
@@ -127,7 +128,7 @@ async def refine_seed_list(
 # ── Stage 3: Probe Generation ─────────────────────────────────────────
 
 
-@router.post("/engagements/{engagement_id}/seed-lists/generate-probes")
+@router.post("/engagements/{engagement_id}/seed-lists/generate-probes", response_model=dict)
 async def generate_probes(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -143,7 +144,7 @@ async def generate_probes(
 # ── Stage 4: Extraction Targeting ──────────────────────────────────────
 
 
-@router.get("/engagements/{engagement_id}/seed-lists/extraction-targets")
+@router.get("/engagements/{engagement_id}/seed-lists/extraction-targets", response_model=dict)
 async def get_extraction_targets(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -160,6 +161,7 @@ async def get_extraction_targets(
 
 @router.patch(
     "/engagements/{engagement_id}/seed-terms/{term_id}/deprecate",
+    response_model=dict,
     status_code=status.HTTP_200_OK,
 )
 async def deprecate_seed_term(
@@ -180,7 +182,7 @@ async def deprecate_seed_term(
 # ── Seed List Coverage Report (Story #367) ────────────────────────────
 
 
-@router.get("/engagements/{engagement_id}/seed-list/coverage")
+@router.get("/engagements/{engagement_id}/seed-list/coverage", response_model=dict)
 async def get_seed_list_coverage(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -194,7 +196,7 @@ async def get_seed_list_coverage(
 # ── Dark Room Backlog (Story #367) ────────────────────────────────────
 
 
-@router.get("/engagements/{engagement_id}/dark-room/backlog")
+@router.get("/engagements/{engagement_id}/dark-room/backlog", response_model=dict)
 async def get_dark_room_backlog(
     engagement_id: UUID,
     threshold: float = Query(default=0.40, ge=0.0, le=1.0),

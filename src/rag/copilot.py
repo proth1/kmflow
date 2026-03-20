@@ -132,7 +132,7 @@ class CopilotOrchestrator:
             )
             session.add(audit_entry)
             await session.flush()
-        except Exception:
+        except Exception:  # Intentionally broad: audit log failure must not prevent returning the answer to the user
             logger.exception("Failed to persist LLM audit log for copilot chat")
 
         # 5. Extract citations from retrieval results
@@ -303,7 +303,7 @@ class CopilotOrchestrator:
             )
             session.add(audit_entry)
             await session.flush()
-        except Exception:
+        except Exception:  # Intentionally broad: audit log failure must not prevent returning the stream to the user
             logger.exception("Failed to persist LLM audit log for copilot streaming")
 
         yield "data: [DONE]\n\n"
