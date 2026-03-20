@@ -28,7 +28,7 @@ services:
 
   # ── Neo4j with APOC plugin ───────────────────────────────────
   neo4j:
-    image: neo4j:5.25-community
+    image: neo4j:5.27-community
     container_name: kmflow-neo4j
     deploy:
       resources:

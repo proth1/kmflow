@@ -9,7 +9,7 @@ ENV API_URL=$API_URL
 # ── Dependencies ─────────────────────────────────────────────
 FROM base AS deps
 COPY package.json package-lock.json* ./
-RUN npm ci 2>/dev/null || npm install
+RUN npm ci
 
 # ── Production build ─────────────────────────────────────────
 FROM base AS builder
