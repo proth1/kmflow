@@ -184,7 +184,9 @@ class TestExtractRelationshipPatterns:
     async def test_handles_neo4j_error(self) -> None:
         mock_driver = MagicMock()
         mock_session_ctx = AsyncMock()
-        mock_session_ctx.__aenter__ = AsyncMock(side_effect=ConnectionError("down"))
+        from neo4j.exceptions import ServiceUnavailable
+
+        mock_session_ctx.__aenter__ = AsyncMock(side_effect=ServiceUnavailable("down"))
         mock_session_ctx.__aexit__ = AsyncMock(return_value=False)
         mock_driver.session.return_value = mock_session_ctx
 

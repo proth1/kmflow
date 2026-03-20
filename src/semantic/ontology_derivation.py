@@ -18,7 +18,7 @@ from collections import Counter, defaultdict
 from typing import Any
 
 from neo4j import AsyncDriver
-from neo4j.exceptions import Neo4jError
+from neo4j.exceptions import DriverError, Neo4jError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -175,7 +175,7 @@ class OntologyDerivationService:
                             "count": record["cnt"],
                         }
                     )
-        except Neo4jError:
+        except (Neo4jError, DriverError):
             logger.exception("Neo4j pattern extraction failed; continuing with empty patterns")
 
         return patterns

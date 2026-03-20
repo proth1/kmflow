@@ -130,21 +130,23 @@ class TestTaskDispatch:
         queue, redis = make_queue(SimpleWorker())
 
         task_id = "test-task-001"
-        redis.hgetall = AsyncMock(
-            return_value={
-                "task_id": task_id,
-                "task_type": "simple_task",
-                "status": TaskStatus.PENDING.value,
-                "current_step": "0",
-                "total_steps": "0",
-                "percent_complete": "0",
-                "error": "",
-                "attempt_count": "0",
-                "max_retries": "1",
-                "created_at": "2026-01-01T00:00:00+00:00",
-                "completed_at": "",
-            }
-        )
+        base_data = {
+            "task_id": task_id,
+            "task_type": "simple_task",
+            "status": TaskStatus.PENDING.value,
+            "current_step": "0",
+            "total_steps": "0",
+            "percent_complete": "0",
+            "error": "",
+            "attempt_count": "0",
+            "max_retries": "1",
+            "created_at": "2026-01-01T00:00:00+00:00",
+            "completed_at": "",
+        }
+        # First call fetches max_retries (returns PENDING); subsequent call
+        # from get_status after execution should reflect COMPLETED state.
+        completed_data = {**base_data, "status": TaskStatus.COMPLETED.value, "result": '{"done": true}'}
+        redis.hgetall = AsyncMock(side_effect=[base_data, completed_data])
 
         progress = await queue.execute_task(task_id, "simple_task", {})
 
@@ -355,9 +357,15 @@ class TestGracefulShutdown:
         redis_client = AsyncMock()
         redis_client.publish = AsyncMock()
 
-        # Simulate xreadgroup returning a task entry to trigger the worker error
+        # Simulate xreadgroup returning a task entry once, then empty
         task_fields = {"task_id": "boom-001", "payload": "{}"}
-        redis.xreadgroup = AsyncMock(return_value=[[b"kmflow:tasks:boom", [(b"1-0", task_fields)]]])
+        redis.xreadgroup = AsyncMock(
+            side_effect=[
+                [[b"kmflow:tasks:boom", [(b"1-0", task_fields)]]],
+                [],  # No more tasks — allow worker loop to check shutdown
+            ]
+            + [[] for _ in range(100)]  # Keep returning empty
+        )
         redis.hgetall = AsyncMock(
             return_value={
                 "task_id": "boom-001",
