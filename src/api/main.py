@@ -25,6 +25,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from src.api.middleware.audit import AuditLoggingMiddleware
+from src.api.middleware.csrf import CSRFMiddleware
 from src.api.middleware.security import (
     RateLimitMiddleware,
     RequestIDMiddleware,
@@ -190,7 +191,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # -- CIB7 (Camunda) ---
     cib7_url = os.environ.get("CIB7_URL", "http://localhost:8080/engine-rest")
-    camunda_client = CamundaClient(cib7_url)
+    camunda_client = CamundaClient(
+        cib7_url,
+        auth_user=settings.camunda_user,
+        auth_password=settings.camunda_password.get_secret_value() if settings.camunda_password else None,
+    )
     app.state.camunda_client = camunda_client
     if await camunda_client.verify_connectivity():
         logger.info("CIB7 Camunda engine connection verified")
@@ -270,8 +275,9 @@ def _register_middleware(app: FastAPI, settings: object) -> None:
         allow_origins=settings.cors_origins,  # type: ignore[attr-defined]
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Accept"],
+        allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Accept", "X-CSRF-Token"],
     )
+    app.add_middleware(CSRFMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(AuditLoggingMiddleware)
     app.add_middleware(RequestIDMiddleware)

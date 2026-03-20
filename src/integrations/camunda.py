@@ -18,9 +18,16 @@ logger = logging.getLogger(__name__)
 class CamundaClient:
     """Async client for the CIB7 REST API."""
 
-    def __init__(self, base_url: str, timeout: float = 30.0) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        timeout: float = 30.0,
+        auth_user: str | None = None,
+        auth_password: str | None = None,
+    ) -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self._auth = httpx.BasicAuth(auth_user, auth_password) if auth_user and auth_password else None
 
     async def _request(
         self,
@@ -33,7 +40,7 @@ class CamundaClient:
     ) -> Any:
         """Make an HTTP request to the CIB7 REST API."""
         url = f"{self.base_url}{path}"
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        async with httpx.AsyncClient(timeout=self.timeout, auth=self._auth) as client:
             response = await client.request(method, url, json=json, files=files, params=params)
             response.raise_for_status()
             if response.status_code == 204:
@@ -55,7 +62,7 @@ class CamundaClient:
 
     async def deploy_process(self, name: str, bpmn_xml: bytes, filename: str = "process.bpmn") -> dict[str, Any]:
         """Deploy a BPMN process model."""
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        async with httpx.AsyncClient(timeout=self.timeout, auth=self._auth) as client:
             response = await client.post(
                 f"{self.base_url}/deployment/create",
                 data={

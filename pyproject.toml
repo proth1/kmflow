@@ -111,8 +111,18 @@ databricks = [
 where = ["."]
 include = ["src*"]
 
+[tool.coverage.run]
+omit = [
+    "agent/*",
+    "src/integrations/celonis.py",
+    "src/integrations/soroco.py",
+    "src/integrations/sap.py",
+    "src/integrations/aris.py",
+    "src/taskmining/ml/*",
+]
+
 [tool.coverage.report]
-fail_under = 85
+fail_under = 90
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -80,6 +80,7 @@ services:
       DEBUG: "false"
       AUTH_DEV_MODE: "false"
       LOG_LEVEL: WARNING
+      COOKIE_SECURE: "true"
     security_opt:
       - no-new-privileges:true
     cap_drop:

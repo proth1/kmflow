@@ -79,6 +79,10 @@ class Settings(BaseSettings):
     # Secure cookies). Defaults to True; set False only in local dev.
     cookie_secure: bool = True
 
+    # ── Camunda / CIB7 ───────────────────────────────────────────
+    camunda_user: str | None = None
+    camunda_password: SecretStr | None = None
+
     # ── RAG Copilot (Phase 4) ─────────────────────────────────────
     copilot_model: str = "claude-sonnet-4-5-20250929"
     copilot_max_context_tokens: int = 4000
