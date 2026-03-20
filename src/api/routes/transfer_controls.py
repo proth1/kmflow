@@ -11,14 +11,14 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
 from src.core.models import TransferDecision, User
 from src.core.models.transfer import DataResidencyRestriction
-from src.core.permissions import require_permission
+from src.core.permissions import check_engagement_access, require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -205,6 +205,7 @@ async def record_scc(
 
 @router.get("/log", response_model=list[TransferLogResponse])
 async def list_transfer_logs(
+    request: Request,
     engagement_id: UUID = Query(..., description="Filter by engagement"),
     connector_id: str | None = Query(None, description="Filter by connector"),
     limit: int = Query(20, ge=1, le=100),
@@ -213,6 +214,8 @@ async def list_transfer_logs(
     user: User = Depends(require_permission("transfer:read")),
 ) -> Any:
     """List transfer log entries for an engagement."""
+    await check_engagement_access(engagement_id, request, user)
+
     from sqlalchemy import select
 
     from src.core.models import DataTransferLog

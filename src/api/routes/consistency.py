@@ -22,7 +22,7 @@ from src.api.deps import get_session
 from src.core.models import User
 from src.core.models.conflict import ConflictObject, MismatchType, ResolutionStatus
 from src.core.models.pov import ProcessModel, ProcessModelStatus
-from src.core.permissions import require_permission
+from src.core.permissions import require_engagement_access, require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +109,7 @@ async def disagreement_report(
     engagement_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
     output_format: str = Query("json", alias="format", description="Output format: json or pdf"),
     limit: int = Query(default=200, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
@@ -262,6 +263,7 @@ async def consistency_metrics(
     engagement_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Return consistency metrics including agreement rate.
 
@@ -350,6 +352,7 @@ async def consistency_trend(
     engagement_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Return conflict reduction trend across POV versions.
 

@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
 from src.core.models import User, UserRole
-from src.core.permissions import require_permission, require_role
+from src.core.permissions import require_engagement_access, require_permission, require_role
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +148,7 @@ async def configure_engagement(
     body: ConfigureRequest,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_role(UserRole.ENGAGEMENT_LEAD)),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> Any:
     """Configure the minimum cohort size for an engagement.
 
@@ -176,6 +177,7 @@ async def get_engagement_config(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("monitoring:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> Any:
     """Get the cohort suppression configuration for an engagement."""
     from src.security.cohort.suppression import CohortSuppressionService

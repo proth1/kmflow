@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
 from src.core.models import User
-from src.core.permissions import require_permission
+from src.core.permissions import require_engagement_access, require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +93,7 @@ async def list_llm_audit(
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> Any:
     """List LLM audit entries for an engagement with date range filter."""
     from src.api.services.llm_audit import LLMAuditService
@@ -144,6 +145,7 @@ async def get_llm_audit_stats(
     to_date: datetime | None = Query(default=None, alias="to"),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("simulation:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> Any:
     """Get acceptance/modification/rejection rates for LLM suggestions."""
     from src.api.services.llm_audit import LLMAuditService

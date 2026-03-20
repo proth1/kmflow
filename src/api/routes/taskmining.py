@@ -76,7 +76,7 @@ from src.core.models.taskmining import (
     VCETriggerReason,
     VisualContextEvent,
 )
-from src.core.permissions import require_permission
+from src.core.permissions import check_engagement_access, require_permission
 from src.core.rls import set_engagement_context, set_rls_bypass
 
 logger = logging.getLogger(__name__)
@@ -268,6 +268,7 @@ async def approve_agent(
 
 @router.get("/agents", response_model=AgentListResponse)
 async def list_agents(
+    request: Request,
     engagement_id: UUID | None = None,
     status_filter: AgentStatus | None = None,
     limit: int = Query(default=50, ge=1, le=200),
@@ -276,6 +277,8 @@ async def list_agents(
     current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
     """List registered agents with optional filters."""
+    if engagement_id:
+        await check_engagement_access(engagement_id, request, current_user)
     await _apply_rls_context(session, current_user, engagement_id)
 
     query = select(TaskMiningAgent)
@@ -462,6 +465,7 @@ async def agent_heartbeat(
 
 @router.get("/sessions", response_model=SessionListResponse)
 async def list_sessions(
+    request: Request,
     engagement_id: UUID | None = None,
     agent_id: UUID | None = None,
     limit: int = Query(default=50, ge=1, le=200),
@@ -470,6 +474,8 @@ async def list_sessions(
     current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
     """List capture sessions with optional filters."""
+    if engagement_id:
+        await check_engagement_access(engagement_id, request, current_user)
     await _apply_rls_context(session, current_user, engagement_id)
 
     query = select(TaskMiningSession)
@@ -500,6 +506,7 @@ async def list_sessions(
 
 @router.get("/actions", response_model=ActionListResponse)
 async def list_actions(
+    request: Request,
     engagement_id: UUID | None = None,
     session_id: UUID | None = None,
     category: str | None = None,
@@ -509,6 +516,8 @@ async def list_actions(
     current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
     """List aggregated user actions with optional filters."""
+    if engagement_id:
+        await check_engagement_access(engagement_id, request, current_user)
     await _apply_rls_context(session, current_user, engagement_id)
 
     query = select(TaskMiningAction)
@@ -542,6 +551,7 @@ async def list_actions(
 
 @router.get("/quarantine", response_model=QuarantineListResponse)
 async def list_quarantine(
+    request: Request,
     engagement_id: UUID | None = None,
     status_filter: QuarantineStatus | None = None,
     limit: int = Query(default=50, ge=1, le=200),
@@ -550,6 +560,8 @@ async def list_quarantine(
     current_user: User = Depends(require_permission("taskmining:admin")),
 ) -> dict[str, Any]:
     """List PII quarantine items for review."""
+    if engagement_id:
+        await check_engagement_access(engagement_id, request, current_user)
     await _apply_rls_context(session, current_user, engagement_id)
 
     query = select(PIIQuarantine)
@@ -621,11 +633,14 @@ async def quarantine_action(
 
 @router.get("/dashboard/stats", response_model=DashboardStats)
 async def get_dashboard_stats(
+    request: Request,
     engagement_id: UUID | None = None,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
     """Return aggregated dashboard statistics for task mining."""
+    if engagement_id:
+        await check_engagement_access(engagement_id, request, current_user)
     await _apply_rls_context(session, current_user, engagement_id)
 
     filters = []
@@ -800,6 +815,7 @@ async def ingest_vce_events(
 
 @router.get("/vce", response_model=VCEListResponse)
 async def list_vce_events(
+    request: Request,
     engagement_id: UUID | None = None,
     session_id: UUID | None = None,
     screen_state_class: ScreenStateClass | None = None,
@@ -810,6 +826,9 @@ async def list_vce_events(
     current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
     """List VCE events with optional filters."""
+    if engagement_id:
+        await check_engagement_access(engagement_id, request, current_user)
+
     query = select(VisualContextEvent)
     count_query = select(func.count(VisualContextEvent.id))
 
@@ -863,6 +882,7 @@ async def get_vce_event(
 
 @router.get("/vce/distribution", response_model=VCEDistributionResponse)
 async def get_vce_distribution(
+    request: Request,
     engagement_id: UUID,
     period_start: datetime | None = None,
     period_end: datetime | None = None,
@@ -870,6 +890,8 @@ async def get_vce_distribution(
     current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
     """Return screen state class distribution for an engagement."""
+    await check_engagement_access(engagement_id, request, current_user)
+
     from src.taskmining.vce.analytics import get_vce_distribution as _get_distribution
 
     return await _get_distribution(
@@ -887,11 +909,14 @@ async def get_vce_distribution(
 
 @router.get("/vce/triggers/summary", response_model=VCETriggerSummaryResponse)
 async def get_vce_trigger_summary(
+    request: Request,
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
     """Return trigger reason distribution for an engagement."""
+    await check_engagement_access(engagement_id, request, current_user)
+
     from src.taskmining.vce.analytics import get_trigger_summary
 
     return await get_trigger_summary(session=session, engagement_id=engagement_id)
@@ -904,11 +929,14 @@ async def get_vce_trigger_summary(
 
 @router.get("/vce/dwell", response_model=VCEDwellAnalysisResponse)
 async def get_vce_dwell_analysis(
+    request: Request,
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
     """Return dwell time analysis per app and screen state class."""
+    await check_engagement_access(engagement_id, request, current_user)
+
     from src.taskmining.vce.analytics import get_dwell_analysis
 
     return await get_dwell_analysis(session=session, engagement_id=engagement_id)
@@ -955,6 +983,7 @@ def _matrix_to_response(m: TransitionMatrix) -> dict[str, Any]:
 
 @router.get("/switching/traces", response_model=SwitchingTraceListResponse)
 async def list_switching_traces(
+    request: Request,
     engagement_id: UUID,
     session_id: UUID | None = None,
     min_friction: float | None = Query(default=None, ge=0.0, le=1.0),
@@ -964,6 +993,8 @@ async def list_switching_traces(
     current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
     """List switching traces for an engagement."""
+    await check_engagement_access(engagement_id, request, current_user)
+
     query = select(SwitchingTrace).where(SwitchingTrace.engagement_id == engagement_id)
     count_query = select(func.count(SwitchingTrace.id)).where(SwitchingTrace.engagement_id == engagement_id)
 
@@ -987,6 +1018,7 @@ async def list_switching_traces(
 
 @router.get("/switching/matrix", response_model=TransitionMatrixResponse)
 async def get_transition_matrix(
+    request: Request,
     engagement_id: UUID,
     period_start: datetime,
     period_end: datetime,
@@ -999,6 +1031,8 @@ async def get_transition_matrix(
     Returns the most recent stored matrix matching the filters, or computes
     a new one if none exists.
     """
+    await check_engagement_access(engagement_id, request, current_user)
+
     # Try to find existing matrix for this period
     query = (
         select(TransitionMatrix)
@@ -1034,11 +1068,14 @@ async def get_transition_matrix(
 
 @router.get("/switching/friction", response_model=FrictionAnalysisResponse)
 async def get_friction_analysis(
+    request: Request,
     engagement_id: UUID,
     db: AsyncSession = Depends(get_session),
     current_user: User = Depends(require_permission("taskmining:read")),
 ) -> dict[str, Any]:
     """Return aggregate friction analysis for an engagement."""
+    await check_engagement_access(engagement_id, request, current_user)
+
     from src.taskmining.switching import get_friction_analysis as _get_friction_analysis
 
     return await _get_friction_analysis(session=db, engagement_id=engagement_id)
