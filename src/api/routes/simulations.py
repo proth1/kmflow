@@ -209,7 +209,7 @@ async def get_scenario(
 # -- Run Simulation -----------------------------------------------------------
 
 
-@router.post("/scenarios/{scenario_id}/run", response_model=SimulationResultResponse)
+@router.post("/scenarios/{scenario_id}/run", response_model=SimulationResultResponse, status_code=status.HTTP_200_OK)
 async def run_scenario(
     scenario_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -339,6 +339,7 @@ async def list_modifications(
 @router.delete(
     "/scenarios/{scenario_id}/modifications/{modification_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
 )
 async def delete_modification(
     scenario_id: UUID,
@@ -619,7 +620,9 @@ async def get_result(
 # -- Epistemic Plan -----------------------------------------------------------
 
 
-@router.post("/scenarios/{scenario_id}/epistemic-plan", response_model=EpistemicPlanResponse)
+@router.post(
+    "/scenarios/{scenario_id}/epistemic-plan", response_model=EpistemicPlanResponse, status_code=status.HTTP_200_OK
+)
 async def generate_epistemic_plan(
     scenario_id: UUID,
     request: Request,
@@ -856,6 +859,7 @@ async def list_financial_assumptions(
 @router.delete(
     "/scenarios/{scenario_id}/financial-assumptions/{assumption_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
 )
 async def delete_financial_assumption(
     scenario_id: UUID,

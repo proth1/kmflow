@@ -98,7 +98,7 @@ async def list_cases(
 async def get_event_spine(
     case_id: str,
     engagement_id: UUID = Query(..., description="Engagement ID for authorization"),
-    limit: int = Query(200, ge=1, le=2000, description="Maximum events to return"),
+    limit: int = Query(200, ge=1, le=1000, description="Maximum events to return"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),

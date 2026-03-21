@@ -152,7 +152,7 @@ export default function LineagePage() {
                         {record.transformation_chain && record.transformation_chain.length > 0 && (
                           <div className="mt-2 space-y-1">
                             {record.transformation_chain.map((step, i) => (
-                              <div key={i} className="text-xs bg-muted rounded px-2 py-1">
+                              <div key={(step as Record<string, string>).action || (step as Record<string, string>).step || String(i)} className="text-xs bg-muted rounded px-2 py-1">
                                 {(step as Record<string, string>).action || (step as Record<string, string>).step || JSON.stringify(step)}
                               </div>
                             ))}

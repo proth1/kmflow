@@ -4,7 +4,7 @@ Provides endpoints for generating, retrieving, and inspecting
 process models created by the consensus algorithm.
 """
 
-# FUTURE(audit-B1-002): Split into pov/ sub-package: core, elements, evidence_map, triangulation
+# DEFERRED: tracked in KMFLOW-659 (audit-B1-002): Split into pov/ sub-package: core, elements, evidence_map, triangulation
 
 from __future__ import annotations
 
@@ -434,7 +434,7 @@ async def _get_elements_for_model(
     model_id: uuid.UUID,
 ) -> list[dict[str, Any]]:
     """Get elements for a model as simple dicts for version comparison."""
-    result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == model_id))
+    result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == model_id).limit(1000))
     return [
         {
             "name": e.name,
@@ -686,7 +686,9 @@ async def get_bpmn_xml(
         )
 
     # Get element confidence scores
-    elements_result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == model_uuid))
+    elements_result = await session.execute(
+        select(ProcessElement).where(ProcessElement.model_id == model_uuid).limit(1000)
+    )
     elements = list(elements_result.scalars().all())
 
     element_confidences = {elem.name: elem.confidence_score for elem in elements}
@@ -768,7 +770,9 @@ async def get_latest_model_for_engagement(
         )
 
     # Get all elements for the model
-    elements_result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == model.id))
+    elements_result = await session.execute(
+        select(ProcessElement).where(ProcessElement.model_id == model.id).limit(1000)
+    )
     elements = list(elements_result.scalars().all())
 
     return {
@@ -898,7 +902,9 @@ async def get_engagement_dashboard(
         )
 
     # Get elements for brightness distribution
-    elements_result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == model.id))
+    elements_result = await session.execute(
+        select(ProcessElement).where(ProcessElement.model_id == model.id).limit(1000)
+    )
     elements = list(elements_result.scalars().all())
 
     # Brightness distribution
@@ -990,7 +996,9 @@ async def get_confidence_map(
         )
 
     # Get all elements
-    elements_result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == model.id))
+    elements_result = await session.execute(
+        select(ProcessElement).where(ProcessElement.model_id == model.id).limit(1000)
+    )
     elements = list(elements_result.scalars().all())
 
     elements_map: dict[str, dict[str, Any]] = {}
@@ -1054,7 +1062,9 @@ async def get_confidence_summary(
         )
 
     # Get elements
-    elements_result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == model.id))
+    elements_result = await session.execute(
+        select(ProcessElement).where(ProcessElement.model_id == model.id).limit(1000)
+    )
     elements = list(elements_result.scalars().all())
 
     total = len(elements) or 1
@@ -1150,10 +1160,12 @@ async def get_elements_for_evidence(
     if model:
         # Get elements for this model and filter by evidence_id
         elements_result = await session.execute(
-            select(ProcessElement).where(
+            select(ProcessElement)
+            .where(
                 ProcessElement.model_id == model.id,
                 ProcessElement.evidence_ids.isnot(None),
             )
+            .limit(1000)
         )
         for elem in elements_result.scalars().all():
             if elem.evidence_ids and str(ev_uuid) in [str(eid) for eid in elem.evidence_ids]:
@@ -1218,10 +1230,12 @@ async def get_dark_elements(
 
     # Get dark elements (no evidence)
     elements_result = await session.execute(
-        select(ProcessElement).where(
+        select(ProcessElement)
+        .where(
             ProcessElement.model_id == model.id,
             ProcessElement.evidence_count == 0,
         )
+        .limit(1000)
     )
     dark_elements = list(elements_result.scalars().all())
 

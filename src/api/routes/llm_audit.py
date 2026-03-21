@@ -111,6 +111,7 @@ async def list_llm_audit(
 @router.post(
     "/suggestions/{audit_log_id}/flag-hallucination",
     response_model=AuditEntryResponse,
+    status_code=status.HTTP_200_OK,
 )
 async def flag_hallucination(
     audit_log_id: UUID,

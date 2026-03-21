@@ -99,8 +99,8 @@ export default function Sidebar({ element, onClose }: SidebarProps) {
               Contradictions ({element.contradictions.length})
             </div>
             <ul className="m-0 pl-4 text-sm text-red-600 leading-relaxed">
-              {element.contradictions.map((c, i) => (
-                <li key={i}>{c}</li>
+              {element.contradictions.map((c) => (
+                <li key={c}>{c}</li>
               ))}
             </ul>
           </div>

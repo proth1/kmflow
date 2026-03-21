@@ -24,7 +24,7 @@ from src.monitoring.deviation.types import (
 
 logger = logging.getLogger(__name__)
 
-# FUTURE(#350-followup): Add service layer to persist DeviationRecord -> ProcessDeviation ORM objects.
+# DEFERRED: tracked in KMFLOW-659 (#350-followup): Add service layer to persist DeviationRecord -> ProcessDeviation ORM objects.
 # Currently the engine produces in-memory DeviationRecords; a persistence service is needed
 # to bridge engine output to the database for the API endpoint to query.
 

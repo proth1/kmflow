@@ -37,7 +37,7 @@ from src.evidence.intake import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["intake"])
+router = APIRouter(prefix="/api/v1", tags=["intake"])
 
 
 # -- Schemas ------------------------------------------------------------------
@@ -92,7 +92,7 @@ class IntakeProgressResponse(BaseModel):
 
 
 @router.post(
-    "/api/v1/shelf-requests/{request_id}/generate-intake-link",
+    "/shelf-requests/{request_id}/generate-intake-link",
     response_model=GenerateIntakeLinkResponse,
     status_code=status.HTTP_201_CREATED,
     tags=["shelf-requests"],
@@ -182,7 +182,7 @@ async def _get_valid_token(
 
 
 @router.post(
-    "/api/v1/intake/{token}",
+    "/intake/{token}",
     response_model=IntakeUploadResponse,
     status_code=status.HTTP_201_CREATED,
 )
@@ -280,7 +280,7 @@ async def submit_intake_files(
 
 
 @router.get(
-    "/api/v1/intake/{token}/progress",
+    "/intake/{token}/progress",
     response_model=IntakeProgressResponse,
 )
 async def get_intake_progress(

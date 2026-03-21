@@ -12,8 +12,7 @@ from __future__ import annotations
 import logging
 import zipfile
 from pathlib import Path
-from typing import Any
-from xml.etree.ElementTree import ParseError
+from xml.etree.ElementTree import Element, ParseError
 
 from defusedxml.ElementTree import fromstring as safe_fromstring
 
@@ -154,7 +153,7 @@ class VisioImporter(ModelImporter):
 
     def _parse_page_shapes(
         self,
-        root: Any,
+        root: Element,
         model: ImportedModel,
         masters: dict[str, str],
     ) -> None:
@@ -235,7 +234,7 @@ class VisioImporter(ModelImporter):
 
     def _detect_lanes(
         self,
-        root: Any,
+        root: Element,
         model: ImportedModel,
         shape_map: dict[str, ProcessElement],
         masters: dict[str, str],

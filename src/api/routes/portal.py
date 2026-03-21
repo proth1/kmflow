@@ -239,7 +239,7 @@ _ALLOWED_EXTENSIONS = {".pdf", ".docx", ".xlsx", ".csv", ".png", ".jpg", ".jpeg"
 _MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50MB
 
 
-@router.post("/{engagement_id}/upload", response_model=dict)
+@router.post("/{engagement_id}/upload", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def portal_upload(
     engagement_id: UUID,
     file: UploadFile = File(...),

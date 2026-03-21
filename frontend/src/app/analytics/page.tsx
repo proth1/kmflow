@@ -37,6 +37,7 @@ import {
 export default function AnalyticsPage() {
   const [engagementId, setEngagementId] = useState("");
   const [metrics, setMetrics] = useState<SuccessMetricData[]>([]);
+  const [secondaryError, setSecondaryError] = useState<string | null>(null);
 
   const fetchSummary = useCallback(
     (id: string) => fetchMetricSummary(id),
@@ -55,7 +56,7 @@ export default function AnalyticsPage() {
         if (mounted) setMetrics(result.items);
       })
       .catch((err) => {
-        if (mounted) console.error("Failed to load metric definitions:", err);
+        if (mounted) setSecondaryError(err instanceof Error ? err.message : "Failed to load metric definitions");
       });
     return () => {
       mounted = false;
@@ -79,6 +80,11 @@ export default function AnalyticsPage() {
       loading={loading}
       loadingText="Loading metrics..."
     >
+      {secondaryError && (
+        <div className="mb-4 rounded-md bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
+          Warning: {secondaryError}
+        </div>
+      )}
       {summary && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card>

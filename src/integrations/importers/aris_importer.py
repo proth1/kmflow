@@ -13,8 +13,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
-from xml.etree.ElementTree import ParseError
+from xml.etree.ElementTree import Element, ParseError
 
 from defusedxml.ElementTree import parse as safe_parse
 
@@ -101,7 +100,7 @@ class ARISImporter(ModelImporter):
 
         return model
 
-    def _validate_version(self, root: Any) -> None:
+    def _validate_version(self, root: Element) -> None:
         """Check AML version compatibility."""
         # AML files may have version in attributes or header
         version = root.get("Version", root.get("version", ""))
@@ -117,7 +116,7 @@ class ARISImporter(ModelImporter):
                     supported_versions=SUPPORTED_VERSIONS,
                 )
 
-    def _extract_objects(self, root: Any, model: ImportedModel) -> dict[str, ProcessElement]:
+    def _extract_objects(self, root: Element, model: ImportedModel) -> dict[str, ProcessElement]:
         """Extract object definitions from AML."""
         obj_map: dict[str, ProcessElement] = {}
 
@@ -157,7 +156,7 @@ class ARISImporter(ModelImporter):
 
     def _extract_connections(
         self,
-        root: Any,
+        root: Element,
         model: ImportedModel,
         obj_map: dict[str, ProcessElement],
     ) -> None:
@@ -196,7 +195,7 @@ class ARISImporter(ModelImporter):
 
     def _extract_lanes(
         self,
-        root: Any,
+        root: Element,
         model: ImportedModel,
         obj_map: dict[str, ProcessElement],
     ) -> None:

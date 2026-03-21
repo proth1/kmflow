@@ -222,7 +222,7 @@ async def traverse_graph(
 async def semantic_search(
     request: Request,
     query: str,
-    top_k: int = 10,
+    top_k: int = Query(default=10, ge=1, le=100),
     engagement_id: UUID | None = None,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:read")),
@@ -240,11 +240,6 @@ async def semantic_search(
     """
     if engagement_id is not None:
         await check_engagement_access(engagement_id, request, user)
-    if top_k < 1 or top_k > 100:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="top_k must be between 1 and 100",
-        )
 
     eng_id = str(engagement_id) if engagement_id else None
 
@@ -396,7 +391,7 @@ class BridgeRunResponse(BaseModel):
     errors: list[str] = Field(default_factory=list)
 
 
-@router.post("/{engagement_id}/bridges/run", response_model=BridgeRunResponse)
+@router.post("/{engagement_id}/bridges/run", response_model=BridgeRunResponse, status_code=status.HTTP_200_OK)
 async def run_bridges(
     engagement_id: UUID,
     request: Request,

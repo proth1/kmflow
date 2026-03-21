@@ -106,7 +106,7 @@ class HealthResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/evaluate", response_model=EvaluateResponse)
+@router.post("/evaluate", response_model=EvaluateResponse, status_code=status.HTTP_200_OK)
 async def evaluate(
     body: EvaluateRequest,
     session: AsyncSession = Depends(get_session),

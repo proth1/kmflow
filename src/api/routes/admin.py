@@ -42,7 +42,7 @@ class KeyRotationResponse(BaseModel):
     status: str
 
 
-@router.post("/retention-cleanup", response_model=RetentionCleanupResponse)
+@router.post("/retention-cleanup", response_model=RetentionCleanupResponse, status_code=status.HTTP_200_OK)
 async def run_retention_cleanup(
     user: User = Depends(require_role(UserRole.PLATFORM_ADMIN)),
     session: AsyncSession = Depends(get_session),
@@ -79,7 +79,7 @@ async def run_retention_cleanup(
     return RetentionCleanupResponse(dry_run=False, cleaned_up=count, status="completed")
 
 
-@router.post("/rotate-encryption-key", response_model=KeyRotationResponse)
+@router.post("/rotate-encryption-key", response_model=KeyRotationResponse, status_code=status.HTTP_200_OK)
 async def rotate_encryption_key(
     user: User = Depends(require_role(UserRole.PLATFORM_ADMIN)),
     session: AsyncSession = Depends(get_session),

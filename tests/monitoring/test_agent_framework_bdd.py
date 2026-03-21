@@ -9,18 +9,17 @@ Covers all 4 acceptance scenarios:
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any
 
 import pytest
 
-from tests.helpers import wait_for_condition
 from src.monitoring.agents.base import (
     AgentHealth,
     BaseMonitoringAgent,
 )
 from src.monitoring.agents.config import AgentConfig, RetryConfig
 from src.monitoring.agents.registry import AgentRegistry
+from tests.helpers import wait_for_condition
 
 # ---------------------------------------------------------------------------
 # Concrete test agent implementation
@@ -121,7 +120,9 @@ class TestAgentStartsAndPolls:
         agent._poll_data = None  # No new data
 
         await agent.start()
-        await wait_for_condition(lambda: agent.poll_calls >= 2, timeout=5.0, message="Agent did not poll at least twice")
+        await wait_for_condition(
+            lambda: agent.poll_calls >= 2, timeout=5.0, message="Agent did not poll at least twice"
+        )
         await agent.stop()
 
         # Should have polled at least twice in 5.0s with 0.05s interval
@@ -203,7 +204,9 @@ class TestDataExtraction:
         agent._extract_count = 7
 
         await agent.start()
-        await wait_for_condition(lambda: len(agent._extraction_events) >= 1, timeout=2.0, message="No extraction events")
+        await wait_for_condition(
+            lambda: len(agent._extraction_events) >= 1, timeout=2.0, message="No extraction events"
+        )
         await agent.stop()
 
         assert len(agent._extraction_events) >= 1
@@ -234,7 +237,9 @@ class TestDataExtraction:
         assert agent.last_poll_time is None
 
         await agent.start()
-        await wait_for_condition(lambda: agent.last_poll_time is not None, timeout=2.0, message="last_poll_time not updated")
+        await wait_for_condition(
+            lambda: agent.last_poll_time is not None, timeout=2.0, message="last_poll_time not updated"
+        )
         await agent.stop()
 
         assert agent.last_poll_time is not None
@@ -639,7 +644,9 @@ class TestCircuitBreaker:
         agent._poll_error = RuntimeError("Timeout")
 
         await agent.start()
-        await wait_for_condition(lambda: len(agent.alert_calls) >= 1, timeout=2.0, message="No alert raised by circuit breaker")
+        await wait_for_condition(
+            lambda: len(agent.alert_calls) >= 1, timeout=2.0, message="No alert raised by circuit breaker"
+        )
         await agent.stop()
 
         assert len(agent.alert_calls) >= 1

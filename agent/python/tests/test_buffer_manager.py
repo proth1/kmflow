@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import pytest
 
-from kmflow_agent.buffer.manager import BufferManager
-
 
 @pytest.mark.asyncio
 async def test_write_and_read_event(buffer_manager):

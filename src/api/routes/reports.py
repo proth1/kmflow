@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
+from src.api.routes.auth import limiter
 from src.core.models import ReportFormat, ReportStatus, User
 from src.core.permissions import require_engagement_access, require_permission
 from src.core.reports import ReportEngine
@@ -142,6 +143,7 @@ def _render_format(engine: ReportEngine, report: Any, fmt: str, filename: str) -
     response_model=ReportTriggerResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
+@limiter.limit("10/minute")
 async def trigger_report_generation(
     engagement_id: UUID,
     body: ReportGenerateRequest,
@@ -297,7 +299,7 @@ async def get_report_status(
     }
 
 
-@router.get("/engagements/{engagement_id}/download/{report_id}")
+@router.get("/engagements/{engagement_id}/download/{report_id}", response_model=None)
 async def download_report(
     request: Request,
     engagement_id: UUID,

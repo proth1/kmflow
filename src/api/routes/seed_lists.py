@@ -109,7 +109,7 @@ async def get_seed_list(
 # ── Stage 2: NLP Refinement ───────────────────────────────────────────
 
 
-@router.post("/engagements/{engagement_id}/seed-lists/refine", response_model=dict)
+@router.post("/engagements/{engagement_id}/seed-lists/refine", response_model=dict, status_code=status.HTTP_200_OK)
 async def refine_seed_list(
     engagement_id: UUID,
     payload: AddDiscoveredTermsPayload,
@@ -128,7 +128,9 @@ async def refine_seed_list(
 # ── Stage 3: Probe Generation ─────────────────────────────────────────
 
 
-@router.post("/engagements/{engagement_id}/seed-lists/generate-probes", response_model=dict)
+@router.post(
+    "/engagements/{engagement_id}/seed-lists/generate-probes", response_model=dict, status_code=status.HTTP_200_OK
+)
 async def generate_probes(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),

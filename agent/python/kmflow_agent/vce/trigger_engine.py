@@ -34,15 +34,11 @@ class TriggerEngine:
 
     def __init__(self) -> None:
         # Maps app_name → deque of (timestamp, screen_class) tuples
-        self._error_history: dict[str, deque[datetime]] = defaultdict(
-            lambda: deque(maxlen=100)
-        )
+        self._error_history: dict[str, deque[datetime]] = defaultdict(lambda: deque(maxlen=100))
         # Known screen feature cluster prototypes — list of feature dicts
         self._cluster_prototypes: list[dict[str, float]] = []
 
-    def check_recurring_exception(
-        self, app_name: str, screen_class: str
-    ) -> bool:
+    def check_recurring_exception(self, app_name: str, screen_class: str) -> bool:
         """Check if error screens for app_name exceed the recurrence threshold.
 
         Fires when >= EXCEPTION_THRESHOLD error screens are observed for the
@@ -67,9 +63,7 @@ class TriggerEngine:
         # Count occurrences within window
         count = sum(1 for ts in history if ts >= cutoff)
         if count >= _EXCEPTION_THRESHOLD:
-            logger.debug(
-                "RECURRING_EXCEPTION trigger: app=%s count=%d", app_name, count
-            )
+            logger.debug("RECURRING_EXCEPTION trigger: app=%s count=%d", app_name, count)
             return True
         return False
 
@@ -91,10 +85,7 @@ class TriggerEngine:
             self._cluster_prototypes.append(dict(features))
             return False
 
-        min_distance = min(
-            self._cosine_distance(features, proto)
-            for proto in self._cluster_prototypes
-        )
+        min_distance = min(self._cosine_distance(features, proto) for proto in self._cluster_prototypes)
 
         if min_distance > _NOVEL_CLUSTER_THRESHOLD:
             logger.debug(
@@ -157,8 +148,8 @@ class TriggerEngine:
         """
         keys = set(a) | set(b)
         dot = sum(a.get(k, 0.0) * b.get(k, 0.0) for k in keys)
-        mag_a = math.sqrt(sum(v ** 2 for v in a.values()))
-        mag_b = math.sqrt(sum(v ** 2 for v in b.values()))
+        mag_a = math.sqrt(sum(v**2 for v in a.values()))
+        mag_b = math.sqrt(sum(v**2 for v in b.values()))
         if mag_a == 0 or mag_b == 0:
             return 1.0
         similarity = dot / (mag_a * mag_b)

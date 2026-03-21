@@ -328,7 +328,7 @@ async def list_decisions(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/review-packs/route", response_model=list[RoutedPackResponse])
+@router.post("/review-packs/route", response_model=list[RoutedPackResponse], status_code=status.HTTP_200_OK)
 async def route_review_packs(
     body: RoutePacksRequest,
     session: AsyncSession = Depends(get_session),
@@ -561,7 +561,7 @@ async def get_version_diff(
     v2_els_result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == v2))
     v2_elements = v2_els_result.scalars().all()
 
-    def to_snapshot(el: Any) -> ElementSnapshot:
+    def to_snapshot(el: ProcessElement) -> ElementSnapshot:
         return ElementSnapshot(
             element_id=str(el.id),
             name=el.name,
@@ -613,7 +613,7 @@ async def _generate_packs_async(
     task_id: str,
     pov_version_id: uuid.UUID,
     engagement_id: uuid.UUID,
-    session_factory: Any,
+    session_factory: Any,  # Any because: async_sessionmaker; avoids circular import
 ) -> None:
     """Background task to generate review packs.
 

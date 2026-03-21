@@ -299,6 +299,7 @@ async def list_modifications(
 @router.delete(
     "/{scenario_id}/modifications/{modification_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
 )
 async def delete_modification(
     scenario_id: UUID,

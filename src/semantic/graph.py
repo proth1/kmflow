@@ -567,7 +567,7 @@ class KnowledgeGraphService:
         top_k: int = 10,
         engagement_id: str | None = None,
         node_label: str | None = None,
-        db_session: Any = None,
+        db_session: Any = None,  # Any because: AsyncSession; circular import avoided (semantic → core → semantic)
     ) -> list[dict[str, Any]]:
         """Search for similar nodes using pgvector semantic search.
 

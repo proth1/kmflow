@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -67,7 +68,7 @@ class EvidenceResponse(BaseModel):
     size_bytes: int | None = None
     mime_type: str | None = None
     metadata_json: dict | None = None
-    source_date: Any | None = None
+    source_date: datetime | None = None
     completeness_score: float
     reliability_score: float
     freshness_score: float
@@ -76,8 +77,8 @@ class EvidenceResponse(BaseModel):
     duplicate_of_id: UUID | None = None
     validation_status: ValidationStatus
     classification: DataClassification = DataClassification.INTERNAL
-    created_at: Any | None = None
-    updated_at: Any | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 
 class EvidenceDetailResponse(EvidenceResponse):
@@ -96,7 +97,7 @@ class FragmentResponse(BaseModel):
     fragment_type: FragmentType
     content: str
     metadata_json: str | None = None
-    created_at: Any | None = None
+    created_at: datetime | None = None
 
 
 class EvidenceCatalogItem(BaseModel):
@@ -493,7 +494,7 @@ async def update_validation_status(
     return evidence
 
 
-@router.post("/validate-batch", response_model=BatchValidationResponse)
+@router.post("/validate-batch", response_model=BatchValidationResponse, status_code=status.HTTP_200_OK)
 async def batch_validate(
     payload: BatchValidationRequest,
     session: AsyncSession = Depends(get_session),
@@ -574,7 +575,7 @@ async def get_fragments(
     return list(result.scalars().all())
 
 
-@router.get("/{evidence_id}/download")
+@router.get("/{evidence_id}/download", response_model=None)
 async def download_evidence(
     evidence_id: UUID,
     session: AsyncSession = Depends(get_session),

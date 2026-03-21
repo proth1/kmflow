@@ -316,7 +316,7 @@ async def export_user_data(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/erasure-request", response_model=ErasureRequestResponse)
+@router.post("/erasure-request", response_model=ErasureRequestResponse, status_code=status.HTTP_201_CREATED)
 async def request_erasure(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),

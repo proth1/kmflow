@@ -232,7 +232,7 @@ async def register_agent(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/agents/{agent_id}/approve", response_model=AgentResponse)
+@router.post("/agents/{agent_id}/approve", response_model=AgentResponse, status_code=status.HTTP_200_OK)
 async def approve_agent(
     agent_id: UUID,
     payload: AgentApproveRequest,
@@ -324,7 +324,7 @@ async def list_agents(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/events", response_model=EventBatchResponse)
+@router.post("/events", response_model=EventBatchResponse, status_code=status.HTTP_201_CREATED)
 async def ingest_events(
     payload: EventBatchRequest,
     request: Request,
@@ -442,7 +442,7 @@ async def get_agent_config(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/heartbeat", response_model=HeartbeatResponse)
+@router.post("/heartbeat", response_model=HeartbeatResponse, status_code=status.HTTP_200_OK)
 async def agent_heartbeat(
     payload: HeartbeatRequest,
     session: AsyncSession = Depends(get_session),
@@ -607,7 +607,9 @@ async def list_quarantine(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/quarantine/{quarantine_id}/action", response_model=QuarantineItemResponse)
+@router.post(
+    "/quarantine/{quarantine_id}/action", response_model=QuarantineItemResponse, status_code=status.HTTP_200_OK
+)
 async def quarantine_action(
     quarantine_id: UUID,
     payload: QuarantineActionRequest,
@@ -1106,7 +1108,7 @@ async def get_friction_analysis(
     return await _get_friction_analysis(session=db, engagement_id=engagement_id)
 
 
-@router.post("/switching/assemble", response_model=AssembleSwitchingResponse)
+@router.post("/switching/assemble", response_model=AssembleSwitchingResponse, status_code=status.HTTP_200_OK)
 async def assemble_switching(
     payload: AssembleSwitchingRequest,
     db: AsyncSession = Depends(get_session),

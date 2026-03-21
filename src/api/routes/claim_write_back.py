@@ -152,6 +152,7 @@ async def batch_ingest_claims(
 @router.post(
     "/engagements/{engagement_id}/claims/recompute-confidence",
     response_model=dict,
+    status_code=status.HTTP_200_OK,
 )
 async def recompute_confidence(
     engagement_id: uuid.UUID,

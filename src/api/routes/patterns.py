@@ -228,7 +228,7 @@ async def update_pattern(
     return _pattern_to_response(pattern)
 
 
-@router.delete("/{pattern_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{pattern_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def delete_pattern(
     pattern_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -251,7 +251,7 @@ async def delete_pattern(
     await session.commit()
 
 
-@router.post("/search", response_model=PatternList)
+@router.post("/search", response_model=PatternList, status_code=status.HTTP_200_OK)
 async def search_patterns(
     payload: PatternSearchRequest,
     session: AsyncSession = Depends(get_session),
@@ -275,7 +275,7 @@ async def search_patterns(
     return {"items": items, "total": total}
 
 
-@router.post("/{pattern_id}/apply", response_model=PatternResponse)
+@router.post("/{pattern_id}/apply", response_model=PatternResponse, status_code=status.HTTP_200_OK)
 async def apply_pattern(
     pattern_id: UUID,
     payload: PatternApplyRequest,

@@ -135,7 +135,7 @@ async def update_dpa(
     return dpa
 
 
-@router.post("/{dpa_id}/activate", response_model=DpaResponse)
+@router.post("/{dpa_id}/activate", response_model=DpaResponse, status_code=status.HTTP_200_OK)
 async def activate_dpa(
     engagement_id: UUID,
     dpa_id: UUID,

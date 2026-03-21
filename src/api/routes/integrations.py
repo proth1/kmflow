@@ -256,7 +256,7 @@ async def update_connection(
     return _conn_to_response(conn)
 
 
-@router.delete("/connections/{connection_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/connections/{connection_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def delete_connection(
     connection_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -278,7 +278,7 @@ async def delete_connection(
     await session.commit()
 
 
-@router.post("/connections/{connection_id}/test", response_model=TestResult)
+@router.post("/connections/{connection_id}/test", response_model=TestResult, status_code=status.HTTP_200_OK)
 async def test_connection(
     connection_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -317,7 +317,7 @@ async def test_connection(
         return {"connection_id": str(connection_id), "success": False, "message": str(e)}
 
 
-@router.post("/connections/{connection_id}/sync", response_model=SyncResult)
+@router.post("/connections/{connection_id}/sync", response_model=SyncResult, status_code=status.HTTP_202_ACCEPTED)
 async def sync_connection(
     connection_id: UUID,
     session: AsyncSession = Depends(get_session),

@@ -43,7 +43,7 @@ class CohortCheckResponse(BaseModel):
     reason: str | None = None
     cohort_size_observed: int
     cohort_minimum: int
-    data: Any | None = None
+    data: Any | None = None  # Any because: holds caller-supplied payload after cohort check (shape unknown)
 
 
 class ExportCheckRequest(BaseModel):
@@ -81,7 +81,7 @@ class CohortConfigResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/check", response_model=CohortCheckResponse)
+@router.post("/check", response_model=CohortCheckResponse, status_code=status.HTTP_200_OK)
 async def check_cohort(
     body: CohortCheckRequest,
     session: AsyncSession = Depends(get_session),
@@ -108,7 +108,7 @@ async def check_cohort(
         ) from exc
 
 
-@router.post("/export-check", response_model=ExportCheckResponse)
+@router.post("/export-check", response_model=ExportCheckResponse, status_code=status.HTTP_200_OK)
 async def check_export(
     body: ExportCheckRequest,
     session: AsyncSession = Depends(get_session),

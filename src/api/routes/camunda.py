@@ -10,7 +10,7 @@ import logging
 from typing import Any  # noqa: F401 — used in inline Pydantic schemas
 
 import httpx
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
 from pydantic import BaseModel
 
 from src.core.models import User
@@ -108,7 +108,7 @@ async def list_deployments(
         raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine") from e
 
 
-@router.post("/deploy", response_model=DeployProcessResponse)
+@router.post("/deploy", response_model=DeployProcessResponse, status_code=status.HTTP_200_OK)
 async def deploy_process(
     request: Request,
     file: UploadFile = File(...),
@@ -145,7 +145,7 @@ async def list_process_definitions(
         raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine") from e
 
 
-@router.post("/process/{key}/start", response_model=StartProcessResponse)
+@router.post("/process/{key}/start", response_model=StartProcessResponse, status_code=status.HTTP_200_OK)
 async def start_process(
     key: str,
     body: StartProcessRequest,

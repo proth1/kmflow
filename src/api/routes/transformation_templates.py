@@ -103,7 +103,9 @@ async def list_templates(
     }
 
 
-@router.post("/scenarios/{scenario_id}/templates/apply", response_model=ApplyTemplatesResponse)
+@router.post(
+    "/scenarios/{scenario_id}/templates/apply", response_model=ApplyTemplatesResponse, status_code=status.HTTP_200_OK
+)
 async def apply_templates_to_scenario(
     scenario_id: UUID,
     body: ApplyTemplatesRequest,

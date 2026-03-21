@@ -323,6 +323,7 @@ async def escalate_conflict(
     "/conflicts/escalation-check",
     response_model=dict,
     summary="Run escalation check for overdue conflicts",
+    status_code=status.HTTP_200_OK,
 )
 async def run_escalation_check(
     session: AsyncSession = Depends(get_session),

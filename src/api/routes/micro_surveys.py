@@ -130,7 +130,7 @@ async def generate_micro_survey(
     return survey
 
 
-@router.post("/{survey_id}/respond", response_model=SubmitResponseResponse)
+@router.post("/{survey_id}/respond", response_model=SubmitResponseResponse, status_code=status.HTTP_200_OK)
 async def submit_survey_response(
     survey_id: UUID,
     body: SubmitResponseRequest,

@@ -49,7 +49,7 @@ async def list_exports(
     return await service.get_export_logs(engagement_id, limit, offset)
 
 
-@router.post("/extract-watermark", response_model=dict)
+@router.post("/extract-watermark", response_model=dict, status_code=status.HTTP_200_OK)
 async def extract_watermark(
     payload: WatermarkExtractPayload,
     session: AsyncSession = Depends(get_session),

@@ -180,6 +180,140 @@ async def ingest_actions_to_graph(
     return summary
 
 
+async def _sync_screen_state_nodes(
+    graph_service: KnowledgeGraphService,
+    vce_events: list[VisualContextEvent],
+    engagement_id: str,
+) -> tuple[dict[str, str], int]:
+    """Ensure ScreenState nodes exist for all observed classes.
+
+    Returns:
+        ({class → node_id}, count_of_newly_created_nodes)
+    """
+    existing = await graph_service.find_nodes("ScreenState", {"engagement_id": engagement_id})
+    node_map: dict[str, str] = {
+        node.properties["screen_state_class"]: node.id for node in existing if node.properties.get("screen_state_class")
+    }
+    new_nodes: list[dict[str, Any]] = []
+    for vce in vce_events:
+        cls_val = str(vce.screen_state_class)
+        if cls_val not in node_map:
+            node_id = str(uuid.uuid4())
+            node_map[cls_val] = node_id
+            new_nodes.append(
+                {
+                    "id": node_id,
+                    "name": cls_val,
+                    "engagement_id": engagement_id,
+                    "screen_state_class": cls_val,
+                    "source": "vce",
+                }
+            )
+    if new_nodes:
+        await graph_service.batch_create_nodes("ScreenState", new_nodes)
+        logger.info("Created %d ScreenState nodes for engagement %s", len(new_nodes), engagement_id)
+    return node_map, len(new_nodes)
+
+
+async def _create_vce_nodes(
+    graph_service: KnowledgeGraphService,
+    new_vce_events: list[VisualContextEvent],
+    engagement_id: str,
+) -> dict[str, str]:
+    """Create VisualContextEvent graph nodes; return {vce.id → node_id}."""
+    vce_node_map: dict[str, str] = {}
+    if not new_vce_events:
+        return vce_node_map
+    props_list: list[dict[str, Any]] = []
+    for vce in new_vce_events:
+        node_id = str(uuid.uuid4())
+        vce_node_map[str(vce.id)] = node_id
+        props_list.append(
+            {
+                "id": node_id,
+                "name": f"VCE:{vce.screen_state_class}@{vce.timestamp.isoformat()}",
+                "engagement_id": engagement_id,
+                "screen_state_class": str(vce.screen_state_class),
+                "confidence": vce.confidence,
+                "trigger_reason": str(vce.trigger_reason),
+                "dwell_ms": vce.dwell_ms,
+                "interaction_intensity": vce.interaction_intensity,
+                "application_name": vce.application_name,
+                "timestamp": vce.timestamp.isoformat(),
+                "source_vce_id": str(vce.id),
+                "source": "vce",
+            }
+        )
+    await graph_service.batch_create_nodes("VisualContextEvent", props_list)
+    logger.info("Created %d VisualContextEvent nodes for engagement %s", len(new_vce_events), engagement_id)
+    return vce_node_map
+
+
+async def _create_vce_relationships(
+    graph_service: KnowledgeGraphService,
+    new_vce_events: list[VisualContextEvent],
+    vce_node_map: dict[str, str],
+    screen_state_node_map: dict[str, str],
+    app_node_map: dict[str, str],
+    engagement_id: str,
+) -> tuple[int, int, int]:
+    """Create CLASSIFIED_AS, OBSERVED_DURING, and CAPTURED_IN edges. Returns (classified, observed, captured)."""
+    classified_rels = []
+    observed_rels = []
+    for vce in new_vce_events:
+        vce_nid = vce_node_map.get(str(vce.id))
+        if not vce_nid:
+            continue
+        ss_nid = screen_state_node_map.get(str(vce.screen_state_class))
+        if ss_nid:
+            classified_rels.append({"from_id": vce_nid, "to_id": ss_nid})
+        app_nid = app_node_map.get(vce.application_name)
+        if app_nid:
+            observed_rels.append({"from_id": vce_nid, "to_id": app_nid})
+
+    classified_count = (
+        await graph_service.batch_create_relationships("CLASSIFIED_AS", classified_rels) if classified_rels else 0
+    )
+    observed_count = (
+        await graph_service.batch_create_relationships("OBSERVED_DURING", observed_rels) if observed_rels else 0
+    )
+
+    # Session stub nodes
+    existing_sessions = await graph_service.find_nodes("Session", {"engagement_id": engagement_id})
+    session_node_map: dict[str, str] = {
+        node.properties["session_id"]: node.id for node in existing_sessions if node.properties.get("session_id")
+    }
+    new_stubs: list[dict[str, Any]] = []
+    for vce in new_vce_events:
+        if not vce.session_id:
+            continue
+        sid = str(vce.session_id)
+        if sid not in session_node_map:
+            nid = str(uuid.uuid4())
+            session_node_map[sid] = nid
+            new_stubs.append(
+                {
+                    "id": nid,
+                    "name": f"Session:{sid[:8]}",
+                    "engagement_id": engagement_id,
+                    "session_id": sid,
+                    "source": "vce",
+                }
+            )
+    if new_stubs:
+        await graph_service.batch_create_nodes("Session", new_stubs)
+
+    captured_rels = [
+        {"from_id": vce_node_map[str(vce.id)], "to_id": session_node_map[str(vce.session_id)]}
+        for vce in new_vce_events
+        if vce.session_id and str(vce.id) in vce_node_map and str(vce.session_id) in session_node_map
+    ]
+    captured_count = (
+        await graph_service.batch_create_relationships("CAPTURED_IN", captured_rels) if captured_rels else 0
+    )
+    return classified_count, observed_count, captured_count
+
+
 async def ingest_vce_events(
     db_session: AsyncSession,
     graph_service: KnowledgeGraphService,
@@ -201,7 +335,6 @@ async def ingest_vce_events(
     Returns:
         Summary dict with counts of created nodes and relationships.
     """
-    # Fetch all VCE records for the engagement
     stmt = (
         select(VisualContextEvent)
         .where(VisualContextEvent.engagement_id == engagement_id)
@@ -212,160 +345,26 @@ async def ingest_vce_events(
 
     if not vce_events:
         logger.info("No VCE events to ingest for engagement %s", engagement_id)
-        return {
-            "vce_nodes": 0,
-            "screen_state_nodes": 0,
-            "classified_as": 0,
-            "observed_during": 0,
-            "captured_in": 0,
-        }
+        return {"vce_nodes": 0, "screen_state_nodes": 0, "classified_as": 0, "observed_during": 0, "captured_in": 0}
 
-    # Existing VCE graph nodes
     existing_vce_nodes = await graph_service.find_nodes("VisualContextEvent", {"engagement_id": engagement_id})
     existing_vce_source_ids = {n.properties.get("source_vce_id") for n in existing_vce_nodes}
 
-    # Existing ScreenState nodes (keyed by screen_state_class)
-    existing_screen_states = await graph_service.find_nodes("ScreenState", {"engagement_id": engagement_id})
-    screen_state_node_map: dict[str, str] = {}
-    for node in existing_screen_states:
-        cls = node.properties.get("screen_state_class")
-        if cls:
-            screen_state_node_map[cls] = node.id
+    screen_state_node_map, new_ss_count = await _sync_screen_state_nodes(graph_service, vce_events, engagement_id)
 
-    # Existing Application nodes
     existing_apps = await graph_service.find_nodes("Application", {"engagement_id": engagement_id})
-    app_node_map: dict[str, str] = {
-        str(n.properties.get("name")): n.id for n in existing_apps if n.properties.get("name")
-    }
+    app_node_map: dict[str, str] = {str(n.properties["name"]): n.id for n in existing_apps if n.properties.get("name")}
 
-    # -- ScreenState nodes (dedup per engagement) -----------------------------
-    new_screen_states: list[dict[str, Any]] = []
-    for vce in vce_events:
-        cls_val = str(vce.screen_state_class)
-        if cls_val not in screen_state_node_map:
-            node_id = str(uuid.uuid4())
-            screen_state_node_map[cls_val] = node_id
-            new_screen_states.append(
-                {
-                    "id": node_id,
-                    "name": cls_val,
-                    "engagement_id": engagement_id,
-                    "screen_state_class": cls_val,
-                    "source": "vce",
-                }
-            )
-
-    if new_screen_states:
-        await graph_service.batch_create_nodes("ScreenState", new_screen_states)
-        logger.info(
-            "Created %d ScreenState nodes for engagement %s",
-            len(new_screen_states),
-            engagement_id,
-        )
-
-    # -- VisualContextEvent nodes ---------------------------------------------
     new_vce_events = [v for v in vce_events if str(v.id) not in existing_vce_source_ids]
-    vce_node_map: dict[str, str] = {}
+    vce_node_map = await _create_vce_nodes(graph_service, new_vce_events, engagement_id)
 
-    if new_vce_events:
-        vce_props_list: list[dict[str, Any]] = []
-        for vce in new_vce_events:
-            node_id = str(uuid.uuid4())
-            vce_node_map[str(vce.id)] = node_id
-            vce_props_list.append(
-                {
-                    "id": node_id,
-                    "name": f"VCE:{vce.screen_state_class}@{vce.timestamp.isoformat()}",
-                    "engagement_id": engagement_id,
-                    "screen_state_class": str(vce.screen_state_class),
-                    "confidence": vce.confidence,
-                    "trigger_reason": str(vce.trigger_reason),
-                    "dwell_ms": vce.dwell_ms,
-                    "interaction_intensity": vce.interaction_intensity,
-                    "application_name": vce.application_name,
-                    "timestamp": vce.timestamp.isoformat(),
-                    "source_vce_id": str(vce.id),
-                    "source": "vce",
-                }
-            )
-        await graph_service.batch_create_nodes("VisualContextEvent", vce_props_list)
-        logger.info(
-            "Created %d VisualContextEvent nodes for engagement %s",
-            len(new_vce_events),
-            engagement_id,
-        )
-
-    # -- CLASSIFIED_AS relationships (VCE → ScreenState) ----------------------
-    classified_as_rels = []
-    for vce in new_vce_events:
-        vce_node_id = vce_node_map.get(str(vce.id))
-        ss_node_id = screen_state_node_map.get(str(vce.screen_state_class))
-        if vce_node_id and ss_node_id:
-            classified_as_rels.append({"from_id": vce_node_id, "to_id": ss_node_id})
-
-    classified_as_count = 0
-    if classified_as_rels:
-        classified_as_count = await graph_service.batch_create_relationships("CLASSIFIED_AS", classified_as_rels)
-
-    # -- OBSERVED_DURING relationships (VCE → Application) -------------------
-    observed_during_rels = []
-    for vce in new_vce_events:
-        vce_node_id = vce_node_map.get(str(vce.id))
-        app_node_id = app_node_map.get(vce.application_name)
-        if vce_node_id and app_node_id:
-            observed_during_rels.append({"from_id": vce_node_id, "to_id": app_node_id})
-
-    observed_during_count = 0
-    if observed_during_rels:
-        observed_during_count = await graph_service.batch_create_relationships("OBSERVED_DURING", observed_during_rels)
-
-    # -- CAPTURED_IN relationships (VCE → Session) ---------------------------
-    # Sessions are not graph nodes in the current ontology; we create lightweight
-    # Session stub nodes keyed by session_id to hold these relationships.
-    session_node_map: dict[str, str] = {}
-    existing_session_nodes = await graph_service.find_nodes("Session", {"engagement_id": engagement_id})
-    for node in existing_session_nodes:
-        sid = node.properties.get("session_id")
-        if sid:
-            session_node_map[sid] = node.id
-
-    new_session_stubs: list[dict[str, Any]] = []
-    for vce in new_vce_events:
-        if not vce.session_id:
-            continue
-        sid = str(vce.session_id)
-        if sid not in session_node_map:
-            node_id = str(uuid.uuid4())
-            session_node_map[sid] = node_id
-            new_session_stubs.append(
-                {
-                    "id": node_id,
-                    "name": f"Session:{sid[:8]}",
-                    "engagement_id": engagement_id,
-                    "session_id": sid,
-                    "source": "vce",
-                }
-            )
-
-    if new_session_stubs:
-        await graph_service.batch_create_nodes("Session", new_session_stubs)
-
-    captured_in_rels = []
-    for vce in new_vce_events:
-        if not vce.session_id:
-            continue
-        vce_node_id = vce_node_map.get(str(vce.id))
-        sess_node_id = session_node_map.get(str(vce.session_id))
-        if vce_node_id and sess_node_id:
-            captured_in_rels.append({"from_id": vce_node_id, "to_id": sess_node_id})
-
-    captured_in_count = 0
-    if captured_in_rels:
-        captured_in_count = await graph_service.batch_create_relationships("CAPTURED_IN", captured_in_rels)
+    classified_as_count, observed_during_count, captured_in_count = await _create_vce_relationships(
+        graph_service, new_vce_events, vce_node_map, screen_state_node_map, app_node_map, engagement_id
+    )
 
     summary = {
         "vce_nodes": len(new_vce_events),
-        "screen_state_nodes": len(new_screen_states),
+        "screen_state_nodes": new_ss_count,
         "classified_as": classified_as_count,
         "observed_during": observed_during_count,
         "captured_in": captured_in_count,

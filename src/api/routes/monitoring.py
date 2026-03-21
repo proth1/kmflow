@@ -242,7 +242,7 @@ async def update_monitoring_job(
     return _job_to_response(job)
 
 
-@router.post("/jobs/{job_id}/activate", response_model=MonitoringJobResponse)
+@router.post("/jobs/{job_id}/activate", response_model=MonitoringJobResponse, status_code=status.HTTP_200_OK)
 async def activate_monitoring_job(
     job_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -269,7 +269,7 @@ async def activate_monitoring_job(
     return _job_to_response(job)
 
 
-@router.post("/jobs/{job_id}/pause", response_model=MonitoringJobResponse)
+@router.post("/jobs/{job_id}/pause", response_model=MonitoringJobResponse, status_code=status.HTTP_200_OK)
 async def pause_monitoring_job(
     job_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -287,7 +287,7 @@ async def pause_monitoring_job(
     return _job_to_response(job)
 
 
-@router.post("/jobs/{job_id}/stop", response_model=MonitoringJobResponse)
+@router.post("/jobs/{job_id}/stop", response_model=MonitoringJobResponse, status_code=status.HTTP_200_OK)
 async def stop_monitoring_job(
     job_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -491,7 +491,7 @@ async def get_alert(
     return _alert_to_response(alert)
 
 
-@router.post("/alerts/{alert_id}/action", response_model=AlertResponse)
+@router.post("/alerts/{alert_id}/action", response_model=AlertResponse, status_code=status.HTTP_200_OK)
 async def alert_action(
     alert_id: UUID,
     payload: AlertActionRequest,

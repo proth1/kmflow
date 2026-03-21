@@ -82,7 +82,7 @@ class _UnionFind:
 
 
 async def _count_components(
-    neo4j_session: Any,
+    neo4j_session: Any,  # Any because: neo4j.AsyncSession; no exported type alias
     engagement_id: str,
 ) -> tuple[int, int]:
     """Return (component_count, largest_component_size) using union-find.

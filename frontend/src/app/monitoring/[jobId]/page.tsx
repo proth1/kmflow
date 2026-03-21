@@ -70,6 +70,7 @@ export default function MonitoringJobDetail() {
   const driftData = deviations
     .sort((a, b) => new Date(a.detected_at).getTime() - new Date(b.detected_at).getTime())
     .map((d) => ({
+      id: d.id,
       date: new Date(d.detected_at).toLocaleDateString(),
       magnitude: d.magnitude,
     }));
@@ -107,8 +108,8 @@ export default function MonitoringJobDetail() {
               </div>
             ) : (
               <div className="space-y-2">
-                {driftData.map((d, i) => (
-                  <div key={i} className="flex items-center gap-3">
+                {driftData.map((d) => (
+                  <div key={d.id} className="flex items-center gap-3">
                     <span className="w-24 text-xs text-gray-500">{d.date}</span>
                     <div className="h-3 flex-1 rounded bg-gray-200">
                       <div

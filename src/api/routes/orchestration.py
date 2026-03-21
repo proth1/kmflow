@@ -115,7 +115,7 @@ def _get_camunda_client(request: Request):
     return client
 
 
-@router.post("/deploy", response_model=DeployAllResponse)
+@router.post("/deploy", response_model=DeployAllResponse, status_code=status.HTTP_200_OK)
 async def deploy_all_workflows(
     request: Request,
     user: User = Depends(require_permission("engagement:update")),
@@ -237,7 +237,7 @@ async def get_process_instance_detail(
         raise HTTPException(status_code=502, detail="Failed to communicate with Camunda engine") from e
 
 
-@router.post("/instances/{instance_id}/retry", response_model=RetryIncidentsResponse)
+@router.post("/instances/{instance_id}/retry", response_model=RetryIncidentsResponse, status_code=status.HTTP_200_OK)
 async def retry_instance_incidents(
     instance_id: str,
     request: Request,

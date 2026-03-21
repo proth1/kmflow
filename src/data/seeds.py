@@ -26,14 +26,8 @@ def get_best_practice_seeds() -> list[dict[str, Any]]:
         return yaml.safe_load(f)
 
 
-def get_benchmark_seeds() -> list[dict[str, Any]]:
-    """Return 20 benchmarks across 5 industries.
-
-    Returns:
-        List of dicts matching Benchmark model fields.
-    """
+def _financial_services_benchmarks() -> list[dict[str, Any]]:
     return [
-        # Financial Services (4)
         {
             "metric_name": "Straight-Through Processing Rate",
             "industry": "Financial Services",
@@ -70,7 +64,11 @@ def get_benchmark_seeds() -> list[dict[str, Any]]:
             "p90": 98.0,
             "source": "Thomson Reuters Regulatory Intelligence",
         },
-        # Insurance (4)
+    ]
+
+
+def _insurance_benchmarks() -> list[dict[str, Any]]:
+    return [
         {
             "metric_name": "Claims Processing Time (days)",
             "industry": "Insurance",
@@ -107,7 +105,11 @@ def get_benchmark_seeds() -> list[dict[str, Any]]:
             "p90": 72.0,
             "source": "JD Power Insurance Digital Experience",
         },
-        # Banking (4)
+    ]
+
+
+def _banking_benchmarks() -> list[dict[str, Any]]:
+    return [
         {
             "metric_name": "Loan Origination Cycle Time (days)",
             "industry": "Banking",
@@ -144,7 +146,11 @@ def get_benchmark_seeds() -> list[dict[str, Any]]:
             "p90": 4.5,
             "source": "Deloitte Digital Maturity Model",
         },
-        # Healthcare (4)
+    ]
+
+
+def _healthcare_benchmarks() -> list[dict[str, Any]]:
+    return [
         {
             "metric_name": "Patient Throughput (per day)",
             "industry": "Healthcare",
@@ -181,7 +187,11 @@ def get_benchmark_seeds() -> list[dict[str, Any]]:
             "p90": 96.0,
             "source": "ONC Health IT Dashboard",
         },
-        # Manufacturing (4)
+    ]
+
+
+def _manufacturing_benchmarks() -> list[dict[str, Any]]:
+    return [
         {
             "metric_name": "Overall Equipment Effectiveness (%)",
             "industry": "Manufacturing",
@@ -219,3 +229,18 @@ def get_benchmark_seeds() -> list[dict[str, Any]]:
             "source": "Gartner Supply Chain Top 25",
         },
     ]
+
+
+def get_benchmark_seeds() -> list[dict[str, Any]]:
+    """Return 20 benchmarks across 5 industries.
+
+    Returns:
+        List of dicts matching Benchmark model fields.
+    """
+    return (
+        _financial_services_benchmarks()
+        + _insurance_benchmarks()
+        + _banking_benchmarks()
+        + _healthcare_benchmarks()
+        + _manufacturing_benchmarks()
+    )

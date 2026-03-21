@@ -226,7 +226,7 @@ def _build_column_defs(schema_definition: dict[str, Any] | None) -> list[str]:
 
 
 def register_tables(
-    client: Any,
+    client: Any,  # Any because: databricks-sdk WorkspaceClient; optional dep
     catalog_entries: list[DataCatalogEntry],
     catalog: str,
     schema: str,
@@ -298,7 +298,9 @@ def register_tables(
     return results
 
 
-def _ensure_schema(client: Any, warehouse_id: str, catalog: str, schema: str) -> None:
+def _ensure_schema(
+    client: Any, warehouse_id: str, catalog: str, schema: str
+) -> None:  # Any because: databricks-sdk WorkspaceClient
     """Create a Unity Catalog schema if it does not already exist.
 
     Args:
@@ -317,7 +319,7 @@ def _ensure_schema(client: Any, warehouse_id: str, catalog: str, schema: str) ->
         logger.warning("Could not ensure schema %s.%s: %s", catalog, schema, exc)
 
 
-def _discover_warehouse(client: Any) -> str:
+def _discover_warehouse(client: Any) -> str:  # Any because: databricks-sdk WorkspaceClient
     """Return the ID of the first available SQL warehouse.
 
     Falls back to empty string if no warehouses are accessible.

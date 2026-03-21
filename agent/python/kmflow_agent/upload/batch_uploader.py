@@ -53,11 +53,9 @@ class BatchUploader:
                 logger.exception("Upload cycle error")
             # Wait for interval or shutdown
             try:
-                await asyncio.wait_for(
-                    shutdown_event.wait(), timeout=self.interval_seconds
-                )
+                await asyncio.wait_for(shutdown_event.wait(), timeout=self.interval_seconds)
                 break  # shutdown requested
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass  # normal interval elapsed
         logger.info("Batch uploader stopped (%d batches uploaded)", self._upload_count)
 
@@ -81,15 +79,15 @@ class BatchUploader:
         # Prune uploaded events
         await self.buffer.prune_uploaded()
 
-    async def _upload_batch(
-        self, batch_id: str, events: list[dict[str, Any]]
-    ) -> bool:
+    async def _upload_batch(self, batch_id: str, events: list[dict[str, Any]]) -> bool:
         """Upload a single batch with gzip compression and retry logic."""
-        payload = json.dumps({
-            "agent_id": self.config.agent_id,
-            "session_id": str(uuid.uuid4()),
-            "events": events,
-        }).encode("utf-8")
+        payload = json.dumps(
+            {
+                "agent_id": self.config.agent_id,
+                "session_id": str(uuid.uuid4()),
+                "events": events,
+            }
+        ).encode("utf-8")
 
         compressed = gzip.compress(payload)
         checksum = hashlib.sha256(payload).hexdigest()
@@ -107,11 +105,9 @@ class BatchUploader:
                     },
                 )
                 if response.status_code in (200, 201, 202):
-                    logger.info(
-                        "Batch %s uploaded (%d events)", batch_id[:8], len(events)
-                    )
+                    logger.info("Batch %s uploaded (%d events)", batch_id[:8], len(events))
                     return True
-                elif response.status_code >= 500:
+                if response.status_code >= 500:
                     logger.warning(
                         "Server error %d for batch %s (attempt %d/%d)",
                         response.status_code,
@@ -136,7 +132,7 @@ class BatchUploader:
                 )
 
             # Exponential backoff: 2, 4, 8, 16, 32 seconds
-            backoff = BASE_BACKOFF_SECONDS * (2 ** attempt)
+            backoff = BASE_BACKOFF_SECONDS * (2**attempt)
             await asyncio.sleep(backoff)
 
         logger.error(

@@ -198,7 +198,7 @@ async def update_catalog_entry(
     return entry
 
 
-@router.delete("/catalog/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/catalog/{entry_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def delete_catalog_entry(
     entry_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
@@ -251,7 +251,7 @@ async def list_policies(
     }
 
 
-@router.post("/policies/evaluate", response_model=PolicyEvaluateResponse)
+@router.post("/policies/evaluate", response_model=PolicyEvaluateResponse, status_code=status.HTTP_200_OK)
 async def evaluate_policies(
     body: PolicyEvaluateRequest,
     session: AsyncSession = Depends(get_session),
@@ -293,7 +293,7 @@ async def evaluate_policies(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/export/{engagement_id}")
+@router.get("/export/{engagement_id}", response_model=None)
 async def export_governance(
     engagement_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),

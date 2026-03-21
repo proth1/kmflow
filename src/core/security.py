@@ -7,11 +7,11 @@ to SQLAlchemy queries based on user membership.
 from __future__ import annotations
 
 import logging
-from typing import Any
 from uuid import UUID
 
 from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import InstrumentedAttribute
 
 from src.core.models import EngagementMember, User, UserRole
 
@@ -48,7 +48,7 @@ def filter_by_engagement_access(
     query: Select,
     user: User,
     engagement_ids: list[UUID],
-    engagement_id_column: Any,
+    engagement_id_column: InstrumentedAttribute,  # type: ignore[type-arg]  # SQLAlchemy column descriptor
 ) -> Select:
     """Add a WHERE clause to restrict results to accessible engagements.
 

@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import pytest
-
 from kmflow_agent.vce.classifier import (
     DATA_ENTRY,
     ERROR,
-    NAVIGATION,
     OTHER,
     QUEUE,
     REVIEW,

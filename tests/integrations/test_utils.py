@@ -155,15 +155,14 @@ class TestPaginateOffset:
                         "total": 3,
                     },
                 )
-            else:
-                call_count += 1
-                return _make_response(
-                    200,
-                    {
-                        "results": [{"id": 3}],
-                        "total": 3,
-                    },
-                )
+            call_count += 1
+            return _make_response(
+                200,
+                {
+                    "results": [{"id": 3}],
+                    "total": 3,
+                },
+            )
 
         mock_client = AsyncMock(spec=httpx.AsyncClient)
         mock_client.request = mock_request
@@ -231,13 +230,12 @@ class TestPaginateCursor:
                         "next": "https://api.example.com/data?page2",
                     },
                 )
-            else:
-                return _make_response(
-                    200,
-                    {
-                        "results": [{"id": 2}],
-                    },
-                )
+            return _make_response(
+                200,
+                {
+                    "results": [{"id": 2}],
+                },
+            )
 
         mock_client = AsyncMock(spec=httpx.AsyncClient)
         mock_client.request = mock_request

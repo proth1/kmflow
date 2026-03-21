@@ -99,7 +99,7 @@ class DatabricksBackend:
         # Full-qualified Delta table for metadata tracking
         self._metadata_table = f"`{catalog}`.`{schema}`.`evidence_metadata`"
 
-        self._client: Any = None  # Initialized lazily on first use
+        self._client: Any = None  # Any because: databricks-sdk WorkspaceClient; optional dep, no stub bundled
         self._warehouse_id: str | None = None  # Cached on first discovery
 
     # ------------------------------------------------------------------
@@ -170,7 +170,7 @@ class DatabricksBackend:
             raise ValueError(f"Path is outside storage boundary: {path!r} (expected prefix: {self._volume_base!r})")
         return path
 
-    def _ensure_metadata_table(self, w: Any) -> None:
+    def _ensure_metadata_table(self, w: Any) -> None:  # Any because: databricks-sdk WorkspaceClient
         """Create the evidence metadata Delta table if it does not exist.
 
         The table lives in Unity Catalog and is created once per workspace
@@ -204,7 +204,7 @@ class DatabricksBackend:
                 exc,
             )
 
-    def _get_warehouse_id(self, w: Any) -> str:
+    def _get_warehouse_id(self, w: Any) -> str:  # Any because: databricks-sdk WorkspaceClient
         """Return the first running SQL warehouse ID.
 
         In practice callers should pass a warehouse ID explicitly; this

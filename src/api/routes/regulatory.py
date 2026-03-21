@@ -145,7 +145,7 @@ async def update_policy(
     return policy
 
 
-@router.delete("/policies/{policy_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/policies/{policy_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def delete_policy(
     policy_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -257,7 +257,7 @@ async def update_control(
     return control
 
 
-@router.delete("/controls/{control_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/controls/{control_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def delete_control(
     control_id: UUID,
     request: Request,
@@ -391,7 +391,7 @@ async def update_regulation(
     return regulation
 
 
-@router.delete("/regulations/{regulation_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/regulations/{regulation_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def delete_regulation(
     regulation_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -480,7 +480,7 @@ async def get_governance_chain(
 # -- Overlay Engine Routes (Story #29) ----------------------------------------
 
 
-@router.post("/overlay/{engagement_id}/build", response_model=dict)
+@router.post("/overlay/{engagement_id}/build", response_model=dict, status_code=status.HTTP_200_OK)
 async def build_governance_overlay(
     engagement_id: UUID,
     request: Request,

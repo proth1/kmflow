@@ -336,7 +336,11 @@ async def export_decision_dmn(
 # ── SME Validation ───────────────────────────────────────────────────
 
 
-@router.post("/engagements/{engagement_id}/decisions/{decision_id}/validate", response_model=ValidateDecisionResponse)
+@router.post(
+    "/engagements/{engagement_id}/decisions/{decision_id}/validate",
+    response_model=ValidateDecisionResponse,
+    status_code=status.HTTP_200_OK,
+)
 async def validate_decision_rule(
     engagement_id: uuid.UUID,
     decision_id: uuid.UUID,

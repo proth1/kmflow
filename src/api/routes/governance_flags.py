@@ -43,6 +43,7 @@ class GovernanceCheckResponse(BaseModel):
 @router.post(
     "/engagements/{engagement_id}/scenarios/{scenario_id}/suggestions/{suggestion_id}/governance-check",
     response_model=GovernanceCheckResponse,
+    status_code=status.HTTP_200_OK,
 )
 async def check_governance_flags(
     engagement_id: UUID,

@@ -4,7 +4,7 @@ Provides CRUD operations for target operating models, gap analysis results,
 best practices, and benchmarks.
 """
 
-# FUTURE(audit-B1-001): Split into tom/ sub-package: core, gaps, benchmarks, roadmaps, maturity, alignment
+# DEFERRED: tracked in KMFLOW-659 (audit-B1-001): Split into tom/ sub-package: core, gaps, benchmarks, roadmaps, maturity, alignment
 
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ from sqlalchemy.orm import selectinload
 
 from src.api.background import track_background_task
 from src.api.deps import get_session
+from src.api.routes.auth import limiter
 from src.api.schemas.tom import (
     AlignmentResponse,
     AlignmentRunResultsResponse,
@@ -512,8 +513,10 @@ async def list_gaps(
 # -- Gap Rationale Generation Routes (Story #352) ----------------------------
 
 
-@router.post("/gaps/{gap_id}/generate-rationale", response_model=RationaleResponse)
+@router.post("/gaps/{gap_id}/generate-rationale", response_model=RationaleResponse, status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
 async def generate_gap_rationale(
+    request: Request,
     gap_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:update")),
@@ -560,8 +563,11 @@ async def generate_gap_rationale(
 @router.post(
     "/gaps/engagement/{engagement_id}/generate-rationales",
     response_model=BulkRationaleResponse,
+    status_code=status.HTTP_200_OK,
 )
+@limiter.limit("5/minute")
 async def generate_bulk_rationales(
+    request: Request,
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:update")),
@@ -932,7 +938,7 @@ async def get_gap_recommendations(
 # -- Alignment Engine Routes (Story #30) --------------------------------------
 
 
-@router.post("/alignment/{engagement_id}/{tom_id}", response_model=AlignmentResponse)
+@router.post("/alignment/{engagement_id}/{tom_id}", response_model=AlignmentResponse, status_code=status.HTTP_200_OK)
 async def run_alignment(
     engagement_id: UUID,
     tom_id: UUID,
@@ -991,7 +997,9 @@ async def get_maturity_scores(
     return {"engagement_id": str(engagement_id), "maturity_scores": scores}
 
 
-@router.post("/alignment/{engagement_id}/prioritize", response_model=PrioritizedGapsResponse)
+@router.post(
+    "/alignment/{engagement_id}/prioritize", response_model=PrioritizedGapsResponse, status_code=status.HTTP_200_OK
+)
 async def prioritize_gaps(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -1144,7 +1152,7 @@ async def get_gap_analysis_dashboard(
 # -- Conformance Routes (Story #32) -------------------------------------------
 
 
-@router.post("/conformance/check", response_model=ConformanceCheckResponse)
+@router.post("/conformance/check", response_model=ConformanceCheckResponse, status_code=status.HTTP_200_OK)
 async def check_conformance(
     pov_model_id: UUID,
     reference_model_id: UUID,
@@ -1210,8 +1218,10 @@ async def get_conformance_summary(
 # -- Roadmap Routes (Story #34) -----------------------------------------------
 
 
-@router.post("/roadmap/{engagement_id}/{tom_id}", response_model=RoadmapResponse)
+@router.post("/roadmap/{engagement_id}/{tom_id}", response_model=RoadmapResponse, status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
 async def generate_roadmap(
+    request: Request,
     engagement_id: UUID,
     tom_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -1275,7 +1285,9 @@ async def get_roadmap_summary(
     response_model=GenerateRoadmapResponse,
     status_code=status.HTTP_201_CREATED,
 )
+@limiter.limit("10/minute")
 async def generate_prioritized_roadmap(
+    request: Request,
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_permission("engagement:update")),
@@ -1341,7 +1353,7 @@ async def get_prioritized_roadmap(
     }
 
 
-@router.get("/roadmaps/{roadmap_id}/export")
+@router.get("/roadmaps/{roadmap_id}/export", response_model=None)
 async def export_roadmap(
     roadmap_id: UUID,
     export_format: str = Query(default="html", alias="format", description="Export format: html"),
@@ -1712,8 +1724,8 @@ async def get_alignment_run_results(
 
 async def _run_alignment_scoring_async(
     run_id: UUID,
-    session_factory: Any,
-    neo4j_driver: Any,
+    session_factory: Any,  # Any because: async_sessionmaker; avoids circular import
+    neo4j_driver: Any,  # Any because: neo4j.AsyncDriver; imported lazily inside
 ) -> None:
     """Background task to execute alignment scoring."""
     from src.semantic.graph import KnowledgeGraphService

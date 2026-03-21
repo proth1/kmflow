@@ -55,8 +55,8 @@ export default function ScenarioFinancialColumn({
               Top Sensitivities
             </div>
             <div className="space-y-1.5">
-              {topSensitivities.map((s, i) => (
-                <div key={i} className="flex items-center justify-between text-sm">
+              {topSensitivities.map((s) => (
+                <div key={s.assumption_name} className="flex items-center justify-between text-sm">
                   <span className="truncate mr-2">{s.assumption_name}</span>
                   <span className="text-muted-foreground text-xs shrink-0">
                     ${s.impact_range.optimistic.toLocaleString()} &ndash; ${s.impact_range.pessimistic.toLocaleString()}

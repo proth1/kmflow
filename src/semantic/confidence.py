@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import logging
 
-# FUTURE(audit-B2-001): Move ConfidenceScore to src/core/models/confidence.py so it can be shared
-# without importing from api/schemas in service-layer code.
+# DEFERRED: tracked in KMFLOW-659 (audit-B2-001): Move ConfidenceScore to src/core/models/confidence.py
+# so it can be shared without importing from api/schemas in service-layer code.
 from src.api.schemas.confidence import ConfidenceScore
 from src.pov.constants import (
     BRIGHTNESS_BRIGHT_THRESHOLD,

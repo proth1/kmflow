@@ -26,9 +26,12 @@ def _read_keychain(account: str) -> str | None:
     try:
         result = subprocess.run(
             [
-                "security", "find-generic-password",
-                "-s", KEYCHAIN_SERVICE,
-                "-a", account,
+                "security",
+                "find-generic-password",
+                "-s",
+                KEYCHAIN_SERVICE,
+                "-a",
+                account,
                 "-w",  # output password only
             ],
             capture_output=True,
@@ -53,10 +56,14 @@ def _write_keychain(account: str, secret: str) -> bool:
     try:
         result = subprocess.run(
             [
-                "security", "add-generic-password",
-                "-s", KEYCHAIN_SERVICE,
-                "-a", account,
-                "-w", secret,
+                "security",
+                "add-generic-password",
+                "-s",
+                KEYCHAIN_SERVICE,
+                "-a",
+                account,
+                "-w",
+                secret,
                 "-U",  # update if exists
             ],
             capture_output=True,
@@ -84,9 +91,7 @@ def get_auth_token() -> str | None:
         return token
 
     # 3. Legacy file — migrate to Keychain and remove file
-    token_path = Path(
-        os.path.expanduser("~/Library/Application Support/KMFlowAgent/.agent_token")
-    )
+    token_path = Path(os.path.expanduser("~/Library/Application Support/KMFlowAgent/.agent_token"))
     try:
         token = token_path.read_text().strip()
         if token:
@@ -113,9 +118,7 @@ def _get_ca_bundle_path() -> str | None:
 
 def _get_client_cert() -> tuple[str, str] | None:
     """Return (cert_path, key_path) for mTLS client certificate."""
-    app_support = Path(
-        os.path.expanduser("~/Library/Application Support/KMFlowAgent")
-    )
+    app_support = Path(os.path.expanduser("~/Library/Application Support/KMFlowAgent"))
     cert_path = app_support / "client.crt"
     key_path = app_support / "client.key"
     if cert_path.exists() and key_path.exists():

@@ -10,7 +10,7 @@ import asyncio
 import json
 import logging
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -66,11 +66,9 @@ class ConfigManager:
         while not shutdown_event.is_set():
             await self._refresh()
             try:
-                await asyncio.wait_for(
-                    shutdown_event.wait(), timeout=self.refresh_interval
-                )
+                await asyncio.wait_for(shutdown_event.wait(), timeout=self.refresh_interval)
                 break
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
         logger.info("Config manager stopped")
 

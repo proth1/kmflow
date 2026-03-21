@@ -72,7 +72,7 @@ class ClassificationRule:
 def _check_condition(
     session: AggregatedSession,
     condition: str,
-    threshold: Any,
+    threshold: int | float,
     total: int,
 ) -> bool:
     """Check a single condition against session features."""

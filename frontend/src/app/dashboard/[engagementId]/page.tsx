@@ -51,6 +51,7 @@ export default function DashboardPage() {
   const [userRole, setUserRole] = useState<UserRole>("platform_admin");
 
   useEffect(() => {
+    let cancelled = false;
     async function loadData() {
       setLoading(true);
       setError(null);
@@ -61,6 +62,8 @@ export default function DashboardPage() {
           fetchConfidenceDistribution(engagementId),
           fetchCurrentUser(),
         ]);
+
+        if (cancelled) return;
 
         if (dashData.status === "fulfilled") {
           setDashboard(dashData.value);
@@ -73,14 +76,16 @@ export default function DashboardPage() {
         if (confData.status === "fulfilled") setConfidence(confData.value);
         if (userData.status === "fulfilled") setUserRole(userData.value.role);
       } catch (err) {
+        if (cancelled) return;
         setError(
           err instanceof Error ? err.message : "Failed to load dashboard",
         );
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     loadData();
+    return () => { cancelled = true; };
   }, [engagementId]);
 
   // Persona visibility rules
