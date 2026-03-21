@@ -3,6 +3,27 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.247] - 2026-03-21
+### Security
+- Dev mode auth: refuse auto-auth in non-dev/test environments (HTTP 503) (#655)
+- CSRF token bound to session via HMAC-SHA256 of access cookie (#655)
+- Token blacklist: explicit warning on Redis failure (#655)
+- CIB7 production: CAMUNDA_USER/PASSWORD env vars with fail-fast (#655)
+- Frontend Dockerfile: non-root user (nextjs:1001) (#655)
+
+### Fixed
+- RLS: added role_rate_assumptions + volume_forecasts to engagement-scoped tables (#655)
+- GDPR export: added LLMAuditLog + CopilotFeedback coverage (#655)
+- GDPR anonymize: covers llm_audit_logs and copilot_feedback (#655)
+- GDPR Art. 17 stub: raises NotImplementedError instead of fake success (#655)
+- 29 unjustified `except Exception` → specific types or justified (#655)
+- 10 unjustified `: Any` → concrete types (#655)
+- response_model added to 66 endpoints across 16 route files (#655)
+
+### Added
+- tests/api/test_audit_log_routes.py (7 tests) (#655)
+- agent/python/tests/test_retention.py (12 tests) (#655)
+
 ## [2026.03.246] - 2026-03-20
 ### Security
 - **CRITICAL**: Fix tasks router prefix from /tasks to /api/v1/tasks (#637)

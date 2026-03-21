@@ -1,7 +1,7 @@
 # KMFlow Platform State
 
-**Version**: 2026.03.246
-**Last Updated**: 2026-03-20
+**Version**: 2026.03.247
+**Last Updated**: 2026-03-21
 
 ## Quick Stats
 
@@ -11,7 +11,7 @@
 | API Routers | 77 |
 | Test Count | 6,145+ backend + 635 frontend (6,780+ total) |
 | Total LOC | ~120,000 (440+ Python / 120 TypeScript / 39 Swift / 63 C#/C) |
-| Database Migrations | 91 |
+| Database Migrations | 92 |
 | BPMN Process Models | 44 |
 | Coverage | >83% |
 | Python Version | 3.12+ |

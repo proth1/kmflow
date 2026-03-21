@@ -1,22 +1,24 @@
 # Active Context
 
-**Last Updated**: 2026-03-20
+**Last Updated**: 2026-03-21
 
 ## Project Status
 
 **MVP COMPLETE + WGI ALIGNED** — Platform MVP done. Windows Task Mining Agent fully implemented. WGI Platform Alignment complete.
 
-- **Current version**: 2026.03.246
+- **Current version**: 2026.03.247
 - **Open issues**: 0
 - **PM tool**: Jira (KMFLOW project at agentic-sdlc.atlassian.net)
 - **Presentations**: kmflow.agentic-innovations.com + state-street-apex.agentic-innovations.com
 
 ## Current Focus
 
-Comprehensive audit remediation complete (6 batches, 92 findings). All CRITICALs and HIGHs resolved. Remaining items are deferred test coverage (binary parser tests, maturity scorer boundary tests) and accepted risks.
+Audit remediation rounds 2 + 3 complete. 6th audit cycle shows 83 findings (down from 103). All CRITICALs addressed (dev-mode hardening, N+1 verified fixed). All HIGHs addressed except deferred god-file splits. Next: incremental response_model additions, MagicMock spec migration, god-file decomposition.
 
 ## Recently Completed
 
+- **PR #656**: Audit R3 — 2 CRITICAL + 13 HIGH fixes: dev-mode auth guard, CSRF session binding (HMAC), CIB7 auth, frontend non-root, RLS tables, GDPR export/anonymize, 66 response_model endpoints, 29 exception justifications, 10 type narrowings, GDPR stub → NotImplementedError, 19 new tests (#655, merged 2026-03-21)
+- **PR #652**: Audit R2 — 8 batches, 60+ findings: slowapi Redis, coverage 90%, CSRF middleware, refresh token rotation, Neo4j constraints, pagination, response_model (30 endpoints), exception handling, test coverage, frontend quality, TLS, network segmentation, coding guardrails (merged 2026-03-20)
 - **PRs #637-#651**: Comprehensive audit remediation — 6 batches, 92 findings (2 CRIT + 27 HIGH + 47 MED + 26 LOW): tasks router prefix fix, engagement IDOR (13 routes), refresh token blacklisting, CSRF cookies, async parallelism, Neo4j LIMIT, SurveyClaim rename, Camunda pagination, API compliance, main.py SRP, LLM user attribution, supply chain hardening (merged 2026-03-20)
 - **PR #635**: GDPR Article 28 DPA tracking — DataProcessingAgreement model, 5 endpoints, engagement compliance summary, evidence upload warning, field allowlist, RLS, migration 091, 13 tests (merged 2026-03-20)
 - **PR #634**: Audit remediation #4 — response_model (27 endpoints), GDPR agent tests (23), flaky tests hardened, seeds YAML, HNSW index, exception comments, dependency pinning (#633, merged 2026-03-19)
