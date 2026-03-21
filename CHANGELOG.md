@@ -3,6 +3,26 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.248] - 2026-03-21
+### Security
+- WebSocket `get_websocket_user` env guard refuses dev mode in non-dev/test (#657)
+- Graph routes: engagement access on /build, /traverse, /search, /bridges/run (#657)
+- Erasure job: covers llm_audit_logs, copilot_feedback, copilot_messages (#657)
+- RLS: added policy_bundles + endpoint_consent_records (#657)
+- MIME fallback: application/octet-stream instead of client type (#657)
+- Error messages normalized to prevent engagement UUID leak (#657)
+
+### Changed
+- CSRF token generation moved to src/core/csrf.py (fixes layering violation) (#657)
+- Dashboard queries parallelized with asyncio.gather (#657)
+- RetentionEnforcer uses asyncio.to_thread for sync I/O (#657)
+- Per-request engagement membership cache eliminates RBAC N+1 (#657)
+- All except Exception justified (0 unjustified remaining) (#657)
+- response_model added to 17 more endpoints (#657)
+
+### Added
+- tests/api/test_graph_engagement_access.py (8 tests) (#657)
+
 ## [2026.03.247] - 2026-03-21
 ### Security
 - Dev mode auth: refuse auto-auth in non-dev/test environments (HTTP 503) (#655)

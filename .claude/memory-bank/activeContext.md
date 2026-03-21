@@ -6,17 +6,18 @@
 
 **MVP COMPLETE + WGI ALIGNED** — Platform MVP done. Windows Task Mining Agent fully implemented. WGI Platform Alignment complete.
 
-- **Current version**: 2026.03.247
+- **Current version**: 2026.03.248
 - **Open issues**: 0
 - **PM tool**: Jira (KMFLOW project at agentic-sdlc.atlassian.net)
 - **Presentations**: kmflow.agentic-innovations.com + state-street-apex.agentic-innovations.com
 
 ## Current Focus
 
-Audit remediation rounds 2 + 3 complete. 6th audit cycle shows 83 findings (down from 103). All CRITICALs addressed (dev-mode hardening, N+1 verified fixed). All HIGHs addressed except deferred god-file splits. Next: incremental response_model additions, MagicMock spec migration, god-file decomposition.
+Audit remediation rounds 2-4 complete. 7th audit cycle found 72 findings (down from 103 pre-R2). 0 unjustified except Exception remaining. All graph routes have engagement access. GDPR erasure covers all tables. Next: incremental response_model (121 remaining), MagicMock spec migration, god-file decomposition.
 
 ## Recently Completed
 
+- **PR #658**: Audit R4 — 1 CRITICAL + 10 HIGH + 7 MEDIUM fixes: WS env guard, graph engagement access, erasure job tables, RLS consent tables, 17 response_model endpoints, all except justified, RBAC N+1 cache, dashboard parallel queries, retention async, MIME fallback, core layering fix, 8 new tests (#657, merged 2026-03-21)
 - **PR #656**: Audit R3 — 2 CRITICAL + 13 HIGH fixes: dev-mode auth guard, CSRF session binding (HMAC), CIB7 auth, frontend non-root, RLS tables, GDPR export/anonymize, 66 response_model endpoints, 29 exception justifications, 10 type narrowings, GDPR stub → NotImplementedError, 19 new tests (#655, merged 2026-03-21)
 - **PR #652**: Audit R2 — 8 batches, 60+ findings: slowapi Redis, coverage 90%, CSRF middleware, refresh token rotation, Neo4j constraints, pagination, response_model (30 endpoints), exception handling, test coverage, frontend quality, TLS, network segmentation, coding guardrails (merged 2026-03-20)
 - **PRs #637-#651**: Comprehensive audit remediation — 6 batches, 92 findings (2 CRIT + 27 HIGH + 47 MED + 26 LOW): tasks router prefix fix, engagement IDOR (13 routes), refresh token blacklisting, CSRF cookies, async parallelism, Neo4j LIMIT, SurveyClaim rename, Camunda pagination, API compliance, main.py SRP, LLM user attribution, supply chain hardening (merged 2026-03-20)
