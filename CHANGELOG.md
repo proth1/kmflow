@@ -3,6 +3,33 @@
 All notable changes to KMFlow are documented here.
 Format: [CalVer](https://calver.org/) — `YYYY.MM.MICRO` (year.month.sequential-build)
 
+## [2026.03.249] - 2026-03-21
+### Security
+- MCP rate limiting migrated from in-memory dict to Redis sliding window (#659)
+- Rate limits on 6 LLM-heavy endpoints: tom rationale/roadmap, semantic extraction, report generation (#659)
+- Token blacklist returns success/failure bool; logout warns on Redis failure (#659)
+
+### Changed
+- POST status_code explicitly set on ~85 endpoints across 40+ route files (#659)
+- response_model on ALL remaining routes — 0 missing (#659)
+- POV: .limit(1000) on 8 unbounded analytics queries (#659)
+- event_spine pagination ceiling le=2000 → le=1000 (#659)
+- Graph top_k/depth: Query(ge=, le=) bounds replace manual validation (#659)
+- 5 functions >150 lines decomposed into helpers (#659)
+- ~20 :Any → concrete types (datetime, Element, UUID, InstrumentedAttribute) (#659)
+- DualWriteFailure compensation job implemented (#659)
+
+### Fixed
+- Cancellation guards on dashboard + portal async useEffects (#659)
+- Secondary error states on governance + analytics pages (#659)
+- 6 index-key violations in frontend list renders (#659)
+- useMonitoringData double cast → proper nullable type (#659)
+- Worker lock files regenerated (#659)
+
+### Added
+- 4 per-route error.tsx pages (governance, dashboard, monitoring, analytics) (#659)
+- ~1,500 lines of new tests across evaluation, quality, integrations, parsers (#659)
+
 ## [2026.03.248] - 2026-03-21
 ### Security
 - WebSocket `get_websocket_user` env guard refuses dev mode in non-dev/test (#657)
