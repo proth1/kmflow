@@ -10,8 +10,8 @@ Supports:
 
 from __future__ import annotations
 
+import hmac
 import logging
-import secrets
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -250,7 +250,10 @@ def set_auth_cookies(
 
     # Double-submit CSRF cookie — NOT HttpOnly so JavaScript can read it
     # and send it back via the X-CSRF-Token header on mutation requests.
-    csrf_token = secrets.token_urlsafe(32)
+    # Token is HMAC-SHA256 of the access token, binding it to the session.
+    from src.api.middleware.csrf import generate_csrf_token
+
+    csrf_token = generate_csrf_token(access_token)
     response.set_cookie(
         key=CSRF_COOKIE_NAME,
         value=csrf_token,
@@ -328,10 +331,21 @@ async def verify_csrf_token(request: Request) -> None:
         return
 
     csrf_header = request.headers.get(CSRF_HEADER_NAME)
-    if not csrf_header or not secrets.compare_digest(csrf_cookie, csrf_header):
+    if not csrf_header:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="CSRF token missing or invalid",
+            detail="CSRF token missing",
+        )
+
+    # Validate against HMAC of the access cookie (session-bound token)
+    from src.api.middleware.csrf import generate_csrf_token
+
+    access_cookie = request.cookies.get(ACCESS_COOKIE_NAME, "")
+    expected = generate_csrf_token(access_cookie)
+    if not hmac.compare_digest(expected, csrf_header):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="CSRF token invalid",
         )
 
 

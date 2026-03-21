@@ -56,7 +56,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             )
 
         access_cookie = request.cookies.get(ACCESS_COOKIE_NAME, "")
-        expected_token = _generate_csrf_token(access_cookie)
+        expected_token = generate_csrf_token(access_cookie)
         if not hmac.compare_digest(expected_token, csrf_header):
             return Response(
                 content='{"detail":"CSRF token mismatch"}',
@@ -71,7 +71,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         """Set the CSRF cookie bound to the current session if not already present."""
         if not request.cookies.get(CSRF_COOKIE):
             access_cookie = request.cookies.get(ACCESS_COOKIE_NAME, "")
-            token = _generate_csrf_token(access_cookie)
+            token = generate_csrf_token(access_cookie)
             settings = get_settings()
             response.set_cookie(
                 key=CSRF_COOKIE,
@@ -83,7 +83,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             )
 
 
-def _generate_csrf_token(access_cookie_value: str) -> str:
+def generate_csrf_token(access_cookie_value: str) -> str:
     """Generate CSRF token cryptographically bound to the current session."""
     settings = get_settings()
     secret = settings.jwt_secret_key.get_secret_value()

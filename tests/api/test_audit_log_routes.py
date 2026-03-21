@@ -44,7 +44,7 @@ def _make_audit_log() -> MagicMock:
     entry = MagicMock(spec=AuditLog)
     entry.id = LOG_ID
     entry.engagement_id = ENGAGEMENT_ID
-    entry.action = AuditAction.CREATE
+    entry.action = AuditAction.EVIDENCE_UPLOADED
     entry.actor = "admin@example.com"
     entry.details = "Created evidence item"
     entry.user_id = USER_ID
