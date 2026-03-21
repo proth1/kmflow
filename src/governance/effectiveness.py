@@ -17,6 +17,7 @@ from decimal import Decimal
 from typing import Any
 
 from src.core.models import ControlEffectiveness
+from src.semantic.graph import KnowledgeGraphService
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +77,7 @@ def generate_recommendation(
 class ControlEffectivenessScoringService:
     """Scores control effectiveness from graph evidence."""
 
-    def __init__(self, graph_service: Any) -> None:
+    def __init__(self, graph_service: KnowledgeGraphService) -> None:
         self._graph = graph_service
 
     async def get_execution_evidence(self, control_id: str, engagement_id: str) -> dict[str, Any]:
@@ -108,7 +109,7 @@ class ControlEffectivenessScoringService:
                 "evidenced_count": evidenced_count,
                 "evidence_ids": evidence_ids,
             }
-        except Exception:
+        except Exception:  # Intentionally broad: Neo4j driver errors vary by version and connection state
             logger.warning("Failed to query SUPPORTED_BY edges for control %s", control_id, exc_info=True)
             return {"total_required": 0, "evidenced_count": 0, "evidence_ids": []}
 

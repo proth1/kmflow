@@ -11,6 +11,7 @@ import uuid
 from typing import Any
 from uuid import UUID
 
+from neo4j import AsyncDriver
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,7 +33,7 @@ logger = logging.getLogger(__name__)
 async def run_nightly_evaluation(
     session: AsyncSession,
     engagement_ids: list[str],
-    neo4j_driver: Any = None,
+    neo4j_driver: AsyncDriver | None = None,
     alert_engine: AlertEngine | None = None,
 ) -> dict[str, Any]:
     """Orchestrate nightly evaluations across all given engagements.

@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import get_settings
 from src.core.models import LLMAuditLog, SimulationScenario
+from src.semantic.graph import KnowledgeGraphService
 from src.simulation.suggester import AlternativeSuggesterService
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ async def generate_audited_suggestions(
     scenario: SimulationScenario,
     user_id: UUID,
     session: AsyncSession,
-    graph_service: Any = None,
+    graph_service: KnowledgeGraphService | None = None,
     context_notes: str | None = None,
 ) -> list[dict[str, Any]]:
     """Generate LLM suggestions with full audit logging.
@@ -64,7 +65,7 @@ async def generate_audited_suggestions(
         prompt_tokens = len(prompt_text) // 4
         completion_tokens = len(llm_response) // 4
 
-    except Exception as exc:
+    except Exception as exc:  # Intentionally broad: LLM client can raise httpx, openai, or provider-specific errors
         error_message = str(exc)
         logger.exception("LLM suggestion failed for scenario %s", scenario.id)
         suggestions = suggester.fallback_suggestions(scenario, prompt_text)
@@ -87,7 +88,7 @@ async def generate_audited_suggestions(
             )
             session.add(audit_entry)
             await session.flush()
-        except Exception:
+        except Exception:  # Intentionally broad: audit log failure must not mask the original LLM error
             logger.exception("CRITICAL: Failed to persist LLM audit log for scenario %s", scenario.id)
 
     # Post-process: add governance flags
@@ -106,7 +107,7 @@ async def generate_audited_suggestions(
 async def _enrich_with_governance(
     suggestions: list[dict[str, Any]],
     scenario: SimulationScenario,
-    graph_service: Any,
+    graph_service: KnowledgeGraphService,
 ) -> list[dict[str, Any]]:
     """Enrich suggestions with governance flags from knowledge graph.
 
@@ -125,7 +126,7 @@ async def _enrich_with_governance(
             """,
             {"engagement_id": str(scenario.engagement_id)},
         )
-    except Exception:
+    except Exception:  # Intentionally broad: Neo4j driver errors vary by version and connection state
         logger.exception("Failed to query governance tags for %s", scenario.engagement_id)
         return suggestions
 

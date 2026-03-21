@@ -77,9 +77,9 @@ class ConsentService:
     async def withdraw_consent(self, consent_id: uuid.UUID) -> dict[str, Any] | None:
         """Withdraw consent by marking record as WITHDRAWN.
 
-        Returns the withdrawal details including a deletion task ID.
-        The consent record itself is retained (7-year floor) but the
-        status prevents further data processing.
+        Raises NotImplementedError because GDPR Art. 17 data deletion across all
+        stores (PostgreSQL, Neo4j, pgvector, Redis) is not yet implemented (KMFLOW-382).
+        The consent record is marked WITHDRAWN before the error is raised.
         """
         record = await self._session.get(EndpointConsentRecord, consent_id)
         if record is None:
@@ -93,33 +93,11 @@ class ConsentService:
         record.withdrawn_at = now
         await self._session.flush()
 
-        # TODO(#382): Wire to actual task queue (Redis stream or Celery).
-        # Currently records the withdrawal without dispatching a deletion task.
-        # The actual deletion across PostgreSQL, Neo4j, pgvector, and Redis will
-        # be implemented when the desktop pipeline integration is complete.
-        deletion_task_id = uuid.uuid4()
-
-        logger.warning(
-            "Consent withdrawal recorded for id=%s participant=%s but deletion task NOT dispatched "
-            "(pending Story #382 implementation)",
-            consent_id,
-            record.participant_id,
+        raise NotImplementedError(
+            "GDPR Art. 17 deletion not yet implemented — tracked in KMFLOW-382. "
+            "Consent withdrawal is recorded but data deletion across PostgreSQL, "
+            "Neo4j, pgvector, and Redis has not been dispatched."
         )
-        logger.info(
-            "Consent withdrawn: id=%s, participant=%s, deletion_task=%s",
-            consent_id,
-            record.participant_id,
-            deletion_task_id,
-        )
-        return {
-            "consent_id": str(consent_id),
-            "participant_id": str(record.participant_id),
-            "engagement_id": str(record.engagement_id),
-            "withdrawn_at": now.isoformat(),
-            "deletion_task_id": str(deletion_task_id),
-            "deletion_targets": ["postgresql", "neo4j", "pgvector", "redis"],
-            "status": "withdrawal_recorded_pending_implementation",
-        }
 
     async def get_consent(self, consent_id: uuid.UUID) -> EndpointConsentRecord | None:
         """Get a single consent record by ID."""

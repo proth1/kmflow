@@ -17,6 +17,7 @@ from decimal import Decimal
 from typing import Any
 
 from src.core.models import ComplianceLevel
+from src.semantic.graph import KnowledgeGraphService
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ class ComplianceAssessmentService:
     controls, then checks for evidence of control execution.
     """
 
-    def __init__(self, graph_service: Any) -> None:
+    def __init__(self, graph_service: KnowledgeGraphService) -> None:
         self._graph = graph_service
 
     async def get_required_controls(self, activity_id: str, engagement_id: str) -> list[dict[str, Any]]:
@@ -74,7 +75,7 @@ class ComplianceAssessmentService:
                 for r in records
                 if r.get("control_id")
             ]
-        except Exception:
+        except Exception:  # Intentionally broad: Neo4j driver errors vary by version and connection state
             logger.warning("Failed to query ENFORCED_BY edges for activity %s", activity_id, exc_info=True)
             return []
 
@@ -94,7 +95,7 @@ class ComplianceAssessmentService:
             )
             records = await self._graph.run_query(query, {"control_ids": control_ids, "engagement_id": engagement_id})
             return [r["control_id"] for r in records if r.get("control_id")]
-        except Exception:
+        except Exception:  # Intentionally broad: Neo4j driver errors vary by version and connection state
             logger.warning("Failed to query control evidence for engagement %s", engagement_id, exc_info=True)
             return []
 

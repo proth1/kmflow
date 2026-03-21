@@ -90,6 +90,7 @@ ENGAGEMENT_SCOPED_TABLES: list[str] = [
     "retention_policies",
     "review_packs",
     "role_activity_mappings",
+    "role_rate_assumptions",
     "seed_terms",
     "semantic_relationships",
     "shelf_data_requests",
@@ -110,6 +111,7 @@ ENGAGEMENT_SCOPED_TABLES: list[str] = [
     "uplift_projections",
     "validation_decisions",
     "visual_context_events",
+    "volume_forecasts",
 ]
 
 

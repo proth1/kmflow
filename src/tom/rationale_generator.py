@@ -9,12 +9,15 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.models import GapAnalysisResult, LLMAuditLog, TargetOperatingModel
+
+if TYPE_CHECKING:
+    from src.core.config import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +152,7 @@ Respond in JSON format:
 class RationaleGeneratorService:
     """Generates LLM-powered rationale for gap analysis results."""
 
-    def __init__(self, settings: Any | None = None) -> None:
+    def __init__(self, settings: Settings | None = None) -> None:
         if settings is None:
             from src.core.config import get_settings
 
@@ -195,7 +198,9 @@ class RationaleGeneratorService:
         try:
             response_text = await self._call_llm(prompt)
             result = self._parse_response(response_text)
-        except Exception as exc:
+        except (
+            Exception
+        ) as exc:  # Intentionally broad: LLM client can raise httpx, anthropic, or provider-specific errors
             error_message = str(exc)
             logger.exception("Failed to generate rationale for gap %s", gap.id)
             result = self._fallback_rationale(gap)
@@ -215,7 +220,7 @@ class RationaleGeneratorService:
                 )
                 session.add(audit_entry)
                 await session.flush()
-            except Exception:
+            except Exception:  # Intentionally broad: audit log failure must not mask the original LLM error
                 logger.exception("Failed to persist LLM audit log for TOM rationale gap %s", gap.id)
 
         return result

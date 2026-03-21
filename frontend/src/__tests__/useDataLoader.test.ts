@@ -23,7 +23,7 @@ describe("useDataLoader", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("sets error on fetch failure (refetch, not initial silent load)", async () => {
+  it("propagates error on fetch failure (both initial and refetch)", async () => {
     const fetchFn = jest.fn(async (_signal: AbortSignal) => {
       throw new Error("Network error");
     });
@@ -31,13 +31,13 @@ describe("useDataLoader", () => {
       useDataLoader(fetchFn, "Custom error message"),
     );
 
-    // Initial load is silent — no error set
+    // Initial load now propagates errors (silent only suppresses loading spinner)
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
     });
-    expect(result.current.error).toBeNull();
+    expect(result.current.error).toBe("Network error");
 
-    // Refetch is NOT silent — error should appear
+    // Refetch also shows error
     await act(async () => {
       await result.current.refetch();
     });

@@ -94,7 +94,7 @@ async def cleanup_expired_engagements(
                     deleted_nodes,
                     eng.id,
                 )
-            except Exception:
+            except Exception:  # Intentionally broad: graph deletion errors must not abort DB cleanup
                 logger.exception(
                     "Retention cleanup: graph deletion failed for engagement %s, continuing with DB cleanup",
                     eng.id,
@@ -127,7 +127,9 @@ async def cleanup_expired_engagements(
                 if p.exists():
                     p.unlink()
                     files_deleted += 1
-            except Exception:
+            except (
+                Exception
+            ):  # Intentionally broad: file deletion errors (OSError, PermissionError) must not abort DB cleanup
                 logger.warning("Retention cleanup: failed to delete file %s", file_path)
         if files_deleted:
             logger.info(

@@ -413,17 +413,17 @@ async def get_dashboard(
 
     try:
         stages = await get_pipeline_stages(engagement_id, _engagement_user, session)
-    except Exception:
+    except Exception:  # Intentionally broad: dashboard sections fail independently to deliver partial results
         logger.exception("Dashboard: failed to fetch pipeline stages for engagement %s", engagement_id)
 
     try:
         retrieval = await get_retrieval_summary(engagement_id, _engagement_user, session)
-    except Exception:
+    except Exception:  # Intentionally broad: dashboard sections fail independently to deliver partial results
         logger.exception("Dashboard: failed to fetch retrieval summary for engagement %s", engagement_id)
 
     try:
         entities = await get_entity_summary(engagement_id, _engagement_user, session)
-    except Exception:
+    except Exception:  # Intentionally broad: dashboard sections fail independently to deliver partial results
         logger.exception("Dashboard: failed to fetch entity summary for engagement %s", engagement_id)
 
     try:
@@ -431,12 +431,12 @@ async def get_dashboard(
     except HTTPException:
         # 404 is expected when no snapshot exists — treat as empty, not an error
         pass
-    except Exception:
+    except Exception:  # Intentionally broad: dashboard sections fail independently to deliver partial results
         logger.exception("Dashboard: failed to fetch graph health for engagement %s", engagement_id)
 
     try:
         satisfaction = await get_copilot_satisfaction(engagement_id, _engagement_user, session)
-    except Exception:
+    except Exception:  # Intentionally broad: dashboard sections fail independently to deliver partial results
         logger.exception("Dashboard: failed to fetch satisfaction summary for engagement %s", engagement_id)
 
     return {

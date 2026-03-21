@@ -49,10 +49,38 @@ class UpdateCertaintyTierPayload(BaseModel):
     certainty_tier: CertaintyTier
 
 
+class SurveyClaimResponse(BaseModel):
+    """Response schema for a single survey claim."""
+
+    id: str
+    engagement_id: str
+    session_id: str
+    probe_type: str
+    respondent_role: str
+    claim_text: str
+    certainty_tier: str
+    proof_expectation: str | None = None
+    created_at: str
+
+
+class SurveyClaimListResponse(BaseModel):
+    """Paginated list of survey claims."""
+
+    items: list[SurveyClaimResponse]
+    total: int
+
+
+class ClaimHistoryResponse(BaseModel):
+    """Certainty tier transition history for a claim."""
+
+    claim_id: str
+    history: list[dict[str, Any]]
+
+
 # ── Endpoints ──────────────────────────────────────────────────────────
 
 
-@router.get("/engagements/{engagement_id}/survey-claims")
+@router.get("/engagements/{engagement_id}/survey-claims", response_model=SurveyClaimListResponse)
 async def list_survey_claims(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -74,7 +102,7 @@ async def list_survey_claims(
     )
 
 
-@router.get("/engagements/{engagement_id}/survey-claims/{claim_id}")
+@router.get("/engagements/{engagement_id}/survey-claims/{claim_id}", response_model=SurveyClaimResponse)
 async def get_survey_claim(
     engagement_id: UUID,
     claim_id: UUID,
@@ -100,7 +128,7 @@ async def get_survey_claim(
     }
 
 
-@router.patch("/engagements/{engagement_id}/survey-claims/{claim_id}")
+@router.patch("/engagements/{engagement_id}/survey-claims/{claim_id}", response_model=SurveyClaimResponse)
 async def update_survey_claim(
     engagement_id: UUID,
     claim_id: UUID,
@@ -128,6 +156,7 @@ async def update_survey_claim(
 
 @router.post(
     "/engagements/{engagement_id}/survey-claims/{claim_id}/shelf-data-request",
+    response_model=dict,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_shelf_data_request_from_claim(
@@ -155,7 +184,7 @@ async def create_shelf_data_request_from_claim(
     return result
 
 
-@router.get("/engagements/{engagement_id}/survey-claims/{claim_id}/history")
+@router.get("/engagements/{engagement_id}/survey-claims/{claim_id}/history", response_model=ClaimHistoryResponse)
 async def get_claim_history(
     engagement_id: UUID,
     claim_id: UUID,

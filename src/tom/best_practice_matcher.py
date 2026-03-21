@@ -8,13 +8,22 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any
+from typing import Any, Protocol
 
 import numpy as np
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.models import BestPractice, GapAnalysisResult
+
+
+class _EmbeddingServiceProtocol(Protocol):
+    """Minimal interface required by BestPracticeMatcher."""
+
+    async def embed_text_async(self, text: str) -> list[float]: ...
+
+    async def embed_texts_async(self, texts: list[str]) -> list[list[float]]: ...
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +37,7 @@ class BestPracticeMatcher:
     cosine similarity for relevance ranking within a dimension.
     """
 
-    def __init__(self, embedding_service: Any | None = None) -> None:
+    def __init__(self, embedding_service: _EmbeddingServiceProtocol | None = None) -> None:
         self._embedding_service = embedding_service
 
     async def match_gaps_to_practices(

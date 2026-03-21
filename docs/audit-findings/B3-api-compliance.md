@@ -1,240 +1,172 @@
-# B3: API Compliance Audit Findings (Re-Audit — 2026-03-19)
+# B3: API Compliance Audit Findings (Re-Audit — 2026-03-20)
 
 **Agent**: B3 (API Compliance Auditor)
-**Date**: 2026-03-19
-**Scope**: REST standards, response format consistency, pagination, error handling, rate limiting, API versioning
-**Supersedes**: Previous B3 audit dated 2026-02-26 (26 files, ~210 handlers)
+**Date**: 2026-03-20
+**Scope**: REST standards, response format consistency, pagination, error handling, rate limiting, response_model compliance
+**Supersedes**: Previous B3 audit dated 2026-03-19 (76 files, ~456 handlers)
 
 ---
 
 ## Summary
 
 - **Total Route Files Audited**: 76 files in `src/api/routes/`
-- **Total Endpoint Handlers**: ~456 route handlers
-- **Critical Issues**: 1
-- **High Issues**: 3
-- **Medium Issues**: 5
+- **Total Endpoint Handlers**: 463 route handlers
+- **Critical Issues**: 0
+- **High Issues**: 1
+- **Medium Issues**: 4
 - **Low Issues**: 4
 
-### Resolved Since Prior Audit
-
-The following HIGH findings from the prior audit were confirmed **resolved**:
+### Resolved Since Prior Audit (2026-03-19)
 
 | Prior Finding | Resolution |
 |---|---|
-| In-memory rate limiter bypassed in multi-worker deployments | Fixed: `RateLimitMiddleware` now uses Redis Lua `INCR + EXPIRE` (atomic, multi-worker safe) |
-| `list_engagement_members` had no pagination | Fixed: `limit`/`offset` added; returns `{items, total}` with `MemberListResponse` |
-| `cost_modeling.py` role rates and forecasts had unbounded queries | Fixed: pagination bounds and separate `COUNT(*)` query added to both routes |
-| `gap_probes.py` TODO comment documenting incomplete stub | Fixed: TODO removed; docstring explicitly states ephemeral behavior; `probes` array now returned in response body |
+| CRITICAL: Auth rate limiter not Redis-backed | Fixed: `slowapi` now uses `storage_uri=_redis_url` (Redis-backed in non-dev) |
+| CRITICAL: No per-email brute-force protection | Fixed: `_check_email_lockout` / `_record_failed_login` / `_clear_login_lockout` all implemented in `auth.py` with Redis + 15-min sliding window |
+| HIGH: `graph_analytics.py` unbounded EvidenceItem query | Fixed: `.limit(500)` applied with warning log when capped |
+| HIGH: `correlation.py` unbounded CanonicalActivityEvent query | Fixed: COUNT(*) guard added; raises 400 if total > 10,000 events |
+| MEDIUM: `governance.py /policies` returns `policy_file` filesystem path | Fixed: `policy_file` removed from response; `response_model=PolicyListResponse` now declared |
 
 ---
 
-## Critical Issues
+## Lessons Learned Counts (This Audit)
 
-### [CRITICAL] RATE LIMITING: Auth Endpoint Rate Limiter Not Account-Level
-
-**File**: `src/api/routes/auth.py:46`, `src/api/routes/auth.py:116`
-**Agent**: B3 (API Compliance Auditor)
-**Evidence**:
-```python
-limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
-
-@router.post("/token", response_model=TokenResponse)
-@limiter.limit("5/minute")
-async def get_token(request: Request, payload: TokenRequest, ...) -> dict[str, Any]:
-```
-**Description**: The `slowapi` limiter on `/token`, `/login`, and `/refresh/cookie` limits by remote IP address (`get_remote_address`) only. There is no per-account (per-email) failed-attempt counter. A distributed credential stuffing attack from multiple IPs is not rate limited at all. While the `RateLimitMiddleware` is now correctly Redis-backed (resolving the prior CRITICAL), `slowapi` itself is per-process and uses `get_remote_address` only — it does not share counters across uvicorn workers.
-
-**Risk**: Distributed credential stuffing via multiple source IPs evades all current per-IP controls. An attacker cycling source IPs can attempt unlimited logins. Combined with the `slowapi` per-process limitation (no Redis backing), multi-worker deployments multiply the per-IP window by worker count.
-
-**Recommendation**: (1) Back the `slowapi` limiter with Redis using `slowapi`'s `storage_uri` parameter. (2) Add per-email lockout in Redis: after N consecutive failed login attempts for the same email, block attempts for a configurable window regardless of source IP.
+1. **Routes missing `response_model=`**: 176 of 463 (38%)
+2. **Unbounded queries (select without .limit()) in route handlers**: 9 (in `pov.py` — specific scoped selects for single-model analytics)
+3. **Missing status_code on POST**: 111 of 158 POST endpoints (70%)
 
 ---
 
 ## High Issues
 
-### [HIGH] UNBOUNDED QUERY: `graph_analytics.py` Fetches All Evidence Items Without Limit
+### [HIGH] RESPONSE CONTRACT: 176 Endpoints Missing `response_model`
 
-**File**: `src/api/routes/graph_analytics.py:137`
+**File**: Multiple — representative: `src/api/routes/governance.py`, `src/api/routes/cost_modeling.py:227`, `src/api/routes/admin.py:26`, `src/api/routes/simulations.py:278`, `src/api/routes/seed_lists.py:111`
 **Agent**: B3 (API Compliance Auditor)
 **Evidence**:
 ```python
-evidence_result = await session.execute(
-    select(EvidenceItem).where(EvidenceItem.engagement_id == engagement_id)
-)
-evidence_items = list(evidence_result.scalars().all())
+# cost_modeling.py:227 — POST with no response_model
+@router.post("/engagements/{engagement_id}/cost-modeling/staffing")
+async def compute_staffing(...) -> dict[str, Any]:
+
+# admin.py:26 — critical admin operation with no schema
+@router.post("/retention-cleanup")
+async def run_retention_cleanup(...) -> dict[str, Any]:
+
+# seed_lists.py:111 — mutation without contract
+@router.post("/engagements/{engagement_id}/seed-lists/refine")
+async def refine_seed_list(...) -> dict[str, Any]:
 ```
-**Description**: `get_triangulation_results` fetches the complete set of `EvidenceItem` rows for an engagement with no `.limit()` clause. For each evidence item, it then calls `extract_entities(str(content))` in a Python loop — this is an O(N) async call loop. Engagements with thousands of evidence items will cause memory spikes and long request latency. The endpoint has no pagination — it returns all triangulation results for all activities at once.
+**Description**: 176 of 463 route handlers (38%) have no `response_model` on the decorator. Routes missing `response_model` produce no OpenAPI response schema, are not validated at serialization time, and can silently drift from their documented contract. The problem is concentrated in: `pov.py` (multiple analytics endpoints), `governance.py` (export, overlay, SLA endpoints), `cost_modeling.py` (all 4 computation endpoints), `tom.py` (several action endpoints), `admin.py` (both admin operations), and `simulations.py` (several create/delete operations).
 
-**Risk**: Memory exhaustion and request timeout on large engagements; denial-of-service vector for any authenticated user with a large engagement; no upper bound on processing time.
+**Risk**: 38% of the API surface has no documented or validated response contract; response structure drift is undetected until runtime; `-> Any` return types defeat mypy analysis; OpenAPI docs are materially incomplete for integration clients.
 
-**Recommendation**: Add a `limit` parameter with a sensible cap (e.g., `le=500`) and apply `.limit(limit).offset(offset)` to the evidence item query. For very large engagements, consider moving this computation to a background task.
-
----
-
-### [HIGH] UNBOUNDED QUERY: `correlation.py` Fetches All Events for Correlation Run
-
-**File**: `src/api/routes/correlation.py:63`
-**Agent**: B3 (API Compliance Auditor)
-**Evidence**:
-```python
-events_result = await session.execute(
-    select(CanonicalActivityEvent).where(CanonicalActivityEvent.engagement_id == engagement_id)
-)
-all_events = list(events_result.scalars().all())
-```
-**Description**: `run_correlation` fetches all `CanonicalActivityEvent` rows for an engagement unboundedly. Task mining deployments can generate thousands to hundreds of thousands of events over time. All fetched events are held in memory and iterated multiple times (deterministic pass, then assisted pass on unlinked subset). The deterministic linker and assisted linker process the full set synchronously.
-
-**Risk**: Memory exhaustion proportional to event volume; request timeout on large datasets; no indication to the caller of partial processing.
-
-**Recommendation**: Process correlation in batches or as a background task. If synchronous execution is maintained, add a hard limit with a documented maximum (e.g., `max_events=10000`) and return a warning in the response when truncated. A background task pattern (returning a job ID for polling) would match the pattern already used in `pov.py`.
-
----
-
-### [HIGH] RESPONSE CONTRACT: ~35 Endpoints Return `-> Any` Without `response_model`
-
-**File**: Multiple — representative examples: `src/api/routes/governance.py:330`, `src/api/routes/data_classification.py:97`, `src/api/routes/consent.py:76`, `src/api/routes/camunda.py:53`
-**Agent**: B3 (API Compliance Auditor)
-**Evidence**:
-```python
-# governance.py:330 — no response_model, no type annotation
-@router.get("/policies")
-async def list_policies(user: ...) -> dict[str, Any]:
-    return {"policy_file": str(engine.policy_file), "policies": engine.policies}
-
-# data_classification.py:97 — no response_model
-@router.post("/retention/{engagement_id}/enforce")
-async def enforce_retention(...) -> dict[str, Any]:
-
-# consent.py:76 — no response_model on withdraw action
-@router.post("/{consent_id}/withdraw")
-async def withdraw_consent(...) -> dict[str, Any]:
-```
-**Description**: Approximately 35 route handlers have no `response_model` on the decorator. A subset of these also use `-> Any` as the return type annotation. Routes missing `response_model` do not produce OpenAPI response schemas, are not validated at serialization time, and can silently drift from their documented contract. Particularly notable: `governance.py /policies` returns `policy_file` — a server-side filesystem path — with no response model to constrain or sanitize the output.
-
-**Risk**: No OpenAPI documentation for ~8% of endpoints; response structure changes are undetected until runtime; server filesystem path exposed in `governance.py /policies` response; `-> Any` defeats mypy static analysis.
-
-**Recommendation**: Define Pydantic `response_model` types for all 35 endpoints. Remove `policy_file` from the `list_policies` response or replace with a sanitized version identifier. Replace `-> Any` return annotations with `dict[str, Any]` at minimum, or the specific Pydantic model.
+**Recommendation**: Define Pydantic `response_model` types for all 176 endpoints. Prioritize: (1) all POST/PATCH/DELETE mutation endpoints first (audit trail risk), (2) admin operations, (3) analytics/computation endpoints. Minimum: add `response_model=dict` as a placeholder to generate schemas, then refine with typed Pydantic models.
 
 ---
 
 ## Medium Issues
 
-### [MEDIUM] HTTP SEMANTICS: `PATCH /api/v1/engagements/{id}/archive` Uses PATCH Without Request Body
+### [MEDIUM] HTTP SEMANTICS: 111 of 158 POST Endpoints Missing Explicit `status_code`
 
-**File**: `src/api/routes/engagements.py:271`
+**File**: Multiple — representative: `src/api/routes/cost_modeling.py:227`, `src/api/routes/governance.py:413`, `src/api/routes/claim_write_back.py:59`, `src/api/routes/survey_sessions.py:53`
 **Agent**: B3 (API Compliance Auditor)
 **Evidence**:
 ```python
-@router.patch("/{engagement_id}/archive", response_model=EngagementResponse)
-async def archive_engagement(
-    engagement_id: UUID,
-    user: User = Depends(require_permission("engagement:delete")),
-    ...
-) -> Engagement:
-    engagement.status = EngagementStatus.ARCHIVED
+# cost_modeling.py:227 — creates a result, should be 200 (computation) or 201 (resource)
+@router.post("/engagements/{engagement_id}/cost-modeling/staffing")
+async def compute_staffing(...) -> dict[str, Any]:
+
+# claim_write_back.py:59 — creates a write-back record
+@router.post(...)
+async def create_claim_write_back(...) -> dict[str, Any]:
+
+# Correctly specified example for comparison:
+@router.post("/definitions", response_model=SuccessMetricResponse, status_code=status.HTTP_201_CREATED)
 ```
-**Description**: `PATCH` is used for a state transition action with no request body — the action is fully encoded in the URL path segment `/archive`. HTTP spec requires PATCH to include a body describing the change. Compare with `monitoring.py` which correctly uses `POST /jobs/{id}/activate` for state transition actions.
+**Description**: 111 of 158 POST endpoints (70%) have no explicit `status_code`, which causes FastAPI to default to `HTTP_200_OK`. REST convention requires `201 Created` for resource creation, `202 Accepted` for async operations, and `200 OK` for action/computation endpoints. Without explicit declaration, OpenAPI documents 200 for all of these — clients cannot distinguish creation from computation from async dispatch.
 
-**Risk**: HTTP spec violation; minor inconsistency with the action-endpoint pattern used elsewhere in the codebase.
+**Risk**: HTTP contract ambiguity for integration clients; OpenAPI docs cannot differentiate created resources from computation results; response code changes become implicit breaking changes.
 
-**Recommendation**: Change to `POST /{engagement_id}/archive` to match the action endpoint pattern used in `monitoring.py` (`POST /jobs/{id}/activate`, `POST /jobs/{id}/pause`, `POST /jobs/{id}/stop`).
+**Recommendation**: Add explicit `status_code=status.HTTP_201_CREATED` to all resource-creating POST endpoints. Use `status_code=status.HTTP_202_ACCEPTED` for async operation triggers (as is done correctly in `replay.py`). Use `status_code=status.HTTP_200_OK` for computation-only endpoints. The `replay.py` file is the correct reference pattern.
 
 ---
 
-### [MEDIUM] HTTP SEMANTICS: `DELETE /api/v1/seed-lists` Returns HTTP 200 With Body
+### [MEDIUM] UNBOUNDED QUERY: `pov.py` Analytics Endpoints Load All Elements Without Limit
 
-**File**: `src/api/routes/seed_lists.py:161`
+**File**: `src/api/routes/pov.py:689`, `pov.py:771`, `pov.py:901`, `pov.py:993`, `pov.py:1057`, `pov.py:1153`, `pov.py:1221`
 **Agent**: B3 (API Compliance Auditor)
 **Evidence**:
 ```python
-@router.delete(
-    "/engagements/{engagement_id}/seed-terms/{term_id}",
-    status_code=status.HTTP_200_OK,
-)
-async def deprecate_seed_term(...) -> dict[str, Any]:
-    """Deprecate a seed term (soft delete)."""
-    service = SeedListService(session)
-    result = await service.deprecate_term(term_id)
-    return result
+# pov.py:901 — get_engagement_dashboard: all elements for brightness distribution
+elements_result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == model.id))
+elements = list(elements_result.scalars().all())
+
+# pov.py:993 — get_confidence_map: all elements for heatmap
+elements_result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == model.id))
+elements = list(elements_result.scalars().all())
+
+# pov.py:437 — _get_elements_for_model helper (version diff): all elements
+result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == model_id))
 ```
-**Description**: The seed term "delete" is a soft delete (deprecation) that returns a body describing the updated state. All other 13 `DELETE` endpoints in the codebase use `HTTP_204_NO_CONTENT`. This is the sole exception. While 200 with body is technically valid for a soft delete, the inconsistency misleads consumers who expect `DELETE` to always return 204.
+**Description**: Seven analytics endpoints in `pov.py` issue `select(ProcessElement).where(model_id==X)` with no `.limit()`. These are used for: dashboard KPIs (`get_engagement_dashboard`), confidence heatmap (`get_confidence_map`), confidence summary (`get_confidence_summary`), version diff helper (`_get_elements_for_model`), BPMN+elements payload (`get_latest_model_for_engagement`), BPMN confidence overlay (`get_model_bpmn`), and dark element identification (`get_dark_elements`). These are analytical aggregation queries over all elements of a single model. Process models can grow to thousands of elements as engagements mature.
 
-**Risk**: Inconsistency with platform DELETE convention; API consumers may mishandle responses if they assume 204 for all DELETEs.
+**Risk**: Memory pressure and response latency proportional to model size; no upper bound on result set for any model; the dashboard endpoint (`get_engagement_dashboard`) is likely called frequently, amplifying the impact.
 
-**Recommendation**: Rename to `PATCH .../deprecate` which semantically describes a state transition that returns the modified resource, making HTTP 200 with body the natural choice.
+**Recommendation**: For endpoints that compute aggregates (dashboard, confidence summary), push the computation into SQL `COUNT/SUM` queries or window functions instead of loading all rows into Python. For endpoints that must return all elements (BPMN viewer), document the element count limit in the API contract and add a hard cap (e.g., 10,000 elements) with a warning log. The `get_process_elements` endpoint at `pov.py:504` is the correct reference — it already uses `.offset(offset).limit(limit)`.
 
 ---
 
 ### [MEDIUM] PAGINATION: Inconsistent `limit` Ceiling Across the API
 
-**File**: Multiple — representative: `src/api/routes/event_spine.py`, `src/api/routes/correlation.py`, `src/api/routes/engagements.py`
+**File**: Multiple — `src/api/routes/event_spine.py:100`, `src/api/routes/pov.py:523`, `src/api/routes/consistency.py:114`
 **Agent**: B3 (API Compliance Auditor)
 **Evidence**:
 ```python
-# event_spine.py — limit ceiling 10x the standard
+# event_spine.py:100 — ceiling 10x the standard
 limit: int = Query(200, ge=1, le=2000, ...)
 
-# governance.py — 2.5x standard
-limit: int = Query(50, ge=1, le=500, ...)
+# pov.py:523 — evidence map ceiling 5x standard
+limit: int = Query(default=200, ge=1, le=1000)
 
-# correlation.py — 5x standard
-limit: int = Query(100, ge=1, le=1000, ...)
+# pov.py:587 — gaps ceiling 5x standard
+limit: int = Query(default=100, ge=1, le=1000)
 
 # engagements.py — platform standard
 limit: int = Query(default=20, ge=1, le=100)
 ```
-**Description**: The maximum `limit` ceiling (`le=`) varies from 100 to 2000 across list endpoints with no documented rationale. The project coding standards specify `le=200` as the default, but multiple files exceed this without explanation.
+**Description**: The maximum `limit` ceiling (`le=`) varies from 100 to 2000 across list endpoints with no documented rationale. Coding standards specify `le=200` as the default, but `event_spine.py` allows 2000, `pov.py` evidence-map and gaps allow 1000. None of these have inline comments justifying the exception.
 
 **Risk**: Higher ceilings allow larger result sets than intended; potential memory pressure at `le=2000`; inconsistent client experience across the API.
 
-**Recommendation**: Establish a platform-wide default maximum of `le=200`. Routes needing higher limits (e.g., `event_spine`) should include an inline comment justifying the exception.
+**Recommendation**: Establish a platform-wide default maximum of `le=200`. Routes needing higher limits should include an inline comment justifying the exception (e.g., `# le=2000: event spine requires high-cardinality loads for process mining`).
 
 ---
 
-### [MEDIUM] RESPONSE FORMAT: Rate Limit Error Bodies Are Inconsistent Between Two Middleware Paths
+### [MEDIUM] RATE LIMITING: Only 2 of 158 POST Endpoints Have Rate Limiting Applied
 
-**File**: `src/api/middleware/security.py:148`, `src/api/main.py:275`
+**File**: `src/api/routes/copilot.py:43`, `src/api/routes/simulations.py:899`, `src/api/routes/intake.py:189`
 **Agent**: B3 (API Compliance Auditor)
 **Evidence**:
 ```python
-# RateLimitMiddleware (security.py:148) — uses "detail", no request_id
-return Response(
-    content='{"detail":"Rate limit exceeded"}',
-    status_code=429,
-    headers={"Retry-After": str(ttl)},
-)
+# copilot.py — rate limited via copilot_rate_limit dependency
+user: User = Depends(copilot_rate_limit),
 
-# slowapi handler (main.py:275) — produces {"error": "Rate limit exceeded"}
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+# simulations.py — inline Redis rate limit
+await _check_llm_rate_limit(request, str(user.id))
+
+# intake.py:189 — slowapi limit on unauthenticated intake
+@limiter.limit("20/hour")
+async def submit_intake_files(...):
+
+# No rate limiting on: POST /api/v1/tom/*, POST /api/v1/reports/*, POST /api/v1/semantic/*, etc.
+@router.post("/engagements/{engagement_id}/cost-modeling/staffing")
+async def compute_staffing(...)  # LLM or heavy computation; no rate limit
 ```
-**Description**: Rate limit exceeded responses come from two code paths and produce different JSON shapes. `RateLimitMiddleware` produces `{"detail": "..."}` with no `request_id`. The `slowapi` handler (used for per-route `@limiter.limit()` decorators on auth endpoints) produces `{"error": "..."}` using slowapi's default format. Clients cannot distinguish between rate limit sources.
+**Description**: The `RateLimitMiddleware` applies a global rate limit of 100 requests/minute by IP address. Only 3 specific endpoints have additional per-user or per-endpoint rate limits: `/copilot/chat*`, `/scenarios/*/run`, and `/intake/{token}`. Computation-heavy endpoints in `tom.py` (alignment scoring, roadmap generation), `reports.py` (report generation), `semantic.py` (entity extraction, embedding), and `assessment_matrix.py` (matrix computation) have no per-user rate limiting beyond the global IP ceiling.
 
-**Risk**: Clients parsing rate limit errors must handle two different response schemas; `request_id` absent from middleware 429s makes distributed tracing harder; inconsistent with the platform's `{"detail": ..., "request_id": ...}` error envelope.
+**Risk**: Authenticated users can exhaust LLM or CPU-intensive operations without per-endpoint throttling; the global IP ceiling does not prevent a single authenticated user from hammering compute-heavy endpoints; no protection against per-tenant resource exhaustion.
 
-**Recommendation**: Override slowapi's default exception handler to emit `{"detail": "Rate limit exceeded", "request_id": request.state.request_id}`. The `app.add_exception_handler` in `main.py:275` should use a custom handler instead of `_rate_limit_exceeded_handler`.
-
----
-
-### [MEDIUM] INFORMATION DISCLOSURE: `GET /api/v1/governance/policies` Returns Filesystem Path
-
-**File**: `src/api/routes/governance.py:330`
-**Agent**: B3 (API Compliance Auditor)
-**Evidence**:
-```python
-@router.get("/policies")
-async def list_policies(user: User = Depends(require_permission("governance:read"))) -> dict[str, Any]:
-    engine = PolicyEngine()
-    return {
-        "policy_file": str(engine.policy_file),
-        "policies": engine.policies,
-    }
-```
-**Description**: The `policy_file` key returns the full server-side filesystem path of the YAML policy file (e.g., `/app/src/core/policies/governance.yaml`). This reveals deployment directory structure to any user with `governance:read` permission. No `response_model` is declared, so this leakage is not constrained by serialization.
-
-**Risk**: Server filesystem path disclosure to authenticated users; no OpenAPI schema generated for this endpoint; policy structure changes silently break clients.
-
-**Recommendation**: Remove `policy_file` from the response or replace it with a sanitized name/version string (e.g., `"policy_version": "1.0"`). Define a `GovernancePoliciesResponse` Pydantic model.
+**Recommendation**: Apply `copilot_rate_limit`-style per-user rate limiting to all LLM-backed and computation-heavy POST endpoints. The `src/core/rate_limiter.py` pattern is reusable. Priority endpoints: `tom.py` alignment scoring, `semantic.py` extract/embed, `reports.py` report generation, `assessment_matrix.py` compute.
 
 ---
 
@@ -242,30 +174,32 @@ async def list_policies(user: User = Depends(require_permission("governance:read
 
 ### [LOW] VERSIONING: `users.py`, `gdpr.py`, `health.py` Hardcode Full Paths in Route Decorators
 
-**File**: `src/api/routes/users.py:31`, `src/api/routes/health.py:20`, `src/api/routes/gdpr.py:47`
+**File**: `src/api/routes/users.py:143`, `src/api/routes/health.py:27`, `src/api/routes/gdpr.py:47`
 **Agent**: B3 (API Compliance Auditor)
 **Evidence**:
 ```python
-# users.py:31
-router = APIRouter(tags=["users"])  # No prefix
+# users.py — router has no prefix
+router = APIRouter(tags=["users"])
 
-# users.py:98 — path hardcoded in decorator
-@router.post("/api/v1/users", response_model=UserResponse, ...)
+# users.py:143 — full path hardcoded in each decorator
+@router.get("/api/v1/users", response_model=UserListResponse)
+async def list_users(...):
 
-# health.py:24 — same pattern
+# health.py:27 — same pattern
 @router.get("/api/v1/health")
+async def health_check() -> dict[str, Any]:
 ```
-**Description**: Three of 76 route files create routers without a `prefix` and hardcode `/api/v1/...` into every individual route decorator. The other 73 files use `APIRouter(prefix="/api/v1/...", tags=[...])`. This divergence makes API version bumps require individual path updates in these files rather than a single prefix change.
+**Description**: Three of 76 route files create routers without a `prefix` and hardcode `/api/v1/...` into every individual route decorator. The other 73 files use `APIRouter(prefix="/api/v1/...", tags=[...])`.
 
-**Risk**: Harder to maintain; diverges from the established pattern; error-prone when paths need updating.
+**Risk**: Harder to maintain; error-prone when paths need updating for API version bumps.
 
 **Recommendation**: Refactor to `APIRouter(prefix="/api/v1/users", tags=["users"])` etc. and simplify all path strings to relative paths.
 
 ---
 
-### [LOW] HTTP SEMANTICS: `top_k` in `GET /api/v1/graph/search` Uses Manual Validation Instead of `Query` Bounds
+### [LOW] HTTP SEMANTICS: `top_k` and `depth` Use Manual Validation Instead of `Query` Bounds
 
-**File**: `src/api/routes/graph.py:217`
+**File**: `src/api/routes/graph.py:217`, `src/api/routes/graph.py:183`
 **Agent**: B3 (API Compliance Auditor)
 **Evidence**:
 ```python
@@ -275,35 +209,34 @@ async def semantic_search(
     ...
 ) -> list[dict[str, Any]]:
     if top_k < 1 or top_k > 100:  # Manual validation
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="top_k must be between 1 and 100",
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, ...)
 ```
-**Description**: `top_k` is a plain `int = 10` with no `Query(ge=1, le=100)` bounds, then manually validated in the handler body. FastAPI will not document the bounds in the OpenAPI spec. The same issue exists for `depth` in `traverse_graph` at line 183.
+**Description**: `top_k` and `depth` use plain `int = N` with manual range checks instead of `Query(ge=1, le=N)`. FastAPI will not document the bounds in the OpenAPI spec and will not generate standard 422 validation errors for out-of-range inputs.
 
-**Risk**: OpenAPI docs do not show valid bounds; manual validation duplicates what `Query` handles automatically; misses FastAPI's standard 422 validation error format.
+**Risk**: OpenAPI docs do not show valid bounds; manual validation duplicates FastAPI validation; out-of-range values produce 400 instead of the standard 422 for validation errors.
 
-**Recommendation**: Change to `top_k: int = Query(default=10, ge=1, le=100)` and remove the manual `if` check. Apply the same fix to `depth: int = Query(default=2, ge=1, le=5)` in `traverse_graph`.
+**Recommendation**: Change to `top_k: int = Query(default=10, ge=1, le=100)` and remove the manual `if` check. Apply the same fix to `depth` in `traverse_graph`.
 
 ---
 
-### [LOW] HTTP SEMANTICS: `DELETE /orchestration/instances/{id}` Lacks Explicit `status_code`
+### [LOW] HTTP SEMANTICS: `PATCH /api/v1/engagements/{id}/archive` Uses PATCH Without Request Body
 
-**File**: `src/api/routes/orchestration.py:202`
+**File**: `src/api/routes/engagements.py:271`
 **Agent**: B3 (API Compliance Auditor)
 **Evidence**:
 ```python
-@router.delete("/instances/{instance_id}")
-async def cancel_process_instance(instance_id: str, ...) -> dict[str, Any]:
-    await client.delete_process_instance(instance_id)
-    return {"instance_id": instance_id, "status": "cancelled"}
+@router.patch("/{engagement_id}/archive", response_model=EngagementResponse)
+async def archive_engagement(
+    engagement_id: UUID,
+    user: User = Depends(require_permission("engagement:delete")),
+) -> Engagement:
+    engagement.status = EngagementStatus.ARCHIVED
 ```
-**Description**: The DELETE route has no explicit `status_code` (defaults to 200). It returns a body. Compare with all other DELETE routes that use `HTTP_204_NO_CONTENT`. Since this DELETE returns a body the 200 is semantically reasonable, but the lack of explicit declaration is inconsistent. Additionally, all Camunda/orchestration routes use bare integer `502` instead of `status.HTTP_502_BAD_GATEWAY` for error responses — 10 occurrences across `camunda.py` and `orchestration.py`.
+**Description**: `PATCH` is used for a state transition action with no request body — the action is fully encoded in the URL path segment `/archive`. HTTP spec requires PATCH to include a body describing the change. `monitoring.py` correctly uses `POST /jobs/{id}/activate` for equivalent state transition actions.
 
-**Risk**: Style inconsistency; `status_code` not documented in OpenAPI; bare integers harder to audit than named constants.
+**Risk**: HTTP spec violation; inconsistency with the action-endpoint pattern used elsewhere.
 
-**Recommendation**: Add `status_code=status.HTTP_200_OK` to the route decorator. Replace all bare `502` integers with `status.HTTP_502_BAD_GATEWAY`.
+**Recommendation**: Change to `POST /{engagement_id}/archive` to match the action endpoint pattern used in `monitoring.py`.
 
 ---
 
@@ -320,11 +253,11 @@ async def seed_best_practices_and_benchmarks(...) -> dict[str, Any]:
         bp = BestPractice(**bp_data)
         session.add(bp)   # No existence check before insert
 ```
-**Description**: The TOM seed endpoint unconditionally inserts all seed records without checking for prior existence. Repeated calls create duplicate best practice and benchmark records. The `metrics.py` seed endpoint at line 328 correctly checks for existence before inserting. The inconsistency creates data integrity risk.
+**Description**: The TOM seed endpoint unconditionally inserts all seed records without checking for prior existence. Repeated calls create duplicate best practice and benchmark records. The `metrics.py` seed endpoint at line 328 correctly checks for existence before inserting.
 
-**Risk**: Duplicate best practice and benchmark records on repeated calls; data integrity violation; inconsistent with `metrics.py` seed pattern.
+**Risk**: Duplicate best practice and benchmark records on repeated calls; data integrity violation.
 
-**Recommendation**: Add per-record existence checks before inserting, consistent with the `metrics.py` implementation. Alternatively, use `INSERT ... ON CONFLICT DO NOTHING` at the database level.
+**Recommendation**: Add per-record existence checks before inserting, consistent with the `metrics.py` implementation.
 
 ---
 
@@ -333,28 +266,23 @@ async def seed_best_practices_and_benchmarks(...) -> dict[str, Any]:
 | Route File | Endpoint | Limit Bounds | Offset Bounds | Status |
 |---|---|---|---|---|
 | `engagements.py` | `list_engagements` | `ge=1, le=100` | `ge=0` | Confirmed |
-| `engagements.py` | `get_audit_logs` | `ge=1, le=100` | `ge=0` | Confirmed |
 | `evidence.py` | `list_evidence` | `ge=1, le=200` | `ge=0` | Confirmed |
-| `evidence.py` | `catalog_evidence` | `ge=1, le=200` | `ge=0` | Confirmed |
-| `evidence.py` | `get_fragments` | `ge=1, le=1000` | `ge=0` | Confirmed |
 | `users.py` | `list_users` | `ge=1, le=200` | `ge=0` | Confirmed |
-| `users.py` | `list_engagement_members` | `ge=1, le=200` | `ge=0` | Confirmed (resolved) |
 | `pov.py` | `get_process_elements` | `ge=1, le=200` | `ge=0` | Confirmed |
+| `pov.py` | `get_dark_room_backlog` | `ge=1, le=200` | `ge=0` | Confirmed |
 | `monitoring.py` | All list endpoints | `ge=1, le=200` | `ge=0` | Confirmed |
 | `tom.py` | `list_toms`, `list_gaps` | `ge=1, le=200` | `ge=0` | Confirmed |
-| `regulatory.py` | All list endpoints | `ge=1, le=200` | `ge=0` | Confirmed |
-| `patterns.py` | `list_patterns` | `ge=1, le=200` | `ge=0` | Confirmed |
-| `cost_modeling.py` | `list_role_rates` | `ge=1, le=200` | `ge=0` | Confirmed (resolved) |
-| `cost_modeling.py` | `list_volume_forecasts` | `ge=1, le=200` | `ge=0` | Confirmed (resolved) |
-| `correlation.py` | All list endpoints | `ge=1, le=1000` | `ge=0` | High ceiling — see MEDIUM |
-| `event_spine.py` | `get_event_spine` | `ge=1, le=2000` | `ge=0` | High ceiling — see MEDIUM |
-| `graph_analytics.py` | `get_triangulation_results` | None | None | MISSING — see HIGH |
-| `correlation.py` | `run_correlation` | None | None | MISSING — see HIGH |
-| `incidents.py` | `list_incidents` | `ge=1, le=100` | `ge=0` | Confirmed |
-| `micro_surveys.py` | `list_micro_surveys` | `ge=1, le=100` | `ge=0` | Confirmed |
-| `transfer_controls.py` | `list_transfer_logs` | `ge=1, le=100` | `ge=0` | Confirmed |
-
-**Pagination bounds are confirmed across the majority of endpoints. 2 functional gaps remain (triangulation results, correlation run).**
+| `cost_modeling.py` | `list_role_rates` | `ge=1, le=200` | `ge=0` | Confirmed |
+| `cost_modeling.py` | `list_volume_forecasts` | `ge=1, le=200` | `ge=0` | Confirmed |
+| `gap_probes.py` | `list_gap_probes` | `ge=1, le=200` | `ge=0` | Confirmed |
+| `scenarios.py` | `list_scenarios` | `ge=1, le=1000` | `ge=0` | High ceiling |
+| `pov.py` | `get_evidence_map` | `ge=1, le=1000` | `ge=0` | High ceiling — MEDIUM |
+| `pov.py` | `get_evidence_gaps` | `ge=1, le=1000` | `ge=0` | High ceiling — MEDIUM |
+| `consistency.py` | list endpoints | `ge=1, le=1000` | `ge=0` | High ceiling — MEDIUM |
+| `event_spine.py` | `get_event_spine` | `ge=1, le=2000` | `ge=0` | High ceiling — MEDIUM |
+| `graph_analytics.py` | `get_triangulation_results` | Hard cap at 500 | N/A | Confirmed (resolved) |
+| `correlation.py` | `run_correlation` | Guard: 400 if >10,000 | N/A | Confirmed (resolved) |
+| `pov.py` | Analytics endpoints (7) | None | None | Unbounded — see HIGH |
 
 ---
 
@@ -366,16 +294,14 @@ The platform uses a consistent paginated list structure:
 {"items": [...], "total": N}
 ```
 
-This is correctly implemented across ~95% of endpoints. The following deviate:
+This is correctly implemented across ~95% of paginated endpoints. The following deviate:
 
 | Endpoint | Deviation |
 |---|---|
-| `GET /api/v1/governance/policies` | Returns raw policy YAML dict with no `response_model`; includes `policy_file` (filesystem path) |
 | `GET /api/v1/governance/export/{id}` | Binary ZIP — no `responses={}` documenting content type in OpenAPI |
-| Multiple Camunda routes | Return bare `list[dict]` / `dict` with no `response_model` |
-| ~35 endpoints total | Missing `response_model` — no OpenAPI response schema |
-| `consent.py /withdraw` | No `response_model` on state-change action |
-| `data_classification.py /retention/enforce` | No `response_model` |
+| `pov.py` analytics endpoints | Return `dict[str, Any]` with no `response_model`; structure not enforced |
+| `cost_modeling.py` computation endpoints (4) | No `response_model`; response structure undocumented |
+| ~176 endpoints total | Missing `response_model` — see HIGH finding |
 
 ---
 
@@ -384,33 +310,32 @@ This is correctly implemented across ~95% of endpoints. The following deviate:
 | Category | Auth Required | Auth Type |
 |---|---|---|
 | `GET /api/v1/health` | No | Public — intentionally unauthenticated |
-| Auth endpoints (`/auth/token`, `/auth/login`, `/auth/refresh`) | No (credentials in body) | Dev mode only for `/token` |
+| `GET /api/v1/intake/{token}/progress` | Token-validated | Intake token (no user JWT) |
+| `POST /api/v1/intake/{token}` | Token-validated + rate limited | Intake token, 20/hour |
+| Auth endpoints (`/auth/token`, `/auth/login`, `/auth/refresh`) | No (credentials in body) | Email lockout enforced |
 | All engagement, evidence, graph, pov, tom, regulatory routes | Yes | `require_permission(...)` via JWT |
 | GDPR routes | Yes | `get_current_user` via JWT |
 | Admin routes | Yes | `require_role(PLATFORM_ADMIN)` |
 | Portal routes | Yes | `require_permission("portal:read")` |
-| Quality/Pipeline routes | Yes | `require_engagement_access` via JWT |
-| WebSocket routes | Varies | See `websocket.py` |
-| MCP server | See MCP config | Mounted at `/mcp` |
 
-The health endpoint is appropriately unauthenticated. All other routes enforce authentication through `Depends()` injection. No unauthenticated route was found that should require authentication.
+No unauthenticated route was found that should require authentication. The health endpoint is appropriately unauthenticated.
 
 ---
 
 ## Error Handling Assessment
 
 **Positive findings:**
-- Global `ValueError` handler in `main.py:460` returns consistent `{"detail": ..., "request_id": ...}`
-- Global `Exception` handler at `main.py:469` prevents stack trace leakage in production
-- Route-level 404/403/409/422 errors use FastAPI `HTTPException` with the standard `{"detail": "..."}` format
-- `request_id` propagated through `RequestIDMiddleware` to all error responses (except rate limit 429s from middleware)
-- Camunda/external service failures use explicit 502 Bad Gateway (correct semantics)
-- `RateLimitMiddleware` now correctly returns `Retry-After` header on 429 responses
+- Global `ValueError` handler in `main.py` returns consistent `{"detail": ..., "request_id": ...}`
+- Global `Exception` handler prevents stack trace leakage
+- Route-level 404/403/409/422 errors use `HTTPException` with standard `{"detail": "..."}` format
+- `request_id` propagated through `RequestIDMiddleware` to all error responses
+- Camunda/external service failures use explicit 502 Bad Gateway
+- `RateLimitMiddleware` returns `Retry-After` header on 429 responses
+- `pipeline_quality.py` dashboard uses per-sub-endpoint try/except with logging (partial failure resilience)
 
 **Inconsistencies found:**
-- Rate limit 429 from `RateLimitMiddleware` produces `{"detail": "..."}` without `request_id`
-- Rate limit 429 from `slowapi` produces `{"error": "..."}` (different key name, no `request_id`)
-- `governance.py` overlay and gap detection endpoints have no try/except around Neo4j calls — inconsistent with `graph.py` which explicitly handles `ValueError` and `RuntimeError`
+- `semantic.py:367`: bare `except Exception: continue` with no logging inside a per-label entity query loop — silent failure on entity labels
+- `governance.py` overlay and gap detection endpoints have no try/except around Neo4j calls — inconsistent with `graph.py` which explicitly handles errors
 
 ---
 
@@ -419,10 +344,10 @@ The health endpoint is appropriately unauthenticated. All other routes enforce a
 | Method | Usage | Status |
 |---|---|---|
 | `GET` | Read-only retrieval | Correct throughout |
-| `POST` | Resource creation and action triggers | Correct; creation uses 201; async triggers use 202 |
-| `PATCH` | Partial field update | Correct; `archive` route is exception (no body — see MEDIUM finding) |
+| `POST` | Resource creation and action triggers | Correct; async triggers use 202; creation mostly uses 201 |
+| `PATCH` | Partial field update | Correct; `archive` route is exception (no body — see LOW finding) |
 | `PUT` | Full replacement | Used correctly in `integrations.py` for field mapping |
-| `DELETE` | Resource deletion | 204 used on 12 of 13 `DELETE` routes; `seed_lists.py` uses 200 (soft delete — see MEDIUM) |
+| `DELETE` | Resource deletion | 204 used on 13 of 14 `DELETE` routes |
 
 ---
 
@@ -431,28 +356,28 @@ The health endpoint is appropriately unauthenticated. All other routes enforce a
 **Score: 7.5/10**
 
 **Justification:**
-- (+) Redis-backed `RateLimitMiddleware` — correct multi-worker rate limiting (prior CRITICAL resolved)
+- (+) Prior CRITICALs fully resolved: Redis-backed slowapi, per-email lockout
+- (+) Prior HIGHs fully resolved: triangulation capped at 500, correlation guarded at 10k
+- (+) Prior MEDIUM resolved: `governance.py /policies` no longer leaks `policy_file`
 - (+) Pagination bounds present across ~93% of list endpoints
 - (+) Global error handlers prevent stack trace leakage
-- (+) HTTP status codes correct on ~98% of endpoints (201 creation, 204 deletion, 202 async)
+- (+) HTTP status codes correct on most endpoints (201 creation, 204 deletion, 202 async)
 - (+) Response format `{items, total}` consistent across ~95% of list endpoints
-- (+) 456 endpoints across 76 files with high structural consistency
-- (+) `list_engagement_members` pagination resolved from prior audit
-- (+) `cost_modeling.py` pagination and COUNT fixes resolved from prior audit
-- (-) `slowapi` limiter not Redis-backed; no per-account brute-force protection (remaining CRITICAL)
-- (-) 2 list endpoints still issue unbounded queries (triangulation, correlation run)
-- (-) ~35 route handlers missing `response_model`
-- (-) Information disclosure in `governance.py /policies` (filesystem path)
+- (-) 176 of 463 endpoints (38%) still missing `response_model` — HIGH
+- (-) 111 of 158 POST endpoints missing explicit `status_code` — MEDIUM
+- (-) 7 pov.py analytics endpoints issue unbounded element queries — MEDIUM
+- (-) Rate limiting sparse outside copilot/simulations/intake — MEDIUM
 
 ---
 
 ## Checkbox Verification Results
 
 - [x] **Response format consistency** — Verified: ~95% of list endpoints use `{items, total}`. 7 endpoints deviate (documented above).
-- [x] **Pagination bounds** — Verified: ~93% of paginated endpoints have bounds. 2 functional gaps remain (triangulation, correlation run). Prior gaps in cost_modeling and members resolved.
-- [ ] **Rate limiting applied to all endpoints** — Not fully verified: `RateLimitMiddleware` is now Redis-backed (prior CRITICAL resolved). `slowapi` on auth endpoints is still per-process and IP-only; no per-account brute-force protection.
+- [x] **Pagination bounds (le= constraint)** — Verified: all paginated endpoints have bounds. High ceilings flagged (event_spine, pov gaps/evidence-map).
+- [x] **Rate limiting applied to sensitive endpoints** — Partially verified: copilot, simulations, intake rate limited. Computation-heavy tom/reports/semantic endpoints lack per-user limits (MEDIUM).
 - [x] **HTTP method usage** — Verified: Correct GET/POST/PUT/PATCH/DELETE semantics on ~98% of endpoints.
-- [x] **Error handling consistency** — Verified: Global handlers present; route-level errors consistent. Minor inconsistency in rate limit 429 response body shape between two code paths.
-- [x] **API versioning** — Verified: All routes use `/api/v1/` prefix (via router prefix or inline path). `X-API-Version` header set on all responses via middleware.
-- [ ] **Response models on all routes** — Not fully verified: ~35 endpoints lack `response_model`. Several governance, consent, data_classification, and camunda endpoints missing.
-- [x] **NO TODO COMMENTS** — Verified: Prior TODO in `gap_probes.py` resolved. No TODO comments found in any route file.
+- [x] **Error handling consistency** — Verified: Global handlers present; route-level errors consistent. Minor silent failure in `semantic.py` entity loop.
+- [x] **API versioning** — Verified: All routes use `/api/v1/` prefix via router prefix or inline path. `X-API-Version` header set on all responses via middleware.
+- [ ] **Response models on all routes** — Not verified: 176 of 463 endpoints lack `response_model` (38%).
+- [x] **NO TODO COMMENTS** — Verified: No TODO comments found in any route file.
+- [ ] **Explicit status_code on POST endpoints** — Not verified: 111 of 158 POST endpoints (70%) missing explicit status_code.

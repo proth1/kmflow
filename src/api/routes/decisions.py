@@ -71,6 +71,52 @@ class CoverageGapResponse(BaseModel):
     probe_generated: bool = False
 
 
+class DecisionListResponse(BaseModel):
+    """Paginated list of decision points."""
+
+    engagement_id: str
+    decisions: list[DecisionPointResponse]
+    total: int
+    limit: int
+    offset: int
+
+
+class BusinessRuleListResponse(BaseModel):
+    """Business rules for a decision point."""
+
+    decision_id: str
+    decision_name: str
+    rules: list[BusinessRuleResponse]
+    total: int
+
+
+class DmnExportResponse(BaseModel):
+    """DMN export for a decision point."""
+
+    decision_id: str
+    decision_name: str
+    dmn_xml: str
+    rule_count: int
+
+
+class ValidateDecisionResponse(BaseModel):
+    """Response from validating a decision rule."""
+
+    decision_id: str
+    action: str
+    validation_count: int
+
+
+class CoverageResponse(BaseModel):
+    """Decision coverage analysis response."""
+
+    engagement_id: str
+    total_activities: int
+    covered: int
+    gaps: list[CoverageGapResponse]
+    coverage_percentage: float
+
+
 # ── Helpers ────────────────────────────────────────────────────────────
 
 
@@ -108,7 +154,7 @@ def _element_by_id(engagement_id: uuid.UUID, element_id: uuid.UUID) -> Any:
 # ── Decision Discovery ───────────────────────────────────────────────
 
 
-@router.get("/engagements/{engagement_id}/decisions")
+@router.get("/engagements/{engagement_id}/decisions", response_model=DecisionListResponse)
 async def list_decisions(
     engagement_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
@@ -168,7 +214,7 @@ async def list_decisions(
 # ── Business Rules for a Decision ───────────────────────────────────
 
 
-@router.get("/engagements/{engagement_id}/decisions/{decision_id}/rules")
+@router.get("/engagements/{engagement_id}/decisions/{decision_id}/rules", response_model=BusinessRuleListResponse)
 async def get_decision_rules(
     engagement_id: uuid.UUID,
     decision_id: uuid.UUID,
@@ -218,7 +264,7 @@ async def get_decision_rules(
 # ── DMN Export ───────────────────────────────────────────────────────
 
 
-@router.get("/engagements/{engagement_id}/decisions/{decision_id}/dmn")
+@router.get("/engagements/{engagement_id}/decisions/{decision_id}/dmn", response_model=DmnExportResponse)
 async def export_decision_dmn(
     engagement_id: uuid.UUID,
     decision_id: uuid.UUID,
@@ -290,7 +336,7 @@ async def export_decision_dmn(
 # ── SME Validation ───────────────────────────────────────────────────
 
 
-@router.post("/engagements/{engagement_id}/decisions/{decision_id}/validate")
+@router.post("/engagements/{engagement_id}/decisions/{decision_id}/validate", response_model=ValidateDecisionResponse)
 async def validate_decision_rule(
     engagement_id: uuid.UUID,
     decision_id: uuid.UUID,
@@ -344,7 +390,7 @@ async def validate_decision_rule(
 # ── Coverage Gaps ────────────────────────────────────────────────────
 
 
-@router.get("/engagements/{engagement_id}/decisions/coverage")
+@router.get("/engagements/{engagement_id}/decisions/coverage", response_model=CoverageResponse)
 async def get_decision_coverage(
     engagement_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),

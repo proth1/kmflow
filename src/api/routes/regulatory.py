@@ -480,7 +480,7 @@ async def get_governance_chain(
 # -- Overlay Engine Routes (Story #29) ----------------------------------------
 
 
-@router.post("/overlay/{engagement_id}/build")
+@router.post("/overlay/{engagement_id}/build", response_model=dict)
 async def build_governance_overlay(
     engagement_id: UUID,
     request: Request,
@@ -507,7 +507,7 @@ async def build_governance_overlay(
     }
 
 
-@router.get("/overlay/{engagement_id}/compliance")
+@router.get("/overlay/{engagement_id}/compliance", response_model=dict)
 async def get_compliance_state(
     engagement_id: UUID,
     request: Request,
@@ -534,7 +534,7 @@ async def get_compliance_state(
     }
 
 
-@router.get("/overlay/{engagement_id}/ungoverned")
+@router.get("/overlay/{engagement_id}/ungoverned", response_model=dict)
 async def get_ungoverned_processes(
     engagement_id: UUID,
     request: Request,
