@@ -53,8 +53,8 @@ class ContinuousEvidencePipeline:
     def __init__(
         self,
         redis_client: aioredis.Redis,
-        session_factory: Any,
-        neo4j_driver: Any = None,
+        session_factory: Any,  # Any because: async_sessionmaker; avoids circular import
+        neo4j_driver: Any = None,  # Any because: neo4j.AsyncDriver; optional dep
         metrics: MetricsCollector | None = None,
         quality_threshold: float = DEFAULT_QUALITY_THRESHOLD,
     ) -> None:

@@ -45,6 +45,84 @@ class BPMNActivity:
             self.id = f"Activity_{uuid.uuid4().hex[:8]}"
 
 
+def _build_bpmn_process(
+    definitions: ET.Element,
+    process_name: str,
+    activities: list[BPMNActivity],
+) -> tuple[str, str, str, list[str], list[tuple[str, str, str]]]:
+    """Add the process element with all tasks and flows to definitions.
+
+    Returns:
+        (process_id, start_id, end_id, task_ids, flow_elements)
+    """
+    process_id = f"Process_{uuid.uuid4().hex[:8]}"
+    process = ET.SubElement(
+        definitions,
+        f"{{{BPMN_NS}}}process",
+        {"id": process_id, "name": process_name, "isExecutable": "true"},
+    )
+
+    start_id = f"StartEvent_{uuid.uuid4().hex[:8]}"
+    ET.SubElement(process, f"{{{BPMN_NS}}}startEvent", {"id": start_id, "name": "Start"})
+
+    end_id = f"EndEvent_{uuid.uuid4().hex[:8]}"
+    ET.SubElement(process, f"{{{BPMN_NS}}}endEvent", {"id": end_id, "name": "End"})
+
+    task_ids: list[str] = []
+    for activity in activities:
+        task_id = activity.id
+        task_ids.append(task_id)
+        tag = f"{{{BPMN_NS}}}exclusiveGateway" if activity.is_gateway else f"{{{BPMN_NS}}}task"
+        ET.SubElement(process, tag, {"id": task_id, "name": activity.name})
+
+    flow_elements: list[tuple[str, str, str]] = []
+
+    def _add_flow(src: str, tgt: str) -> None:
+        fid = f"Flow_{uuid.uuid4().hex[:8]}"
+        flow_elements.append((fid, src, tgt))
+        ET.SubElement(process, f"{{{BPMN_NS}}}sequenceFlow", {"id": fid, "sourceRef": src, "targetRef": tgt})
+
+    _add_flow(start_id, task_ids[0])
+    for i in range(len(task_ids) - 1):
+        _add_flow(task_ids[i], task_ids[i + 1])
+    _add_flow(task_ids[-1], end_id)
+
+    return process_id, start_id, end_id, task_ids, flow_elements
+
+
+def _build_bpmn_diagram_layout(
+    definitions: ET.Element,
+    process_id: str,
+    start_id: str,
+    end_id: str,
+    task_ids: list[str],
+    flow_elements: list[tuple[str, str, str]],
+) -> None:
+    """Append BPMNDiagram layout section to definitions (left-to-right)."""
+    diagram = ET.SubElement(definitions, f"{{{BPMNDI_NS}}}BPMNDiagram", {"id": f"BPMNDiagram_{uuid.uuid4().hex[:8]}"})
+    plane = ET.SubElement(
+        diagram, f"{{{BPMNDI_NS}}}BPMNPlane", {"id": f"BPMNPlane_{uuid.uuid4().hex[:8]}", "bpmnElement": process_id}
+    )
+
+    x = LANE_X_START
+    y = LANE_Y_START
+
+    _add_shape(plane, start_id, x, y + (TASK_HEIGHT - EVENT_SIZE) // 2, EVENT_SIZE, EVENT_SIZE)
+    x += EVENT_SIZE + H_SPACING
+
+    element_positions: dict[str, tuple[int, int]] = {start_id: (LANE_X_START, y)}
+    for task_id in task_ids:
+        _add_shape(plane, task_id, x, y, TASK_WIDTH, TASK_HEIGHT)
+        element_positions[task_id] = (x, y)
+        x += TASK_WIDTH + H_SPACING
+
+    _add_shape(plane, end_id, x, y + (TASK_HEIGHT - EVENT_SIZE) // 2, EVENT_SIZE, EVENT_SIZE)
+    element_positions[end_id] = (x, y)
+
+    for fid, src, tgt in flow_elements:
+        _add_edge(plane, fid, element_positions, src, tgt)
+
+
 def generate_bpmn_xml(
     process_name: str,
     activities: list[BPMNActivity],
@@ -66,161 +144,19 @@ def generate_bpmn_xml(
     if not activities:
         return _empty_bpmn(process_name)
 
-    # Register namespaces for clean output
     ET.register_namespace("bpmn", BPMN_NS)
     ET.register_namespace("bpmndi", BPMNDI_NS)
     ET.register_namespace("dc", DC_NS)
     ET.register_namespace("di", DI_NS)
 
-    process_id = f"Process_{uuid.uuid4().hex[:8]}"
     definitions = ET.Element(
         f"{{{BPMN_NS}}}definitions",
-        {
-            "id": f"Definitions_{uuid.uuid4().hex[:8]}",
-            "targetNamespace": "http://bpmn.io/schema/bpmn",
-        },
+        {"id": f"Definitions_{uuid.uuid4().hex[:8]}", "targetNamespace": "http://bpmn.io/schema/bpmn"},
     )
 
-    process = ET.SubElement(
-        definitions,
-        f"{{{BPMN_NS}}}process",
-        {
-            "id": process_id,
-            "name": process_name,
-            "isExecutable": "true",
-        },
-    )
+    process_id, start_id, end_id, task_ids, flow_elements = _build_bpmn_process(definitions, process_name, activities)
+    _build_bpmn_diagram_layout(definitions, process_id, start_id, end_id, task_ids, flow_elements)
 
-    # Create start event
-    start_id = f"StartEvent_{uuid.uuid4().hex[:8]}"
-    ET.SubElement(
-        process,
-        f"{{{BPMN_NS}}}startEvent",
-        {
-            "id": start_id,
-            "name": "Start",
-        },
-    )
-
-    # Create end event
-    end_id = f"EndEvent_{uuid.uuid4().hex[:8]}"
-    ET.SubElement(
-        process,
-        f"{{{BPMN_NS}}}endEvent",
-        {
-            "id": end_id,
-            "name": "End",
-        },
-    )
-
-    # Create task/gateway elements
-    task_ids: list[str] = []
-    for activity in activities:
-        task_id = activity.id
-        task_ids.append(task_id)
-        if activity.is_gateway:
-            ET.SubElement(
-                process,
-                f"{{{BPMN_NS}}}exclusiveGateway",
-                {
-                    "id": task_id,
-                    "name": activity.name,
-                },
-            )
-        else:
-            ET.SubElement(
-                process,
-                f"{{{BPMN_NS}}}task",
-                {
-                    "id": task_id,
-                    "name": activity.name,
-                },
-            )
-
-    # Create sequence flows: Start -> Task1 -> Task2 -> ... -> End
-    flow_elements: list[tuple[str, str, str]] = []
-
-    # Start -> first task
-    flow_id = f"Flow_{uuid.uuid4().hex[:8]}"
-    flow_elements.append((flow_id, start_id, task_ids[0]))
-    ET.SubElement(
-        process,
-        f"{{{BPMN_NS}}}sequenceFlow",
-        {
-            "id": flow_id,
-            "sourceRef": start_id,
-            "targetRef": task_ids[0],
-        },
-    )
-
-    # Task-to-task flows
-    for i in range(len(task_ids) - 1):
-        flow_id = f"Flow_{uuid.uuid4().hex[:8]}"
-        flow_elements.append((flow_id, task_ids[i], task_ids[i + 1]))
-        ET.SubElement(
-            process,
-            f"{{{BPMN_NS}}}sequenceFlow",
-            {
-                "id": flow_id,
-                "sourceRef": task_ids[i],
-                "targetRef": task_ids[i + 1],
-            },
-        )
-
-    # Last task -> End
-    flow_id = f"Flow_{uuid.uuid4().hex[:8]}"
-    flow_elements.append((flow_id, task_ids[-1], end_id))
-    ET.SubElement(
-        process,
-        f"{{{BPMN_NS}}}sequenceFlow",
-        {
-            "id": flow_id,
-            "sourceRef": task_ids[-1],
-            "targetRef": end_id,
-        },
-    )
-
-    # Create BPMN diagram
-    diagram = ET.SubElement(
-        definitions,
-        f"{{{BPMNDI_NS}}}BPMNDiagram",
-        {
-            "id": f"BPMNDiagram_{uuid.uuid4().hex[:8]}",
-        },
-    )
-    plane = ET.SubElement(
-        diagram,
-        f"{{{BPMNDI_NS}}}BPMNPlane",
-        {
-            "id": f"BPMNPlane_{uuid.uuid4().hex[:8]}",
-            "bpmnElement": process_id,
-        },
-    )
-
-    # Layout: left-to-right
-    x = LANE_X_START
-    y = LANE_Y_START
-
-    # Start event shape
-    _add_shape(plane, start_id, x, y + (TASK_HEIGHT - EVENT_SIZE) // 2, EVENT_SIZE, EVENT_SIZE)
-    x += EVENT_SIZE + H_SPACING
-
-    # Task shapes
-    element_positions: dict[str, tuple[int, int]] = {start_id: (LANE_X_START, y)}
-    for task_id in task_ids:
-        _add_shape(plane, task_id, x, y, TASK_WIDTH, TASK_HEIGHT)
-        element_positions[task_id] = (x, y)
-        x += TASK_WIDTH + H_SPACING
-
-    # End event shape
-    _add_shape(plane, end_id, x, y + (TASK_HEIGHT - EVENT_SIZE) // 2, EVENT_SIZE, EVENT_SIZE)
-    element_positions[end_id] = (x, y)
-
-    # Flow edges
-    for fid, src, tgt in flow_elements:
-        _add_edge(plane, fid, element_positions, src, tgt)
-
-    # Serialize to string
     ET.indent(definitions, space="  ")
     return ET.tostring(definitions, encoding="unicode", xml_declaration=True)
 

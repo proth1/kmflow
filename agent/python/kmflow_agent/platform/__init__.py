@@ -33,9 +33,8 @@ def get_platform() -> PlatformBase:
         from kmflow_agent.platform._macos import MacOSPlatform
 
         return MacOSPlatform()
-    elif sys.platform == "win32":
+    if sys.platform == "win32":
         from kmflow_agent.platform._windows import WindowsPlatform
 
         return WindowsPlatform()
-    else:
-        raise RuntimeError(f"Unsupported platform: {sys.platform}")
+    raise RuntimeError(f"Unsupported platform: {sys.platform}")

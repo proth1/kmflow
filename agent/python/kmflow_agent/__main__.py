@@ -13,7 +13,6 @@ import asyncio
 import logging
 import os
 import signal
-import sys
 
 from kmflow_agent.auth import create_http_client, get_auth_token
 from kmflow_agent.buffer.manager import BufferManager

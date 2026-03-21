@@ -142,7 +142,9 @@ async def get_retention_policy(
     }
 
 
-@router.post("/retention/{engagement_id}/enforce", response_model=RetentionEnforcementResponse)
+@router.post(
+    "/retention/{engagement_id}/enforce", response_model=RetentionEnforcementResponse, status_code=status.HTTP_200_OK
+)
 async def enforce_retention(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),

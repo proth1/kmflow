@@ -94,7 +94,7 @@ class AnthropicProvider(LLMProvider):
 
     def __init__(self, default_model: str = "claude-sonnet-4-5-20250929") -> None:
         self._default_model = default_model
-        self._client: Any = None
+        self._client: Any = None  # Any because: anthropic.AsyncAnthropic; imported lazily
 
     def _get_client(self) -> Any:
         """Return cached Anthropic client (enables connection pooling)."""

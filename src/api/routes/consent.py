@@ -130,7 +130,7 @@ async def record_consent(
     }
 
 
-@router.post("/{consent_id}/withdraw", response_model=ConsentWithdrawalResponse)
+@router.post("/{consent_id}/withdraw", response_model=ConsentWithdrawalResponse, status_code=status.HTTP_200_OK)
 async def withdraw_consent(
     consent_id: UUID,
     session: AsyncSession = Depends(get_session),

@@ -1,0 +1,355 @@
+# Financial Regulatory Domain Seed List
+# Used by the KMFlow semantic engine to bootstrap entity extraction and
+# concept recognition in SEC/FINRA/FCA/MAS/HKMA/ESMA regulatory documents.
+#
+# Structure:
+#   Each top-level key is a domain concept category.
+#   Each entry is a canonical term with optional aliases.
+#
+# Jurisdictions covered: US (SEC, FINRA), UK (FCA), Singapore (MAS),
+#                        Hong Kong (HKMA), EU (ESMA)
+
+version: "1.0"
+domain: "financial_regulations"
+
+categories:
+
+  fiduciary_duty:
+    description: "Obligations requiring a party to act in another's best interest"
+    terms:
+      - canonical: "fiduciary duty"
+        aliases:
+          - "fiduciary obligation"
+          - "fiduciary responsibility"
+          - "duty of loyalty"
+          - "duty of care"
+          - "best interest obligation"
+      - canonical: "investment advisor fiduciary"
+        aliases:
+          - "RIA fiduciary"
+          - "adviser fiduciary standard"
+      - canonical: "conflict of interest"
+        aliases:
+          - "material conflict"
+          - "undisclosed conflict"
+          - "conflicts disclosure"
+      - canonical: "best interest standard"
+        aliases:
+          - "Regulation Best Interest"
+          - "Reg BI"
+          - "best interest obligation"
+
+  segregation_of_assets:
+    description: "Requirements to keep client funds separate from firm assets"
+    terms:
+      - canonical: "segregation of assets"
+        aliases:
+          - "asset segregation"
+          - "client asset segregation"
+          - "CASS"
+          - "custody rule"
+          - "Rule 15c3-3"
+      - canonical: "customer protection rule"
+        aliases:
+          - "15c3-3"
+          - "broker-dealer customer protection"
+          - "possession or control"
+          - "PAB account"
+      - canonical: "special reserve bank account"
+        aliases:
+          - "customer reserve account"
+          - "reserve formula"
+          - "weekly reserve computation"
+      - canonical: "omnibus account"
+        aliases:
+          - "omnibus segregated account"
+          - "fully disclosed account"
+
+  net_capital:
+    description: "Minimum capital adequacy requirements for broker-dealers"
+    terms:
+      - canonical: "net capital rule"
+        aliases:
+          - "Rule 15c3-1"
+          - "SEC net capital"
+          - "net capital requirement"
+          - "broker-dealer capital"
+      - canonical: "tentative net capital"
+        aliases:
+          - "TNC"
+          - "preliminary net capital"
+      - canonical: "aggregate indebtedness"
+        aliases:
+          - "AI ratio"
+          - "debt-to-capital ratio"
+      - canonical: "haircut"
+        aliases:
+          - "securities haircut"
+          - "position haircut"
+          - "market risk haircut"
+      - canonical: "early warning threshold"
+        aliases:
+          - "120% threshold"
+          - "net capital early warning"
+
+  reserve_requirement:
+    description: "Mandatory financial reserves held against liabilities"
+    terms:
+      - canonical: "reserve requirement"
+        aliases:
+          - "minimum reserve"
+          - "liquidity reserve"
+          - "regulatory reserve"
+      - canonical: "customer free credit balance"
+        aliases:
+          - "free credit balance"
+          - "customer cash balance"
+      - canonical: "margin account reserve"
+        aliases:
+          - "margin lending reserve"
+          - "margin deficit"
+
+  customer_protection:
+    description: "Rules protecting retail and institutional customers"
+    terms:
+      - canonical: "customer protection"
+        aliases:
+          - "client protection"
+          - "investor protection"
+          - "retail investor protection"
+      - canonical: "SIPC coverage"
+        aliases:
+          - "Securities Investor Protection Corporation"
+          - "SIPC insurance"
+          - "account insurance"
+      - canonical: "FSCS protection"
+        aliases:
+          - "Financial Services Compensation Scheme"
+          - "UK deposit protection"
+      - canonical: "best execution"
+        aliases:
+          - "duty of best execution"
+          - "execution quality"
+          - "order execution policy"
+          - "Rule 5310"
+          - "MiFID best execution"
+      - canonical: "order handling"
+        aliases:
+          - "order routing"
+          - "order handling obligations"
+          - "Manning Rule"
+
+  suitability:
+    description: "Requirements to match products/recommendations to customer profile"
+    terms:
+      - canonical: "suitability"
+        aliases:
+          - "suitability obligation"
+          - "suitability standard"
+          - "Rule 2111"
+          - "know-your-customer suitability"
+      - canonical: "reasonable basis suitability"
+        aliases:
+          - "product suitability"
+          - "strategy suitability"
+      - canonical: "customer-specific suitability"
+        aliases:
+          - "customer profile suitability"
+          - "individual suitability"
+      - canonical: "quantitative suitability"
+        aliases:
+          - "churning"
+          - "excessive trading"
+
+  kyc_aml:
+    description: "Know Your Customer and Anti-Money Laundering obligations"
+    terms:
+      - canonical: "know your customer"
+        aliases:
+          - "KYC"
+          - "customer due diligence"
+          - "CDD"
+          - "enhanced due diligence"
+          - "EDD"
+          - "simplified due diligence"
+          - "SDD"
+      - canonical: "anti-money laundering"
+        aliases:
+          - "AML"
+          - "BSA compliance"
+          - "Bank Secrecy Act"
+          - "anti-money laundering program"
+          - "AML program"
+      - canonical: "suspicious activity report"
+        aliases:
+          - "SAR"
+          - "suspicious transaction report"
+          - "STR"
+          - "FinCEN SAR"
+      - canonical: "currency transaction report"
+        aliases:
+          - "CTR"
+          - "cash transaction report"
+      - canonical: "OFAC screening"
+        aliases:
+          - "sanctions screening"
+          - "SDN list"
+          - "sanctions compliance"
+      - canonical: "politically exposed person"
+        aliases:
+          - "PEP"
+          - "senior political figure"
+
+  beneficial_ownership:
+    description: "Disclosure and identification of ultimate beneficial owners"
+    terms:
+      - canonical: "beneficial ownership"
+        aliases:
+          - "UBO"
+          - "ultimate beneficial owner"
+          - "beneficial owner"
+          - "FinCEN beneficial ownership rule"
+          - "25% threshold"
+      - canonical: "legal entity customer"
+        aliases:
+          - "LEC"
+          - "corporate customer"
+          - "entity due diligence"
+      - canonical: "control prong"
+        aliases:
+          - "controlling person"
+          - "single controlling individual"
+      - canonical: "certifying form"
+        aliases:
+          - "beneficial ownership certification"
+          - "ownership form"
+
+  proxy_voting:
+    description: "Obligations related to voting proxies on behalf of clients"
+    terms:
+      - canonical: "proxy voting"
+        aliases:
+          - "proxy vote"
+          - "proxy voting policy"
+          - "shareholder voting"
+      - canonical: "proxy voting disclosure"
+        aliases:
+          - "Form N-PX"
+          - "proxy voting record"
+          - "annual proxy disclosure"
+      - canonical: "proxy advisory firm"
+        aliases:
+          - "ISS"
+          - "Glass Lewis"
+          - "proxy advisor"
+          - "vote recommendation"
+      - canonical: "say-on-pay"
+        aliases:
+          - "executive compensation vote"
+          - "advisory vote on pay"
+
+  securities_lending:
+    description: "Obligations and disclosures related to lending securities"
+    terms:
+      - canonical: "securities lending"
+        aliases:
+          - "stock lending"
+          - "securities loan"
+          - "lender"
+          - "borrower"
+      - canonical: "securities financing transaction"
+        aliases:
+          - "SFT"
+          - "repo"
+          - "repurchase agreement"
+          - "reverse repo"
+      - canonical: "collateral management"
+        aliases:
+          - "eligible collateral"
+          - "collateral haircut"
+          - "collateral reinvestment"
+      - canonical: "indemnification"
+        aliases:
+          - "lender indemnification"
+          - "credit indemnity"
+          - "securities lending indemnification"
+
+  short_selling:
+    description: "Regulations governing short sale transactions"
+    terms:
+      - canonical: "short selling"
+        aliases:
+          - "short sale"
+          - "short position"
+          - "naked short"
+          - "covered short"
+      - canonical: "Regulation SHO"
+        aliases:
+          - "Reg SHO"
+          - "short sale rule"
+          - "locate requirement"
+          - "close-out requirement"
+      - canonical: "threshold security"
+        aliases:
+          - "threshold list"
+          - "Reg SHO threshold"
+      - canonical: "alternative uptick rule"
+        aliases:
+          - "Rule 201"
+          - "circuit breaker short sale"
+
+  margin_requirement:
+    description: "Rules governing margin lending and maintenance"
+    terms:
+      - canonical: "margin requirement"
+        aliases:
+          - "margin call"
+          - "margin maintenance"
+          - "initial margin"
+          - "Regulation T"
+          - "Reg T"
+      - canonical: "margin agreement"
+        aliases:
+          - "margin disclosure"
+          - "margin account agreement"
+          - "hypothecation agreement"
+      - canonical: "house maintenance requirement"
+        aliases:
+          - "house call"
+          - "firm margin requirement"
+          - "maintenance margin"
+      - canonical: "portfolio margin"
+        aliases:
+          - "risk-based margin"
+          - "OCC portfolio margin"
+          - "TIMS"
+
+  reporting_recordkeeping:
+    description: "Regulatory reporting and recordkeeping obligations"
+    terms:
+      - canonical: "Form ADV"
+        aliases:
+          - "ADV Part 1"
+          - "ADV Part 2"
+          - "investment adviser registration"
+      - canonical: "Form BD"
+        aliases:
+          - "broker-dealer registration"
+          - "BD registration"
+      - canonical: "trade reporting"
+        aliases:
+          - "TRACE"
+          - "ORF"
+          - "trade reporting obligation"
+          - "post-trade transparency"
+      - canonical: "books and records"
+        aliases:
+          - "recordkeeping"
+          - "Rule 17a-3"
+          - "Rule 17a-4"
+          - "books and records rule"
+      - canonical: "annual compliance report"
+        aliases:
+          - "CCO annual report"
+          - "Rule 206(4)-7"
+          - "compliance review"

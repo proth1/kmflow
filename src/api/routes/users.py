@@ -28,7 +28,7 @@ from src.core.permissions import has_permission, has_role_level, require_engagem
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["users"])
+router = APIRouter(prefix="/api/v1", tags=["users"])
 
 
 # ---------------------------------------------------------------------------
@@ -95,7 +95,7 @@ class MemberResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/api/v1/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(
     payload: UserCreate,
     session: AsyncSession = Depends(get_session),
@@ -140,7 +140,7 @@ async def create_user(
     return user
 
 
-@router.get("/api/v1/users", response_model=UserListResponse)
+@router.get("/users", response_model=UserListResponse)
 async def list_users(
     limit: int = Query(default=20, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
@@ -164,7 +164,7 @@ async def list_users(
     return {"items": users, "total": total}
 
 
-@router.get("/api/v1/users/{user_id}", response_model=UserResponse)
+@router.get("/users/{user_id}", response_model=UserResponse)
 async def get_user(
     user_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -191,7 +191,7 @@ async def get_user(
     return user
 
 
-@router.patch("/api/v1/users/{user_id}", response_model=UserResponse)
+@router.patch("/users/{user_id}", response_model=UserResponse)
 async def update_user(
     user_id: UUID,
     payload: UserUpdate,
@@ -241,7 +241,7 @@ async def update_user(
 
 
 @router.post(
-    "/api/v1/engagements/{engagement_id}/members",
+    "/engagements/{engagement_id}/members",
     response_model=MemberResponse,
     status_code=status.HTTP_201_CREATED,
 )
@@ -310,8 +310,9 @@ async def add_engagement_member(
 
 
 @router.delete(
-    "/api/v1/engagements/{engagement_id}/members/{user_id}",
+    "/engagements/{engagement_id}/members/{user_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
 )
 async def remove_engagement_member(
     engagement_id: UUID,
@@ -360,7 +361,7 @@ class MemberListResponse(BaseModel):
     total: int
 
 
-@router.get("/api/v1/engagements/{engagement_id}/members", response_model=MemberListResponse)
+@router.get("/engagements/{engagement_id}/members", response_model=MemberListResponse)
 async def list_engagement_members(
     engagement_id: UUID,
     limit: int = Query(default=50, ge=1, le=200),

@@ -54,8 +54,8 @@ class GradientBoostingTaskClassifier:
     """
 
     def __init__(self) -> None:
-        self._model: Any | None = None
-        self._label_encoder: Any | None = None
+        self._model: Any | None = None  # Any because: sklearn GradientBoostingClassifier; no stub available
+        self._label_encoder: Any | None = None  # Any because: sklearn LabelEncoder; no stub available
         self._schema_version: int = FEATURE_SCHEMA_VERSION
 
     @property

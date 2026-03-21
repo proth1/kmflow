@@ -65,11 +65,9 @@ class HealthReporter:
             await self._send_heartbeat(metrics)
             self._check_cpu_threshold(metrics.cpu_percent)
             try:
-                await asyncio.wait_for(
-                    shutdown_event.wait(), timeout=self.heartbeat_interval
-                )
+                await asyncio.wait_for(shutdown_event.wait(), timeout=self.heartbeat_interval)
                 break
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
         logger.info("Health reporter stopped")
 

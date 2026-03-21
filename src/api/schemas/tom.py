@@ -128,7 +128,7 @@ class GapResponse(BaseModel):
     risk_exposure: int | None
     regulatory_impact: int | None
     remediation_cost: int | None
-    created_at: Any
+    created_at: datetime
 
 
 class GapList(BaseModel):
@@ -163,7 +163,7 @@ class BestPracticeResponse(BaseModel):
     source: str | None
     tom_dimension: TOMDimension
     maturity_level_applicable: int | None
-    created_at: Any
+    created_at: datetime
 
 
 class BenchmarkCreate(BaseModel):
@@ -191,7 +191,7 @@ class BenchmarkResponse(BaseModel):
     p75: float
     p90: float
     source: str | None
-    created_at: Any
+    created_at: datetime
 
 
 class TOMImport(BaseModel):
@@ -525,7 +525,7 @@ class PrioritizedRoadmapResponse(BaseModel):
     total_initiatives: int
     estimated_duration_weeks: int
     phases: list[PrioritizedPhaseResponse]
-    generated_at: Any
+    generated_at: datetime
 
 
 class GenerateRoadmapResponse(BaseModel):

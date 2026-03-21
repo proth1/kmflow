@@ -10,11 +10,12 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
+from src.api.routes.auth import limiter
 from src.core.auth import get_current_user
 from src.core.models import User
 from src.core.permissions import require_engagement_access
@@ -143,8 +144,10 @@ class EngagementEntitiesResponse(BaseModel):
 # -- Endpoints ---------------------------------------------------------------
 
 
-@router.post("/extract", response_model=EntityExtractionResponse)
+@router.post("/extract", response_model=EntityExtractionResponse, status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
 async def extract_entities_endpoint(
+    request: Request,
     body: EntityExtractionRequest,
     user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
@@ -185,7 +188,7 @@ async def extract_entities_endpoint(
     }
 
 
-@router.post("/resolve", response_model=EntityResolutionResponse)
+@router.post("/resolve", response_model=EntityResolutionResponse, status_code=status.HTTP_200_OK)
 async def resolve_entities_endpoint(
     body: EntityResolutionRequest,
     user: User = Depends(get_current_user),
@@ -244,7 +247,7 @@ async def resolve_entities_endpoint(
     }
 
 
-@router.post("/embed", response_model=EmbeddingResponse)
+@router.post("/embed", response_model=EmbeddingResponse, status_code=status.HTTP_200_OK)
 async def generate_embeddings_endpoint(
     body: EmbeddingRequest,
     user: User = Depends(get_current_user),
@@ -269,6 +272,7 @@ async def generate_embeddings_endpoint(
 @router.post(
     "/search/{engagement_id}",
     response_model=SemanticSearchResponse,
+    status_code=status.HTTP_200_OK,
 )
 async def semantic_search_endpoint(
     engagement_id: UUID,

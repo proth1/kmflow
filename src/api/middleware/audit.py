@@ -46,7 +46,7 @@ def _extract_resource_type(path: str) -> str | None:
 
 
 async def _persist_audit_event(
-    session_factory: Any,
+    session_factory: Any,  # Any because: async_sessionmaker; avoids circular import
     **kwargs: Any,
 ) -> None:
     """Persist an audit event to the database (fire-and-forget).

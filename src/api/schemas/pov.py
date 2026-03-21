@@ -42,7 +42,7 @@ class ProcessModelResponse(BaseModel):
     evidence_count: int
     contradiction_count: int
     metadata_json: dict | None = None
-    generated_at: Any | None = None
+    generated_at: datetime | None = None
     generated_by: str
 
 

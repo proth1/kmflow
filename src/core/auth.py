@@ -163,19 +163,25 @@ async def is_token_blacklisted(request: Request | WebSocket, token: str) -> bool
         return True
 
 
-async def blacklist_token(request: Request, token: str, expires_in: int = 1800) -> None:
+async def blacklist_token(request: Request, token: str, expires_in: int = 1800) -> bool:
     """Add a token to the blacklist in Redis.
 
     Args:
         request: The FastAPI request (to access app.state.redis_client).
         token: The raw JWT string to blacklist.
         expires_in: TTL in seconds (should match remaining token life).
+
+    Returns:
+        True if the token was successfully blacklisted, False if Redis was
+        unavailable (token may remain valid until natural expiry).
     """
     try:
         redis_client = request.app.state.redis_client
         await redis_client.setex(f"token:blacklist:{token}", expires_in, "1")
+        return True
     except (ConnectionError, OSError, _aioredis.RedisError) as exc:
         logger.warning("Token blacklist write failed — token may remain valid: %s", exc)
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -481,6 +487,13 @@ async def get_websocket_user(
     """
     settings = get_settings()
 
+    # Security note: JWT is accepted via query parameter because the WebSocket
+    # protocol does not support custom headers during the HTTP upgrade handshake.
+    # This means the token may appear in server access logs. To reduce exposure,
+    # callers should use short-lived tokens (e.g. one-time tickets with a 60s TTL)
+    # obtained from a dedicated /api/v1/auth/ws-ticket endpoint rather than
+    # passing the regular session access token directly.
+    #
     # Try token param, then cookie
     jwt_token = token or websocket.cookies.get(ACCESS_COOKIE_NAME)
 

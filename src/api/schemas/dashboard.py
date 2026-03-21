@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -27,7 +26,7 @@ class RecentActivityEntry(BaseModel):
     action: str
     actor: str
     details: str | None = None
-    created_at: Any | None = None
+    created_at: datetime | None = None
 
 
 class DashboardResponse(BaseModel):

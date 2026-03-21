@@ -195,7 +195,7 @@ class LogoutResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/token", response_model=TokenResponse)
+@router.post("/token", response_model=TokenResponse, status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
 async def get_token(
     request: Request,
@@ -258,7 +258,7 @@ async def get_token(
     }
 
 
-@router.post("/refresh", response_model=TokenResponse)
+@router.post("/refresh", response_model=TokenResponse, status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def refresh_token(
     request: Request,
@@ -316,7 +316,7 @@ async def refresh_token(
     }
 
 
-@router.post("/login", response_model=LoginResponse)
+@router.post("/login", response_model=LoginResponse, status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
 async def login(
     request: Request,
@@ -379,7 +379,7 @@ async def login(
     return response
 
 
-@router.post("/refresh/cookie", response_model=RefreshCookieResponse)
+@router.post("/refresh/cookie", response_model=RefreshCookieResponse, status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def refresh_token_cookie(
     request: Request,
@@ -483,13 +483,19 @@ async def logout(
             detail="Not authenticated",
         )
 
-    # Blacklist the access token
-    await blacklist_token(request, token)
+    # Blacklist the access token; cookies are cleared regardless of Redis availability
+    blacklisted = await blacklist_token(request, token)
+    if not blacklisted:
+        logger.warning("Logout: access token blacklist failed — token may remain valid until expiry")
 
     # Also blacklist the refresh token if present (prevents reuse after logout)
     refresh_token_value = request.cookies.get(REFRESH_COOKIE_NAME)
     if refresh_token_value:
-        await blacklist_token(request, refresh_token_value, expires_in=settings.jwt_refresh_token_expire_minutes * 60)
+        refresh_blacklisted = await blacklist_token(
+            request, refresh_token_value, expires_in=settings.jwt_refresh_token_expire_minutes * 60
+        )
+        if not refresh_blacklisted:
+            logger.warning("Logout: refresh token blacklist failed — token may remain valid until expiry")
 
     response = JSONResponse(
         content={"message": "Logged out"},

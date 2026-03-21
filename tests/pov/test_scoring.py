@@ -5,9 +5,8 @@ from __future__ import annotations
 import uuid
 from unittest.mock import MagicMock, PropertyMock
 
-from src.core.models.evidence import EvidenceItem
-
 from src.core.models import CorroborationLevel
+from src.core.models.evidence import EvidenceItem
 from src.pov.consensus import ConsensusElement
 from src.pov.scoring import (
     _compute_agreement,

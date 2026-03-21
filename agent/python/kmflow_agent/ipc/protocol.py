@@ -5,8 +5,7 @@ These dataclasses MUST stay in sync with agent/macos/Sources/IPC/EventProtocol.s
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import datetime
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 

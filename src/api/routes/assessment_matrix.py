@@ -57,7 +57,9 @@ async def get_assessment_matrix(
     }
 
 
-@router.post("/engagements/{engagement_id}/assessment-matrix/compute", response_model=dict)
+@router.post(
+    "/engagements/{engagement_id}/assessment-matrix/compute", response_model=dict, status_code=status.HTTP_200_OK
+)
 async def compute_assessment_matrix(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -90,7 +92,9 @@ async def compute_assessment_matrix(
     }
 
 
-@router.post("/engagements/{engagement_id}/assessment-matrix/export", response_model=dict)
+@router.post(
+    "/engagements/{engagement_id}/assessment-matrix/export", response_model=dict, status_code=status.HTTP_200_OK
+)
 async def export_assessment_matrix(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),

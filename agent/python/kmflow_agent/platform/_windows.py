@@ -82,7 +82,7 @@ class WindowsPlatform(PlatformBase):
                     await writer.wait_closed()
                     return
                 await client_handler(reader, writer)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning("IPC client did not send auth token within timeout")
                 writer.close()
                 await writer.wait_closed()
@@ -118,7 +118,7 @@ class WindowsPlatform(PlatformBase):
         try:
             # Use cmdkey to store in Windows Credential Manager
             result = subprocess.run(
-                ["cmdkey", f"/generic:{target}", f"/user:KMFlowAgent", f"/pass:{value}"],
+                ["cmdkey", f"/generic:{target}", "/user:KMFlowAgent", f"/pass:{value}"],
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -163,8 +163,7 @@ class WindowsPlatform(PlatformBase):
             username = os.environ.get("USERNAME", "")
             if username:
                 subprocess.run(
-                    ["icacls", str(path), "/inheritance:r",
-                     "/grant:r", f"{username}:(F)"],
+                    ["icacls", str(path), "/inheritance:r", "/grant:r", f"{username}:(F)"],
                     capture_output=True,
                     timeout=10,
                 )
@@ -225,7 +224,12 @@ class WindowsPlatform(PlatformBase):
             output_blob = DATA_BLOB()
 
             if crypt32.CryptProtectData(
-                ctypes.byref(input_blob), None, None, None, None, 0,
+                ctypes.byref(input_blob),
+                None,
+                None,
+                None,
+                None,
+                0,
                 ctypes.byref(output_blob),
             ):
                 result = ctypes.string_at(output_blob.pbData, output_blob.cbData)
@@ -252,7 +256,12 @@ class WindowsPlatform(PlatformBase):
             output_blob = DATA_BLOB()
 
             if crypt32.CryptUnprotectData(
-                ctypes.byref(input_blob), None, None, None, None, 0,
+                ctypes.byref(input_blob),
+                None,
+                None,
+                None,
+                None,
+                0,
                 ctypes.byref(output_blob),
             ):
                 result = ctypes.string_at(output_blob.pbData, output_blob.cbData).decode("utf-8")

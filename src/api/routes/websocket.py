@@ -407,7 +407,7 @@ async def task_progress_websocket(
         await pubsub.close()
 
 
-@router.get("/api/v1/ws/status")
+@router.get("/api/v1/ws/status", response_model=dict)
 async def websocket_status(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:

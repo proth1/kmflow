@@ -27,7 +27,7 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import IO, Any
-from xml.etree.ElementTree import ParseError
+from xml.etree.ElementTree import Element, ParseError
 
 from defusedxml.ElementTree import iterparse
 
@@ -84,14 +84,14 @@ class ParsedEvent:
         }
 
 
-def _extract_attribute_value(elem: Any) -> tuple[str, Any]:
+def _extract_attribute_value(elem: Element) -> tuple[str, Any]:
     """Extract key and value from a XES attribute element.
 
     XES attributes are typed: <string key="..." value="..."/>,
     <date key="..." value="..."/>, <int key="..." value="..."/>, etc.
     """
     key = elem.get("key", "")
-    value = elem.get("value", "")
+    value: str | int | float | bool = elem.get("value", "")
 
     tag = elem.tag
     # Strip namespace if present
@@ -105,7 +105,7 @@ def _extract_attribute_value(elem: Any) -> tuple[str, Any]:
         with contextlib.suppress(ValueError, TypeError):
             value = float(value)
     elif tag == "boolean":
-        value = value.lower() in ("true", "1")
+        value = str(value).lower() in ("true", "1")
 
     return key, value
 

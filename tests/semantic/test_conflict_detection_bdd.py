@@ -493,7 +493,7 @@ class TestConflictDetectionPipeline:
                         "created_b": None,
                     }
                 ]
-            elif "PERFORMED_BY" in query:
+            if "PERFORMED_BY" in query:
                 # Role query
                 return [
                     {

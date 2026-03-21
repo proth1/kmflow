@@ -132,8 +132,8 @@ export default function RoadmapTimeline({
                   )}
                 >
                   {phase.initiatives.length > 0 ? (
-                    phase.initiatives.map((init, idx) => (
-                      <InitiativeRow key={idx} initiative={init} />
+                    phase.initiatives.map((init) => (
+                      <InitiativeRow key={init.gap_id} initiative={init} />
                     ))
                   ) : (
                     <div className="p-4 text-[hsl(var(--muted-foreground))] text-center text-sm">

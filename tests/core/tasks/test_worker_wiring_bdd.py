@@ -14,8 +14,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-
-from tests.helpers import wait_for_condition
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -27,6 +25,7 @@ from src.core.tasks.queue import (
     TaskQueue,
 )
 from src.core.tasks.runner import _publish_task_progress, run_task_worker
+from tests.helpers import wait_for_condition
 
 # -- FakeRedis (extended for Pub/Sub) -----------------------------------------
 

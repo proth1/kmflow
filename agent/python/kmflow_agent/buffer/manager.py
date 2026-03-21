@@ -21,9 +21,7 @@ from kmflow_agent.buffer.encryption import decrypt_payload, encrypt_payload
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_DB_PATH = os.path.expanduser(
-    "~/Library/Application Support/KMFlowAgent/buffer.db"
-)
+DEFAULT_DB_PATH = os.path.expanduser("~/Library/Application Support/KMFlowAgent/buffer.db")
 MAX_BUFFER_SIZE_BYTES = 100 * 1024 * 1024  # 100 MB
 
 CREATE_TABLE = """
@@ -74,9 +72,12 @@ class BufferManager:
         try:
             result = subprocess.run(
                 [
-                    "security", "find-generic-password",
-                    "-s", keychain_service,
-                    "-a", keychain_account,
+                    "security",
+                    "find-generic-password",
+                    "-s",
+                    keychain_service,
+                    "-a",
+                    keychain_account,
                     "-w",
                 ],
                 capture_output=True,
@@ -96,17 +97,23 @@ class BufferManager:
             try:
                 subprocess.run(
                     ["security", "delete-generic-password", "-s", keychain_service, "-a", keychain_account],
-                    capture_output=True, timeout=5,
+                    capture_output=True,
+                    timeout=5,
                 )
                 subprocess.run(
                     [
-                        "security", "add-generic-password",
-                        "-s", keychain_service,
-                        "-a", keychain_account,
-                        "-w", encoded,
+                        "security",
+                        "add-generic-password",
+                        "-s",
+                        keychain_service,
+                        "-a",
+                        keychain_account,
+                        "-w",
+                        encoded,
                         "-U",
                     ],
-                    capture_output=True, timeout=5,
+                    capture_output=True,
+                    timeout=5,
                 )
                 key_path.unlink(missing_ok=True)
                 logger.info("Migrated buffer encryption key from file to Keychain")
@@ -121,10 +128,14 @@ class BufferManager:
         try:
             subprocess.run(
                 [
-                    "security", "add-generic-password",
-                    "-s", keychain_service,
-                    "-a", keychain_account,
-                    "-w", encoded,
+                    "security",
+                    "add-generic-password",
+                    "-s",
+                    keychain_service,
+                    "-a",
+                    keychain_account,
+                    "-w",
+                    encoded,
                     "-U",
                 ],
                 capture_output=True,

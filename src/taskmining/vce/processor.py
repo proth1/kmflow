@@ -46,7 +46,7 @@ def _validate_event(event_data: dict[str, Any]) -> str | None:
         return f"Invalid trigger_reason: {event_data['trigger_reason']!r}"
 
     confidence = event_data.get("confidence")
-    if not isinstance(confidence, (int, float)) or not (0.0 <= float(confidence) <= 1.0):
+    if not isinstance(confidence, int | float) or not (0.0 <= float(confidence) <= 1.0):
         return f"confidence must be a float in [0.0, 1.0], got {confidence!r}"
 
     dwell_ms = event_data.get("dwell_ms")
@@ -79,7 +79,7 @@ async def process_vce_event(session: AsyncSession, event_data: dict[str, Any]) -
         ts = datetime.fromisoformat(ts)
 
     # Parse UUIDs — accept strings or UUID objects
-    def _uuid(val: Any) -> UUID:
+    def _uuid(val: str | UUID) -> UUID:
         return UUID(str(val)) if not isinstance(val, UUID) else val
 
     vce = VisualContextEvent(

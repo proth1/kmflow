@@ -1,0 +1,1089 @@
+# Wealth Management Domain Seed List
+# ====================================
+# Domain vocabulary for custody, clearing, and wealth advisory engagements.
+# Organized by TermCategory (activity, system, role, regulation, artifact).
+#
+# Each term has:
+#   term               - canonical display name
+#   category           - TermCategory enum value
+#   description        - one-sentence definition
+#   aliases            - common alternate names / abbreviations
+#   related_regulations - applicable regulatory frameworks
+#
+# Source: Apex Clearing / Apex Advisor Solutions domain, U.S. and international
+# regulatory context, buy-side and sell-side wealth operations.
+
+domain: wealth_management
+
+terms:
+
+  # ── Activities ─────────────────────────────────────────────────────────────
+
+  - term: trade execution
+    category: activity
+    description: >
+      The act of placing and filling a buy or sell order in a financial instrument
+      on a trading venue or via a dealer.
+    aliases:
+      - order fill
+      - trade fill
+      - execution
+    related_regulations:
+      - Reg BI
+      - MiFID II
+      - SEC Rule 15c6-1
+
+  - term: order routing
+    category: activity
+    description: >
+      The process of directing a client order to the appropriate venue, market
+      maker, or internalization pool for execution.
+    aliases:
+      - smart order routing
+      - SOR
+      - order flow management
+    related_regulations:
+      - Reg NMS
+      - Reg BI
+      - MiFID II
+
+  - term: portfolio rebalancing
+    category: activity
+    description: >
+      Adjusting a portfolio's asset weights back to target allocations by
+      buying and selling securities to correct drift.
+    aliases:
+      - rebalancing
+      - drift correction
+      - allocation rebalance
+    related_regulations:
+      - Investment Advisers Act
+      - Reg BI
+
+  - term: NAV calculation
+    category: activity
+    description: >
+      Computing the net asset value of a fund by summing asset market values,
+      subtracting liabilities, and dividing by shares outstanding.
+    aliases:
+      - net asset value calculation
+      - fund pricing
+      - daily NAV
+    related_regulations:
+      - Investment Company Act
+      - SEC Rule 17a-5
+
+  - term: corporate actions processing
+    category: activity
+    description: >
+      Handling mandatory and voluntary corporate events such as dividends,
+      stock splits, mergers, tender offers, and rights offerings on behalf
+      of beneficial owners.
+    aliases:
+      - corporate action handling
+      - CA processing
+      - events processing
+    related_regulations:
+      - SEC Rule 17a-5
+      - DTC rules
+
+  - term: custody settlement
+    category: activity
+    description: >
+      The process of finalizing the transfer of securities and cash between
+      counterparties through a central securities depository or custodian.
+    aliases:
+      - settlement
+      - securities settlement
+      - DVP settlement
+    related_regulations:
+      - SEC Rule 15c6-1
+      - SEC Rule 15c3-3
+
+  - term: clearing validation
+    category: activity
+    description: >
+      Comparing and matching trade details between counterparties at a clearing
+      house to confirm, net, and guarantee settlement obligations.
+    aliases:
+      - trade clearing
+      - clearing and settlement
+      - trade validation
+    related_regulations:
+      - Dodd-Frank
+      - SEC Rule 17a-5
+      - FINRA Rule 4210
+
+  - term: reconciliation
+    category: activity
+    description: >
+      Comparing internal records of positions, cash, and transactions against
+      custodian, counterparty, or exchange records to identify and resolve breaks.
+    aliases:
+      - position reconciliation
+      - cash reconciliation
+      - break resolution
+    related_regulations:
+      - SEC Rule 17a-5
+      - SEC Rule 15c3-3
+
+  - term: KYC onboarding
+    category: activity
+    description: >
+      Know Your Customer due diligence performed at account opening to verify
+      client identity, assess risk, and establish the regulatory customer profile.
+    aliases:
+      - know your customer
+      - KYC
+      - client onboarding
+      - account opening due diligence
+    related_regulations:
+      - Bank Secrecy Act
+      - USA PATRIOT Act
+      - FinCEN CDD Rule
+
+  - term: AML screening
+    category: activity
+    description: >
+      Anti-Money Laundering checks that screen clients, transactions, and
+      counterparties against watchlists, sanctions lists, and behavior models.
+    aliases:
+      - anti-money laundering screening
+      - AML
+      - sanctions screening
+      - OFAC screening
+    related_regulations:
+      - Bank Secrecy Act
+      - USA PATRIOT Act
+      - Dodd-Frank
+
+  - term: beneficial ownership verification
+    category: activity
+    description: >
+      Identifying and verifying the natural persons who ultimately own or
+      control a legal entity opening a financial account.
+    aliases:
+      - UBO verification
+      - ultimate beneficial owner check
+      - BO verification
+    related_regulations:
+      - FinCEN CDD Rule
+      - Bank Secrecy Act
+      - USA PATRIOT Act
+
+  - term: proxy voting
+    category: activity
+    description: >
+      Casting votes on shareholder resolutions on behalf of beneficial owners
+      of securities held in custody.
+    aliases:
+      - shareholder voting
+      - vote execution
+      - proxy processing
+    related_regulations:
+      - Investment Advisers Act
+      - SEC Rule 14a
+
+  - term: securities lending
+    category: activity
+    description: >
+      Temporarily transferring securities to a borrower (typically to cover
+      short positions) in exchange for collateral and a lending fee.
+    aliases:
+      - stock lending
+      - sec lending
+      - SBL
+    related_regulations:
+      - SEC Rule 15c3-3
+      - FINRA Rule 4210
+
+  - term: margin management
+    category: activity
+    description: >
+      Monitoring margin accounts, calculating requirements, and issuing or
+      responding to margin calls to maintain regulatory and house capital ratios.
+    aliases:
+      - margin monitoring
+      - margin call management
+      - reg T margin
+    related_regulations:
+      - FINRA Rule 4210
+      - Regulation T
+      - SEC Rule 15c3-3
+
+  - term: dividend processing
+    category: activity
+    description: >
+      Collecting dividends from issuers and distributing cash or stock dividends
+      to beneficial owners on record date.
+    aliases:
+      - income processing
+      - dividend distribution
+      - cash dividend processing
+    related_regulations:
+      - SEC Rule 17a-5
+      - DTC rules
+
+  - term: tax lot accounting
+    category: activity
+    description: >
+      Tracking the acquisition date and cost basis of each lot of securities
+      purchased to support accurate gain/loss and tax reporting.
+    aliases:
+      - lot accounting
+      - cost basis accounting
+      - FIFO/LIFO accounting
+    related_regulations:
+      - IRS cost basis reporting rules
+      - SEC Rule 17a-5
+
+  - term: trade allocation
+    category: activity
+    description: >
+      Distributing the fills of a block or aggregated order across multiple
+      client accounts after execution.
+    aliases:
+      - order allocation
+      - block allocation
+      - post-trade allocation
+    related_regulations:
+      - Investment Advisers Act
+      - Reg BI
+      - MiFID II
+
+  - term: best execution
+    category: activity
+    description: >
+      The obligation to execute client orders on terms most favorable to the
+      client, considering price, costs, speed, likelihood of execution, and size.
+    aliases:
+      - best ex
+      - execution quality
+      - MiFID best execution
+    related_regulations:
+      - Reg BI
+      - MiFID II
+      - FINRA Rule 5310
+
+  - term: suitability assessment
+    category: activity
+    description: >
+      Evaluating whether a recommended investment product or strategy is
+      appropriate given the client's financial situation, risk tolerance,
+      investment horizon, and objectives.
+    aliases:
+      - suitability review
+      - client suitability
+      - know your customer suitability
+    related_regulations:
+      - Reg BI
+      - Investment Advisers Act
+      - FINRA Rule 2111
+
+  - term: fee billing
+    category: activity
+    description: >
+      Calculating and collecting advisory, custody, and transactional fees
+      from client accounts based on AUM, flat fees, or commission schedules.
+    aliases:
+      - fee calculation
+      - advisory fee billing
+      - AUM billing
+    related_regulations:
+      - Investment Advisers Act
+      - Reg BI
+
+  # ── Systems ────────────────────────────────────────────────────────────────
+
+  - term: Charles River Development
+    category: system
+    description: >
+      Industry-leading investment management system providing OMS, compliance,
+      and portfolio management capabilities for asset managers and wealth firms.
+    aliases:
+      - CRD
+      - Charles River IMS
+      - Charles River OMS
+    related_regulations:
+      - Investment Advisers Act
+      - MiFID II
+
+  - term: SWIFT
+    category: system
+    description: >
+      Society for Worldwide Interbank Financial Telecommunication network used
+      for secure cross-border payment and securities settlement messaging.
+    aliases:
+      - SWIFT network
+      - SWIFT messaging
+      - BIC/SWIFT
+    related_regulations:
+      - Bank Secrecy Act
+      - FATF guidelines
+
+  - term: FIX Protocol
+    category: system
+    description: >
+      Financial Information eXchange protocol — the industry standard messaging
+      format for real-time electronic exchange of securities transactions.
+    aliases:
+      - FIX
+      - FIX messaging
+      - FIX engine
+    related_regulations:
+      - MiFID II
+      - Reg NMS
+
+  - term: DTC
+    category: system
+    description: >
+      Depository Trust Company — the U.S. central securities depository that
+      holds securities in electronic form and settles trades for broker-dealers.
+    aliases:
+      - Depository Trust Company
+      - DTCC DTC
+      - DTC participant
+    related_regulations:
+      - SEC Rule 17a-5
+      - SEC Rule 15c3-3
+
+  - term: NSCC
+    category: system
+    description: >
+      National Securities Clearing Corporation — the central counterparty
+      that clears equities, ETFs, and mutual fund trades for U.S. markets.
+    aliases:
+      - National Securities Clearing Corporation
+      - NSCC clearing
+      - CNS system
+    related_regulations:
+      - Dodd-Frank
+      - SEC Rule 17a-5
+
+  - term: OCC
+    category: system
+    description: >
+      Options Clearing Corporation — the central counterparty that clears
+      and settles listed options and futures contracts in the U.S.
+    aliases:
+      - Options Clearing Corporation
+      - OCC clearing
+    related_regulations:
+      - Dodd-Frank
+      - FINRA Rule 4210
+
+  - term: Apex Clearing Platform
+    category: system
+    description: >
+      Apex Fintech Solutions' core clearing and custody technology platform
+      serving broker-dealers and registered investment advisors.
+    aliases:
+      - Apex clearing
+      - Apex platform
+    related_regulations:
+      - SEC Rule 15c3-3
+      - SEC Rule 17a-5
+
+  - term: Apex Advisor Solutions
+    category: system
+    description: >
+      Apex's wealth advisory technology suite providing custody, portfolio
+      management, and reporting tools for RIAs and hybrid advisors.
+    aliases:
+      - Apex Advisor
+      - AAS
+    related_regulations:
+      - Investment Advisers Act
+      - Reg BI
+
+  - term: Apex Silver API
+    category: system
+    description: >
+      Apex's RESTful API layer enabling fintechs and RIAs to integrate
+      account opening, trading, and custody functions programmatically.
+    aliases:
+      - Silver API
+      - Apex API
+    related_regulations:
+      - Investment Advisers Act
+      - SEC Rule 17a-5
+
+  - term: Bloomberg Terminal
+    category: system
+    description: >
+      Professional financial data and analytics platform providing market
+      data, news, execution tools, and communication services.
+    aliases:
+      - Bloomberg
+      - BBG terminal
+      - BTERM
+    related_regulations:
+      - MiFID II
+
+  - term: FactSet
+    category: system
+    description: >
+      Financial data and software platform used for portfolio analytics,
+      performance attribution, risk analysis, and research.
+    aliases:
+      - FactSet Research Systems
+      - FactSet analytics
+    related_regulations:
+      - Investment Advisers Act
+
+  - term: custody platform
+    category: system
+    description: >
+      Technology system used by custodians to hold client assets, process
+      settlements, track positions, and generate account statements.
+    aliases:
+      - custodian system
+      - custody system
+      - safekeeping platform
+    related_regulations:
+      - SEC Rule 15c3-3
+      - SEC Rule 17a-5
+
+  - term: fund accounting system
+    category: system
+    description: >
+      Specialized system that calculates and records NAV, accruals, income,
+      and expenses for pooled investment vehicles.
+    aliases:
+      - fund admin system
+      - NAV system
+      - fund accounting platform
+    related_regulations:
+      - Investment Company Act
+      - SEC Rule 17a-5
+
+  - term: transfer agent
+    category: system
+    description: >
+      System (or third-party service) that maintains the record of fund
+      shareholders, processes subscriptions/redemptions, and issues statements.
+    aliases:
+      - TA system
+      - shareholder recordkeeper
+      - registrar
+    related_regulations:
+      - Investment Company Act
+      - SEC Rule 17a-5
+
+  - term: OMS
+    category: system
+    description: >
+      Order Management System — technology used to create, route, execute,
+      and track investment orders across asset classes.
+    aliases:
+      - order management system
+      - order management platform
+    related_regulations:
+      - Reg BI
+      - MiFID II
+
+  - term: EMS
+    category: system
+    description: >
+      Execution Management System — technology providing direct market access,
+      algorithmic execution, and real-time analytics for trading desks.
+    aliases:
+      - execution management system
+      - execution platform
+      - trading EMS
+    related_regulations:
+      - MiFID II
+      - Reg NMS
+
+  - term: PMS
+    category: system
+    description: >
+      Portfolio Management System — software that tracks holdings, performance,
+      risk metrics, and compliance rules for managed accounts.
+    aliases:
+      - portfolio management system
+      - portfolio management platform
+      - portfolio analytics system
+    related_regulations:
+      - Investment Advisers Act
+      - MiFID II
+
+  # ── Roles ──────────────────────────────────────────────────────────────────
+
+  - term: custody officer
+    category: role
+    description: >
+      Professional responsible for the safe custody of client assets, settlement
+      of securities transactions, and administration of custody accounts.
+    aliases:
+      - custodian
+      - custody specialist
+      - asset safety officer
+    related_regulations:
+      - SEC Rule 15c3-3
+      - Investment Advisers Act
+
+  - term: clearing specialist
+    category: role
+    description: >
+      Operations professional who manages the clearing process, resolves trade
+      breaks, and interfaces with central counterparties and depositories.
+    aliases:
+      - clearing ops
+      - clearing analyst
+      - settlement specialist
+    related_regulations:
+      - SEC Rule 15c6-1
+      - Dodd-Frank
+
+  - term: wealth advisor
+    category: role
+    description: >
+      Licensed professional who provides comprehensive financial planning,
+      investment advice, and ongoing portfolio management to individual clients.
+    aliases:
+      - financial advisor
+      - investment advisor
+      - wealth manager
+    related_regulations:
+      - Investment Advisers Act
+      - Reg BI
+
+  - term: portfolio manager
+    category: role
+    description: >
+      Investment professional with discretionary authority to construct,
+      monitor, and adjust client portfolios to meet stated investment objectives.
+    aliases:
+      - PM
+      - investment manager
+      - discretionary manager
+    related_regulations:
+      - Investment Advisers Act
+      - MiFID II
+
+  - term: compliance officer
+    category: role
+    description: >
+      Individual responsible for implementing and monitoring the firm's
+      compliance program to ensure adherence to applicable laws and regulations.
+    aliases:
+      - compliance manager
+      - regulatory compliance officer
+    related_regulations:
+      - Investment Advisers Act
+      - Investment Company Act
+      - Bank Secrecy Act
+
+  - term: operations analyst
+    category: role
+    description: >
+      Middle- or back-office professional who processes transactions, resolves
+      exceptions, and maintains operational controls in securities workflows.
+    aliases:
+      - ops analyst
+      - securities operations analyst
+      - trade ops
+    related_regulations:
+      - SEC Rule 17a-5
+
+  - term: fund accountant
+    category: role
+    description: >
+      Professional who calculates NAV, manages accruals, reconciles positions,
+      and produces financial reports for pooled investment vehicles.
+    aliases:
+      - fund accounting analyst
+      - NAV accountant
+    related_regulations:
+      - Investment Company Act
+      - SEC Rule 17a-5
+
+  - term: relationship manager
+    category: role
+    description: >
+      Client-facing professional who manages the overall business relationship
+      with institutional or high-net-worth clients and coordinates service delivery.
+    aliases:
+      - RM
+      - client relationship manager
+      - client service manager
+    related_regulations:
+      - Investment Advisers Act
+      - Reg BI
+
+  - term: trade support
+    category: role
+    description: >
+      Operations team responsible for confirming trades, booking positions,
+      and resolving execution discrepancies in post-trade workflows.
+    aliases:
+      - trade support analyst
+      - trading operations
+      - trade ops support
+    related_regulations:
+      - SEC Rule 15c6-1
+      - MiFID II
+
+  - term: middle office
+    category: role
+    description: >
+      Function bridging trading desks and back office; responsible for
+      risk management, compliance oversight, and post-trade processing.
+    aliases:
+      - mid office
+      - middle office operations
+    related_regulations:
+      - Dodd-Frank
+      - MiFID II
+
+  - term: back office
+    category: role
+    description: >
+      Operational function responsible for settlement, reconciliation,
+      recordkeeping, and reporting after trades are executed.
+    aliases:
+      - back office operations
+      - BO
+      - settlement ops
+    related_regulations:
+      - SEC Rule 17a-5
+      - SEC Rule 15c3-3
+
+  - term: risk manager
+    category: role
+    description: >
+      Professional responsible for identifying, measuring, and managing market,
+      credit, liquidity, and operational risks across the firm.
+    aliases:
+      - risk analyst
+      - market risk manager
+      - enterprise risk manager
+    related_regulations:
+      - Dodd-Frank
+      - MiFID II
+      - FINRA Rule 4210
+
+  - term: CCO
+    category: role
+    description: >
+      Chief Compliance Officer — the senior officer accountable for the firm's
+      overall compliance with securities laws and regulatory requirements.
+    aliases:
+      - Chief Compliance Officer
+      - head of compliance
+    related_regulations:
+      - Investment Advisers Act
+      - Investment Company Act
+      - Bank Secrecy Act
+
+  - term: RIA
+    category: role
+    description: >
+      Registered Investment Adviser — a firm or individual registered with the
+      SEC or state securities regulator to provide investment advice for compensation.
+    aliases:
+      - Registered Investment Adviser
+      - registered investment advisor
+      - investment adviser
+    related_regulations:
+      - Investment Advisers Act
+      - SEC Form ADV
+
+  - term: broker-dealer
+    category: role
+    description: >
+      A firm registered with FINRA and the SEC that executes securities
+      transactions on behalf of customers (broker) and for its own account (dealer).
+    aliases:
+      - BD
+      - registered broker-dealer
+      - introducing broker
+    related_regulations:
+      - SEC Rule 15c3-3
+      - SEC Rule 17a-5
+      - Reg BI
+
+  # ── Regulations ────────────────────────────────────────────────────────────
+
+  - term: SEC Rule 15c3-3
+    category: regulation
+    description: >
+      Customer Protection Rule — requires broker-dealers to maintain physical
+      possession or control of customer securities and segregate customer cash.
+    aliases:
+      - Rule 15c3-3
+      - customer protection rule
+      - customer reserve requirements
+    related_regulations:
+      - SEC Rule 17a-5
+
+  - term: SEC Rule 17a-5
+    category: regulation
+    description: >
+      Reports to be Made by Certain Brokers and Dealers — requires periodic
+      financial and operational reporting including audited financial statements.
+    aliases:
+      - Rule 17a-5
+      - broker-dealer reporting rule
+      - FOCUS report rule
+    related_regulations:
+      - SEC Rule 15c3-3
+
+  - term: SEC Rule 15c6-1
+    category: regulation
+    description: >
+      Settlement Cycle Rule — mandates that broker-dealer transactions in most
+      securities settle no later than T+1 (one business day after trade date).
+    aliases:
+      - Rule 15c6-1
+      - T+1 settlement rule
+      - settlement cycle rule
+    related_regulations:
+      - SEC Rule 17a-5
+
+  - term: Reg BI
+    category: regulation
+    description: >
+      Regulation Best Interest — requires broker-dealers to act in the best
+      interest of retail customers when making investment recommendations.
+    aliases:
+      - Regulation Best Interest
+      - best interest standard
+      - Reg BI rule
+    related_regulations:
+      - Investment Advisers Act
+      - SEC Rule 17a-5
+
+  - term: FINRA Rule 4210
+    category: regulation
+    description: >
+      FINRA's margin requirements rule governing the amount of credit that
+      broker-dealers may extend to customers for securities purchases.
+    aliases:
+      - Rule 4210
+      - FINRA margin rule
+      - margin requirements
+    related_regulations:
+      - Regulation T
+      - SEC Rule 15c3-3
+
+  - term: Investment Advisers Act
+    category: regulation
+    description: >
+      Federal law (1940) governing the registration, conduct, and fiduciary
+      obligations of investment advisers managing client assets for compensation.
+    aliases:
+      - Advisers Act
+      - IAA
+      - Investment Advisers Act of 1940
+    related_regulations:
+      - Reg BI
+      - SEC Form ADV
+
+  - term: Investment Company Act
+    category: regulation
+    description: >
+      Federal law (1940) regulating the organization and activities of
+      investment companies including mutual funds, ETFs, and closed-end funds.
+    aliases:
+      - ICA
+      - 40 Act
+      - Investment Company Act of 1940
+    related_regulations:
+      - Investment Advisers Act
+      - SEC Rule 17a-5
+
+  - term: Bank Secrecy Act
+    category: regulation
+    description: >
+      U.S. federal law requiring financial institutions to assist government
+      agencies in detecting and preventing money laundering and financial crime.
+    aliases:
+      - BSA
+      - Bank Secrecy Act of 1970
+      - FinCEN BSA
+    related_regulations:
+      - USA PATRIOT Act
+      - Dodd-Frank
+
+  - term: USA PATRIOT Act
+    category: regulation
+    description: >
+      Post-9/11 law that expanded AML requirements for financial institutions,
+      mandating enhanced customer due diligence and suspicious activity monitoring.
+    aliases:
+      - PATRIOT Act
+      - Uniting and Strengthening America by Providing Appropriate Tools Act
+    related_regulations:
+      - Bank Secrecy Act
+      - FinCEN CDD Rule
+
+  - term: Dodd-Frank
+    category: regulation
+    description: >
+      Dodd-Frank Wall Street Reform and Consumer Protection Act (2010) — sweeping
+      financial reform legislation covering OTC derivatives clearing, systemic
+      risk oversight, and consumer protection.
+    aliases:
+      - Dodd-Frank Act
+      - DFA
+      - Dodd-Frank Wall Street Reform Act
+    related_regulations:
+      - SEC Rule 15c3-3
+      - Bank Secrecy Act
+
+  - term: MiFID II
+    category: regulation
+    description: >
+      Markets in Financial Instruments Directive II — EU regulation governing
+      investment services, trading venues, and investor protection across
+      European financial markets.
+    aliases:
+      - Markets in Financial Instruments Directive II
+      - MiFID 2
+    related_regulations:
+      - MiFIR
+
+  - term: FCA CASS
+    category: regulation
+    description: >
+      UK Financial Conduct Authority Client Assets Sourcebook — rules requiring
+      FCA-authorised firms to safeguard and segregate client money and assets.
+    aliases:
+      - CASS
+      - Client Assets Sourcebook
+      - FCA client money rules
+    related_regulations:
+      - MiFID II
+
+  - term: MAS SFA
+    category: regulation
+    description: >
+      Monetary Authority of Singapore Securities and Futures Act — Singapore's
+      primary legislation governing securities markets, intermediaries, and
+      collective investment schemes.
+    aliases:
+      - Securities and Futures Act
+      - SFA
+      - MAS securities law
+    related_regulations:
+      - MAS CMS licensing requirements
+
+  - term: HKMA SFC
+    category: regulation
+    description: >
+      Hong Kong Securities and Futures Commission regulatory framework
+      administered in coordination with HKMA for licensed financial intermediaries.
+    aliases:
+      - SFC regulations
+      - Hong Kong SFC
+      - HKMA prudential requirements
+    related_regulations:
+      - SFO
+      - HKMA guidelines
+
+  # ── Artifacts ──────────────────────────────────────────────────────────────
+
+  - term: trade confirmation
+    category: artifact
+    description: >
+      Written or electronic document sent to a client after trade execution
+      confirming the security, quantity, price, and settlement date of a transaction.
+    aliases:
+      - confirm
+      - trade confirm
+      - execution confirmation
+    related_regulations:
+      - SEC Rule 10b-10
+      - MiFID II
+
+  - term: custody statement
+    category: artifact
+    description: >
+      Periodic account statement from a custodian showing asset holdings, cash
+      balances, transaction history, and accrued income.
+    aliases:
+      - account statement
+      - custody account statement
+      - position statement
+    related_regulations:
+      - SEC Rule 15c3-3
+      - Investment Advisers Act
+
+  - term: NAV report
+    category: artifact
+    description: >
+      Daily or periodic report produced by fund accounting showing the
+      calculated net asset value per share and total fund AUM.
+    aliases:
+      - NAV summary
+      - fund pricing report
+      - daily NAV report
+    related_regulations:
+      - Investment Company Act
+      - SEC Rule 17a-5
+
+  - term: holdings report
+    category: artifact
+    description: >
+      Report listing the securities, quantities, market values, and weights
+      held in a portfolio or across a set of client accounts at a point in time.
+    aliases:
+      - position report
+      - portfolio holdings
+      - holdings snapshot
+    related_regulations:
+      - Investment Advisers Act
+      - 13F filing
+
+  - term: performance attribution
+    category: artifact
+    description: >
+      Analytical report decomposing portfolio return relative to a benchmark
+      into allocation, selection, and interaction effects.
+    aliases:
+      - attribution report
+      - performance report
+      - Brinson attribution
+    related_regulations:
+      - Investment Advisers Act
+      - GIPS standards
+
+  - term: compliance certificate
+    category: artifact
+    description: >
+      Periodic attestation from a portfolio manager or compliance officer
+      confirming that accounts are managed in accordance with investment
+      guidelines and regulatory requirements.
+    aliases:
+      - compliance attestation
+      - IPS compliance certificate
+      - compliance sign-off
+    related_regulations:
+      - Investment Advisers Act
+      - Investment Company Act
+
+  - term: SAR filing
+    category: artifact
+    description: >
+      Suspicious Activity Report — a confidential filing submitted to FinCEN
+      when a financial institution identifies potential money laundering or
+      other financial crime.
+    aliases:
+      - Suspicious Activity Report
+      - SAR
+      - FinCEN SAR
+    related_regulations:
+      - Bank Secrecy Act
+      - USA PATRIOT Act
+
+  - term: CTR filing
+    category: artifact
+    description: >
+      Currency Transaction Report — a mandatory report filed with FinCEN for
+      cash transactions exceeding $10,000 in a single business day.
+    aliases:
+      - Currency Transaction Report
+      - CTR
+      - FinCEN CTR
+    related_regulations:
+      - Bank Secrecy Act
+
+  - term: Form ADV
+    category: artifact
+    description: >
+      Uniform application for investment adviser registration, filed with the
+      SEC or state securities regulators, disclosing business practices, fees,
+      conflicts of interest, and disciplinary history.
+    aliases:
+      - ADV
+      - Part 1 ADV
+      - Part 2 ADV brochure
+    related_regulations:
+      - Investment Advisers Act
+
+  - term: Form CRS
+    category: artifact
+    description: >
+      Customer Relationship Summary — a brief disclosure document that RIAs and
+      broker-dealers must deliver to retail investors summarizing services,
+      fees, conflicts, and legal standards.
+    aliases:
+      - CRS
+      - relationship summary
+      - Form CRS disclosure
+    related_regulations:
+      - Reg BI
+      - Investment Advisers Act
+
+  - term: 13F filing
+    category: artifact
+    description: >
+      Quarterly SEC filing required from institutional investment managers
+      with more than $100 million in qualifying assets, disclosing long equity
+      holdings as of quarter-end.
+    aliases:
+      - Form 13F
+      - 13F report
+      - institutional holdings report
+    related_regulations:
+      - Investment Company Act
+      - SEC Rule 13f-1
+
+  - term: proxy statement
+    category: artifact
+    description: >
+      Document sent to shareholders before an annual or special meeting
+      describing agenda items, director nominees, and shareholder resolutions
+      on which votes are solicited.
+    aliases:
+      - DEF 14A
+      - proxy circular
+      - shareholder proxy statement
+    related_regulations:
+      - SEC Rule 14a
+      - Investment Advisers Act
+
+  - term: corporate action notice
+    category: artifact
+    description: >
+      Notification from an issuer, depository, or custodian announcing a
+      mandatory or voluntary corporate event and the required response from
+      beneficial holders.
+    aliases:
+      - CA notice
+      - corporate event notice
+      - DTC announcement
+    related_regulations:
+      - SEC Rule 17a-5
+      - DTC rules
+
+  - term: margin call notice
+    category: artifact
+    description: >
+      Formal notice issued to a client when their margin account equity falls
+      below required maintenance levels, demanding deposit of additional funds
+      or securities.
+    aliases:
+      - margin call
+      - margin deficiency notice
+      - Reg T call
+    related_regulations:
+      - FINRA Rule 4210
+      - Regulation T
+
+  - term: settlement instruction
+    category: artifact
+    description: >
+      Message sent to a custodian or depository specifying the details
+      required to settle a securities transaction, including counterparty,
+      ISIN, quantity, price, and settlement date.
+    aliases:
+      - settlement message
+      - SSI
+      - standing settlement instruction
+      - SWIFT settlement instruction
+    related_regulations:
+      - SEC Rule 15c6-1
+      - MiFID II

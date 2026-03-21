@@ -177,7 +177,7 @@ async def update_annotation(
     return annotation
 
 
-@router.delete("/{annotation_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{annotation_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def delete_annotation(
     annotation_id: UUID,
     session: AsyncSession = Depends(get_session),

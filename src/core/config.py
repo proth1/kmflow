@@ -202,7 +202,7 @@ class Settings(BaseSettings):
 
     @field_validator("cors_origins", mode="before")
     @classmethod
-    def parse_cors_origins(cls, v: Any) -> list[str]:
+    def parse_cors_origins(cls, v: Any) -> list[str]:  # Any because: Pydantic before-validator receives raw env value
         """Parse CORS origins from JSON string or list."""
         if isinstance(v, str):
             try:

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from kmflow_agent.buffer.encryption import decrypt_payload, encrypt_payload
 
 

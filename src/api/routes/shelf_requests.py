@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import date
 from typing import Any
 from uuid import UUID
 
@@ -96,7 +97,7 @@ class ShelfRequestResponse(BaseModel):
     title: str
     description: str | None = None
     status: ShelfRequestStatus
-    due_date: Any | None = None
+    due_date: date | None = None
     items: list[ShelfRequestItemResponse] = Field(default_factory=list)
     fulfillment_percentage: float = 0.0
 
@@ -383,7 +384,7 @@ async def update_shelf_request(
     return await _get_request_or_404(session, request_id)
 
 
-@router.post("/{request_id}/intake", response_model=IntakeResponse)
+@router.post("/{request_id}/intake", response_model=IntakeResponse, status_code=status.HTTP_200_OK)
 async def submit_evidence_intake(
     request_id: UUID,
     payload: IntakeRequest,

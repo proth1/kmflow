@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from kmflow_agent.vce.redactor import REDACTION_MARKER, redact_pii
 
 

@@ -264,7 +264,7 @@ async def list_volume_forecasts(
 # ── Cost Computation Routes ──────────────────────────────────────────
 
 
-@router.post("/engagements/{engagement_id}/cost-modeling/staffing", response_model=dict)
+@router.post("/engagements/{engagement_id}/cost-modeling/staffing", response_model=dict, status_code=status.HTTP_200_OK)
 async def compute_staffing(
     engagement_id: UUID,
     payload: StaffingCostRequest,
@@ -285,7 +285,7 @@ async def compute_staffing(
     return compute_staffing_cost(role_rates, [t.model_dump() for t in payload.task_assignments])
 
 
-@router.post("/engagements/{engagement_id}/cost-modeling/volume", response_model=dict)
+@router.post("/engagements/{engagement_id}/cost-modeling/volume", response_model=dict, status_code=status.HTTP_200_OK)
 async def compute_volume(
     engagement_id: UUID,
     payload: VolumeCostRequest,
@@ -298,7 +298,9 @@ async def compute_volume(
     return compute_volume_cost(forecast.baseline_volume, forecast.variance_pct, payload.per_transaction_cost)
 
 
-@router.post("/engagements/{engagement_id}/cost-modeling/quarterly", response_model=dict)
+@router.post(
+    "/engagements/{engagement_id}/cost-modeling/quarterly", response_model=dict, status_code=status.HTTP_200_OK
+)
 async def compute_quarterly(
     engagement_id: UUID,
     payload: QuarterlyProjectionRequest,
@@ -318,7 +320,9 @@ async def compute_quarterly(
     )
 
 
-@router.post("/engagements/{engagement_id}/cost-modeling/fte-savings", response_model=dict)
+@router.post(
+    "/engagements/{engagement_id}/cost-modeling/fte-savings", response_model=dict, status_code=status.HTTP_200_OK
+)
 async def compute_fte(
     engagement_id: UUID,
     payload: FteSavingsRequest,

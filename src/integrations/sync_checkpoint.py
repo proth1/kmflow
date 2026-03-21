@@ -206,7 +206,7 @@ def _now_iso() -> str:
 
 
 async def run_incremental_sync_async(
-    connector: Any,
+    connector: Any,  # Any because: accepts any connector implementing sync_incremental()
     connector_type: str,
     engagement_id: str,
     checkpoint_store: SyncCheckpointStore,

@@ -202,7 +202,7 @@ async def list_reference_models(
     }
 
 
-@router.post("/check", response_model=ConformanceCheckResponse)
+@router.post("/check", response_model=ConformanceCheckResponse, status_code=status.HTTP_200_OK)
 async def run_conformance_check(
     payload: ConformanceCheckRequest,
     user: User = Depends(require_permission("conformance:check")),

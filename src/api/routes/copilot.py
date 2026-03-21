@@ -36,7 +36,7 @@ router = APIRouter(prefix="/api/v1/copilot", tags=["copilot"])
 # -- Routes -------------------------------------------------------------------
 
 
-@router.post("/chat", response_model=ChatResponse)
+@router.post("/chat", response_model=ChatResponse, status_code=status.HTTP_200_OK)
 async def copilot_chat(
     payload: ChatRequest,
     request: Request,
@@ -158,7 +158,7 @@ async def get_chat_history(
     }
 
 
-@router.post("/chat/stream")
+@router.post("/chat/stream", response_model=None, status_code=status.HTTP_200_OK)
 async def copilot_chat_stream(
     payload: ChatRequest,
     request: Request,

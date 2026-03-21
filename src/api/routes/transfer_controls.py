@@ -122,7 +122,7 @@ class TransferLogResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/evaluate", response_model=EvaluateTransferResponse)
+@router.post("/evaluate", response_model=EvaluateTransferResponse, status_code=status.HTTP_200_OK)
 async def evaluate_transfer(
     body: EvaluateTransferRequest,
     session: AsyncSession = Depends(get_session),
@@ -162,7 +162,7 @@ async def create_tia(
     return tia
 
 
-@router.post("/tia/{tia_id}/approve", response_model=TIAResponse)
+@router.post("/tia/{tia_id}/approve", response_model=TIAResponse, status_code=status.HTTP_200_OK)
 async def approve_tia(
     tia_id: UUID,
     body: ApproveTIARequest,

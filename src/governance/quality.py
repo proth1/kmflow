@@ -8,9 +8,9 @@ which thresholds passed or failed.
 from __future__ import annotations
 
 import logging
+import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -52,7 +52,7 @@ class SLAResult:
     passing: bool
     violations: list[SLAViolation] = field(default_factory=list)
     checked_at: datetime = field(default_factory=lambda: datetime.now(UTC))
-    entry_id: Any = None
+    entry_id: uuid.UUID | None = None
     evidence_count: int = 0
 
 

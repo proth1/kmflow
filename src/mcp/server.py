@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from src.mcp.auth import validate_api_key
+from src.mcp.auth import check_mcp_rate_limit, validate_api_key
 from src.mcp.schemas import MCPServerInfo, MCPToolCall, MCPToolResult
 from src.mcp.tools import TOOL_DEFINITIONS
 
@@ -34,9 +34,18 @@ async def _verify_mcp_auth(request: Request) -> dict[str, Any]:
             detail="Missing or invalid Authorization header",
         )
     api_key = auth[7:]
+    redis_client = getattr(request.app.state, "redis_client", None)
+
+    # Enforce per-key request rate limit before hitting the database
+    if redis_client is not None and not await check_mcp_rate_limit(redis_client, api_key):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="MCP rate limit exceeded",
+        )
+
     session_factory = request.app.state.db_session_factory
     async with session_factory() as session:
-        client = await validate_api_key(session, api_key)
+        client = await validate_api_key(session, api_key, redis_client=redis_client)
     if not client:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

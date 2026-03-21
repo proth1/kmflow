@@ -38,7 +38,7 @@ class AlternativeSuggesterService:
 
     async def generate_suggestions(
         self,
-        scenario: Any,
+        scenario: Any,  # Any because: SimulationScenario ORM object; import avoided to prevent circular deps
         user_id: UUID,
         context_notes: str | None = None,
     ) -> list[dict[str, Any]]:
@@ -63,7 +63,9 @@ class AlternativeSuggesterService:
 
         return suggestions
 
-    def build_prompt(self, scenario: Any, context_notes: str | None) -> str:
+    def build_prompt(
+        self, scenario: Any, context_notes: str | None
+    ) -> str:  # Any because: SimulationScenario ORM; see generate_suggestions
         """Public interface for prompt building. Used by suggestion_engine for audit logging."""
         return self._build_prompt(scenario, context_notes)
 
@@ -75,11 +77,15 @@ class AlternativeSuggesterService:
         """Public interface for response parsing. Used by suggestion_engine for audit logging."""
         return self._parse_response(llm_response, prompt)
 
-    def fallback_suggestions(self, scenario: Any, prompt: str) -> list[dict[str, Any]]:
+    def fallback_suggestions(
+        self, scenario: Any, prompt: str
+    ) -> list[dict[str, Any]]:  # Any because: SimulationScenario ORM; see generate_suggestions
         """Public interface for fallback suggestions. Used by suggestion_engine for audit logging."""
         return self._fallback_suggestions(scenario, prompt)
 
-    def _build_prompt(self, scenario: Any, context_notes: str | None) -> str:
+    def _build_prompt(
+        self, scenario: Any, context_notes: str | None
+    ) -> str:  # Any because: SimulationScenario ORM; see generate_suggestions
         """Build the LLM prompt from scenario context.
 
         User-controlled fields are sanitised and wrapped in XML delimiters

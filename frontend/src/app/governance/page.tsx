@@ -39,6 +39,7 @@ interface GovernanceData {
 export default function GovernancePage() {
   const [engagementId, setEngagementId] = useState("");
   const [policies, setPolicies] = useState<PolicyData | null>(null);
+  const [secondaryError, setSecondaryError] = useState<string | null>(null);
 
   const fetchGovernanceData = useCallback(
     async (id: string, signal: AbortSignal) => {
@@ -66,7 +67,7 @@ export default function GovernancePage() {
         if (mounted) setPolicies(data);
       })
       .catch((err) => {
-        if (mounted) console.error("Failed to load policies:", err);
+        if (mounted) setSecondaryError(err instanceof Error ? err.message : "Failed to load policies");
       });
     return () => {
       mounted = false;
@@ -90,6 +91,11 @@ export default function GovernancePage() {
       loading={loading}
       loadingText="Loading governance data..."
     >
+      {secondaryError && (
+        <div className="mb-4 rounded-md bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
+          Warning: {secondaryError}
+        </div>
+      )}
       {health && (
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <Card>

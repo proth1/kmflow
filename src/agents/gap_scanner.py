@@ -29,6 +29,126 @@ _MIN_NODES_FOR_COVERAGE = 2
 _MIN_RELATIONSHIPS_FOR_DENSITY = 3
 
 
+async def _fetch_graph_topology(
+    neo4j_driver: AsyncDriver,
+    engagement_id: str,
+) -> tuple[dict[str, int], dict[str, int], list[dict[str, str]], list[dict[str, str]]]:
+    """Query Neo4j for nodes, relationships, orphans, and unsupported elements.
+
+    Returns:
+        (nodes_by_label, rels_by_type, orphaned_nodes, unsupported_elements)
+    """
+    async with neo4j_driver.session() as session:
+        node_result = await session.run(
+            "MATCH (n {engagement_id: $eid}) RETURN labels(n)[0] AS label, count(n) AS count",
+            eid=engagement_id,
+        )
+        nodes_by_label: dict[str, int] = {r["label"]: r["count"] async for r in node_result}
+
+        rel_result = await session.run(
+            "MATCH (a {engagement_id: $eid})-[r]->(b) RETURN type(r) AS rel_type, count(r) AS count",
+            eid=engagement_id,
+        )
+        rels_by_type: dict[str, int] = {r["rel_type"]: r["count"] async for r in rel_result}
+
+        orphan_result = await session.run(
+            "MATCH (n {engagement_id: $eid}) WHERE NOT (n)-[]-() RETURN n.name AS name, labels(n)[0] AS label, n.id AS id",
+            eid=engagement_id,
+        )
+        orphaned_nodes: list[dict[str, str]] = [
+            {"id": r["id"], "name": r["name"] or "Unknown", "label": r["label"]} async for r in orphan_result
+        ]
+
+        unsupported_result = await session.run(
+            """
+            MATCH (n {engagement_id: $eid})
+            WHERE labels(n)[0] IN ['Process', 'Activity']
+              AND NOT (n)-[:SUPPORTED_BY]->()
+              AND NOT ()-[:SUPPORTED_BY]->(n)
+            RETURN n.name AS name, labels(n)[0] AS label, n.id AS id
+            """,
+            eid=engagement_id,
+        )
+        unsupported: list[dict[str, str]] = [
+            {"id": r["id"], "name": r["name"] or "Unknown", "label": r["label"]} async for r in unsupported_result
+        ]
+
+    return nodes_by_label, rels_by_type, orphaned_nodes, unsupported
+
+
+def _compute_dimension_scores(nodes_by_label: dict[str, int]) -> dict[str, float]:
+    """Compute coverage score per TOM dimension from node counts."""
+    scores: dict[str, float] = {}
+    for dimension, labels in _DIMENSION_NODE_LABELS.items():
+        total = sum(nodes_by_label.get(label, 0) for label in labels)
+        if total >= _MIN_NODES_FOR_COVERAGE:
+            scores[dimension] = round(min(1.0, total / (_MIN_NODES_FOR_COVERAGE * 3)), 2)
+        else:
+            scores[dimension] = round(total / max(_MIN_NODES_FOR_COVERAGE, 1), 2)
+    return scores
+
+
+def _build_gap_list(
+    dimension_scores: dict[str, float],
+    orphaned_nodes: list[dict[str, str]],
+    unsupported: list[dict[str, str]],
+    rels_by_type: dict[str, int],
+    coverage_threshold: float,
+) -> list[dict[str, Any]]:
+    """Assemble the gap list from all gap sources."""
+    gaps: list[dict[str, Any]] = []
+
+    for dimension, score in dimension_scores.items():
+        if score < coverage_threshold:
+            gaps.append(
+                {
+                    "gap_type": "dimension_coverage",
+                    "severity": "high" if score < 0.3 else "medium",
+                    "dimension": dimension,
+                    "coverage_score": score,
+                    "description": f"Dimension '{dimension}' has low graph coverage (score: {score:.2f})",
+                    "recommendation": f"Add more evidence related to {dimension.replace('_', ' ')}",
+                }
+            )
+
+    for node in orphaned_nodes:
+        gaps.append(
+            {
+                "gap_type": "orphaned_node",
+                "severity": "medium",
+                "element_name": node["name"],
+                "element_id": node["id"],
+                "description": f"{node['label']} '{node['name']}' has no relationships",
+                "recommendation": f"Add evidence linking '{node['name']}' to other elements",
+            }
+        )
+
+    for node in unsupported:
+        gaps.append(
+            {
+                "gap_type": "unsupported_process",
+                "severity": "high",
+                "element_name": node["name"],
+                "element_id": node["id"],
+                "description": f"{node['label']} '{node['name']}' lacks evidence support",
+                "recommendation": f"Collect evidence supporting '{node['name']}'",
+            }
+        )
+
+    for bridge_type in {"SUPPORTED_BY", "GOVERNED_BY", "IMPLEMENTS", "DEVIATES_FROM"} - set(rels_by_type.keys()):
+        gaps.append(
+            {
+                "gap_type": "missing_bridge_type",
+                "severity": "low",
+                "element_name": bridge_type,
+                "description": f"No {bridge_type} relationships exist in the graph",
+                "recommendation": f"Run semantic bridges to create {bridge_type} relationships",
+            }
+        )
+
+    return gaps
+
+
 async def scan_evidence_gaps_graph(
     engagement_id: str,
     neo4j_driver: AsyncDriver,
@@ -50,142 +170,9 @@ async def scan_evidence_gaps_graph(
     Returns:
         Dict with dimension_scores, gaps, orphaned_nodes, and summary.
     """
-    async with neo4j_driver.session() as session:
-        # Count nodes by label
-        node_result = await session.run(
-            """
-            MATCH (n {engagement_id: $engagement_id})
-            RETURN labels(n)[0] AS label, count(n) AS count
-            """,
-            engagement_id=engagement_id,
-        )
-        nodes_by_label: dict[str, int] = {}
-        async for record in node_result:
-            nodes_by_label[record["label"]] = record["count"]
-
-        # Count relationships by type
-        rel_result = await session.run(
-            """
-            MATCH (a {engagement_id: $engagement_id})-[r]->(b)
-            RETURN type(r) AS rel_type, count(r) AS count
-            """,
-            engagement_id=engagement_id,
-        )
-        rels_by_type: dict[str, int] = {}
-        async for record in rel_result:
-            rels_by_type[record["rel_type"]] = record["count"]
-
-        # Find orphaned nodes (no relationships)
-        orphan_result = await session.run(
-            """
-            MATCH (n {engagement_id: $engagement_id})
-            WHERE NOT (n)-[]-()
-            RETURN n.name AS name, labels(n)[0] AS label, n.id AS id
-            """,
-            engagement_id=engagement_id,
-        )
-        orphaned_nodes: list[dict[str, str]] = []
-        async for record in orphan_result:
-            orphaned_nodes.append(
-                {
-                    "id": record["id"],
-                    "name": record["name"] or "Unknown",
-                    "label": record["label"],
-                }
-            )
-
-        # Check for Evidence nodes without SUPPORTED_BY
-        unsupported_result = await session.run(
-            """
-            MATCH (n {engagement_id: $engagement_id})
-            WHERE labels(n)[0] IN ['Process', 'Activity']
-              AND NOT (n)-[:SUPPORTED_BY]->()
-              AND NOT ()-[:SUPPORTED_BY]->(n)
-            RETURN n.name AS name, labels(n)[0] AS label, n.id AS id
-            """,
-            engagement_id=engagement_id,
-        )
-        unsupported: list[dict[str, str]] = []
-        async for record in unsupported_result:
-            unsupported.append(
-                {
-                    "id": record["id"],
-                    "name": record["name"] or "Unknown",
-                    "label": record["label"],
-                }
-            )
-
-    # Calculate dimension coverage scores
-    dimension_scores: dict[str, float] = {}
-    for dimension, labels in _DIMENSION_NODE_LABELS.items():
-        total_nodes = sum(nodes_by_label.get(label, 0) for label in labels)
-        if total_nodes >= _MIN_NODES_FOR_COVERAGE:
-            # Score based on node count and relationship density
-            node_score = min(1.0, total_nodes / (_MIN_NODES_FOR_COVERAGE * 3))
-            dimension_scores[dimension] = round(node_score, 2)
-        else:
-            dimension_scores[dimension] = round(total_nodes / max(_MIN_NODES_FOR_COVERAGE, 1), 2)
-
-    # Build gaps list
-    gaps: list[dict[str, Any]] = []
-
-    # Dimension coverage gaps
-    for dimension, score in dimension_scores.items():
-        if score < coverage_threshold:
-            severity = "high" if score < 0.3 else "medium"
-            gaps.append(
-                {
-                    "gap_type": "dimension_coverage",
-                    "severity": severity,
-                    "dimension": dimension,
-                    "coverage_score": score,
-                    "description": f"Dimension '{dimension}' has low graph coverage (score: {score:.2f})",
-                    "recommendation": f"Add more evidence related to {dimension.replace('_', ' ')}",
-                }
-            )
-
-    # Orphaned node gaps
-    for node in orphaned_nodes:
-        gaps.append(
-            {
-                "gap_type": "orphaned_node",
-                "severity": "medium",
-                "element_name": node["name"],
-                "element_id": node["id"],
-                "description": f"{node['label']} '{node['name']}' has no relationships",
-                "recommendation": f"Add evidence linking '{node['name']}' to other elements",
-            }
-        )
-
-    # Unsupported process elements
-    for node in unsupported:
-        gaps.append(
-            {
-                "gap_type": "unsupported_process",
-                "severity": "high",
-                "element_name": node["name"],
-                "element_id": node["id"],
-                "description": f"{node['label']} '{node['name']}' lacks evidence support",
-                "recommendation": f"Collect evidence supporting '{node['name']}'",
-            }
-        )
-
-    # Missing bridge relationship types
-    expected_bridge_types = {"SUPPORTED_BY", "GOVERNED_BY", "IMPLEMENTS", "DEVIATES_FROM"}
-    missing_bridges = expected_bridge_types - set(rels_by_type.keys())
-    for bridge_type in missing_bridges:
-        gaps.append(
-            {
-                "gap_type": "missing_bridge_type",
-                "severity": "low",
-                "element_name": bridge_type,
-                "description": f"No {bridge_type} relationships exist in the graph",
-                "recommendation": f"Run semantic bridges to create {bridge_type} relationships",
-            }
-        )
-
-    total_nodes = sum(nodes_by_label.values())
-    total_rels = sum(rels_by_type.values())
+    nodes_by_label, rels_by_type, orphaned_nodes, unsupported = await _fetch_graph_topology(neo4j_driver, engagement_id)
+    dimension_scores = _compute_dimension_scores(nodes_by_label)
+    gaps = _build_gap_list(dimension_scores, orphaned_nodes, unsupported, rels_by_type, coverage_threshold)
 
     return {
         "engagement_id": engagement_id,
@@ -193,8 +180,8 @@ async def scan_evidence_gaps_graph(
         "gaps": gaps,
         "orphaned_nodes": orphaned_nodes,
         "summary": {
-            "total_nodes": total_nodes,
-            "total_relationships": total_rels,
+            "total_nodes": sum(nodes_by_label.values()),
+            "total_relationships": sum(rels_by_type.values()),
             "nodes_by_label": nodes_by_label,
             "relationships_by_type": rels_by_type,
             "gap_count": len(gaps),

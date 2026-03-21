@@ -39,7 +39,9 @@ _IMMUTABLE_FIELDS = frozenset(
 
 
 @event.listens_for(Session, "before_flush")
-def _enforce_immutability(session: Session, flush_context: Any, instances: Any) -> None:
+def _enforce_immutability(
+    session: Session, flush_context: Any, instances: Any
+) -> None:  # Any because: SQLAlchemy internal UOWTransaction / InstanceState; no public type
     """Prevent modification of immutable LLMAuditLog fields."""
     for obj in session.dirty:
         if not isinstance(obj, LLMAuditLog):

@@ -138,7 +138,7 @@ async def list_raci_cells(
     }
 
 
-@router.post("/derive", response_model=RACIDeriveResponse)
+@router.post("/derive", response_model=RACIDeriveResponse, status_code=status.HTTP_200_OK)
 async def derive_raci_matrix(
     request: Request,
     engagement_id: UUID = Query(..., description="Engagement to derive RACI matrix for"),
@@ -264,7 +264,7 @@ async def validate_raci_cell(
     return cell
 
 
-@router.get("/export")
+@router.get("/export", response_model=None)
 async def export_raci_csv(
     engagement_id: UUID = Query(..., description="Engagement to export RACI matrix for"),
     session: AsyncSession = Depends(get_session),

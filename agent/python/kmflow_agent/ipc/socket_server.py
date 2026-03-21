@@ -24,7 +24,7 @@ import json
 import logging
 import os
 import stat
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from kmflow_agent.buffer.manager import BufferManager
@@ -78,9 +78,7 @@ class SocketServer:
         if os.path.exists(self.socket_path):
             os.unlink(self.socket_path)
 
-        server = await asyncio.start_unix_server(
-            self._handle_client, path=self.socket_path
-        )
+        server = await asyncio.start_unix_server(self._handle_client, path=self.socket_path)
 
         # Restrict socket file permissions to owner-only
         os.chmod(self.socket_path, stat.S_IRUSR | stat.S_IWUSR)  # 0o600
@@ -204,9 +202,9 @@ class SocketServer:
         # Build VCERecord — contains only metadata, no pixel data
         ts_str = event_data.get("timestamp", "")
         try:
-            ts = datetime.fromisoformat(ts_str) if ts_str else datetime.now(timezone.utc)
+            ts = datetime.fromisoformat(ts_str) if ts_str else datetime.now(UTC)
         except ValueError:
-            ts = datetime.now(timezone.utc)
+            ts = datetime.now(UTC)
 
         record = VCERecord(
             timestamp=ts,

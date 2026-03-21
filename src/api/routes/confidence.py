@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, Field
 
 from src.core.auth import get_current_user
@@ -59,7 +59,7 @@ class BatchConfidenceResponse(BaseModel):
 # -- Endpoints ---------------------------------------------------------------
 
 
-@router.post("/compute", response_model=ConfidenceResponse)
+@router.post("/compute", response_model=ConfidenceResponse, status_code=status.HTTP_200_OK)
 async def compute_confidence_endpoint(
     body: ConfidenceRequest,
     user: User = Depends(get_current_user),
@@ -104,7 +104,7 @@ async def compute_confidence_endpoint(
     }
 
 
-@router.post("/compute/batch", response_model=BatchConfidenceResponse)
+@router.post("/compute/batch", response_model=BatchConfidenceResponse, status_code=status.HTTP_200_OK)
 async def compute_confidence_batch_endpoint(
     body: BatchConfidenceRequest,
     user: User = Depends(get_current_user),

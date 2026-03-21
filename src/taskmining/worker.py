@@ -40,16 +40,12 @@ async def process_task(task_data: dict[str, Any]) -> dict[str, Any]:
     task_type = task_data.get("task_type", "unknown")
     logger.debug("Processing task mining task: type=%s", task_type)
 
-    # TODO(Epic #206, Stories #207/#208/#209): Wire up aggregation engine.
+    # DEFERRED: tracked in KMFLOW-206 (aggregation engine wiring)
     # SessionAggregator -> ActionClassifier -> EvidenceMaterializer
-    # Stubs below are Phase 1 placeholders — they accept messages without
-    # performing actual work so the worker loop doesn't reject them.
     if task_type == "aggregate":
-        # TODO(Epic #206, Stories #207/#208): Wire up SessionAggregator -> ActionClassifier
-        raise NotImplementedError("Task type 'aggregate' is not yet implemented (see Epic #206, Story #207)")
+        raise NotImplementedError("Task type 'aggregate' is not yet implemented (KMFLOW-206/207)")
     if task_type == "materialize":
-        # TODO(Epic #206, Story #209): Wire up EvidenceMaterializer
-        raise NotImplementedError("Task type 'materialize' is not yet implemented (see Epic #206, Story #209)")
+        raise NotImplementedError("Task type 'materialize' is not yet implemented (KMFLOW-206/209)")
     if task_type == "assemble_switching":
         return await _handle_assemble_switching(task_data)
     raise NotImplementedError(f"Unknown task type: {task_type!r}")

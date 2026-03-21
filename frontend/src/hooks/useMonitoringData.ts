@@ -91,11 +91,11 @@ const extractIdentity = <T,>(d: T) => d;
 const extractItems = <T,>(d: { items: T }) => d.items;
 
 export function useMonitoringStats(engagementId: string) {
-  const { data: stats, loading, error, refresh } = useMonitoringFetch<MonitoringStats>(
+  const { data: stats, loading, error, refresh } = useMonitoringFetch<MonitoringStats | null>(
     `/api/v1/monitoring/stats/${engagementId}`,
     engagementId,
-    extractIdentity as (data: MonitoringStats) => MonitoringStats,
-    null as unknown as MonitoringStats,
+    extractIdentity as (data: MonitoringStats | null) => MonitoringStats | null,
+    null,
   );
   return { stats, loading, error, refresh };
 }

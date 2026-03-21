@@ -5,15 +5,16 @@ Provides DB-backed API key verification for MCP tool calls.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import hmac
 import logging
 import secrets
-import time
 import uuid
 from datetime import UTC, datetime
 from typing import Any
 
+import redis.asyncio as _aioredis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,11 +23,10 @@ from src.mcp.pii import mask_pii
 
 logger = logging.getLogger(__name__)
 
-# Per-key-id rate limiting for failed validation attempts.
-# key_id -> (fail_count, window_start_epoch)
-_FAILED_ATTEMPTS: dict[str, tuple[int, float]] = {}
 _MAX_FAILED_ATTEMPTS = 5
 _LOCKOUT_WINDOW_SECONDS = 300  # 5 minutes
+_MCP_RATE_LIMIT_REQUESTS = 100
+_MCP_RATE_LIMIT_WINDOW = 60  # seconds
 
 
 async def generate_api_key(
@@ -63,12 +63,52 @@ async def generate_api_key(
     return {"key_id": key_id, "api_key": f"{key_id}.{raw_key}"}
 
 
-async def validate_api_key(db: AsyncSession, api_key: str) -> dict[str, Any] | None:
+async def check_mcp_rate_limit(
+    redis_client: Any,
+    api_key: str,
+    limit: int = _MCP_RATE_LIMIT_REQUESTS,
+    window: int = _MCP_RATE_LIMIT_WINDOW,
+) -> bool:
+    """Check per-API-key request rate limit using Redis sliding window.
+
+    Args:
+        redis_client: An async Redis client (from app.state.redis_client).
+        api_key: The API key identifier to rate-limit.
+        limit: Maximum requests allowed per window.
+        window: Window size in seconds.
+
+    Returns:
+        True if the request is within the limit, False if rate limit exceeded.
+        Returns True (allow) if Redis is unavailable — rate limiting is
+        best-effort and must not block authenticated requests.
+    """
+    key = f"mcp_ratelimit:{api_key}"
+    try:
+        count = await redis_client.incr(key)
+        if count == 1:
+            await redis_client.expire(key, window)
+        if count > limit:
+            logger.warning("MCP rate limit exceeded for key %s (%d/%d)", api_key, count, limit)
+            return False
+        return True
+    except (ConnectionError, OSError, _aioredis.RedisError) as exc:
+        logger.warning("Redis unavailable for MCP rate limit check — allowing request: %s", exc)
+        return True
+
+
+async def validate_api_key(
+    db: AsyncSession,
+    api_key: str,
+    redis_client: Any | None = None,
+) -> dict[str, Any] | None:
     """Validate an API key and return client info.
 
     Args:
         db: Database session.
         api_key: The full API key (key_id.secret).
+        redis_client: Optional Redis client for rate limiting failed attempts.
+            When provided, lockout state is stored in Redis (multi-worker safe).
+            When absent, failed-attempt tracking is skipped.
 
     Returns:
         Dict with key_id, client_name, user_id if valid, None otherwise.
@@ -79,16 +119,16 @@ async def validate_api_key(db: AsyncSession, api_key: str) -> dict[str, Any] | N
 
     key_id, raw_key = api_key.split(".", 1)
 
-    # Per-key-id rate limiting for failed attempts
-    now = time.monotonic()
-    if key_id in _FAILED_ATTEMPTS:
-        fail_count, window_start = _FAILED_ATTEMPTS[key_id]
-        if now - window_start > _LOCKOUT_WINDOW_SECONDS:
-            # Window expired — reset
-            del _FAILED_ATTEMPTS[key_id]
-        elif fail_count >= _MAX_FAILED_ATTEMPTS:
-            logger.warning("API key %s locked out after %d failed attempts", key_id, fail_count)
-            return None
+    # Per-key-id lockout for failed validation attempts (Redis-backed)
+    if redis_client is not None:
+        lockout_key = f"mcp_auth_failures:{key_id}"
+        try:
+            fail_count_raw = await redis_client.get(lockout_key)
+            if fail_count_raw is not None and int(fail_count_raw) >= _MAX_FAILED_ATTEMPTS:
+                logger.warning("API key %s locked out after repeated failed attempts", key_id)
+                return None
+        except (ConnectionError, OSError, _aioredis.RedisError) as exc:
+            logger.warning("Redis unavailable for MCP auth lockout check — skipping: %s", exc)
 
     # Query the database for this key_id
     stmt = select(MCPAPIKey).where(
@@ -100,18 +140,20 @@ async def validate_api_key(db: AsyncSession, api_key: str) -> dict[str, Any] | N
 
     if not key_record:
         logger.warning("API key %s not found or inactive", key_id)
-        _record_failed_attempt(key_id, now)
+        await _record_failed_attempt_redis(redis_client, key_id)
         return None
 
     # Hash the incoming key and compare with stored hash
     incoming_hash = hashlib.sha256(raw_key.encode()).hexdigest()
     if not hmac.compare_digest(incoming_hash, key_record.key_hash):
         logger.warning("API key %s hash mismatch", key_id)
-        _record_failed_attempt(key_id, now)
+        await _record_failed_attempt_redis(redis_client, key_id)
         return None
 
-    # Successful validation — clear any failure record
-    _FAILED_ATTEMPTS.pop(key_id, None)
+    # Successful validation — clear failure counter
+    if redis_client is not None:
+        with contextlib.suppress(ConnectionError, OSError, _aioredis.RedisError):
+            await redis_client.delete(f"mcp_auth_failures:{key_id}")
 
     # Update last_used_at timestamp
     key_record.last_used_at = datetime.now(UTC)
@@ -125,13 +167,17 @@ async def validate_api_key(db: AsyncSession, api_key: str) -> dict[str, Any] | N
     }
 
 
-def _record_failed_attempt(key_id: str, now: float) -> None:
-    """Record a failed validation attempt for rate limiting."""
-    if key_id in _FAILED_ATTEMPTS:
-        count, start = _FAILED_ATTEMPTS[key_id]
-        _FAILED_ATTEMPTS[key_id] = (count + 1, start)
-    else:
-        _FAILED_ATTEMPTS[key_id] = (1, now)
+async def _record_failed_attempt_redis(redis_client: Any | None, key_id: str) -> None:
+    """Increment the Redis-backed failed-attempt counter for a key."""
+    if redis_client is None:
+        return
+    lockout_key = f"mcp_auth_failures:{key_id}"
+    try:
+        count = await redis_client.incr(lockout_key)
+        if count == 1:
+            await redis_client.expire(lockout_key, _LOCKOUT_WINDOW_SECONDS)
+    except (ConnectionError, OSError, _aioredis.RedisError) as exc:
+        logger.warning("Redis unavailable for MCP auth failure recording: %s", exc)
 
 
 async def revoke_api_key(db: AsyncSession, key_id: str) -> bool:

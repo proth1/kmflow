@@ -181,7 +181,9 @@ async def complete_survey_session(
 
 
 @router.post(
-    "/engagements/{engagement_id}/survey-sessions/{session_id}/generate-probes", response_model=ProbeGenerationResponse
+    "/engagements/{engagement_id}/survey-sessions/{session_id}/generate-probes",
+    response_model=ProbeGenerationResponse,
+    status_code=status.HTTP_200_OK,
 )
 async def generate_session_probes(
     engagement_id: UUID,

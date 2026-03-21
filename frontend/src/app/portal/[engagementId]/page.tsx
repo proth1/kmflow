@@ -14,15 +14,21 @@ export default function PortalOverview() {
 
   useEffect(() => {
     if (!engagementId) return;
-    fetchPortalOverview(engagementId)
-      .then((data) => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const data = await fetchPortalOverview(engagementId);
+        if (cancelled) return;
         setOverview(data);
         setLoading(false);
-      })
-      .catch((err: Error) => {
-        setError(err.message || "Failed to load overview");
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Failed to load overview");
         setLoading(false);
-      });
+      }
+    };
+    load();
+    return () => { cancelled = true; };
   }, [engagementId]);
 
   return (

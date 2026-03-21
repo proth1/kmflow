@@ -499,8 +499,8 @@ export default function ConformanceDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 bg-white">
-                      {conformanceResult.deviations.map((deviation, idx) => (
-                        <tr key={idx}>
+                      {conformanceResult.deviations.map((deviation) => (
+                        <tr key={`${deviation.element_name}-${deviation.deviation_type}`}>
                           <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
                             {deviation.element_name}
                           </td>

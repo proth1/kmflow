@@ -6,7 +6,7 @@ activates: entity extraction, knowledge graph building, embedding generation,
 and semantic bridge execution.
 """
 
-# FUTURE(audit-B1-003): Extract storage.py + intelligence.py; keep pipeline as thin orchestrator
+# DEFERRED: tracked in KMFLOW-659 (audit-B1-003): Extract storage.py + intelligence.py; keep pipeline as thin orchestrator
 
 from __future__ import annotations
 

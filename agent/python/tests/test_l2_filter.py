@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from kmflow_agent.pii.l2_filter import L2Filter
 
 

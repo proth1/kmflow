@@ -139,7 +139,7 @@ async def create_incident(
     return incident
 
 
-@router.post("/{incident_id}/contain", response_model=ContainmentResponse)
+@router.post("/{incident_id}/contain", response_model=ContainmentResponse, status_code=status.HTTP_200_OK)
 async def contain_incident(
     incident_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -164,7 +164,7 @@ async def contain_incident(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=msg) from exc
 
 
-@router.post("/{incident_id}/close", response_model=CloseResponse)
+@router.post("/{incident_id}/close", response_model=CloseResponse, status_code=status.HTTP_200_OK)
 async def close_incident(
     incident_id: UUID,
     body: CloseIncidentRequest,

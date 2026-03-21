@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from kmflow_agent.vce.trigger_engine import (
     _EXCEPTION_THRESHOLD,
     TriggerEngine,
