@@ -327,7 +327,7 @@ async def check_engagement_access(
         if not cached:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Not a member of engagement {engagement_id}",
+                detail="You do not have access to this engagement",
             )
         return
 
@@ -345,7 +345,7 @@ async def check_engagement_access(
     if member is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Not a member of engagement {engagement_id}",
+            detail="You do not have access to this engagement",
         )
 
 

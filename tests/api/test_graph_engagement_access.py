@@ -201,7 +201,10 @@ class TestTraverseAccess:
         node_id = str(uuid.uuid4())
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            response = await ac.get(f"/api/v1/graph/traverse/{node_id}")
+            response = await ac.get(
+                f"/api/v1/graph/traverse/{node_id}",
+                params={"engagement_id": str(uuid.uuid4())},
+            )
         assert response.status_code == 200
 
     @pytest.mark.asyncio
@@ -222,7 +225,11 @@ class TestTraverseAccess:
             async with AsyncClient(transport=transport, base_url="http://test") as ac:
                 response = await ac.get(
                     f"/api/v1/graph/traverse/{node_id}",
-                    params={"depth": 3, "relationship_types": "SUPPORTS,LINKS_TO"},
+                    params={
+                        "engagement_id": str(uuid.uuid4()),
+                        "depth": 3,
+                        "relationship_types": "SUPPORTS,LINKS_TO",
+                    },
                 )
             assert response.status_code == 200
 
