@@ -77,7 +77,9 @@ class WatermarkService:
         """
         try:
             decoded = base64.b64decode(encoded.encode("ascii")).decode("utf-8")
-        except Exception:
+        except (
+            Exception
+        ):  # Intentionally broad: base64 or encoding errors of any kind must return None (invalid watermark)
             logger.warning("Failed to base64-decode watermark")
             return None
 

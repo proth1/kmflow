@@ -364,7 +364,9 @@ async def list_engagement_entities(
         except ValueError:
             logger.debug("Skipping invalid label %s for engagement %s", label, engagement_id)
             continue
-        except Exception:
+        except (
+            Exception
+        ):  # Intentionally broad: Neo4j, network, or serialization errors per label must not abort the full query
             logger.warning("Failed to query label %s for engagement %s", label, engagement_id, exc_info=True)
             continue
 

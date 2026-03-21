@@ -677,7 +677,7 @@ async def _generate_packs_async(
                 task_id,
             )
 
-    except Exception:
+    except Exception:  # Intentionally broad: background task must catch all failures to write sentinel failure record
         logger.exception("Failed to generate review packs (task %s)", task_id)
         # Write a sentinel record so clients can detect the failure via GET
         try:
@@ -694,7 +694,7 @@ async def _generate_packs_async(
                 )
                 session.add(sentinel)
                 await session.commit()
-        except Exception:
+        except Exception:  # Intentionally broad: error during error handling, logging is best effort
             logger.exception("Failed to write failure sentinel (task %s)", task_id)
 
 

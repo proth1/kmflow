@@ -3,75 +3,61 @@
 **Auditor**: C2 (Frontend Quality Auditor)
 **Scope**: `frontend/src/` — React component patterns, error boundaries, accessibility, token storage security, state management
 **Date**: 2026-03-20
-**Prior Audit**: 2026-03-19 (findings updated in this report)
+**Audit Cycle**: 7
+**Prior Audit**: Cycle 6 (2026-03-19)
 
 ## Summary
 
 | Severity | Count |
 |----------|-------|
 | CRITICAL | 0     |
-| HIGH     | 1     |
+| HIGH     | 0     |
 | MEDIUM   | 3     |
-| LOW      | 4     |
-| **Total** | **8** |
+| LOW      | 3     |
+| **Total** | **6** |
 
-**Trend**: Stable since prior audit. The one HIGH finding (BPMNViewer double cast) persists. Three MEDIUM findings identified in this cycle: missing cancellation in two page-level effects, secondary data failure silently swallowed in two pages, and missing ARIA live regions for async loading states. Four LOW findings: index keys in four locations, per-route error boundary gaps, ontology silent error discard, and inline graph height (confirmed resolved from prior audit).
-
----
-
-## Resolved Since Prior Audit (2026-02-26)
-
-The following findings from the earlier audit cycle are confirmed closed in the current codebase:
-
-- **CRITICAL resolved — JWT localStorage read removed**: The `localStorage.getItem("kmflow_token")` call confirmed absent from all source files. Auth is exclusively via `credentials: "include"` (HttpOnly cookie).
-- **HIGH resolved — `useMonitoringData` AbortController**: `useMonitoringData.ts` now uses a shared `useMonitoringFetch` generic that passes `AbortController` correctly and exposes an `error` state on all three hooks.
-- **HIGH resolved — `useMonitoringData` silent error swallowing**: All three hooks now expose `error: string | null` and set it on failure; bare `catch {}` blocks are gone.
-- **MEDIUM resolved — Hardcoded engagement UUIDs in navigation**: `AppShell.tsx` sidebar links and `app/page.tsx` quick actions now use generic routes without any embedded engagement UUIDs.
-- **MEDIUM resolved — `FinancialTab` unlabeled form inputs**: All five inputs in the assumption form now have `aria-label` attributes.
-- **MEDIUM resolved — `FinancialTab` icon-only delete button**: Delete button has `aria-label={`Delete assumption ${a.name}`}`.
-- **MEDIUM resolved — `conformance/page.tsx` eslint suppression**: The suppression comment is now documented with justification.
-- **LOW resolved — `AppShell` sidebar toggle missing `aria-expanded`**: The collapse toggle now has `aria-expanded={!sidebarCollapsed}`.
-- **LOW resolved — `OntologyGraph` synchronous cytoscape import**: Uses dynamic `import("cytoscape")` inside `useEffect`; wrapped with `next/dynamic` and `ssr: false`.
-- **LOW resolved — inline graph height**: `graph/[engagementId]/page.tsx` now uses `className="h-[calc(100vh-250px)]"` (Tailwind arbitrary value), not inline style.
+**Trend**: Improved from cycle 6. The prior HIGH finding (BPMNViewer double cast) is now resolved — `BPMNViewer.tsx` uses a single justified `as BpmnViewer` cast with a comment. The prior LOW finding for `ontology/page.tsx` silent error discard is also resolved — both `validateError` and `exportError` state variables are now present and rendered. Three MEDIUM findings persist unchanged: missing cancellation guards in two page effects, silent secondary data failures in governance and analytics pages, and missing ARIA live regions for loading states. Three LOW findings remain: index keys in six locations, per-route `error.tsx` gap, and a new `useMonitoringData` null cast.
 
 ---
 
-## High Severity Issues
+## Resolved Since Prior Audit (Cycle 6)
 
-### [HIGH] TYPE SAFETY: `as unknown as` Cast Bypasses Type System in BPMNViewer
+### BPMNViewer double cast — RESOLVED
 
-**File**: `frontend/src/components/BPMNViewer.tsx:95`
-**Agent**: C2 (Frontend Quality Auditor)
-**Evidence**:
+**File**: `frontend/src/components/BPMNViewer.tsx:91`
+
+The six repeated `as unknown as BpmnViewer` casts have been replaced with a single direct cast at construction time:
+
 ```typescript
-viewerRef.current = viewer as unknown as BpmnViewer;
-await (viewer as unknown as BpmnViewer).importXML(bpmnXml);
-const canvas = (viewer as unknown as BpmnViewer).get("canvas");
-const overlays = (viewer as unknown as BpmnViewer).get("overlays");
-const elementRegistry = (viewer as unknown as BpmnViewer).get("elementRegistry");
-const eventBus = (viewer as unknown as BpmnViewer).get("eventBus");
+const viewer = new BpmnJS({ container: containerRef.current }) as BpmnViewer;
+// Safe: BpmnJS satisfies the BpmnViewer interface at runtime
 ```
-**Description**: The `BPMNViewer` component defines local interface stubs (`BpmnCanvas`, `BpmnOverlays`, `BpmnElementRegistry`, `BpmnEventBus`, `BpmnViewer`) and then casts the dynamically-imported `bpmn-js` instance through `as unknown as BpmnViewer` six times. This double cast is TypeScript's escape hatch for unsafe coercions — it unconditionally succeeds at compile time regardless of whether the runtime type matches the declared interface. Additionally, `GraphExplorer.tsx` has five `as any` casts in Cytoscape style properties (`"font-weight": "bold" as any`, `"text-background-padding": "2px" as any`, `nodeRepulsion: 8000 as any`) to work around Cytoscape's style type definitions being narrower than its actual accepted values.
-**Risk**: Double casts on the bpmn-js viewer instance mean that any property access mismatch between the local stub interfaces and the actual library object is silently ignored by the compiler. If the `bpmn-js` library version changes its service API shape, TypeScript will not catch the mismatch.
-**Recommendation**: Type the initial import result directly as `BpmnViewer` in a single cast rather than double-casting each use site. For `GraphExplorer`, the `as any` casts on Cytoscape style properties are an acceptable library-type-gap workaround; add a comment on each explaining the rationale.
+
+Subsequent uses of `viewer.get(...)` and `viewer.importXML(...)` now call through the typed reference without additional casts. The justifying comment is present. This closes the HIGH finding from cycles 5–6.
+
+### ontology/page.tsx silent error discard — RESOLVED
+
+**File**: `frontend/src/app/ontology/page.tsx`
+
+`validateError` and `exportError` state variables are now present. Both `handleValidate` and `handleExport` set the respective error state on failure, and the errors are rendered in the UI. The bare `catch {}` blocks are gone. This closes the LOW finding from cycles 5–6.
 
 ---
 
 ## Medium Severity Issues
 
-### [MEDIUM] ASYNC SAFETY: Missing Cancellation Guard in `portal/[engagementId]/page.tsx` and `dashboard/[engagementId]/page.tsx` useEffect
+### [MEDIUM] ASYNC SAFETY: Missing Cancellation Guard in Two Page-Level Effects
 
 **File**: `frontend/src/app/portal/[engagementId]/page.tsx:15`
 **File**: `frontend/src/app/dashboard/[engagementId]/page.tsx:53`
 **Agent**: C2 (Frontend Quality Auditor)
 **Evidence**:
 ```typescript
-// portal/[engagementId]/page.tsx — no cancelled ref
+// portal/[engagementId]/page.tsx — no cancelled ref, no cleanup return
 useEffect(() => {
   if (!engagementId) return;
   fetchPortalOverview(engagementId)
     .then((data) => {
-      setOverview(data);      // state update after potential unmount
+      setOverview(data);      // executes after potential unmount
       setLoading(false);
     })
     .catch((err: Error) => {
@@ -80,15 +66,15 @@ useEffect(() => {
     });
 }, [engagementId]);
 
-// dashboard/[engagementId]/page.tsx — no cleanup return
+// dashboard/[engagementId]/page.tsx — async inner function, no cleanup
 useEffect(() => {
   async function loadData() { ... }
   loadData();
 }, [engagementId]);
 ```
-**Description**: The `portal/[engagementId]/page.tsx` effect uses `.then()/.catch()` chains without a `cancelled` ref guard or cleanup return. If the component unmounts before the fetch resolves (e.g., the user navigates away), both `setOverview` and `setLoading(false)` will execute on an unmounted component, producing the React "Can't perform a state update on an unmounted component" warning. The `dashboard/[engagementId]/page.tsx` `loadData` function also has no cancellation guard — no `cancelled` ref, no `AbortController`, and no cleanup return from the `useEffect`. The rest of the codebase consistently uses either `cancelled` refs or `AbortController` for async effects (confirmed in 22 of 24 files with async effects).
-**Risk**: React will log an error for state updates on unmounted components. In React 18 concurrent mode, this can produce duplicate state updates on strict mode remounts if the async request completes twice. The inconsistency with the established codebase pattern increases maintainability burden.
-**Recommendation**: Apply the same `cancelled` ref pattern already established in `monitoring/[jobId]/page.tsx:21` and `portal/[engagementId]/evidence/page.tsx:21`:
+**Description**: `portal/[engagementId]/page.tsx` has no `cancelled` ref guard and no cleanup return. If the user navigates away before the fetch resolves, `setOverview` and `setLoading(false)` execute on an unmounted component. `dashboard/[engagementId]/page.tsx` wraps all fetches in `Promise.allSettled` which is appropriate for handling partial failures, but the `loadData` async function has no cancellation guard and no cleanup return from `useEffect`. The rest of the codebase uses either `cancelled` refs or `AbortController` consistently (confirmed in 22 of 24 files with async effects).
+**Risk**: React logs state-update-on-unmounted-component warnings. In React 18 strict mode, effects run twice on mount, which can produce duplicate in-flight requests that both resolve and attempt state updates.
+**Recommendation**: Apply the `cancelled` ref pattern already established in `monitoring/[jobId]/page.tsx:21`:
 ```typescript
 useEffect(() => {
   let cancelled = false;
@@ -126,9 +112,9 @@ useEffect(() => {
   if (mounted) console.error("Failed to load metric definitions:", err);
 });
 ```
-**Description**: Both `governance/page.tsx` and `analytics/page.tsx` load secondary data (policies and metric definitions) in separate effects that only log to `console.error` on failure — nothing is surfaced in the UI. If `fetchPolicies()` or `fetchMetricDefinitions()` fails (network error, 500, auth expiry), the user sees a page that appears to have loaded successfully but is missing data, with no indication that policies or metric definitions are unavailable. The primary data loads in both pages use the `useEngagementData` hook which does surface errors via `PageLayout`. Only the secondary data loads are silent.
-**Risk**: Users operate under incomplete data (missing policies/metrics) without knowing it. Particularly relevant for `governance/page.tsx` — a page about data governance showing incorrect policy state is a meaningful accuracy gap.
-**Recommendation**: Introduce a dedicated `secondaryError` state variable for each affected page and render it as a non-blocking warning (e.g., dismissible banner below the main content) rather than replacing the full page view. Alternatively, include both data loads in the `useEngagementData` hook call for a unified error surface.
+**Description**: Both pages load secondary data (policies and metric definitions) in standalone effects that log failures only to `console.error`. If these fetches fail, users see a page that appears fully loaded but is missing policy or metric data with no visual indication. The primary data loads use `useEngagementData` which surfaces errors via `PageLayout`. Only the secondary loads are silent.
+**Risk**: Users operate under incomplete data without knowing it. This is particularly relevant for `governance/page.tsx` — a missing policy list on a governance page is a meaningful accuracy gap that users may act on incorrectly.
+**Recommendation**: Add a `secondaryError` state for each affected page and render it as a dismissible warning banner below the `PageLayout` header content.
 
 ---
 
@@ -137,10 +123,11 @@ useEffect(() => {
 **File**: `frontend/src/app/dashboard/[engagementId]/page.tsx:89-96`
 **File**: `frontend/src/app/tom/[engagementId]/page.tsx:59-67`
 **File**: `frontend/src/app/patterns/page.tsx:63-72`
+**File**: `frontend/src/app/monitoring/[jobId]/page.tsx:44-52`
 **Agent**: C2 (Frontend Quality Auditor)
 **Evidence**:
 ```typescript
-// dashboard page — loading state has no aria-live announcement
+// dashboard — loading container has no role or aria-live
 if (loading) {
   return (
     <div className="max-w-6xl mx-auto p-8">
@@ -151,19 +138,55 @@ if (loading) {
   );
 }
 ```
-**Description**: Loading states across async data-fetching pages render text like "Loading dashboard...", "Loading TOM dashboard...", "Loading patterns..." without `aria-live="polite"` or `role="status"`. Screen readers do not announce these loading state changes because the text is injected via React's virtual DOM replacement, not via a live region. When the loaded content replaces the loading indicator, there is also no announcement that data has finished loading or that an error has occurred. The `EvidenceUploader` and `shelf-requests/page.tsx` progress bars do use `role="progressbar"` with `aria-valuenow/min/max` correctly — this inconsistency suggests the pattern is known but not uniformly applied.
-**Risk**: Screen reader users have no auditory feedback during data loading and no confirmation that loading has completed. On pages with engagement-specific data (dashboard, TOM, graph), this creates a silent blank period that is indistinguishable from a hung page.
-**Recommendation**: Add `role="status"` to loading indicator containers (this is equivalent to `aria-live="polite"` for status messages):
+**Description**: Loading states across async data-fetching pages render visible text without `role="status"` or `aria-live="polite"`. Screen readers do not announce these changes because text injected via React virtual DOM replacement is not treated as a live region. `EvidenceUploader` and `shelf-requests/page.tsx` use `role="progressbar"` correctly — the inconsistency suggests the pattern is known but not uniformly applied. Eight or more pages are affected.
+**Risk**: Screen reader users receive no auditory feedback during data loading or on completion, making async pages indistinguishable from a hung page during the loading period.
+**Recommendation**: Add `role="status"` to loading indicator containers. This is equivalent to `aria-live="polite"` for status messages and requires a one-line change per loading state:
 ```typescript
 <div role="status" className="text-center text-[hsl(var(--muted-foreground))] py-12">
   Loading dashboard...
 </div>
 ```
-This is a one-line change per loading state and applies to all 8+ pages with conditional loading renders.
 
 ---
 
 ## Low Severity Issues
+
+### [LOW] LIST INDEX KEYS: Six Locations Using Array Index as React Key
+
+**File**: `frontend/src/components/Sidebar.tsx:103`
+**File**: `frontend/src/app/monitoring/[jobId]/page.tsx:111`
+**File**: `frontend/src/app/simulations/components/ScenarioFinancialColumn.tsx:59`
+**File**: `frontend/src/app/lineage/page.tsx:155`
+**File**: `frontend/src/app/conformance/page.tsx:503`
+**File**: `frontend/src/components/RoadmapTimeline.tsx:136`
+**File**: `frontend/src/app/copilot/page.tsx:160`
+**Agent**: C2 (Frontend Quality Auditor)
+**Evidence**:
+```typescript
+// Sidebar.tsx:103 — plain string contradictions
+{element.contradictions.map((c, i) => (
+  <li key={i}>{c}</li>
+
+// monitoring/[jobId]/page.tsx:111 — drift chart (date+magnitude objects)
+{driftData.map((d, i) => (
+  <div key={i} className="flex items-center gap-3">
+
+// ScenarioFinancialColumn.tsx:59 — sensitivities (have assumption_name)
+{topSensitivities.map((s, i) => (
+  <div key={i} className="flex items-center justify-between text-sm">
+
+// RoadmapTimeline.tsx:136 — initiatives (have dimension field)
+{phase.initiatives.map((init, idx) => (
+  <InitiativeRow key={idx} initiative={init} />
+
+// copilot/page.tsx:160 — citations (have source_id)
+<div key={citIndex} className="rounded bg-gray-200 px-2 py-1 text-xs"
+```
+**Description**: Seven list renders use array index as React key. All lists are currently read-only and never reordered. Two locations have stable fields available: `ScenarioFinancialColumn.tsx` sensitivities have `s.assumption_name`; `copilot/page.tsx` citations have `citation.source_id`. `RoadmapTimeline.tsx` initiatives have a `dimension` field. `conformance/page.tsx` deviations lack a stable ID in the `Deviation` interface. `monitoring/[jobId]/page.tsx` `driftData` is derived from deviations (which have `id`) but the mapping strips the id. `Sidebar.tsx` contradictions are plain strings.
+**Risk**: Low immediate risk given read-only nature. Risk increases if any list gains sort, filter, or reorder functionality.
+**Recommendation**: Use stable keys where available: `s.assumption_name` for sensitivities, `citation.source_id` for copilot citations, `init.dimension` for roadmap initiatives. For remaining locations (plain strings, stripped-id derived data), index is acceptable but document with a comment.
+
+---
 
 ### [LOW] ERROR BOUNDARY COVERAGE GAP: No Per-Route `error.tsx` Files
 
@@ -175,105 +198,62 @@ This is a one-line change per loading state and applies to all 8+ pages with con
   <AppShell>{children}</AppShell>
 </ErrorBoundary>
 ```
-**Description**: The root `ErrorBoundary` in `layout.tsx` wraps the full application. `ComponentErrorBoundary` is correctly applied around the four highest-risk rendering components (`BPMNViewer` in two pages, `GraphExplorer`, monitoring dashboard). Only `simulations/` has a Next.js App Router `error.tsx`. A render error in any other complex page component tears down the full `AppShell` including the navigation sidebar. Users cannot navigate away without a hard reload.
-**Risk**: Any uncaught render error in a page-level component replaces the entire UI (including navigation) with the root fallback, losing all navigation state. Recovery requires a full page reload.
-**Recommendation**: Add `app/error.tsx` as the default App Router error boundary for the page layer. Next.js scopes `error.tsx` to the route segment automatically and preserves the parent layout (including `AppShell`). Target initially: `conformance/`, `analytics/`, and `governance/` — pages with the most state slices.
+**Description**: The root `ErrorBoundary` in `layout.tsx` wraps the full application. `ComponentErrorBoundary` is correctly applied around the four highest-risk rendering components (`BPMNViewer` in two pages, `GraphExplorer`, monitoring dashboard). Only `simulations/` has a Next.js App Router `error.tsx`. A render error in any other complex page component tears down the full `AppShell` including the navigation sidebar, requiring a hard reload to recover.
+**Risk**: Any uncaught render error in a page-level component replaces the entire UI (including navigation) with the root fallback, losing all navigation state.
+**Recommendation**: Add `app/error.tsx` as a default App Router error boundary for the page layer. Next.js scopes it to the route segment automatically and preserves the parent layout. Priority candidates: `conformance/`, `analytics/`, `governance/`.
 
 ---
 
-### [LOW] SILENT ERROR DISCARD: `ontology/page.tsx` Validate and Export Handlers
+### [LOW] TYPE ESCAPE: `null as unknown as MonitoringStats` in Hook Initializer
 
-**File**: `frontend/src/app/ontology/page.tsx:85-88, 101-103`
+**File**: `frontend/src/hooks/useMonitoringData.ts:98`
 **Agent**: C2 (Frontend Quality Auditor)
 **Evidence**:
 ```typescript
-} catch {
-  // Validation errors handled in UI
+null as unknown as MonitoringStats,
+```
+**Description**: `useMonitoringStats` passes `null` as the initial value for `MonitoringStats` via a double cast. This is necessary because the generic `useMonitoringFetch<T>` hook types its `initialValue` parameter as the extracted type `T`, which is `MonitoringStats` (a non-nullable object type). Passing `null` would be a type error without the cast. The double cast is constrained to this single initialization point, not spread across multiple use sites as the prior BPMNViewer issue was. Callers of `useMonitoringStats` receive `stats: MonitoringStats` and must null-check before use — the return type annotation does not surface the nullable reality.
+**Risk**: Low. The hook is used in one location (`monitoring/page.tsx`) and the caller correctly null-checks `stats` before rendering. However, the type contract is misleading: `stats` is typed `MonitoringStats` but is actually `null` until the first fetch resolves.
+**Recommendation**: Change the generic constraint or the return type to `MonitoringStats | null` to make the nullable reality explicit:
+```typescript
+export function useMonitoringStats(engagementId: string) {
+  const { data: stats, loading, error, refresh } = useMonitoringFetch<MonitoringStats | null>(
+    ...
+    null,  // no cast needed
+  );
+  return { stats, loading, error, refresh };
 }
-// ...
-} catch {
-  // Export errors handled silently
-}
 ```
-**Description**: The `handleValidate` and `handleExport` functions have bare `catch {}` blocks that discard errors entirely. If the validation API fails (e.g., network error, 500 response), the user sees no feedback — the Validate button simply stops spinning. The export catch comment `// Export errors handled silently` acknowledges the silent failure. Both are user-initiated operations.
-**Risk**: Users may retry the same failed operation repeatedly or incorrectly assume the operation succeeded.
-**Recommendation**: Expose error state for both operations alongside the existing `deriveError` state and render a dismissible error message below the respective buttons.
-
----
-
-### [LOW] LIST INDEX KEYS: Four Locations Using Array Index as React Key
-
-**File**: `frontend/src/components/Sidebar.tsx:103`
-**File**: `frontend/src/app/monitoring/[jobId]/page.tsx:111`
-**File**: `frontend/src/app/simulations/components/ScenarioFinancialColumn.tsx:59`
-**File**: `frontend/src/app/lineage/page.tsx:155`
-**Agent**: C2 (Frontend Quality Auditor)
-**Evidence**:
-```typescript
-// Sidebar.tsx:103 — contradictions list
-{element.contradictions.map((c, i) => (
-  <li key={i}>{c}</li>
-
-// monitoring/[jobId]/page.tsx:111 — drift chart bars
-{driftData.map((d, i) => (
-  <div key={i} className="flex items-center gap-3">
-
-// ScenarioFinancialColumn.tsx:59 — sensitivities list
-{topSensitivities.map((s, i) => (
-  <div key={i} className="flex items-center justify-between text-sm">
-
-// lineage/page.tsx:155 — transformation chain steps
-{record.transformation_chain.map((step, i) => (
-  <div key={i} className="text-xs bg-muted rounded px-2 py-1">
-```
-**Description**: Four components use array index as the React `key`. All four lists are effectively read-only and never reordered, so reconciliation correctness is not affected in the current implementation. Deviation objects in `monitoring/[jobId]` have stable `id` fields usable as keys; sensitivity entries in `ScenarioFinancialColumn` have `assumption_name`; lineage transformation steps are untyped `unknown[]` (no guaranteed stable ID). The `Sidebar.tsx` contradictions are plain strings with no stable ID.
-**Risk**: Low immediate risk given read-only nature. Risk increases if any list gains sort/filter/delete functionality without updating the key strategy.
-**Recommendation**: Use stable keys where available (`deviation.id`, `s.assumption_name`). For plain string lists (`Sidebar.tsx` contradictions) and untyped transformation chains (`lineage/page.tsx`), index is acceptable but should be documented with a comment.
-
----
-
-### [LOW] COPILOT CITATION LIST USES INDEX KEY
-
-**File**: `frontend/src/app/copilot/page.tsx:158-160`
-**Agent**: C2 (Frontend Quality Auditor)
-**Evidence**:
-```typescript
-{message.citations.map((citation, citIndex) => (
-  <div
-    key={citIndex}
-    className="rounded bg-gray-200 px-2 py-1 text-xs"
-```
-**Description**: The citation list in the copilot chat uses `citIndex` (array index) as the key. Citations are per-message and the list is append-only. `source_id` is available on each citation object and is a stable identifier. The `messages.map` at line 133 uses a composite `key={`${message.role}-${index}`}` which is better but still index-based.
-**Risk**: Low — citation lists are read-only per message and never reordered. However, using `source_id` is straightforward.
-**Recommendation**: Use `citation.source_id` as key: `key={citation.source_id}`. For the message list, consider a `useRef` counter to assign monotonic IDs to messages at creation time.
 
 ---
 
 ## Positive Highlights
 
-1. **JWT token storage is secure**: Auth is exclusively via HttpOnly cookie (`credentials: "include"`) across all 150+ API calls. No token in `localStorage` or `sessionStorage` in any source file.
+1. **JWT token storage is secure**: Auth is exclusively via HttpOnly cookie (`credentials: "include"`) across all API calls. No token in `localStorage` or `sessionStorage` in any source file. The `localStorage` reference in `__tests__/api.test.ts` is test-only infrastructure for a legacy token path that is no longer in the production code.
 
 2. **No `dangerouslySetInnerHTML`**: Zero XSS-via-React-props vectors across all source files.
 
-3. **No `console.log` in source**: All `console.error` calls are in error boundary `componentDidCatch` handlers (intentional diagnostic logging) or secondary data-load error paths (MEDIUM finding above).
+3. **No `console.log` in source**: All `console.error` calls are in error boundary `componentDidCatch` handlers (intentional diagnostic logging) or the secondary-data error paths (MEDIUM finding above).
 
-4. **No TODO/FIXME comments**: No deferred work markers found across all source files.
+4. **No TODO/FIXME comments**: No deferred work markers found across all source files. All `placeholder` occurrences are HTML input `placeholder` attributes, not code debt markers.
 
 5. **No hardcoded secrets or credentials**: No API keys, tokens, passwords, or internal identifiers embedded in source.
 
-6. **`useMonitoringData` fully remediated**: All three monitoring hooks use `AbortController` with cleanup and expose `error` state consistently.
+6. **BPMNViewer type cast resolved**: Single justified `as BpmnViewer` cast replaces six prior `as unknown as` double casts. Comment explains the runtime safety rationale.
 
-7. **Error boundaries well-layered**: Root `ErrorBoundary` in `layout.tsx`, `ComponentErrorBoundary` on four heavy visualization components, and `simulations/error.tsx` for the most complex page.
+7. **`useMonitoringData` fully clean**: All three hooks use `AbortController` with proper cleanup via `controllerRef.current?.abort()` in the effect cleanup function. All three expose `error: string | null`. The `null as unknown as MonitoringStats` initializer is a LOW finding, not HIGH.
 
-8. **WebSocket lifecycle correctly managed**: `useWebSocket` clears reconnect timers and closes connections on unmount. Reconnect logic uses a retry cap.
+8. **`AbortController` used in 22 of 24 async effect files**: The two exceptions (`portal/[engagementId]/page.tsx`, `dashboard/[engagementId]/page.tsx`) are the MEDIUM finding above.
 
-9. **`AbortController` used consistently in 22 of 24 async effect files**: The two exceptions (`portal/[engagementId]/page.tsx`, `dashboard/[engagementId]/page.tsx`) are the MEDIUM finding above.
+9. **WebSocket lifecycle correctly managed**: `admin/task-mining/dashboard/page.tsx` clears reconnect timers and closes connections on unmount. Bare `catch {}` blocks for malformed message JSON and WS construction failure are documented with comments — these are acceptable intentional silent failures.
 
-10. **Accessibility thorough on interactive components**: `EvidenceUploader`, `GraphExplorer`, `AppShell` sidebar, and all form components in admin pages use correct `aria-label`, `aria-expanded`, `role`, and keyboard handler patterns.
+10. **Error boundaries well-layered**: Root `ErrorBoundary` in `layout.tsx`, `ComponentErrorBoundary` with `role="alert"` on four heavy visualization components, and `simulations/error.tsx` for the most complex page.
 
-11. **TypeScript type coverage is high**: No `any` in `lib/api/` or any hook. Five `as any` casts confined to Cytoscape style overrides; six `as unknown as BpmnViewer` in `BPMNViewer.tsx` (HIGH finding above). No `@ts-ignore`, `@ts-nocheck`, or `@ts-expect-error` anywhere.
+11. **TypeScript coverage is high**: No `@ts-ignore`, `@ts-nocheck`, or `@ts-expect-error` anywhere. Five `as any` casts confined to Cytoscape style overrides in `GraphExplorer.tsx` — library type gap, not application logic.
 
-12. **Dynamic imports with SSR disabled for heavy visualization libs**: `graph/`, `visualize/`, `ontology/`, and `assessment-matrix/` pages all use `next/dynamic` with `{ ssr: false }` for cytoscape, bpmn-js, and recharts.
+12. **Dynamic imports with SSR disabled**: `graph/`, `visualize/`, `ontology/`, and `assessment-matrix/` pages all use `next/dynamic` with `{ ssr: false }` for cytoscape, bpmn-js, and recharts.
+
+13. **Accessibility thorough on interactive components**: `EvidenceUploader`, `GraphExplorer`, `AppShell` sidebar, `RoadmapTimeline` phase toggles (correct `aria-label` and `aria-expanded`), and all form components in admin pages use correct aria patterns.
 
 ---
 
@@ -281,18 +261,18 @@ This is a one-line change per loading state and applies to all 8+ pages with con
 
 | Criterion | Status | Details |
 |-----------|--------|---------|
-| NO TODO COMMENTS | PASS | No TODO/FIXME/HACK/PLACEHOLDER comments found in source files |
+| NO TODO COMMENTS | PASS | No TODO/FIXME/HACK/PLACEHOLDER code debt markers in source files |
 | NO PLACEHOLDERS | PASS | No stub implementations or incomplete functions |
 | NO HARDCODED SECRETS | PASS | No credentials, API keys, or secrets |
-| PROPER ERROR HANDLING | PARTIAL | MEDIUM: 2 pages missing cancellation guards; 2 pages silently discard secondary data errors. LOW: `ontology/page.tsx` discards validate/export errors |
-| NO `any` TYPES | PARTIAL | HIGH: 6 `as unknown as BpmnViewer` casts in `BPMNViewer.tsx`; 5 `as any` in `GraphExplorer.tsx` Cytoscape style overrides |
-| ERROR BOUNDARIES | PARTIAL | Root boundary + ComponentErrorBoundary on 4 heavy components appropriate; only `simulations/` has per-route `error.tsx` |
+| PROPER ERROR HANDLING | PARTIAL | MEDIUM: 2 pages missing cancellation guards; 2 pages silently discard secondary data errors |
+| NO `any` TYPES | PARTIAL | LOW: `null as unknown as MonitoringStats` in `useMonitoringData.ts:98`; 5 `as any` in `GraphExplorer.tsx` style overrides (library type gap) |
+| ERROR BOUNDARIES | PARTIAL | Root boundary + ComponentErrorBoundary on 4 heavy components; only `simulations/` has per-route `error.tsx` |
 | ACCESSIBILITY | PARTIAL | MEDIUM: No `role="status"` on loading states across 8+ async pages |
 
 ---
 
 ## Code Quality Score
 
-**7.5 / 10**
+**8.0 / 10**
 
-The codebase demonstrates strong fundamentals: no security vulnerabilities, no TODO debt, consistent AbortController cleanup on nearly all async effects, proper HttpOnly cookie auth, zero dangerouslySetInnerHTML, and thorough accessibility on interactive components. The score is limited by the type-system escape hatch in `BPMNViewer`, two page-level effects missing the established cancellation pattern, silent secondary data failures in governance and analytics pages, and absent ARIA live regions for loading states. No regressions from the prior audit cycle are present.
+Improved from 7.5 in cycle 6. The BPMNViewer HIGH finding is resolved; the ontology silent error LOW finding is resolved. The remaining issues are: two page effects missing the established cancellation pattern (MEDIUM), two pages with silent secondary data failure (MEDIUM), loading states lacking ARIA live regions (MEDIUM), index keys in six read-only list renders (LOW), absent per-route `error.tsx` files (LOW), and a misleading nullable type in one hook initializer (LOW). No security regressions are present. The codebase is consistent in its patterns with a small number of isolated deviations.

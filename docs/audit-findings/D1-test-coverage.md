@@ -2,6 +2,7 @@
 
 **Agent**: D1 (Test Coverage Auditor)
 **Date**: 2026-03-20
+**Cycle**: 7
 **Scope**: Test coverage gaps, mock quality, missing integration tests, edge case coverage
 
 ---
@@ -10,42 +11,44 @@
 
 **PIPELINE STATUS: WARNING (90-94% estimated — not BLOCKED, but improvements required)**
 
-The KMFlow backend test suite has grown significantly since the prior audit, now comprising 332 test files (main suite) and 14 agent test files covering 421 non-init source modules (78.9% file-coverage ratio). The `fail_under` threshold has been correctly raised to **90%** in `pyproject.toml`, and several HIGH-severity gaps from the previous audit have been remediated: simulation engine tests exist, worker tests exist, watermark extractor tests exist, and agent GDPR `audit_logger` and `purge` tests exist.
+The KMFlow backend test suite now comprises 333 test files (main suite) and 15 agent test files covering 421 non-init source modules (79.1% file-coverage ratio). The `fail_under` threshold is correctly set to **90%** in `pyproject.toml`. Cycle 7 audit confirms one HIGH finding from the prior cycle was remediated: `agent/python/tests/test_retention.py` now exists and covers GDPR data retention enforcement with 13 test cases.
 
-The primary remaining concerns are: (1) **1,733 bare `MagicMock()` instances without `spec=`** across 195 test files, representing a pervasive test quality risk where attribute-access typos pass silently; (2) **7 API route modules with no dedicated test file** including `assumptions`, `audit_logs`, `decisions`, `exports`, `micro_surveys`, `patterns`, and `simulations`; (3) **agent GDPR `retention.py` still has no test file**; (4) **timing-dependent `asyncio.sleep` assertions** remain in `test_worker_dispatch.py`.
+The primary remaining concerns are: (1) **1,728 bare `MagicMock()` instances without `spec=`** across 196 test files — effectively unchanged from cycle 6; (2) **7 API route modules with no dedicated test file** (`assumptions`, `audit_logs`, `decisions`, `exports`, `micro_surveys`, `patterns`, `simulations`) — unchanged; (3) **11 untracked test files not yet committed** meaning those source modules remain uncovered in CI; (4) **wall-clock `asyncio.sleep` assertions** remain in `test_worker_dispatch.py`.
 
 | Metric | Value |
 |--------|-------|
 | Source files (non-init, src/) | 421 |
-| Test files (main suite) | 332 |
-| Test files (agent) | 14 |
-| Test/source file ratio | 78.9% |
-| `fail_under` configured | 90% (CORRECT — meets audit requirement) |
+| Test files (main suite, committed) | 333 |
+| Test files (agent, committed) | 13 |
+| Untracked test files (not in CI) | 11 |
+| Test/source file ratio (committed) | 79.1% |
+| `fail_under` configured | 90% (CORRECT) |
 | Route files in src/api/routes/ | 77 |
 | Route files with no dedicated test | 7 |
-| Bare `MagicMock()` instances | 1,733 across 195 files |
-| `MagicMock(spec=...)` instances | 328 (16% spec'd rate) |
+| Bare `MagicMock()` instances | 1,728 across 196 files |
+| `MagicMock(spec=...)` instances | 329 (16% spec'd rate) |
 | `asyncio.sleep` in tests (non-helpers) | 9 occurrences |
 | Wall-clock timing sleeps (non-trivial) | 5 (values > 0.01s) |
-| Agent GDPR modules untested | 1 (`retention.py`) |
+| Agent GDPR modules untested | 0 (FIXED this cycle) |
 
 ---
 
-## Remediation Status vs Prior Audit
+## Remediation Status vs Prior Cycle
 
 | Prior Finding | Status |
 |--------------|--------|
 | `fail_under` at 80% | FIXED — raised to 90% |
-| Simulation engine no tests | FIXED — `tests/simulation/test_engine.py` exists with 20+ tests |
+| Simulation engine no tests | FIXED — `tests/simulation/test_engine.py` exists |
 | Worker stubs no tests | FIXED — `tests/taskmining/test_worker.py`, `tests/monitoring/test_monitoring_worker.py` exist |
 | Agent GDPR `purge.py` no tests | FIXED — `agent/python/tests/gdpr/test_purge.py` exists |
 | Agent GDPR `audit_logger.py` no tests | FIXED — `agent/python/tests/gdpr/test_audit_logger.py` exists |
 | Watermark extractor no tests | FIXED — `tests/security/test_watermark_extractor.py` exists |
-| `re_encrypt_value` untested | FIXED — `tests/core/test_encryption.py` now has 9 tests including key rotation |
-| Agent GDPR `retention.py` no tests | **STILL MISSING** |
-| 40+ API routes no HTTP-layer tests | **PARTIALLY FIXED** — 7 routes still missing |
-| Bare `MagicMock()` pattern | **ONGOING** — 1,733 instances |
-| Timing-dependent asyncio.sleep | **PARTIALLY FIXED** — reduced to 9 occurrences, 5 non-trivial |
+| `re_encrypt_value` untested | FIXED — `tests/core/test_encryption.py` covers key rotation |
+| Agent GDPR `retention.py` no tests | **FIXED** — `agent/python/tests/test_retention.py` now exists (13 test cases) |
+| 7 API routes no HTTP-layer tests | **ONGOING** — 7 routes still missing (assumptions, audit_logs, decisions, exports, micro_surveys, patterns, simulations) |
+| Bare `MagicMock()` pattern | **ONGOING** — 1,728 instances (marginal decrease of 5) |
+| Timing-dependent asyncio.sleep | **ONGOING** — 5 non-trivial wall-clock sleeps remain |
+| Untracked test files not in CI | **ONGOING** — 11 untracked test files/dirs |
 
 ---
 
@@ -53,9 +56,9 @@ The primary remaining concerns are: (1) **1,733 bare `MagicMock()` instances wit
 
 | Module | Test File Exists | Quality Assessment |
 |--------|-----------------|-------------------|
-| `src/core/auth.py` | Yes — `tests/core/test_auth.py` | EXCELLENT: covers password hash, JWT create/decode, expiry, blacklist, cookie auth |
-| `src/api/routes/auth.py` | Yes — `tests/api/test_auth_routes.py` | GOOD: dev-mode blocked in prod, refresh with access token rejected, inactive user 401 |
-| `src/api/routes/gdpr.py` | Yes — `tests/api/test_gdpr.py` | GOOD: export, erasure, consent lifecycle, invalid consent_type |
+| `src/core/auth.py` | Yes — `tests/core/test_auth.py` | EXCELLENT: JWT create/decode, expiry, blacklist, cookie auth |
+| `src/api/routes/auth.py` | Yes — `tests/api/test_auth_routes.py` | GOOD: dev-mode blocked in prod, refresh rejected, inactive user 401 |
+| `src/api/routes/gdpr.py` | Yes — `tests/api/test_gdpr.py` | GOOD: export, erasure, consent lifecycle |
 | `src/api/routes/assumptions.py` | None — covered indirectly | MEDIUM: no dedicated HTTP-layer test |
 | `src/api/routes/audit_logs.py` | None — covered indirectly | MEDIUM: no dedicated HTTP-layer test |
 | `src/api/routes/decisions.py` | None — covered indirectly | MEDIUM: no dedicated HTTP-layer test |
@@ -63,25 +66,25 @@ The primary remaining concerns are: (1) **1,733 bare `MagicMock()` instances wit
 | `src/api/routes/micro_surveys.py` | None — covered indirectly | MEDIUM: no dedicated HTTP-layer test |
 | `src/api/routes/patterns.py` | None — covered indirectly | MEDIUM: no dedicated HTTP-layer test |
 | `src/api/routes/simulations.py` | None — covered indirectly | MEDIUM: no dedicated HTTP-layer test |
-| `src/simulation/engine.py` | Yes — `tests/simulation/test_engine.py` | GOOD: 20+ tests, empty/single-node/what-if/capacity scenarios |
-| `src/taskmining/worker.py` | Yes — `tests/taskmining/test_worker.py` | GOOD: stub dispatch, missing engagement_id, UUID validation |
-| `src/monitoring/worker.py` | Yes — `tests/monitoring/test_monitoring_worker.py` | GOOD: detect/alert/collect/unknown paths |
+| `src/simulation/engine.py` | Yes — `tests/simulation/test_engine.py` | GOOD: empty/single-node/what-if/capacity scenarios |
+| `src/taskmining/worker.py` | Yes — `tests/taskmining/test_worker.py` | GOOD |
+| `src/monitoring/worker.py` | Yes — `tests/monitoring/test_monitoring_worker.py` | GOOD |
 | `src/security/watermark/extractor.py` | Yes — `tests/security/test_watermark_extractor.py` | GOOD |
-| `src/core/encryption.py` | Yes — `tests/core/test_encryption.py` | GOOD: 9 tests including re_encrypt_value and key rotation fallback |
-| `src/api/middleware/pep.py` | Yes — `tests/api/test_pep_middleware.py` | GOOD: permit/deny/mask/suppress via ASGI integration |
+| `src/core/encryption.py` | Yes — `tests/core/test_encryption.py` | GOOD: includes re_encrypt_value and key rotation fallback |
+| `src/api/middleware/pep.py` | Yes — `tests/api/test_pep_middleware.py` | GOOD: permit/deny/mask/suppress via ASGI |
 | `src/api/deps.py` | No dedicated test | LOW: covered implicitly by route tests |
 | `agent/kmflow_agent/gdpr/audit_logger.py` | Yes — `agent/python/tests/gdpr/test_audit_logger.py` | GOOD |
 | `agent/kmflow_agent/gdpr/purge.py` | Yes — `agent/python/tests/gdpr/test_purge.py` | GOOD |
-| `agent/kmflow_agent/gdpr/retention.py` | None | MISSING — compliance-critical |
-| `src/quality/instrumentation.py` | Yes — `tests/quality/test_instrumentation.py` | GOOD |
+| `agent/kmflow_agent/gdpr/retention.py` | Yes — `agent/python/tests/test_retention.py` | GOOD: 13 tests, deletion, preservation, audit callback, async run/shutdown |
+| `src/quality/instrumentation.py` | Yes — `tests/quality/test_instrumentation.py` (untracked) | PENDING COMMIT |
 
 ---
 
 ## Findings
 
-### [HIGH] QUALITY: Pervasive bare `MagicMock()` without `spec=` across 195 test files
+### [HIGH] QUALITY: Pervasive bare `MagicMock()` without `spec=` across 196 test files
 
-**File**: `/Users/proth/repos/kmflow/tests/pov/test_aggregation.py:65`, `/Users/proth/repos/kmflow/tests/conftest.py:78` (195 files total)
+**File**: `/Users/proth/repos/kmflow/tests/pov/test_aggregation.py:65`, `/Users/proth/repos/kmflow/tests/conftest.py:78` (196 files total)
 **Agent**: D1 (Test Coverage Auditor)
 **Evidence**:
 ```python
@@ -94,12 +97,19 @@ mock_unique = MagicMock()
 mock_result = MagicMock()
 session.add = MagicMock()
 driver = MagicMock()
+
+# Top offenders by count:
+# tests/core/test_reports.py: 74 bare instances
+# tests/api/test_persona_dashboards_bdd.py: 54 bare instances
+# tests/api/test_scenario_comparison_bdd.py: 37 bare instances
+# tests/tom/test_best_practice_matcher.py: 35 bare instances
+# tests/api/test_governance.py: 35 bare instances
 ```
-**Description**: 1,733 bare `MagicMock()` instances exist across 195 test files, compared to only 328 instances using `MagicMock(spec=...)` — a spec compliance rate of approximately 16%. Without `spec=`, MagicMock accepts any attribute access silently. If production code accesses a misspelled attribute or a field that was renamed during refactoring, the mock still returns a new MagicMock rather than raising `AttributeError`, causing the test to pass while testing nothing. The central `tests/conftest.py` fixtures that are reused across the entire test suite (`mock_result`, `driver`, `mock_pipe`) are all unspec'd, amplifying the impact.
+**Description**: 1,728 bare `MagicMock()` instances exist across 196 test files, compared to only 329 instances using `MagicMock(spec=...)` — a spec compliance rate of approximately 16%. Without `spec=`, MagicMock accepts any attribute access silently. If production code accesses a misspelled or renamed attribute, the mock returns a new MagicMock rather than raising `AttributeError`, causing the test to pass while testing nothing. The central `tests/conftest.py` fixtures reused across the entire test suite are all unspec'd, amplifying the impact.
 
-**Risk**: Attribute-access typos in production code go undetected. Schema refactoring (renaming fields in Pydantic models or ORM classes) will not break mock-based tests. The false-passing rate is structurally highest in POV, TOM, and core tests — exactly the domain logic modules where correctness matters most.
+**Risk**: Attribute-access typos in production code go undetected. Schema refactoring (renaming fields in Pydantic models or ORM classes) does not break mock-based tests. The false-passing rate is structurally highest in POV, TOM, and core tests — the domain logic modules where correctness is most critical.
 
-**Recommendation**: Prioritize adding `spec=` to fixtures in `tests/conftest.py` first (highest reuse impact). Then work module by module. Use `MagicMock(spec=ClassName)` where the class is importable, or `create_autospec(instance)` for complex objects. Add a `ruff` custom rule or pre-commit hook checking for bare `MagicMock()` in test files.
+**Recommendation**: Prioritize adding `spec=` to fixtures in `tests/conftest.py` first (highest reuse impact). Then address top offenders (`test_reports.py`, `test_persona_dashboards_bdd.py`). Use `MagicMock(spec=ClassName)` or `create_autospec(instance)`. Add a pre-commit check for bare `MagicMock()` in test files.
 
 ---
 
@@ -117,79 +127,66 @@ MISSING dedicated test file: src/api/routes/micro_surveys.py
 MISSING dedicated test file: src/api/routes/patterns.py
 MISSING dedicated test file: src/api/routes/simulations.py
 ```
-**Description**: Seven route modules under `src/api/routes/` have no dedicated `test_<route>.py` file in `tests/api/`. Some are covered by adjacent BDD service tests or overlapping route tests (e.g., `audit_logs` is touched in `test_audit_logging_bdd.py`), but the HTTP transport layer — URL matching, request body validation, authentication enforcement, error response format — is not verified for these routes. For `simulations.py` and `exports.py` in particular, the route files define POST/GET endpoints that are security-sensitive (data exports should enforce auth).
+**Description**: Seven route modules under `src/api/routes/` have no dedicated test file in `tests/api/`. BDD service tests may touch some logic, but the HTTP transport layer — URL matching, request body validation, authentication enforcement, HTTP status codes — is not verified for these routes. `exports.py` and `simulations.py` are security-sensitive (data export should enforce auth).
 
-**Risk**: Route-level bugs including wrong HTTP status codes, missing auth guards on specific verbs, incorrect URL parameters, and schema validation gaps are not caught by service-layer BDD tests that bypass the FastAPI routing stack entirely.
+**Risk**: Route-level bugs including wrong HTTP status codes, missing auth guards, incorrect URL parameters, and schema validation gaps are not caught by service-layer BDD tests that bypass FastAPI routing entirely.
 
-**Recommendation**: Create `tests/api/test_<route>_routes.py` for each missing route. Minimum coverage: unauthenticated request returns 401, happy-path GET/POST returns expected status code, malformed body returns 422. The pattern used in `tests/api/test_pipeline_quality_routes.py` (using `ASGITransport` with mocked deps) is a good template.
-
----
-
-### [HIGH] MISSING COVERAGE: Agent GDPR `retention.py` has no test file
-
-**File**: `/Users/proth/repos/kmflow/agent/python/kmflow_agent/gdpr/retention.py`
-**Agent**: D1 (Test Coverage Auditor)
-**Evidence**:
-```
-agent/python/kmflow_agent/gdpr/
-  audit_logger.py  ← has test (test_audit_logger.py)
-  purge.py         ← has test (test_purge.py)
-  retention.py     ← NO TEST FILE
-```
-**Description**: The agent's GDPR module contains three files. `audit_logger.py` and `purge.py` gained tests in the recent remediation batch, but `retention.py` — which enforces GDPR data retention schedules on the local SQLite event buffer — remains untested. Retention enforcement is compliance-critical: a bug that silently fails to delete data past its retention period constitutes a GDPR Art. 5(1)(e) storage limitation violation.
-
-**Risk**: GDPR data retention failures are silent. A logic error in the retention date calculation or the deletion predicate could retain data indefinitely without any test exposing it. Given that `purge.py` now has tests using `tmp_path`, the pattern is established and adding `retention.py` tests is low-effort.
-
-**Recommendation**: Create `agent/python/tests/gdpr/test_retention.py` following the pattern of `test_purge.py`. Test: records past retention age are deleted, records within retention window are kept, empty database returns 0, retention calculation uses correct timezone handling.
+**Recommendation**: Create `tests/api/test_<route>_routes.py` for each. Minimum: unauthenticated request returns 401, happy-path returns expected status, malformed body returns 422. Use `tests/api/test_pipeline_quality_routes.py` as the template.
 
 ---
 
 ### [MEDIUM] FLAKY: Wall-clock `asyncio.sleep` assertions in worker dispatch tests
 
-**File**: `/Users/proth/repos/kmflow/tests/core/test_worker_dispatch.py:311`
+**File**: `/Users/proth/repos/kmflow/tests/core/test_worker_dispatch.py:311,332,388`
 **Agent**: D1 (Test Coverage Auditor)
 **Evidence**:
 ```python
-# test_worker_dispatch.py:311
+# test_worker_dispatch.py:311 — gate for shutdown signal
 async def stop_after_start() -> None:
     await asyncio.sleep(0.05)
     shutdown.set()
 
-# test_worker_dispatch.py:332
-task = asyncio.create_task(run_task_worker(...))
+# test_worker_dispatch.py:332 — gate before task.cancel()
 await asyncio.sleep(0.02)
 task.cancel()
 
-# test_worker_dispatch.py:388
+# test_worker_dispatch.py:388 — gate for retry-after-backoff assertion
 await asyncio.sleep(0.15)
 ```
-**Description**: Three tests in `test_worker_dispatch.py` use hardcoded wall-clock sleep durations (0.02s, 0.05s, 0.15s) as timing gates for async state transitions. The 0.15s sleep on line 388 is used to allow a "retry after backoff" assertion — meaning the test assumes the error + retry cycle completes within 150ms. Under CI load, slow VMs, or test parallelism, this window is insufficient.
+**Description**: Three tests use hardcoded wall-clock sleeps (0.02s, 0.05s, 0.15s) as timing gates for async state transitions. The 0.15s sleep asserts that an error+retry cycle completes within 150ms. Under CI load or test parallelism this window is insufficient. The 0.02s sleep before `task.cancel()` is particularly fragile — if the task has not yet started processing when cancel fires, test behavior is nondeterministic.
 
-**Risk**: Intermittent CI failures on slow runners erode trust in the test suite and lead to test suppression, which removes regression protection from the worker dispatch path. The 0.02s sleep before `task.cancel()` is particularly fragile — if the task has not yet started processing when cancel fires, the test behavior is nondeterministic.
+**Risk**: Intermittent CI failures on slow runners erode trust in the test suite and lead to test suppression, removing regression protection from the worker dispatch path.
 
-**Recommendation**: Replace wall-clock waits with event-driven synchronization: inject an `asyncio.Event` into the worker that signals when each state transition completes, then `await asyncio.wait_for(event.wait(), timeout=10)` in the test. The `asyncio.sleep(0)` yield-to-event-loop pattern used in `test_async_task_bdd.py` and `test_audit_logging_bdd.py` is correct and should be preserved.
+**Recommendation**: Replace wall-clock waits with event-driven synchronization: inject an `asyncio.Event` that signals state transitions, then `await asyncio.wait_for(event.wait(), timeout=10)`. Preserve the `asyncio.sleep(0)` yield-to-event-loop pattern used correctly in `test_async_task_bdd.py:75` and `test_audit_logging_bdd.py:681`.
 
 ---
 
-### [MEDIUM] QUALITY: Test/source file ratio below 80% indicates structural coverage gaps
+### [MEDIUM] QUALITY: 11 untracked test files not counted in CI coverage
 
-**File**: `/Users/proth/repos/kmflow/` (aggregate metric)
+**File**: Multiple (see evidence)
 **Agent**: D1 (Test Coverage Auditor)
 **Evidence**:
 ```
-Source files (non-init): 421
-Test files (main suite): 332
-Test/source ratio: 78.9%
-
-Route files: 77
-Route test files: ~70 (matching by name)
-Route coverage: ~91%
+?? agent/python/tests/ipc/test_socket_server.py
+?? agent/python/tests/test_auth.py
+?? agent/python/tests/upload/test_batch_uploader.py
+?? tests/api/test_pipeline_quality_routes.py
+?? tests/evaluation/test_entity_evaluator.py
+?? tests/evaluation/test_golden_dataset.py
+?? tests/evaluation/test_graph_health.py
+?? tests/evaluation/test_rag_evaluator.py
+?? tests/evaluation/test_retrieval_evaluator.py
+?? tests/evidence/parsers/test_financial_regulatory_parser.py
+?? tests/integrations/test_apex_clearing.py
+?? tests/integrations/test_charles_river.py
+?? tests/quality/test_instrumentation.py
+?? tests/quality/test_metrics_collector.py
 ```
-**Description**: At 78.9%, the test-to-source file ratio has not kept pace with recent source additions. New route files (`pipeline_quality.py`, `apex_clearing.py`, `charles_river.py`, etc.) were added along with test files, but the 7 missing route test files and the unpaired source modules in `src/integrations/` (new `apex_clearing.py` and `charles_river.py` have untracked test files not yet committed) create a gap. The `tests/quality/` and `tests/evaluation/` directories contain tests for newly added source modules but are not yet committed, meaning they are not counted in CI coverage runs.
+**Description**: 14 test files across 5 areas are untracked in git and therefore excluded from CI coverage runs. Corresponding source modules (`src/quality/`, `src/integrations/apex_clearing.py`, `src/integrations/charles_river.py`, agent IPC, agent upload) have no coverage in CI until these files are committed.
 
-**Risk**: Untracked test files (`tests/quality/`, `tests/evaluation/`, `tests/integrations/test_apex_clearing.py`, `tests/integrations/test_charles_river.py`) are not included in pytest runs until committed, leaving corresponding source modules uncovered in CI.
+**Risk**: CI coverage measurement underreports the true state. New source modules added without committing their tests create a misleading picture of 90% coverage — the actual denominator is incomplete.
 
-**Recommendation**: Commit untracked test files in `tests/quality/`, `tests/evaluation/`, and `tests/integrations/` to include them in CI coverage measurements. Review all new source modules added in the last sprint for matching test file existence.
+**Recommendation**: Commit all untracked test files. This is a single `git add` + commit operation with no source code changes required.
 
 ---
 
@@ -204,11 +201,11 @@ async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
     async with session_factory() as session:
         yield session
 ```
-**Description**: `src/api/deps.py` is the canonical database session dependency used by all 77 route files. It has no dedicated test. The `AttributeError` path (missing `db_session_factory` in app state) and the session-cleanup-on-exception path are both untested. These scenarios can occur during application misconfiguration or startup races.
+**Description**: `src/api/deps.py` is the canonical database session dependency for all 77 route files. The `AttributeError` path (missing `db_session_factory`) and session-cleanup-on-exception path are untested. These can occur during startup races or misconfiguration.
 
-**Risk**: Low — route-level tests implicitly exercise the session dependency. However, the error path (session cleanup when a route raises) is not tested and could cause transaction leaks under error conditions.
+**Risk**: Low — route-level tests implicitly exercise the happy path. Error paths could cause transaction leaks.
 
-**Recommendation**: Add `tests/api/test_deps.py` verifying: normal session yield and cleanup, `AttributeError` when state missing, session closed even when route raises.
+**Recommendation**: Add `tests/api/test_deps.py`: normal session yield and cleanup, `AttributeError` when state missing, session closed even when route raises.
 
 ---
 
@@ -216,9 +213,10 @@ async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
 
 | Category | Count | Threshold | Status |
 |----------|-------|-----------|--------|
-| Bare `MagicMock()` without `spec=` | 1,733 | 0 ideal | FAIL |
+| Bare `MagicMock()` without `spec=` | 1,728 | 0 ideal | FAIL |
 | `asyncio.sleep` in test assertions (non-trivial) | 5 | 0 ideal | WARNING |
 | Missing test files for route modules | 7 | 0 ideal | FAIL |
+| Agent GDPR `retention.py` untested | 0 | 0 | PASS (FIXED) |
 
 ---
 
@@ -226,20 +224,18 @@ async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
 
 | Risk Area | Current State | Severity |
 |-----------|--------------|----------|
-| Bare `MagicMock()` without `spec=` (1,733 instances) | Active — attribute typos pass silently | HIGH |
+| Bare `MagicMock()` without `spec=` (1,728 instances) | Active — attribute typos pass silently | HIGH |
 | 7 API route modules without dedicated test files | Active | HIGH |
-| Agent GDPR `retention.py` untested | Active | HIGH |
+| 14 untracked test files not counted in CI | Active | MEDIUM |
 | Wall-clock `asyncio.sleep` in worker dispatch tests | Active — 5 non-trivial sleeps | MEDIUM |
-| Untracked test files not counted in CI | Active — 9 test dirs/files pending commit | MEDIUM |
 | `src/api/deps.py` corner cases untested | Low risk | LOW |
 
 ---
 
 ## Recommendations Summary
 
-1. **Immediate**: Commit untracked test files (`tests/quality/`, `tests/evaluation/`, `tests/integrations/test_apex_clearing.py`, `tests/integrations/test_charles_river.py`, `agent/python/tests/ipc/`, `agent/python/tests/upload/`) so they are included in CI coverage.
-2. **Short-term**: Create `agent/python/tests/gdpr/test_retention.py` — the `test_purge.py` pattern with `tmp_path` is directly reusable.
-3. **Short-term**: Create dedicated HTTP-layer test files for the 7 missing route modules. Use `tests/api/test_pipeline_quality_routes.py` as the template.
-4. **Medium-term**: Systematically replace bare `MagicMock()` in `tests/conftest.py` with `MagicMock(spec=ClassName)` — this single file change propagates benefit to the entire test suite.
-5. **Medium-term**: Replace wall-clock `asyncio.sleep` assertions in `test_worker_dispatch.py` with event-driven synchronization using injected `asyncio.Event` objects.
-6. **Ongoing**: Enforce `MagicMock(spec=ClassName)` pattern in code review. Target spec-compliance rate of >80% (currently 16%).
+1. **Immediate**: Commit all 14 untracked test files so CI coverage is accurate.
+2. **Short-term**: Create dedicated HTTP-layer test files for the 7 missing route modules. Use `/Users/proth/repos/kmflow/tests/api/test_pipeline_quality_routes.py` as template.
+3. **Medium-term**: Replace bare `MagicMock()` in `tests/conftest.py` with `MagicMock(spec=ClassName)` — single-file change with suite-wide impact.
+4. **Medium-term**: Replace wall-clock `asyncio.sleep` in `test_worker_dispatch.py` with event-driven synchronization.
+5. **Ongoing**: Enforce `MagicMock(spec=ClassName)` in code review. Target spec-compliance rate >80% (currently 16%).

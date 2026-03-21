@@ -20,7 +20,7 @@ router = APIRouter(prefix="/api/v1/schema-library", tags=["schema-library"])
 _library = SchemaLibrary()
 
 
-@router.get("/platforms")
+@router.get("/platforms", response_model=dict)
 async def list_platforms(
     user: User = Depends(require_permission("engagement:read")),
 ) -> dict[str, Any]:
@@ -32,7 +32,7 @@ async def list_platforms(
     }
 
 
-@router.get("/platforms/{platform}")
+@router.get("/platforms/{platform}", response_model=dict)
 async def get_platform_template(
     platform: str,
     user: User = Depends(require_permission("engagement:read")),
@@ -51,7 +51,7 @@ async def get_platform_template(
     return template.to_dict()
 
 
-@router.get("/platforms/{platform}/tables/{table_name}")
+@router.get("/platforms/{platform}/tables/{table_name}", response_model=dict)
 async def get_table_template(
     platform: str,
     table_name: str,
@@ -74,7 +74,7 @@ async def get_table_template(
     return table.to_dict()
 
 
-@router.get("/platforms/{platform}/check")
+@router.get("/platforms/{platform}/check", response_model=dict)
 async def check_platform_support(
     platform: str,
     user: User = Depends(require_permission("engagement:read")),

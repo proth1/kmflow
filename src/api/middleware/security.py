@@ -140,7 +140,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 result = await redis_client.eval(_RATE_LIMIT_SCRIPT, 1, key, self.window_seconds)
                 count = int(result[0])
                 ttl = max(int(result[1]), 1)
-            except Exception:
+            except Exception:  # Intentionally broad: Redis errors must fail open to avoid blocking all requests
                 # Redis unavailable — fail open (allow request)
                 logger.warning("Rate limiter Redis unavailable, allowing request")
                 count = 0

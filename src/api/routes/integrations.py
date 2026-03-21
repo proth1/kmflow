@@ -102,7 +102,9 @@ def _decrypt_config(conn: IntegrationConnection) -> dict[str, Any]:
     if conn.encrypted_config:
         try:
             return decrypt_dict(conn.encrypted_config)
-        except Exception:
+        except (
+            Exception
+        ):  # Intentionally broad: any decryption failure (key mismatch, corruption, etc.) must fall back gracefully
             logger.warning("Failed to decrypt config for connection %s, falling back to config_json", conn.id)
     return conn.config_json or {}
 

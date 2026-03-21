@@ -74,7 +74,7 @@ class AgentRegistry:
             if agent.health not in (AgentHealth.STOPPED,):
                 try:
                     await agent.stop()
-                except Exception:
+                except Exception:  # Intentionally broad: agent stop errors must not prevent other agents from stopping
                     logger.exception("Failed to stop agent %s", agent.agent_id)
 
     def unregister(self, agent_id: str) -> None:

@@ -24,7 +24,7 @@ router = APIRouter(tags=["health"])
 logger = logging.getLogger(__name__)
 
 
-@router.get("/api/v1/health")
+@router.get("/api/v1/health", response_model=dict)
 async def health_check() -> dict[str, Any]:
     """Minimal liveness probe for load balancers and orchestrators.
 
@@ -36,7 +36,7 @@ async def health_check() -> dict[str, Any]:
     }
 
 
-@router.get("/api/v1/health/detail")
+@router.get("/api/v1/health/detail", response_model=dict)
 async def health_check_detail(
     request: Request,
     _current_user: User = Depends(get_current_user),

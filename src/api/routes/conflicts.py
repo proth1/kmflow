@@ -321,6 +321,7 @@ async def escalate_conflict(
 
 @router.post(
     "/conflicts/escalation-check",
+    response_model=dict,
     summary="Run escalation check for overdue conflicts",
 )
 async def run_escalation_check(

@@ -162,7 +162,9 @@ class BaseMonitoringAgent(ABC):
             await self.connect()
             self.consecutive_failures = 0
             self._emit_health(AgentHealth.CONNECTED)
-        except Exception as exc:
+        except (
+            Exception
+        ) as exc:  # Intentionally broad: any connection error must mark agent unhealthy and abort the run loop
             logger.warning("Agent %s connection failed: %s", self.agent_id, exc)
             self.consecutive_failures += 1
             self._emit_health(AgentHealth.UNHEALTHY, str(exc))
@@ -189,7 +191,9 @@ class BaseMonitoringAgent(ABC):
 
             except asyncio.CancelledError:
                 break
-            except Exception as exc:
+            except (
+                Exception
+            ) as exc:  # Intentionally broad: poll errors must be counted for circuit-breaker logic, not propagated
                 self.consecutive_failures += 1
                 logger.warning(
                     "Agent %s poll failure #%d: %s",

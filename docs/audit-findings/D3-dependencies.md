@@ -14,12 +14,12 @@
 | CRITICAL findings | 0 |
 | HIGH findings | 0 |
 | MEDIUM findings | 0 |
-| LOW findings | 4 |
-| RESOLVED since last audit | 8 |
+| LOW findings | 5 |
+| RESOLVED since last audit | 8 (0 new this cycle) |
 
 **Python dependency count (production)**: 27 packages in `[project.dependencies]` (pyopenssl, pyasn1 present as CVE floor guards)
 **Python lock file status**: CURRENT — `requirements.lock` regenerated with `uv pip compile pyproject.toml -o requirements.lock --generate-hashes`. SHA-256 hashes present for all packages. `cryptography==46.0.5`, `pyjwt==2.12.1`, `pyopenssl==26.0.0`, and `pyasn1==0.6.3` all correctly pinned in the lock.
-**Node.js lock file status**: PRESENT and UP TO DATE — `frontend/package-lock.json` (lockfileVersion 3); all three Cloudflare Worker packages have committed lock files.
+**Node.js lock file status**: PRESENT — `frontend/package-lock.json` (lockfileVersion 3, up to date); all three Cloudflare Worker packages have committed lock files. Note: all three worker lock root entries still show `"jose": "^6.1.3"` (caret) rather than the exact pin `"6.1.3"` declared in `package.json` — lock files were not regenerated after the pin change (see LOW finding LOCK-FILE below).
 **Docker install method**: `Dockerfile.backend:20` installs via `pip install --no-cache-dir --require-hashes --prefix=/install -r requirements.lock` — hash verification active on all Docker builds.
 
 ---
@@ -60,7 +60,7 @@ The prior audit found `pyopenssl` and `pyasn1` (added to `pyproject.toml` as tra
 
 ### RESOLVED: [MEDIUM] Worker package.json Files Use Caret Ranges for jose
 
-The prior audit found all three Cloudflare Worker `package.json` files using `"jose": "^6.1.3"` (caret range on the auth-critical JWT library). All three workers now use exact pin `"jose": "6.1.3"`: `infrastructure/cloudflare-workers/presentation-auth/package.json:16`, `state-street-apex-auth/package.json:16`, `tunnel-auth/package.json:9`. Finding is **closed**.
+The prior audit found all three Cloudflare Worker `package.json` files using `"jose": "^6.1.3"` (caret range on the auth-critical JWT library). All three workers now use exact pin `"jose": "6.1.3"`: `infrastructure/cloudflare-workers/presentation-auth/package.json:16`, `state-street-apex-auth/package.json:16`, `tunnel-auth/package.json:9`. Finding is **closed**. Note: a cycle 7 inspection found that the lock files were not regenerated after the pin change — all three lock root entries still show `"^6.1.3"`. This is tracked as a separate new LOW finding (LOCK-FILE).
 
 ### RESOLVED: [MEDIUM] aiofiles Declared Without Upper Bound
 
@@ -128,6 +128,27 @@ neo4j:
 **Description**: All three Cloudflare Worker `package.json` files use caret ranges for `wrangler` (the deployment tool). The caret ranges contradict the exact-pin ADR. Additionally, the three workers resolve to three different `wrangler` versions (4.65.0, 4.69.0, 4.75.0), meaning deployment behavior may diverge between workers. Each worker has a committed lock file so individual builds are reproducible, but running `npm install` instead of `npm ci` would silently upgrade to whatever the range resolves to at that moment.
 **Risk**: Low. Each lock file ensures reproducibility for `npm ci`. Risk only materializes on fresh installs or when lock files are regenerated independently.
 **Recommendation**: Standardize all three workers to `"wrangler": "4.75.0"` (exact pin) and regenerate all lock files. Use `npm ci` in all deployment scripts.
+
+---
+
+### [LOW] LOCK-FILE: Worker Lock Root Entries Inconsistent With Declared jose Exact Pin
+
+**File**: `infrastructure/cloudflare-workers/presentation-auth/package-lock.json`, `state-street-apex-auth/package-lock.json`, `tunnel-auth/package-lock.json`
+**Agent**: D3 (Dependency & Regression Auditor)
+**Evidence**:
+```json
+// Root entry in all three lock files (stale — reflects pre-pin-change package.json state)
+"jose": "^6.1.3"
+
+// Current declaration in all three package.json files (correct — exact pin)
+"jose": "6.1.3"
+
+// Resolved node_modules/jose version in all three lock files (correct)
+"version": "6.1.3"
+```
+**Description**: The three Cloudflare Worker `package.json` files were updated to declare `"jose": "6.1.3"` (exact pin), resolving the prior MEDIUM finding. However, the lock files were not regenerated after this change. The root package entries in all three lock files still show `"jose": "^6.1.3"` (the caret range from before the pin change). The `node_modules/jose` resolved version in each lock is `6.1.3`, so there is no security exposure when using `npm ci`. The discrepancy indicates the lock files were not regenerated after the `package.json` exact-pin change and are now inconsistent with the declared intent.
+**Risk**: Low. No current security exposure — the lock files resolve to `jose@6.1.3` and `npm ci` enforces the lock. Risk is process: stale root entries indicate the lock regeneration step was skipped, which could mask future version drift if the same pattern applies to other packages.
+**Recommendation**: Regenerate all three worker lock files by running `npm install` in each worker directory after confirming the exact pin is declared in `package.json`, then commit the updated lock files. This should be done together with the wrangler exact-pin standardization to avoid multiple lock file regenerations.
 
 ---
 
@@ -212,8 +233,8 @@ neo4j:
 
 ## Supply Chain Risk Score: LOW-MEDIUM
 
-The JavaScript supply chain is in good shape: the frontend `package-lock.json` (lockfileVersion 3) has integrity hashes for all packages; all three Cloudflare Worker packages have committed lock files with `jose` exact-pinned at `6.1.3`. Two accepted npm advisories are documented and non-exploitable. Remaining risk is three worker `package.json` files use caret ranges for `wrangler` with inconsistent resolved versions across workers (LOW).
+The JavaScript supply chain is largely in good shape: the frontend `package-lock.json` (lockfileVersion 3) has integrity hashes for all packages; all three Cloudflare Worker lock files resolve `jose` to `6.1.3`. Two accepted npm advisories are documented and non-exploitable. Two worker-related LOW findings remain open: (1) `wrangler` uses caret ranges with inconsistent resolved versions across workers; (2) all three worker lock file root entries still show `"jose": "^6.1.3"` because the lock files were not regenerated after the `package.json` exact-pin change — no current security exposure, but a process hygiene gap.
 
 The Python supply chain is now in good standing: `requirements.lock` was regenerated with `--generate-hashes`, providing SHA-256 tamper detection for all packages. `Dockerfile.backend` installs with `--require-hashes`, enforcing hash verification on every build. `cryptography==46.0.5`, `pyjwt==2.12.1`, `pyopenssl==26.0.0`, and `pyasn1==0.6.3` are all correctly resolved in the lock. No HIGH or MEDIUM Python dependency findings remain.
 
-The remaining risk is the neo4j minor-only tag in `docker-compose.yml` and the long-term maintenance trajectory of `langdetect`.
+The remaining risk is the neo4j minor-only tag in `docker-compose.yml`, stale worker lock root entries for `jose`, and the long-term maintenance trajectory of `langdetect`.

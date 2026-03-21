@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_session
 from src.core.models import User
-from src.core.permissions import require_engagement_access, require_permission
+from src.core.permissions import check_engagement_access, require_engagement_access, require_permission
 from src.semantic.builder import KnowledgeGraphBuilder
 from src.semantic.embeddings import EmbeddingService
 from src.semantic.graph import (
@@ -138,6 +138,7 @@ def get_builder(request: Request) -> KnowledgeGraphBuilder:
 @router.post("/build", response_model=BuildResponse, status_code=status.HTTP_202_ACCEPTED)
 async def build_graph(
     payload: BuildRequest,
+    request: Request,
     session: AsyncSession = Depends(get_session),
     builder: KnowledgeGraphBuilder = Depends(get_builder),
     user: User = Depends(require_permission("engagement:read")),
@@ -153,6 +154,7 @@ async def build_graph(
 
     Set incremental=True to only process new fragments.
     """
+    await check_engagement_access(payload.engagement_id, request, user)
     try:
         result = await builder.build_knowledge_graph(
             session=session,
@@ -181,6 +183,8 @@ async def build_graph(
 @router.get("/traverse/{node_id}", response_model=list[NodeResponse])
 async def traverse_graph(
     node_id: str,
+    request: Request,
+    engagement_id: UUID = Query(...),
     depth: int = Query(default=2, ge=1, le=5),
     relationship_types: str | None = None,
     graph_service: KnowledgeGraphService = Depends(get_graph_service),
@@ -189,9 +193,11 @@ async def traverse_graph(
     """Traverse the knowledge graph from a starting node.
 
     Query parameters:
+    - engagement_id: Engagement scope (required, enforces access control)
     - depth: Maximum traversal depth (1-5, default 2)
     - relationship_types: Comma-separated list of relationship types to follow
     """
+    await check_engagement_access(engagement_id, request, user)
     rel_types = None
     if relationship_types:
         rel_types = [rt.strip() for rt in relationship_types.split(",")]
@@ -214,6 +220,7 @@ async def traverse_graph(
 
 @router.get("/search", response_model=list[SearchResult])
 async def semantic_search(
+    request: Request,
     query: str,
     top_k: int = 10,
     engagement_id: UUID | None = None,
@@ -231,6 +238,8 @@ async def semantic_search(
     - top_k: Number of results (1-100, default 10)
     - engagement_id: Optional engagement scope
     """
+    if engagement_id is not None:
+        await check_engagement_access(engagement_id, request, user)
     if top_k < 1 or top_k > 100:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -269,7 +278,7 @@ async def get_graph_stats(
             cached = await redis_client.get(cache_key)
             if cached:
                 return json.loads(cached)
-        except Exception:
+        except Exception:  # Intentionally broad: Redis unavailability or decode errors must fall through to live query
             logger.debug("Redis cache read failed for %s, falling through", cache_key)
 
     stats = await graph_service.get_stats(str(engagement_id))
@@ -283,7 +292,7 @@ async def get_graph_stats(
     if redis_client is not None:
         try:
             await redis_client.setex(cache_key, 60, json.dumps(result))
-        except Exception:
+        except Exception:  # Intentionally broad: cache write failures are non-fatal and must not fail the request
             logger.debug("Redis cache write failed for %s", cache_key)
 
     return result
@@ -392,6 +401,7 @@ async def run_bridges(
     engagement_id: UUID,
     request: Request,
     user: User = Depends(require_permission("engagement:read")),
+    _engagement_user: User = Depends(require_engagement_access),
 ) -> dict[str, Any]:
     """Run all semantic bridges for an engagement.
 

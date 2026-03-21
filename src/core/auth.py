@@ -20,7 +20,7 @@ from uuid import UUID
 import bcrypt
 import jwt
 import redis.asyncio as _aioredis
-from fastapi import Depends, HTTPException, Request, Response, WebSocket, status
+from fastapi import Depends, HTTPException, Request, Response, WebSocket, WebSocketException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import PyJWTError
 from sqlalchemy import select
@@ -251,7 +251,7 @@ def set_auth_cookies(
     # Double-submit CSRF cookie — NOT HttpOnly so JavaScript can read it
     # and send it back via the X-CSRF-Token header on mutation requests.
     # Token is HMAC-SHA256 of the access token, binding it to the session.
-    from src.api.middleware.csrf import generate_csrf_token
+    from src.core.csrf import generate_csrf_token
 
     csrf_token = generate_csrf_token(access_token)
     response.set_cookie(
@@ -338,7 +338,7 @@ async def verify_csrf_token(request: Request) -> None:
         )
 
     # Validate against HMAC of the access cookie (session-bound token)
-    from src.api.middleware.csrf import generate_csrf_token
+    from src.core.csrf import generate_csrf_token
 
     access_cookie = request.cookies.get(ACCESS_COOKIE_NAME, "")
     expected = generate_csrf_token(access_cookie)
@@ -487,6 +487,8 @@ async def get_websocket_user(
     if jwt_token is None:
         # Dev mode: return first active admin
         if settings.auth_dev_mode:
+            if settings.app_env not in ("development", "testing"):
+                raise WebSocketException(code=1008, reason="Server misconfiguration")
             session_factory = websocket.app.state.db_session_factory
             async with session_factory() as session:
                 result = await session.execute(
@@ -509,7 +511,7 @@ async def get_websocket_user(
     try:
         if await is_token_blacklisted(websocket, jwt_token):
             return None
-    except Exception:
+    except Exception:  # Intentionally broad: Redis/DB errors must deny access (fail-secure)
         logger.warning("Token blacklist check failed, denying WebSocket access as a precaution")
         return None
 

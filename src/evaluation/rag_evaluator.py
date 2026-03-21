@@ -96,7 +96,7 @@ async def evaluate_faithfulness(
     user_prompt = f"CONTEXT:\n{context}\n\nANSWER:\n{answer}"
     try:
         raw = await llm.generate(user_prompt, system=FAITHFULNESS_PROMPT)
-    except Exception as exc:
+    except Exception as exc:  # Intentionally broad: LLM errors must return graceful null score, not propagate
         logger.exception("LLM call failed for faithfulness evaluation")
         return {
             "score": None,
@@ -130,7 +130,7 @@ async def evaluate_answer_relevance(
     user_prompt = f"QUERY:\n{query}\n\nANSWER:\n{answer}"
     try:
         raw = await llm.generate(user_prompt, system=ANSWER_RELEVANCE_PROMPT)
-    except Exception as exc:
+    except Exception as exc:  # Intentionally broad: LLM errors must return graceful null score, not propagate
         logger.exception("LLM call failed for answer_relevance evaluation")
         return {
             "score": None,
@@ -167,7 +167,7 @@ async def evaluate_hallucination(
     user_prompt = f"CONTEXT:\n{context}\n\nANSWER:\n{answer}"
     try:
         raw = await llm.generate(user_prompt, system=HALLUCINATION_PROMPT)
-    except Exception as exc:
+    except Exception as exc:  # Intentionally broad: LLM errors must return graceful null score, not propagate
         logger.exception("LLM call failed for hallucination evaluation")
         return {
             "score": None,

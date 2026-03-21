@@ -118,7 +118,8 @@ def validate_file_type(file_content: bytes, file_name: str, mime_type: str | Non
     try:
         detected_type = magic.from_buffer(file_content[:8192], mime=True)
     except (ValueError, OSError):
-        logger.debug("Magic detection failed, using client-provided MIME type")
+        logger.debug("Magic detection failed, falling back to application/octet-stream")
+        detected_type = "application/octet-stream"
 
     if detected_type == "application/octet-stream":
         # Require secondary extension check: only known binary evidence formats

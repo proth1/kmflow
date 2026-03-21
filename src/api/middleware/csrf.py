@@ -7,7 +7,6 @@ authentication. Bearer-token (API/MCP) requests are exempt.
 
 from __future__ import annotations
 
-import hashlib
 import hmac
 import logging
 
@@ -17,6 +16,7 @@ from starlette.types import ASGIApp
 
 from src.core.auth import ACCESS_COOKIE_NAME
 from src.core.config import get_settings
+from src.core.csrf import generate_csrf_token
 
 logger = logging.getLogger(__name__)
 
@@ -81,14 +81,3 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 samesite="lax",
                 path="/",
             )
-
-
-def generate_csrf_token(access_cookie_value: str) -> str:
-    """Generate CSRF token cryptographically bound to the current session."""
-    settings = get_settings()
-    secret = settings.jwt_secret_key.get_secret_value()
-    return hmac.new(
-        secret.encode(),
-        access_cookie_value.encode(),
-        hashlib.sha256,
-    ).hexdigest()

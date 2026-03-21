@@ -7,6 +7,7 @@ satisfaction across an engagement.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 from uuid import UUID
@@ -405,39 +406,62 @@ async def get_dashboard(
     copilot satisfaction into a single response. Each section is fetched
     independently so a partial failure in one section does not break the rest.
     """
+    results = await asyncio.gather(
+        get_pipeline_stages(engagement_id, _engagement_user, session),
+        get_retrieval_summary(engagement_id, _engagement_user, session),
+        get_entity_summary(engagement_id, _engagement_user, session),
+        get_graph_health(engagement_id, _engagement_user, session),
+        get_copilot_satisfaction(engagement_id, _engagement_user, session),
+        return_exceptions=True,
+    )
+
+    stages_raw, retrieval_raw, entities_raw, graph_health_raw, satisfaction_raw = results
+
     stages: list[dict[str, Any]] = []
     retrieval: dict[str, Any] | None = None
     entities: dict[str, Any] | None = None
     graph_health: dict[str, Any] | None = None
     satisfaction: dict[str, Any] | None = None
 
-    try:
-        stages = await get_pipeline_stages(engagement_id, _engagement_user, session)
-    except Exception:  # Intentionally broad: dashboard sections fail independently to deliver partial results
-        logger.exception("Dashboard: failed to fetch pipeline stages for engagement %s", engagement_id)
+    if isinstance(stages_raw, Exception):
+        logger.exception(
+            "Dashboard: failed to fetch pipeline stages for engagement %s", engagement_id, exc_info=stages_raw
+        )
+    else:
+        stages = stages_raw  # type: ignore[assignment]
 
-    try:
-        retrieval = await get_retrieval_summary(engagement_id, _engagement_user, session)
-    except Exception:  # Intentionally broad: dashboard sections fail independently to deliver partial results
-        logger.exception("Dashboard: failed to fetch retrieval summary for engagement %s", engagement_id)
+    if isinstance(retrieval_raw, Exception):
+        logger.exception(
+            "Dashboard: failed to fetch retrieval summary for engagement %s", engagement_id, exc_info=retrieval_raw
+        )
+    else:
+        retrieval = retrieval_raw  # type: ignore[assignment]
 
-    try:
-        entities = await get_entity_summary(engagement_id, _engagement_user, session)
-    except Exception:  # Intentionally broad: dashboard sections fail independently to deliver partial results
-        logger.exception("Dashboard: failed to fetch entity summary for engagement %s", engagement_id)
+    if isinstance(entities_raw, Exception):
+        logger.exception(
+            "Dashboard: failed to fetch entity summary for engagement %s", engagement_id, exc_info=entities_raw
+        )
+    else:
+        entities = entities_raw  # type: ignore[assignment]
 
-    try:
-        graph_health = await get_graph_health(engagement_id, _engagement_user, session)
-    except HTTPException:
+    if isinstance(graph_health_raw, HTTPException):
         # 404 is expected when no snapshot exists — treat as empty, not an error
         pass
-    except Exception:  # Intentionally broad: dashboard sections fail independently to deliver partial results
-        logger.exception("Dashboard: failed to fetch graph health for engagement %s", engagement_id)
+    elif isinstance(graph_health_raw, Exception):
+        logger.exception(
+            "Dashboard: failed to fetch graph health for engagement %s", engagement_id, exc_info=graph_health_raw
+        )
+    else:
+        graph_health = graph_health_raw  # type: ignore[assignment]
 
-    try:
-        satisfaction = await get_copilot_satisfaction(engagement_id, _engagement_user, session)
-    except Exception:  # Intentionally broad: dashboard sections fail independently to deliver partial results
-        logger.exception("Dashboard: failed to fetch satisfaction summary for engagement %s", engagement_id)
+    if isinstance(satisfaction_raw, Exception):
+        logger.exception(
+            "Dashboard: failed to fetch satisfaction summary for engagement %s",
+            engagement_id,
+            exc_info=satisfaction_raw,
+        )
+    else:
+        satisfaction = satisfaction_raw  # type: ignore[assignment]
 
     return {
         "stages": stages,

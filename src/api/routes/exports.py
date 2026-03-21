@@ -31,7 +31,7 @@ class WatermarkExtractPayload(BaseModel):
     encoded_watermark: str
 
 
-@router.get("")
+@router.get("", response_model=dict)
 async def list_exports(
     engagement_id: UUID = Query(..., description="Engagement to query exports for"),
     limit: int = Query(default=20, ge=1, le=1000),
@@ -49,7 +49,7 @@ async def list_exports(
     return await service.get_export_logs(engagement_id, limit, offset)
 
 
-@router.post("/extract-watermark")
+@router.post("/extract-watermark", response_model=dict)
 async def extract_watermark(
     payload: WatermarkExtractPayload,
     session: AsyncSession = Depends(get_session),

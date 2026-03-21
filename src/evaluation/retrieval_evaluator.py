@@ -196,7 +196,7 @@ async def evaluate_dataset(
     for q in queries:
         try:
             metrics = await evaluate_query(retriever, session, q, engagement_id, top_k=10)
-        except Exception:
+        except Exception:  # Intentionally broad: per-query errors must not abort the full evaluation run
             logger.exception("Failed to evaluate query %s", q.id)
             continue
 

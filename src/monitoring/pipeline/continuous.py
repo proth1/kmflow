@@ -115,7 +115,7 @@ class ContinuousEvidencePipeline:
                             msg_id,
                         )
 
-            except Exception:
+            except Exception:  # Intentionally broad: consumer loop errors must retry, not crash the consumer
                 logger.exception("Error in evidence pipeline consumer %s", consumer_name)
                 if not shutdown_event.is_set():
                     import asyncio
@@ -177,7 +177,9 @@ class ContinuousEvidencePipeline:
                 msg_id,
             )
 
-        except Exception:
+        except (
+            Exception
+        ):  # Intentionally broad: per-message processing errors must record failure metrics, not propagate
             logger.exception("Failed to process evidence msg=%s", msg_id)
             success = False
 

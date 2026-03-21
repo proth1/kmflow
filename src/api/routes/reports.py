@@ -226,7 +226,7 @@ async def trigger_report_generation(
                 job_data["pdf_base64"] = base64.b64encode(result.pdf_bytes).decode()
             await _set_report_job(request, report_id, job_data)
 
-    except Exception as e:
+    except Exception as e:  # Intentionally broad: background report task must catch all failures to write error status
         logger.error("Report generation failed for %s: %s", engagement_id, e)
         await _set_report_job(
             request,

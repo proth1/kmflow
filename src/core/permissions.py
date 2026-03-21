@@ -206,7 +206,9 @@ async def require_engagement_access(
 ) -> User:
     """FastAPI dependency that checks engagement membership.
 
-    Platform admins bypass the membership check.
+    Platform admins bypass the membership check. Results are cached on
+    ``request.state`` so repeated calls within the same request do not
+    issue additional DB queries.
 
     Args:
         engagement_id: The engagement to check access for.
@@ -223,6 +225,20 @@ async def require_engagement_access(
     if user.role == UserRole.PLATFORM_ADMIN:
         return user
 
+    cache_key = f"engagement_member:{user.id}:{engagement_id}"
+    cache: dict[str, bool] = getattr(request.state, "_engagement_cache", {})
+    if not cache:
+        request.state._engagement_cache = cache
+
+    cached = cache.get(cache_key)
+    if cached is not None:
+        if not cached:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have access to this engagement",
+            )
+        return user
+
     session_factory = request.app.state.db_session_factory
     async with session_factory() as session:
         result = await session.execute(
@@ -233,6 +249,7 @@ async def require_engagement_access(
         )
         member = result.scalar_one_or_none()
 
+    cache[cache_key] = member is not None
     if member is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -291,13 +308,29 @@ async def check_engagement_access(
     called from any handler with an engagement_id obtained from a query param
     or request body.
 
-    Platform admins bypass the check.
+    Platform admins bypass the check. Results are cached on ``request.state``
+    so repeated calls within the same request do not issue additional DB queries.
 
     Raises:
         HTTPException 403: If the user is not a member.
     """
     if user.role == UserRole.PLATFORM_ADMIN:
         return
+
+    cache_key = f"engagement_member:{user.id}:{engagement_id}"
+    cache: dict[str, bool] = getattr(request.state, "_engagement_cache", {})
+    if not cache:
+        request.state._engagement_cache = cache
+
+    cached = cache.get(cache_key)
+    if cached is not None:
+        if not cached:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Not a member of engagement {engagement_id}",
+            )
+        return
+
     session_factory = request.app.state.db_session_factory
     async with session_factory() as session:
         result = await session.execute(
@@ -307,6 +340,8 @@ async def check_engagement_access(
             )
         )
         member = result.scalar_one_or_none()
+
+    cache[cache_key] = member is not None
     if member is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

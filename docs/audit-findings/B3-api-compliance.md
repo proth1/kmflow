@@ -1,4 +1,4 @@
-# B3: API Compliance Audit Findings (Re-Audit — 2026-03-20)
+# B3: API Compliance Audit Findings (Re-Audit — 2026-03-20, Cycle 7)
 
 **Agent**: B3 (API Compliance Auditor)
 **Date**: 2026-03-20
@@ -9,7 +9,7 @@
 
 ## Summary
 
-- **Total Route Files Audited**: 76 files in `src/api/routes/`
+- **Total Route Files Audited**: 77 files in `src/api/routes/`
 - **Total Endpoint Handlers**: 463 route handlers
 - **Critical Issues**: 0
 - **High Issues**: 1
@@ -25,20 +25,21 @@
 | HIGH: `graph_analytics.py` unbounded EvidenceItem query | Fixed: `.limit(500)` applied with warning log when capped |
 | HIGH: `correlation.py` unbounded CanonicalActivityEvent query | Fixed: COUNT(*) guard added; raises 400 if total > 10,000 events |
 | MEDIUM: `governance.py /policies` returns `policy_file` filesystem path | Fixed: `policy_file` removed from response; `response_model=PolicyListResponse` now declared |
+| HIGH: 176 endpoints missing `response_model` (prior cycle) | Partially resolved: 55 endpoints corrected; 121 remain (26%) |
 
 ---
 
-## Lessons Learned Counts (This Audit)
+## Lessons Learned Counts (This Audit Cycle)
 
-1. **Routes missing `response_model=`**: 176 of 463 (38%)
-2. **Unbounded queries (select without .limit()) in route handlers**: 9 (in `pov.py` — specific scoped selects for single-model analytics)
-3. **Missing status_code on POST**: 111 of 158 POST endpoints (70%)
+1. **Routes missing `response_model=`**: 121 of 463 (26%)
+2. **Unbounded queries (select without .limit()) in route handlers**: 9 (in `pov.py` — scoped analytics selects for single-model aggregations)
+3. **Missing `status_code` on POST**: 111 of 158 POST endpoints (70%)
 
 ---
 
 ## High Issues
 
-### [HIGH] RESPONSE CONTRACT: 176 Endpoints Missing `response_model`
+### [HIGH] RESPONSE CONTRACT: 121 Endpoints Missing `response_model`
 
 **File**: Multiple — representative: `src/api/routes/governance.py`, `src/api/routes/cost_modeling.py:227`, `src/api/routes/admin.py:26`, `src/api/routes/simulations.py:278`, `src/api/routes/seed_lists.py:111`
 **Agent**: B3 (API Compliance Auditor)
@@ -56,11 +57,13 @@ async def run_retention_cleanup(...) -> dict[str, Any]:
 @router.post("/engagements/{engagement_id}/seed-lists/refine")
 async def refine_seed_list(...) -> dict[str, Any]:
 ```
-**Description**: 176 of 463 route handlers (38%) have no `response_model` on the decorator. Routes missing `response_model` produce no OpenAPI response schema, are not validated at serialization time, and can silently drift from their documented contract. The problem is concentrated in: `pov.py` (multiple analytics endpoints), `governance.py` (export, overlay, SLA endpoints), `cost_modeling.py` (all 4 computation endpoints), `tom.py` (several action endpoints), `admin.py` (both admin operations), and `simulations.py` (several create/delete operations).
+**Description**: 121 of 463 route handlers (26%) have no `response_model` on the decorator. Routes missing `response_model` produce no OpenAPI response schema, are not validated at serialization time, and can silently drift from their documented contract. The problem is concentrated in: `pov.py` (multiple analytics endpoints), `governance.py` (export, overlay, SLA endpoints), `cost_modeling.py` (all 4 computation endpoints), `tom.py` (several action endpoints), `admin.py` (both admin operations), and `simulations.py` (several create/delete operations).
 
-**Risk**: 38% of the API surface has no documented or validated response contract; response structure drift is undetected until runtime; `-> Any` return types defeat mypy analysis; OpenAPI docs are materially incomplete for integration clients.
+**Progress note**: Improved from 176 (38%) in the prior cycle to 121 (26%) — 55 endpoints remediated. Issue remains HIGH as 26% of the API surface still has no validated response contract.
 
-**Recommendation**: Define Pydantic `response_model` types for all 176 endpoints. Prioritize: (1) all POST/PATCH/DELETE mutation endpoints first (audit trail risk), (2) admin operations, (3) analytics/computation endpoints. Minimum: add `response_model=dict` as a placeholder to generate schemas, then refine with typed Pydantic models.
+**Risk**: 26% of the API surface has no documented or validated response contract; response structure drift is undetected until runtime; `-> Any` return types defeat mypy analysis; OpenAPI docs are materially incomplete for integration clients.
+
+**Recommendation**: Define Pydantic `response_model` types for all 121 remaining endpoints. Prioritize: (1) all POST/PATCH/DELETE mutation endpoints first (audit trail risk), (2) admin operations, (3) analytics/computation endpoints. The `response_model=dict` annotation is insufficient — use typed Pydantic models.
 
 ---
 
@@ -85,6 +88,16 @@ async def create_claim_write_back(...) -> dict[str, Any]:
 ```
 **Description**: 111 of 158 POST endpoints (70%) have no explicit `status_code`, which causes FastAPI to default to `HTTP_200_OK`. REST convention requires `201 Created` for resource creation, `202 Accepted` for async operations, and `200 OK` for action/computation endpoints. Without explicit declaration, OpenAPI documents 200 for all of these — clients cannot distinguish creation from computation from async dispatch.
 
+Top offending files by count of POST routes missing `status_code`:
+- `tom.py`: 9 routes
+- `governance.py`: 7 routes
+- `cost_modeling.py`: 6 routes
+- `taskmining.py`: 5 routes
+- `simulations.py`: 5 routes
+- `semantic.py`: 4 routes
+- `monitoring.py`: 4 routes
+- `auth.py`: 4 routes
+
 **Risk**: HTTP contract ambiguity for integration clients; OpenAPI docs cannot differentiate created resources from computation results; response code changes become implicit breaking changes.
 
 **Recommendation**: Add explicit `status_code=status.HTTP_201_CREATED` to all resource-creating POST endpoints. Use `status_code=status.HTTP_202_ACCEPTED` for async operation triggers (as is done correctly in `replay.py`). Use `status_code=status.HTTP_200_OK` for computation-only endpoints. The `replay.py` file is the correct reference pattern.
@@ -108,7 +121,7 @@ elements = list(elements_result.scalars().all())
 # pov.py:437 — _get_elements_for_model helper (version diff): all elements
 result = await session.execute(select(ProcessElement).where(ProcessElement.model_id == model_id))
 ```
-**Description**: Seven analytics endpoints in `pov.py` issue `select(ProcessElement).where(model_id==X)` with no `.limit()`. These are used for: dashboard KPIs (`get_engagement_dashboard`), confidence heatmap (`get_confidence_map`), confidence summary (`get_confidence_summary`), version diff helper (`_get_elements_for_model`), BPMN+elements payload (`get_latest_model_for_engagement`), BPMN confidence overlay (`get_model_bpmn`), and dark element identification (`get_dark_elements`). These are analytical aggregation queries over all elements of a single model. Process models can grow to thousands of elements as engagements mature.
+**Description**: Seven analytics endpoints in `pov.py` issue `select(ProcessElement).where(model_id==X)` with no `.limit()`. These are used for: dashboard KPIs (`get_engagement_dashboard`), confidence heatmap (`get_confidence_map`), confidence summary (`get_confidence_summary`), version diff helper (`_get_elements_for_model`), BPMN+elements payload (`get_latest_model_for_engagement`), BPMN confidence overlay (`get_model_bpmn`), and dark element identification (`get_dark_elements`). Process models can grow to thousands of elements as engagements mature.
 
 **Risk**: Memory pressure and response latency proportional to model size; no upper bound on result set for any model; the dashboard endpoint (`get_engagement_dashboard`) is likely called frequently, amplifying the impact.
 
@@ -118,12 +131,12 @@ result = await session.execute(select(ProcessElement).where(ProcessElement.model
 
 ### [MEDIUM] PAGINATION: Inconsistent `limit` Ceiling Across the API
 
-**File**: Multiple — `src/api/routes/event_spine.py:100`, `src/api/routes/pov.py:523`, `src/api/routes/consistency.py:114`
+**File**: Multiple — `src/api/routes/event_spine.py:101`, `src/api/routes/pov.py:523`, `src/api/routes/consistency.py:114`, `src/api/routes/simulations.py` (7 endpoints), `src/api/routes/monitoring.py` (4 endpoints)
 **Agent**: B3 (API Compliance Auditor)
 **Evidence**:
 ```python
-# event_spine.py:100 — ceiling 10x the standard
-limit: int = Query(200, ge=1, le=2000, ...)
+# event_spine.py:101 — ceiling 10x the standard
+limit: int = Query(200, ge=1, le=2000, description="Maximum events to return"),
 
 # pov.py:523 — evidence map ceiling 5x standard
 limit: int = Query(default=200, ge=1, le=1000)
@@ -131,20 +144,23 @@ limit: int = Query(default=200, ge=1, le=1000)
 # pov.py:587 — gaps ceiling 5x standard
 limit: int = Query(default=100, ge=1, le=1000)
 
+# consistency.py:114 — ceiling 5x standard
+limit: int = Query(default=20, ge=1, le=1000),
+
 # engagements.py — platform standard
 limit: int = Query(default=20, ge=1, le=100)
 ```
-**Description**: The maximum `limit` ceiling (`le=`) varies from 100 to 2000 across list endpoints with no documented rationale. Coding standards specify `le=200` as the default, but `event_spine.py` allows 2000, `pov.py` evidence-map and gaps allow 1000. None of these have inline comments justifying the exception.
+**Description**: The maximum `limit` ceiling (`le=`) varies from 100 to 2000 across list endpoints with no documented rationale. Breakdown of `le=` values across limit parameters: `le=1000` appears 44 times across 27 route files; `le=200` appears 33 times; `le=500` appears 5 times; `le=100` appears 5 times; `le=2000` appears once (`event_spine.py`). None of the `le=1000` or `le=2000` instances have inline comments justifying the exception to the `le=200` standard.
 
 **Risk**: Higher ceilings allow larger result sets than intended; potential memory pressure at `le=2000`; inconsistent client experience across the API.
 
-**Recommendation**: Establish a platform-wide default maximum of `le=200`. Routes needing higher limits should include an inline comment justifying the exception (e.g., `# le=2000: event spine requires high-cardinality loads for process mining`).
+**Recommendation**: Establish a platform-wide default maximum of `le=200`. Routes needing higher limits should include an inline comment justifying the exception (e.g., `# le=2000: event spine requires high-cardinality loads for process mining`). The `le=1000` ceiling in 27 files should be reviewed and reduced where not justified.
 
 ---
 
-### [MEDIUM] RATE LIMITING: Only 2 of 158 POST Endpoints Have Rate Limiting Applied
+### [MEDIUM] RATE LIMITING: Only 5 of 77 Route Files Have Rate Limiting Applied
 
-**File**: `src/api/routes/copilot.py:43`, `src/api/routes/simulations.py:899`, `src/api/routes/intake.py:189`
+**File**: `src/api/routes/copilot.py:43`, `src/api/routes/simulations.py:899`, `src/api/routes/intake.py:189`, `src/api/routes/auth.py:199`, `src/api/routes/gdpr.py:203`
 **Agent**: B3 (API Compliance Auditor)
 **Evidence**:
 ```python
@@ -162,7 +178,7 @@ async def submit_intake_files(...):
 @router.post("/engagements/{engagement_id}/cost-modeling/staffing")
 async def compute_staffing(...)  # LLM or heavy computation; no rate limit
 ```
-**Description**: The `RateLimitMiddleware` applies a global rate limit of 100 requests/minute by IP address. Only 3 specific endpoints have additional per-user or per-endpoint rate limits: `/copilot/chat*`, `/scenarios/*/run`, and `/intake/{token}`. Computation-heavy endpoints in `tom.py` (alignment scoring, roadmap generation), `reports.py` (report generation), `semantic.py` (entity extraction, embedding), and `assessment_matrix.py` (matrix computation) have no per-user rate limiting beyond the global IP ceiling.
+**Description**: The `RateLimitMiddleware` in `main.py` applies a global rate limit by IP address. Only 5 of 77 route files (6%) have additional per-user or per-endpoint rate limits: `auth.py`, `copilot.py`, `gdpr.py`, `intake.py`, `simulations.py`. Computation-heavy endpoints in `tom.py` (alignment scoring, roadmap generation), `reports.py` (report generation), `semantic.py` (entity extraction, embedding), and `assessment_matrix.py` (matrix computation) have no per-user rate limiting beyond the global IP ceiling.
 
 **Risk**: Authenticated users can exhaust LLM or CPU-intensive operations without per-endpoint throttling; the global IP ceiling does not prevent a single authenticated user from hammering compute-heavy endpoints; no protection against per-tenant resource exhaustion.
 
@@ -189,7 +205,7 @@ async def list_users(...):
 @router.get("/api/v1/health")
 async def health_check() -> dict[str, Any]:
 ```
-**Description**: Three of 76 route files create routers without a `prefix` and hardcode `/api/v1/...` into every individual route decorator. The other 73 files use `APIRouter(prefix="/api/v1/...", tags=[...])`.
+**Description**: Three of 77 route files create routers without a `prefix` and hardcode `/api/v1/...` into every individual route decorator. The other 74 files use `APIRouter(prefix="/api/v1/...", tags=[...])`.
 
 **Risk**: Harder to maintain; error-prone when paths need updating for API version bumps.
 
@@ -270,19 +286,20 @@ async def seed_best_practices_and_benchmarks(...) -> dict[str, Any]:
 | `users.py` | `list_users` | `ge=1, le=200` | `ge=0` | Confirmed |
 | `pov.py` | `get_process_elements` | `ge=1, le=200` | `ge=0` | Confirmed |
 | `pov.py` | `get_dark_room_backlog` | `ge=1, le=200` | `ge=0` | Confirmed |
-| `monitoring.py` | All list endpoints | `ge=1, le=200` | `ge=0` | Confirmed |
 | `tom.py` | `list_toms`, `list_gaps` | `ge=1, le=200` | `ge=0` | Confirmed |
 | `cost_modeling.py` | `list_role_rates` | `ge=1, le=200` | `ge=0` | Confirmed |
 | `cost_modeling.py` | `list_volume_forecasts` | `ge=1, le=200` | `ge=0` | Confirmed |
 | `gap_probes.py` | `list_gap_probes` | `ge=1, le=200` | `ge=0` | Confirmed |
-| `scenarios.py` | `list_scenarios` | `ge=1, le=1000` | `ge=0` | High ceiling |
+| `monitoring.py` | All list endpoints | `ge=1, le=1000` | `ge=0` | High ceiling — MEDIUM |
+| `simulations.py` | All list endpoints (7) | `ge=1, le=1000` | `ge=0` | High ceiling — MEDIUM |
+| `scenarios.py` | `list_scenarios` | `ge=1, le=1000` | `ge=0` | High ceiling — MEDIUM |
 | `pov.py` | `get_evidence_map` | `ge=1, le=1000` | `ge=0` | High ceiling — MEDIUM |
 | `pov.py` | `get_evidence_gaps` | `ge=1, le=1000` | `ge=0` | High ceiling — MEDIUM |
 | `consistency.py` | list endpoints | `ge=1, le=1000` | `ge=0` | High ceiling — MEDIUM |
 | `event_spine.py` | `get_event_spine` | `ge=1, le=2000` | `ge=0` | High ceiling — MEDIUM |
 | `graph_analytics.py` | `get_triangulation_results` | Hard cap at 500 | N/A | Confirmed (resolved) |
 | `correlation.py` | `run_correlation` | Guard: 400 if >10,000 | N/A | Confirmed (resolved) |
-| `pov.py` | Analytics endpoints (7) | None | None | Unbounded — see HIGH |
+| `pov.py` | Analytics endpoints (7) | None | None | Unbounded — see MEDIUM |
 
 ---
 
@@ -300,8 +317,8 @@ This is correctly implemented across ~95% of paginated endpoints. The following 
 |---|---|
 | `GET /api/v1/governance/export/{id}` | Binary ZIP — no `responses={}` documenting content type in OpenAPI |
 | `pov.py` analytics endpoints | Return `dict[str, Any]` with no `response_model`; structure not enforced |
-| `cost_modeling.py` computation endpoints (4) | No `response_model`; response structure undocumented |
-| ~176 endpoints total | Missing `response_model` — see HIGH finding |
+| `cost_modeling.py` computation endpoints (4) | `response_model=dict` (untyped); response structure undocumented |
+| 121 endpoints total | Missing `response_model` — see HIGH finding |
 
 ---
 
@@ -347,7 +364,7 @@ No unauthenticated route was found that should require authentication. The healt
 | `POST` | Resource creation and action triggers | Correct; async triggers use 202; creation mostly uses 201 |
 | `PATCH` | Partial field update | Correct; `archive` route is exception (no body — see LOW finding) |
 | `PUT` | Full replacement | Used correctly in `integrations.py` for field mapping |
-| `DELETE` | Resource deletion | 204 used on 13 of 14 `DELETE` routes |
+| `DELETE` | Resource deletion | 204 used on 9 of 14 `DELETE` routes; 5 DELETE routes missing `status_code=204` |
 
 ---
 
@@ -359,25 +376,27 @@ No unauthenticated route was found that should require authentication. The healt
 - (+) Prior CRITICALs fully resolved: Redis-backed slowapi, per-email lockout
 - (+) Prior HIGHs fully resolved: triangulation capped at 500, correlation guarded at 10k
 - (+) Prior MEDIUM resolved: `governance.py /policies` no longer leaks `policy_file`
+- (+) Progress on response_model coverage: 176 → 121 missing (55 endpoints remediated)
 - (+) Pagination bounds present across ~93% of list endpoints
 - (+) Global error handlers prevent stack trace leakage
 - (+) HTTP status codes correct on most endpoints (201 creation, 204 deletion, 202 async)
 - (+) Response format `{items, total}` consistent across ~95% of list endpoints
-- (-) 176 of 463 endpoints (38%) still missing `response_model` — HIGH
+- (-) 121 of 463 endpoints (26%) still missing `response_model` — HIGH
 - (-) 111 of 158 POST endpoints missing explicit `status_code` — MEDIUM
 - (-) 7 pov.py analytics endpoints issue unbounded element queries — MEDIUM
-- (-) Rate limiting sparse outside copilot/simulations/intake — MEDIUM
+- (-) Rate limiting sparse: only 5 of 77 route files (6%) have per-endpoint limits — MEDIUM
 
 ---
 
 ## Checkbox Verification Results
 
-- [x] **Response format consistency** — Verified: ~95% of list endpoints use `{items, total}`. 7 endpoints deviate (documented above).
-- [x] **Pagination bounds (le= constraint)** — Verified: all paginated endpoints have bounds. High ceilings flagged (event_spine, pov gaps/evidence-map).
-- [x] **Rate limiting applied to sensitive endpoints** — Partially verified: copilot, simulations, intake rate limited. Computation-heavy tom/reports/semantic endpoints lack per-user limits (MEDIUM).
+- [x] **Response format consistency** — Verified: ~95% of list endpoints use `{items, total}`. Deviations documented above.
+- [x] **Pagination bounds (le= constraint)** — Verified: all paginated endpoints have bounds. High ceilings flagged (event_spine le=2000; 27 files with le=1000).
+- [x] **Rate limiting applied to sensitive endpoints** — Partially verified: copilot, simulations, intake, auth, gdpr rate limited. Computation-heavy tom/reports/semantic endpoints lack per-user limits (MEDIUM).
 - [x] **HTTP method usage** — Verified: Correct GET/POST/PUT/PATCH/DELETE semantics on ~98% of endpoints.
-- [x] **Error handling consistency** — Verified: Global handlers present; route-level errors consistent. Minor silent failure in `semantic.py` entity loop.
+- [x] **Error handling consistency** — Verified: Global handlers present; route-level errors consistent. Silent failure in `semantic.py` entity loop noted.
 - [x] **API versioning** — Verified: All routes use `/api/v1/` prefix via router prefix or inline path. `X-API-Version` header set on all responses via middleware.
-- [ ] **Response models on all routes** — Not verified: 176 of 463 endpoints lack `response_model` (38%).
+- [ ] **Response models on all routes** — Not verified: 121 of 463 endpoints lack `response_model` (26%).
 - [x] **NO TODO COMMENTS** — Verified: No TODO comments found in any route file.
 - [ ] **Explicit status_code on POST endpoints** — Not verified: 111 of 158 POST endpoints (70%) missing explicit status_code.
+- [ ] **DELETE routes with 204** — Not fully verified: 5 of 14 DELETE routes missing `status_code=204`.

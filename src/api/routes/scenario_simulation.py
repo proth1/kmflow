@@ -203,7 +203,7 @@ async def _run_simulation_task(
             }
             await session.commit()
 
-        except Exception:
+        except Exception:  # Intentionally broad: background simulation task must catch all failures to update status
             logger.exception("Simulation failed for scenario %s", scenario_id)
             try:
                 sim_result.status = SimulationStatus.FAILED
