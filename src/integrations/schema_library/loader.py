@@ -103,7 +103,9 @@ class SchemaLibrary:
                 template = _parse_template_file(yaml_file)
                 self._templates[template.platform.lower()] = template
                 logger.debug("Loaded schema template: %s", template.platform)
-            except Exception:
+            except (
+                Exception
+            ):  # Intentionally broad: YAML parse or validation errors must not abort loading other templates
                 logger.exception("Failed to load schema template: %s", yaml_file)
 
     def get_template(self, platform: str) -> SchemaTemplate | None:

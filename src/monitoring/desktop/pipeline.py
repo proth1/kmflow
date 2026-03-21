@@ -355,7 +355,9 @@ def process_batch(
             if activity.is_workaround:
                 result.workarounds.append(activity)
 
-        except Exception as exc:
+        except (
+            Exception
+        ) as exc:  # Intentionally broad: per-capture errors must be recorded in result, not abort processing
             result.errors.append(f"Error processing capture {capture.capture_id}: {exc}")
             logger.warning("Failed to process capture %s: %s", capture.capture_id, exc)
 

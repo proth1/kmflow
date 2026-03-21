@@ -403,6 +403,8 @@ class ReportGenerationService:
         except ImportError:
             logger.warning("WeasyPrint not installed, PDF generation unavailable")
             return b""
-        except Exception as e:
+        except (
+            Exception
+        ) as e:  # Intentionally broad: WeasyPrint can raise varied rendering errors; all must return empty bytes
             logger.error("PDF generation failed: %s", e)
             return b""

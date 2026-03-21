@@ -280,7 +280,7 @@ async def delete_control(
             "MATCH (:Activity)-[r:ENFORCED_BY]->(c:Control {id: $control_id}) DELETE r",
             {"control_id": str(control_id)},
         )
-    except Exception:
+    except Exception:  # Intentionally broad: Neo4j unavailability must not block the PostgreSQL soft-delete
         logger.warning("Failed to remove ENFORCED_BY edges for control %s from Neo4j", control_id)
 
     control.deleted_at = datetime.now(UTC)

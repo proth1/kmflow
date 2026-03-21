@@ -265,7 +265,7 @@ async def run_incremental_sync_async(
                 start_time,
             )
 
-    except Exception as exc:
+    except Exception as exc:  # Intentionally broad: any sync failure must be recorded in the log, not propagated
         log.errors.append(str(exc))
         logger.error(
             "Incremental sync failed for %s/%s: %s",

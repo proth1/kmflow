@@ -51,6 +51,24 @@ async def _anonymize_user(user_id: uuid.UUID, db: AsyncSession) -> None:
         {"uid": user_id_str},
     )
 
+    # Anonymise LLM audit logs (nullify user reference)
+    await db.execute(
+        text("UPDATE llm_audit_logs SET user_id = NULL WHERE user_id = :uid"),
+        {"uid": user_id},
+    )
+
+    # Delete copilot feedback rows for this user
+    await db.execute(
+        text("DELETE FROM copilot_feedback WHERE user_id = :uid"),
+        {"uid": user_id},
+    )
+
+    # Redact copilot message content for this user
+    await db.execute(
+        text("UPDATE copilot_messages SET content = '[redacted]' WHERE user_id = :uid"),
+        {"uid": user_id},
+    )
+
     logger.info("GDPR erasure: anonymised user %s", user_id)
 
 

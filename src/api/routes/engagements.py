@@ -329,7 +329,9 @@ async def archive_engagement(
                 engagement_id,
                 deleted_nodes,
             )
-    except Exception:
+    except (
+        Exception
+    ):  # Intentionally broad: Neo4j graph cleanup failure must not block the PostgreSQL archive operation
         logger.exception(
             "Archive engagement %s: graph cleanup failed, continuing with archive",
             engagement_id,

@@ -153,6 +153,8 @@ class GdprErasureWorker(TaskWorker):
 
             await client.close()
             return count
-        except Exception as exc:
+        except (
+            Exception
+        ) as exc:  # Intentionally broad: any Redis error during GDPR purge must raise to prevent silent data retention
             logger.exception("Redis GDPR purge failed")
             raise RuntimeError("Redis GDPR purge failed — data may remain in cache") from exc

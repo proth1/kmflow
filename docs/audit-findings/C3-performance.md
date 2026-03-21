@@ -7,19 +7,19 @@
 
 ## Summary
 
-| Severity | Count |
-|----------|-------|
-| CRITICAL | 1     |
-| HIGH     | 4     |
-| MEDIUM   | 6     |
-| LOW      | 5     |
-| **Total** | **16** |
+| Severity | Count | Resolved (Cycle 7) |
+|----------|-------|--------------------|
+| CRITICAL | 0     | 1                  |
+| HIGH     | 1     | 3                  |
+| MEDIUM   | 6     | 0                  |
+| LOW      | 5     | 0                  |
+| **Total** | **12** | **4**             |
 
 ---
 
 ## Findings
 
-### [CRITICAL] N+1 GRAPH READ: `search_similar` in `KnowledgeGraphService` issues one `get_node()` call per pgvector result row
+### ~~[CRITICAL] N+1 GRAPH READ: `search_similar` in `KnowledgeGraphService` issues one `get_node()` call per pgvector result row~~ — RESOLVED
 
 **File**: `src/semantic/graph.py:612`
 **Agent**: C3 (Performance Auditor)
@@ -39,7 +39,7 @@ for row in rows:
 
 ---
 
-### [HIGH] N+1 GRAPH WRITE: CO_OCCURS_WITH relationships created one-at-a-time inside a nested loop in `build_fragment_graph`
+### ~~[HIGH] N+1 GRAPH WRITE: CO_OCCURS_WITH relationships created one-at-a-time inside a nested loop in `build_fragment_graph`~~ — RESOLVED
 
 **File**: `src/evidence/pipeline.py:466`
 **Agent**: C3 (Performance Auditor)
@@ -64,7 +64,7 @@ for ev_id, entity_ids in evidence_to_entities.items():
 
 ---
 
-### [HIGH] N+1 GRAPH READS: `build_governance_chains` in `RegulatoryOverlayEngine` issues `get_node()` and `get_relationships()` once per process node inside a loop
+### ~~[HIGH] N+1 GRAPH READS: `build_governance_chains` in `RegulatoryOverlayEngine` issues `get_node()` and `get_relationships()` once per process node inside a loop~~ — RESOLVED
 
 **File**: `src/core/regulatory.py:171`
 **Agent**: C3 (Performance Auditor)
@@ -86,7 +86,7 @@ for proc in process_nodes:
 
 ---
 
-### [HIGH] MEMORY LEAK: `AlertEngine` accumulates all alerts and notification log entries in unbounded in-memory lists
+### ~~[HIGH] MEMORY LEAK: `AlertEngine` accumulates all alerts and notification log entries in unbounded in-memory lists~~ — RESOLVED
 
 **File**: `src/monitoring/alerting/engine.py`
 **Agent**: C3 (Performance Auditor)
@@ -289,23 +289,33 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
 ## Performance Risk Score
 
-**Overall Risk: HIGH**
+**Overall Risk: MEDIUM** (downgraded from HIGH — 4 findings resolved in cycle 7)
 
-The async and database infrastructure is sound — routes use `async def`, SQLAlchemy uses asyncpg, the embedding pipeline uses batch operations for the primary path, and connection pooling is configured. The primary risks concentrate in three areas:
+The async and database infrastructure is sound — routes use `async def`, SQLAlchemy uses asyncpg, the embedding pipeline uses batch operations for the primary path, and connection pooling is configured.
 
-1. **N+1 graph operation patterns** (CRITICAL + HIGH + HIGH): `KnowledgeGraphService.search_similar` issues one Neo4j `get_node` call per pgvector result row. The `build_fragment_graph` CO_OCCURS_WITH loop calls `create_relationship` per pair rather than using the existing `batch_create_relationships`. The `RegulatoryOverlayEngine` performs `get_relationships` and `get_node` per process node. In each case, the batch infrastructure already exists in the codebase and just needs to be wired in.
+**Cycle 7 remediations confirmed** (2026-03-20):
+- `search_similar` N+1: batch `MATCH (n) WHERE n.id IN $ids` query replaces per-row `get_node` calls (`src/semantic/graph.py:619-631`)
+- `build_fragment_graph` CO_OCCURS_WITH N+1: now collects all pairs into a list and calls `batch_create_relationships` once (`src/evidence/pipeline.py:471-500`)
+- `build_governance_chains` N+1: MERGE-based upsert queries replace `get_node` + `create_node` per entity (`src/core/regulatory.py:105-176`)
+- `AlertEngine` memory leak: both `self.alerts` and `_notification_log` converted to bounded `deque(maxlen=...)`, `clear_expired()` called every 100 events (`src/monitoring/alerting/engine.py:449-474`)
 
-2. **Unbounded in-memory state** (HIGH): `AlertEngine` accumulates every alert and notification log entry without eviction. The graph health `_count_components` fetches all engagement edges with no LIMIT clause.
+**Remaining primary risks:**
+
+1. **Unbounded graph traversal** (HIGH): `_count_components` in graph health analysis fetches all engagement edges with no LIMIT clause — still active.
+
+2. **Async anti-patterns** (MEDIUM): `RetentionEnforcer.run` calls synchronous SQLite `DELETE` directly on the event loop. `get_dashboard` executes 5 independent queries sequentially instead of concurrently.
 
 3. **Computational inefficiency** (MEDIUM): The task mining semantic bridge uses a Python nested loop for O(N×M) cosine similarity when NumPy matrix multiplication can reduce this to a single BLAS operation.
 
-Several previously-reported issues have been resolved: `generate_fragment_embeddings` now uses `store_embeddings_batch` as the primary path (N+1 is only in the error fallback). `ProcessEvidenceBridge` correctly uses `batch_create_relationships`. `SecurityHeadersMiddleware` pre-builds all static headers in `__init__` — no per-request settings access.
+Previously-resolved issues: `generate_fragment_embeddings` uses `store_embeddings_batch` as the primary path. `ProcessEvidenceBridge` uses `batch_create_relationships`. `SecurityHeadersMiddleware` pre-builds all static headers in `__init__`.
 
 ---
 
 ## New Findings (2026-03-20 — Batch 7 additions)
 
 Files added in scope: `src/quality/metrics_collector.py`, `src/quality/instrumentation.py`, `src/api/routes/pipeline_quality.py`, `agent/python/kmflow_agent/buffer/manager.py`, `agent/python/kmflow_agent/buffer/encryption.py`, `agent/python/kmflow_agent/ipc/socket_server.py`, `agent/python/kmflow_agent/upload/batch_uploader.py`, `agent/python/kmflow_agent/gdpr/retention.py`, `agent/python/kmflow_agent/gdpr/purge.py`, `agent/python/kmflow_agent/gdpr/audit_logger.py`, `agent/python/kmflow_agent/pii/patterns.py`, `src/integrations/apex_clearing.py`, `src/integrations/charles_river.py`
+
+**No issues found**: `MetricsCollector` (`src/quality/metrics_collector.py`) uses `deque(maxlen=100)` with a double-checked locking singleton — correctly bounded, no memory growth risk. `ApexClearingConnector` and `CharlesRiverConnector` use `paginate_offset` with `page_size=200` and flush once per resource type outside the page loop — no N+1 DB pattern.
 
 ---
 

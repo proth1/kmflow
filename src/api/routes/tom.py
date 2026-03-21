@@ -331,7 +331,7 @@ async def get_tom_versions(
 # -- Import/Export Routes -----------------------------------------------------
 
 
-@router.get("/models/{tom_id}/export")
+@router.get("/models/{tom_id}/export", response_model=dict)
 async def export_tom(
     tom_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -1736,7 +1736,9 @@ async def _run_alignment_scoring_async(
                 from src.rag.embeddings import EmbeddingService
 
                 embedding_service = EmbeddingService()
-            except Exception:
+            except (
+                Exception
+            ):  # Intentionally broad: optional service import may fail for any reason; scoring continues without it
                 logger.info("Embedding service not available, using graph-only scoring")
 
             scoring_service = AlignmentScoringService(
@@ -1747,7 +1749,7 @@ async def _run_alignment_scoring_async(
             await scoring_service.run_scoring(session, run)
             await session.commit()
 
-    except Exception:
+    except Exception:  # Intentionally broad: background task must catch all failures to mark run as FAILED
         logger.exception("Background alignment scoring failed for run %s", run_id)
         try:
             async with session_factory() as session:
@@ -1758,5 +1760,5 @@ async def _run_alignment_scoring_async(
                     run.completed_at = datetime.now(UTC)
                     run.error_message = "Background scoring task failed"
                     await session.commit()
-        except Exception:
+        except Exception:  # Intentionally broad: error during error handling, logging is best effort
             logger.exception("Failed to update run %s status to FAILED", run_id)

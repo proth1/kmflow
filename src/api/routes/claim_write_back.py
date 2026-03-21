@@ -58,6 +58,7 @@ class RecomputeConfidencePayload(BaseModel):
 
 @router.post(
     "/engagements/{engagement_id}/claims/ingest",
+    response_model=dict,
     status_code=status.HTTP_201_CREATED,
 )
 async def ingest_claim(
@@ -105,6 +106,7 @@ async def ingest_claim(
 
 @router.post(
     "/engagements/{engagement_id}/claims/batch-ingest",
+    response_model=dict,
     status_code=status.HTTP_201_CREATED,
 )
 async def batch_ingest_claims(
@@ -149,6 +151,7 @@ async def batch_ingest_claims(
 
 @router.post(
     "/engagements/{engagement_id}/claims/recompute-confidence",
+    response_model=dict,
 )
 async def recompute_confidence(
     engagement_id: uuid.UUID,

@@ -114,7 +114,7 @@ def pipeline_stage(
                 try:
                     result = await fn(*args, **kwargs)
                     return result
-                except Exception as exc:
+                except Exception as exc:  # Intentionally broad: instrumentation wrapper must capture all exception types for metrics before re-raising
                     error_count = 1
                     error_type = type(exc).__name__
                     raise
@@ -156,7 +156,7 @@ def pipeline_stage(
             try:
                 result = fn(*args, **kwargs)
                 return result
-            except Exception as exc:
+            except Exception as exc:  # Intentionally broad: instrumentation wrapper must capture all exception types for metrics before re-raising
                 error_count = 1
                 error_type = type(exc).__name__
                 raise

@@ -82,7 +82,7 @@ class ExternalTaskWorker:
                 await self._poll_once()
             except asyncio.CancelledError:
                 break
-            except Exception:
+            except Exception:  # Intentionally broad: poll cycle errors must not crash the worker loop
                 logger.exception("Error in external task poll cycle")
             await asyncio.sleep(self._poll_interval)
 
@@ -96,7 +96,7 @@ class ExternalTaskWorker:
                 max_tasks=self._max_tasks,
                 lock_duration=self._lock_duration,
             )
-        except Exception:
+        except Exception:  # Intentionally broad: Camunda engine may be unavailable or return unexpected errors
             logger.debug("Failed to fetch external tasks (engine may be down)")
             return
 
@@ -117,7 +117,7 @@ class ExternalTaskWorker:
                     variables=output_vars,
                 )
                 logger.info("Completed external task %s (topic=%s)", task_id, topic)
-            except Exception as e:
+            except Exception as e:  # Intentionally broad: handler errors of any kind must be reported back to Camunda
                 logger.error("External task %s failed: %s", task_id, e)
                 retries = task.get("retries")
                 remaining = (retries - 1) if retries and retries > 0 else 0
@@ -128,5 +128,5 @@ class ExternalTaskWorker:
                         error_message=str(e),
                         retries=remaining,
                     )
-                except Exception:
+                except Exception:  # Intentionally broad: error during error handling, logging is best effort
                     logger.exception("Failed to report task failure for %s", task_id)

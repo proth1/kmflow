@@ -34,7 +34,7 @@ def _quadrant_summary(entries: list[dict[str, Any]]) -> dict[str, int]:
     return counts
 
 
-@router.get("/engagements/{engagement_id}/assessment-matrix")
+@router.get("/engagements/{engagement_id}/assessment-matrix", response_model=dict)
 async def get_assessment_matrix(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -57,7 +57,7 @@ async def get_assessment_matrix(
     }
 
 
-@router.post("/engagements/{engagement_id}/assessment-matrix/compute")
+@router.post("/engagements/{engagement_id}/assessment-matrix/compute", response_model=dict)
 async def compute_assessment_matrix(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -90,7 +90,7 @@ async def compute_assessment_matrix(
     }
 
 
-@router.post("/engagements/{engagement_id}/assessment-matrix/export")
+@router.post("/engagements/{engagement_id}/assessment-matrix/export", response_model=dict)
 async def export_assessment_matrix(
     engagement_id: UUID,
     session: AsyncSession = Depends(get_session),
